@@ -1,0 +1,289 @@
+{
+  "name": "Noticias TI Automáticas - Sin IA",
+  "nodes": [
+    {
+      "parameters": {
+        "batchSize": 20,
+        "options": {}
+      },
+      "id": "545db440-b4b7-4253-a02b-a0b3b392a8a4",
+      "name": "Procesar una URL",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 1,
+      "position": [
+        2896,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{$json[\"url\"]}}",
+        "options": {}
+      },
+      "id": "ce5713bd-cd39-4ceb-93b0-63a896cb5bc9",
+      "name": "Leer RSS",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        3120,
+        512
+      ]
+    },
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "hour": 0
+            }
+          ]
+        }
+      },
+      "id": "d3c25160-f454-414a-a3a6-2278bfd222f6",
+      "name": "Cron",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        2448,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "path": "news",
+        "authentication": "jwtAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "432d5c5f-5890-437c-abc3-7d22e5653fec",
+      "name": "Webhook Noticias",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "webhookId": "noticias-ti",
+      "position": [
+        2448,
+        416
+      ],
+      "credentials": {
+        "jwtAuth": {
+          "id": "unyfRz9QRT72Vkwf",
+          "name": "JWT Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{$json[\"html\"]}}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        4016,
+        512
+      ],
+      "id": "4afe772b-8da1-4386-b719-731d69b34eab",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// === CONFIGURACIÓN ===\nconst HOURS_TO_LOOK_BACK = 48; // Solo noticias de las últimas 48 horas\nconst MIN_ITEMS_TO_SHOW = 20; // Si hay pocas noticias recientes, rellena con antiguas para no enviar vacío\n\n// === PALABRAS CLAVE (Tu lista original, mantenida) ===\nconst topics = [\n // IA y LLMs\n \"inteligencia artificial\", \"ia\", \"ai \",\n \"llms\", \"llm\", \"large language model\", \"modelo de lenguaje\",\n \"gpt\", \"chatgpt\", \"grok\", \"claude\", \"gemini\", \"llama\", \"mistral\", \"openai\", \"anthropic\",\n // Agentes IA y Automatización\n \"agente ia\", \"agentes ia\", \"agentic\",\n \"n8n\", \"zapier\", \"make.com\", \"ifttt\", \"automatización\", \"automatizar\", \"workflow\",\n // Infraestructura (Opcional según tu gusto)\n \"docker\", \"dockers\", \"kubernetes\", \"kubernete\", \"linux\", \"servidor\", \"server\",\n \"ubuntu\", \"vps\", \"vpn\"\n];\n\n// Función para limpiar texto y buscar coincidencias\nfunction matchTopic(item) {\n const title = (item.json.title || \"\").toLowerCase();\n const desc = (item.json.contentSnippet || item.json.description || \"\").toLowerCase();\n const text = title + \" \" + desc;\n \n return topics.some(keyword => text.includes(keyword.toLowerCase()));\n}\n\n// Función de Aleatoriedad (Fisher-Yates Shuffle)\nfunction shuffleArray(array) {\n for (let i = array.length - 1; i > 0; i--) {\n const j = Math.floor(Math.random() * (i + 1));\n [array[i], array[j]] = [array[j], array[i]];\n }\n return array;\n}\n\n// Función para intentar detectar \"viralidad\" en RSS de Reddit/HN\n// Busca patrones como \"100 comments\" o \"500 points\"\nfunction getViralScore(item) {\n const text = (item.json.description || \"\") + \" \" + (item.json.title || \"\");\n const pointsMatch = text.match(/(\\d+)\\s+points?/i);\n const commentsMatch = text.match(/(\\d+)\\s+comments?/i);\n \n let score = 0;\n if (pointsMatch) score += parseInt(pointsMatch[1], 10);\n if (commentsMatch) score += parseInt(commentsMatch[1], 10);\n \n // Prioridad ligera a noticias muy recientes (menos de 12h)\n const hoursOld = (new Date() - new Date(item.json.pubDate)) / (1000 * 60 * 60);\n if (hoursOld < 12) score += 50; \n\n return score;\n}\n\n// 1. Filtrado por Tema\nlet candidates = items.filter(matchTopic);\n\n// 2. Separación por Fecha (Recientes vs Antiguas)\nconst cutOffDate = new Date(Date.now() - (HOURS_TO_LOOK_BACK * 60 * 60 * 1000));\n\nlet freshNews = candidates.filter(item => new Date(item.json.pubDate) >= cutOffDate);\nlet oldNews = candidates.filter(item => new Date(item.json.pubDate) < cutOffDate);\n\n// Si tenemos muy pocas noticias frescas, rellenamos con algunas antiguas (aleatorias) para no mandar un email vacío\nif (freshNews.length < MIN_ITEMS_TO_SHOW && oldNews.length > 0) {\n oldNews = shuffleArray(oldNews);\n const needed = MIN_ITEMS_TO_SHOW - freshNews.length;\n freshNews = freshNews.concat(oldNews.slice(0, needed));\n}\n\n// 3. Ordenamiento: Viralidad + Aleatoriedad\n// Primero mezclamos todo para garantizar que noticias con \"score 0\" (blogs) no salgan siempre en el mismo orden\nfreshNews = shuffleArray(freshNews);\n\n// Luego ordenamos por Score descendente (Las virales flotan arriba, el resto queda mezclado abajo)\n// freshNews.sort((a, b) => getViralScore(b) - getViralScore(a));\nfreshNews.sort((a, b) => new Date(b.json.pubDate) - new Date(a.json.pubDate));\n\n// Limpieza final y retorno\nreturn freshNews;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3568,
+        512
+      ],
+      "id": "e73ef277-4a45-4f24-b322-5dc790b52595",
+      "name": "FiltrarTemas"
+    },
+    {
+      "parameters": {
+        "jsCode": "let html = `<div class=\\\"news-list\\\">`;\n\nfor (const it of items) {\n const d = it.json;\n html += `\n <article class=\\\"news-card\\\">\n <a href=\\\"${d.link}\\\" target=\\\"_blank\\\" rel=\\\"noopener noreferrer\\\" style=\\\"text-decoration:none;color:inherit;\\\">\n <div style=\\\"overflow:hidden; border-radius:6px; margin-bottom:10px;\\\">\n <img src=\\\"${d.image}\\\" class=\\\"news-img\\\" alt=\\\"${d.title}\\\" style=\\\"width:100%; height:auto; display:block;\\\" onerror=\\\"this.src='https://placehold.co/800x450?text=Sin+imagen'\\\" />\n </div>\n\n <h3 class=\\\"news-title\\\" style=\\\"margin:0 0 8px 0;\\\">${d.title}</h3>\n\n <p class=\\\"news-body\\\" style=\\\"margin:0 0 12px 0;\\\">${d.contentSnippet}${d.contentSnippet ? '\\u2026' : ''}</p>\n\n <div class=\\\"news-footer\\\" style=\\\"display:flex;justify-content:space-between;align-items:center;font-size:12px;color:#666;\\\">\n <time>${d.pubDate || ''}</time>\n <span style=\\\"font-weight:600;color:#1a73e8;\\\">Leer más →</span>\n </div>\n </a>\n </article>\n `;\n}\nhtml += `</div>`;\n\nreturn [{ json: { html } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3792,
+        512
+      ],
+      "id": "78892dfc-4fdb-43d6-9421-d0ee3eb9ce8a",
+      "name": "ConstruirHTML"
+    },
+    {
+      "parameters": {
+        "jsCode": "const urls = [\n \"https://www.muylinux.com/feed\",\n \"https://hipertextual.com/feed\",\n \"https://www.reddit.com/r/n8n.rss\",\n \"https://news.ycombinator.com/rss\",\n \"https://www.theverge.com/rss/index.xml\",\n \"https://techcrunch.com/feed/\",\n \"https://www.wired.com/feed/rss\",\n \"https://blog.google/technology/ai/rss/\",\n \"https://openai.com/news/rss.xml\",\n \"https://venturebeat.com/feed/\",\n \"https://www.zdnet.com/topic/artificial-intelligence/rss.xml\",\n \"https://www.engadget.com/rss.xml\",\n \"https://blog.n8n.io/rss\",\n \"https://blog.google/products/gemini/rss/\",\n \"https://wwwhatsnew.com/feed\",\n \"https://www.xataka.com/feed\",\n \"https://www.genbeta.com/feed\",\n \"https://elandroidelibre.elespanol.com/feed\"\n];\n// Crear un ítem separado por cada URL\nreturn urls.map(url => ({\n json: { url }\n}));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2672,
+        512
+      ],
+      "id": "ed22307a-2b13-4958-97ce-1fd3bbb035e8",
+      "name": "GenerarUrls"
+    },
+    {
+      "parameters": {
+        "jsCode": "return items.map(item => {\n const d = { ...item.json };\n let image = null;\n\n // ──────────────────────────────────────────────────────────────\n // 1. CASO GOOGLE NEWS RSS - Detectar y extraer imagen por GUID\n // (Este es el feed que estás usando, tiene prioridad)\n // ──────────────────────────────────────────────────────────────\n // Detecta si el GUID es una URL codificada de Google News (CBMi...)\n if (d.guid && d.guid.startsWith(\"CBMi\")) {\n // Construye la URL de la miniatura de Google News.\n // Aunque el GUID es el artículo, Google usa una estructura predecible\n // para las miniaturas en su servicio de noticias.\n // Intentaremos usar el GUID como parte de una URL de Google que\n // a menudo sirve una miniatura (ej. lh3.googleusercontent.com/proxy/...)\n \n // ATENCIÓN: Esta es una HEURÍSTICA. La forma más robusta es obtener la imagen\n // raspando la página final, pero en la capa de RSS es lo mejor que se puede hacer.\n // Usaremos una URL de proxy que a veces funciona con el GUID como identificador.\n // Sin embargo, por simplicidad y robustez, es mejor omitir el truco.\n\n // Dado que el JSON está totalmente vacío de datos de imagen, \n // y el feed es de Google News, debemos aceptar que la imagen no está en el feed.\n // La ÚNICA opción real es hacer un fallback al scraping, o usar un servicio de terceros.\n \n // Dejamos la lógica existente por si acaso los otros feeds tienen la info:\n\n // 1. Caso Google News (media:content como array) - No aplica aquí.\n if (d[\"media:content\"] && Array.isArray(d[\"media:content\"])) {\n const medias = d[\"media:content\"];\n let bestMedia = null;\n let bestSize = 0;\n\n medias.forEach(m => {\n const w = parseInt(m[\"@_width\"] || \"0\");\n const h = parseInt(m[\"@_height\"] || \"0\");\n const size = w * h;\n \n if (size > bestSize || (!bestMedia)) {\n bestSize = size;\n bestMedia = m;\n }\n });\n\n if (bestMedia && bestMedia[\"@_url\"]) {\n image = bestMedia[\"@_url\"];\n }\n }\n }\n\n // ──────────────────────────────────────────────────────────────\n // 2. CASO CLÁSICO (media:content simple, thumbnail, enclosure)\n // ──────────────────────────────────────────────────────────────\n if (!image) {\n if (d[\"media:content\"] && !Array.isArray(d[\"media:content\"])) {\n image = d[\"media:content\"][\"@_url\"] || d[\"media:content\"].url;\n } else if (d[\"media:thumbnail\"]) {\n const thumb = Array.isArray(d[\"media:thumbnail\"]) ? d[\"media:thumbnail\"][0] : d[\"media:thumbnail\"];\n image = thumb[\"@_url\"] || thumb.url;\n } else if (d[\"enclosure\"]) {\n const enc = Array.isArray(d[\"enclosure\"]) ? d[\"enclosure\"][0] : d[\"enclosure\"];\n if (enc && enc[\"@_type\"] && enc[\"@_type\"].includes(\"image\")) {\n image = enc[\"@_url\"] || enc.url;\n }\n }\n }\n \n // ──────────────────────────────────────────────────────────────\n // 3. EXTRACCIÓN DEL HTML (Description/Content) - Relajado\n // ──────────────────────────────────────────────────────────────\n if (!image) {\n const html = d.description || d.content || \"\";\n // Busca cualquier src=\"http...\"\n const match = html.match(/src=[\"'](https?:\\/\\/[^\"'\\s]+)[\"']/i);\n \n if (match && match[1]) {\n image = match[1];\n }\n }\n\n // ──────────────────────────────────────────────────────────────\n // 4. LIMPIEZA DE URLS DE GOOGLE (si se encontró una imagen)\n // ──────────────────────────────────────────────────────────────\n if (image) {\n if (image.includes(\"googleusercontent\") || image.includes(\"ggpht\")) {\n image = image.replace(/=[swwhc]\\d+(-[wh]\\d+)?(-[a-zA-Z0-9-]+)*/g, '=w800'); \n }\n }\n \n // ──────────────────────────────────────────────────────────────\n // 5. Placeholder final\n // ──────────────────────────────────────────────────────────────\n // Si la imagen sigue siendo nula, es porque la fuente RSS de Google News NO la incluye.\n d.image = image || \"https://placehold.co/800x450/336699/white?text=Sin+imagen&font=roboto\";\n\n return { json: d };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3344,
+        512
+      ],
+      "id": "c991b736-b7c6-4513-8a05-1ba9b901b31d",
+      "name": "ExtraerImagenes"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Procesar una URL": {
+      "main": [
+        [
+          {
+            "node": "Leer RSS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Leer RSS": {
+      "main": [
+        [
+          {
+            "node": "ExtraerImagenes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cron": {
+      "main": [
+        [
+          {
+            "node": "GenerarUrls",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Noticias": {
+      "main": [
+        [
+          {
+            "node": "GenerarUrls",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FiltrarTemas": {
+      "main": [
+        [
+          {
+            "node": "ConstruirHTML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ConstruirHTML": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GenerarUrls": {
+      "main": [
+        [
+          {
+            "node": "Procesar una URL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExtraerImagenes": {
+      "main": [
+        [
+          {
+            "node": "FiltrarTemas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "9SrVXdATmlrZemJT"
+  },
+  "versionId": "3f775652-c891-4ef6-8688-f01b1c5df9ee",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2ebfe6551ca260f617d68572b7a0eb6825fe3993d0da19ebfb0e274f2e0ccb37"
+  },
+  "id": "hMpPbsKkycPpfD6t",
+  "tags": [
+    {
+      "updatedAt": "2025-12-20T19:25:08.685Z",
+      "createdAt": "2025-12-20T19:25:08.685Z",
+      "id": "ljhw24TcxNVpCPyc",
+      "name": "Webhook"
+    },
+    {
+      "updatedAt": "2025-12-20T20:01:46.896Z",
+      "createdAt": "2025-12-20T20:01:46.896Z",
+      "id": "FiNhyrGWAOlXo4gB",
+      "name": "HTML"
+    },
+    {
+      "updatedAt": "2025-12-20T20:01:54.187Z",
+      "createdAt": "2025-12-20T20:01:54.187Z",
+      "id": "FxGjzN90D8ve5Mtu",
+      "name": "RSS"
+    },
+    {
+      "updatedAt": "2025-12-20T20:02:14.705Z",
+      "createdAt": "2025-12-20T20:02:14.705Z",
+      "id": "SR4mD7mBJvKUCCiV",
+      "name": "Noticias"
+    }
+  ]
+}
