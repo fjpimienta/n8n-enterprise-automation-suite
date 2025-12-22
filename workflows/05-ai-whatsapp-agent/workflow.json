@@ -1,0 +1,721 @@
+{
+  "name": "WhatsApp Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": "=Rol\nEres 3M, una asesora de atención al cliente en Hosting3M, un sitio\nespecializado en servicios de registro, renovacion de dominios, renta de alojamiento web, renta servidores VPS con Linux(R) gestionado con Plesk(R) y Proyectos de Tecnologia de Informacion con integracion de sistemas de computo a traves de API's, microservicios, contenedores y automatizaciones con n8n.\nCon más de 20 años de experiencia en el sector, destacas por tu habilidad para\nentender las necesidades de las empresas y particulares interesadas en encontrar soluciones a sus requerimientos tecnologicos.\nContexto\nHosting3M es un integrador de servicios reconocido por su trato ético y personalizado hacia\nlas empresas y particulares, ofreciendo soluciones a la medida y cumpliendo los requisitos tecnicos.\nTareas\n1. Renta de Dominios, Alojamiento Web, Servidores VPS, Proyectos de TI: Tu tarea principal es conseguir la renta de los diferentes servicios, debes perseguir este objetivo por encima de todo\n2. Responder preguntas: Tu tarea secundaria es responder dudas sobre\nespecificaciones de tipos de alojamiento web, servidores vps, dominios .com, .mx, .com.mx, proyectos de TI, precios,\netc…\nEspecificaciones\nMensaje de Bienvenida\nSi el cliente es “Nuevo”, envíale SIEMPRE un mensaje diciendo tu nombre y\npreguntándole el suyo, envíale textualmente el siguiente mensaje:\n”¡Hola, soy 3M! Encantada, cómo te llamas? 😊 [respuesta a la pregunta del\ncliente]”\nSi el cliente es “Viejo” y te saluda, envíale SIEMPRE un mensaje sin decir tu\nnombre ni preguntándole el suyo, como este:\n¡Hola! 😊 [respuesta a la pregunta]\n\nAsesoramiento\nSi el cliente NO te da datos sobre lo que busca, tendrás que preguntar:\n“¿Tienes alguna preferencia en el tipo de dominio?”\n“¿Tienes alguna preferencia en el tipo de alojamiento web?”\n“¿Tienes alguna preferencia en la capacidad del servidor VPS?”\n“¿Tienes alguna preferencia en las automatizaciones con Agentes IA?”\n“¿Ya cuentas con dominio?”\n“¿Ya cuentas con alojamiento web?”\n“¿Ya cuentas con servidor vps?”\n“¿Ya cuentas con automatizaciones con Agentes IA?”\nEstas preguntas me ayudarán a entender mejor tus necesidades y hacerte\nalgunas recomendaciones. \nTambién puedes echarle un ojo a nuestra web, donde encontrarás los diferentes servicios y sus características. ✨\nHorario\nSIEMPRE que un cliente pregunta por el horario o tienes que dárselo, escribe\ntextualmente el siguiente mensaje:\nNuestro horario de visita es:\nDe Lunes a Viernes: De 9:00 a 14:00 y De 15:00 a 19:00\nSábado: De 10:00 a 13:00\nMétodos de pago:\nSIEMPRE que un cliente te pregunte por nuestros métodos de pagos, escribe\ntextualmente el siguiente mensaje:\nEstas son nuestras opciones de pago disponibles:\n1. Transferencia Bancaria: Puedes realizar una transferencia a nuestra\ncuenta bancaria. Te proporcionaremos los detalles de la cuenta una vez\nque confirmes la compra.\n2. Tarjeta de Crédito o Débito: Aceptamos pagos con tarjeta, ya sea en\npersona en nuestras instalaciones o a través de un enlace seguro que te\nenviaremos.\n3. Efectivo: Si decides recoger el cachorro en nuestras instalaciones, puedes\npagar en efectivo al momento de la recogida. En caso de que el importe del\ncachorro sea mayor que 1.000€, se podrás completar el pago con\ncualquiera de los métodos anteriores.\nUna vez que elijas el método de pago que prefieras, te proporcionaremos toda\nla información necesaria para completar la transacción. ¿Hay algo más en lo\nque pueda ayudarte? 💰\nTransferir Mensajes\nSIEMPRE que un cliente quiera hablar con una persona (con mensaje o por\nllamada), escribe textualmente el siguiente mensaje:\nSi prefieres hablar con un asesor, puedes llamar a este mismo número. Nuestro\nhorario de atención telefónica es: Lunes a Viernes de 9:00 a 14:00 y de 15:00 a 19:00. Los sábados de 10:00 - 13:00. ¿Hay algo más en lo que pueda ayudarte por\nahora? 😊\nEjemplo De Conversación\nCliente: “Quiero un dominio\n3M: “¡Excelente elección! Estarias disponible a nivel mundial con tu nuevo dominio y darte a conocer en este mundo global.”\nCliente: “.com”\n3M: “¡Genial! ✨ Ahora, ¿te gustaría ver los servicios de alojamiento web o de servidores vps?\n📷”\nReglas\n*NUNCA respondas utilizando negrita o utilizando el símbolo ***\nNotas\n1. Cordialidad y profesionalismo: Mantente siempre cordial y profesional,\ntransmitiendo confianza y pasión por los perros.\n2. Proactividad: Debes de ser proactiva y comercial para conseguir la venta\ndel cachorro como objetivo principal\n3. Respuestas: NUNCA termines la conversación, responde SIEMPRE de\nforma abierta para continuar la conversación para conseguir vender el\ncachorro\n4. Humano: Envía en cada mensaje emoticonos que tengan que ver con\nperros para hacer la conversación más amigable.\n5. Proceso de compra: Asegúrate de seguir los pasos del proceso de compra\nen orden | Nunca hagas sentir al cliente que está siendo dirigido por un\npaso a paso, NUNCA digas cosas como “como siguiente paso…” o “si estás\nlisto para avanzar en la compra”\n6. Importante: NO proporcionamos historial médico de ningún cachorro | NO\nofrecemos garantías de salud | NO hacemos pruebas genéticas | NO\nofrecemos asesoramiento postventa.\n7. Ortografía: NO utilices NUNCA las siguientes frases: “ha cometido un error\nen la escritura”, “ha habido un error”, “Te gustaría saber qué sexo\nprefieres”, “pedido”, “humano”, “stock”\n8. Antiguedad: Recuerda SIEMPRE decirle tu nombre y preguntarle al cliente\nel suyo si es “Nuevo”\n9. Base de Datos: Recuerda activar la herramienta “Base de Datos” para\nresolver dudas sobre disponibilidad y características de nuestros cachorros\n10. Transportes: Recuerda activar la herramienta “transportes” para dar\ninformación sobre rutas y transportes.\n11. Visitas: Recuerda activar la herramienta “visitas” para agendar, cambiar o\neliminar visitas\n12. Fotos: Recuerda activar la herramineta “fotos” para enviar fotos de\nnuestros cachorros.\n13. Apertura: NUNCA intenes finalizar la conversación (NO digas finalizar, SI di\ncontinuar)\n14. Estilo: Nunca uses doble asterisco [()texto,()]. Si necesitas resaltar algo,\nutiliza un solo asterisco a cada lado [(**)texto ()]. Evita la negrita siempre\nque sea posible.\nUso de Herramientas\nBase de Datos\nNombre: Base de Datos\nUtiliza SIEMPRE la herramienta “Base de Datos” para:\nObtener información sobre nuestros perros (disponibilidad, precios,\nregistro o renovacion, tipo de dominio, tipo de alojamiento web, tipo de servidor vps, integracion de sistemas, integracion de automatizaciones con agentes IA)\nCuándo usar la herramienta “Base de Datos”?\nTienes que utilizar esta herramienta cuando el cliente diga cosas como:\nQue tipos de dominios tienes?\nQue tipos de alojamiento web tienes?\nQue tipos de servidores VPS tienes?\nTienes automatizaciones con agentes IA?\nFecha actual: “ {{ $now }} \""
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        688,
+        64
+      ],
+      "id": "5d094481-08d7-42b9-b376-e2c5569a3f81",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-5.2-chat-latest",
+          "mode": "list",
+          "cachedResultName": "gpt-5.2-chat-latest"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        688,
+        256
+      ],
+      "id": "8b9557b0-bd23-44e5-b930-c5f0b9d8140a",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "J2Srua9BlEesUnWy",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.message.from }}",
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        832,
+        256
+      ],
+      "id": "d476326e-4ee5-4f1a-b70c-d1028e547370",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "57b1ae30-fce1-4077-82ff-508bf8589910",
+                    "leftValue": "={{ $json.messages[0].audio }}",
+                    "rightValue": "Audio",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Audio"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "358b951e-772b-4277-9c7c-6132b969bbac",
+                    "leftValue": "={{ $json.messages[0].text }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Text"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.messages[0].image }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "id": "939b29fe-ee79-415c-8b7c-3e11832bf4d1"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Image"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        -112,
+        224
+      ],
+      "id": "5ebed467-84af-493b-8dfb-f6b837ac2581",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        -272,
+        240
+      ],
+      "id": "d07a9f4a-199b-42e0-bee4-c4ec9c7a30f1",
+      "name": "WhatsApp Trigger",
+      "webhookId": "9735313a-df90-4f9f-b92d-e809dc3a2d5f",
+      "credentials": {
+        "whatsAppTriggerApi": {
+          "id": "DkRawy9rI5h9M59O",
+          "name": "WhatsApp OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fa6f8976-6b16-41fc-b138-a0f6b3a0c24a",
+              "name": "text",
+              "value": "={{ $json.messages[0].text.body }}",
+              "type": "string"
+            },
+            {
+              "id": "54a5646d-c7aa-4a93-9858-fee79aedfbc4",
+              "name": "number",
+              "value": "={{ $json.messages[0].from }}",
+              "type": "string"
+            },
+            {
+              "id": "6168d859-850b-44a8-adaa-a70c1ef29ec9",
+              "name": "message",
+              "value": "={{ JSON.parse(JSON.stringify($node[\"Switch\"].json.messages[0])) }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        528,
+        240
+      ],
+      "id": "6bf6e724-00e6-42a1-96b0-12bc73f10a05",
+      "name": "Message"
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "operation": "mediaUrlGet",
+        "mediaGetId": "={{ $json.messages[0].audio.id }}"
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        48,
+        64
+      ],
+      "id": "3003068b-e8e3-49dd-b37a-51ad48159baf",
+      "name": "GetUrlAudio",
+      "webhookId": "d934d012-62e4-4698-b021-1094fc65be28",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "dO9xkaztEuFukOHu",
+          "name": "WhatsApp Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "binaryPropertyName": "=data",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        368,
+        64
+      ],
+      "id": "1401e43c-3a9e-4c5e-bae7-bccd205b0dde",
+      "name": "Transcribe",
+      "credentials": {
+        "openAiApi": {
+          "id": "J2Srua9BlEesUnWy",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        208,
+        64
+      ],
+      "id": "8863453d-6945-43d4-9ed7-2260896a2389",
+      "name": "Download",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ZdFtYQMPIA1zmIL9",
+          "name": "Header Auth"
+        },
+        "whatsAppApi": {
+          "id": "dO9xkaztEuFukOHu",
+          "name": "WhatsApp Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ea9a401e-1cf6-4285-a663-c61f33a33815",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "be45a936-fb92-4a11-a681-18837945b91d",
+              "name": "number",
+              "value": "={{ JSON.parse(JSON.stringify($node[\"Switch\"].json.messages[0].from)) }}",
+              "type": "string"
+            },
+            {
+              "id": "e72f11c5-4b44-49aa-941d-c8546f4a6e0e",
+              "name": "message",
+              "value": "={{ JSON.parse(JSON.stringify($node[\"Switch\"].json.messages[0])) }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        528,
+        64
+      ],
+      "id": "add17644-1616-4f21-a320-afb814b1e26e",
+      "name": "MessageAudio"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f87c281c-c987-4dfe-9af0-19def14419d3",
+              "leftValue": "={{ $('Switch').item.json.messages[0].audio }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        976,
+        64
+      ],
+      "id": "6ed5d5e6-e553-4a44-ba07-82eb199a6754",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "input": "={{ $('AI Agent').item.json.output }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1152,
+        64
+      ],
+      "id": "5b3dfaaf-2d54-40e4-910f-79ea72484cbf",
+      "name": "GenerateAudio",
+      "credentials": {
+        "openAiApi": {
+          "id": "J2Srua9BlEesUnWy",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "item.binary.data.mimeType = \"audio/mpeg\";\nreturn item;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1312,
+        64
+      ],
+      "id": "6de32b00-70f8-499c-afd8-360bd2b1027d",
+      "name": "ConvertAudio"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "779389351933657",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}",
+        "messageType": "audio",
+        "mediaPath": "useMedian8n",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1472,
+        64
+      ],
+      "id": "44b89830-3463-43ba-b549-e90a636a5cdc",
+      "name": "SendAudio",
+      "webhookId": "9e87c22e-d30b-4e7f-8e08-596266de57ea",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "dO9xkaztEuFukOHu",
+          "name": "WhatsApp Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "779389351933657",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}",
+        "textBody": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1152,
+        240
+      ],
+      "id": "bcf0e085-7b69-4669-bdcb-2d5cc9c50a23",
+      "name": "SendText",
+      "webhookId": "3f17610b-1d0b-42d9-b2e0-65592846d402",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "dO9xkaztEuFukOHu",
+          "name": "WhatsApp Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "eb93bfb7-46d2-4d72-9929-119d104c89e8",
+              "name": "text",
+              "value": "=No tengo permitido procesar imagenes. Favor de considerar la comunicacion textual o por audio.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        528,
+        416
+      ],
+      "id": "a58f3637-a310-4a05-941b-4fe2cb3cad5c",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "779389351933657",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}",
+        "textBody": "={{ $json.text }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1152,
+        416
+      ],
+      "id": "efb7acb2-89ff-4092-ab72-45a8339adf29",
+      "name": "Send message",
+      "webhookId": "3ae6b0a4-b137-4e5a-b53a-df35e8cb29a4",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "dO9xkaztEuFukOHu",
+          "name": "WhatsApp Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Response",
+        "height": 592,
+        "width": 704
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        944,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "7cab0e1f-5c76-4fde-9a00-c941a2fce95a",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "## Agente",
+        "height": 432,
+        "width": 272,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        656,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "9bd11ced-d079-4ecb-b8db-081eca48673f",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Process Audio",
+        "height": 224,
+        "width": 640,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        0,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "b1a6f205-10e7-4a87-a887-e23ec229f36b",
+      "name": "Sticky Note2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "GetUrlAudio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GetUrlAudio": {
+      "main": [
+        [
+          {
+            "node": "Download",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe": {
+      "main": [
+        [
+          {
+            "node": "MessageAudio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download": {
+      "main": [
+        [
+          {
+            "node": "Transcribe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MessageAudio": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "GenerateAudio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SendText",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GenerateAudio": {
+      "main": [
+        [
+          {
+            "node": "ConvertAudio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ConvertAudio": {
+      "main": [
+        [
+          {
+            "node": "SendAudio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Send message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "9SrVXdATmlrZemJT"
+  },
+  "versionId": "bb954366-71fa-4eb5-8d0a-3520d07990d2",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2ebfe6551ca260f617d68572b7a0eb6825fe3993d0da19ebfb0e274f2e0ccb37"
+  },
+  "id": "S8md9ShNWPxdUoYs",
+  "tags": []
+}
