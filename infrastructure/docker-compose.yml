@@ -1,0 +1,143 @@
+services:
+  n8n:
+    build:
+      context: .
+      dockerfile: Dockerfile.n8n
+    container_name: n8n-compose
+    restart: always
+    ports:
+      - "127.0.0.1:${port}:${port}"
+    dns:
+      - 1.1.1.1
+      - 8.8.8.8
+    env_file:
+      - .env
+    environment:
+      - N8N_LOG_LEVEL=info                          # o debug para troubleshooting
+      - N8N_LOG_OUTPUT=console,file                 # escribe tanto en stdout como en archivo
+      - N8N_LOG_FILE_LOCATION=/home/node/.n8n/logs/n8n.log
+      - N8N_LOG_FILE_SIZE_MAX=50                    # MB por archivo
+      - N8N_LOG_FILE_COUNT_MAX=10                   # cantidad de archivos retenidos (rotación)
+      # Execution / retention
+      - EXECUTIONS_DATA_PRUNE=true
+      - EXECUTIONS_DATA_MAX_AGE=336                 # horas (336 = 14 días). Ajusta según necesidad
+      - EXECUTIONS_DATA_SAVE_ON_ERROR=all
+      - EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
+      - N8N_HOST=${SUBDOMAIN}.${DOMAIN_NAME}
+      - N8N_PORT=${port}
+      - N8N_PROTOCOL=https
+      - N8N_RUNNERS_ENABLED=false
+      - NODE_ENV=production
+      - WEBHOOK_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}/
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+      - TZ=${GENERIC_TIMEZONE}
+      - N8N_EXPRESS_TRUST_PROXY=1
+      - N8N_EDITOR_BASE_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}
+      - N8N_FORCE_HTTPS=true
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=postgres-compose
+      - DB_POSTGRESDB_PORT=${port_db}
+      - DB_POSTGRESDB_DATABASE=${n8n_db}
+      - DB_POSTGRESDB_USER=${n8n_user}
+      - DB_POSTGRESDB_PASSWORD=${n8n_pass}
+      - NODE_FUNCTION_ALLOW_EXTERNAL=jsonwebtoken,pdf-parse
+      - NODE_FUNCTION_ALLOW_BUILTIN=crypto,fs
+      - N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE=true
+      - JWT_SECRET=${JWT_SECRET}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # - N8N_WORKER_COUNT=2
+      - N8N_GIT_NODE_DISABLE_BARE_REPOS=true
+      - SERVICES_TIMEOUT=300   # 60
+      - NODE_OPTIONS=--max-old-space-size=1024
+    depends_on:
+      - postgres
+    volumes:  # Definir los volumenes.
+
+    networks:
+      - n8n-compose_network
+    deploy:
+      resources:
+        limits:
+          memory: 1024m
+
+  postgres:
+    image: ankane/pgvector:latest
+    container_name: postgres-compose
+    restart: always
+    environment:
+      - POSTGRES_DB=${n8n_db}
+      - POSTGRES_USER=${n8n_user}
+      - POSTGRES_PASSWORD=${n8n_pass}
+    volumes:  # Definir los volumenes.
+    ports:
+      - "${port_db}:${port_db}"
+    networks:
+      - n8n-compose_network
+
+  jwt-service:
+    build:
+      context: ./jwt-service
+      dockerfile: Dockerfile
+    container_name: jwt-service
+    restart: always
+    ports:
+      - "4000:4000"
+    env_file:
+      - .env
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - N8N_CORS_ALLOW_HEADERS=Authorization,Content-Type
+      - N8N_CORS_ORIGINS=https://hosting3m.com
+    networks:
+      - n8n-compose_network
+
+  whatsapp-agent:
+    image: node:18
+    container_name: whatsapp-agent
+    working_dir: /app
+    volumes:
+      - ./whatsapp-agent:/app
+    ports:
+      - "4001:3000"
+    command: ["sh", "-c", "npm install && node index.js"]
+    env_file:
+      - .env
+    environment:
+      - WHATSAPP_TOKEN=${WHATSAPP_TOKEN}
+      - PHONE_NUMBER_ID=${PHONE_NUMBER_ID}
+
+  scraper-service:
+    build:
+      context: ./scraper-service
+      dockerfile: Dockerfile
+    container_name: scraper-service
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+      - MAX_CONCURRENCY=2
+      - PORT=3001
+    networks:
+      - n8n-compose_network
+    shm_size: '1g' # Establecer a 1 GB. (La mitad de tu RAM física es lo ideal)
+    deploy:
+      resources:
+        limits:
+          memory: 1200m # Limita su uso total a 1.2 GB (RAM + SWAP).
+          # Si no tienes Swap activado, usa 700m como límite duro.
+          # Dado que tienes Swap, podemos darle más techo aquí.
+        reservations:
+          memory: 500m
+
+volumes:
+  n8n_restored_data:
+    external: true
+  postgres_data:
+    external: false
+
+networks:
+  n8n-compose_network:
+    driver: bridge
