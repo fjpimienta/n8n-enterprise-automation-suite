@@ -1,0 +1,237 @@
+{
+  "name": "CRUD 1.0",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{$json[\"query\"]}}",
+        "options": {
+          "queryReplacement": "={{$json[\"values\"]}}"
+        }
+      },
+      "id": "d35d87d2-d2f4-4846-8faf-38deb4d5a1e9",
+      "name": "Execute SQL",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        896,
+        0
+      ],
+      "alwaysOutputData": true,
+      "notesInFlow": false,
+      "executeOnce": false,
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": "={{ $json.result === 'success' ? 200 : 500 }}"
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1344,
+        0
+      ],
+      "id": "03ce013f-d42f-4e64-ba9a-e80e9addf205",
+      "name": "Respond to Webhook",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "crud/:model",
+        "authentication": "jwtAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "e0222eae-0fef-49e4-bacf-0d8ac166a764",
+      "name": "WebhookCRUD",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "192ecac2-3a14-42dc-8a5d-49c54eab282a",
+      "credentials": {
+        "jwtAuth": {
+          "id": "unyfRz9QRT72Vkwf",
+          "name": "JWT Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// El modelo se captura de la URL path: /crud/:model\nconst modelName = $node[\"WebhookCRUD\"].json.params.model;\nconst requestBody = $node[\"WebhookCRUD\"].json.body;\n\nif (!modelName) {\n  throw new Error('Parámetro faltante en URL: se requiere el nombre del modelo (ej. /crud/customers)');\n}\n\nreturn [{\n    json: {\n        model_name: modelName,\n        ...requestBody // Pasa el body original (operation, fields, filter)\n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        0
+      ],
+      "id": "eb04a7c1-9901-4343-9bea-04095e826110",
+      "name": "Get Model Name"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select * from crud_models where model_name='{{ $json.model_name }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        448,
+        0
+      ],
+      "id": "b4772a23-a5c8-4c42-8fe0-f53c7bd00825",
+      "name": "Get Model Config",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Obtener la configuración del modelo (fila devuelta por Get Model Config)\nconst config = $json;\n\nif (!config) {\n  const modelName = $node[\"Get Model Name\"].json.model_name;\n  throw new Error(`Configuración de modelo no encontrada para: ${modelName}`);\n}\n\n// 2. Obtener body del Webhook y NORMALIZAR\nconst originalBody = $node[\"WebhookCRUD\"].json.body ?? {};\n\nconst operation = originalBody.operation;\nconst fields =\n  originalBody.fields && typeof originalBody.fields === 'object'\n    ? originalBody.fields\n    : {};\nconst filter = originalBody.filter;\n\n// 3. Configuración del modelo\nconst realTableName = config.table_name;\nconst primaryKey = config.primary_key;\n\n// Ajuste dinámico del filtro por email\nconst defaultFilter =\n  config.default_filter === 'id=$1' && fields.email\n    ? 'email=$1'\n    : config.default_filter;\n\nif (!operation || !realTableName) {\n  throw new Error('Parámetros faltantes: se requiere operation y tabla');\n}\n\nlet query = '';\nlet values = [];\n\n// 4. Construcción dinámica de SQL\nswitch (operation) {\n  case 'insert': {\n    if (Object.keys(fields).length === 0) {\n      throw new Error('Insert requiere fields');\n    }\n\n    const cols = Object.keys(fields).join(',');\n    const placeholders = Object.keys(fields)\n      .map((_, i) => `$${i + 1}`)\n      .join(',');\n\n    values = Object.values(fields);\n    query = `INSERT INTO ${realTableName} (${cols}) VALUES (${placeholders}) ON CONFLICT (url) DO NOTHING\nRETURNING *;`;\n    break;\n  }\n\n  case 'update': {\n    const updateFields = { ...fields };\n    delete updateFields.id;\n\n    if (Object.keys(updateFields).length === 0) {\n      throw new Error('Update requiere fields válidos');\n    }\n\n    const cols = Object.keys(updateFields);\n    values = Object.values(updateFields);\n\n    const setClause = cols.map((c, i) => `${c}=$${i + 1}`).join(',');\n    const filterIndex = cols.length + 1;\n\n    if (defaultFilter === 'email=$1' && fields.email) {\n      query = `UPDATE ${realTableName} SET ${setClause} WHERE email=$${filterIndex} RETURNING *;`;\n      values.push(fields.email);\n    } else if (filter) {\n      query = `UPDATE ${realTableName} SET ${setClause} WHERE ${filter} RETURNING *;`;\n    } else {\n      throw new Error('Falta filtro para update');\n    }\n    break;\n  }\n\n  case 'getOne': {\n    const filterField = defaultFilter.split('=')[0];\n\n    if (fields[filterField]) {\n      query = `SELECT * FROM ${realTableName} WHERE ${defaultFilter};`;\n      values = [fields[filterField]];\n    } else if (filter) {\n      query = `SELECT * FROM ${realTableName} WHERE ${filter};`;\n      values = [];\n    } else {\n      throw new Error(`Falta filtro para getOne (${filterField})`);\n    }\n    break;\n  }\n\n  case 'getAll': {\n    if (Object.keys(fields).length > 0) {\n      const cols = Object.keys(fields);\n      values = Object.values(fields);\n\n      const whereClause = cols\n        .map((col, i) => `${col}::date=$${i + 1}`)\n        .join(' AND ');\n\n      query = `SELECT * FROM ${realTableName} WHERE ${whereClause};`;\n    } else {\n      query = `SELECT * FROM ${realTableName};`;\n      values = [];\n    }\n    break;\n  }\n\n  default:\n    throw new Error(`Operación no válida: ${operation}`);\n}\n\n// 5. Salida para Execute SQL\nreturn [\n  {\n    json: {\n      query,\n      values,\n      table: realTableName,\n      operation\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ],
+      "id": "bedc9b1c-7c2d-4b4b-932d-9020df972c36",
+      "name": "Build Dynamic Query"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Operación\nconst operation = $node[\"Build Dynamic Query\"].json.operation;\n\n// Items devueltos por Postgres\nconst sqlItems = $items(\"Execute SQL\");\n\n// Error SQL\nif (sqlItems.length === 1 && sqlItems[0].json?.error) {\n  return [\n    {\n      json: {\n        operation,\n        data: null,\n        found_records: 0,\n        result: \"error\",\n        error: sqlItems[0].json.error.message\n      }\n    }\n  ];\n}\n\n// Filtrar SOLO filas reales (descartar { success: true })\nconst rows = sqlItems\n  .map(item => item.json)\n  .filter(row =>\n    row &&\n    typeof row === \"object\" &&\n    !row.success &&              // descarta placeholder\n    Object.keys(row).length > 0\n  );\n\n// Resultado según operación\nlet data = null;\nlet found_records = 0;\n\nswitch (operation) {\n  case \"insert\":\n  case \"update\":\n  case \"getOne\":\n  case \"delete\":\n    data = rows[0] || null;\n    found_records = data ? 1 : 0;\n    break;\n\n  case \"getAll\":\n    data = rows;\n    found_records = rows.length;\n    break;\n}\n\n// Salida final\nreturn [\n  {\n    json: {\n      operation,\n      data,\n      found_records,\n      result: \"success\"\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        0
+      ],
+      "id": "2632d28d-1b3a-4f50-9f20-0a6e1b57ba82",
+      "name": "Normalize"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Execute SQL": {
+      "main": [
+        [
+          {
+            "node": "Normalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WebhookCRUD": {
+      "main": [
+        [
+          {
+            "node": "Get Model Name",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Model Name": {
+      "main": [
+        [
+          {
+            "node": "Get Model Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Model Config": {
+      "main": [
+        [
+          {
+            "node": "Build Dynamic Query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Dynamic Query": {
+      "main": [
+        [
+          {
+            "node": "Execute SQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "9SrVXdATmlrZemJT"
+  },
+  "versionId": "e5f5cf49-0ea7-47cb-8bc3-fe020686c937",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2ebfe6551ca260f617d68572b7a0eb6825fe3993d0da19ebfb0e274f2e0ccb37"
+  },
+  "id": "SZ7jE4hGDZ5oiD1n",
+  "tags": [
+    {
+      "updatedAt": "2025-12-20T19:25:08.685Z",
+      "createdAt": "2025-12-20T19:25:08.685Z",
+      "id": "ljhw24TcxNVpCPyc",
+      "name": "Webhook"
+    },
+    {
+      "updatedAt": "2025-12-20T20:03:23.298Z",
+      "createdAt": "2025-12-20T20:03:23.298Z",
+      "id": "UUN2qPnY76eYwC1y",
+      "name": "CRUD"
+    },
+    {
+      "updatedAt": "2025-12-20T20:03:46.545Z",
+      "createdAt": "2025-12-20T20:03:46.545Z",
+      "id": "jafWIhyZ3XGpyA6j",
+      "name": "Postgres"
+    }
+  ]
+}
