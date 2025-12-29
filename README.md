@@ -14,9 +14,12 @@ Desplegado en VPS Linux optimizado (2 vCore, 4GB RAM, NVMe) usando orquestación
 
 | Servicio 			| Tecnología 				| Función 															|
 | :--- 				| :--- 						| :--- 																|
-| **Orquestador** 	| n8n v2.0.3 (Enterprise) 	| Motor lógico de flujos. 											|
+| **Orquestador** 	| n8n v2.1.4 (Enterprise) 	| Motor lógico de flujos. 											|
+| **Capa de Datos** | PostgreSQL + pgvector     | Almacenamiento relacional y base de datos vectorial para RAG.     |
+| **Seguridad**     | Node.js (JWT Service)     | Microservicio dedicado para firma y validación de tokens RS256.   |
+| **Agentes IA**    | OpenAI + LangChain Logic  | Procesamiento de lenguaje natural y razonamiento autónomo.        |
 | **Memoria IA** 	| PostgreSQL + pgvector 	| RAG (Retrieval-Augmented Generation) para contexto a largo plazo. |
-| **Auth** 			| Node.js (JWT) 			| Microservicio propio para firmar y validar peticiones seguras. 	|
+| **Proxy/Ingress** | Nginx                     | Terminación SSL, balanceo de carga y endurecimiento de cabeceras. |
 | **Ingesta** 		| Node.js Scraper 			| Motor de extracción de datos en tiempo real. 						|
 | **Mensajería** 	| WhatsApp Gateway 			| Interfaz conversacional asíncrona. 								|
 
@@ -26,6 +29,7 @@ Desplegado en VPS Linux optimizado (2 vCore, 4GB RAM, NVMe) usando orquestación
 3.  **📰 Automated News Curator:** Scraping, resumen con IA y clasificación semántica.
 4.  **📢 Social Media Orchestrator:** Generación de contenido omnicanal (X, FB, LinkedIn).
 5.  **🤖 AI WhatsApp Agent (RAG):** Asistente inteligente con memoria persistente en Postgres.
+6.  **🛠️ Dynamic CRUD Engine:** Capa de abstracción de datos para gestión dinámica de entidades SQL.
 
 ## 🚀 Despliegue
 ```bash
@@ -52,10 +56,16 @@ A continuación se detalla la documentación técnica y el código fuente de cad
 | `03` | **RAG News Intelligence** 	| Curaduría de noticias automatizada con análisis de sentimiento vectorial. | `Scraper` `OpenAI` `Pinecone/PgVector` | [📖 Ver Docs](workflows/03-rag-news-intelligence/README.md) |
 | `04` | **Omnichannel Social** 	| Orquestador de publicación de contenido en redes sociales. 				| `HTTP Request` `Twitter API` `LinkedIn` | [📖 Ver Docs](workflows/04-omnichannel-social/README.md) |
 | `05` | **AI WhatsApp Agent** 		| Asistente conversacional con memoria a largo plazo (RAG). 				| `WhatsApp` `Postgres` `OpenAI` | [📖 Ver Docs](workflows/05-ai-whatsapp-agent/README.md) |
-
+| `06` | **Dynamic CRUD Engine**    | Capa de abstracción para gestión de entidades dinámica.                   | `PostgreSQL` `JS Logic` `JWT` | [📖 Ver Docs](workflows/06-dynamic-crud-engine/README.md) |
 ---
 
 ## GitHub Projects (Gestión Ágil)
+**Para este proyecto utilizo GitHub Projects V2 con un enfoque de entrega continua (CI/CD) y gestión de riesgos.**
+
+    * Backlog (R&D): Implementación de MCP (Model Context Protocol) para interoperabilidad entre LLMs y sistemas de archivos locales.
+    * En Progreso: Optimización de búsqueda HNSW en pgvector para reducir la latencia en datasets de gran escala (>1M vectores).
+    * Completado (Milestones): * Despliegue de infraestructura base con redes Docker aisladas.
+        * Implementación del motor CRUD dinámico para reducción de deuda técnica.
 
 **Configuración del Tablero:**
 
@@ -75,10 +85,6 @@ A continuación se detalla la documentación técnica y el código fuente de cad
 
 ---
 
-## GitHub Pages (Opcional pero Recomendado)
-1.  Ve a `Settings` de tu repositorio -> `Pages`.
-2.  Fuente: `Deploy from a branch` -> `main` -> `/root`.
-3.  Usa un tema Jekyll integrado (ej. "Architect" o "Tactile").
-4.  **Resultado:** GitHub transformará tu `README.md` principal en una landing page elegante automáticamente. Esto sirve como tu "Galería Visual" inmediata.
-
----
+Desarrollado por: Francisco Jesus Pérez Pimienta 
+    - Ingeniero en Sistemas Computacionales.
+    - Maestro en Administracion de Proyectos.
