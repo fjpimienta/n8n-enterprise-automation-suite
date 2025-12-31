@@ -51,12 +51,12 @@ A continuación se detalla la documentación técnica y el código fuente de cad
 
 | ID | Módulo / Servicio | Función Principal | Stack & Integraciones | Documentación |
 | :--- | :--- | :--- | :--- | :---: |
-| `01` | **Auth JWT Gateway** 		| Middleware de seguridad. Valida tokens y protege webhooks públicos. 		| `Node.js` `Crypto` `JWT` | [📖 Ver Docs](workflows/01-auth-jwt-gateway/README.md) |
-| `02` | **CRM Lead Proxy** 		| Sanitización de datos de entrada y enrutamiento seguro de prospectos. 	| `Webhook` `RegEx` `JSON Schema` | [📖 Ver Docs](workflows/02-crm-lead-proxy/README.md) |
-| `03` | **RAG News Intelligence** 	| Curaduría de noticias automatizada con análisis de sentimiento vectorial. | `Scraper` `OpenAI` `Pinecone/PgVector` | [📖 Ver Docs](workflows/03-rag-news-intelligence/README.md) |
-| `04` | **Omnichannel Social** 	| Orquestador de publicación de contenido en redes sociales. 				| `HTTP Request` `Twitter API` `LinkedIn` | [📖 Ver Docs](workflows/04-omnichannel-social/README.md) |
-| `05` | **AI WhatsApp Agent** 		| Asistente conversacional con memoria a largo plazo (RAG). 				| `WhatsApp` `Postgres` `OpenAI` | [📖 Ver Docs](workflows/05-ai-whatsapp-agent/README.md) |
-| `06` | **Dynamic CRUD Engine**    | Capa de abstracción para gestión de entidades dinámica.                   | `PostgreSQL` `JS Logic` `JWT` | [📖 Ver Docs](workflows/06-dynamic-crud-engine/README.md) |
+| `01` | **Auth JWT Gateway** 		| Middleware de seguridad. Valida tokens y protege webhooks públicos. 		| `Node.js` `Crypto` `JWT` | [📖 Ver Docs](workflows/01-auth-jwt-gateway/v1/README.md) |
+| `02` | **CRM Lead Proxy** 		| Sanitización de datos de entrada y enrutamiento seguro de prospectos. 	| `Webhook` `RegEx` `JSON Schema` | [📖 Ver Docs](workflows/02-crm-lead-proxy/v1/README.md) |
+| `03` | **RAG News Intelligence** 	| Curaduría de noticias automatizada con análisis de sentimiento vectorial. | `Scraper` `OpenAI` `Pinecone/PgVector` | [📖 Ver Docs](workflows/03-rag-news-intelligence/v1/README.md) |
+| `04` | **Omnichannel Social** 	| Orquestador de publicación de contenido en redes sociales. 				| `HTTP Request` `Twitter API` `LinkedIn` | [📖 Ver Docs](workflows/04-omnichannel-social/v1/README.md) |
+| `05` | **AI WhatsApp Agent** 		| Asistente conversacional con memoria a largo plazo (RAG). 				| `WhatsApp` `Postgres` `OpenAI` | [📖 Ver Docs](workflows/05-ai-whatsapp-agent/v1/README.md) |
+| `06` | **Dynamic CRUD Engine**    | Capa de abstracción para gestión de entidades dinámica.                   | `PostgreSQL` `JS Logic` `JWT` | [📖 Ver Docs](workflows/06-dynamic-crud-engine/v2/README.md) |
 ---
 
 ## GitHub Projects (Gestión Ágil)
