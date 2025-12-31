@@ -1,0 +1,763 @@
+{
+  "name": "CRUD 2.0",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{$json.query}}",
+        "options": {
+          "queryReplacement": "={{$json.values}}"
+        }
+      },
+      "id": "045183ad-07ae-482a-916a-12afd65503c0",
+      "name": "Execute SQL",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2,
+      "position": [
+        528,
+        192
+      ],
+      "alwaysOutputData": true,
+      "notesInFlow": false,
+      "executeOnce": false,
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": "={{ $json.status ?? 200 }}"
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1648,
+        256
+      ],
+      "id": "fc0374d3-e17a-4729-8646-6419b4cca065",
+      "name": "Respond to Webhook",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "crud/v2/:model",
+        "authentication": "jwtAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "6b0d64e8-868c-4278-af91-5dbca12d2f09",
+      "name": "WebhookCRUD",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -2512,
+        256
+      ],
+      "webhookId": "81949755-352f-4f0b-bdf3-aac2d1f4b369",
+      "credentials": {
+        "jwtAuth": {
+          "id": "unyfRz9QRT72Vkwf",
+          "name": "JWT Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// El modelo se captura de la URL path: /crud/:model\nconst modelName = $node[\"WebhookCRUD\"].json.params.model;\nconst requestBody = $node[\"WebhookCRUD\"].json.body;\n\nif (!modelName) {\n  throw new Error('Parámetro faltante en URL: se requiere el nombre del modelo (ej. /crud/customers)');\n}\n\nreturn [{\n    json: {\n        model_name: modelName,\n        ...requestBody // Pasa el body original (operation, fields, filter)\n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -2288,
+        256
+      ],
+      "id": "3f7c4f6d-26ad-485b-80c8-fee249faab37",
+      "name": "Get Model Name"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select * from crud_models where model_name='{{ $json.model_name }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2064,
+        256
+      ],
+      "id": "62f4cd79-0005-4e43-ae1a-99ce3c37d3f0",
+      "name": "Get Model Config",
+      "retryOnFail": false,
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "NO6LIndnkfNuxK5N",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/NO6LIndnkfNuxK5N",
+          "cachedResultName": "Build Query v2"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        304,
+        192
+      ],
+      "id": "229b4d58-8908-4815-b2cc-11aead666e5e",
+      "name": "Call 'Build Query'"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "iFawDMkvCwPbg4bn",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/iFawDMkvCwPbg4bn",
+          "cachedResultName": "Normalize"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        976,
+        192
+      ],
+      "id": "b24bc7eb-af49-4893-8756-721568c98e03",
+      "name": "Call 'Normalize'"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "27ec18a9-6d19-4c5b-b388-9b0a32264843",
+              "name": "model_config",
+              "value": "={{ $json }}",
+              "type": "object"
+            },
+            {
+              "id": "b852315d-2a90-4979-a0f7-a3649edecad5",
+              "name": "body",
+              "value": "={{ $node[\"Get Model Name\"].json }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        80,
+        192
+      ],
+      "id": "4e99203d-aa81-4977-ab8b-47f81b2f8a5d",
+      "name": "Prepare Subworkflow Input"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9480a411-c509-4994-b9dd-c57519b1c1e2",
+              "name": "sql_results",
+              "value": "={{ $input.all().map(item => item.json) }}",
+              "type": "array"
+            },
+            {
+              "id": "ca19a287-6b7a-4732-8f2d-4ea53e5ee8fa",
+              "name": "operation",
+              "value": "={{ $item(0, 0).$node[\"Get Model Name\"].json.operation }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        752,
+        192
+      ],
+      "id": "305e1f38-ea38-4996-b270-6cb4ce12c5bd",
+      "name": "Prepare Normalize"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Verificar si hubo un error en la extracción de Auth\nconst authContext = $node[\"Extract Auth Context\"].json;\nif (authContext.error) {\n    return { json: authContext }; // Propaga el error 401/403\n}\n\n// 2. Obtener datos del Webhook\nconst webhook = $node[\"WebhookCRUD\"].json;\nconst userRole = authContext.user?.role;\n\nif (!userRole) {\n    return {\n        json: {\n            error: true,\n            status: 401,\n            message: \"Acceso Denegado: Rol de usuario no definido.\",\n            code: \"AUTH_ERROR\"\n        }\n    };\n}\n\nconst operationRaw = (webhook.body?.operation || \"\").toLowerCase();\n\n// Mapeo exhaustivo para validación\nconst opMapping = { \n    'getall': 'getall',\n    'getone': 'getone',\n    'select': 'getall', // Por si alguien envía 'select'\n    'insert': 'insert',\n    'update': 'update',\n    'delete': 'delete'\n};\n\nconst opToValidate = opMapping[operationRaw] || operationRaw;\nconst modelConfig = $node[\"Schema Validate\"].json;\n\n\n// 4. Verificación de permisos en el modelo\n// Validamos que allowed_ops exista y sea un array antes de usar .map\nconst allowedOps = Array.isArray(modelConfig.allowed_ops) \n    ? modelConfig.allowed_ops \n    : [];\n\nconst isOpAllowed = allowedOps.map(op => op.toLowerCase()).includes(opToValidate);\n\nif (!isOpAllowed) {\n    // EN LUGAR DE: throw new Error(...)\n    // USA ESTO:\n    return {\n        json: {\n            error: true,\n            status: 403,\n            message: `Operación ${operationRaw.toUpperCase()} no permitida para este modelo.`,\n            code: \"OPERATION_NOT_ALLOWED\"\n        }\n    };\n}\n\n// ... (resto del código)\n\n// 5. Verificación de Rol contra la DB\nconst roleKey = `allowed_roles_${opToValidate}`;\nconst allowedRolesStr = modelConfig[roleKey] || \"ADMIN\";\nconst allowedRolesList = allowedRolesStr.split(',').map(r => r.trim().toUpperCase());\n\nif (!allowedRolesList.includes(userRole.toUpperCase())) {\n    return {\n        json: {\n            error: true,\n            status: 403,\n            message: `Prohibido: El rol '${userRole}' no tiene permiso para '${operationRaw.toUpperCase()}'`,\n            code: \"SECURITY_VALIDATION\"\n        }\n    };\n}\n\n// Si todo está bien, agregamos una bandera de éxito\nreturn { json: { ...modelConfig, error: false } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -144,
+        256
+      ],
+      "id": "36073d16-095d-4101-86f6-125d60550fb7",
+      "name": "Security Validation",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const modelConfig = $node[\"Get Model Config\"].json;\nconst webhookBody = $node[\"WebhookCRUD\"].json.body || {};\nconst operation = (webhookBody.operation || \"\").toLowerCase();\nconst bodyFields = webhookBody.fields || {};\n\n// SOLO validamos campos requeridos si es INSERT o UPDATE\nif ([\"insert\", \"update\"].includes(operation)) {\n    if (modelConfig.schema_json) {\n        const schema = modelConfig.schema_json;\n        Object.keys(schema).forEach(field => {\n            if (schema[field].required === true) {\n                if (bodyFields[field] === undefined || bodyFields[field] === null) {\n                    // throw new Error(`Campo requerido faltante: ${field}`);\n                    return {\n                      json: {\n                        error: true,\n                        status: 400,\n                        message: `Campo requerido faltante: ${field}`,\n                        code: \"SCHEMA_VALIDATION\"\n                      }\n                    };\n                }\n            }\n        });\n    }\n}\n\nreturn { json: { ...modelConfig, validated: true } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -592,
+        160
+      ],
+      "id": "994aba32-a83a-451b-929b-e0addc3d56a8",
+      "name": "Schema Validate"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "daf1f3be-cb12-43e4-a9f8-473f81ce4c81",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1840,
+        256
+      ],
+      "id": "8c6e5d17-83a3-4610-b2c7-d94fbe4c93ca",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n    c.column_name, \n    c.data_type,\n    kcu.table_name AS foreign_table,\n    kcu.column_name AS foreign_column\nFROM information_schema.columns c\nLEFT JOIN information_schema.key_column_usage kcu \n    ON c.table_name = kcu.table_name \n    AND c.column_name = kcu.column_name \n    AND kcu.position_in_unique_constraint IS NOT NULL\nWHERE c.table_name = '{{$node[\"Get Model Name\"].json.model_name}}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1616,
+        352
+      ],
+      "id": "78c653dc-4afb-4747-af54-4323bda2386c",
+      "name": "Get",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "=Eres un arquitecto de bases de datos. Tu salida debe ser estrictamente un objeto JSON que represente la configuración de un modelo CRUD.\n\nBasado en estas columnas de la tabla '{{ $node[\"Get Model Name\"].json.model_name }}': \n{{ $json.data.map(c => c.column_name + \" (\" + c.data_type + \")\" + (c.foreign_table ? \" [FK -> \" + c.foreign_table + \".\" + c.foreign_column + \"]\" : \"\")).join(\", \") }}\n\nGenera un JSON con esta estructura:\n{\n  \"table_name\": \"{{ $node[\"Get Model Name\"].json.model_name }}\",\n  \"primary_key\": \"identifica_la_pk_o_id\",\n  \"allowed_fields\": [\"lista_de_todas_las_columnas\"],\n  \"schema_json\": { \n     \"campo\": {\"type\": \"string|number|boolean\", \"required\": false} \n  },\n  \"joins\": [\n     { \"table\": \"nombre_tabla_destino\", \"own_col\": \"mi_columna_fk\", \"foreign_col\": \"columna_destino_pk\" }\n  ],\n  \"allowed_ops\": [\"SELECT\", \"INSERT\", \"UPDATE\", \"DELETE\", \"GETALL\", \"GETONE\"],\n  \"allowed_roles_select\": \"ADMIN,EDITOR,CUSTOMER\",\n  \"allowed_roles_insert\": \"ADMIN,EDITOR\",\n  \"allowed_roles_update\": \"ADMIN,EDITOR\",\n  \"allowed_roles_delete\": \"ADMIN\",\n  \"hooks\": {\"pre\": [], \"post\": []}\n}\n\nINSTRUCCIONES CLAVE:\n1. Para la primary_key: identifica la columna que sea PRIMARY KEY en la base de datos. Si no hay una columna llamada 'id', observa las columnas proporcionadas y elige la que actúe como identificador único (ej. 'email' o 'code'). No inventes nombres de columnas que no estén en la lista recibida.\n\n2. Para los joins: Analiza la lista de columnas proporcionada arriba. Si alguna columna tiene la etiqueta \"[FK -> tabla.columna]\", significa que es una llave foránea. Agrega un objeto al array \"joins\" usando esos datos.\n   - \"table\": la tabla a la que apunta la FK.\n   - \"own_col\": la columna de esta tabla (ej. id_company).\n   - \"foreign_col\": la columna de la otra tabla (ej. id_company).\n   Si no hay columnas marcadas como FK, devuelve \"joins\": []."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "textFormat": {
+            "textOptions": {
+              "type": "json_schema"
+            }
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        -1168,
+        352
+      ],
+      "id": "daaeeb1f-a115-49ca-99c9-33ec7db4af96",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "J2Srua9BlEesUnWy",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -1392,
+        352
+      ],
+      "id": "944d2019-e2b8-4635-a120-818b5e0c0c2c",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Acceder al contenido de la IA (Viene del nodo anterior)\nconst aiOutput = $json.output?.[0]?.content?.[0]?.text?.message;\n\nif (!aiOutput) {\n  throw new Error(\"No se encontró contenido en la respuesta de la IA.\");\n}\n\ntry {\n  // 2. Parsear el JSON generado por la IA\n  const cleanJson = JSON.parse(aiOutput);\n  \n  // 3. Obtener las columnas reales (Usamos $(...).all() para obtener los datos del nodo Get)\n  // El nodo 'Aggregate' unifica todo, pero 'Get' tiene la lista original de columnas.\n  const getOutput = $(\"Get\").all();\n  const realColumns = getOutput.map(item => item.json.column_name);\n  \n  if (realColumns.length === 0) {\n    throw new Error(\"No se pudieron recuperar las columnas del nodo 'Get'.\");\n  }\n\n  let finalPK = cleanJson.primary_key;\n\n  // 4. VALIDACIÓN DE LA PRIMARY KEY\n  if (!realColumns.includes(finalPK)) {\n    // Si la IA inventó algo, buscamos una real\n    const backupPK = realColumns.find(c => c.toLowerCase() === 'id' || c.toLowerCase().endsWith('_id')) \n                     || (cleanJson.table_name === 'users' && realColumns.includes('email') ? 'email' : null)\n                     || realColumns[0];\n    \n    finalPK = backupPK;\n  }\n\n  // 5. Retornar el objeto limpio para el INSERT\n  return [{\n    json: {\n      ...cleanJson,\n      primary_key: finalPK,\n      allowed_fields: realColumns, // Forzamos las columnas reales detectadas\n      schema_json: typeof cleanJson.schema_json === 'string' ? JSON.parse(cleanJson.schema_json) : cleanJson.schema_json,\n      hooks: cleanJson.hooks || { pre: [], post: [] }\n    }\n  }];\n\n} catch (e) {\n  throw new Error(\"Error al procesar configuración de IA: \" + e.message);\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -816,
+        352
+      ],
+      "id": "46de3f53-9c2f-40d8-bb25-412d55149d26",
+      "name": "Parse IA"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO crud_models (\n  model_name, \n  table_name, \n  primary_key, \n  allowed_fields, \n  schema_json, \n  allowed_ops,\n  allowed_roles_select,\n  allowed_roles_insert,\n  allowed_roles_update,\n  allowed_roles_delete,\n  joins\n)\nVALUES (\n  '{{ $json.table_name }}', \n  '{{ $json.table_name }}', \n  '{{ $json.primary_key }}', \n  '{{ JSON.stringify($json.allowed_fields) }}'::jsonb, \n  '{{ JSON.stringify($json.schema_json) }}'::jsonb, \n  '{{ \"{\" + $json.allowed_ops.join(\",\") + \"}\" }}'::text[],\n  'ADMIN,EDITOR,CUSTOMER',\n  'ADMIN,EDITOR',\n  'ADMIN,EDITOR',\n  'ADMIN',\n  '{{ JSON.stringify($json.joins) }}'::jsonb\n)\nRETURNING *;",
+        "options": {
+          "largeNumbersOutput": "text"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -592,
+        352
+      ],
+      "id": "2e561126-7172-4de5-9591-e1c0175ebf9b",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a9c55b43-582c-4672-ab7d-1fecf1862d43",
+              "leftValue": "={{ $json.execution_info.has_post_hooks }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1200,
+        192
+      ],
+      "id": "59341fec-c28e-49c9-a8ca-ac9a919058bd",
+      "name": "Check Post-Hooks"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO crud_logs (model_name, operation, user_role, status_code, payload, response_summary)\nVALUES (\n  '{{ $node[\"Get Model Name\"].json.model_name }}',\n  '{{ $node[\"Get Model Name\"].json.operation }}',\n  '{{ $node[\"Security Validation\"].json.user_role || \"unknown\" }}',\n  {{ $json.error ? 400 : 200 }},\n  '{{ JSON.stringify($node[\"WebhookCRUD\"].json.body) }}'::jsonb,\n  '{{ JSON.stringify({ count: $json.data?.length || 0, success: !$json.error }) }}'::jsonb\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1424,
+        112
+      ],
+      "id": "25591135-dd2a-46e5-be70-698d993b6162",
+      "name": "Insert Logs",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4e51710f-891e-44f5-979c-7aaad6c76256",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1424,
+        400
+      ],
+      "id": "b8a45305-e07f-4b0b-bd31-41eb4d324201",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const headers = $node[\"WebhookCRUD\"].json.headers || {};\n\nconst roleHeader = Object.keys(headers)\n  .find(k => k.toLowerCase() === 'x-jwt-claim-role');\n\nconst role = roleHeader ? headers[roleHeader] : null;\n\nif (!role) {\n  return [{\n    json: {\n      error: true,\n      status: 401,\n      message: \"Rol no encontrado en token\",\n      code: \"NO_ROLE\"\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    user: {\n      role: role.toUpperCase()\n    }\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -368,
+        256
+      ],
+      "id": "8bca9778-496c-4127-b145-0e25edfe9023",
+      "name": "Extract Auth Context"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Execute SQL": {
+      "main": [
+        [
+          {
+            "node": "Prepare Normalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WebhookCRUD": {
+      "main": [
+        [
+          {
+            "node": "Get Model Name",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Model Name": {
+      "main": [
+        [
+          {
+            "node": "Get Model Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Model Config": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Build Query'": {
+      "main": [
+        [
+          {
+            "node": "Execute SQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'Normalize'": {
+      "main": [
+        [
+          {
+            "node": "Check Post-Hooks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Subworkflow Input": {
+      "main": [
+        [
+          {
+            "node": "Call 'Build Query'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Normalize": {
+      "main": [
+        [
+          {
+            "node": "Call 'Normalize'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Security Validation": {
+      "main": [
+        [
+          {
+            "node": "Prepare Subworkflow Input",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schema Validate": {
+      "main": [
+        [
+          {
+            "node": "Extract Auth Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Schema Validate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Parse IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse IA": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "Extract Auth Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Post-Hooks": {
+      "main": [
+        [
+          {
+            "node": "Insert Logs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Logs": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Auth Context": {
+      "main": [
+        [
+          {
+            "node": "Security Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "9SrVXdATmlrZemJT",
+    "timeSavedMode": "fixed"
+  },
+  "versionId": "6a5ab826-2458-4429-a8d3-41fefb2ec9bd",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2ebfe6551ca260f617d68572b7a0eb6825fe3993d0da19ebfb0e274f2e0ccb37"
+  },
+  "id": "JhrqfHIlRKLHxY2f",
+  "tags": []
+}
