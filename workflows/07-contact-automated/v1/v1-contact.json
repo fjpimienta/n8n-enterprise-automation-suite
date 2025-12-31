@@ -1,0 +1,420 @@
+{
+  "name": "Contact Hosting3m",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "contactoHosting3m",
+        "authentication": "jwtAuth",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -1040,
+        128
+      ],
+      "id": "cdf58ee7-fe7b-46cb-bab7-781a2a14094a",
+      "name": "Webhook (Contacto Hosting3m)",
+      "webhookId": "5399d02d-f7e9-46fb-8fd5-a30d895dc2a5",
+      "credentials": {
+        "jwtAuth": {
+          "id": "unyfRz9QRT72Vkwf",
+          "name": "JWT Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return [\n  {\n    json: {\n      authHeader: $json.headers?.authorization || 'No Authorization header',\n      body: $json.body\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -816,
+        128
+      ],
+      "id": "901a80b2-4f3c-4ef8-b42f-afba73a947a7",
+      "name": "codeStart"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Retornar los campos en un formato limpio\nreturn [{\n  json: {\n    authorization: $input.first().json.authHeader,\n    names: $input.first().json.body.names,\n    middlename: $input.first().json.body.middlename,\n    lastname: $input.first().json.body.lastname,\n    email: $input.first().json.body.email,\n    phone: $input.first().json.body.phone,\n    service: $input.first().json.body.service,\n    message: $input.first().json.body.message\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -592,
+        128
+      ],
+      "id": "f5a70bc4-16b8-4b1a-bd19-acc19e29369a",
+      "name": "CodeFields"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": true,\n  \"mensaje\": \"El mensaje se ha enviado de forma satisfactoria.\"\n}\n",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        752,
+        128
+      ],
+      "id": "1c6b1080-3a03-4042-9dba-1f00b36e4121",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.hosting3m.com/webhook/192ecac2-3a14-42dc-8a5d-49c54eab282a/crud/customers",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$node[\"CodeFields\"].json.authorization}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"operation\": \"insert\",\n  \"fields\": {\n    \"id_company\": 1,\n    \"id_type\": 1,\n    \"names\": \"{{ $json.names }}\",\n    \"middlename\": \"{{ $json.middlename }}\",\n    \"lastname\": \"{{ $json.lastname }}\",\n    \"email\": \"{{ $json.email }}\",\n    \"phone\": \"{{ $json.phone }}\",\n    \"service\": \"{{ $json.service }}\",\n    \"message\": \"{{ $json.message }}\"\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -368,
+        128
+      ],
+      "id": "0e14046f-6422-4963-aa55-fa88dd599962",
+      "name": "Insert",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.hosting3m.com/webhook/192ecac2-3a14-42dc-8a5d-49c54eab282a/crud/customers",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "authorization",
+              "value": "=Bearer {{$node[\"CodeFields\"].json.authorization}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"operation\": \"update\",\n  \"fields\": {\n    \"id\": {{$json.id}},\n    \"id_company\": 1,\n    \"id_type\": 1,\n    \"names\": \"{{ $node[\"Insert\"].json.names }}\",\n    \"middlename\": \"{{ $node[\"Insert\"].json.middlename }}\",\n    \"lastname\": \"{{ $node[\"Insert\"].json.lastname }}\",\n    \"email\": \"{{ $node[\"Insert\"].json.email }}\",\n    \"phone\": \"{{ $node[\"Insert\"].json.phone }}\",\n    \"service\": \"{{ $node[\"Insert\"].json.service }}\",\n    \"message\": \"{{ $node[\"Insert\"].json.message }}\"\n  }\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        80,
+        128
+      ],
+      "id": "51385079-51d3-40a8-bda5-a33502bd29bf",
+      "name": "Update",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.hosting3m.com/webhook/192ecac2-3a14-42dc-8a5d-49c54eab282a/crud/customers",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "authorization",
+              "value": "=Bearer {{$node[\"CodeFields\"].json.authorization}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"operation\": \"getOne\",\n  \"fields\": {\n    \"email\": \"{{ $json.email }}\"\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -144,
+        192
+      ],
+      "id": "fe5cddc0-99e8-4ff5-90d6-960e3ea3e670",
+      "name": "getCustomer",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "fromEmail": "n8n@hosting3m.com",
+        "toEmail": "=contacto@hosting3m.com",
+        "subject": "Contacto Sitio Web.",
+        "emailFormat": "=html",
+        "html": "=Hemos recibido este correo de: {{$node[\"CodeFields\"].json.names}} {{ $node[\"CodeFields\"].json.middlename }} {{ $node[\"CodeFields\"].json.lastname }}:  <br>\nEl mensaje es el siguiehte: <br>\n\"Message\": \"{{$node[\"CodeFields\"].json.message}}\".<br>\n\"Service\": \"{{$node[\"CodeFields\"].json.service}}\".<br>\n\"Phone\": \"{{$node[\"CodeFields\"].json.phone}}\".\n\n",
+        "options": {
+          "appendAttribution": false,
+          "ccEmail": "fjpimienta@hosting3m.com"
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        528,
+        128
+      ],
+      "id": "14e81fbc-34ea-4187-a8a6-a33113687666",
+      "name": "SendMailContact",
+      "webhookId": "15e776b7-257b-4fc8-ac70-42bad1077a15",
+      "credentials": {
+        "smtp": {
+          "id": "9FrPlhJb7FCBe7ZO",
+          "name": "n8n@hosting3m.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "contacto@hosting3m.com",
+        "toEmail": "={{ $json.email }}",
+        "subject": "Contacto Sitio Web.",
+        "html": "=Hola. {{ $json.names }}: <br>\nGracias por contactarnos. Analizaremos tus comentarios y nos pondremos en contacto en breve.",
+        "options": {
+          "appendAttribution": true
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        304,
+        0
+      ],
+      "id": "9b278bc9-87eb-495c-8059-0027b9581968",
+      "name": "SendMail",
+      "webhookId": "15e776b7-257b-4fc8-ac70-42bad1077a15",
+      "credentials": {
+        "smtp": {
+          "id": "GR5kg3dzrkw00Slf",
+          "name": "contacto@hosting3m.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "contacto@hosting3m.com",
+        "toEmail": "={{ $json.data[0].email }}",
+        "subject": "Contacto Sitio Web.",
+        "emailFormat": "=html",
+        "html": "=Hola. {{ $json.data[0].names }}: <br>\nGracias por contactarnos. Analizaremos tus comentarios y nos pondremos en contacto en breve.\n\"message\": \"{{$node[\"CodeFields\"].json.message}}\"\n",
+        "options": {
+          "appendAttribution": true,
+          "ccEmail": "fjpimienta@hosting3m.com"
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        304,
+        240
+      ],
+      "id": "5ad7fdee-1461-45e0-963c-748c93599b01",
+      "name": "SendMailError",
+      "webhookId": "15e776b7-257b-4fc8-ac70-42bad1077a15",
+      "credentials": {
+        "smtp": {
+          "id": "GR5kg3dzrkw00Slf",
+          "name": "contacto@hosting3m.com"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook (Contacto Hosting3m)": {
+      "main": [
+        [
+          {
+            "node": "codeStart",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "codeStart": {
+      "main": [
+        [
+          {
+            "node": "CodeFields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CodeFields": {
+      "main": [
+        [
+          {
+            "node": "Insert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert": {
+      "main": [
+        [
+          {
+            "node": "SendMail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "getCustomer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update": {
+      "main": [
+        [
+          {
+            "node": "SendMail",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SendMailError",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "getCustomer": {
+      "main": [
+        [
+          {
+            "node": "Update",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SendMailError",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SendMailContact": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SendMail": {
+      "main": [
+        [
+          {
+            "node": "SendMailContact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SendMailError": {
+      "main": [
+        [
+          {
+            "node": "SendMailContact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "9SrVXdATmlrZemJT"
+  },
+  "versionId": "b80dd5a5-0859-44fa-aa65-7f5ff0143f35",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "2ebfe6551ca260f617d68572b7a0eb6825fe3993d0da19ebfb0e274f2e0ccb37"
+  },
+  "id": "ZevwXDCwF7Re1klQ",
+  "tags": [
+    {
+      "updatedAt": "2025-12-20T19:25:08.685Z",
+      "createdAt": "2025-12-20T19:25:08.685Z",
+      "id": "ljhw24TcxNVpCPyc",
+      "name": "Webhook"
+    },
+    {
+      "updatedAt": "2025-12-20T19:25:50.503Z",
+      "createdAt": "2025-12-20T19:25:50.503Z",
+      "id": "wJ0vNQ7idcCu9BGu",
+      "name": "JWT"
+    },
+    {
+      "updatedAt": "2025-12-20T20:03:23.298Z",
+      "createdAt": "2025-12-20T20:03:23.298Z",
+      "id": "UUN2qPnY76eYwC1y",
+      "name": "CRUD"
+    },
+    {
+      "updatedAt": "2025-12-20T20:03:43.499Z",
+      "createdAt": "2025-12-20T20:03:43.499Z",
+      "id": "6dOXPBVsMw3OlOvZ",
+      "name": "Mail"
+    },
+    {
+      "updatedAt": "2025-12-20T20:03:46.545Z",
+      "createdAt": "2025-12-20T20:03:46.545Z",
+      "id": "jafWIhyZ3XGpyA6j",
+      "name": "Postgres"
+    }
+  ]
+}

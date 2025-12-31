@@ -1,4 +1,4 @@
-# 🔑 Enterprise JWT Token Generator (n8n Workflow)
+# 🔑 Enterprise JWT Token Generator v2 (n8n Workflow)
 
 ## 📝 Descripción
 
@@ -6,11 +6,21 @@ Este componente es un microservicio de autenticación orquestado en **n8n** que 
 
 ---
 
+## 🚦 Versiones del Workflow
+
+| Versión | Estado | Endpoint Path | Cambios Principales | Archivo JSON |
+| :--- | :--- | :--- | :--- | :--- |
+| **v1** | `Legacy` | `/genera-token` | Lanzamiento inicial. | `v1-auth.json` |
+| **v2** | `Stable` | `/v2/genera-token` | Integracion de Rol del usuario. | `v2-auth.json` |
+
+---
+
 ### 🛡 flujo de Seguridad
-1.  **Aislamiento de Servicio:**
+1.  **Validación de Identidad:** Recibe credenciales y consulta PostgreSQL (`users` table) para verificar existencia y obtener el rol (`public`, `admin`).
+2.  **Aislamiento de Servicio:**
     * El flujo **no genera el token**.
     * Delega la firma criptográfica a un contenedor Docker aislado (`jwt-service:4000`) accesible solo a través de la red interna de Docker (Bridge Network).
-2.  **Respuesta Estructurada:** Retorna el Token + Rol para consumo del cliente.
+3.  **Respuesta Estructurada:** Retorna el Token + Rol para consumo del cliente.
 
 ### 🐳 Docker Integration
 El uso de `http://jwt-service:4000` demuestra el conocimiento de redes de contenedores, evitando exponer el servicio de firma a la internet pública, reduciendo la superficie de ataque.
@@ -48,7 +58,7 @@ El flujo se activa mediante una solicitud **HTTP POST**. Una vez procesado, devu
 ### Ejemplo de Solicitud (cURL):
 
     ```bash
-    curl -X POST [https://tu-instancia-n8n.com/webhook/genera-token](https://tu-instancia-n8n.com/webhook/genera-token) \
+    curl -X POST [https://tu-instancia-n8n.com/webhook/v2/genera-token](https://tu-instancia-n8n.com/webhook/v2/genera-token) \
       -H "Content-Type: application/json" \
       -d '{
         "user": "francisco.perez@example.com"
@@ -57,7 +67,8 @@ El flujo se activa mediante una solicitud **HTTP POST**. Una vez procesado, devu
     ###Ejemplo de Respuesta Exitosa:
         JSON
             {
-              "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+              "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+              "role": "admin"
             }
 
 ---
