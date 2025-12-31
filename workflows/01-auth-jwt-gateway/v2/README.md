@@ -6,6 +6,15 @@ Este componente es un microservicio de autenticación orquestado en **n8n** que 
 
 ---
 
+## 🚦 Versiones del Workflow
+
+| Versión | Estado | Endpoint Path | Cambios Principales | Archivo JSON |
+| :--- | :--- | :--- | :--- | :--- |
+| **v1** | `Legacy` | `/genera-token` | Lanzamiento inicial. | `v1-auth.json` |
+| **v2** | `Stable` | `/v2/genera-token` | Integracion de Rol del usuario. | `v2-auth.json` |
+
+---
+
 ### 🛡 flujo de Seguridad
 1.  **Validación de Identidad:** Recibe credenciales y consulta PostgreSQL (`users` table) para verificar existencia y obtener el rol (`public`, `admin`).
 2.  **Aislamiento de Servicio:**
@@ -49,7 +58,7 @@ El flujo se activa mediante una solicitud **HTTP POST**. Una vez procesado, devu
 ### Ejemplo de Solicitud (cURL):
 
     ```bash
-    curl -X POST [https://tu-instancia-n8n.com/webhook/genera-token-v2](https://tu-instancia-n8n.com/webhook/genera-token-v2) \
+    curl -X POST [https://tu-instancia-n8n.com/webhook/v2/genera-token](https://tu-instancia-n8n.com/webhook/v2/genera-token) \
       -H "Content-Type: application/json" \
       -d '{
         "user": "francisco.perez@example.com"
