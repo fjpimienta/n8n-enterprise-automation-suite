@@ -22,6 +22,7 @@ Desplegado en VPS Linux optimizado (2 vCore, 4GB RAM, NVMe) usando orquestación
 | **Proxy/Ingress** | Nginx                     | Terminación SSL, balanceo de carga y endurecimiento de cabeceras. |
 | **Ingesta** 		| Node.js Scraper 			| Motor de extracción de datos en tiempo real. 						|
 | **Mensajería** 	| WhatsApp Gateway 			| Interfaz conversacional asíncrona. 								|
+| **Contactos**     | n8n v2.1.4 (Enterprise)   | Flujo para recibir informacion de prospectos en Contacto.         |
 
 ## 📦 Módulos Implementados (Workflows)
 1.  **🔐 Secure Token Gateway:** Gestión de autenticación API-Key/JWT centralizada.
@@ -30,6 +31,7 @@ Desplegado en VPS Linux optimizado (2 vCore, 4GB RAM, NVMe) usando orquestación
 4.  **📢 Social Media Orchestrator:** Generación de contenido omnicanal (X, FB, LinkedIn).
 5.  **🤖 AI WhatsApp Agent (RAG):** Asistente inteligente con memoria persistente en Postgres.
 6.  **🛠️ Dynamic CRUD Engine:** Capa de abstracción de datos para gestión dinámica de entidades SQL.
+7.  **🛠️ Contact & CRM Bridge v2 (n8n Workflow):** Sistema de captura de leads de Hosting3m.
 
 ## 🚀 Despliegue
 ```bash
@@ -56,7 +58,8 @@ A continuación se detalla la documentación técnica y el código fuente de cad
 | `03` | **RAG News Intelligence** 	| Curaduría de noticias automatizada con análisis de sentimiento vectorial. | `Scraper` `OpenAI` `Pinecone/PgVector` | [📖 Ver Docs](workflows/03-rag-news-intelligence/v1/README.md) |
 | `04` | **Omnichannel Social** 	| Orquestador de publicación de contenido en redes sociales. 				| `HTTP Request` `Twitter API` `LinkedIn` | [📖 Ver Docs](workflows/04-omnichannel-social/v1/README.md) |
 | `05` | **AI WhatsApp Agent** 		| Asistente conversacional con memoria a largo plazo (RAG). 				| `WhatsApp` `Postgres` `OpenAI` | [📖 Ver Docs](workflows/05-ai-whatsapp-agent/v1/README.md) |
-| `06` | **Dynamic CRUD Engine**    | Capa de abstracción para gestión de entidades dinámica.                   | `PostgreSQL` `JS Logic` `JWT` | [📖 Ver Docs](workflows/06-dynamic-crud-engine/v2/README.md) |
+| `06` | **Dynamic CRUD Engine**    | Capa de abstracción para gestión de entidades dinámica.                   | `Postgre` `JS Logic` `JWT` | [📖 Ver Docs](workflows/06-dynamic-crud-engine/v2/README.md) |
+| `07` | **Contact & CRM Bridge**   | Sistema de captura de leads de Hosting3m.                                 | `Webhook` `JWT` `CRUD` `Mail` `Postgres` | [📖 Ver Docs](workflows/07-contact-automated/v2/README.md) |
 ---
 
 ## GitHub Projects (Gestión Ágil)
