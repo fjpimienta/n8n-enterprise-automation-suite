@@ -3,6 +3,16 @@
 ## 📝 Descripción
 Este workflow actúa como una **Capa de Abstracción de Datos (DAL)** dinámica. A diferencia de un CRUD tradicional, este flujo no está acoplado a una sola tabla. Utiliza metadatos almacenados en una tabla de configuración para procesar operaciones sobre cualquier modelo de la base de datos de forma segura y centralizada.
 
+---
+
+## 🚦 Versiones del Workflow
+
+| Versión | Estado | Endpoint Path | Cambios Principales | Archivo JSON |
+| :--- | :--- | :--- | :--- | :--- |
+| **v1** | `Legacy` | `/crud/:model` | Lanzamiento inicial. | `v1-crud.json` |
+
+---
+
 ### 🏗️ Arquitectura de la Solución
 1. **Ruteo Dinámico:** Captura el modelo desde la URL (`/crud/:model`).
 2. **Inyección de Configuración:** Consulta la tabla `crud_models` para obtener el nombre real de la tabla física, llaves primarias y filtros por defecto.
