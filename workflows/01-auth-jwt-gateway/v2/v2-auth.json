@@ -1,5 +1,5 @@
 {
-  "name": "GeneraTokenv2",
+  "name": "v2/GeneraToken",
   "nodes": [
     {
       "parameters": {
@@ -21,9 +21,11 @@
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "genera-token-v2",
+        "path": "v2/genera-token",
         "responseMode": "responseNode",
-        "options": {}
+        "options": {
+          "allowedOrigins": "*"
+        }
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
@@ -156,7 +158,7 @@
     "availableInMCP": false,
     "errorWorkflow": "9SrVXdATmlrZemJT"
   },
-  "versionId": "2a4b94ac-c107-4f2d-ad77-800efe314d77",
+  "versionId": "332cd36c-d1f9-48d3-9d95-de3fceec405f",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2ebfe6551ca260f617d68572b7a0eb6825fe3993d0da19ebfb0e274f2e0ccb37"
@@ -176,16 +178,16 @@
       "name": "Security"
     },
     {
-      "name": "Token",
-      "id": "TEcAAV8ImkhhzPtv",
       "updatedAt": "2025-12-20T19:25:45.288Z",
-      "createdAt": "2025-12-20T19:25:45.288Z"
+      "createdAt": "2025-12-20T19:25:45.288Z",
+      "id": "TEcAAV8ImkhhzPtv",
+      "name": "Token"
     },
     {
-      "name": "JWT",
-      "id": "wJ0vNQ7idcCu9BGu",
       "updatedAt": "2025-12-20T19:25:50.503Z",
-      "createdAt": "2025-12-20T19:25:50.503Z"
+      "createdAt": "2025-12-20T19:25:50.503Z",
+      "id": "wJ0vNQ7idcCu9BGu",
+      "name": "JWT"
     }
   ]
 }

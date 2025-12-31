@@ -1,0 +1,110 @@
+{
+  "name": "GeneraToken",
+  "nodes": [
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"token\": \"{{ $json.token }}\"\n}\n",
+        "options": {
+          "responseCode": "={{ $json.status || 200 }}"
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        416,
+        0
+      ],
+      "id": "fa8c168b-76eb-4e67-8d2a-42ceafb5b083",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "genera-token",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "90d37be2-40fa-47ea-a9e4-8827561fdd94",
+      "name": "Genera Token",
+      "webhookId": "275a4bc0-7184-422a-8fad-725817e2741f"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://jwt-service:4000/generate-token",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "=Content-Type",
+              "value": "=application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "=user",
+              "value": "={{ $json.body.user }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "58ddab5a-047b-4715-b0f6-811788904d82",
+      "name": "HTTP Request"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Genera Token": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "9SrVXdATmlrZemJT"
+  },
+  "versionId": "bdbaff0e-034e-4759-a55d-1805e5235b96",
+  "meta": {
+    "instanceId": "2ebfe6551ca260f617d68572b7a0eb6825fe3993d0da19ebfb0e274f2e0ccb37"
+  },
+  "id": "5QW9sxCE9CdVhEfw",
+  "tags": []
+}
