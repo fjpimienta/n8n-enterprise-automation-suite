@@ -1,0 +1,32 @@
+# --- Seguridad y Secretos ---
+.env
+**/ .env
+credentials_export.txt
+documentos_legales.json
+
+# --- Datos de Base de Datos (Muy Pesado) ---
+postgres/data/
+pgvector/data/
+**/data/
+
+# --- Backups y Temporales ---
+*.tar
+*.sqlite
+*.sql
+*.log
+n8n_backup/
+local-files/
+
+# --- Node.js / Microservicios ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# --- Python (si usas para agentes) ---
+__pycache__/
+*.py[cod]
+
+# --- OS específicos ---
+.DS_Store
+Thumbs.db
