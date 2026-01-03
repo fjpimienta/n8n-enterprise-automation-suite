@@ -52,8 +52,8 @@ async function scrapeGeneric(page, $, selectors, title, pubDate, description, fi
         status: 200,
         success: Object.keys(finalResult).length > 0,
         url: finalUrl,
-        title: title,
-        pubDate: pubDate,
+        title: title, 
+        pubDate: pubDate, 
         description: description,
         data: finalResult
     };
@@ -82,7 +82,7 @@ async function scrapeLinkedIn(page, $) {
         status: 200,
         success: !!ogImage, // Éxito si encontramos al menos la imagen
         url: page.url(),
-        title: ogTitle,
+        title: ogTitle, 
         description: ogDescription,
         data: result
     };
@@ -90,60 +90,60 @@ async function scrapeLinkedIn(page, $) {
 
 // --- Rutas de Express ---
 app.post('/scrape', async (req, res) => {
- let browser = null;
- try {
-  const { url, selectors, title, pubDate, description } = req.body;
-  console.log(`[DEBUG] url: ${url}`);
-  console.log(`[DEBUG] title: ${title}`);
-  console.log(`[DEBUG] description: ${description}`);
+  let browser = null;
+  try {
+    const { url, selectors, title, pubDate, description } = req.body;
+    console.log(`[DEBUG] url: ${url}`);
+    console.log(`[DEBUG] title: ${title}`);
+    console.log(`[DEBUG] description: ${description}`);
 
-  if (!url) {
-   return res.status(400).json({ error: "Se requiere 'url'." });
-  }
+    if (!url) {
+      return res.status(400).json({ error: "Se requiere 'url'." });
+    }
 
     const isLinkedIn = url.includes('linkedin.com'); // Simplificado para que incluya todos los enlaces de LinkedIn
 
-  browser = await puppeteer.launch({
-   executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser',
-   args: [
-    '--no-sandbox',
-    '--disable-setuid-sandbox',
-    '--disable-dev-shm-usage',
-    '--disable-gpu',
-    '--no-zygote',
-   ],
-   headless: "new",
-   protocolTimeout: 180000
-  });
+    browser = await puppeteer.launch({
+      executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser',
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--no-zygote',
+      ],
+      headless: "new",
+      protocolTimeout: 180000
+    });
 
-  const page = await browser.newPage();
+    const page = await browser.newPage();
 
-  // Bloqueo de recursos (Imágenes, CSS, etc.) para velocidad
-  await page.setRequestInterception(true);
-  page.on('request', (req) => {
-   const resourceType = req.resourceType();
-   if (['image', 'stylesheet', 'font', 'media'].includes(resourceType)) {
-    req.abort();
-   } else {
-    req.continue();
-   }
-  });
+    // Bloqueo de recursos (Imágenes, CSS, etc.) para velocidad
+    await page.setRequestInterception(true);
+    page.on('request', (req) => {
+      const resourceType = req.resourceType();
+      if (['image', 'stylesheet', 'font', 'media'].includes(resourceType)) {
+        req.abort();
+      } else {
+        req.continue();
+      }
+    });
 
-  await page.setUserAgent(USER_AGENT);
-  await page.setViewport({ width: 1280, height: 800 });
+    await page.setUserAgent(USER_AGENT);
+    await page.setViewport({ width: 1280, height: 800 });
 
-  console.log(`[DEBUG] Navegando a: ${url}`);
-  try {
-    await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
-  } catch (e) {
-    console.log(`[WARN] Timeout en goto inicial: ${e.message}`);
-  }
+    console.log(`[DEBUG] Navegando a: ${url}`);
+    try {
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    } catch (e) {
+        console.log(`[WARN] Timeout en goto inicial: ${e.message}`);
+    }
 
-  // Pausa para renderizado JS
-  await new Promise(r => setTimeout(r, 8000));
- 
-  const html = await page.content();
-  const $ = cheerio.load(html, { decodeEntities: true });
+    // Pausa para renderizado JS
+    await new Promise(r => setTimeout(r, 8000)); 
+   
+    const html = await page.content();
+    const $ = cheerio.load(html, { decodeEntities: true }); 
 
     let responseData;
 
@@ -163,18 +163,18 @@ app.post('/scrape', async (req, res) => {
         };
     }
 
-  return res.json(responseData);
+    return res.json(responseData);
 
- } catch (err) {
-  console.error("[ERROR] Scraping:", err);
-  return res.status(500).json({ error: err.message, stack: err.stack });
- } finally {
-  if (browser) {
-    try { await browser.close(); } catch(e) { console.error(e); }
-  }
- }
+  } catch (err) {
+    console.error("[ERROR] Scraping:", err);
+    return res.status(500).json({ error: err.message, stack: err.stack });
+  } finally {
+    if (browser) {
+        try { await browser.close(); } catch(e) { console.error(e); }
+    }
+  }
 });
 
 app.listen(PORT, () => {
- console.log(`Scraper-service v2 escuchando en puerto ${PORT}`);
+  console.log(`Scraper-service v2 escuchando en puerto ${PORT}`);
 });
