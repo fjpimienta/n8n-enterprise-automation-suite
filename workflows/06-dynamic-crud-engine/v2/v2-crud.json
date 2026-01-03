@@ -1,5 +1,5 @@
 {
-  "name": "CRUD 2.0",
+  "name": "v2/CRUD",
   "nodes": [
     {
       "parameters": {
@@ -15,7 +15,7 @@
       "typeVersion": 2,
       "position": [
         528,
-        192
+        208
       ],
       "alwaysOutputData": true,
       "notesInFlow": false,
@@ -40,7 +40,7 @@
       "typeVersion": 1.4,
       "position": [
         1648,
-        256
+        288
       ],
       "id": "fc0374d3-e17a-4729-8646-6419b4cca065",
       "name": "Respond to Webhook",
@@ -60,7 +60,7 @@
       "typeVersion": 1,
       "position": [
         -2512,
-        256
+        208
       ],
       "webhookId": "81949755-352f-4f0b-bdf3-aac2d1f4b369",
       "credentials": {
@@ -78,7 +78,7 @@
       "typeVersion": 2,
       "position": [
         -2288,
-        256
+        208
       ],
       "id": "3f7c4f6d-26ad-485b-80c8-fee249faab37",
       "name": "Get Model Name"
@@ -93,7 +93,7 @@
       "typeVersion": 2.6,
       "position": [
         -2064,
-        256
+        208
       ],
       "id": "62f4cd79-0005-4e43-ae1a-99ce3c37d3f0",
       "name": "Get Model Config",
@@ -113,7 +113,7 @@
           "value": "NO6LIndnkfNuxK5N",
           "mode": "list",
           "cachedResultUrl": "/workflow/NO6LIndnkfNuxK5N",
-          "cachedResultName": "Build Query v2"
+          "cachedResultName": "v2/Build Query"
         },
         "workflowInputs": {
           "mappingMode": "defineBelow",
@@ -132,7 +132,7 @@
       "typeVersion": 1.3,
       "position": [
         304,
-        192
+        208
       ],
       "id": "229b4d58-8908-4815-b2cc-11aead666e5e",
       "name": "Call 'Build Query'"
@@ -163,7 +163,7 @@
       "typeVersion": 1.3,
       "position": [
         976,
-        192
+        208
       ],
       "id": "b24bc7eb-af49-4893-8756-721568c98e03",
       "name": "Call 'Normalize'"
@@ -181,8 +181,14 @@
             {
               "id": "b852315d-2a90-4979-a0f7-a3649edecad5",
               "name": "body",
-              "value": "={{ $node[\"Get Model Name\"].json }}",
+              "value": "={{ $node[\"WebhookCRUD\"].json.body }}",
               "type": "object"
+            },
+            {
+              "id": "f468dffb-69ae-4df4-8acd-e6b11f93a073",
+              "name": "operation",
+              "value": "={{ $node[\"WebhookCRUD\"].json.body.operation }}",
+              "type": "string"
             }
           ]
         },
@@ -192,7 +198,7 @@
       "typeVersion": 3.4,
       "position": [
         80,
-        192
+        208
       ],
       "id": "4e99203d-aa81-4977-ab8b-47f81b2f8a5d",
       "name": "Prepare Subworkflow Input"
@@ -221,24 +227,10 @@
       "typeVersion": 3.4,
       "position": [
         752,
-        192
+        208
       ],
       "id": "305e1f38-ea38-4996-b270-6cb4ce12c5bd",
       "name": "Prepare Normalize"
-    },
-    {
-      "parameters": {
-        "jsCode": "// 1. Verificar si hubo un error en la extracción de Auth\nconst authContext = $node[\"Extract Auth Context\"].json;\nif (authContext.error) {\n    return { json: authContext }; // Propaga el error 401/403\n}\n\n// 2. Obtener datos del Webhook\nconst webhook = $node[\"WebhookCRUD\"].json;\nconst userRole = authContext.user?.role;\n\nif (!userRole) {\n    return {\n        json: {\n            error: true,\n            status: 401,\n            message: \"Acceso Denegado: Rol de usuario no definido.\",\n            code: \"AUTH_ERROR\"\n        }\n    };\n}\n\nconst operationRaw = (webhook.body?.operation || \"\").toLowerCase();\n\n// Mapeo exhaustivo para validación\nconst opMapping = { \n    'getall': 'getall',\n    'getone': 'getone',\n    'select': 'getall', // Por si alguien envía 'select'\n    'insert': 'insert',\n    'update': 'update',\n    'delete': 'delete'\n};\n\nconst opToValidate = opMapping[operationRaw] || operationRaw;\nconst modelConfig = $node[\"Schema Validate\"].json;\n\n\n// 4. Verificación de permisos en el modelo\n// Validamos que allowed_ops exista y sea un array antes de usar .map\nconst allowedOps = Array.isArray(modelConfig.allowed_ops) \n    ? modelConfig.allowed_ops \n    : [];\n\nconst isOpAllowed = allowedOps.map(op => op.toLowerCase()).includes(opToValidate);\n\nif (!isOpAllowed) {\n    // EN LUGAR DE: throw new Error(...)\n    // USA ESTO:\n    return {\n        json: {\n            error: true,\n            status: 403,\n            message: `Operación ${operationRaw.toUpperCase()} no permitida para este modelo.`,\n            code: \"OPERATION_NOT_ALLOWED\"\n        }\n    };\n}\n\n// ... (resto del código)\n\n// 5. Verificación de Rol contra la DB\nconst roleKey = `allowed_roles_${opToValidate}`;\nconst allowedRolesStr = modelConfig[roleKey] || \"ADMIN\";\nconst allowedRolesList = allowedRolesStr.split(',').map(r => r.trim().toUpperCase());\n\nif (!allowedRolesList.includes(userRole.toUpperCase())) {\n    return {\n        json: {\n            error: true,\n            status: 403,\n            message: `Prohibido: El rol '${userRole}' no tiene permiso para '${operationRaw.toUpperCase()}'`,\n            code: \"SECURITY_VALIDATION\"\n        }\n    };\n}\n\n// Si todo está bien, agregamos una bandera de éxito\nreturn { json: { ...modelConfig, error: false } };"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -144,
-        256
-      ],
-      "id": "36073d16-095d-4101-86f6-125d60550fb7",
-      "name": "Security Validation",
-      "onError": "continueErrorOutput"
     },
     {
       "parameters": {
@@ -248,7 +240,7 @@
       "typeVersion": 2,
       "position": [
         -592,
-        160
+        112
       ],
       "id": "994aba32-a83a-451b-929b-e0addc3d56a8",
       "name": "Schema Validate"
@@ -282,7 +274,7 @@
       "typeVersion": 2.3,
       "position": [
         -1840,
-        256
+        208
       ],
       "id": "8c6e5d17-83a3-4610-b2c7-d94fbe4c93ca",
       "name": "If"
@@ -297,7 +289,7 @@
       "typeVersion": 2.6,
       "position": [
         -1616,
-        352
+        304
       ],
       "id": "78c653dc-4afb-4747-af54-4323bda2386c",
       "name": "Get",
@@ -337,7 +329,7 @@
       "typeVersion": 2.1,
       "position": [
         -1168,
-        352
+        304
       ],
       "id": "daaeeb1f-a115-49ca-99c9-33ec7db4af96",
       "name": "Message a model",
@@ -357,7 +349,7 @@
       "typeVersion": 1,
       "position": [
         -1392,
-        352
+        304
       ],
       "id": "944d2019-e2b8-4635-a120-818b5e0c0c2c",
       "name": "Aggregate"
@@ -370,7 +362,7 @@
       "typeVersion": 2,
       "position": [
         -816,
-        352
+        304
       ],
       "id": "46de3f53-9c2f-40d8-bb25-412d55149d26",
       "name": "Parse IA"
@@ -387,7 +379,7 @@
       "typeVersion": 2.6,
       "position": [
         -592,
-        352
+        304
       ],
       "id": "2e561126-7172-4de5-9591-e1c0175ebf9b",
       "name": "Execute a SQL query",
@@ -427,7 +419,7 @@
       "typeVersion": 2.3,
       "position": [
         1200,
-        192
+        208
       ],
       "id": "59341fec-c28e-49c9-a8ca-ac9a919058bd",
       "name": "Check Post-Hooks"
@@ -442,7 +434,7 @@
       "typeVersion": 2.6,
       "position": [
         1424,
-        112
+        144
       ],
       "id": "25591135-dd2a-46e5-be70-698d993b6162",
       "name": "Insert Logs",
@@ -482,7 +474,7 @@
       "typeVersion": 2.3,
       "position": [
         1424,
-        400
+        432
       ],
       "id": "b8a45305-e07f-4b0b-bd31-41eb4d324201",
       "name": "If1"
@@ -495,10 +487,24 @@
       "typeVersion": 2,
       "position": [
         -368,
-        256
+        208
       ],
       "id": "8bca9778-496c-4127-b145-0e25edfe9023",
       "name": "Extract Auth Context"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Verificar si hubo un error en la extracción de Auth\nconst authContext = $node[\"Extract Auth Context\"].json;\nif (authContext.error) {\n    return { json: authContext }; // Propaga el error 401/403\n}\n\n// 2. Obtener datos del Webhook\nconst webhook = $node[\"WebhookCRUD\"].json;\nconst userRole = authContext.user?.role;\n\nif (!userRole) {\n    return {\n        json: {\n            error: true,\n            status: 401,\n            message: \"Acceso Denegado: Rol de usuario no definido.\",\n            code: \"AUTH_ERROR\"\n        }\n    };\n}\n\nconst operationRaw = (webhook.body?.operation || \"\").toLowerCase();\n\n// Mapeo exhaustivo para validación\nconst opMapping = { \n    'getall': 'getall',\n    'getone': 'getone',\n    'select': 'getall', // Por si alguien envía 'select'\n    'insert': 'insert',\n    'update': 'update',\n    'delete': 'delete'\n};\n\nconst opToValidate = opMapping[operationRaw] || operationRaw;\nconst modelConfig = $node[\"Schema Validate\"].json;\n\n\n// 4. Verificación de permisos en el modelo\n// Validamos que allowed_ops exista y sea un array antes de usar .map\nconst allowedOps = Array.isArray(modelConfig.allowed_ops) \n    ? modelConfig.allowed_ops \n    : [];\n\nconst isOpAllowed = allowedOps.map(op => op.toLowerCase()).includes(opToValidate);\n\nif (!isOpAllowed) {\n    // EN LUGAR DE: throw new Error(...)\n    // USA ESTO:\n    return {\n        json: {\n            error: true,\n            status: 403,\n            message: `Operación ${operationRaw.toUpperCase()} no permitida para este modelo.`,\n            code: \"OPERATION_NOT_ALLOWED\"\n        }\n    };\n}\n\n// ... (resto del código)\n\n// 5. Verificación de Rol contra la DB\nconst roleKey = `allowed_roles_${opToValidate}`;\nconst allowedRolesStr = modelConfig[roleKey] || \"ADMIN\";\nconst allowedRolesList = allowedRolesStr.split(',').map(r => r.trim().toUpperCase());\n\nif (!allowedRolesList.includes(userRole.toUpperCase())) {\n    return {\n        json: {\n            error: true,\n            status: 403,\n            message: `Prohibido: El rol '${userRole}' no tiene permiso para '${operationRaw.toUpperCase()}'`,\n            code: \"SECURITY_VALIDATION\"\n        }\n    };\n}\n\n// Si todo está bien, agregamos una bandera de éxito\nreturn { json: { ...modelConfig, error: false } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -144,
+        208
+      ],
+      "id": "8c24c1f1-8945-4eac-b3f6-a6ea205dcc14",
+      "name": "Security Validation",
+      "onError": "continueRegularOutput"
     }
   ],
   "pinData": {},
@@ -585,24 +591,6 @@
         [
           {
             "node": "Call 'Normalize'",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Security Validation": {
-      "main": [
-        [
-          {
-            "node": "Prepare Subworkflow Input",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "If1",
             "type": "main",
             "index": 0
           }
@@ -743,6 +731,17 @@
           }
         ]
       ]
+    },
+    "Security Validation": {
+      "main": [
+        [
+          {
+            "node": "Prepare Subworkflow Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -753,11 +752,36 @@
     "errorWorkflow": "9SrVXdATmlrZemJT",
     "timeSavedMode": "fixed"
   },
-  "versionId": "6a5ab826-2458-4429-a8d3-41fefb2ec9bd",
+  "versionId": "b3848534-0c79-464f-99fb-c29b04d9d638",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2ebfe6551ca260f617d68572b7a0eb6825fe3993d0da19ebfb0e274f2e0ccb37"
   },
   "id": "JhrqfHIlRKLHxY2f",
-  "tags": []
+  "tags": [
+    {
+      "updatedAt": "2025-12-20T19:25:08.685Z",
+      "createdAt": "2025-12-20T19:25:08.685Z",
+      "id": "ljhw24TcxNVpCPyc",
+      "name": "Webhook"
+    },
+    {
+      "updatedAt": "2025-12-20T20:03:23.298Z",
+      "createdAt": "2025-12-20T20:03:23.298Z",
+      "id": "UUN2qPnY76eYwC1y",
+      "name": "CRUD"
+    },
+    {
+      "updatedAt": "2025-12-20T20:03:46.545Z",
+      "createdAt": "2025-12-20T20:03:46.545Z",
+      "id": "jafWIhyZ3XGpyA6j",
+      "name": "Postgres"
+    },
+    {
+      "updatedAt": "2025-12-31T16:55:06.301Z",
+      "createdAt": "2025-12-31T16:55:06.301Z",
+      "id": "ts9FABk8F02a5xrA",
+      "name": "Agent IA"
+    }
+  ]
 }

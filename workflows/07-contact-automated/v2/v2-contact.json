@@ -1,5 +1,5 @@
 {
-  "name": "Contact Hosting3m 2.0",
+  "name": "v2/Contact",
   "nodes": [
     {
       "parameters": {
@@ -73,7 +73,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://n8n.hosting3m.com/webhook/192ecac2-3a14-42dc-8a5d-49c54eab282a/crud/customers",
+        "url": "https://n8n.hosting3m.com/webhook/81949755-352f-4f0b-bdf3-aac2d1f4b369/crud/v2/customers",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -109,7 +109,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://n8n.hosting3m.com/webhook/192ecac2-3a14-42dc-8a5d-49c54eab282a/crud/customers",
+        "url": "https://n8n.hosting3m.com/webhook/81949755-352f-4f0b-bdf3-aac2d1f4b369/crud/v2/customers",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -145,7 +145,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://n8n.hosting3m.com/webhook/192ecac2-3a14-42dc-8a5d-49c54eab282a/crud/customers",
+        "url": "https://n8n.hosting3m.com/webhook/81949755-352f-4f0b-bdf3-aac2d1f4b369/crud/v2/customers",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -165,7 +165,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"operation\": \"getOne\",\n  \"fields\": {\n    \"email\": \"{{ $json.email }}\"\n  }\n}",
+        "jsonBody": "={\n  \"operation\": \"getone\",\n  \"fields\": {\n    \"email\": \"{{ $json.email }}\"\n  }\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -384,14 +384,15 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false,
-    "errorWorkflow": "9SrVXdATmlrZemJT"
+    "errorWorkflow": "9SrVXdATmlrZemJT",
+    "timeSavedMode": "fixed"
   },
-  "versionId": "25b1956e-f228-4d4d-8ea1-a8b2481fc7e1",
+  "versionId": "47b3c22a-7a2b-4137-9035-ac9281fffd7f",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2ebfe6551ca260f617d68572b7a0eb6825fe3993d0da19ebfb0e274f2e0ccb37"
