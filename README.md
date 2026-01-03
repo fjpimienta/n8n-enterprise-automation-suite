@@ -21,7 +21,6 @@ Desplegado en VPS Linux optimizado (2 vCore, 4GB RAM, NVMe) usando orquestación
 | **Memoria IA** 	| PostgreSQL + pgvector 	| RAG (Retrieval-Augmented Generation) para contexto a largo plazo. |
 | **Proxy/Ingress** | Nginx                     | Terminación SSL, balanceo de carga y endurecimiento de cabeceras. |
 | **Ingesta** 		| Node.js Scraper 			| Motor de extracción de datos en tiempo real. 						|
-| **Mensajería** 	| WhatsApp Gateway 			| Interfaz conversacional asíncrona. 								|
 | **Contactos**     | n8n v2.1.4 (Enterprise)   | Flujo para recibir informacion de prospectos en Contacto.         |
 
 ## 📦 Módulos Implementados (Workflows)
