@@ -1,5 +1,5 @@
 {
-  "name": "News Hosting3m Post SM",
+  "name": "v2/OmniChannel",
   "nodes": [
     {
       "parameters": {
@@ -493,7 +493,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://n8n.hosting3m.com/webhook/192ecac2-3a14-42dc-8a5d-49c54eab282a/crud/news_articles",
+        "url": "https://n8n.hosting3m.com/webhook/81949755-352f-4f0b-bdf3-aac2d1f4b369/crud/v2/news_articles",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -504,6 +504,10 @@
             {
               "name": "Authorization",
               "value": "=Bearer {{ $('Get Token').first().json.token }}"
+            },
+            {
+              "name": "x-jwt-claim-role",
+              "value": "={{ $('Get Token').first().json.role}}"
             }
           ]
         },
@@ -635,7 +639,7 @@
           "conditions": [
             {
               "id": "41424244-43fd-46ba-b215-ed8ad4e51ac6",
-              "leftValue": "={{ $json.found_records }}",
+              "leftValue": "={{ $json.meta.foundRecords }}",
               "rightValue": 0,
               "operator": {
                 "type": "number",
@@ -1116,7 +1120,7 @@
     "errorWorkflow": "9SrVXdATmlrZemJT",
     "timeSavedMode": "fixed"
   },
-  "versionId": "16b7a771-d207-4deb-8167-72462b6010cc",
+  "versionId": "207f729b-9cce-40cb-b600-13d51a0666d2",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2ebfe6551ca260f617d68572b7a0eb6825fe3993d0da19ebfb0e274f2e0ccb37"
