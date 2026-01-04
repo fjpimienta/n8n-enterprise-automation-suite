@@ -23,7 +23,7 @@ services:
       - EXECUTIONS_DATA_MAX_AGE=336                 # horas (336 = 14 días). Ajusta según necesidad
       - EXECUTIONS_DATA_SAVE_ON_ERROR=all
       - EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
-
+      - N8N_EXPRESS_TRUST_PROXY=true
       - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
       - N8N_HOST=${SUBDOMAIN}.${DOMAIN_NAME}
       - N8N_PORT=${port}
