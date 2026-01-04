@@ -4,9 +4,11 @@
 credentials_export.txt
 documentos_legales.json
 
-# --- Datos de Base de Datos (Muy Pesado) ---
-postgres/data/
-pgvector/data/
+# --- Datos de Base de Datos ---
+postgres/
+pgvector/
+ollama-models/
+# Ignorar cualquier carpeta de datos interna
 **/data/
 
 # --- Backups y Temporales ---
