@@ -6,7 +6,7 @@ require('dotenv').config();
 const app = express();
 app.use(express.json());
 app.use(cors({ 
-  origin: 'https://dominio.com',
+  origin: 'https://hosting3m.com',
   methods: ['POST'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
