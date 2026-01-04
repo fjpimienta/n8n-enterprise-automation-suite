@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.n8n
-    container_name: n8n-compose
+    container_name: n8n-enterprise-core
     restart: always
     ports:
       - "127.0.0.1:${port}:${port}"
@@ -23,6 +23,7 @@ services:
       - EXECUTIONS_DATA_MAX_AGE=336                 # horas (336 = 14 días). Ajusta según necesidad
       - EXECUTIONS_DATA_SAVE_ON_ERROR=all
       - EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
+      - N8N_EXPRESS_TRUST_PROXY=true
       - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
       - N8N_HOST=${SUBDOMAIN}.${DOMAIN_NAME}
       - N8N_PORT=${port}
@@ -36,7 +37,7 @@ services:
       - N8N_EDITOR_BASE_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}
       - N8N_FORCE_HTTPS=true
       - DB_TYPE=postgresdb
-      - DB_POSTGRESDB_HOST=postgres-compose
+      - DB_POSTGRESDB_HOST=postgres
       - DB_POSTGRESDB_PORT=${port_db}
       - DB_POSTGRESDB_DATABASE=${n8n_db}
       - DB_POSTGRESDB_USER=${n8n_user}
@@ -49,13 +50,18 @@ services:
       # - N8N_WORKER_COUNT=2
       - N8N_GIT_NODE_DISABLE_BARE_REPOS=true
       - SERVICES_TIMEOUT=300   # 60
-      - NODE_OPTIONS=--max-old-space-size=1024
+      - NODE_OPTIONS=--max-old-space-size=1024 --require /home/node/.n8n/custom/init-blob.js
     depends_on:
       - postgres
-    volumes:  # Definir los volumenes.
-
+    volumes:
+      - n8n_restored_data:/home/node/.n8n
+      - /var/www/vhosts/hosting3m.com/n8n.hosting3m.com/n8n-compose/local-files:/files      
+      - /var/lib/psa/dumps:/var/lib/psa/dumps
+      - ./.env:/home/node/.env
+      - /var/www/vhosts/hosting3m.com/n8n.hosting3m.com/n8n-compose/custom:/home/node/.n8n/custom
+      - /opt/n8n/logs:/home/node/.n8n/logs
     networks:
-      - n8n-compose_network
+      - n8n_enterprise_net
     deploy:
       resources:
         limits:
@@ -63,26 +69,29 @@ services:
 
   postgres:
     image: ankane/pgvector:latest
-    container_name: postgres-compose
+    container_name: n8n-enterprise-db
     restart: always
     environment:
       - POSTGRES_DB=${n8n_db}
       - POSTGRES_USER=${n8n_user}
       - POSTGRES_PASSWORD=${n8n_pass}
-    volumes:  # Definir los volumenes.
+    volumes:
+      - /opt/n8n/data/postgres_db:/var/lib/postgresql/data # Mapeo ABSOLUTO con los datos recuperados
+      # - postgres_data:/var/lib/postgresql/data
+      - ./postgres/initdb:/docker-entrypoint-initdb.d
     ports:
       - "${port_db}:${port_db}"
     networks:
-      - n8n-compose_network
+      - n8n_enterprise_net
 
   jwt-service:
     build:
-      context: ./jwt-service
+      context: ../microservices/jwt-service
       dockerfile: Dockerfile
-    container_name: jwt-service
+    container_name: n8n-jwt-service
     restart: always
     ports:
-      - "4000:4000"
+      - "${port_jwt}:${port_jwt}"
     env_file:
       - .env
     environment:
@@ -90,38 +99,23 @@ services:
       - N8N_CORS_ALLOW_HEADERS=Authorization,Content-Type
       - N8N_CORS_ORIGINS=https://hosting3m.com
     networks:
-      - n8n-compose_network
-
-  whatsapp-agent:
-    image: node:18
-    container_name: whatsapp-agent
-    working_dir: /app
-    volumes:
-      - ./whatsapp-agent:/app
-    ports:
-      - "4001:3000"
-    command: ["sh", "-c", "npm install && node index.js"]
-    env_file:
-      - .env
-    environment:
-      - WHATSAPP_TOKEN=${WHATSAPP_TOKEN}
-      - PHONE_NUMBER_ID=${PHONE_NUMBER_ID}
+      - n8n_enterprise_net
 
   scraper-service:
     build:
-      context: ./scraper-service
+      context: ../microservices/scraper-service
       dockerfile: Dockerfile
-    container_name: scraper-service
+    container_name: n8n-scraper-service
     restart: always
     ports:
-      - "3001:3001"
+      - "${port_scraper}:${port_scraper}"
     environment:
       - NODE_ENV=production
       - USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
       - MAX_CONCURRENCY=2
       - PORT=3001
     networks:
-      - n8n-compose_network
+      - n8n_enterprise_net
     shm_size: '1g' # Establecer a 1 GB. (La mitad de tu RAM física es lo ideal)
     deploy:
       resources:
@@ -139,5 +133,5 @@ volumes:
     external: false
 
 networks:
-  n8n-compose_network:
+  n8n_enterprise_net:
     driver: bridge
