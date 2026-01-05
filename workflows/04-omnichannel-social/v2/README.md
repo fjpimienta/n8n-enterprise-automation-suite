@@ -2,11 +2,11 @@
 
 **Concepto:** Microservices Integration / Modular Design
 
-Este flujo epresenta una solución integral de Marketing Automation de grado empresarial. Diseñada para operar de forma autónoma, esta suite orquestada en n8n se encarga de la extracción de noticias tecnológicas, el procesamiento de activos digitales y la distribución programada en múltiples plataformas sociales (X, Facebook, LinkedIn), garantizando una presencia de marca constante y optimizada.
+Este flujo representa una solución integral de Marketing Automation de grado empresarial. Diseñada para operar de forma autónoma, esta suite orquestada en n8n se encarga de la extracción de noticias tecnológicas, el procesamiento de activos digitales mediante IA generativa y la distribución programada en múltiples plataformas sociales (X, Facebook, LinkedIn), garantizando una presencia de marca constante y optimizada.
 
 ## 📝 Descripción
 
-El workflow automatiza el ciclo de vida completo de un contenido: desde su descubrimiento en la web hasta su publicación definitiva. Su arquitectura está orientada a la eficiencia operativa y al posicionamiento de autoridad en el sector tecnológico.
+El workflow automatiza el ciclo de vida completo de un contenido: desde su descubrimiento en la web hasta su publicación definitiva. Su arquitectura está orientada a la eficiencia operativa y al posicionamiento de autoridad en el sector tecnológico, utilizando validaciones contra base de datos para asegurar la unicidad del contenido.
 
 ---
 
@@ -15,93 +15,70 @@ El workflow automatiza el ciclo de vida completo de un contenido: desde su descu
 | Versión | Estado | Endpoint Path | Cambios Principales | Archivo JSON |
 | :--- | :--- | :--- | :--- | :--- |
 | **v1** | `Legacy` | `/NewsScraper` | Lanzamiento inicial. | `v1-omnichanel.json` |
-| **v2** | `Stable` | `/v2/NewsScraper` | CRUD v2, soporte para Roles de Usuario, manejo de errores mejorado y paths amigables. | `v2-omnichanel.json` |
+| **v2** | `Stable` | `/v2/NewsScraper` | CRUD v2, soporte para Roles de Usuario, generación de imágenes con IA, manejo de errores y paths amigables. | `v2-omnichanel.json` |
 
 ---
 
-### Lógica del Sistema:
-1.  **Curaduría Basada en Scraping:** Extrae dinámicamente títulos, descripciones e imágenes desde el portal de noticias mediante selectores CSS avanzados, eliminando la dependencia de feeds manuales.
-2.  **Lógica Anti-Duplicación::** Implementa un sistema de verificación cruzada con una base de datos CRUD para asegurar que ninguna noticia se publique dos veces el mismo día o se repita el contenido.
-3.  **Adaptación de Contenido Omnicanal:** Genera automáticamente copys personalizados con hashtags y estructuras específicas para Twitter, Facebook y LinkedIn (perfiles personales y de empresa) a partir de una única fuente.
-4.  **Gestión Robusta de Media:** Descarga, redimensiona y procesa imágenes en tiempo real para cumplir con los requisitos técnicos de cada API social.
+## ⚙️ Arquitectura y Lógica del Sistema
+
+El flujo opera bajo un esquema secuencial con validación condicional. A continuación se detalla cada etapa:
+
+### 1. Disparadores (Triggers) Híbridos
+El sistema puede iniciarse de dos formas:
+* **Automática (Cron):** Ejecución programada diariamente a las 06:00 AM.
+* **Manual (Webhook):** Endpoint `/v2/NewsScraper` protegido con autenticación JWT para ejecuciones bajo demanda.
+
+### 2. Autenticación y Control de Publicación
+Antes de procesar contenido, el sistema realiza verificaciones de seguridad y negocio:
+* **Generación de Token:** Obtiene un token JWT interno (`Get Token`) para interactuar con la API de backend.
+* **Verificación de Cuota Diaria:** Consulta la base de datos (`Check Publish`) para verificar si ya se ha publicado contenido en el rango de tiempo actual (`$now.startOf('day')` a `$now.endOf('day')`). Si ya existe una publicación, el flujo se detiene para evitar spam.
+
+### 3. Curaduría y Scraping
+* **Extracción:** Se conecta a la fuente de noticias (`Get News`) y utiliza selectores CSS específicos (`.news-title`, `.news-body`, etc.) para extraer metadatos relevantes.
+* **Selección:** Limita el procesamiento al primer artículo disponible (`Limit`) y asigna una fuente estática de marca.
+
+### 4. Idempotencia (Prevención de Duplicados)
+* Consulta a la API interna (`Check Article Exists`) verificando la URL del artículo.
+* **Lógica Condicional:** Si el artículo ya existe en la base de datos, el flujo termina y notifica la existencia. Si no existe, procede a la generación de contenido.
+
+### 5. Enriquecimiento con IA Generativa (GenAI)
+En lugar de usar la imagen original (que puede tener derechos de autor o baja calidad), el sistema crea su propio activo visual:
+* **Prompt Engineering:** Construye un prompt dinámico basado en el título de la noticia (e.g., *"Futuristic technology concept... high detail, 8k"*).
+* **Generación:** Utiliza la API de **Pollinations.ai (Modelo Flux)** para generar una imagen única de 1000x800px.
+* **Fallback:** Incluye lógica de recuperación (`HandleImageError`) en caso de que la generación o descarga de la imagen falle.
+
+### 6. Distribución Omnicanal
+El contenido se adapta y se publica simultáneamente en:
+* **𝕏 (Twitter):**
+    * Sube la imagen generada (`UploadImageX`).
+    * Ejecuta código JavaScript (`Code in JavaScript`) para truncar el texto si supera los 280 caracteres, añadiendo un enlace "Ver más".
+* **Facebook:**
+    * Detecta dinámicamente el ID de la página objetivo y extrae el Token de acceso (`ExtractPageToken`).
+    * Publica el post con imagen y enlace en la Fan Page.
+* **LinkedIn:**
+    * Publica en el **Perfil de Empresa** (Organization).
+    * Publica en el **Perfil Personal** (Person) para maximizar el alcance.
+
+### 7. Persistencia de Datos
+Finalmente, tras una publicación exitosa, se registra el artículo en la base de datos interna (`insert` operation) con la fecha de publicación, URL, título e imagen generada, cerrando el ciclo de validación para futuras ejecuciones.
 
 ---
 
-## 🛠️ Instalación
+## 🛠️ Stack Tecnológico & Integraciones
 
-Para desplegar este workflow en tu infraestructura, sigue estos pasos:
+* **Core:** n8n (Workflow Automation).
+* **Backend:** API REST propia con Autenticación JWT.
+* **IA:** Pollinations.ai (Flux Model) para generación de imágenes.
+* **Social APIs:**
+    * Twitter API v2 (OAuth2 & OAuth1.0a para media upload).
+    * Facebook Graph API (v19.0/v20.0).
+    * LinkedIn API (Community Management).
+* **Lenguajes:** JavaScript (para lógica de negocio dentro de los nodos `Function/Code`).
 
-1.  **Requisitos de Infraestructura:**
-    * Instancia de **n8n v2.0.3** o superior.
-    * Microservicio de autenticación JWT activo.
-    * Base de datos o microservicio CRUD accesible vía HTTP para el registro de logs.
-    * Acceso a las APIs de desarrollador de X (Twitter), Facebook Graph API y LinkedIn Community Management.
+## 📋 Requisitos de Configuración (Credenciales)
 
-2.  **Importación del Workflow:**
-    * Copia el contenido del archivo `.json` de este repositorio.
-    * En n8n, selecciona "Import from File" o pega el JSON directamente en el lienzo.
-    * Actualice los IDs de página de Facebook y las organizaciones de LinkedIn en los nodos de código y configuración.
-
-3.  **Configuración de Credenciales:**
-    * **JWT Auth:** Configura tu secreto de validación en el nodo Webhook.
-    * **OAuth2:** Vincular las cuentas de X, Facebook y LinkedIn en el panel de credenciales de n8n.
-    * **HTTP Basic/Token:** Configurar el acceso al generador de tokens interno de hosting3m.com.
-
-4.  **Despliegue de Servicios Relacionados:**
-    ```bash
-    # Asegúrate de tener el microservicio de persistencia activo
-    docker-compose up -d n8n-compose-scraper-service jwt-service
-    ```
-
----
-
-## 🚀 Uso
-
-El flujo es altamente versátil y puede consumirse de dos formas:
-
-### 🔄 Consumo vía API (Bajo Demanda)
-Envíe una petición autenticada para obtener el HTML curado en tiempo real:
-```bash
-curl -X POST https://n8n.tu-dominio.com/webhook/v2/NewsScraper \
--H "Content-Type: application/json"
--H "Authorization: Bearer <TU_JWT_TOKEN>"
-```
-
-### Ejecución Automática
-
-El nodo **Cron** está configurado para ejecutar el proceso diariamente a las 06:00 horas, ideal para alimentar bases de datos vectoriales (RAG) o disparar envíos de correo automáticos.
-
-**Lógica de Salida**
-El flujo retorna un objeto JSON con una propiedad `html` que contiene una estructura de `news-cards` responsivas, diseñadas para una experiencia de usuario profesional.
-
-### Monitoreo de Resultados
-Cada publicación exitosa genera un registro en la base de datos centralizada, incluyendo la URL del artículo, el título y el timestamp de publicación, permitiendo auditorías de marketing posteriores.
-
----
-
-### 📦 Tecnologías
-Este flujo de trabajo demuestra un dominio avanzado de la integración de sistemas modernos:
-    * **n8n Orquestador:** Motor de flujos de trabajo basado en nodos.
-    * **JavaScript (Node.js):** Lógica personalizada para manipulación de objetos JSON y limpieza de datos.
-    * **HTML Parsing (Scraping):** Uso de selectores DOM para la extracción precisa de metadatos de noticias.
-    * **REST API:** Comunicación con servicios externos de CRM y gestión de clientes.
-    * **JWT (JSON Web Tokens):** Estándar de seguridad para la autenticación de la petición entrante.
-    * **Gestión de Binarios:** Procesamiento de imágenes para carga de media en redes sociales
-
----
-
-## 🤝 Contribución
-###Si deseas mejorar este flujo o añadir validaciones adicionales (como MFA o logging avanzado):
-    1. Haz un Fork del repositorio.
-    2. Crea una nueva rama (git checkout -b feature/MejoraSeguridad).
-    3. Realiza tus cambios y haz un Commit (git commit -m 'Añadida validación de expiración').
-    4. Sube los cambios a tu rama (git push origin feature/MejoraSeguridad).
-    5. Abre un Pull Request.
-
----
-
-## 📄 Licencia
-###Este proyecto demuestra la capacidad de integración de n8n con stacks modernos de backend:Este proyecto está bajo la licencia n8n Sustainable Use License. Eres libre de usarlo y modificarlo para fines personales o internos de empresa.
-
-
-Desarrollado por: Francisco Jesus Pérez Pimienta - Ingeniero en Sistemas Computaciones y Maestro en Administracion de Proyectos.
+Para desplegar este flujo, se requieren las siguientes credenciales configuradas en n8n:
+1.  **JWT Auth account:** Para la API interna.
+2.  **Twitter OAuth2 & API Key:** Para postear y subir medios.
+3.  **Facebook Graph Posts:** Permisos de `pages_manage_posts` y `pages_read_engagement`.
+4.  **LinkedIn Credential:** Permisos de `w_member_social` y `w_organization_social`.
