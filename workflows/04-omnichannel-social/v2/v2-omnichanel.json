@@ -12,13 +12,13 @@
           ]
         }
       },
-      "id": "83c901d9-d703-4f62-afc7-c90fce5deddc",
+      "id": "097c307c-1c8d-408f-b711-27bf769a6f0a",
       "name": "Cron",
       "type": "n8n-nodes-base.cron",
       "typeVersion": 1,
       "position": [
-        128,
-        1248
+        -2448,
+        3520
       ]
     },
     {
@@ -28,14 +28,14 @@
         "responseMode": "responseNode",
         "options": {}
       },
-      "id": "85facf2b-8a37-4ee9-9ebb-3ed2732ed9fa",
+      "id": "a66e01e1-4504-4328-916a-ce410e4d24e3",
       "name": "Webhook Noticias",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "webhookId": "noticias-ti",
       "position": [
-        128,
-        1056
+        -2448,
+        3328
       ],
       "credentials": {
         "jwtAuth": {
@@ -51,25 +51,25 @@
             {
               "id": "67de7425-fb84-4c31-91fc-954061dc076d",
               "name": "tweet_text",
-              "value": "={{ `🚀 ¿Estás listo para el futuro? 💡 La tecnología avanza: \"${$('Limit').item.json.title}\". Echa un vistazo al análisis completo de ${$('Limit').item.json.source}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M ➡️ ${$('Limit').item.json.url.href}` }}\n",
+              "value": "={{ `💡 \"${$('Limit').item.json.title}\". Echa un vistazo al análisis completo de ${$('Limit').item.json.source}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M ➡️ ${$('Limit').item.json.url.href}` }}\n",
               "type": "string"
             },
             {
               "id": "983175be-ce4b-4fbc-ad7d-bc2e7524096a",
               "name": "fb_post_text",
-              "value": "={{ `🔥 ¿Estás listo para el futuro? El artículo de hoy nos revela la clave: \"${$('Limit').item.json.title}\", proveniente de ${$('Limit').item.json.source}. ¿Qué opinas de este avance? ¡Comenta abajo! ⬇️ Lee más: ${$('Limit').item.json.url.href}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M` }}",
+              "value": "={{ `💡 \"${$('Limit').item.json.title}\", proveniente de ${$('Limit').item.json.source}. ¿Qué opinas de este avance? ¡Comenta abajo! ⬇️ Lee más: ${$('Limit').item.json.url.href}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M` }}",
               "type": "string"
             },
             {
               "id": "a9bee46a-2427-438a-a8df-3e6ba0b16ab5",
               "name": "li_post_text",
-              "value": "={{ `🚀 ¿Estás listo para el futuro? 💡 La tecnología avanza: \"${$('Limit').item.json.title}\". Fuente: ${$('Limit').item.json.source} ➡️ ${$('Limit').item.json.url.href}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M` }}",
+              "value": "={{ `💡 \"${$('Limit').item.json.title}\". Fuente: ${$('Limit').item.json.source} ➡️ ${$('Limit').item.json.url.href}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M` }}",
               "type": "string"
             },
             {
               "id": "e7d15066-4754-4e2e-8de3-0fa4b5e5d9cc",
               "name": "image",
-              "value": "={{ $json.image?.src || $node[\"Limit\"].json.image?.src || 'https://placehold.co/800x450?text=Sin+Imagen' }}",
+              "value": "={{ \n  (() => {\n    // 1. Obtenemos el título de la noticia desde el nodo anterior (Limit)\n    const title = $('Limit').item.json.title;\n    \n    // 2. Definimos un prompt base para asegurar el estilo \"Tech News\"\n    // \"Futuristic technology concept art about [Titulo], high quality, 4k, trending on artstation\"\n    const prompt = `Futuristic technology concept, editorial illustration about: ${title}, high detail, 8k, professional lighting`;\n  \n    // 3. Codificamos el prompt para URL\n    const encodedPrompt = encodeURIComponent(prompt);\n  \n    // 4. Retornamos la URL de Pollinations\n    // width=1000, height=800 (Coincide con tu nodo DownloadImage), model=flux, seed=random\n    const randomSeed = Math.floor(Math.random() * 1000);\n    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1000&height=800&model=flux&nologo=true&seed=${randomSeed}`;\n  })() \n}}",
               "type": "string"
             }
           ]
@@ -79,26 +79,26 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2592,
-        1024
+        16,
+        3296
       ],
-      "id": "509363c4-efde-4995-827e-e27ea78b163d",
+      "id": "f2a96813-c443-4f61-9228-289cc488d9d2",
       "name": "SetX"
     },
     {
       "parameters": {
-        "text": "={{ $('SetX').item.json.tweet_text }}",
+        "text": "={{ $json.tweet_text_fixed }}",
         "additionalFields": {
-          "attachments": "={{ $json.media_id_string }}"
+          "attachments": "={{ $json.media_id }}"
         }
       },
       "type": "n8n-nodes-base.twitter",
       "typeVersion": 2,
       "position": [
-        4384,
-        928
+        1808,
+        3200
       ],
-      "id": "144279a9-e3f3-481a-9f44-9f29dcc9fa96",
+      "id": "872c70de-924b-4157-ad1d-e412212d703b",
       "name": "CreateTweet",
       "credentials": {
         "twitterOAuth2Api": {
@@ -110,7 +110,7 @@
     },
     {
       "parameters": {
-        "url": "={{ $json.image.replace(/-w\\\\d+-h\\\\d+/, '-w1000-h800') }}",
+        "url": "={{ $json.image }}",
         "options": {
           "allowUnauthorizedCerts": true,
           "redirect": {
@@ -123,10 +123,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        2816,
-        960
+        240,
+        3232
       ],
-      "id": "f89d6ebe-d5b8-4edb-97ca-aafe9ba7bfed",
+      "id": "d9fdf145-a809-48c8-9df0-15a6f5ac573a",
       "name": "DownloadImage",
       "onError": "continueRegularOutput"
     },
@@ -137,10 +137,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3488,
-        1024
+        912,
+        3296
       ],
-      "id": "ae0a6a9d-fd28-43ac-a9b9-d396db1e929a",
+      "id": "d94f289a-2865-480e-9644-1e5a2becde85",
       "name": "SaveImage"
     },
     {
@@ -171,16 +171,12 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        4160,
-        928
+        1360,
+        3200
       ],
-      "id": "d655829d-79e5-4ea7-804c-6cd1a6c2b0ca",
+      "id": "465fc40d-e76f-44a5-9e22-16c6eb5f87a2",
       "name": "UploadImageX",
       "credentials": {
-        "oAuth2Api": {
-          "id": "lnLUpQVAqFzHCRWt",
-          "name": "Twitter OAuth2 con Media"
-        },
         "oAuth1Api": {
           "id": "P5Kmo1oGuqM9bVsr",
           "name": "X API 1"
@@ -204,13 +200,13 @@
           }
         }
       },
-      "id": "2ce8d84c-03db-410c-86a6-6078a12264ed",
+      "id": "6379cf6d-cf5e-47cb-ac2d-8edda506b1ab",
       "name": "GetPageTokens",
       "type": "n8n-nodes-base.facebookGraphApi",
       "typeVersion": 1,
       "position": [
-        3936,
-        736
+        1360,
+        3008
       ],
       "credentials": {
         "facebookGraphApi": {
@@ -224,13 +220,13 @@
       "parameters": {
         "jsCode": "// --- CONFIGURACIÓN ---\nconst targetPageId = '103483927910104'; // Tu ID objetivo\n// ---------------------\n\n// 1. Detectar dónde están las páginas (Manejo de estructura variable)\nlet allPages = [];\n\nif (items.length > 0 && items[0].json.id && items[0].json.name) {\n    // CASO A: n8n ya desempaquetó la lista. Cada 'item' es una página.\n    allPages = items.map(i => i.json);\n} else if (items.length > 0 && items[0].json.data && Array.isArray(items[0].json.data)) {\n    // CASO B: Estructura cruda anidada en 'data'.\n    allPages = items[0].json.data;\n} else {\n    // CASO C: No se encontraron datos reconocibles\n    return [{\n        json: {\n            error: \"No se recibieron páginas de Facebook. Revisa el nodo anterior.\",\n            input_received: items[0]?.json\n        }\n    }];\n}\n\n// 2. Buscar tu página específica\nconst targetPage = allPages.find(p => p.id === targetPageId);\n\n// 3. Obtener el contenido del post (del nodo SetX)\n// Nota: Usamos $('SetX').first().json para ir a lo seguro\nlet postContent = {};\ntry {\n    postContent = $('SetX').first().json;\n} catch (e) {\n    postContent = { fb_post_text: \"Texto de prueba\", image: \"https://via.placeholder.com/150\" };\n}\n\n// 4. RESULTADO\nif (targetPage) {\n    // ¡ÉXITO! Encontramos el token\n    return [{\n        json: {\n            status: \"READY_TO_POST\",\n            page_token: targetPage.access_token,\n            page_id: targetPage.id,\n            page_name: targetPage.name,\n            message: postContent.fb_post_text,\n            link: postContent.image\n        }\n    }];\n} else {\n    // ERROR DE COINCIDENCIA (Diagnóstico)\n    // Devolvemos la lista de lo que SÍ encontró para que veas los IDs\n    return [{\n        json: {\n            status: \"ID_MISMATCH\",\n            error_message: `El ID ${targetPageId} no está en la lista de páginas disponibles.`,\n            found_pages: allPages.map(p => ({ name: p.name, id: p.id }))\n        }\n    }];\n}"
       },
-      "id": "507c1eff-18ff-412c-8186-aa8caf0bdc64",
+      "id": "64483aed-756b-4986-bf00-06e1b704631b",
       "name": "ExtractPageToken",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        4160,
-        736
+        1584,
+        3008
       ],
       "onError": "continueRegularOutput"
     },
@@ -257,13 +253,13 @@
         },
         "options": {}
       },
-      "id": "852fe95c-281e-4288-b4bf-e48d0bf77c94",
+      "id": "f57a5652-603d-410f-b88b-a44e088a97e3",
       "name": "PostToFacebookPage",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        4384,
-        736
+        1808,
+        3008
       ],
       "onError": "continueRegularOutput"
     },
@@ -280,10 +276,10 @@
       "type": "n8n-nodes-base.linkedIn",
       "typeVersion": 1,
       "position": [
-        4384,
-        1120
+        1808,
+        3392
       ],
-      "id": "29c699ed-946c-429a-ad2c-cbc536a6ebd8",
+      "id": "e7f1e226-6bbd-42ab-9d44-e02fffa77b7d",
       "name": "Post Company",
       "credentials": {
         "linkedInCommunityManagementOAuth2Api": {
@@ -305,10 +301,10 @@
       "type": "n8n-nodes-base.linkedIn",
       "typeVersion": 1,
       "position": [
-        4384,
-        1312
+        1808,
+        3584
       ],
-      "id": "2232ae2f-e202-46e1-91b0-f94a7e1f6d96",
+      "id": "01ad5f39-d608-4375-8acf-5f0a811e9387",
       "name": "Post Personal",
       "credentials": {
         "linkedInCommunityManagementOAuth2Api": {
@@ -327,10 +323,10 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        3040,
-        1024
+        464,
+        3296
       ],
-      "id": "bb76ab5a-c4af-4d9c-861a-73735fed8393",
+      "id": "489d6fdb-5d56-4210-a87f-ff4b351469e3",
       "name": "HandleImageError"
     },
     {
@@ -361,10 +357,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        3264,
-        1024
+        688,
+        3296
       ],
-      "id": "a3f729bd-9f7e-4b7b-a5b6-2c4baa571082",
+      "id": "6fbd5b65-da63-4818-b9d4-12a378eb1e07",
       "name": "If1"
     },
     {
@@ -394,10 +390,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        3712,
-        1024
+        1136,
+        3296
       ],
-      "id": "c02584cd-dcc1-40f9-874d-6ffc59950e83",
+      "id": "3428cb11-490c-49ec-b6df-fa19acc16c62",
       "name": "If2"
     },
     {
@@ -418,10 +414,10 @@
       "type": "n8n-nodes-base.html",
       "typeVersion": 1.2,
       "position": [
-        1248,
-        1072
+        -1328,
+        3344
       ],
-      "id": "175357e8-a811-42f3-ab88-1bd1d39aac4b",
+      "id": "cf194b17-e361-4fc9-a844-f6e7e9bbf825",
       "name": "Extract_HTML"
     },
     {
@@ -460,10 +456,10 @@
       "type": "n8n-nodes-base.html",
       "typeVersion": 1.2,
       "position": [
-        1472,
-        1072
+        -1104,
+        3344
       ],
-      "id": "785cd7ed-70cd-4fbd-afe5-28ce45dc798e",
+      "id": "90373384-bc05-48c4-b38c-ca3dde4e70ac",
       "name": "Set_HTML"
     },
     {
@@ -484,10 +480,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1696,
-        1072
+        -880,
+        3344
       ],
-      "id": "26dedd92-918e-4578-833b-f91f0372ba7d",
+      "id": "8f4d5507-4a9f-4c9a-8451-71c81cee95fc",
       "name": "Add Static Source"
     },
     {
@@ -525,10 +521,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        2144,
-        1072
+        -432,
+        3344
       ],
-      "id": "be9113d3-8a3a-4409-87b9-0a0101ca4da6",
+      "id": "fb9c1288-76f8-469c-bba7-59c7ba445cfa",
       "name": "Check Article Exists",
       "alwaysOutputData": true
     },
@@ -559,10 +555,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        352,
-        1152
+        -2224,
+        3424
       ],
-      "id": "8cd636ed-ef55-439e-ac26-245088e80f67",
+      "id": "6111ff98-e0cf-4ec0-a285-35308263180b",
       "name": "Get Token"
     },
     {
@@ -586,10 +582,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        1024,
-        1072
+        -1552,
+        3344
       ],
-      "id": "f8abf726-4068-4e14-bc2a-8def18707c1c",
+      "id": "e439691e-6b65-40dc-b693-dd788cfe610a",
       "name": "Get News"
     },
     {
@@ -621,10 +617,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        576,
-        1152
+        -2000,
+        3424
       ],
-      "id": "4c223733-e864-4cf9-9b89-82ce7dba43d5",
+      "id": "546a3708-fc15-4ded-b256-6fa8e9b662d0",
       "name": "Check Publish"
     },
     {
@@ -654,10 +650,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        800,
-        1152
+        -1776,
+        3424
       ],
-      "id": "1a4922b5-b079-408e-a3a4-c13a5ce3808f",
+      "id": "ebee8e36-18f6-4f0c-bdb1-66ab255a0a10",
       "name": "Not Exist Pub"
     },
     {
@@ -668,10 +664,10 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        4400,
-        1664
+        1824,
+        3936
       ],
-      "id": "b2bcff9a-0cfa-40c2-b1ef-ce58142d6a41",
+      "id": "bb1f3d14-3188-4553-9e8d-ac8818047f9d",
       "name": "Respond Exists"
     },
     {
@@ -702,10 +698,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        2368,
-        1072
+        -208,
+        3344
       ],
-      "id": "92ed6d01-afa0-4847-b888-12ff3f7750af",
+      "id": "062350d0-92e9-4ca3-8b8e-a4b5d2b8a340",
       "name": "Not exist"
     },
     {
@@ -731,16 +727,16 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"operation\": \"insert\",\n  \"fields\": {\n    \"url\": \"{{ $('Limit').item.json.url.href }}\",\n    \"title\": \"{{ $('Limit').item.json.title }}\",\n    \"source\": \"{{ $('Limit').item.json.source }}\",\n    \"image\": \"{{ $('SetX').item.json.image }}\",\n    \"published_at\": \"{{ new Date().toISOString() }}\"\n  }\n}",
+        "jsonBody": "={{ \n  {\n    \"operation\": \"insert\",\n    \"fields\": {\n      \"url\": $('Limit').item.json.url.href,\n      \"title\": $('Limit').item.json.title,\n      \"source\": $('Limit').item.json.source,\n      \"image\": $('SetX').item.json.image,\n      \"published_at\": new Date().toISOString()\n    }\n  } \n}}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        4608,
-        928
+        2096,
+        3200
       ],
-      "id": "bc2ce061-58fd-4cd4-a24a-3574fdd9b75c",
+      "id": "06465149-0673-4bf7-9a14-44bad641b326",
       "name": "HTTP Request"
     },
     {
@@ -751,10 +747,10 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        4832,
-        928
+        2320,
+        3200
       ],
-      "id": "f671f564-7859-4cb7-bd35-d25c059759c6",
+      "id": "febd7de2-5281-4c54-9638-e51ef7f80172",
       "name": "Respond to End"
     },
     {
@@ -762,11 +758,24 @@
       "type": "n8n-nodes-base.limit",
       "typeVersion": 1,
       "position": [
-        1920,
-        1072
+        -656,
+        3344
       ],
-      "id": "9bc9898e-002a-4e58-930b-740db280b95e",
+      "id": "f8d38d1c-0303-439c-abe7-fb814ff31498",
       "name": "Limit"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtenemos el texto desde el nodo 'SetX' independientemente de dónde venga el flujo\nconst text = $('SetX').item.json.tweet_text;\n\nlet finalTweet = text;\n\n// Si el texto es muy largo, lo recortamos para X (Twitter)\nif (text && text.length > 270) {\n  finalTweet = text.substring(0, 150) + \"... Ver más en: https://hosting3m.com/#news\";\n}\n\n// Pasamos también el media_id que viene del nodo anterior para no perderlo\nreturn { \n  tweet_text_fixed: finalTweet,\n  media_id: $json.media_id_string \n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1584,
+        3200
+      ],
+      "id": "88131746-e9db-464c-800f-24f0e27ee7f9",
+      "name": "Code in JavaScript"
     }
   ],
   "pinData": {
@@ -852,7 +861,7 @@
       "main": [
         [
           {
-            "node": "CreateTweet",
+            "node": "Code in JavaScript",
             "type": "main",
             "index": 0
           }
@@ -1110,6 +1119,17 @@
           }
         ]
       ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "CreateTweet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -1118,9 +1138,10 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false,
     "errorWorkflow": "9SrVXdATmlrZemJT",
-    "timeSavedMode": "fixed"
+    "timeSavedMode": "fixed",
+    "timeSavedPerExecution": 30
   },
-  "versionId": "207f729b-9cce-40cb-b600-13d51a0666d2",
+  "versionId": "75a7e6a2-d65a-495d-9b9b-5bea1746a084",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "2ebfe6551ca260f617d68572b7a0eb6825fe3993d0da19ebfb0e274f2e0ccb37"
