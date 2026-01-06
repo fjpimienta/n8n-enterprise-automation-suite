@@ -4,7 +4,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{\n {\n  \"token\": $json.token,\n  \"role\": $node[\"Get Role\"].json.role\n }\n}}",
+        "responseBody": "={{\n {\n  \"token\": $json.token,\n  \"role\": $json.role\n }\n}}",
         "options": {
           "responseCode": "={{ $json.status || 200 }}"
         }
@@ -12,7 +12,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        672,
+        448,
         0
       ],
       "id": "7cc206e3-bd94-47c0-85bd-c7eb3cffe8ba",
@@ -58,8 +58,8 @@
               "value": "={{ $node[\"Genera Token\"].json.body.user }}"
             },
             {
-              "name": "role",
-              "value": "={{ $json.role }}"
+              "name": "internal_secret",
+              "value": "={{$env[\"INTERNAL_SECRET\"]}}"
             }
           ]
         },
@@ -68,7 +68,7 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        448,
+        224,
         0
       ],
       "id": "76a7294a-9af1-4807-80fa-23693696a07f",
@@ -76,42 +76,17 @@
     },
     {
       "parameters": {
-        "operation": "select",
-        "schema": {
-          "__rl": true,
-          "mode": "list",
-          "value": "public"
-        },
-        "table": {
-          "__rl": true,
-          "value": "users",
-          "mode": "list",
-          "cachedResultName": "users"
-        },
-        "where": {
-          "values": [
-            {
-              "column": "email",
-              "value": "={{ $json.body.user }}"
-            }
-          ]
-        },
-        "options": {}
+        "content": "## Propósito: Orquestador de autenticación v2.\n**Double click** to edit me. [Guide](https://docs.n8n.io/workflows/components/sticky-notes/)\n\n**Entrada**: JSON con user.\n**Dependencia**: Servicio interno jwt-service:4000. Seguridad: Utiliza la variable de entorno INTERNAL_SECRET.",
+        "width": 544
       },
-      "type": "n8n-nodes-base.postgres",
-      "typeVersion": 2.6,
+      "type": "n8n-nodes-base.stickyNote",
       "position": [
-        224,
-        0
+        0,
+        -176
       ],
-      "id": "6fc72ce7-51e7-4464-a554-998224688bbb",
-      "name": "Get Role",
-      "credentials": {
-        "postgres": {
-          "id": "BQrod4uGVzM1nvLw",
-          "name": "Postgres account"
-        }
-      }
+      "typeVersion": 1,
+      "id": "3af3a97b-7faa-4136-8fe1-eaed022cb809",
+      "name": "Sticky Note"
     }
   ],
   "pinData": {},
@@ -120,7 +95,7 @@
       "main": [
         [
           {
-            "node": "Get Role",
+            "node": "HTTP Request",
             "type": "main",
             "index": 0
           }
@@ -137,17 +112,6 @@
           }
         ]
       ]
-    },
-    "Get Role": {
-      "main": [
-        [
-          {
-            "node": "HTTP Request",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
     }
   },
   "active": true,
@@ -156,38 +120,40 @@
     "timeSavedMode": "fixed",
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false,
-    "errorWorkflow": "9SrVXdATmlrZemJT"
+    "errorWorkflow": "9SrVXdATmlrZemJT",
+    "executionTimeout": -1,
+    "timeSavedPerExecution": 0
   },
-  "versionId": "332cd36c-d1f9-48d3-9d95-de3fceec405f",
+  "versionId": "493cf0bf-fd69-439b-a2a2-f3e6053b7051",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "2ebfe6551ca260f617d68572b7a0eb6825fe3993d0da19ebfb0e274f2e0ccb37"
+    "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
   },
   "id": "JvAaNpnER0tIJPf3",
   "tags": [
     {
-      "updatedAt": "2025-12-20T19:25:08.685Z",
-      "createdAt": "2025-12-20T19:25:08.685Z",
-      "id": "ljhw24TcxNVpCPyc",
-      "name": "Webhook"
+      "name": "Auth",
+      "id": "aPjoIbXEEiVHHnmx",
+      "updatedAt": "2026-01-06T22:03:50.582Z",
+      "createdAt": "2026-01-06T22:03:50.582Z"
     },
     {
-      "updatedAt": "2025-12-20T19:25:38.936Z",
-      "createdAt": "2025-12-20T19:24:03.065Z",
-      "id": "kej8yFK0WMHHioIl",
-      "name": "Security"
+      "name": "Microservicio",
+      "id": "xW8oai2TUsoc8WTz",
+      "updatedAt": "2026-01-06T22:03:54.891Z",
+      "createdAt": "2026-01-06T22:03:54.891Z"
     },
     {
-      "updatedAt": "2025-12-20T19:25:45.288Z",
-      "createdAt": "2025-12-20T19:25:45.288Z",
-      "id": "TEcAAV8ImkhhzPtv",
-      "name": "Token"
+      "name": "v2",
+      "id": "Z57mQ3C8keMOgZHW",
+      "updatedAt": "2026-01-06T22:03:57.984Z",
+      "createdAt": "2026-01-06T22:03:57.984Z"
     },
     {
-      "updatedAt": "2025-12-20T19:25:50.503Z",
-      "createdAt": "2025-12-20T19:25:50.503Z",
-      "id": "wJ0vNQ7idcCu9BGu",
-      "name": "JWT"
+      "name": "Produccion",
+      "id": "QEpTSF53s2mPoGeW",
+      "updatedAt": "2026-01-06T22:04:01.156Z",
+      "createdAt": "2026-01-06T22:04:01.156Z"
     }
   ]
 }
