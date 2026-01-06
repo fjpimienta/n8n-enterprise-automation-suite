@@ -12,15 +12,44 @@ app.use(cors({
 }));
 
 const JWT_SECRET = process.env.JWT_SECRET;
+const INTERNAL_SECRET = process.env.INTERNAL_SECRET;
 
+// ENDPOINT DE GENERACIÓN
 app.post('/generate-token', (req, res) => {
-  const { user } = req.body;
-  if (!user) {
-    return res.status(400).json({ error: 'User is required' });
+  const { user, internal_secret } = req.body; // Recibimos el secreto
+  
+  if (!user) return res.status(400).json({ error: 'User is required' });
+
+  // VALIDACIÓN: Si no es el secreto correcto, rechazamos
+  if (internal_secret !== INTERNAL_SECRET) {
+    return res.status(403).json({ error: 'Unauthorized: Invalid internal secret' });
   }
 
-  const token = jwt.sign({ user }, JWT_SECRET, { expiresIn: '1h' });
-  res.json({ token });
+  // IMPORTANTE: Definimos el ROL aquí, no en n8n
+  const role = user === 'n8n@hosting3m.com' ? 'ADMIN' : 'CUSTOMER';
+
+  const token = jwt.sign({ user, role }, JWT_SECRET, { expiresIn: '1h' });
+  res.json({ token, role }); // Devolvemos el rol también para comodidad de n8n
+});
+
+// ENDPOINT DE VERIFICACIÓN
+app.post('/verify-token', (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ valid: false, error: 'No token provided' });
+
+  const token = authHeader.split(' ')[1]; // Extrae el token del Bearer
+
+  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+    if (err) {
+      return res.status(401).json({ valid: false, error: 'Invalid or expired token' });
+    }
+    // Si es válido, devolvemos los datos del usuario decodificados
+    res.json({ 
+      valid: true, 
+      user: decoded.user, 
+      role: decoded.role 
+    });
+  });
 });
 
 const PORT = 4000;
