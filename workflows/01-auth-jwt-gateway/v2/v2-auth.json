@@ -24,7 +24,23 @@
         "path": "v2/genera-token",
         "responseMode": "responseNode",
         "options": {
-          "allowedOrigins": "*"
+          "allowedOrigins": "https://hosting3m.com",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "https://hosting3m.com"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, GET, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, Authorization, x-jwt-claim-role"
+              }
+            ]
+          }
         }
       },
       "type": "n8n-nodes-base.webhook",
@@ -55,7 +71,7 @@
           "parameters": [
             {
               "name": "=user",
-              "value": "={{ $node[\"Genera Token\"].json.body.user }}"
+              "value": "={{ $node[\"Genera Token\"].json.body.user || \"n8n@hosting3m.com\" }}"
             },
             {
               "name": "internal_secret",
@@ -121,10 +137,9 @@
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false,
     "errorWorkflow": "9SrVXdATmlrZemJT",
-    "executionTimeout": -1,
     "timeSavedPerExecution": 0
   },
-  "versionId": "493cf0bf-fd69-439b-a2a2-f3e6053b7051",
+  "versionId": "2d0eab15-baaa-4f4b-8493-6a9eeb5c2015",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
@@ -132,28 +147,28 @@
   "id": "JvAaNpnER0tIJPf3",
   "tags": [
     {
-      "name": "Auth",
-      "id": "aPjoIbXEEiVHHnmx",
       "updatedAt": "2026-01-06T22:03:50.582Z",
-      "createdAt": "2026-01-06T22:03:50.582Z"
+      "createdAt": "2026-01-06T22:03:50.582Z",
+      "id": "aPjoIbXEEiVHHnmx",
+      "name": "Auth"
     },
     {
-      "name": "Microservicio",
-      "id": "xW8oai2TUsoc8WTz",
       "updatedAt": "2026-01-06T22:03:54.891Z",
-      "createdAt": "2026-01-06T22:03:54.891Z"
+      "createdAt": "2026-01-06T22:03:54.891Z",
+      "id": "xW8oai2TUsoc8WTz",
+      "name": "Microservicio"
     },
     {
-      "name": "v2",
-      "id": "Z57mQ3C8keMOgZHW",
       "updatedAt": "2026-01-06T22:03:57.984Z",
-      "createdAt": "2026-01-06T22:03:57.984Z"
+      "createdAt": "2026-01-06T22:03:57.984Z",
+      "id": "Z57mQ3C8keMOgZHW",
+      "name": "v2"
     },
     {
-      "name": "Produccion",
-      "id": "QEpTSF53s2mPoGeW",
       "updatedAt": "2026-01-06T22:04:01.156Z",
-      "createdAt": "2026-01-06T22:04:01.156Z"
+      "createdAt": "2026-01-06T22:04:01.156Z",
+      "id": "QEpTSF53s2mPoGeW",
+      "name": "Produccion"
     }
   ]
 }
