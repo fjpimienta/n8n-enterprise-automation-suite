@@ -1,6 +1,7 @@
 # --- Seguridad y Secretos ---
 .env
-**/ .env
+**/.env
+.env.*
 credentials_export.txt
 documentos_legales.json
 
