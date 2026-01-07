@@ -12,37 +12,14 @@
           ]
         }
       },
-      "id": "097c307c-1c8d-408f-b711-27bf769a6f0a",
+      "id": "ac88eff1-5161-44a7-8924-cd8c5a37059e",
       "name": "Cron",
       "type": "n8n-nodes-base.cron",
       "typeVersion": 1,
       "position": [
-        -2448,
-        3520
+        -3712,
+        4352
       ]
-    },
-    {
-      "parameters": {
-        "path": "v2/NewsScraper",
-        "authentication": "jwtAuth",
-        "responseMode": "responseNode",
-        "options": {}
-      },
-      "id": "a66e01e1-4504-4328-916a-ce410e4d24e3",
-      "name": "Webhook Noticias",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 1,
-      "webhookId": "noticias-ti",
-      "position": [
-        -2448,
-        3328
-      ],
-      "credentials": {
-        "jwtAuth": {
-          "id": "unyfRz9QRT72Vkwf",
-          "name": "JWT Auth account"
-        }
-      }
     },
     {
       "parameters": {
@@ -51,25 +28,25 @@
             {
               "id": "67de7425-fb84-4c31-91fc-954061dc076d",
               "name": "tweet_text",
-              "value": "={{ `💡 \"${$('Limit').item.json.title}\". Echa un vistazo al análisis completo de ${$('Limit').item.json.source}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M ➡️ ${$('Limit').item.json.url.href}` }}\n",
+              "value": "={{ `💡 \"${$json.data[0].title}\". Echa un vistazo al análisis completo de ${$json.data[0].source}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M ➡️ ${$json.data[0].url}` }}\n",
               "type": "string"
             },
             {
               "id": "983175be-ce4b-4fbc-ad7d-bc2e7524096a",
               "name": "fb_post_text",
-              "value": "={{ `💡 \"${$('Limit').item.json.title}\", proveniente de ${$('Limit').item.json.source}. ¿Qué opinas de este avance? ¡Comenta abajo! ⬇️ Lee más: ${$('Limit').item.json.url.href}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M` }}",
+              "value": "={{ `💡 \"${$json.data[0].title}\", proveniente de ${$json.data[0].source}. ¿Qué opinas de este avance? ¡Comenta abajo! ⬇️ Lee más: ${$json.data[0].url}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M` }}",
               "type": "string"
             },
             {
               "id": "a9bee46a-2427-438a-a8df-3e6ba0b16ab5",
               "name": "li_post_text",
-              "value": "={{ `💡 \"${$('Limit').item.json.title}\". Fuente: ${$('Limit').item.json.source} ➡️ ${$('Limit').item.json.url.href}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M` }}",
+              "value": "={{ `💡 \"${$json.data[0].title}\". Fuente: ${$json.data[0].source} ➡️ ${$json.data[0].url}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M` }}",
               "type": "string"
             },
             {
               "id": "e7d15066-4754-4e2e-8de3-0fa4b5e5d9cc",
               "name": "image",
-              "value": "={{ \n  (() => {\n    // 1. Obtenemos el título de la noticia desde el nodo anterior (Limit)\n    const title = $('Limit').item.json.title;\n    \n    // 2. Definimos un prompt base para asegurar el estilo \"Tech News\"\n    // \"Futuristic technology concept art about [Titulo], high quality, 4k, trending on artstation\"\n    const prompt = `Futuristic technology concept, editorial illustration about: ${title}, high detail, 8k, professional lighting`;\n  \n    // 3. Codificamos el prompt para URL\n    const encodedPrompt = encodeURIComponent(prompt);\n  \n    // 4. Retornamos la URL de Pollinations\n    // width=1000, height=800 (Coincide con tu nodo DownloadImage), model=flux, seed=random\n    const randomSeed = Math.floor(Math.random() * 1000);\n    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1000&height=800&model=flux&nologo=true&seed=${randomSeed}`;\n  })() \n}}",
+              "value": "={{ \n  (() => {\n    // 1. Obtenemos el título de la noticia desde el nodo anterior (Limit)\n    const title = $('Get Articles').item.json.title;\n    \n    // 2. Definimos un prompt base para asegurar el estilo \"Tech News\"\n    // \"Futuristic technology concept art about [Titulo], high quality, 4k, trending on artstation\"\n    const prompt = `Futuristic technology concept, editorial illustration about: ${title}, high detail, 8k, professional lighting`;\n  \n    // 3. Codificamos el prompt para URL\n    const encodedPrompt = encodeURIComponent(prompt);\n  \n    // 4. Retornamos la URL de Pollinations\n    // width=1000, height=800 (Coincide con tu nodo DownloadImage), model=flux, seed=random\n    const randomSeed = Math.floor(Math.random() * 1000);\n    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1000&height=800&model=flux&nologo=true&seed=${randomSeed}`;\n  })() \n}}",
               "type": "string"
             }
           ]
@@ -79,10 +56,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        16,
-        3296
+        -2592,
+        4272
       ],
-      "id": "f2a96813-c443-4f61-9228-289cc488d9d2",
+      "id": "82e19c04-2d7c-49e6-aed0-f34b0139de8c",
       "name": "SetX"
     },
     {
@@ -95,10 +72,10 @@
       "type": "n8n-nodes-base.twitter",
       "typeVersion": 2,
       "position": [
-        1808,
-        3200
+        -800,
+        3888
       ],
-      "id": "872c70de-924b-4157-ad1d-e412212d703b",
+      "id": "8e5e8e9d-c809-44bc-bc16-977e3f4ba681",
       "name": "CreateTweet",
       "credentials": {
         "twitterOAuth2Api": {
@@ -123,10 +100,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        240,
-        3232
+        -2368,
+        4208
       ],
-      "id": "d9fdf145-a809-48c8-9df0-15a6f5ac573a",
+      "id": "7f1cc316-5999-4e2e-8502-eb79bcc40550",
       "name": "DownloadImage",
       "onError": "continueRegularOutput"
     },
@@ -137,10 +114,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        912,
-        3296
+        -1696,
+        4080
       ],
-      "id": "d94f289a-2865-480e-9644-1e5a2becde85",
+      "id": "fd3b0c1a-a7be-4adc-a7ff-8a49d1c0eb36",
       "name": "SaveImage"
     },
     {
@@ -171,10 +148,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        1360,
-        3200
+        -1248,
+        3888
       ],
-      "id": "465fc40d-e76f-44a5-9e22-16c6eb5f87a2",
+      "id": "76a7c77a-e06d-442b-bd0c-8d9f7da6efcd",
       "name": "UploadImageX",
       "credentials": {
         "oAuth1Api": {
@@ -200,13 +177,13 @@
           }
         }
       },
-      "id": "6379cf6d-cf5e-47cb-ac2d-8edda506b1ab",
+      "id": "fcee418d-3e8a-4f49-9f0b-54fa3b35eb26",
       "name": "GetPageTokens",
       "type": "n8n-nodes-base.facebookGraphApi",
       "typeVersion": 1,
       "position": [
-        1360,
-        3008
+        -1248,
+        3696
       ],
       "credentials": {
         "facebookGraphApi": {
@@ -220,13 +197,13 @@
       "parameters": {
         "jsCode": "// --- CONFIGURACIÓN ---\nconst targetPageId = '103483927910104'; // Tu ID objetivo\n// ---------------------\n\n// 1. Detectar dónde están las páginas (Manejo de estructura variable)\nlet allPages = [];\n\nif (items.length > 0 && items[0].json.id && items[0].json.name) {\n    // CASO A: n8n ya desempaquetó la lista. Cada 'item' es una página.\n    allPages = items.map(i => i.json);\n} else if (items.length > 0 && items[0].json.data && Array.isArray(items[0].json.data)) {\n    // CASO B: Estructura cruda anidada en 'data'.\n    allPages = items[0].json.data;\n} else {\n    // CASO C: No se encontraron datos reconocibles\n    return [{\n        json: {\n            error: \"No se recibieron páginas de Facebook. Revisa el nodo anterior.\",\n            input_received: items[0]?.json\n        }\n    }];\n}\n\n// 2. Buscar tu página específica\nconst targetPage = allPages.find(p => p.id === targetPageId);\n\n// 3. Obtener el contenido del post (del nodo SetX)\n// Nota: Usamos $('SetX').first().json para ir a lo seguro\nlet postContent = {};\ntry {\n    postContent = $('SetX').first().json;\n} catch (e) {\n    postContent = { fb_post_text: \"Texto de prueba\", image: \"https://via.placeholder.com/150\" };\n}\n\n// 4. RESULTADO\nif (targetPage) {\n    // ¡ÉXITO! Encontramos el token\n    return [{\n        json: {\n            status: \"READY_TO_POST\",\n            page_token: targetPage.access_token,\n            page_id: targetPage.id,\n            page_name: targetPage.name,\n            message: postContent.fb_post_text,\n            link: postContent.image\n        }\n    }];\n} else {\n    // ERROR DE COINCIDENCIA (Diagnóstico)\n    // Devolvemos la lista de lo que SÍ encontró para que veas los IDs\n    return [{\n        json: {\n            status: \"ID_MISMATCH\",\n            error_message: `El ID ${targetPageId} no está en la lista de páginas disponibles.`,\n            found_pages: allPages.map(p => ({ name: p.name, id: p.id }))\n        }\n    }];\n}"
       },
-      "id": "64483aed-756b-4986-bf00-06e1b704631b",
+      "id": "07d0557e-21e8-4880-9077-850e4347f096",
       "name": "ExtractPageToken",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1584,
-        3008
+        -1024,
+        3696
       ],
       "onError": "continueRegularOutput"
     },
@@ -253,13 +230,13 @@
         },
         "options": {}
       },
-      "id": "f57a5652-603d-410f-b88b-a44e088a97e3",
+      "id": "136194ba-3ed9-455c-b1af-7e4e7979be48",
       "name": "PostToFacebookPage",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        1808,
-        3008
+        -800,
+        3696
       ],
       "onError": "continueRegularOutput"
     },
@@ -276,10 +253,10 @@
       "type": "n8n-nodes-base.linkedIn",
       "typeVersion": 1,
       "position": [
-        1808,
-        3392
+        -800,
+        4080
       ],
-      "id": "e7f1e226-6bbd-42ab-9d44-e02fffa77b7d",
+      "id": "e71e198e-4ec8-47ec-b95a-76db8302b92f",
       "name": "Post Company",
       "credentials": {
         "linkedInCommunityManagementOAuth2Api": {
@@ -301,10 +278,10 @@
       "type": "n8n-nodes-base.linkedIn",
       "typeVersion": 1,
       "position": [
-        1808,
-        3584
+        -800,
+        4272
       ],
-      "id": "01ad5f39-d608-4375-8acf-5f0a811e9387",
+      "id": "84eb4503-f118-4981-8a46-fda88299214e",
       "name": "Post Personal",
       "credentials": {
         "linkedInCommunityManagementOAuth2Api": {
@@ -323,10 +300,10 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        464,
-        3296
+        -2144,
+        4272
       ],
-      "id": "489d6fdb-5d56-4210-a87f-ff4b351469e3",
+      "id": "9f703ac5-c3a2-46de-85f2-12d74f1212d2",
       "name": "HandleImageError"
     },
     {
@@ -357,10 +334,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        688,
-        3296
+        -1920,
+        4272
       ],
-      "id": "6fbd5b65-da63-4818-b9d4-12a378eb1e07",
+      "id": "c26a0786-1f20-47f4-867f-a4fc1adc18cc",
       "name": "If1"
     },
     {
@@ -390,143 +367,11 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        1136,
-        3296
+        -1472,
+        4080
       ],
-      "id": "3428cb11-490c-49ec-b6df-fa19acc16c62",
+      "id": "2f4a218a-2f46-4edb-8b1f-3dfbc4a29a05",
       "name": "If2"
-    },
-    {
-      "parameters": {
-        "operation": "extractHtmlContent",
-        "extractionValues": {
-          "values": [
-            {
-              "key": "articles",
-              "cssSelector": "article.news-card",
-              "returnValue": "html",
-              "returnArray": true
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.html",
-      "typeVersion": 1.2,
-      "position": [
-        -1328,
-        3344
-      ],
-      "id": "cf194b17-e361-4fc9-a844-f6e7e9bbf825",
-      "name": "Extract_HTML"
-    },
-    {
-      "parameters": {
-        "operation": "extractHtmlContent",
-        "dataPropertyName": "articles",
-        "extractionValues": {
-          "values": [
-            {
-              "key": "title",
-              "cssSelector": ".news-title",
-              "skipSelectors": ".article.news-card"
-            },
-            {
-              "key": "description",
-              "cssSelector": ".news-body",
-              "skipSelectors": ".article.news-card"
-            },
-            {
-              "key": "image",
-              "cssSelector": "img.news-img",
-              "returnValue": "attribute"
-            },
-            {
-              "key": "url",
-              "cssSelector": "=a",
-              "returnValue": "attribute"
-            },
-            {
-              "key": "source"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.html",
-      "typeVersion": 1.2,
-      "position": [
-        -1104,
-        3344
-      ],
-      "id": "90373384-bc05-48c4-b38c-ca3dde4e70ac",
-      "name": "Set_HTML"
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "a00bb3b9-4596-4e92-b161-553aec63471f",
-              "name": "source",
-              "value": "https://hosting3m.com/#news",
-              "type": "string"
-            }
-          ]
-        },
-        "includeOtherFields": true,
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        -880,
-        3344
-      ],
-      "id": "8f4d5507-4a9f-4c9a-8451-71c81cee95fc",
-      "name": "Add Static Source"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://n8n.hosting3m.com/webhook/81949755-352f-4f0b-bdf3-aac2d1f4b369/crud/v2/news_articles",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{ $('Get Token').first().json.token }}"
-            },
-            {
-              "name": "x-jwt-claim-role",
-              "value": "={{ $('Get Token').first().json.role}}"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n    \"operation\": \"getOne\",\n    \"fields\":\n    {\n        \"url\": \"{{ $json.url.href }}\"\n    }\n}",
-        "options": {
-          "response": {
-            "response": {
-              "neverError": true
-            }
-          }
-        }
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        -432,
-        3344
-      ],
-      "id": "fb9c1288-76f8-469c-bba7-59c7ba445cfa",
-      "name": "Check Article Exists",
-      "alwaysOutputData": true
     },
     {
       "parameters": {
@@ -555,38 +400,11 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -2224,
-        3424
+        -3488,
+        4352
       ],
-      "id": "6111ff98-e0cf-4ec0-a285-35308263180b",
+      "id": "e5232db0-bbaf-42b1-9cf9-f4a422effa0a",
       "name": "Get Token"
-    },
-    {
-      "parameters": {
-        "url": "https://n8n.hosting3m.com/webhook/news",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{$node[\"Get Token\"].json.token}}"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        -1552,
-        3344
-      ],
-      "id": "e439691e-6b65-40dc-b693-dd788cfe610a",
-      "name": "Get News"
     },
     {
       "parameters": {
@@ -617,10 +435,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -2000,
-        3424
+        -3264,
+        4352
       ],
-      "id": "546a3708-fc15-4ded-b256-6fa8e9b662d0",
+      "id": "c304a2ab-6d0d-4b79-9aa0-3334a3072ab1",
       "name": "Check Publish"
     },
     {
@@ -650,10 +468,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -1776,
-        3424
+        -3040,
+        4352
       ],
-      "id": "ebee8e36-18f6-4f0c-bdb1-66ab255a0a10",
+      "id": "0ca0b810-5609-4a56-9121-26d637b14d7c",
       "name": "Not Exist Pub"
     },
     {
@@ -664,45 +482,11 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        1824,
-        3936
+        -1248,
+        4464
       ],
-      "id": "bb1f3d14-3188-4553-9e8d-ac8818047f9d",
+      "id": "c0538b51-ee64-45ae-8fe2-5c6dfb7ce0c2",
       "name": "Respond Exists"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "efa4ae0c-3999-4e2c-92be-52d1faf5c265",
-              "leftValue": "={{ $json.data?.id }}",
-              "rightValue": "",
-              "operator": {
-                "type": "number",
-                "operation": "notExists",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        -208,
-        3344
-      ],
-      "id": "062350d0-92e9-4ca3-8b8e-a4b5d2b8a340",
-      "name": "Not exist"
     },
     {
       "parameters": {
@@ -727,42 +511,17 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ \n  {\n    \"operation\": \"insert\",\n    \"fields\": {\n      \"url\": $('Limit').item.json.url.href,\n      \"title\": $('Limit').item.json.title,\n      \"source\": $('Limit').item.json.source,\n      \"image\": $('SetX').item.json.image,\n      \"published_at\": new Date().toISOString()\n    }\n  } \n}}",
+        "jsonBody": "={{ \n  {\n    \"operation\": \"insert\",\n    \"fields\": {\n      \"url\": $('Get Articles').item.json.data[0].url,\n      \"title\": $('Get Articles').item.json.data[0].title,\n      \"source\": \"https://hosting3m.com/#news\",\n      \"image\": $('SetX').item.json.image,\n      \"published_at\": new Date().toISOString()\n    }\n  } \n}}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        2096,
-        3200
+        -576,
+        3968
       ],
-      "id": "06465149-0673-4bf7-9a14-44bad641b326",
+      "id": "6ac8937f-b564-4e6f-8048-273000514335",
       "name": "HTTP Request"
-    },
-    {
-      "parameters": {
-        "respondWith": "allIncomingItems",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.5,
-      "position": [
-        2320,
-        3200
-      ],
-      "id": "febd7de2-5281-4c54-9638-e51ef7f80172",
-      "name": "Respond to End"
-    },
-    {
-      "parameters": {},
-      "type": "n8n-nodes-base.limit",
-      "typeVersion": 1,
-      "position": [
-        -656,
-        3344
-      ],
-      "id": "f8d38d1c-0303-439c-abe7-fb814ff31498",
-      "name": "Limit"
     },
     {
       "parameters": {
@@ -771,33 +530,58 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1584,
-        3200
+        -1024,
+        3888
       ],
-      "id": "88131746-e9db-464c-800f-24f0e27ee7f9",
+      "id": "84f73f4e-b84a-4113-b6bd-7c6248a37730",
       "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.hosting3m.com/webhook/81949755-352f-4f0b-bdf3-aac2d1f4b369/crud/v2/news_articles",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$node[\"Get Token\"].json.token}}"
+            },
+            {
+              "name": "x-jwt-claim-role",
+              "value": "={{$node[\"Get Token\"].json.role}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"operation\": \"getall\",\n  \"fields\": {\n    \"published_at\": null \n  },\n  \"limit\": 1\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2816,
+        4272
+      ],
+      "id": "2ed066f9-1248-4139-9b9d-e2473c3b533a",
+      "name": "Get Articles",
+      "alwaysOutputData": true
     }
   ],
-  "pinData": {
-    "Cron": [
-      {
-        "json": {}
-      }
-    ]
-  },
+  "pinData": {},
   "connections": {
     "Cron": {
-      "main": [
-        [
-          {
-            "node": "Get Token",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Webhook Noticias": {
       "main": [
         [
           {
@@ -985,66 +769,11 @@
         ]
       ]
     },
-    "Extract_HTML": {
-      "main": [
-        [
-          {
-            "node": "Set_HTML",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Set_HTML": {
-      "main": [
-        [
-          {
-            "node": "Add Static Source",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Add Static Source": {
-      "main": [
-        [
-          {
-            "node": "Limit",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Check Article Exists": {
-      "main": [
-        [
-          {
-            "node": "Not exist",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Get Token": {
       "main": [
         [
           {
             "node": "Check Publish",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get News": {
-      "main": [
-        [
-          {
-            "node": "Extract_HTML",
             "type": "main",
             "index": 0
           }
@@ -1066,25 +795,7 @@
       "main": [
         [
           {
-            "node": "Get News",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Respond Exists",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Not exist": {
-      "main": [
-        [
-          {
-            "node": "SetX",
+            "node": "Get Articles",
             "type": "main",
             "index": 0
           }
@@ -1100,24 +811,7 @@
     },
     "HTTP Request": {
       "main": [
-        [
-          {
-            "node": "Respond to End",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Limit": {
-      "main": [
-        [
-          {
-            "node": "Check Article Exists",
-            "type": "main",
-            "index": 0
-          }
-        ]
+        []
       ]
     },
     "Code in JavaScript": {
@@ -1125,6 +819,17 @@
         [
           {
             "node": "CreateTweet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Articles": {
+      "main": [
+        [
+          {
+            "node": "SetX",
             "type": "main",
             "index": 0
           }
@@ -1141,10 +846,10 @@
     "timeSavedMode": "fixed",
     "timeSavedPerExecution": 30
   },
-  "versionId": "75a7e6a2-d65a-495d-9b9b-5bea1746a084",
+  "versionId": "1a1ced5e-7c27-4177-aaaf-4dbc904d8913",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "2ebfe6551ca260f617d68572b7a0eb6825fe3993d0da19ebfb0e274f2e0ccb37"
+    "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
   },
   "id": "PcfAnum7D3OTAzod",
   "tags": [
