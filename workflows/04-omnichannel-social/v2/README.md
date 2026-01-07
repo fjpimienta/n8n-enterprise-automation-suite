@@ -6,7 +6,7 @@ Este flujo representa una solución integral de Marketing Automation de grado em
 
 ## 📝 Descripción
 
-El workflow automatiza el ciclo de vida completo de un contenido: desde su descubrimiento en la web hasta su publicación definitiva. Su arquitectura está orientada a la eficiencia operativa y al posicionamiento de autoridad en el sector tecnológico, utilizando validaciones contra base de datos para asegurar la unicidad del contenido.
+El workflow automatiza el ciclo de vida completo del contenido: desde su descubrimiento en la base de datos hasta su publicación definitiva. La arquitectura v2 introduce capas de seguridad robustas y una lógica de prevención de spam que asegura que la marca mantenga una comunicación profesional y no redundante.
 
 ---
 
@@ -15,7 +15,7 @@ El workflow automatiza el ciclo de vida completo de un contenido: desde su descu
 | Versión | Estado | Endpoint Path | Cambios Principales | Archivo JSON |
 | :--- | :--- | :--- | :--- | :--- |
 | **v1** | `Legacy` | `/NewsScraper` | Lanzamiento inicial. | `v1-omnichanel.json` |
-| **v2** | `Stable` | `/v2/NewsScraper` | CRUD v2, soporte para Roles de Usuario, generación de imágenes con IA, manejo de errores y paths amigables. | `v2-omnichanel.json` |
+| **v2** | `Stable` | `/v2/NewsScraper` | CRUD v2, Verificación de cuota diaria, Generación IA (Flux), CRUD v2, Soporte Multi-perfil LinkedIn. | `v2-omnichanel.json` |
 
 ---
 
@@ -66,7 +66,7 @@ Finalmente, tras una publicación exitosa, se registra el artículo en la base d
 
 ## 🛠️ Stack Tecnológico & Integraciones
 
-* **Core:** n8n (Workflow Automation).
+* **Core:** n8n (Workflow Automation) version 2.2.4.
 * **Backend:** API REST propia con Autenticación JWT.
 * **IA:** Pollinations.ai (Flux Model) para generación de imágenes.
 * **Social APIs:**
@@ -82,3 +82,14 @@ Para desplegar este flujo, se requieren las siguientes credenciales configuradas
 2.  **Twitter OAuth2 & API Key:** Para postear y subir medios.
 3.  **Facebook Graph Posts:** Permisos de `pages_manage_posts` y `pages_read_engagement`.
 4.  **LinkedIn Credential:** Permisos de `w_member_social` y `w_organization_social`.
+
+## 🤝 Contribución
+    1. Haz un Fork del repositorio.
+    2. Crea una rama para tu mejora: git checkout -b feature/nuevo-filtro.
+    3. Realiza un Commit: git commit -m 'Añadida fuente de noticias TechCrunch'.
+    4. Abre un Pull Request.
+
+## 📄 Licencia
+Este proyecto está bajo la licencia n8n Sustainable Use License. Desarrollado para optimizar la presencia digital y la inteligencia de contenidos de Hosting3m.
+
+Desarrollado por: Francisco Jesus Pérez Pimienta - Ingeniero en Sistemas Computacionales y Maestro en Administración de Proyectos.

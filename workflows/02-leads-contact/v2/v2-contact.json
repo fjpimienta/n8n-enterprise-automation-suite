@@ -1,56 +1,17 @@
 {
-  "name": "Contact Hosting3m",
+  "name": "v2/Contact",
   "nodes": [
     {
       "parameters": {
-        "httpMethod": "POST",
-        "path": "contactoHosting3m",
-        "authentication": "jwtAuth",
-        "responseMode": "responseNode",
-        "options": {
-          "allowedOrigins": "*"
-        }
-      },
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 1,
-      "position": [
-        -1040,
-        128
-      ],
-      "id": "cdf58ee7-fe7b-46cb-bab7-781a2a14094a",
-      "name": "Webhook (Contacto Hosting3m)",
-      "webhookId": "5399d02d-f7e9-46fb-8fd5-a30d895dc2a5",
-      "credentials": {
-        "jwtAuth": {
-          "id": "unyfRz9QRT72Vkwf",
-          "name": "JWT Auth account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "return [\n  {\n    json: {\n      authHeader: $json.headers?.authorization || 'No Authorization header',\n      body: $json.body\n    }\n  }\n];\n"
+        "jsCode": "// Retornar los campos en un formato limpio\nreturn [{\n  json: {\n    authorization: $('Webhook Contact').first().json.headers.authorization,\n    names: $('Webhook Contact').first().json.body.names,\n    middlename: $('Webhook Contact').first().json.body.middlename,\n    lastname: $('Webhook Contact').first().json.body.lastname,\n    email: $('Webhook Contact').first().json.body.email,\n    phone: $('Webhook Contact').first().json.body.phone,\n    service: $('Webhook Contact').first().json.body.service,\n    message: $('Webhook Contact').first().json.body.message\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -816,
-        128
+        -368,
+        144
       ],
-      "id": "901a80b2-4f3c-4ef8-b42f-afba73a947a7",
-      "name": "codeStart"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Retornar los campos en un formato limpio\nreturn [{\n  json: {\n    authorization: $input.first().json.authHeader,\n    names: $input.first().json.body.names,\n    middlename: $input.first().json.body.middlename,\n    lastname: $input.first().json.body.lastname,\n    email: $input.first().json.body.email,\n    phone: $input.first().json.body.phone,\n    service: $input.first().json.body.service,\n    message: $input.first().json.body.message\n  }\n}];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -592,
-        128
-      ],
-      "id": "f5a70bc4-16b8-4b1a-bd19-acc19e29369a",
+      "id": "f8eee51c-fa1a-4c90-8766-e0a490551472",
       "name": "CodeFields"
     },
     {
@@ -64,16 +25,16 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        752,
-        128
+        976,
+        144
       ],
-      "id": "1c6b1080-3a03-4042-9dba-1f00b36e4121",
+      "id": "159e2740-d32b-4c63-8b30-41e3be8a9d9f",
       "name": "Respond to Webhook"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "https://n8n.hosting3m.com/webhook/192ecac2-3a14-42dc-8a5d-49c54eab282a/crud/customers",
+        "url": "https://n8n.hosting3m.com/webhook/81949755-352f-4f0b-bdf3-aac2d1f4b369/crud/v2/customers",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -84,6 +45,10 @@
             {
               "name": "Authorization",
               "value": "=Bearer {{$node[\"CodeFields\"].json.authorization}}"
+            },
+            {
+              "name": "x-jwt-claim-role",
+              "value": "={{$node[\"CodeFields\"].json.role}}"
             }
           ]
         },
@@ -95,17 +60,17 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -368,
-        128
+        -144,
+        144
       ],
-      "id": "0e14046f-6422-4963-aa55-fa88dd599962",
+      "id": "9281a290-012e-4180-a156-b6df6cdecf18",
       "name": "Insert",
       "onError": "continueErrorOutput"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "https://n8n.hosting3m.com/webhook/192ecac2-3a14-42dc-8a5d-49c54eab282a/crud/customers",
+        "url": "https://n8n.hosting3m.com/webhook/81949755-352f-4f0b-bdf3-aac2d1f4b369/crud/v2/customers",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -116,6 +81,10 @@
             {
               "name": "authorization",
               "value": "=Bearer {{$node[\"CodeFields\"].json.authorization}}"
+            },
+            {
+              "name": "x-jwt-claim-role",
+              "value": "={{$node[\"CodeFields\"].json.role}}"
             }
           ]
         },
@@ -127,17 +96,17 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        80,
-        128
+        304,
+        144
       ],
-      "id": "51385079-51d3-40a8-bda5-a33502bd29bf",
+      "id": "b89d09e2-00ef-49ce-9bb8-6f6fdf403489",
       "name": "Update",
       "onError": "continueErrorOutput"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "https://n8n.hosting3m.com/webhook/192ecac2-3a14-42dc-8a5d-49c54eab282a/crud/customers",
+        "url": "https://n8n.hosting3m.com/webhook/81949755-352f-4f0b-bdf3-aac2d1f4b369/crud/v2/customers",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -148,21 +117,25 @@
             {
               "name": "authorization",
               "value": "=Bearer {{$node[\"CodeFields\"].json.authorization}}"
+            },
+            {
+              "name": "x-jwt-claim-role",
+              "value": "={{$node[\"CodeFields\"].json.role}}"
             }
           ]
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n  \"operation\": \"getOne\",\n  \"fields\": {\n    \"email\": \"{{ $json.email }}\"\n  }\n}",
+        "jsonBody": "={\n  \"operation\": \"getone\",\n  \"fields\": {\n    \"email\": \"{{ $json.email }}\"\n  }\n}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -144,
-        192
+        80,
+        208
       ],
-      "id": "fe5cddc0-99e8-4ff5-90d6-960e3ea3e670",
+      "id": "a3c011fa-a0f3-47ea-937d-bab616d5d108",
       "name": "getCustomer",
       "onError": "continueErrorOutput"
     },
@@ -181,12 +154,12 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        528,
-        128
+        752,
+        144
       ],
-      "id": "14e81fbc-34ea-4187-a8a6-a33113687666",
+      "id": "855a6f6c-e356-45ad-b0a1-af10ff56be44",
       "name": "SendMailContact",
-      "webhookId": "15e776b7-257b-4fc8-ac70-42bad1077a15",
+      "webhookId": "f6b6824a-617b-4c0d-bae7-ea8ac4a01052",
       "credentials": {
         "smtp": {
           "id": "9FrPlhJb7FCBe7ZO",
@@ -207,12 +180,12 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        304,
-        0
+        528,
+        16
       ],
-      "id": "9b278bc9-87eb-495c-8059-0027b9581968",
+      "id": "3e3fcee4-5150-490f-be00-1a6cf980e8f0",
       "name": "SendMail",
-      "webhookId": "15e776b7-257b-4fc8-ac70-42bad1077a15",
+      "webhookId": "cb8f98cd-5b8e-4f33-bab4-a136b792c541",
       "credentials": {
         "smtp": {
           "id": "GR5kg3dzrkw00Slf",
@@ -235,44 +208,116 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        304,
-        240
+        528,
+        256
       ],
-      "id": "5ad7fdee-1461-45e0-963c-748c93599b01",
+      "id": "7490e61a-8625-479b-a9a3-7d993dc95de6",
       "name": "SendMailError",
-      "webhookId": "15e776b7-257b-4fc8-ac70-42bad1077a15",
+      "webhookId": "28ae3569-99a5-434e-99e7-1447f13a2d17",
       "credentials": {
         "smtp": {
           "id": "GR5kg3dzrkw00Slf",
           "name": "contacto@hosting3m.com"
         }
       }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "51275301-bea2-454d-b495-3f942bbdb9e6",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -592,
+        240
+      ],
+      "id": "94b3ed74-1ec9-472a-a0c8-8a875c38a1e2",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"mensaje\": \"Acceso denegado\"}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -368,
+        336
+      ],
+      "id": "6761c733-1b05-40d9-9df4-d1e226c4a092",
+      "name": "Respond Denegate"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://jwt-service:4000/verify-token",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $json.headers.authorization }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -816,
+        240
+      ],
+      "id": "690e5013-4286-4a00-bc54-4672aaa8860b",
+      "name": "Verify Token"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "v2/contact",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "https://hosting3m.com"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -1040,
+        240
+      ],
+      "id": "3255290d-21fb-42da-91dc-64937dd5c478",
+      "name": "Webhook Contact",
+      "webhookId": "7d364b2e-be45-40eb-b7b9-8740bd3b8ba7"
     }
   ],
   "pinData": {},
   "connections": {
-    "Webhook (Contacto Hosting3m)": {
-      "main": [
-        [
-          {
-            "node": "codeStart",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "codeStart": {
-      "main": [
-        [
-          {
-            "node": "CodeFields",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "CodeFields": {
       "main": [
         [
@@ -370,6 +415,46 @@
           }
         ]
       ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "CodeFields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Denegate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Token": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Contact": {
+      "main": [
+        [
+          {
+            "node": "Verify Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -377,20 +462,28 @@
     "executionOrder": "v1",
     "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false,
-    "errorWorkflow": "9SrVXdATmlrZemJT"
+    "errorWorkflow": "9SrVXdATmlrZemJT",
+    "timeSavedMode": "fixed",
+    "timeSavedPerExecution": 5
   },
-  "versionId": "b80dd5a5-0859-44fa-aa65-7f5ff0143f35",
+  "versionId": "e93f5a9f-d3b6-4ede-85e4-03c6513c92d9",
   "meta": {
     "templateCredsSetupCompleted": true,
-    "instanceId": "2ebfe6551ca260f617d68572b7a0eb6825fe3993d0da19ebfb0e274f2e0ccb37"
+    "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
   },
-  "id": "ZevwXDCwF7Re1klQ",
+  "id": "rrhAH1qMYfcQ68mB",
   "tags": [
     {
       "updatedAt": "2025-12-20T19:25:08.685Z",
       "createdAt": "2025-12-20T19:25:08.685Z",
       "id": "ljhw24TcxNVpCPyc",
       "name": "Webhook"
+    },
+    {
+      "updatedAt": "2025-12-20T19:25:50.503Z",
+      "createdAt": "2025-12-20T19:25:50.503Z",
+      "id": "wJ0vNQ7idcCu9BGu",
+      "name": "JWT"
     },
     {
       "updatedAt": "2025-12-20T20:03:23.298Z",
