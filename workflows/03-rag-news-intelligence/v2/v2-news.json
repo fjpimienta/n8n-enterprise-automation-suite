@@ -1,0 +1,508 @@
+{
+  "name": "v2/news",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "v2/news",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "https://hosting3m.com",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, Authorization, x-jwt-claim-role"
+              },
+              {
+                "name": "Access-Control-Allow-Credentials",
+                "value": "true"
+              },
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "https://hosting3m.com"
+              }
+            ]
+          }
+        }
+      },
+      "id": "ff3da440-8fa0-490d-bc33-8c9638ebb608",
+      "name": "Webhook Noticias",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "webhookId": "noticias-ti",
+      "position": [
+        5968,
+        1008
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.data }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        6864,
+        912
+      ],
+      "id": "edc6bc1e-f73b-4858-ac28-76f2077355ca",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "51275301-bea2-454d-b495-3f942bbdb9e6",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        6416,
+        1008
+      ],
+      "id": "46848542-1d48-48d9-a660-23e5ea039c91",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"mensaje\": \"Acceso denegado\"}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        6640,
+        1104
+      ],
+      "id": "90c207e1-442b-4a78-97a8-6e6e0104a321",
+      "name": "Respond Denegate"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        5968,
+        688
+      ],
+      "id": "f487dd08-cf2d-4ec0-a5bb-7d9b2148db25",
+      "name": "News by hour"
+    },
+    {
+      "parameters": {
+        "jsCode": "const urls = [\n  // --- GOOGLE NEWS (Búsqueda por palabra clave) ---\n  \"https://news.google.com/rss/search?q=inteligencia+artificial+when:24h&hl=es-419&gl=MX&ceid=MX:es-419\",\n  \"https://news.google.com/rss/search?q=automatizacion+n8n+when:24h&hl=es&gl=ES&ceid=ES:es\",\n  \n  // --- COMUNIDAD ---\n  \"https://www.meneame.net/rss?id=231\", \n  \"https://reddit.com/r/es/search.rss?q=tecnologia&sort=new\",\n  \n  // --- MEDIOS ---\n  \"https://eloutput.com/feed/\",\n  \"https://www.infobae.com/feeds/rss/es/tag/tecnologia/\",\n  \"https://as.com/meristation/tecnologia/rss/\",\n  \"https://www.diariomotor.com/tecmovia/feed/\"\n];\n\nreturn urls.map(url => ({ json: { url } }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6640,
+        688
+      ],
+      "id": "7a1ca79c-7de5-4300-ae1b-daa08f92ec2d",
+      "name": "Url Generated"
+    },
+    {
+      "parameters": {
+        "url": "={{$json[\"url\"]}}",
+        "options": {}
+      },
+      "id": "955bd81b-7871-4a7e-92ba-9517784b65d4",
+      "name": "RSS Read",
+      "type": "n8n-nodes-base.rssFeedRead",
+      "typeVersion": 1,
+      "position": [
+        6864,
+        688
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Limpieza inicial\nconst validItems = items.filter(item => item.json && item.json.title);\nconst MIN_DESEADO = 5;\n\n// === TUS TEMAS ===\nconst topics = [\n  \"inteligencia artificial\", \"ia\", \"ai \", \"llm\", \"gpt\", \"chatgpt\", \"gemini\", \"claude\",\n  \"n8n\", \"automatización\", \"automatizar\", \"workflow\", \"linux\", \"docker\", \"servidor\", \"agente\", \"agentic\"\n];\n\nfunction matchTopic(item) {\n  const title = (item.json.title || \"\").toLowerCase();\n  const desc = (item.json.contentSnippet || item.json.description || \"\").toLowerCase();\n  return topics.some(keyword => (title + \" \" + desc).includes(keyword.toLowerCase()));\n}\n\n// 2. Filtrar por tema (PRIMERO FILTRAMOS, LUEGO PROCESAMOS IMAGENES)\nlet candidates = validItems.filter(matchTopic);\n\n// 3. Ordenar por fecha DESCENDENTE\ncandidates.sort((a, b) => {\n  const dateA = new Date(a.json.pubDate || 0);\n  const dateB = new Date(b.json.pubDate || 0);\n  return dateB - dateA;\n});\n\n// 4. Quitar duplicados por título\nconst uniqueTitles = new Set();\nconst finalNews = candidates.filter(item => {\n  const isDuplicate = uniqueTitles.has(item.json.title);\n  uniqueTitles.add(item.json.title);\n  return !isDuplicate;\n});\n\n// 5. Devolver máximo 10 noticias (para no saturar el HTML)\nreturn finalNews.slice(0, 10);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7088,
+        688
+      ],
+      "id": "dba6b5c1-de2b-490b-b5c5-90ee695e2b0c",
+      "name": "Filter News"
+    },
+    {
+      "parameters": {
+        "jsCode": "const seed = Math.floor(Math.random() * 5000);\nconst prompt = encodeURIComponent(\"Futuristic tech concept art, AI and Automation with n8n, isometric 8k, unreal engine 5, neon blue lighting\");\nconst imageUrl = `https://image.pollinations.ai/prompt/${prompt}?width=800&height=450&model=flux&seed=${seed}&nologo=true`;\n\nreturn { json: { global_image: imageUrl } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6416,
+        688
+      ],
+      "id": "d20b7771-da57-4a92-bfde-b91613cd85e7",
+      "name": "Image Generated"
+    },
+    {
+      "parameters": {
+        "jsCode": "const globalImage = $(\"Image Generated\").first().json.global_image;\n\nreturn items.map(item => {\n  return {\n    json: {\n      url: item.json.link,\n      title: item.json.title,\n      source: item.json.source || 'RSS Feed',\n      image: globalImage,\n      published_at: new Date(item.json.pubDate || Date.now()).toISOString()\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7312,
+        688
+      ],
+      "id": "ab1828c5-225f-49e9-b596-5466c6e0360e",
+      "name": "Config Data"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.hosting3m.com/webhook/81949755-352f-4f0b-bdf3-aac2d1f4b369/crud/v2/news_articles",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $('Get Token').first().json.token }}"
+            },
+            {
+              "name": "x-jwt-claim-role",
+              "value": "={{ $('Get Token').first().json.role }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"operation\": \"insert\",\n  \"fields\": {\n    \"url\": \"{{ $input.item.json.url }}\",\n    \"title\": \"{{ $input.item.json.title }}\",\n    \"source\": \"{{ $input.item.json.source }}\",\n    \"image\": \"{{ $input.item.json.image }}\"\n  }\n}",
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        7536,
+        688
+      ],
+      "id": "5a0731b5-d50f-4108-9cf9-099ca7b7849e",
+      "name": "Insert",
+      "retryOnFail": true,
+      "waitBetweenTries": 1000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.hosting3m.com/webhook/v2/genera-token",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "user",
+              "value": "n8n@hosting3m.com"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        6192,
+        688
+      ],
+      "id": "a307261e-1e9c-4b7c-aef4-095e7959aff1",
+      "name": "Get Token"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.hosting3m.com/webhook/81949755-352f-4f0b-bdf3-aac2d1f4b369/crud/v2/news_articles",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $node[\"Webhook Noticias\"].json.headers.authorization }}"
+            },
+            {
+              "name": "x-jwt-claim-role",
+              "value": "={{ $node[\"Verify Token\"].json.role }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"operation\": \"getAll\"\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        6640,
+        912
+      ],
+      "id": "b0950dd0-d91e-4aeb-8fd8-65462174ff17",
+      "name": "Check Article Exists",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://jwt-service:4000/verify-token",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.headers.authorization }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        6192,
+        1008
+      ],
+      "id": "e7d937ae-8f0e-4650-991d-3b5be1b1cd38",
+      "name": "Verify Token"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Noticias": {
+      "main": [
+        [
+          {
+            "node": "Verify Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Check Article Exists",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Denegate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "News by hour": {
+      "main": [
+        [
+          {
+            "node": "Get Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Url Generated": {
+      "main": [
+        [
+          {
+            "node": "RSS Read",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RSS Read": {
+      "main": [
+        [
+          {
+            "node": "Filter News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter News": {
+      "main": [
+        [
+          {
+            "node": "Config Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Image Generated": {
+      "main": [
+        [
+          {
+            "node": "Url Generated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config Data": {
+      "main": [
+        [
+          {
+            "node": "Insert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Token": {
+      "main": [
+        [
+          {
+            "node": "Image Generated",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert": {
+      "main": [
+        [],
+        []
+      ]
+    },
+    "Check Article Exists": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Token": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "9SrVXdATmlrZemJT",
+    "timeSavedPerExecution": 1
+  },
+  "versionId": "85aefbff-fc5c-4bf4-bd3c-113fdcee4a6b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
+  },
+  "id": "ZngYvvyhhTnhuZH8",
+  "tags": []
+}
