@@ -78,7 +78,7 @@ services:
     container_name: n8n-enterprise-db
     restart: always
     environment:
-      - POSTGRES_DB=${n8n_db}
+      - POSTGRES_DB=${n8n_hosting3m_db}
       - POSTGRES_USER=${n8n_user}
       - POSTGRES_PASSWORD=${n8n_pass}
     volumes:

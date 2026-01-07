@@ -19,13 +19,13 @@ const { Pool } = require('pg');
 console.log("Intentando conectar a DB con:");
 console.log("Host:", process.env.n8n_host);
 console.log("User:", process.env.n8n_user);
-console.log("database:", process.env.n8n_db);
+console.log("database:", process.env.n8n_hosting3m_db);
 
 // Configuración de la DB (usa tus variables de entorno)
 const pool = new Pool({
   user: process.env.n8n_user,
   host: process.env.n8n_host,
-  database: process.env.n8n_db,
+  database: process.env.n8n_hosting3m_db,
   password: process.env.n8n_pass,
   port: process.env.port_db,
 });
