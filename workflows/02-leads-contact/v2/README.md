@@ -1,7 +1,9 @@
 # 🛠️ Contact & CRM Bridge v2 (n8n Workflow)
 
 ## 📝 Descripción
-Este workflow es la evolución del sistema de captura de leads de Hosting3m. Actúa como un orquestador inteligente que recibe peticiones, valida identidad mediante JWT, normaliza datos y ejecuta una lógica de Upsert (Update or Insert) en el core de la base de datos a través de una API CRUD interna.
+Este workflow implementa un sistema robusto de captura de prospectos y sincronización con CRM utilizando n8n. Diseñado bajo una arquitectura de microservicios, integra validación de identidad externa vía JWT, persistencia inteligente (Upsert) y un sistema de notificaciones automáticas con manejo de excepciones.
+
+El flujo actúa como el backend orquestador para los formularios de contacto de Hosting3m. Su función principal es validar la legitimidad de la petición, procesar la información del cliente y asegurar que los datos lleguen tanto a la base de datos como al equipo de ventas sin duplicidades.
 
 ---
 
@@ -15,19 +17,21 @@ Este workflow es la evolución del sistema de captura de leads de Hosting3m. Act
 ---
 
 ### ⚙️ Lógica de Negocio
-1. **Validación JWT:** El flujo está protegido mediante autenticación JWT, asegurando que solo peticiones autorizadas puedan registrar contactos.
-2. **Procesamiento de Campos:** Mediante nodos de Code (JavaScript), se normalizan los encabezados y el cuerpo del mensaje para un manejo limpio de datos.
-3. **Inteligencia de Persistencia (Flowchart):** 
-    * Intenta registrar al cliente directamente (Insert).
-    * Si el cliente ya existe (basado en el email), el flujo captura el error, busca el ID del cliente (getCustomer) y procede a actualizar la información existente (Update).
-4. **Confirmación Multicanal:** Envía un correo de confirmación al cliente.
-    * Notifica al equipo de ventas/soporte con los detalles del servicio solicitado.
+1. **Seguridad Perimetral:** Validación de tokens mediante un microservicio externo de JWT.
+2. **Control de Acceso:** Filtro mediante nodo If que bloquea peticiones no autorizadas (401 Unauthorized).
+3. **Normalización:** Extracción y limpieza de campos mediante JavaScript (Nodo Code).
+4. **Estrategia Upsert (Inteligente):** 
+    * Intento 1: Intenta una inserción directa (POST /insert).
+    * Fallback: Si falla (usuario existente), busca el ID del cliente (POST /getone) y realiza una actualización (POST /update).
+5. **Confirmación Multicanal:**
+    * Correo de agradecimiento al cliente (vía SendMail).
+    * Notificación interna detallada al equipo de soporte (vía SendMailContact).
 
 ---
 
 ## 🛠️ Instalación
 - **Requisitos previos:**
-    * Instancia de n8n (v2.1.4 o superior).
+    * Instancia de n8n (v2.2.4 o superior).
     * Credenciales SMTP configuradas para los nodos de envío de correo.
     * Un servicio CRUD activo en https://n8n.hosting3m.com/webhook/.../crud/v2/customers.
 - **Importación:**

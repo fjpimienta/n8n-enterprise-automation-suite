@@ -2,8 +2,9 @@
 
 ## 📝 Descripción
 
-Este componente es un microservicio de autenticación orquestado en **n8n** que actúa como middleware entre una base de datos relacional y un servicio de firma de tokens. Su función principal es validar la identidad de un usuario, recuperar sus privilegios (roles) desde **PostgreSQL** y emitir un JSON Web Token (JWT) mediante un servicio externo.
+Este componente es un microservicio de autenticación orquestado en n8n que actúa como middleware de seguridad. Su función principal es recibir una identidad de usuario, comunicarse de forma segura con un servicio interno de firma y retornar un JSON Web Token (JWT) junto con el rol asignado.
 
+Este flujo destaca por su enfoque en seguridad por aislamiento, delegando la lógica criptográfica a un servicio especializado no expuesto a internet.
 ---
 
 ## 🚦 Versiones del Workflow
@@ -11,19 +12,22 @@ Este componente es un microservicio de autenticación orquestado en **n8n** que 
 | Versión | Estado | Endpoint Path | Cambios Principales | Archivo JSON |
 | :--- | :--- | :--- | :--- | :--- |
 | **v1** | `Legacy` | `/genera-token` | Lanzamiento inicial. | `v1-auth.json` |
-| **v2** | `Stable` | `/v2/genera-token` | Integracion de Rol del usuario. | `v2-auth.json` |
+| **v2** | `Stable` | `/v2/genera-token` | Integración de Rol y uso de Variables de Entorno. | `v2-auth.json` |
 
 ---
 
+## 🏗️ Arquitectura del Flujo
+
 ### 🛡 flujo de Seguridad
-1.  **Validación de Identidad:** Recibe credenciales y consulta PostgreSQL (`users` table) para verificar existencia y obtener el rol (`public`, `admin`).
-2.  **Aislamiento de Servicio:**
-    * El flujo **no genera el token**.
-    * Delega la firma criptográfica a un contenedor Docker aislado (`jwt-service:4000`) accesible solo a través de la red interna de Docker (Bridge Network).
-3.  **Respuesta Estructurada:** Retorna el Token + Rol para consumo del cliente.
+1.  **Recepción (Webhook):** Escucha peticiones POST en el endpoint /v2/genera-token. Soporta CORS (*) para integración con aplicaciones web front-end.
+2.  **Generación de Token (HTTP Request):**
+    * Se comunica con el contenedor jwt-service en el puerto 4000.
+    * Payload: Envía el nombre de usuario y un INTERNAL_SECRET recuperado de las variables de entorno de n8n ($env["INTERNAL_SECRET"]).
+    * Aislamiento de Red: Utiliza resolución DNS interna de Docker, evitando la exposición pública de la llave secreta.
+3.  **Respuesta Estructurada (Respond to Webhook):** Retorna un objeto JSON limpio con el token y el role, mapeando dinámicamente el código de estado HTTP según la respuesta del servicio.
 
 ### 🐳 Docker Integration
-El uso de `http://jwt-service:4000` demuestra el conocimiento de redes de contenedores, evitando exponer el servicio de firma a la internet pública, reduciendo la superficie de ataque.
+El uso de `http://jwt-service:4000` emuestra el aprovechamiento de redes de contenedores (Bridge Network), lo que garantiza que la firma del token ocurra en un entorno controlado y de baja latencia.
 
 ---
 
@@ -32,7 +36,7 @@ El uso de `http://jwt-service:4000` demuestra el conocimiento de redes de conten
 Para desplegar este flujo en tu instancia de n8n, sigue estos pasos:
 
 1.  **Requisitos previos:**
-    * Instancia de **n8n** (v2.0.3 o superior).
+    * Instancia de **n8n** (v2.2.4 o superior).
     * El contenedor `jwt-service` debe estar corriendo en la misma red que n8n escuchando en el puerto `4000`.
     * Contenedor **PostgreSQL** con una tabla `users` (debe contener columnas `email` y `role`).
 
@@ -45,10 +49,18 @@ Para desplegar este flujo en tu instancia de n8n, sigue estos pasos:
     * Asegúrate de que la red de Docker permita la comunicación con el host `jwt-service`.
 
 4. **Configuración de Variables de Entorno:**
-    * Asegúrate de que tu `docker-compose.yml` incluya el servicio de tokens:
+    * Asegúrate de que tu docker-compose.yml incluya el secreto:
+      ```
+      services:
+        n8n:
+          environment:
+            - INTERNAL_SECRET=tu_clave_secreta_super_segura
+      ```
+
       ```bash
         # Comando para levantar la infraestructura necesaria
         docker-compose up -d jwt-service postgres-compose
+      ```
 ---
 
 ## 🚀 Uso

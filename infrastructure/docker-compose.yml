@@ -51,15 +51,21 @@ services:
       - N8N_GIT_NODE_DISABLE_BARE_REPOS=true
       - SERVICES_TIMEOUT=300   # 60
       - NODE_OPTIONS=--max-old-space-size=1024 --require /home/node/.n8n/custom/init-blob.js
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+      - N8N_BLOCK_ENV_VARS_INCLUDE=INTERNAL_SECRET
     depends_on:
       - postgres
     volumes:
+      # Datos persistentes (Volumen nombrado)
       - n8n_restored_data:/home/node/.n8n
-      - /var/www/vhosts/hosting3m.com/n8n.hosting3m.com/n8n-compose/local-files:/files      
+      # Rutas dinámicas usando variables del .env
+      # Ejemplo de cómo configurar las rutas en tu .env
+      - ${PROJECT_ROOT}/local-files:/files      
+      - ${PROJECT_ROOT}/custom:/home/node/.n8n/custom
+      - ${LOGS_PATH}:/home/node/.n8n/logs
+      # Rutas de sistema (Mantenidas por necesidad de Plesk)
       - /var/lib/psa/dumps:/var/lib/psa/dumps
       - ./.env:/home/node/.env
-      - /var/www/vhosts/hosting3m.com/n8n.hosting3m.com/n8n-compose/custom:/home/node/.n8n/custom
-      - /opt/n8n/logs:/home/node/.n8n/logs
     networks:
       - n8n_enterprise_net
     deploy:
@@ -72,12 +78,11 @@ services:
     container_name: n8n-enterprise-db
     restart: always
     environment:
-      - POSTGRES_DB=${n8n_db}
+      - POSTGRES_DB=${n8n_hosting3m_db}
       - POSTGRES_USER=${n8n_user}
       - POSTGRES_PASSWORD=${n8n_pass}
     volumes:
-      - /opt/n8n/data/postgres_db:/var/lib/postgresql/data # Mapeo ABSOLUTO con los datos recuperados
-      # - postgres_data:/var/lib/postgresql/data
+      - /opt/n8n/data/postgres_db:/var/lib/postgresql/data
       - ./postgres/initdb:/docker-entrypoint-initdb.d
     ports:
       - "${port_db}:${port_db}"
@@ -126,11 +131,37 @@ services:
         reservations:
           memory: 500m
 
+  budibase:
+    image: budibase/budibase:latest
+    container_name: hotel-app-ui
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:10000:80"
+    environment:
+      # Claves secretas internas de Budibase (cámbialas por algo seguro)
+      JWT_SECRET: ${JWT_SECRET}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      COUCHDB_USER: ${COUCHDB_USER:-budibase}      # Recomendado agregar (genera uno fuerte)
+      COUCHDB_PASSWORD: ${COUCHDB_PASSWORD}        # Obligatorio y fuerte
+      INTERNAL_API_KEY: ${INTERNAL_API_KEY}        # Obligatorio y fuerte
+      # Estas son las que faltaban para reverse proxy
+      APP_URL: "https://sanjose.hosting3m.com"      # ← URL pública completa
+      PUBLIC_URL: "https://sanjose.hosting3m.com"  # ← Igual que arriba
+      SELF_HOSTED: "1"                             # Indica que es self-hosted
+
+    volumes:
+      - budibase_data:/data
+    networks:
+      - n8n_enterprise_net
+    #depends_on:
+    #  - n8n-enterprise-db
+
 volumes:
-  n8n_restored_data:
-    external: true
-  postgres_data:
-    external: false
+  n8n_restored_data: {}
+  postgres_data: {}
+  budibase_data: {}
 
 networks:
   n8n_enterprise_net:
