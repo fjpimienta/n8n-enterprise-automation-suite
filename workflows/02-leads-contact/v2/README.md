@@ -20,10 +20,10 @@ El flujo actúa como el backend orquestador para los formularios de contacto de 
 1. **Seguridad Perimetral:** Validación de tokens mediante un microservicio externo de JWT.
 2. **Control de Acceso:** Filtro mediante nodo If que bloquea peticiones no autorizadas (401 Unauthorized).
 3. **Normalización:** Extracción y limpieza de campos mediante JavaScript (Nodo Code).
-3. **Estrategia Upsert (Inteligente):** 
+4. **Estrategia Upsert (Inteligente):** 
     * Intento 1: Intenta una inserción directa (POST /insert).
     * Fallback: Si falla (usuario existente), busca el ID del cliente (POST /getone) y realiza una actualización (POST /update).
-4. **Confirmación Multicanal:**
+5. **Confirmación Multicanal:**
     * Correo de agradecimiento al cliente (vía SendMail).
     * Notificación interna detallada al equipo de soporte (vía SendMailContact).
 
