@@ -1,0 +1,28 @@
+// auth.interceptor.ts (Mejorado)
+import { inject } from '@angular/core';
+import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
+import { catchError, throwError } from 'rxjs';
+import { Router } from '@angular/router';
+
+export const authInterceptor: HttpInterceptorFn = (req, next) => {
+  const token = localStorage.getItem('token');
+  const router = inject(Router);
+
+  let clonedReq = req;
+  if (token) {
+    clonedReq = req.clone({
+      setHeaders: { Authorization: `Bearer ${token}` }
+    });
+  }
+
+  return next(clonedReq).pipe(
+    catchError((error: HttpErrorResponse) => {
+      if (error.status === 401) {
+        // Token inválido o expirado
+        localStorage.removeItem('token');
+        router.navigate(['/login']);
+      }
+      return throwError(() => error);
+    })
+  );
+};

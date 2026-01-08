@@ -1,0 +1,81 @@
+<div class="page-wrapper">
+  <div class="page-header d-print-none">
+    <div class="container-xl">
+      <div class="row g-2 align-items-center">
+        <div class="col">
+          <h2 class="page-title">Panel de Control Hotelero</h2>
+          <div class="text-muted mt-1">Estado actual del complejo - {{ today | date:'dd/MM/yyyy' }}</div>
+        </div>
+        <div class="col-auto ms-auto d-print-none">
+          <button (click)="logout()" class="btn btn-danger">Cerrar Sesión</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-body">
+    <div class="container-xl">
+      <div class="row row-deck row-cards">
+        
+        <div class="col-sm-6 col-lg-3">
+          <div class="card">
+            <div class="card-body">
+              <div class="d-flex align-items-center">
+                <div class="subheader">Ocupación</div>
+              </div>
+              <div class="h1 mb-3">85%</div>
+              <div class="progress progress-sm">
+                <div class="progress-bar bg-primary" style="width: 85%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-sm-6 col-lg-3">
+          <div class="card">
+            <div class="card-body">
+              <div class="subheader text-green">Check-ins hoy</div>
+              <div class="h1">12</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12">
+          <div class="card">
+            <div class="card-header"><h3 class="card-title">Estado de Habitaciones</h3></div>
+            <div class="table-responsive">
+              <table class="table card-table table-vcenter text-nowrap datatable">
+                <thead>
+                  <tr>
+                    <th>Hab.</th>
+                    <th>Tipo</th>
+                    <th>Huésped</th>
+                    <th>Estado</th>
+                    <th>Limpieza</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>101</td>
+                    <td>Suite Jr.</td>
+                    <td>Juan Pérez</td>
+                    <td><span class="badge bg-success">Ocupada</span></td>
+                    <td><span class="text-muted">Al día</span></td>
+                  </tr>
+                  <tr>
+                    <td>102</td>
+                    <td>Doble</td>
+                    <td>---</td>
+                    <td><span class="badge bg-secondary">Disponible</span></td>
+                    <td><span class="text-warning">Pendiente</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>

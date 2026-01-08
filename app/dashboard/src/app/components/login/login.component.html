@@ -1,0 +1,29 @@
+<div class="page page-center">
+  <div class="container container-tight py-4">
+    <div class="text-center mb-4">
+      <h1>Hosting3M Hotel Manager</h1>
+    </div>
+    <div class="card card-md">
+      <div class="card-body">
+        <h2 class="h2 text-center mb-4">Acceder a tu cuenta</h2>
+        
+        <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+          <div class="mb-3">
+            <label class="form-label">Usuario</label>
+            <input type="text" formControlName="user" class="form-control" placeholder="admin">
+          </div>
+          <div class="mb-2">
+            <label class="form-label">Contraseña</label>
+            <input type="password" formControlName="pass" class="form-control" placeholder="****">
+          </div>
+          <div class="form-footer">
+            <button type="submit" class="btn btn-primary w-100" [disabled]="loginForm.invalid">
+              Ingresar
+            </button>
+          </div>
+        </form>
+
+      </div>
+    </div>
+  </div>
+</div>

@@ -37,7 +37,7 @@ services:
       - N8N_EDITOR_BASE_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}
       - N8N_FORCE_HTTPS=true
       - DB_TYPE=postgresdb
-      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_HOST=n8n-enterprise-db
       - DB_POSTGRESDB_PORT=${port_db}
       - DB_POSTGRESDB_DATABASE=${n8n_db}
       - DB_POSTGRESDB_USER=${n8n_user}
@@ -78,7 +78,7 @@ services:
     container_name: n8n-enterprise-db
     restart: always
     environment:
-      - POSTGRES_DB=${n8n_hosting3m_db}
+      - POSTGRES_DB=${postgres}
       - POSTGRES_USER=${n8n_user}
       - POSTGRES_PASSWORD=${n8n_pass}
     volumes:
@@ -130,33 +130,6 @@ services:
           # Dado que tienes Swap, podemos darle más techo aquí.
         reservations:
           memory: 500m
-
-  budibase:
-    image: budibase/budibase:latest
-    container_name: hotel-app-ui
-    restart: unless-stopped
-    ports:
-      - "127.0.0.1:10000:80"
-    environment:
-      # Claves secretas internas de Budibase (cámbialas por algo seguro)
-      JWT_SECRET: ${JWT_SECRET}
-      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY}
-      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY}
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
-      COUCHDB_USER: ${COUCHDB_USER:-budibase}      # Recomendado agregar (genera uno fuerte)
-      COUCHDB_PASSWORD: ${COUCHDB_PASSWORD}        # Obligatorio y fuerte
-      INTERNAL_API_KEY: ${INTERNAL_API_KEY}        # Obligatorio y fuerte
-      # Estas son las que faltaban para reverse proxy
-      APP_URL: "https://sanjose.hosting3m.com"      # ← URL pública completa
-      PUBLIC_URL: "https://sanjose.hosting3m.com"  # ← Igual que arriba
-      SELF_HOSTED: "1"                             # Indica que es self-hosted
-
-    volumes:
-      - budibase_data:/data
-    networks:
-      - n8n_enterprise_net
-    #depends_on:
-    #  - n8n-enterprise-db
 
 volumes:
   n8n_restored_data: {}
