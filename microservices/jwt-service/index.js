@@ -35,6 +35,11 @@ const pool = new Pool({
 // ENDPOINT DE GENERACIÓN
 app.post('/generate-token', async (req, res) => {
   const { user, pass, internal_secret } = req.body;
+
+  // LOGS DE DEBUG (Añade estas líneas)
+  console.log(`Intento de login para: ${user}`);
+  console.log(`¿Llegó contraseña?: ${pass ? 'SÍ (longitud: ' + pass.length + ')' : 'NO'}`);
+  console.log(`Internal Secret recibido: ${internal_secret}`);  
   
   if (internal_secret !== INTERNAL_SECRET) {
     return res.status(403).json({ error: 'Unauthorized' });
@@ -56,11 +61,17 @@ app.post('/generate-token', async (req, res) => {
      * comparamos texto plano directamente. Esto permite que tus usuarios actuales entren
      * y puedas actualizar sus claves después.
      */
+    // Intentamos comparar con Bcrypt
     let isMatch = false;
-    try {
-        isMatch = await bcrypt.compare(pass, dbHash);
-    } catch (e) {
-        isMatch = (pass === dbHash); // Fallback temporal para texto plano
+    
+    // Verificamos si dbHash parece un hash de bcrypt (empieza con $2)
+    if (dbHash && dbHash.startsWith('$2')) {
+      isMatch = await bcrypt.compare(pass, dbHash);
+    }
+    
+    // Si no hubo match con bcrypt, probamos con texto plano (Fallback)
+    if (!isMatch) {
+      isMatch = (pass === dbHash);
     }
 
     if (!isMatch) { 
