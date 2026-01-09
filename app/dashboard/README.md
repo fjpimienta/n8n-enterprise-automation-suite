@@ -1,59 +1,81 @@
-# AdminHotel
+# 🏨 AdminHotel Dashboard
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.0.5.
+🛠️ Integrated Frontend for Dynamic CRUD Engine
 
-## Development server
+## 📝 Descripción
+AdminHotel es una aplicación web de alto rendimiento construida sobre Angular 21, diseñada como la interfaz administrativa oficial de la suite de automatización Hosting3M.
 
-To start a local development server, run:
+Este dashboard no solo gestiona la lógica hotelera (reservas, habitaciones, pagos), sino que actúa como el cliente principal del Dynamic CRUD Engine (Módulo 06), permitiendo una gestión de datos en tiempo real mediante una capa de abstracción basada en n8n y PostgreSQL.
 
-```bash
-ng serve
-```
+---
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
+## 🚦 Versiones del Workflow
 
-## Code scaffolding
+| Versión | Estado | Módulo Principal | Stack de UI | Cambios Principales |
+| :--- | :--- | :--- | :--- | :--- |
+| **v0.1** | `Develop` | `Auth & Architecture` | Tabler + Bootstrap | `Estructura base, JWT Auth, Signals.` |
+| **v0.2** | `Planned` | `Room Rack v1` | CSS Grid / Cards | `Gestión visual de 17 habitaciones.` |
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+---
 
-```bash
-ng generate component component-name
-```
+### 🏗️ Arquitectura de la Solución
+La aplicación implementa una arquitectura desacoplada donde el frontend delega la persistencia al orquestador n8n:
+1. **Capa de Seguridad:** mplementación de auth.guard.ts y auth.interceptor.ts para comunicación segura vía JWT con el Módulo 01 (Auth Gateway).
+2. **Gestión de Estado:** Uso de Angular Signals para un manejo reactivo y eficiente del estado del usuario y la UI.
+3. **Consumo de API:** Comunicación dinámica con el endpoint /crud/v2/:model para operaciones atómicas.
+4. **Validación:** Middleware de verificación cruzada entre el rol del usuario (x-jwt-claim-role) y permisos del backend.
+5. **Logging:** Logger.service.ts integrado para depuración en modo desarrollo sin ensuciar la consola de producción.
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+---
 
-```bash
-ng generate --help
-```
+## 🚀 Capacidades de AdminHotel
+- **Seguridad Enterprise:** Autenticación robusta con jwt-decode y protección de rutas.
+- **UI Premium:** Interfaz basada en Tabler, optimizada para visualización de métricas y gestión de inventario.
+- **Testing de Alta Velocidad:** Configuración nativa con Vitest para un ciclo de desarrollo ágil.
+- **Dynamic CRUD Ready:** Formulario y servicios preparados para interactuar con cualquier tabla de PostgreSQL a través del motor n8n.
 
-## Building
+---
 
-To build the project run:
+## 📊 Roadmap: Gestión de Hotel (17 Habitaciones)
+|Módulo|Descripción|Integración n8n|
+|Room Rack|Grid visual del estado de las 17 habitaciones (Libre/Ocupada).|Webhook en tiempo real.|
+|Smart Booking|CRUD de reservaciones conectado a la lógica de IA.|AI WhatsApp Agent (Módulo 05).|
+|Auto-Billing|Generación de recibos y control de pagos mediante Tabler UI.|CRM Bridge (Módulo 07).|
 
-```bash
-ng build
-```
+---
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+## 🛠️ Comandos de Desarrollo
+1. Requisitos
+    * Node.js (v20+)
+    * Angular CLI v21.0.5
 
-## Running unit tests
+2. Instalación y Servidor Local
+    ```
+        # Instalar dependencias
+        npm install
 
-To execute unit tests with the [Vitest](https://vitest.dev/) test runner, use the following command:
+        # Iniciar servidor de desarrollo
+        ng serve
+    ```
+3. Pruebas y Construcción
+    ```
+        # Ejecutar Unit Tests con Vitest
+        ng test
 
-```bash
-ng test
-```
+        # Compilación para Producción (Plesk Ready)
+        ng build --configuration=production
+    ```
 
-## Running end-to-end tests
+---
 
-For end-to-end (e2e) testing, run:
+## 📦 Integración con n8n Enterprise Suite
+Este dashboard es el componente app/dashboard dentro del ecosistema n8n Enterprise Suite. Se comunica directamente con los siguientes servicios:
 
-```bash
-ng e2e
-```
+* JWT Service: Para validación de tokens RS256.
+* PostgreSQL + pgvector: Almacenamiento de metadatos de habitaciones y búsqueda semántica.
+* Nginx Proxy: Terminación SSL y endurecimiento de cabeceras.
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+## 📄 Licencia
+Este proyecto está bajo la licencia n8n Sustainable Use License. Desarrollado para optimizar la presencia digital y la inteligencia de contenidos de Hosting3m.
 
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+Desarrollado por: Francisco Jesus Pérez Pimienta - Ingeniero en Sistemas Computacionales y Maestro en Administración de Proyectos.
