@@ -9,7 +9,7 @@ export class HotelService {
   private http = inject(HttpClient);
   private apiUrl_crud = environment.apiUrl_crud; // Tu URL de n8n
   public loading = signal<boolean>(false); // Nuevo Signal
-  filter = signal<'all' | 'available' | 'occupied' | 'checkout' | 'maintenance'>('all');
+  filter = signal<'all' | 'available' | 'occupied' | 'checkout' | 'maintenance'>('available');
 
   // Signal para estado reactivo (Best Practice Angular 19+)
   rooms = signal<Room[]>([]);
@@ -61,8 +61,14 @@ export class HotelService {
       .subscribe({
         next: (res) => {
           // 2. Gracias a la interfaz, TS sabe que res.data es un Room[]
-          this.rooms.set(res.data || []);
-          this.loading.set(false); // Terminamos carga
+          const data = res.data || [];
+          // Ordenamos antes de setear el estado
+          const sortedRooms = data.sort((a, b) => {
+            // Usamos numeric: true para que ordene 1, 2, 10 en lugar de 1, 10, 2
+            return String(a.room_number).localeCompare(String(b.room_number), undefined, { numeric: true });
+          });
+          this.rooms.set(sortedRooms);
+          this.loading.set(false);
         },
         error: (err) => {
           console.error('Error en API:', err);
