@@ -22,22 +22,43 @@ function isSafeUrl(urlInput) {
         if (!['http:', 'https:'].includes(parsed.protocol)) return false;
 
         const hostname = parsed.hostname;
+        const lowerHost = hostname.toLowerCase();
 
-        // 2. Bloquear nombres de host prohibidos
-        const forbiddenHosts = ['localhost', '127.0.0.1', 'metadata.google.internal'];
-        if (forbiddenHosts.includes(hostname.toLowerCase())) return false;
+        // 2. Bloquear nombres de host prohibidos y de metadatos de la nube
+        const forbiddenHosts = [
+            'localhost',
+            '127.0.0.1',
+            '::1',
+            '0.0.0.0',
+            'metadata.google.internal',
+            '169.254.169.254',
+            'instance-data'
+        ];
+        if (forbiddenHosts.includes(lowerHost)) return false;
 
-        // 3. Validar si es una IP privada (especialmente útil si pasan la IP directamente)
+        // 3. Validación profunda de IP usando ipaddr.js
         if (ipaddr.isValid(hostname)) {
             const addr = ipaddr.parse(hostname);
             const range = addr.range();
-            // Bloquea: loopback, private, linklocal, multicast, etc.
-            if (range !== 'unicast') return false;
+
+            // Lista estricta de rangos PROHIBIDOS (RFC1918 y otros)
+            const forbiddenRanges = [
+                'unspecified',
+                'loopback',
+                'linkLocal',
+                'multicast',
+                'private',
+                'reserved',
+                'uniqueLocal',
+                'carrierGradeNat'
+            ];
+
+            if (forbiddenRanges.includes(range)) return false;
         }
 
         return true;
     } catch (e) {
-        return false; // Si no se puede parsear, no es segura
+        return false;
     }
 }
 
