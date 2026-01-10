@@ -1,23 +1,34 @@
-<div class="page-header d-print-none">
+<div class="page-header d-print-none text-white bg-dark py-3">
   <div class="container-xl">
     <div class="row g-2 align-items-center">
       <div class="col">
-        <div class="page-pretitle">Overview</div>
-        <h2 class="page-title">Panel de Control - Catazajá</h2>
+        <div class="page-pretitle text-muted-light">Hosting3M Dashboard</div>
+        <h2 class="page-title text-white">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-building-skyscraper" width="24"
+            height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+            <path d="M3 21l18 0" />
+            <path d="M5 21v-14l8 -4l8 4v14" />
+            <path d="M19 21v-10l-6 -4" />
+            <path d="M9 9l0 .01" />
+            <path d="M9 12l0 .01" />
+            <path d="M9 15l0 .01" />
+            <path d="M9 18l0 .01" />
+          </svg>
+          Hotel San Jos&eacute;
+        </h2>
       </div>
-      <div class="col-auto ms-auto d-print-none">
-        <div class="btn-list">
-          <button class="btn btn-primary d-none d-sm-inline-block" (click)="refresh()">
-            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
-              stroke-width="2" stroke="currentColor" fill="none">
-              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-              <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" />
-              <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" />
-            </svg>
-            Actualizar
-          </button>
-          <button (click)="logout()" class="btn btn-danger">Cerrar Sesión</button>
-        </div>
+      <div class="col-auto ms-auto d-flex gap-2">
+        <button class="btn btn-icon btn-dark" (click)="refresh()" title="Refrescar">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
+            stroke-width="2" stroke="currentColor" fill="none">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+            <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" />
+            <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" />
+          </svg>
+        </button>
+        <button (click)="logout()" class="btn btn-danger btn-sm">Salir</button>
       </div>
     </div>
   </div>
@@ -25,86 +36,106 @@
 
 <div class="page-body">
   <div class="container-xl">
+
+    @if (hotelService.loading()) {
+    <div class="empty">
+      <div class="spinner-border text-primary" role="status"></div>
+      <p class="empty-title">Sincronizando...</p>
+      <p class="empty-subtitle text-muted">Conectando con n8n Enterprise Suite</p>
+    </div>
+    } @else {
+
     <div class="row row-cards">
-      @if (hotelService.loading()) {
-      <div class="col-12 text-center">
-        <div class="spinner-border text-primary"></div>
-        <p>Consultando base de datos...</p>
-      </div>
-      } @else {
       @for (room of hotelService.rooms(); track room.id) {
-      <div class="col-sm-6 col-lg-3">
-        <div class="card card-sm">
+      <div class="col-6 col-sm-4 col-md-3">
+        <div class="card card-sm h-100 cursor-pointer" [class.border-success]="room.status === 'available'"
+          [class.border-danger]="room.status === 'occupied'" (click)="hotelService.selectRoom(room)">
 
           @if (room.status === 'occupied') {
-          <div class="ribbon ribbon-top bg-red">Ocupada</div>
-          } @else {
-          <div class="ribbon ribbon-top bg-green">Libre</div>
+          <div class="ribbon ribbon-top ribbon-bookmark bg-danger">Ocupada</div>
           }
 
-          <div class="card-body">
-            <div class="d-flex align-items-center">
-              <span class="avatar avatar-xl bg-primary-lt fw-bold rounded">{{ room.room_number }}</span>
-
-              <div class="ms-3">
-                <div class="fw-bold text-dark">{{ room.type }}</div>
-                <div class="text-muted">
-                  <span class="status-dot" [class.status-dot-animated]="room.cleaning_status === 'dirty'"
-                    [class.bg-green]="room.cleaning_status === 'clean'"
-                    [class.bg-orange]="room.cleaning_status === 'dirty'">
-                  </span>
-                  {{ room.cleaning_status | uppercase }}
-                </div>
-              </div>
+          <div class="card-body text-center">
+            <div class="display-6 fw-bold my-2" [class.text-muted]="room.status === 'occupied'">
+              {{ room.room_number }}
             </div>
 
-            <div class="mt-3 btn-list">
-              <button class="btn btn-outline-secondary btn-sm w-100" (click)="hotelService.selectRoom(room)">
-                Ver Detalles
-              </button>
-              @if (hotelService.selectedRoom()) {
-              <div class="modal modal-blur fade show d-block" style="background: rgba(0,0,0,0.5);" tabindex="-1">
-                <div class="modal-dialog modal-dialog-centered">
-                  <div class="modal-content shadow-lg">
-                    <div class="modal-header">
-                      <h5 class="modal-title">Habitación {{ hotelService.selectedRoom()?.room_number }}</h5>
-                      <button type="button" class="btn-close" (click)="hotelService.clearSelection()"></button>
-                    </div>
-                    <div class="modal-body">
-                      <div class="row">
-                        <div class="col-6">
-                          <label class="form-label text-muted">Tipo</label>
-                          <div class="fw-bold">{{ hotelService.selectedRoom()?.type }}</div>
-                        </div>
-                        <div class="col-6">
-                          <label class="form-label text-muted">Precio</label>
-                          <div class="text-success fw-bold">${{ hotelService.selectedRoom()?.price_night }}</div>
-                        </div>
-                      </div>
-                      <hr>
-                      <p>Aquí puedes agregar más información: descripción, amenidades, o historial de limpieza.</p>
-                    </div>
-                    <div class="modal-footer">
-                      <button type="button" class="btn btn-link link-secondary"
-                        (click)="hotelService.clearSelection()">Cerrar</button>
-                      <button type="button" class="btn btn-primary"
-                        (click)="hotelService.clearSelection()">Aceptar</button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              }
+            <div class="text-uppercase text-muted font-weight-medium" style="font-size: 0.7rem; letter-spacing: 1px;">
+              {{ room.type }}
+            </div>
+            <div class="mt-1 text-dark fw-bold">${{ room.price_night }}</div>
 
+            <div class="mt-3">
+              <span class="badge" [class.bg-green-lt]="room.cleaning_status === 'clean'"
+                [class.bg-orange-lt]="room.cleaning_status === 'dirty'">
+                @if(room.cleaning_status === 'clean') { ✨ Limpia } @else { 🧹 Sucia }
+              </span>
             </div>
           </div>
         </div>
       </div>
-      } @empty {
-      <div class="col-12 text-center mt-5">
-        <div class="spinner-border text-primary" role="status"></div>
-        <p>Cargando habitaciones...</p>
+      }
+    </div>
+    }
+  </div>
+</div>
+
+@if (hotelService.selectedRoom()) {
+<div class="modal-backdrop fade show"></div>
+
+<div class="modal modal-blur fade show d-block" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title display-6">Habitación {{ hotelService.selectedRoom()?.room_number }}</h5>
+        <button type="button" class="btn-close" (click)="hotelService.clearSelection()"></button>
       </div>
-      } }
+
+      <div class="modal-body">
+        <div class="row mb-3 align-items-end">
+          <div class="col">
+            <label class="form-label text-muted text-uppercase small">Estado Actual</label>
+            <div class="fw-bold fs-3">
+              @if(hotelService.selectedRoom()?.status === 'available') {
+              <span class="text-success">🟢 Disponible</span>
+              } @else {
+              <span class="text-danger">🔴 Ocupada</span>
+              }
+            </div>
+          </div>
+          <div class="col-auto">
+            <span class="badge bg-azure-lt fs-4">${{ hotelService.selectedRoom()?.price_night }}</span>
+          </div>
+        </div>
+
+        <div class="hr-text text-muted">Acciones Rápidas</div>
+
+        <div class="d-grid gap-2">
+          @if(hotelService.selectedRoom()?.status === 'available') {
+          <button class="btn btn-primary" (click)="notifyN8N('checkin')">
+            🛎️ Registrar Check-in
+          </button>
+          } @else {
+          <button class="btn btn-outline-danger" (click)="notifyN8N('checkout')">
+            📤 Registrar Check-out
+          </button>
+          }
+
+          <button class="btn btn-ghost-warning" (click)="notifyN8N('maintenance')">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-brand-whatsapp" width="24"
+              height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+              <path d="M3 21l1.65 -3.8a9 9 0 1 1 3.4 2.9l-5.05 .9" />
+              <path
+                d="M9 10a.5 .5 0 0 0 1 0v-1a.5 .5 0 0 0 -1 0v1a5 5 0 0 0 5 5h1a.5 .5 0 0 0 0 -1h-1a.5 .5 0 0 0 0 1" />
+            </svg>
+            Solicitar Limpieza (WhatsApp)
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
+}
