@@ -32,3 +32,15 @@ __pycache__/
 # --- OS específicos ---
 .DS_Store
 Thumbs.db
+
+# --- Angular (Dashboard App) ---
+app/dashboard/src/environments/
+app/dashboard/.vscode/
+app/dashboard/node_modules/
+app/dashboard/dist/
+app/dashboard/tmp/
+app/dashboard/out-tsc/
+app/dashboard/.angular/cache/
+
+# --- IDE Config ---
+.vscode/
