@@ -26,7 +26,12 @@
 <div class="page-body">
   <div class="container-xl">
     <div class="row row-cards">
-
+      @if (hotelService.loading()) {
+      <div class="col-12 text-center">
+        <div class="spinner-border text-primary"></div>
+        <p>Consultando base de datos...</p>
+      </div>
+      } @else {
       @for (room of hotelService.rooms(); track room.id) {
       <div class="col-sm-6 col-lg-3">
         <div class="card card-sm">
@@ -54,7 +59,42 @@
             </div>
 
             <div class="mt-3 btn-list">
-              <button class="btn btn-outline-secondary btn-sm w-100">Ver Detalles</button>
+              <button class="btn btn-outline-secondary btn-sm w-100" (click)="hotelService.selectRoom(room)">
+                Ver Detalles
+              </button>
+              @if (hotelService.selectedRoom()) {
+              <div class="modal modal-blur fade show d-block" style="background: rgba(0,0,0,0.5);" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                  <div class="modal-content shadow-lg">
+                    <div class="modal-header">
+                      <h5 class="modal-title">Habitación {{ hotelService.selectedRoom()?.room_number }}</h5>
+                      <button type="button" class="btn-close" (click)="hotelService.clearSelection()"></button>
+                    </div>
+                    <div class="modal-body">
+                      <div class="row">
+                        <div class="col-6">
+                          <label class="form-label text-muted">Tipo</label>
+                          <div class="fw-bold">{{ hotelService.selectedRoom()?.type }}</div>
+                        </div>
+                        <div class="col-6">
+                          <label class="form-label text-muted">Precio</label>
+                          <div class="text-success fw-bold">${{ hotelService.selectedRoom()?.price_night }}</div>
+                        </div>
+                      </div>
+                      <hr>
+                      <p>Aquí puedes agregar más información: descripción, amenidades, o historial de limpieza.</p>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="button" class="btn btn-link link-secondary"
+                        (click)="hotelService.clearSelection()">Cerrar</button>
+                      <button type="button" class="btn btn-primary"
+                        (click)="hotelService.clearSelection()">Aceptar</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              }
+
             </div>
           </div>
         </div>
@@ -64,8 +104,7 @@
         <div class="spinner-border text-primary" role="status"></div>
         <p>Cargando habitaciones...</p>
       </div>
-      }
-
+      } }
     </div>
   </div>
 </div>

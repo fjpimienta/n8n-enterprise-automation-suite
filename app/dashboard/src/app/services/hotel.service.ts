@@ -2,14 +2,17 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Room } from '../models/hotel.types';
 import { environment } from '../../environments/environment';
+import { ApiResponse } from '../interfaces/api-response.interface';
 
 @Injectable({ providedIn: 'root' })
 export class HotelService {
   private http = inject(HttpClient);
   private apiUrl_crud = environment.apiUrl_crud; // Tu URL de n8n
+  public loading = signal<boolean>(false); // Nuevo Signal
 
   // Signal para estado reactivo (Best Practice Angular 19+)
   rooms = signal<Room[]>([]);
+  selectedRoom = signal<Room | null>(null); // Habitación para el detalle
 
   // Función auxiliar para obtener los headers con el authToken
   private getAuthHeaders() {
@@ -20,28 +23,27 @@ export class HotelService {
   }
 
   loadRooms() {
+    this.loading.set(true); // Empezamos carga
     const payload = {
       entity: 'hotel_rooms',
       action: 'list',
       filters: {}
     };
 
-    this.http.post<any>(`${this.apiUrl_crud}/${payload.entity}`, payload, {
+    // 1. Tipamos el post con <ApiResponse<Room>>
+    this.http.post<ApiResponse<Room>>(`${this.apiUrl_crud}/${payload.entity}`, payload, {
       headers: this.getAuthHeaders()
     })
       .subscribe({
-        next: (response) => {
-          // Accedemos específicamente a la propiedad 'data' que vimos en el log
-          if (response && response.data) {
-            this.rooms.set(response.data);
-          } else {
-            console.warn('La respuesta no contiene la propiedad data:', response);
-            this.rooms.set([]); // Limpiamos para evitar errores
-          }
+        next: (res) => {
+          // 2. Gracias a la interfaz, TS sabe que res.data es un Room[]
+          this.rooms.set(res.data || []);
+          this.loading.set(false); // Terminamos carga
         },
-        error: (e) => {
-          console.error('Error cargando habitaciones', e);
-          this.rooms.set([]); // Limpiamos en caso de error de red
+        error: (err) => {
+          console.error('Error en API:', err);
+          this.rooms.set([]); // Reset en caso de fallo
+          this.loading.set(false)
         }
       });
   }
@@ -58,4 +60,15 @@ export class HotelService {
       headers: this.getAuthHeaders()
     });
   }
+
+  // Función para seleccionar
+  selectRoom(room: Room) {
+    this.selectedRoom.set(room);
+  }
+
+  // Función para cerrar detalle
+  clearSelection() {
+    this.selectedRoom.set(null);
+  }
+
 }
