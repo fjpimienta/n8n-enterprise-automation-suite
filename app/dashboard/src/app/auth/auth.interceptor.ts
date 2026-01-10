@@ -5,21 +5,21 @@ import { catchError, throwError } from 'rxjs';
 import { Router } from '@angular/router';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
-  const token = localStorage.getItem('token');
+  const authToken = localStorage.getItem('authToken');
   const router = inject(Router);
 
   let clonedReq = req;
-  if (token) {
+  if (authToken) {
     clonedReq = req.clone({
-      setHeaders: { Authorization: `Bearer ${token}` }
+      setHeaders: { Authorization: `Bearer ${authToken}` }
     });
   }
 
   return next(clonedReq).pipe(
     catchError((error: HttpErrorResponse) => {
       if (error.status === 401) {
-        // Token inválido o expirado
-        localStorage.removeItem('token');
+        // authToken inválido o expirado
+        localStorage.removeItem('authToken');
         router.navigate(['/login']);
       }
       return throwError(() => error);

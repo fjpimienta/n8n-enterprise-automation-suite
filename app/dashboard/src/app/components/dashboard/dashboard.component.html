@@ -1,81 +1,71 @@
-<div class="page-wrapper">
-  <div class="page-header d-print-none">
-    <div class="container-xl">
-      <div class="row g-2 align-items-center">
-        <div class="col">
-          <h2 class="page-title">Panel de Control Hotelero</h2>
-          <div class="text-muted mt-1">Estado actual del complejo - {{ today | date:'dd/MM/yyyy' }}</div>
-        </div>
-        <div class="col-auto ms-auto d-print-none">
+<div class="page-header d-print-none">
+  <div class="container-xl">
+    <div class="row g-2 align-items-center">
+      <div class="col">
+        <div class="page-pretitle">Overview</div>
+        <h2 class="page-title">Panel de Control - Catazajá</h2>
+      </div>
+      <div class="col-auto ms-auto d-print-none">
+        <div class="btn-list">
+          <button class="btn btn-primary d-none d-sm-inline-block" (click)="refresh()">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
+              stroke-width="2" stroke="currentColor" fill="none">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+              <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" />
+              <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" />
+            </svg>
+            Actualizar
+          </button>
           <button (click)="logout()" class="btn btn-danger">Cerrar Sesión</button>
         </div>
       </div>
     </div>
   </div>
+</div>
 
-  <div class="page-body">
-    <div class="container-xl">
-      <div class="row row-deck row-cards">
-        
-        <div class="col-sm-6 col-lg-3">
-          <div class="card">
-            <div class="card-body">
-              <div class="d-flex align-items-center">
-                <div class="subheader">Ocupación</div>
+<div class="page-body">
+  <div class="container-xl">
+    <div class="row row-cards">
+
+      @for (room of hotelService.rooms(); track room.id) {
+      <div class="col-sm-6 col-lg-3">
+        <div class="card card-sm">
+
+          @if (room.status === 'occupied') {
+          <div class="ribbon ribbon-top bg-red">Ocupada</div>
+          } @else {
+          <div class="ribbon ribbon-top bg-green">Libre</div>
+          }
+
+          <div class="card-body">
+            <div class="d-flex align-items-center">
+              <span class="avatar avatar-xl bg-primary-lt fw-bold rounded">{{ room.room_number }}</span>
+
+              <div class="ms-3">
+                <div class="fw-bold text-dark">{{ room.type }}</div>
+                <div class="text-muted">
+                  <span class="status-dot" [class.status-dot-animated]="room.cleaning_status === 'dirty'"
+                    [class.bg-green]="room.cleaning_status === 'clean'"
+                    [class.bg-orange]="room.cleaning_status === 'dirty'">
+                  </span>
+                  {{ room.cleaning_status | uppercase }}
+                </div>
               </div>
-              <div class="h1 mb-3">85%</div>
-              <div class="progress progress-sm">
-                <div class="progress-bar bg-primary" style="width: 85%"></div>
-              </div>
+            </div>
+
+            <div class="mt-3 btn-list">
+              <button class="btn btn-outline-secondary btn-sm w-100">Ver Detalles</button>
             </div>
           </div>
         </div>
-
-        <div class="col-sm-6 col-lg-3">
-          <div class="card">
-            <div class="card-body">
-              <div class="subheader text-green">Check-ins hoy</div>
-              <div class="h1">12</div>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-12">
-          <div class="card">
-            <div class="card-header"><h3 class="card-title">Estado de Habitaciones</h3></div>
-            <div class="table-responsive">
-              <table class="table card-table table-vcenter text-nowrap datatable">
-                <thead>
-                  <tr>
-                    <th>Hab.</th>
-                    <th>Tipo</th>
-                    <th>Huésped</th>
-                    <th>Estado</th>
-                    <th>Limpieza</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>101</td>
-                    <td>Suite Jr.</td>
-                    <td>Juan Pérez</td>
-                    <td><span class="badge bg-success">Ocupada</span></td>
-                    <td><span class="text-muted">Al día</span></td>
-                  </tr>
-                  <tr>
-                    <td>102</td>
-                    <td>Doble</td>
-                    <td>---</td>
-                    <td><span class="badge bg-secondary">Disponible</span></td>
-                    <td><span class="text-warning">Pendiente</span></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
       </div>
+      } @empty {
+      <div class="col-12 text-center mt-5">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p>Cargando habitaciones...</p>
+      </div>
+      }
+
     </div>
   </div>
 </div>

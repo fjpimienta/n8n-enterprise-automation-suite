@@ -17,7 +17,7 @@ interface UserPayload {
 })
 export class AuthService {
   private http = inject(HttpClient);
-  private apiUrl = environment.apiUrl; // URL de n8n: v2/genera-token
+  private apiUrl_token = environment.apiUrl_token; // URL de n8n: v2/genera-token
 
   // Usamos un Signal para el estado del usuario (Angular 21 style)
   currentUser = signal<UserPayload | null>(this.getUserFromStorage());
@@ -37,7 +37,7 @@ export class AuthService {
   }
 
   login(credentials: { user: string; pass: string }) {
-    return this.http.post<any>(this.apiUrl, credentials).pipe(
+    return this.http.post<any>(this.apiUrl_token, credentials).pipe(
       tap(response => {
         // Usamos la estructura que definimos en n8n: { status, data, message }
         if (response.status === 'success' && response.data?.token) {
