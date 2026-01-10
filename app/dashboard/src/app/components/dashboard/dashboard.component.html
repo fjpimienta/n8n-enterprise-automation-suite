@@ -45,32 +45,26 @@
     </div>
     } @else {
 
-    <div class="row row-cards">
-      @for (room of hotelService.rooms(); track room.id) {
-      <div class="col-6 col-sm-4 col-md-3">
-        <div class="card card-sm h-100 cursor-pointer" [class.border-success]="room.status === 'available'"
-          [class.border-danger]="room.status === 'occupied'" (click)="hotelService.selectRoom(room)">
-
-          @if (room.status === 'occupied') {
-          <div class="ribbon ribbon-top ribbon-bookmark bg-danger">Ocupada</div>
-          }
-
-          <div class="card-body text-center">
-            <div class="display-6 fw-bold my-2" [class.text-muted]="room.status === 'occupied'">
-              {{ room.room_number }}
+    <div class="row row-cards g-2 g-md-3"> @for (room of hotelService.rooms(); track room.id) {
+      <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+        <div class="card card-sm shadow-sm border-0 mb-2">
+          <div class="card-body p-2 p-md-3">
+            <div class="d-flex align-items-center justify-content-between">
+              <div>
+                <div class="h3 fw-bold mb-0">{{ room.room_number }}</div>
+                <div class="text-muted small text-uppercase">{{ room.type }}</div>
+              </div>
+              <div class="text-end">
+                <div class="fw-bold text-success">${{ room.price_night }}</div>
+                <span class="badge bg-green-lt p-1" style="font-size: 0.6rem;">
+                  ✨ {{ room.cleaning_status }}
+                </span>
+              </div>
             </div>
 
-            <div class="text-uppercase text-muted font-weight-medium" style="font-size: 0.7rem; letter-spacing: 1px;">
-              {{ room.type }}
-            </div>
-            <div class="mt-1 text-dark fw-bold">${{ room.price_night }}</div>
-
-            <div class="mt-3">
-              <span class="badge" [class.bg-green-lt]="room.cleaning_status === 'clean'"
-                [class.bg-orange-lt]="room.cleaning_status === 'dirty'">
-                @if(room.cleaning_status === 'clean') { ✨ Limpia } @else { 🧹 Sucia }
-              </span>
-            </div>
+            <button class="btn btn-outline-primary btn-sm w-100 mt-2 py-2" (click)="hotelService.selectRoom(room)">
+              Gestionar
+            </button>
           </div>
         </div>
       </div>
@@ -84,8 +78,8 @@
 <div class="modal-backdrop fade show"></div>
 
 <div class="modal modal-blur fade show d-block" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered modal-sm" role="document">
-    <div class="modal-content">
+  <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down" role="document">
+    <div class="modal-content shadow-lg border-0">
 
       <div class="modal-header">
         <h5 class="modal-title display-6">Habitación {{ hotelService.selectedRoom()?.room_number }}</h5>
