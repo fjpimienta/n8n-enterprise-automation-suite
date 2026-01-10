@@ -105,7 +105,7 @@ app.post('/scrape', async (req, res) => {
         console.log(`[DEBUG] Navegando a: ${url}`);
         try {
             // Puppeteer ahora solo navega a URLs que pasaron el filtro de isSafeUrl
-            await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+            await page.goto(parsedUrl.toString(), { waitUntil: 'domcontentloaded', timeout: 60000 });
         } catch (e) {
             console.log(`[WARN] Timeout en goto inicial: ${e.message}`);
         }
