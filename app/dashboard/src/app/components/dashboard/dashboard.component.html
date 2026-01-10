@@ -36,21 +36,20 @@
 
 <div class="page-body">
   <div class="container-xl">
-
-    <div class="d-flex overflow-auto pb-2 gap-2" style="scrollbar-width: none;">
-      <button class="btn btn-pill" [class.btn-primary]="hotelService.filter() === 'all'"
+    <div class="d-flex flex-wrap gap-2 justify-content-center mb-4 px-2">
+      <button class="btn btn-pill btn-sm text-nowrap" [class.btn-primary]="hotelService.filter() === 'all'"
         (click)="hotelService.filter.set('all')">Todas</button>
 
-      <button class="btn btn-pill" [class.btn-success]="hotelService.filter() === 'available'"
+      <button class="btn btn-pill btn-sm text-nowrap" [class.btn-success]="hotelService.filter() === 'available'"
         (click)="hotelService.filter.set('available')">✅ Disponibles</button>
 
-      <button class="btn btn-pill" [class.btn-danger]="hotelService.filter() === 'occupied'"
+      <button class="btn btn-pill btn-sm text-nowrap" [class.btn-danger]="hotelService.filter() === 'occupied'"
         (click)="hotelService.filter.set('occupied')">🏨 Ocupadas</button>
 
-      <button class="btn btn-pill" [class.btn-warning]="hotelService.filter() === 'checkout'"
-        (click)="hotelService.filter.set('checkout')">🧹 Check-out (Urge)</button>
+      <button class="btn btn-pill btn-sm text-nowrap" [class.btn-warning]="hotelService.filter() === 'checkout'"
+        (click)="hotelService.filter.set('checkout')">🧹 Check-out</button>
 
-      <button class="btn btn-pill" [class.btn-secondary]="hotelService.filter() === 'maintenance'"
+      <button class="btn btn-pill btn-sm text-nowrap" [class.btn-secondary]="hotelService.filter() === 'maintenance'"
         (click)="hotelService.filter.set('maintenance')">🛠️ Mantenimiento</button>
     </div>
 
