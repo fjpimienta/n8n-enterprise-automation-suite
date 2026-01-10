@@ -37,40 +37,66 @@
 <div class="page-body">
   <div class="container-xl">
 
-    @if (hotelService.loading()) {
-    <div class="empty">
-      <div class="spinner-border text-primary" role="status"></div>
-      <p class="empty-title">Sincronizando...</p>
-      <p class="empty-subtitle text-muted">Conectando con n8n Enterprise Suite</p>
+    <div class="mb-3">
+      <div class="d-flex overflow-auto pb-2 gap-2" style="scrollbar-width: none;">
+        <button class="btn btn-pill" [class.btn-primary]="hotelService.filter() === 'all'"
+          [class.btn-outline-primary]="hotelService.filter() !== 'all'" (click)="hotelService.filter.set('all')">
+          Todas
+        </button>
+        <button class="btn btn-pill" [class.btn-success]="hotelService.filter() === 'available'"
+          [class.btn-outline-success]="hotelService.filter() !== 'available'"
+          (click)="hotelService.filter.set('available')">
+          Libres
+        </button>
+        <button class="btn btn-pill" [class.btn-danger]="hotelService.filter() === 'occupied'"
+          [class.btn-outline-danger]="hotelService.filter() !== 'occupied'"
+          (click)="hotelService.filter.set('occupied')">
+          Ocupadas
+        </button>
+        <button class="btn btn-pill" [class.btn-warning]="hotelService.filter() === 'dirty'"
+          [class.btn-outline-warning]="hotelService.filter() !== 'dirty'" (click)="hotelService.filter.set('dirty')">
+          🧹 Sucias
+        </button>
+      </div>
     </div>
-    } @else {
 
-    <div class="row row-cards g-2 g-md-3"> @for (room of hotelService.rooms(); track room.id) {
+    <div class="row row-cards g-2"> @for (room of hotelService.filteredRooms(); track room.id) {
       <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-        <div class="card card-sm shadow-sm border-0 mb-2">
-          <div class="card-body p-2 p-md-3">
-            <div class="d-flex align-items-center justify-content-between">
-              <div>
-                <div class="h3 fw-bold mb-0">{{ room.room_number }}</div>
-                <div class="text-muted small text-uppercase">{{ room.type }}</div>
+        <div class="card card-sm shadow-sm border-0 h-100" (click)="hotelService.selectRoom(room)"
+          style="cursor: pointer; transition: transform 0.2s;">
+
+          <div class="card-body p-3">
+            <div class="d-flex align-items-center">
+              <div class="h1 mb-0 me-3 fw-bold text-primary">{{ room.room_number }}</div>
+
+              <div class="flex-fill">
+                <div class="font-weight-medium h4 mb-0 text-capitalize">{{ room.type }}</div>
+                <div class="text-muted small">
+                  <span class="status-dot" [class.bg-green]="room.cleaning_status === 'clean'"
+                    [class.bg-warning]="room.cleaning_status === 'dirty'">
+                  </span>
+                  {{ room.cleaning_status | uppercase }}
+                </div>
               </div>
+
               <div class="text-end">
-                <div class="fw-bold text-success">${{ room.price_night }}</div>
-                <span class="badge bg-green-lt p-1" style="font-size: 0.6rem;">
-                  ✨ {{ room.cleaning_status }}
-                </span>
+                <div class="fw-bold text-success fs-3">${{ room.price_night }}</div>
+                @if(room.status === 'occupied') {
+                <span class="badge bg-red-lt">OCUPADA</span>
+                } @else {
+                <span class="badge bg-green-lt">LIBRE</span>
+                }
               </div>
             </div>
-
-            <button class="btn btn-outline-primary btn-sm w-100 mt-2 py-2" (click)="hotelService.selectRoom(room)">
-              Gestionar
-            </button>
           </div>
         </div>
       </div>
+      } @empty {
+      <div class="col-12 text-center py-5">
+        <p class="text-muted">No hay habitaciones con este filtro.</p>
+      </div>
       }
     </div>
-    }
   </div>
 </div>
 

@@ -1,22 +1,43 @@
+/* Mejora el scroll de los botones de filtro en móvil */
+.overflow-auto::-webkit-scrollbar {
+  display: none;
+}
+
 /* Ajustes específicos para móviles */
 @media (max-width: 576px) {
   .container-tight {
     padding-left: 1.5rem;
     padding-right: 1.5rem;
   }
-  
+
   .card-md {
     border: none;
-    box-shadow: none; /* En móvil se ve mejor más limpio */
+    box-shadow: none;
+    /* En móvil se ve mejor más limpio */
   }
 
   /* Hacer los inputs y botones más grandes para dedos */
-  .form-control, .btn {
+  .form-control,
+  .btn {
     padding: 0.75rem 1rem;
     font-size: 1rem;
   }
 
-  .display-6, h1 {
+  .display-6,
+  h1 {
     font-size: 1.5rem !important;
+  }
+
+  .h1 {
+    font-size: 2.5rem !important;
+    /* El número de habitación será el protagonista */
+  }
+
+  .card-body {
+    padding: 1.25rem !important;
+  }
+
+  .page-title {
+    font-size: 1.2rem;
   }
 }

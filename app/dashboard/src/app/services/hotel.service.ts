@@ -1,4 +1,4 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Room } from '../models/hotel.types';
 import { environment } from '../../environments/environment';
@@ -9,10 +9,21 @@ export class HotelService {
   private http = inject(HttpClient);
   private apiUrl_crud = environment.apiUrl_crud; // Tu URL de n8n
   public loading = signal<boolean>(false); // Nuevo Signal
+  filter = signal<'all' | 'available' | 'occupied' | 'dirty'>('all');
 
   // Signal para estado reactivo (Best Practice Angular 19+)
   rooms = signal<Room[]>([]);
   selectedRoom = signal<Room | null>(null); // Habitación para el detalle
+
+  // Creamos un Signal computado para obtener solo las habitaciones que coinciden
+  filteredRooms = computed(() => {
+    const rooms = this.rooms();
+    const currentFilter = this.filter();
+
+    if (currentFilter === 'all') return rooms;
+    if (currentFilter === 'dirty') return rooms.filter(r => r.cleaning_status === 'dirty');
+    return rooms.filter(r => r.status === currentFilter);
+  });
 
   // Función auxiliar para obtener los headers con el authToken
   private getAuthHeaders() {
