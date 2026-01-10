@@ -109,47 +109,95 @@
   <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down" role="document">
     <div class="modal-content shadow-lg border-0">
 
+      @if (viewMode() === 'details') {
       <div class="modal-header">
         <h5 class="modal-title display-6">Habitación {{ hotelService.selectedRoom()?.room_number }}</h5>
         <button type="button" class="btn-close" (click)="hotelService.clearSelection()"></button>
       </div>
 
       <div class="modal-body">
-        <div class="row mb-3 align-items-end">
+        <div class="row mb-3 align-items-center">
           <div class="col">
-            <label class="form-label text-muted text-uppercase small">Estado Actual</label>
-            <div class="fw-bold fs-3">
+            <label class="form-label text-muted text-uppercase item-label">Estado de Ocupación</label>
+            <div class="h3 mb-0">
               @if(hotelService.selectedRoom()?.status === 'available') {
-              <span class="text-success">🟢 Disponible</span>
+              <span class="badge bg-success-lt p-2">🟢 Disponible para Venta</span>
               } @else {
-              <span class="text-danger">🔴 Ocupada</span>
+              <span class="badge bg-danger-lt p-2">🔴 Habitación Ocupada</span>
               }
             </div>
           </div>
           <div class="col-auto">
-            <span class="badge bg-azure-lt fs-4">${{ hotelService.selectedRoom()?.price_night }}</span>
+            <label class="form-label text-muted text-uppercase item-label text-end">Precio/Noche</label>
+            <div class="h2 text-primary mb-0">${{ hotelService.selectedRoom()?.price_night }}</div>
           </div>
         </div>
 
-        <div class="hr-text text-muted">Acciones Rápidas</div>
+        <div class="mb-3">
+          <label class="form-label text-muted text-uppercase item-label">Estado de Limpieza</label>
+          <div>
+            @if(hotelService.selectedRoom()?.cleaning_status === 'clean') {
+            <span class="text-success"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-inline" width="24"
+                height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                <path d="M5 12l5 5l10 -10" />
+              </svg> Lista para recibir huéspedes</span>
+            } @else {
+            <span class="text-warning"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-inline" width="24"
+                height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
+                <path d="M12 9v4" />
+                <path d="M12 16v.01" />
+              </svg> Requiere limpieza urgente</span>
+            }
+          </div>
+        </div>
+
+        <div class="hr-text text-muted">Acciones Operativas</div>
 
         <div class="d-grid gap-2">
           @if(hotelService.selectedRoom()?.status === 'available' && hotelService.selectedRoom()?.cleaning_status ===
           'clean') {
-          <button class="btn btn-primary" (click)="notifyN8N('checkin')">🛎️ Registrar Check-in</button>
+          <button class="btn btn-primary btn-lg shadow-sm" (click)="viewMode.set('checkin')">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
+              stroke-width="2" stroke="currentColor" fill="none">
+              <path d="M3 21l18 0" />
+              <path d="M5 21v-14l8 -4l8 4v14" />
+              <path d="M19 21v-10l-6 -4" />
+            </svg>
+            Registrar Check-in
+          </button>
           }
 
           @if(hotelService.selectedRoom()?.status === 'occupied') {
-          <button class="btn btn-outline-danger" (click)="notifyN8N('checkout')">📤 Registrar Check-out</button>
+          <button class="btn btn-outline-danger btn-lg" (click)="notifyN8N('checkout')">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
+              stroke-width="2" stroke="currentColor" fill="none">
+              <path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2" />
+              <path d="M9 12h10l-3 -3m0 6l3 -3" />
+            </svg>
+            Registrar Check-out
+          </button>
           }
 
           @if(hotelService.selectedRoom()?.cleaning_status === 'dirty') {
-          <button class="btn btn-success" (click)="notifyN8N('clean_complete')">✨ Marcar como Limpia</button>
+          <button class="btn btn-success" (click)="notifyN8N('clean_complete')">
+            ✨ Marcar como Limpia
+          </button>
           }
 
-          <button class="btn btn-ghost-secondary" (click)="notifyN8N('maintenance')">🛠️ Enviar a Mantenimiento</button>
+          <button class="btn btn-ghost-warning" (click)="notifyN8N('maintenance')">
+            🛠️ Reportar Falla / Mantenimiento
+          </button>
         </div>
       </div>
+      }
+
+      @else if (viewMode() === 'checkin') {
+      <app-checkin-form [room]="hotelService.selectedRoom()" (saved)="handleCheckinSave($event)"
+        (canceled)="viewMode.set('details')">
+      </app-checkin-form>
+      }
+
     </div>
   </div>
 </div>

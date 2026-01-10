@@ -1,14 +1,15 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AuthService } from '../../services/auth.service';
 import { Router } from '@angular/router';
 import { HotelService } from '../../services/hotel.service';
 import { HttpClient } from '@angular/common/http';
+import { CheckinForm } from '../checkin-form/checkin-form.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, CheckinForm],
   templateUrl: './dashboard.component.html'
 })
 export class DashboardComponent {
@@ -16,6 +17,7 @@ export class DashboardComponent {
   private router = inject(Router);
   public hotelService = inject(HotelService);
   private http = inject(HttpClient);
+  viewMode = signal<'details' | 'checkin'>('details');
 
   // URL de tu Webhook de n8n para notificaciones
   private readonly N8N_WHATSAPP_WEBHOOK = 'https://tu-n8n.com/webhook/whatsapp-notifications';
@@ -31,6 +33,32 @@ export class DashboardComponent {
   logout() {
     this.authService.logout();
     this.router.navigate(['/login']);
+  }
+
+  onSelectRoom(room: any) {
+    this.viewMode.set('details');
+    this.hotelService.selectRoom(room);
+  }
+
+  // Función que recibe los datos finales del formulario
+  handleCheckinSave(formData: any) {
+    console.log('Datos listos para enviar a n8n:', formData);
+
+    // Aquí llamarás a tu servicio para guardar en hotel_bookings
+    // Por ahora, usemos tu función notifyN8N adaptada
+    this.executeCheckin(formData);
+  }
+
+  private executeCheckin(data: any) {
+    this.http.post(this.N8N_WHATSAPP_WEBHOOK, { action: 'checkin_full', ...data })
+      .subscribe({
+        next: () => {
+          alert('Check-in registrado exitosamente ✅');
+          this.hotelService.clearSelection();
+          this.refresh();
+        },
+        error: () => alert('Error al procesar el registro')
+      });
   }
 
   // Nueva función para botones de acción
