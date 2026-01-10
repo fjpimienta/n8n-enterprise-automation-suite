@@ -9,7 +9,7 @@ export class HotelService {
   private http = inject(HttpClient);
   private apiUrl_crud = environment.apiUrl_crud; // Tu URL de n8n
   public loading = signal<boolean>(false); // Nuevo Signal
-  filter = signal<'all' | 'available' | 'occupied' | 'dirty'>('all');
+  filter = signal<'all' | 'available' | 'occupied' | 'checkout' | 'maintenance'>('all');
 
   // Signal para estado reactivo (Best Practice Angular 19+)
   rooms = signal<Room[]>([]);
@@ -20,9 +20,22 @@ export class HotelService {
     const rooms = this.rooms();
     const currentFilter = this.filter();
 
-    if (currentFilter === 'all') return rooms;
-    if (currentFilter === 'dirty') return rooms.filter(r => r.cleaning_status === 'dirty');
-    return rooms.filter(r => r.status === currentFilter);
+    switch (currentFilter) {
+      case 'available':
+        // Una habitación es vendible solo si está 'available' Y 'clean' o 'inspected'
+        return rooms.filter(r =>
+          r.status === 'available' && (r.cleaning_status === 'clean' || r.cleaning_status === 'inspected')
+        );
+      case 'occupied':
+        return rooms.filter(r => r.status === 'occupied');
+      case 'checkout':
+        // Urge limpiar: está libre pero sigue sucia
+        return rooms.filter(r => r.status === 'available' && r.cleaning_status === 'dirty');
+      case 'maintenance':
+        return rooms.filter(r => r.status === 'maintenance');
+      default:
+        return rooms;
+    }
   });
 
   // Función auxiliar para obtener los headers con el authToken
