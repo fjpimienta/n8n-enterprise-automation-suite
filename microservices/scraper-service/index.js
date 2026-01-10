@@ -67,34 +67,35 @@ function isSafeUrl(urlInput) {
 app.post('/scrape', async (req, res) => {
     let browser = null;
     try {
-        const { url, selectors, title, pubDate, description } = req.body;
+        // 1. Extraemos el input
+        const { url: rawUrl, selectors, title, pubDate, description } = req.body;
 
-        if (!url) {
+        if (!rawUrl) {
             return res.status(400).json({ error: "Se requiere 'url'." });
         }
 
-        // 1. Parseamos la URL inmediatamente (Evita errores de variable no definida)
-        let parsedUrl;
+        // 2. Sanitización inmediata: Creamos el objeto URL y validamos
+        // Al usar una nueva constante (safeUrlObj), rompemos el rastro del input "sucio"
+        let safeUrlObj;
         try {
-            parsedUrl = new URL(url);
+            safeUrlObj = new URL(rawUrl);
         } catch (e) {
             return res.status(400).json({ error: "URL inválida." });
         }
 
-        // 2. VALIDACIÓN DE SEGURIDAD SSRF
-        if (!isSafeUrl(url)) {
-            console.error(`[SECURITY] Intento de SSRF bloqueado para la URL: ${url}`);
-            return res.status(403).json({ error: "URL no permitida por razones de seguridad." });
+        // 3. Validación de seguridad estricta
+        if (!isSafeUrl(rawUrl)) {
+            console.error(`[SECURITY] SSRF bloqueado: ${rawUrl}`);
+            return res.status(403).json({ error: "URL no permitida por seguridad." });
         }
 
-        // 3. VALIDACIÓN SEGURA DE LINKEDIN (Soluciona Alerta #1)
-        // Ahora sí, parsedUrl existe y podemos leer su hostname
-        const isLinkedIn = parsedUrl.hostname === 'linkedin.com' ||
-            parsedUrl.hostname.endsWith('.linkedin.com');
+        // A partir de aquí, SOLO usamos safeUrlObj
+        const finalUrl = safeUrlObj.toString();
+        const isLinkedIn = safeUrlObj.hostname === 'linkedin.com' ||
+            safeUrlObj.hostname.endsWith('.linkedin.com');
 
-        console.log(`[DEBUG] url: ${url} (isLinkedIn: ${isLinkedIn})`);
+        console.log(`[DEBUG] Procesando: ${finalUrl}`);
 
-        // --- Configuración de Puppeteer ---
         browser = await puppeteer.launch({
             executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || '/usr/bin/chromium-browser',
             args: [
@@ -125,10 +126,10 @@ app.post('/scrape', async (req, res) => {
 
         console.log(`[DEBUG] Navegando a: ${url}`);
         try {
-            // Puppeteer ahora solo navega a URLs que pasaron el filtro de isSafeUrl
-            await page.goto(parsedUrl.toString(), { waitUntil: 'domcontentloaded', timeout: 60000 });
+            // USAMOS finalUrl que proviene del objeto validado
+            await page.goto(finalUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
         } catch (e) {
-            console.log(`[WARN] Timeout en goto inicial: ${e.message}`);
+            console.log(`[WARN] Timeout en goto: ${e.message}`);
         }
 
         // ... [El resto de tu lógica se mantiene igual] ...
