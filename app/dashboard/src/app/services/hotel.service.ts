@@ -50,6 +50,8 @@ export class HotelService {
     this.loading.set(true); // Empezamos carga
     const payload = {
       entity: 'hotel_rooms',
+      table_name: 'hotel_rooms',
+      operation: 'getall',
       action: 'list',
       filters: {}
     };
@@ -82,6 +84,7 @@ export class HotelService {
   updateRoomStatus(id: number, status: string) {
     const payload = {
       entity: 'hotel_rooms',
+      table_name: 'hotel_rooms',
       action: 'update',
       id: id,
       data: { cleaning_status: status }

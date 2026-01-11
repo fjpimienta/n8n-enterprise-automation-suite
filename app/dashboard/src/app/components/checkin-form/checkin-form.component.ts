@@ -1,55 +1,83 @@
-import { Component, inject, input, output, OnInit } from '@angular/core';
-import { FormBuilder, Validators, ReactiveFormsModule } from '@angular/forms';
+import { Component, Output, EventEmitter, input, OnInit } from '@angular/core';
+import { FormGroup, FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
+import { Room } from '../../models/hotel.types';
 
 @Component({
   selector: 'app-checkin-form',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './checkin-form.component.html'
 })
-export class CheckinForm {
-  private fb = inject(FormBuilder);
+export class CheckinFormComponent implements OnInit {
+  room = input.required<Room | null>();
 
-  // Recibimos la habitación seleccionada
-  room = input.required<any>();
+  @Output() saved = new EventEmitter<any>();
+  @Output() canceled = new EventEmitter<void>();
 
-  // Eventos para el dashboard
-  saved = output<any>();
-  canceled = output<void>();
-
-  checkinForm = this.fb.group({
-    full_name: ['', [Validators.required, Validators.minLength(3)]],
-    phone: [''],
-    doc_id: [''],
-    check_in: [new Date().toISOString().split('T')[0]], // Hoy
-    check_out: ['', Validators.required],
-    total_amount: [0, Validators.required],
-    notes: ['']
+  checkinForm = new FormGroup({
+    full_name: new FormControl('', [Validators.required]),
+    phone: new FormControl(''),
+    email: new FormControl('', [Validators.email]),
+    doc_id: new FormControl('', [Validators.required]),
+    city: new FormControl(''),
+    state: new FormControl(''),
+    country: new FormControl('México'),
+    check_out: new FormControl('', [Validators.required]),
+    total_amount: new FormControl(0, [Validators.min(0)]),
+    vip_status: new FormControl(false),
+    requires_invoice: new FormControl(false), // Nuevo campo
+    notes: new FormControl('') // Ahora sí coincidirá con la DB
   });
 
   ngOnInit() {
-    // Calculamos el Check-out sugerido (mañana) por defecto
+    this.initDefaultValues();
+
+    // Escuchar cambios en la fecha de salida para recalcular el monto
+    this.checkinForm.get('check_out')?.valueChanges.subscribe(() => {
+      this.calculateTotal();
+    });
+  }
+
+  private initDefaultValues() {
+    // 1. Establecer fecha de mañana por defecto
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
+    const dateString = tomorrow.toISOString().split('T')[0];
 
     this.checkinForm.patchValue({
-      total_amount: this.room().price_night,
-      check_out: tomorrow.toISOString().split('T')[0]
+      check_out: dateString
     });
+
+    // 2. Calcular monto inicial
+    this.calculateTotal();
+  }
+
+  calculateTotal() {
+    const roomData = this.room();
+    const checkOutDate = this.checkinForm.get('check_out')?.value;
+
+    if (roomData && checkOutDate) {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(checkOutDate);
+
+      // Calcular diferencia en días (mínimo 1 día)
+      const diffTime = end.getTime() - start.getTime();
+      const diffDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+
+      const total = diffDays * (roomData.price_night || 0);
+      this.checkinForm.patchValue({ total_amount: total }, { emitEvent: false });
+    }
   }
 
   confirmCheckin() {
     if (this.checkinForm.valid) {
-      const data = {
-        ...this.checkinForm.value,
-        room_id: this.room().id,
-        status: 'confirmed'
-      };
-      this.saved.emit(data);
+      this.saved.emit(this.checkinForm.value);
     }
   }
 
-  onCancel() {
+  closeCheckinModal() {
     this.canceled.emit();
   }
 }
