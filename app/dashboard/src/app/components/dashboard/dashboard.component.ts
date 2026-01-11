@@ -6,11 +6,12 @@ import { HotelService } from '../../services/hotel.service';
 import { HttpClient } from '@angular/common/http';
 import { CheckinFormComponent } from '../checkin-form/checkin-form.component';
 import { environment } from '../../../environments/environment';
+import { FormsModule } from '@angular/forms';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, CheckinFormComponent],
+  imports: [CommonModule, CheckinFormComponent, FormsModule],
   templateUrl: './dashboard.component.html'
 })
 export class DashboardComponent {
@@ -18,10 +19,17 @@ export class DashboardComponent {
   private router = inject(Router);
   public hotelService = inject(HotelService);
   private http = inject(HttpClient);
-  viewMode = signal<'details' | 'checkin'>('details');
+  viewMode = signal<'details' | 'checkin' | 'checkout_validation'>('details');
 
   // URL de tu Webhook de n8n para notificaciones
-  private readonly N8N_WHATSAPP_WEBHOOK = 'https://tu-n8n.com/webhook/whatsapp-notifications';
+  private readonly N8N_WHATSAPP_WEBHOOK = 'https://n8n.hosting3m.com/webhook/8cd04cee-6a56-4989-b36c-caf9473d7535/webhook';
+
+  checkoutChecks = {
+    tvRemote: false,
+    acRemote: false,
+    keys: false,
+    notes: ''
+  };
 
   ngOnInit() {
     this.refresh();
@@ -50,8 +58,8 @@ export class DashboardComponent {
 
     // PREVENCIÓN DE ERRORES DE DATOS VACÍOS
     // 1. Si no hay fecha de check_in, usamos HOY.
-    const today = new Date().toISOString().split('T')[0];
-    const checkInDate = formData.check_in || today;
+    const now = new Date().toISOString(); // Esto da YYYY-MM-DDTHH:mm:ssZ
+    const checkInDate = formData.check_in || now;
 
     // 2. Aseguramos que check_out no sea nulo (opcional: poner fecha de mañana por defecto)
     if (!formData.check_out) {
@@ -154,6 +162,73 @@ export class DashboardComponent {
     }
   }
 
+  // 3. Modifica la función que abre el checkout
+  handleCheckout() {
+    // En lugar de hacer el proceso, abrimos el modal de validación
+    this.checkoutChecks = { tvRemote: false, acRemote: false, keys: false, notes: '' }; // Reset
+    this.viewMode.set('checkout_validation');
+  }
+
+  // 4. Crea la función final que se ejecuta tras validar
+  async confirmFullCheckout() {
+    const room = this.hotelService.selectedRoom();
+    if (!room) return;
+
+    try {
+      const crudUrl = environment.apiUrl_crud;
+
+      // PASO A: Buscar la reserva activa
+      const bookingRes: any = await this.http.post(`${crudUrl}/hotel_bookings`, {
+        operation: 'getall',
+        fields: { room_id: room.id, status: 'confirmed' }
+      }).toPromise();
+
+      const booking = Array.isArray(bookingRes.data) ? bookingRes.data[0] : null;
+
+      if (booking) {
+        // Creamos el reporte de texto para la columna 'notes'
+        const reporte = `INVENTARIO: TV: ${this.checkoutChecks.tvRemote ? '✅' : '❌'}, ` +
+          `AC: ${this.checkoutChecks.acRemote ? '✅' : '❌'}, ` +
+          `Llaves: ${this.checkoutChecks.keys ? '✅' : '❌'}. ` +
+          `Obs: ${this.checkoutChecks.notes}`;
+
+        // PASO B: Actualizar la reserva incluyendo los campos de inventario
+        await this.http.post(`${crudUrl}/hotel_bookings`, {
+          operation: 'update',
+          id: booking.id,
+          fields: {
+            status: 'checked_out',
+            check_out: new Date().toISOString(),
+            notes: reporte,
+            // MAPEO DE CAMPOS BOOLEANOS A LA BASE DE DATOS
+            inventory_tv_ok: this.checkoutChecks.tvRemote,
+            inventory_ac_ok: this.checkoutChecks.acRemote,
+            inventory_keys_ok: this.checkoutChecks.keys
+          }
+        }).toPromise();
+      }
+
+      // PASO C: Liberar la habitación y marcarla como SUCIA
+      await this.http.post(`${crudUrl}/hotel_rooms`, {
+        operation: 'update',
+        id: room.id,
+        fields: {
+          status: 'available',
+          cleaning_status: 'dirty'
+        }
+      }).toPromise();
+
+      alert('✅ Check-out exitoso. Inventario registrado en base de datos.');
+      this.viewMode.set('details');
+      this.hotelService.clearSelection();
+      this.refresh();
+
+    } catch (error) {
+      console.error('Error en Check-out:', error);
+      alert('Fallo al procesar el Check-out.');
+    }
+  }
+
   private executeCheckin(data: any) {
     this.http.post(this.N8N_WHATSAPP_WEBHOOK, { action: 'checkin_full', ...data })
       .subscribe({
@@ -209,12 +284,14 @@ export class DashboardComponent {
 
   markAsClean() {
     const room = this.hotelService.selectedRoom();
+    if (!room) return;
 
     this.http.post(`${environment.apiUrl_crud}/hotel_rooms`, {
       operation: 'update',
-      filter: { id: room?.id },
+      id: room.id, // El Query Builder ahora busca el ID aquí
       fields: { cleaning_status: 'clean' }
     }).subscribe(() => {
+      alert('✨ Habitación lista');
       this.hotelService.clearSelection();
       this.refresh();
     });

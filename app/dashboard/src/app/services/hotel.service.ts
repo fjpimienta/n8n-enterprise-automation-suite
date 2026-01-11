@@ -87,7 +87,7 @@ export class HotelService {
       table_name: 'hotel_rooms',
       action: 'update',
       id: id,
-      data: { cleaning_status: status }
+      fields: { cleaning_status: status }
     };
     return this.http.post(`${this.apiUrl_crud}/${payload.entity}`, payload, {
       headers: this.getAuthHeaders()

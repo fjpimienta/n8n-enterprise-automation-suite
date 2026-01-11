@@ -168,7 +168,7 @@
           }
 
           @if(hotelService.selectedRoom()?.status === 'occupied') {
-          <button class="btn btn-outline-danger btn-lg" (click)="notifyN8N('checkout')">
+          <button class="btn btn-outline-danger btn-lg" (click)="handleCheckout()">
             <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
               stroke-width="2" stroke="currentColor" fill="none">
               <path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2" />
@@ -195,6 +195,56 @@
       <app-checkin-form [room]="hotelService.selectedRoom()" (saved)="handleCheckinSave($event)"
         (canceled)="viewMode.set('details')">
       </app-checkin-form>
+      }
+
+      @else if (viewMode() === 'checkout_validation') {
+      <div class="modal-header bg-danger text-white">
+        <h5 class="modal-title">Validación de Salida - Habitación {{ hotelService.selectedRoom()?.room_number }}</h5>
+        <button type="button" class="btn-close btn-close-white" (click)="viewMode.set('details')"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted mb-3">Por favor, verifica la entrega de los siguientes artículos:</p>
+
+        <div class="form-selectgroup form-selectgroup-boxes d-flex flex-column">
+          <label class="form-selectgroup-item flex-fill">
+            <input type="checkbox" [(ngModel)]="checkoutChecks.tvRemote" class="form-selectgroup-input">
+            <div class="form-selectgroup-label d-flex align-items-center p-3">
+              <div class="me-3"><span class="form-selectgroup-check"></span></div>
+              <div>📺 Control Remoto TV</div>
+            </div>
+          </label>
+
+          <label class="form-selectgroup-item flex-fill">
+            <input type="checkbox" [(ngModel)]="checkoutChecks.acRemote" class="form-selectgroup-input">
+            <div class="form-selectgroup-label d-flex align-items-center p-3">
+              <div class="me-3"><span class="form-selectgroup-check"></span></div>
+              <div>❄️ Control Aire Acondicionado</div>
+            </div>
+          </label>
+
+          <label class="form-selectgroup-item flex-fill">
+            <input type="checkbox" [(ngModel)]="checkoutChecks.keys" class="form-selectgroup-input">
+            <div class="form-selectgroup-label d-flex align-items-center p-3">
+              <div class="me-3"><span class="form-selectgroup-check"></span></div>
+              <div>🔑 Llaves de la Habitación</div>
+            </div>
+          </label>
+        </div>
+
+        <div class="mt-3">
+          <label class="form-label">Notas de Salida (daños o faltantes)</label>
+          <textarea class="form-control" [(ngModel)]="checkoutChecks.notes"
+            placeholder="Ej: Falta una toalla..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link" (click)="viewMode.set('details')">Cancelar</button>
+        <button type="button" class="btn btn-danger"
+          [disabled]="!checkoutChecks.tvRemote || !checkoutChecks.acRemote || !checkoutChecks.keys"
+          (click)="confirmFullCheckout()">
+          Confirmar Entrega Total y Salida
+        </button>
+      </div>
       }
 
     </div>
