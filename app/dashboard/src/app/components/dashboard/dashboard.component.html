@@ -28,6 +28,9 @@
             <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" />
           </svg>
         </button>
+        <button (click)="generateDailyReport()" class="btn btn-primary btn-sm me-2">
+          💰 Corte de Caja
+        </button>
         <button (click)="logout()" class="btn btn-danger btn-sm">Salir</button>
       </div>
     </div>
@@ -56,7 +59,7 @@
     <div class="row row-cards g-2"> @for (room of hotelService.filteredRooms(); track room.id) {
       <div class="col-12 col-sm-6 col-md-4 col-lg-3">
         <div class="card card-sm shadow-sm border-0 h-100" [class.border-start]="isArrivalToday(room.next_reservation)"
-          style="border-left: 5px solid #206bc4 !important;" (click)="hotelService.selectRoom(room)">
+          style="border-left: 5px solid #206bc4 !important;" (click)="onSelectRoom(room)">
 
           @if (isArrivalToday(room.next_reservation)) {
           <div class="ribbon bg-azure">Llega Hoy</div>
@@ -118,17 +121,26 @@
         <div class="row mb-3 align-items-center">
           <div class="col">
             <label class="form-label text-muted text-uppercase item-label">Estado de Ocupación</label>
-            <div class="h3 mb-0">
+            <div class="h3 mb-0 d-flex align-items-center gap-2">
               @if(hotelService.selectedRoom()?.status === 'available') {
               <span class="badge bg-success-lt p-2">🟢 Disponible para Venta</span>
               } @else {
               <span class="badge bg-danger-lt p-2">🔴 Habitación Ocupada</span>
+
               }
             </div>
           </div>
           <div class="col-auto">
             <label class="form-label text-muted text-uppercase item-label text-end">Precio/Noche</label>
-            <div class="h2 text-primary mb-0">${{ hotelService.selectedRoom()?.price_night }}</div>
+            <div class="h2 text-primary mb-0">${{ hotelService.selectedRoom()?.price_night }}
+                            @if (activeBooking) {
+              <span class="badge p-2" [class.bg-success]="activeBooking.payment_status === 'paid'"
+                [class.bg-warning]="activeBooking.payment_status !== 'paid'">
+                {{ getSelectedRoomPaymentStatus() }}
+              </span>
+              }
+
+            </div>
           </div>
         </div>
 
@@ -181,6 +193,16 @@
           @if(hotelService.selectedRoom()?.cleaning_status === 'dirty') {
           <button class="btn btn-success" (click)="notifyN8N('clean_complete')">
             ✨ Marcar como Limpia
+          </button>
+          }
+
+          @if(hotelService.selectedRoom()?.status === 'occupied' && activeBooking?.payment_status !== 'paid') {
+          <button class="btn btn-success btn-lg shadow-sm mb-2" (click)="markAsPaid(activeBooking)">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
+              stroke-width="2" stroke="currentColor" fill="none">
+              <path d="M12 11v-4m-2 2h4m-8 9h12m-12 -4h12m-10 -10l10 10" />
+            </svg>
+            Registrar Pago Ahora
           </button>
           }
 
@@ -247,6 +269,125 @@
       </div>
       }
 
+    </div>
+  </div>
+</div>
+}
+
+@if (showReportModal) {
+<div class="modal modal-blur fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5)">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">📈 Reporte de Ventas del Día</h5>
+        <button type="button" class="btn-close" (click)="showReportModal = false"></button>
+      </div>
+      <div class="modal-body">
+
+        <div class="row row-cards mb-4">
+          <div class="col-sm-6 col-lg-4">
+            <div class="card card-sm border-primary">
+              <div class="card-body">
+                <div class="row align-items-center">
+                  <div class="col-auto">
+                    <span class="bg-primary text-white avatar">💵</span>
+                  </div>
+                  <div class="col">
+                    <div class="font-weight-medium">Ventas Totales</div>
+                    <div class="text-muted">{{ dailyReport.total | currency }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-lg-4">
+            <div class="card card-sm border-success">
+              <div class="card-body">
+                <div class="row align-items-center">
+                  <div class="col-auto">
+                    <span class="bg-success text-white avatar">✅</span>
+                  </div>
+                  <div class="col">
+                    <div class="font-weight-medium">Cobrado</div>
+                    <div class="text-muted">{{ dailyReport.paid | currency }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-6 col-lg-4">
+            <div class="card card-sm border-warning">
+              <div class="card-body">
+                <div class="row align-items-center">
+                  <div class="col-auto">
+                    <span class="bg-warning text-white avatar">⏳</span>
+                  </div>
+                  <div class="col">
+                    <div class="font-weight-medium">Pendiente</div>
+                    <div class="text-muted">{{ dailyReport.pending | currency }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <h3>Detalle de Movimientos</h3>
+        <div class="table-responsive">
+          <table class="table table-vcenter card-table">
+            <thead>
+              <tr>
+                <th>Hora</th>
+                <th>Habitación</th>
+                <th>Estancia</th>
+                <th>Estado Pago</th>
+                <th class="text-end">Monto</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (item of dailyReport.transactions; track item.id) {
+              <tr>
+                <td>{{ item.created_at | date:'shortTime' }}</td>
+                <td>
+                  Habitación <strong>{{ getRoomNumber(item.room_id) }}</strong>
+                </td>
+                <td>
+                  <span class="text-muted small">
+                    {{ getNights(item.check_in, item.check_out) }} noche(s)
+                  </span>
+                </td>
+                <td>
+                  @if(item.payment_status === 'paid') {
+                  <span class="badge bg-success-lt">✅ Pagado</span>
+                  } @else {
+                  <div class="btn-list">
+                    <span class="badge bg-warning-lt me-2">Pendiente</span>
+                    <button class="btn btn-sm btn-outline-success" (click)="markAsPaid(item)">
+                      💲 Cobrar Ahora
+                    </button>
+                  </div>
+                  }
+                </td>
+                <td class="text-end fw-bold">{{ item.total_amount | currency }}</td>
+              </tr>
+              } @empty {
+              <tr>
+                <td colspan="4" class="text-center p-3">No hay ventas registradas hoy.</td>
+              </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link link-secondary" (click)="showReportModal = false">
+          Cerrar
+        </button>
+        <button type="button" class="btn btn-primary" onclick="window.print()">
+          🖨️ Imprimir
+        </button>
+      </div>
     </div>
   </div>
 </div>

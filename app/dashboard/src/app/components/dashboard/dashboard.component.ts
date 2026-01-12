@@ -30,6 +30,16 @@ export class DashboardComponent {
     keys: false,
     notes: ''
   };
+  activeBooking: any = null;
+
+  // Variables para el reporte
+  showReportModal = false;
+  dailyReport = {
+    total: 0,
+    paid: 0,
+    pending: 0,
+    transactions: [] as any[] // Lista de reservas de hoy
+  };
 
   ngOnInit() {
     this.refresh();
@@ -44,9 +54,29 @@ export class DashboardComponent {
     this.router.navigate(['/login']);
   }
 
-  onSelectRoom(room: any) {
+  async onSelectRoom(room: any) {
     this.viewMode.set('details');
     this.hotelService.selectRoom(room);
+    this.activeBooking = null; // Reset anterior
+
+    if (room.status === 'occupied') {
+      try {
+        // Buscamos la reserva confirmada para esta habitación
+        const res: any = await this.http.post(`${environment.apiUrl_crud}/hotel_bookings`, {
+          operation: 'getall',
+          fields: {
+            room_id: room.id,
+            status: 'confirmed'
+          }
+        }).toPromise();
+
+        if (res.data && res.data.length > 0) {
+          this.activeBooking = res.data[0];
+        }
+      } catch (error) {
+        console.error('Error al cargar reserva activa:', error);
+      }
+    }
   }
 
   // Función que recibe los datos finales del formulario
@@ -295,6 +325,120 @@ export class DashboardComponent {
       this.hotelService.clearSelection();
       this.refresh();
     });
+  }
+
+  async markAsPaid(booking: any) {
+    if (!booking || !confirm(`¿Confirmar que recibiste el pago de $${booking.total_amount}?`)) return;
+
+    try {
+      const crudUrl = environment.apiUrl_crud;
+
+      await this.http.post(`${crudUrl}/hotel_bookings`, {
+        operation: 'update',
+        id: booking.id,
+        fields: { payment_status: 'paid' }
+      }).toPromise();
+
+      // Actualizamos la reserva en memoria para que el cambio sea instantáneo en la vista
+      if (this.activeBooking && this.activeBooking.id === booking.id) {
+        this.activeBooking.payment_status = 'paid';
+      }
+
+      alert('✅ Pago registrado correctamente.');
+
+      // Opcional: refrescar el reporte de caja si estaba abierto
+      if (this.showReportModal) {
+        this.generateDailyReport();
+      }
+
+    } catch (error) {
+      console.error('Error al registrar pago:', error);
+      alert('No se pudo registrar el pago.');
+    }
+  }
+
+  // Función para traducir ID -> Número de Habitación
+  getRoomNumber(id: number): string {
+    // Accedemos a la lista de habitaciones que ya tiene el servicio
+    // NOTA: Si hotelService.rooms es un array simple, quita los paréntesis ()
+    const roomsList = this.hotelService.rooms();
+
+    const found = roomsList.find((r: any) => r.id === id);
+    return found ? found.room_number : '??';
+  }
+
+  // Función para generar el Reporte de Caja
+  async generateDailyReport() {
+    const crudUrl = environment.apiUrl_crud;
+
+    // 1. Obtenemos la fecha de hoy en formato local YYYY-MM-DD
+    const today = new Date().toISOString().split('T')[0];
+
+    try {
+      // 2. Pedimos TODAS las reservas (luego filtraremos en memoria para mayor precisión)
+      // Nota: Si tienes miles de reservas, esto se debe filtrar desde n8n, 
+      // pero para empezar así es más rápido y fácil.
+      const res: any = await this.http.post(`${crudUrl}/hotel_bookings`, {
+        operation: 'getall',
+        fields: { id_company: 1 } // Traemos todo lo de la empresa
+      }).toPromise();
+
+      const bookings = Array.isArray(res.data) ? res.data : [];
+
+      // 3. Filtramos solo las de HOY (creadas hoy O check-out hoy)
+      const todaysBookings = bookings.filter((b: any) => {
+        // Opción A: Ventas generadas hoy (Created At)
+        const createdDate = b.created_at ? b.created_at.split('T')[0] : '';
+
+        // Opción B: Dinero que entra hoy (Check-in o Check-out)
+        // Usaremos 'created_at' para saber lo que se VENDIÓ hoy.
+        return createdDate === today;
+      });
+
+      // 4. Sumamos los totales
+      this.dailyReport = {
+        total: 0,
+        paid: 0,
+        pending: 0,
+        transactions: todaysBookings
+      };
+
+      todaysBookings.forEach((b: any) => {
+        const amount = parseFloat(b.total_amount || 0);
+        this.dailyReport.total += amount;
+        const status = b.payment_status?.toLowerCase();
+
+        if (status === 'paid') {
+          this.dailyReport.paid += amount;
+        } else {
+          this.dailyReport.pending += amount;
+        }
+      });
+
+      // 5. Abrimos el modal
+      this.showReportModal = true;
+
+    } catch (error) {
+      console.error('Error generando reporte:', error);
+      alert('No se pudo calcular el corte de caja.');
+    }
+  }
+
+  // Función para obtener el estado de pago de la habitación seleccionada
+  getSelectedRoomPaymentStatus(): string {
+    if (!this.activeBooking) return 'Cargando...';
+
+    return this.activeBooking.payment_status === 'paid'
+      ? '✅'
+      : '⏳';
+  }
+
+  getNights(checkIn: string, checkOut: string): number {
+    const start = new Date(checkIn);
+    const end = new Date(checkOut);
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays === 0 ? 1 : diffDays; // Si es el mismo día, cuenta como 1 noche
   }
 
 }
