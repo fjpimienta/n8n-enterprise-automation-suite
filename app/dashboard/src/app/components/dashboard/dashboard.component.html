@@ -133,7 +133,7 @@
           <div class="col-auto">
             <label class="form-label text-muted text-uppercase item-label text-end">Precio/Noche</label>
             <div class="h2 text-primary mb-0">${{ hotelService.selectedRoom()?.price_night }}
-                            @if (activeBooking) {
+              @if (activeBooking) {
               <span class="badge p-2" [class.bg-success]="activeBooking.payment_status === 'paid'"
                 [class.bg-warning]="activeBooking.payment_status !== 'paid'">
                 {{ getSelectedRoomPaymentStatus() }}
@@ -277,115 +277,136 @@
 @if (showReportModal) {
 <div class="modal modal-blur fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5)">
   <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">📈 Reporte de Ventas del Día</h5>
-        <button type="button" class="btn-close" (click)="showReportModal = false"></button>
+    <div class="modal-content shadow-lg border-0">
+
+      <div class="modal-header border-0 pb-0 d-flex align-items-center justify-content-between">
+        <div>
+          <h5 class="modal-title h2 text-primary mb-0">📈 Reporte de Ventas</h5>
+        </div>
+
+        <div class="d-flex align-items-center gap-3">
+          <div class="btn-group shadow-sm">
+            <button (click)="reportFilter.set('day'); generateDailyReport()"
+              [class.btn-primary]="reportFilter() === 'day'" class="btn btn-outline-primary btn-sm">Día</button>
+            <button (click)="reportFilter.set('week'); generateDailyReport()"
+              [class.btn-primary]="reportFilter() === 'week'" class="btn btn-outline-primary btn-sm">Semana</button>
+            <button (click)="reportFilter.set('month'); generateDailyReport()"
+              [class.btn-primary]="reportFilter() === 'month'" class="btn btn-outline-primary btn-sm">Mes</button>
+            <button (click)="reportFilter.set('year'); generateDailyReport()"
+              [class.btn-primary]="reportFilter() === 'year'" class="btn btn-outline-primary btn-sm">Año</button>
+          </div>
+
+          <button type="button" class="btn-close static-close" (click)="showReportModal = false"
+            aria-label="Close"></button>
+        </div>
       </div>
+
       <div class="modal-body">
-
         <div class="row row-cards mb-4">
-          <div class="col-sm-6 col-lg-4">
-            <div class="card card-sm border-primary">
+          <div class="col-4">
+            <div class="card card-sm bg-primary-lt border-0 shadow-sm">
               <div class="card-body">
-                <div class="row align-items-center">
-                  <div class="col-auto">
-                    <span class="bg-primary text-white avatar">💵</span>
-                  </div>
-                  <div class="col">
-                    <div class="font-weight-medium">Ventas Totales</div>
-                    <div class="text-muted">{{ dailyReport.total | currency }}</div>
-                  </div>
+                <div class="d-flex align-items-center">
+                  <div class="subheader text-primary">Ventas Totales</div>
                 </div>
+                <div class="h1 mb-0 fw-bold">{{ dailyReport.total | currency }}</div>
               </div>
             </div>
           </div>
-          <div class="col-sm-6 col-lg-4">
-            <div class="card card-sm border-success">
+          <div class="col-4">
+            <div class="card card-sm bg-success-lt border-0 shadow-sm">
               <div class="card-body">
-                <div class="row align-items-center">
-                  <div class="col-auto">
-                    <span class="bg-success text-white avatar">✅</span>
-                  </div>
-                  <div class="col">
-                    <div class="font-weight-medium">Cobrado</div>
-                    <div class="text-muted">{{ dailyReport.paid | currency }}</div>
-                  </div>
+                <div class="d-flex align-items-center">
+                  <div class="subheader text-success">Cobrado (Efectivo)</div>
                 </div>
+                <div class="h1 mb-0 fw-bold">{{ dailyReport.paid | currency }}</div>
               </div>
             </div>
           </div>
-          <div class="col-sm-6 col-lg-4">
-            <div class="card card-sm border-warning">
+          <div class="col-4">
+            <div class="card card-sm bg-warning-lt border-0 shadow-sm">
               <div class="card-body">
-                <div class="row align-items-center">
-                  <div class="col-auto">
-                    <span class="bg-warning text-white avatar">⏳</span>
-                  </div>
-                  <div class="col">
-                    <div class="font-weight-medium">Pendiente</div>
-                    <div class="text-muted">{{ dailyReport.pending | currency }}</div>
-                  </div>
+                <div class="d-flex align-items-center">
+                  <div class="subheader text-warning">Pendiente por Cobrar</div>
                 </div>
+                <div class="h1 mb-0 fw-bold">{{ dailyReport.pending | currency }}</div>
               </div>
             </div>
           </div>
         </div>
 
-        <h3>Detalle de Movimientos</h3>
-        <div class="table-responsive">
-          <table class="table table-vcenter card-table">
-            <thead>
-              <tr>
-                <th>Hora</th>
-                <th>Habitación</th>
-                <th>Estancia</th>
-                <th>Estado Pago</th>
-                <th class="text-end">Monto</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (item of dailyReport.transactions; track item.id) {
-              <tr>
-                <td>{{ item.created_at | date:'shortTime' }}</td>
-                <td>
-                  Habitación <strong>{{ getRoomNumber(item.room_id) }}</strong>
-                </td>
-                <td>
-                  <span class="text-muted small">
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-light py-2">
+            <h3 class="card-title text-muted small fw-bold text-uppercase">Detalle de Movimientos - {{
+              dailyReport.periodLabel }}</h3>
+          </div>
+          <div class="table-responsive" style="max-height: 400px;">
+            <table class="table table-vcenter table-nowrap card-table">
+              <thead>
+                <tr>
+                  <th class="w-1">Hora</th>
+                  <th>Habitación</th>
+                  <th>Estancia</th>
+                  <th>Estado</th>
+                  <th class="text-end">Monto</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of dailyReport.transactions; track item.id) {
+                <tr class="hover-shadow-sm">
+                  <td class="text-muted small">{{ item.created_at | date:'shortTime' }}</td>
+                  <td>
+                    <div class="d-flex align-items-center">
+                      <span class="avatar avatar-xs me-2 bg-blue-lt">{{ getRoomNumber(item.room_id) }}</span>
+                      <span class="fw-bold">Habitación {{ getRoomNumber(item.room_id) }}</span>
+                    </div>
+                  </td>
+                  <td class="small text-muted">
                     {{ getNights(item.check_in, item.check_out) }} noche(s)
-                  </span>
-                </td>
-                <td>
-                  @if(item.payment_status === 'paid') {
-                  <span class="badge bg-success-lt">✅ Pagado</span>
-                  } @else {
-                  <div class="btn-list">
-                    <span class="badge bg-warning-lt me-2">Pendiente</span>
-                    <button class="btn btn-sm btn-outline-success" (click)="markAsPaid(item)">
-                      💲 Cobrar Ahora
-                    </button>
-                  </div>
-                  }
-                </td>
-                <td class="text-end fw-bold">{{ item.total_amount | currency }}</td>
-              </tr>
-              } @empty {
-              <tr>
-                <td colspan="4" class="text-center p-3">No hay ventas registradas hoy.</td>
-              </tr>
-              }
-            </tbody>
-          </table>
+                  </td>
+                  <td>
+                    @if(item.payment_status === 'paid') {
+                    <span class="badge badge-outline text-success fw-bold">
+                      <span class="badge-dot bg-success me-1"></span> PAGADO
+                    </span>
+                    } @else {
+                    <div class="d-flex align-items-center gap-2">
+                      <span class="badge badge-outline text-warning fw-bold">PENDIENTE</span>
+                      <button class="btn btn-ghost-success btn-icon btn-sm" (click)="markAsPaid(item)"
+                        title="Registrar Pago">
+                        <span class="small">💰 Cobrar</span>
+                      </button>
+                    </div>
+                    }
+                  </td>
+                  <td class="text-end fw-bold text-dark h4 mb-0">{{ item.total_amount | currency }}</td>
+                </tr>
+                } @empty {
+                <tr>
+                  <td colspan="5" class="text-center py-5 text-muted">
+                    <div class="mb-2">📭</div>
+                    No se encontraron transacciones en este periodo.
+                  </td>
+                </tr>
+                }
+              </tbody>
+            </table>
+          </div>
         </div>
-
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-link link-secondary" (click)="showReportModal = false">
-          Cerrar
-        </button>
+
+      <div class="modal-footer border-0">
+        <button type="button" class="btn btn-ghost-secondary" (click)="showReportModal = false">Cerrar</button>
         <button type="button" class="btn btn-primary" onclick="window.print()">
-          🖨️ Imprimir
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-printer" width="24" height="24"
+            viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+            <path d="M17 17h2a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2h-14a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h2" />
+            <path d="M17 9v-4a2 2 0 0 0 -2 -2h-6a2 2 0 0 0 -2 2v4" />
+            <path d="M7 13m0 2a2 2 0 0 1 2 -2h6a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-6a2 2 0 0 1 -2 -2z" />
+          </svg>
+          Imprimir Reporte
         </button>
       </div>
     </div>

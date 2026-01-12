@@ -19,6 +19,7 @@ export class DashboardComponent {
   private router = inject(Router);
   public hotelService = inject(HotelService);
   private http = inject(HttpClient);
+  reportFilter = signal<'day' | 'week' | 'month' | 'year'>('day');
   viewMode = signal<'details' | 'checkin' | 'checkout_validation'>('details');
 
   // URL de tu Webhook de n8n para notificaciones
@@ -38,7 +39,8 @@ export class DashboardComponent {
     total: 0,
     paid: 0,
     pending: 0,
-    transactions: [] as any[] // Lista de reservas de hoy
+    transactions: [] as any[],    // Lista de reservas de hoy
+    periodLabel: 'Hoy'            // Filtro Reporte  Caja
   };
 
   ngOnInit() {
@@ -399,58 +401,85 @@ export class DashboardComponent {
   // Función para generar el Reporte de Caja
   async generateDailyReport() {
     const crudUrl = environment.apiUrl_crud;
+    const now = new Date();
 
-    // 1. Obtenemos la fecha de hoy en formato local YYYY-MM-DD
-    const today = new Date().toISOString().split('T')[0];
+    // Función auxiliar para obtener solo la fecha YYYY-MM-DD local
+    const getLocalDateString = (date: Date) => {
+      const offset = date.getTimezoneOffset();
+      const localDate = new Date(date.getTime() - (offset * 60 * 1000));
+      return localDate.toISOString().split('T')[0];
+    };
+
+    const todayStr = getLocalDateString(now);
 
     try {
-      // 2. Pedimos TODAS las reservas (luego filtraremos en memoria para mayor precisión)
-      // Nota: Si tienes miles de reservas, esto se debe filtrar desde n8n, 
-      // pero para empezar así es más rápido y fácil.
       const res: any = await this.http.post(`${crudUrl}/hotel_bookings`, {
         operation: 'getall',
-        fields: { id_company: 1 } // Traemos todo lo de la empresa
+        fields: { id_company: 1 }
       }).toPromise();
 
-      const bookings = Array.isArray(res.data) ? res.data : [];
+      const allBookings = Array.isArray(res.data) ? res.data : [];
 
-      // 3. Filtramos solo las de HOY (creadas hoy O check-out hoy)
-      const todaysBookings = bookings.filter((b: any) => {
-        // Opción A: Ventas generadas hoy (Created At)
-        const createdDate = b.created_at ? b.created_at.split('T')[0] : '';
+      // Lógica de filtrado por periodo
+      const filtered = allBookings.filter((b: any) => {
+        if (!b.created_at) return false;
 
-        // Opción B: Dinero que entra hoy (Check-in o Check-out)
-        // Usaremos 'created_at' para saber lo que se VENDIÓ hoy.
-        return createdDate === today;
+        // Convertimos el created_at de la DB a fecha local para comparar
+        const createdDate = new Date(b.created_at);
+        const createdStr = getLocalDateString(createdDate);
+
+        switch (this.reportFilter()) {
+          case 'day':
+            return createdStr === todayStr;
+
+          case 'week':
+            const weekAgo = new Date();
+            weekAgo.setDate(now.getDate() - 7);
+            return createdDate >= weekAgo;
+
+          case 'month':
+            return createdDate.getMonth() === now.getMonth() &&
+              createdDate.getFullYear() === now.getFullYear();
+
+          case 'year':
+            return createdDate.getFullYear() === now.getFullYear();
+
+          default:
+            return createdStr === todayStr;
+        }
       });
 
-      // 4. Sumamos los totales
+      // Reset de totales
       this.dailyReport = {
         total: 0,
         paid: 0,
         pending: 0,
-        transactions: todaysBookings
+        transactions: filtered,
+        periodLabel: this.getPeriodLabel()
       };
 
-      todaysBookings.forEach((b: any) => {
+      filtered.forEach((b: any) => {
         const amount = parseFloat(b.total_amount || 0);
         this.dailyReport.total += amount;
-        const status = b.payment_status?.toLowerCase();
-
-        if (status === 'paid') {
+        if (b.payment_status === 'paid') {
           this.dailyReport.paid += amount;
         } else {
           this.dailyReport.pending += amount;
         }
       });
 
-      // 5. Abrimos el modal
       this.showReportModal = true;
 
     } catch (error) {
       console.error('Error generando reporte:', error);
-      alert('No se pudo calcular el corte de caja.');
+      alert('No se pudo calcular el reporte.');
     }
+  }
+
+  // Función auxiliar para el título del modal
+  getPeriodLabel(): string {
+    const labels = { 'day': 'Hoy', 'week': 'Última Semana', 'month': 'Mes Actual', 'year': 'Año Actual' };
+    return labels[this.reportFilter()];
   }
 
   // Función para obtener el estado de pago de la habitación seleccionada
