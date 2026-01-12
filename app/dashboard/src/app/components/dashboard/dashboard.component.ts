@@ -192,11 +192,40 @@ export class DashboardComponent {
     }
   }
 
-  // 3. Modifica la función que abre el checkout
-  handleCheckout() {
-    // En lugar de hacer el proceso, abrimos el modal de validación
-    this.checkoutChecks = { tvRemote: false, acRemote: false, keys: false, notes: '' }; // Reset
-    this.viewMode.set('checkout_validation');
+  // 3. Modifica la función que abre el checkout y la lógica de apertura del Checkout
+  async handleCheckout() {
+    const room = this.hotelService.selectedRoom();
+    if (!room) return;
+
+    // 1. Buscamos la reserva para verificar el pago
+    try {
+      const res: any = await this.http.post(`${environment.apiUrl_crud}/hotel_bookings`, {
+        operation: 'getall',
+        fields: { room_id: room.id, status: 'confirmed' }
+      }).toPromise();
+
+      const booking = (res && res.data) ? res.data[0] : null;
+
+      if (booking) {
+        this.activeBooking = booking; // Guardamos la reserva actual
+
+        // 2. VERIFICACIÓN CRÍTICA DE PAGO
+        if (booking.payment_status !== 'paid') {
+          // Si no está pagada, mostramos un aviso y el botón de cobro
+          // Puedes usar un nuevo modo de vista o un flag
+          this.viewMode.set('details'); // Mantenemos en detalles para que vea el botón de pago
+          alert(`⚠️ Atención: La habitación ${room.room_number} tiene un saldo pendiente de $${booking.total_amount}. Debe registrar el pago antes de proceder con la salida.`);
+          return;
+        }
+      }
+
+      // 3. Si llegamos aquí, es que está pagada. Procedemos a la validación de inventario.
+      this.checkoutChecks = { tvRemote: false, acRemote: false, keys: false, notes: '' };
+      this.viewMode.set('checkout_validation');
+
+    } catch (error) {
+      console.error('Error al verificar pago para checkout:', error);
+    }
   }
 
   // 4. Crea la función final que se ejecuta tras validar
