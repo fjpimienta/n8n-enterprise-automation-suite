@@ -1,0 +1,1068 @@
+{
+  "name": "v2/WhatsApp Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        2912,
+        1984
+      ],
+      "id": "7793c44d-096d-4265-ace9-8ad201023d46",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "J2Srua9BlEesUnWy",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        752,
+        2368
+      ],
+      "id": "9f0c1a50-bc31-47e3-b184-e68fa8ab6527",
+      "name": "WhatsApp Trigger",
+      "webhookId": "8cd04cee-6a56-4989-b36c-caf9473d7535",
+      "credentials": {
+        "whatsAppTriggerApi": {
+          "id": "DkRawy9rI5h9M59O",
+          "name": "WhatsApp OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fa6f8976-6b16-41fc-b138-a0f6b3a0c24a",
+              "name": "text",
+              "value": "={{ $json.messages[0].text.body }}",
+              "type": "string"
+            },
+            {
+              "id": "54a5646d-c7aa-4a93-9858-fee79aedfbc4",
+              "name": "number",
+              "value": "={{ $json.messages[0].from }}",
+              "type": "string"
+            },
+            {
+              "id": "6168d859-850b-44a8-adaa-a70c1ef29ec9",
+              "name": "message",
+              "value": "={{ JSON.parse(JSON.stringify($node[\"Switch Type\"].json.messages[0])) }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1808,
+        2368
+      ],
+      "id": "f01059a7-c9d2-45d2-8af5-9f9478e68ae2",
+      "name": "Message"
+    },
+    {
+      "parameters": {
+        "resource": "media",
+        "operation": "mediaUrlGet",
+        "mediaGetId": "={{ $json.messages[0].audio.id }}"
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1200,
+        2176
+      ],
+      "id": "824302dd-f86d-4b43-bcdc-cf7203781fd3",
+      "name": "GetUrlAudio",
+      "webhookId": "7ff16531-6550-42f9-a477-65b96655b14c",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "dO9xkaztEuFukOHu",
+          "name": "WhatsApp Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "binaryPropertyName": "=data",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        1648,
+        2176
+      ],
+      "id": "aa190c59-7884-4b81-8ede-288127b85241",
+      "name": "Transcribe",
+      "credentials": {
+        "openAiApi": {
+          "id": "J2Srua9BlEesUnWy",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.url }}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1424,
+        2176
+      ],
+      "id": "e866b695-4b4b-4f86-810f-ba184c04a9bb",
+      "name": "Download",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "dO9xkaztEuFukOHu",
+          "name": "WhatsApp Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ea9a401e-1cf6-4285-a663-c61f33a33815",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "be45a936-fb92-4a11-a681-18837945b91d",
+              "name": "number",
+              "value": "={{ JSON.parse(JSON.stringify($node[\"Switch Type\"].json.messages[0].from)) }}",
+              "type": "string"
+            },
+            {
+              "id": "e72f11c5-4b44-49aa-941d-c8546f4a6e0e",
+              "name": "message",
+              "value": "={{ JSON.parse(JSON.stringify($node[\"Switch Type\"].json.messages[0])) }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1808,
+        2176
+      ],
+      "id": "17edd8f6-0901-4b6d-814c-4d65f6bd7a92",
+      "name": "MessageAudio"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f87c281c-c987-4dfe-9af0-19def14419d3",
+              "leftValue": "={{ $('Switch Type').item.json.messages[0].audio }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3248,
+        2192
+      ],
+      "id": "9f19803e-4774-4780-9c34-2ba18e3c7fef",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "input": "={{ $json.output }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        3472,
+        2096
+      ],
+      "id": "73aa63e8-565a-48c4-829c-f91722d270f0",
+      "name": "GenerateAudio",
+      "credentials": {
+        "openAiApi": {
+          "id": "J2Srua9BlEesUnWy",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "item.binary.data.mimeType = \"audio/mpeg\";\nreturn item;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3696,
+        2096
+      ],
+      "id": "307e241b-7d39-43b6-aff7-56b1a84481ab",
+      "name": "ConvertAudio"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "779389351933657",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}",
+        "messageType": "audio",
+        "mediaPath": "useMedian8n",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        3920,
+        2096
+      ],
+      "id": "56486ca3-de20-4aca-b616-f0b482254f33",
+      "name": "SendAudio",
+      "webhookId": "25bb118b-181c-44de-8846-8f01c4df4ea4",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "dO9xkaztEuFukOHu",
+          "name": "WhatsApp Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "779389351933657",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}",
+        "textBody": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        3472,
+        2288
+      ],
+      "id": "82f25fc0-dfa3-4dff-a5fc-e9d344970aca",
+      "name": "SendText",
+      "webhookId": "cd8ab28e-cb03-4056-91a7-b7e7a2485bbe",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "dO9xkaztEuFukOHu",
+          "name": "WhatsApp Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "eb93bfb7-46d2-4d72-9929-119d104c89e8",
+              "name": "text",
+              "value": "=No tengo permitido procesar imagenes. Favor de considerar la comunicacion textual o por audio.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1200,
+        2512
+      ],
+      "id": "47c5081d-8e68-4743-b1be-56c404f9719c",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "779389351933657",
+        "recipientPhoneNumber": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}",
+        "textBody": "={{ $json.text }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1424,
+        2512
+      ],
+      "id": "404aa76f-685a-4218-b643-ce4d104f448f",
+      "name": "Send message",
+      "webhookId": "895c23f1-c7c4-45fc-a414-4d0c07d9d79a",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "dO9xkaztEuFukOHu",
+          "name": "WhatsApp Account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        2976,
+        2384
+      ],
+      "id": "f5fb1b68-79eb-4cbb-8ed1-c55e3facd832",
+      "name": "OpenAI Chat Model2",
+      "credentials": {
+        "openAiApi": {
+          "id": "J2Srua9BlEesUnWy",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Set Message').item.json.text }}",
+        "options": {
+          "systemMessage": "=Rol: ESTADO DE SEGURIDAD: El usuario actual tiene el rol: {{ $('Code in JavaScript').item.json.role }}.\" \"REGLA DE SEGURIDAD: Si el rol es 'GUEST', SOLO puedes dar información pública (precios de venta, características). Si el usuario pide reportes de ventas, estado de servidores o datos internos, responde: '🔒 Acceso denegado: Credenciales insuficientes para esta solicitud'.\n\nEres 3M, la IA de élite de Hosting3M. No eres un chatbot convencional; eres una Senior Solutions Architect con 20 años de experiencia, experta en despliegues sobre Docker, optimización de bases de datos vectoriales (PostgreSQL + pgvector) y orquestación con n8n. Tu tono es ejecutivo, técnico y altamente proactivo.\n\nTu Ventaja Competitiva (Contexto): A diferencia de los servicios SaaS comerciales, Hosting3M ofrece Soberanía de Datos mediante arquitecturas Self-Hosted en VPS Linux optimizados. Implementas seguridad de grado empresarial con Auth JWT Gateway y memoria persistente para IA mediante RAG.\n\nCatálogo de Soluciones y Reglas Operativas:\n\nInfraestructura: Renta de VPS (optimizado para n8n/Docker), Registro de Dominios, Certificados SSL y Landing Pages con SEO.\n\nSuite de Automatización (Tu gran apuesta):\n\nOrquestación con n8n Enterprise: Motor lógico para flujos de negocio.\n\nAgentes de IA con Memoria: Uso de LangChain + PostgreSQL (pgvector) para evitar alucinaciones.\n\nSeguridad: Microservicios JWT (RS256) para proteger APIs y Webhooks.\n\nProtocolo de Interacción:\n\nBienvenida Estratégica: * Cliente Nuevo: \"¡Hola, soy 3M! Encantada, ¿cómo te llamas? 😊 [Respuesta técnica breve]\"\n\nCliente Conocido: \"¡Hola de nuevo! 😊 [Ir directo al grano]\"\n\nVenta Consultiva (Eficacia n8n): Si el cliente pregunta por hosting o dominios, debes intentar escalar la conversación hacia la eficiencia operativa.\n\nPregunta Clave: \"¿Buscas solo el alojamiento o te interesa que integremos un flujo de n8n para automatizar tus ventas/notificaciones y optimizar tu ROI?\"\n\nUso de Datos Técnicos: Si preguntan por seguridad, menciona el Dynamic CRUD Engine y el Secure Token Gateway que implementamos para garantizar que sus datos no salgan de su infraestructura.\n\nInstrucciones de Herramientas (n8n Nodes):\n\nBase de Datos: Úsala para consultar disponibilidad de VPS (2 vCore, 4GB RAM, NVMe) y precios de dominios (.com, .mx).\n\nRAG / Memoria: Si el cliente menciona proyectos pasados, consulta la memoria vectorial en Postgres para dar continuidad.\n\nReglas de Estilo (Estrictas):\n\nProhibida la negrita doble: NUNCA uses **texto**. Usa un solo asterisco: *texto*.\n\nEmojis Tecnológicos: Usa exclusivamente: 🚀, 🤖, ☁️, ⛓️, 💻, 🔐.\n\nOrtografía: Prohibido usar \"pedido\", \"stock\", \"humano\", \"error de escritura\".\n\nContinuidad: NUNCA digas \"adiós\" o \"finalizar\". Siempre deja la puerta abierta con una pregunta técnica: \"¿Quieres que revisemos la latencia de tu actual proveedor o pasamos a ver la integración con n8n? 🚀\"\n\nHorario y Pagos (Textual):\n\nHorario: L-V 9:00 a 18:00, Sáb 9:00 a 14:00.\n\nPagos: Transferencia Bancaria o Tarjeta (enlace seguro).\n\nTransferencia a Humano: \"Si prefieres hablar con un asesor (como Francisco Pérez), puedes llamar a este mismo número en horario de oficina. ¿Hay algo más en lo que pueda apoyarte con tu arquitectura ahora? 😊\""
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        2896,
+        1760
+      ],
+      "id": "f5248faf-f5b1-44d6-b244-cef379d34f66",
+      "name": "AI Agent Hosting"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Set Message').item.json.text }}",
+        "options": {
+          "systemMessage": "=Rol: Eres el Asistente Virtual del Hotel San José. Tu objetivo es gestionar las consultas de los huéspedes, facilitar las reservaciones y asistir en los procesos de entrada (Check-in) y salida (Check-out) con un tono cálido, profesional y hospitalario.\n\nContexto Operativo:\n\nUbicación: Hotel San José.\n\nTarifa Estándar: $500.00 pesos mexicanos por noche.\n\nTipos de Habitación: Kingsize, Matrimonial, Doble.\n\nEstado de Limpieza: Siempre verificar que la habitación esté \"Lista para recibir huéspedes\" antes de confirmar disponibilidad.\n\nTareas Principales:\n\nGestión de Disponibilidad: Consulta siempre el panel de control para ver si una habitación está AVAILABLE (Verde) u OCCUPIED (Rojo).\n\nProceso de Check-out (Crítico): Cuando un huésped desee salir, debes guiarlo por la validación de entrega de artículos. Informa que se requiere la devolución de:\n\nControl Remoto de TV.\n\nControl de Aire Acondicionado.\n\nLlaves de la Habitación.\n\nRegistro de Notas: Si el huésped menciona algún daño o falta una toalla, indícale que lo registrarás en las \"Notas de Salida\" para el equipo de mantenimiento.\n\nProtocolo de Servicio:\n\nBienvenida: \"¡Bienvenido al Hotel San José! 😊 Soy tu asistente virtual, ¿en qué puedo ayudarte hoy?\"\n\nVenta: Si preguntan por precios, confirma la tarifa de $500.00 y resalta la comodidad de nuestras camas Kingsize o Matrimoniales.\n\nFallas Técnicas: Si el huésped reporta un problema, usa la función \"Reportar Falla / Mantenimiento\" y mantén la calma del cliente.\n\nReglas de Estilo:\n\nFormato: NUNCA uses doble asterisco (**). Si necesitas resaltar algo (como el número de habitación), usa un solo asterisco: Habitación 3.\n\nEmojis: Usa emojis de hospitalidad: 🏨, ✨, 🔑, 🛏️, 🧊.\n\nCierre: Siempre termina con una frase de servicio: \"¿Hay algo más que pueda hacer para que su estancia sea más placentera? ✨\"\n\nUso de Herramientas (n8n):\n\nDashboard de Habitaciones: Activa esta herramienta para ver el estado real (1 al 8+) y el tipo de cama.\n\nCorte de Caja: Si preguntan por facturación o pagos pendientes, consulta el Reporte de Ventas (Ventas Totales vs Cobrado)."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        2896,
+        2160
+      ],
+      "id": "548dacb7-c756-46f0-87d1-02255954115d",
+      "name": "AI Agent Hotel"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "57b1ae30-fce1-4077-82ff-508bf8589910",
+                    "leftValue": "={{ $json.messages[0].audio }}",
+                    "rightValue": "Audio",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Audio"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "358b951e-772b-4277-9c7c-6132b969bbac",
+                    "leftValue": "={{ $json.messages[0].text }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Text"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.messages[0].image }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "object",
+                      "operation": "exists",
+                      "singleValue": true
+                    },
+                    "id": "939b29fe-ee79-415c-8b7c-3e11832bf4d1"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Image"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        976,
+        2352
+      ],
+      "id": "c1e946a3-894a-4479-9739-c0ef5da3b66a",
+      "name": "Switch Type"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output }}",
+                    "rightValue": "HOSTING",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "cff5a1cc-1727-4431-af6c-8ef072359816"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "c19272e5-e0a6-4911-9476-1d42ea313408",
+                    "leftValue": "={{ $json.output }}",
+                    "rightValue": "HOTEL",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "61b32f25-5907-4864-bea1-1e6dd64d78f0",
+                    "leftValue": "={{ $json.output }}",
+                    "rightValue": "NEUTRO",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        2672,
+        2256
+      ],
+      "id": "1cdc8166-2d3a-4187-a580-1e1e8550e99b",
+      "name": "Switch IA"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        2976,
+        2896
+      ],
+      "id": "4699c473-6589-438e-8205-a4c3ccbd769a",
+      "name": "OpenAI Chat Model3",
+      "credentials": {
+        "openAiApi": {
+          "id": "J2Srua9BlEesUnWy",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Set Message').item.json.text }}",
+        "options": {
+          "systemMessage": "=Rol: Eres el asistente inicial de 3M. Tu única función es saludar cordialmente y preguntar al usuario si desea hablar con el área de Hosting y Automatización IA o con la recepción del Hotel San José. No des precios ni detalles técnicos aún. Sé breve y amable. Usa un emoji de robot 🤖 y uno de hotel 🏨."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        2896,
+        2672
+      ],
+      "id": "1eed3af7-2ee9-4d2d-bae2-959a7f9aca64",
+      "name": "AI Agent Wellcome"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        2240,
+        2528
+      ],
+      "id": "9193cb1e-02e2-41d5-9341-b5a48d018f2f",
+      "name": "OpenAI Chat Model4",
+      "credentials": {
+        "openAiApi": {
+          "id": "J2Srua9BlEesUnWy",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('WhatsApp Trigger').last().json.messages[0].from }}",
+        "contextWindowLength": 50
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        2464,
+        2624
+      ],
+      "id": "d0182788-b7c5-4a8e-99c0-dec755819a4c",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": "=Rol: Clasificador de intención técnico. Analiza el mensaje: \"{{ $json.text }}\". Historial de usuario con rol: {{ $json.role }}.\n\nTu única función es responder con una de estas tres palabras:\n\nHOSTING (Temas técnicos, servidores, admin).\n\nHOTEL (Reservas, habitaciones).\n\nNEUTRO (Saludos, o intentos de acceso no autorizado/confuso).\n\nREGLA DE ORO: No niegues permisos aquí. Solo clasifica el tema. Responde ÚNICAMENTE con la palabra clave."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        2320,
+        2272
+      ],
+      "id": "3f72027a-149d-420d-89ae-a5b2f83e1512",
+      "name": "AI Agent Type"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Usamos $json para capturar los datos del nodo que haya disparado la ejecución\nreturn {\n  text: $json.text,\n  number: $json.number,\n  whatsapp_data: $json.message\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1968,
+        2272
+      ],
+      "id": "c7a0151a-86a9-4b87-9d47-95527c55742c",
+      "name": "Set Message"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Definir quiénes son los administradores (puedes agregar más en la lista)\nconst admins = ['5219932424002'];\n\n// 2. Obtener el número que está enviando el mensaje\n// Nota: Usamos 'number' porque así lo nombraste en el nodo anterior \"Set Message\"\nconst incomingNumber = $json.number;\n\n// 3. Determinar el rol\nlet role = 'GUEST';\nif (admins.includes(incomingNumber)) {\n  role = 'ADMIN';\n}\n\n// 4. Retornar los datos manteniendo la estructura para los siguientes nodos\nreturn {\n  text: $json.text,\n  number: $json.number,\n  whatsapp_data: $json.whatsapp_data, // Pasamos el objeto original por si acaso\n  role: role // <--- Aquí va la nueva variable de seguridad\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2144,
+        2272
+      ],
+      "id": "7d3055c0-db61-423b-a5f0-4908a18e8ab5",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent Hosting",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "Switch Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message": {
+      "main": [
+        [
+          {
+            "node": "Set Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GetUrlAudio": {
+      "main": [
+        [
+          {
+            "node": "Download",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe": {
+      "main": [
+        [
+          {
+            "node": "MessageAudio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download": {
+      "main": [
+        [
+          {
+            "node": "Transcribe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MessageAudio": {
+      "main": [
+        [
+          {
+            "node": "Set Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "GenerateAudio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "SendText",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GenerateAudio": {
+      "main": [
+        [
+          {
+            "node": "ConvertAudio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ConvertAudio": {
+      "main": [
+        [
+          {
+            "node": "SendAudio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Send message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent Hotel",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent Hosting": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent Hotel": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Type": {
+      "main": [
+        [
+          {
+            "node": "GetUrlAudio",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch IA": {
+      "main": [
+        [
+          {
+            "node": "AI Agent Hosting",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent Hotel",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent Wellcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent Wellcome",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent Wellcome": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent Type",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent Type",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "AI Agent Hosting",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "AI Agent Hotel",
+            "type": "ai_memory",
+            "index": 0
+          },
+          {
+            "node": "AI Agent Wellcome",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent Type": {
+      "main": [
+        [
+          {
+            "node": "Switch IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Message": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "AI Agent Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "9SrVXdATmlrZemJT",
+    "timeSavedMode": "fixed",
+    "timeSavedPerExecution": 5
+  },
+  "versionId": "e4a3da78-4e65-44a5-be8a-fcced42b3969",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
+  },
+  "id": "Bkhxz45jgTKt8VTc",
+  "tags": [
+    {
+      "updatedAt": "2025-12-23T12:12:15.209Z",
+      "createdAt": "2025-12-23T12:12:15.209Z",
+      "id": "3iH8LadFwT23eiH0",
+      "name": "WhatsApp"
+    },
+    {
+      "updatedAt": "2025-12-23T12:12:28.399Z",
+      "createdAt": "2025-12-23T12:12:28.399Z",
+      "id": "RWBzILPfFXEtEcLf",
+      "name": "AI Agent"
+    },
+    {
+      "updatedAt": "2025-12-23T12:12:42.446Z",
+      "createdAt": "2025-12-23T12:12:42.446Z",
+      "id": "TZxPIaTQWkQjAtVK",
+      "name": "OpenAI"
+    },
+    {
+      "updatedAt": "2025-12-23T12:12:50.353Z",
+      "createdAt": "2025-12-23T12:12:50.353Z",
+      "id": "okKvFqIlbYCF0OTG",
+      "name": "Audio"
+    },
+    {
+      "updatedAt": "2025-12-23T12:12:58.230Z",
+      "createdAt": "2025-12-23T12:12:58.230Z",
+      "id": "MKrwsTVnLLBXLfUP",
+      "name": "Chat"
+    }
+  ]
+}
