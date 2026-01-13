@@ -7,7 +7,7 @@
 **Stack:** n8n, Docker, PostgreSQL (pgvector), Node.js, OpenAI, Linux VPS.
 
 ## 🎯 Objetivo del Proyecto
-Suite de automatización empresarial diseñada para alta disponibilidad y seguridad. A diferencia de implementaciones estándar SaaS, esta arquitectura **Self-Hosted** garantiza soberanía de datos, latencia mínima y personalización profunda mediante microservicios auxiliares.
+Suite de automatización empresarial diseñada para alta disponibilidad y seguridad. A diferencia de implementaciones estándar SaaS, esta arquitectura Self-Hosted garantiza soberanía de datos, latencia mínima y personalización profunda mediante microservicios auxiliares y clientes frontend desacoplados.
 
 ## 🏗 Arquitectura e Infraestructura (Infrastructure as Code)
 Desplegado en VPS Linux optimizado (2 vCore, 4GB RAM, NVMe) usando orquestación de contenedores.
@@ -30,6 +30,7 @@ Desplegado en VPS Linux optimizado (2 vCore, 4GB RAM, NVMe) usando orquestación
 4.  **📢 Social Media Orchestrator:** Generación de contenido omnicanal (X, FB, LinkedIn).
 5.  **🤖 AI WhatsApp Agent (RAG):** Asistente inteligente con memoria persistente en Postgres.
 6.  **🛠️ Dynamic CRUD Engine:** Capa de abstracción de datos para gestión dinámica de entidades SQL.
+7.  **🏨 AdminHotel Dashboard:** Cliente Web SPA para la gestión visual del inventario hotelero (Consume Módulos 01 y 06).
 
 ## 🚀 Despliegue
 ```bash
@@ -39,6 +40,10 @@ git clone [https://github.com/tu-usuario/n8n-enterprise-suite.git](https://githu
 # Levantar infraestructura
 cd infrastructure
 docker-compose up -d
+
+# Levantar Clientes Frontend (Opcional)
+cd apps/admin-hotel
+npm install && ng serve
 ```
 
 ---
@@ -57,6 +62,7 @@ A continuación se detalla la documentación técnica y el código fuente de cad
 | `04` | **Omnichannel Social** 	| Orquestador de publicación de contenido en redes sociales. 				| `HTTP Request` `Twitter API` `LinkedIn` | [📖 Ver Docs](workflows/04-omnichannel-social/v2/README.md) |
 | `05` | **AI WhatsApp Agent** 		| Asistente conversacional con memoria a largo plazo (RAG). 				| `WhatsApp` `Postgres` `OpenAI` | [📖 Ver Docs](workflows/05-ai-whatsapp-agent/v1/README.md) |
 | `06` | **Dynamic CRUD Engine**    | Capa de abstracción para gestión de entidades dinámica.                   | `Postgre` `JS Logic` `JWT` | [📖 Ver Docs](workflows/06-dynamic-crud-engine/v2/README.md) |
+| `07` | **AdminHotel Dashboard**    | Frontend administrativo para gestión de reservas y habitaciones.         | `Angular 21` `Tabler` `Vitest` | [📖 Ver Docs](app/dashboard/README.md) |
 ---
 
 ## GitHub Projects (Gestión Ágil)
@@ -82,6 +88,7 @@ A continuación se detalla la documentación técnica y el código fuente de cad
 * **Columna "Done" (Tus logros):**
     * *Ticket:* "Despliegue de n8n v2.0.3 con Docker Compose y redes aisladas."
     * *Ticket:* "Creación de Microservicio JWT para seguridad de webhooks."
+    * *Ticket:* "Configuración inicial de AdminHotel: Auth Guard, Interceptores JWT y Signals."
 
 ---
 
