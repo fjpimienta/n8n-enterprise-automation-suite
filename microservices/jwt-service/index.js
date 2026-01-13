@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
 require('dotenv').config();
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 app.use(express.json());
@@ -11,6 +12,15 @@ app.use(cors({
   methods: ['POST'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// Limiter para la ruta de login (protege contra fuerza bruta)
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 10, // Máximo 10 intentos por IP
+  message: { error: 'Demasiados intentos de login. Intente más tarde.' },
+  standardHeaders: true, // Envía headers con info de rate limit
+  legacyHeaders: false,
+});
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const INTERNAL_SECRET = process.env.INTERNAL_SECRET;
@@ -33,7 +43,7 @@ const pool = new Pool({
 });
 
 // ENDPOINT DE GENERACIÓN
-app.post('/generate-token', async (req, res) => {
+app.post('/generate-token', loginLimiter, async (req, res) => {
   const { user, pass, internal_secret } = req.body;
 
   // LOGS DE DEBUG (Añade estas líneas)
