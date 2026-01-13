@@ -22,6 +22,15 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// Limiter para la ruta de verificación de tokens (más permisivo, protege contra abuso/DoS)
+const verifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 100,                 // Máximo 100 verificaciones por IP (ajusta si necesitas más)
+  message: { error: 'Demasiadas solicitudes de verificación. Intente más tarde.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 const JWT_SECRET = process.env.JWT_SECRET;
 const INTERNAL_SECRET = process.env.INTERNAL_SECRET;
 
@@ -109,7 +118,7 @@ app.post('/generate-token', loginLimiter, async (req, res) => {
 });
 
 // ENDPOINT DE VERIFICACIÓN (Asegúrate de devolver el id_company)
-app.post('/verify-token', (req, res) => {
+app.post('/verify-token', verifyLimiter, (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ valid: false, error: 'No token provided' });
 
