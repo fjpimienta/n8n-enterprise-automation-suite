@@ -5,7 +5,7 @@
 ## 📝 Descripción
 AdminHotel es una aplicación web de alto rendimiento construida sobre Angular 21, diseñada como la interfaz administrativa oficial de la suite de automatización Hosting3M.
 
-Este dashboard no solo gestiona la lógica hotelera (reservas, habitaciones, pagos), sino que actúa como el cliente principal del Dynamic CRUD Engine (Módulo 06), permitiendo una gestión de datos en tiempo real mediante una capa de abstracción basada en n8n y PostgreSQL.
+Este dashboard actúa como el cliente principal del Dynamic CRUD Engine, permitiendo una gestión de datos en tiempo real (Reservas, Habitaciones, Check-ins) mediante una capa de abstracción basada en n8n y PostgreSQL.
 
 ---
 
@@ -15,6 +15,28 @@ Este dashboard no solo gestiona la lógica hotelera (reservas, habitaciones, pag
 | :--- | :--- | :--- | :--- | :--- |
 | **v0.1** | `Develop` | `Auth & Architecture` | Tabler + Bootstrap | `Estructura base, JWT Auth, Signals.` |
 | **v0.2** | `Planned` | `Room Rack v1` | CSS Grid / Cards | `Gestión visual de 17 habitaciones.` |
+
+---
+
+## 🏗️ Arquitectura Técnica
+La aplicación implementa una arquitectura desacoplada donde el frontend delega la lógica de negocio y persistencia al orquestador n8n.
+
+1. Flujo de Datos y Seguridad
+    * API Gateway (n8n): Comunicación directa con Webhooks v3 para operaciones atómicas.
+    * Seguridad: Implementación de auth.guard.ts que protege la ruta /dashboard.
+    * Persistencia: Los formularios (como Checkin-form) envían payloads JSON que son procesados por flujos de trabajo en n8n y almacenados en PostgreSQL.
+2. Componentes Principales
+|Componente|Ruta|Descripción|
+|Login|/login|Puerta de entrada. Gestiona la obtención del JWT contra el servicio de Hosting3M.|
+|Dashboard|/dashboard|(Protegido) Contenedor principal. Renderiza la UI basada en Tabler.|
+|Checkin-form|(Child)|Formulario reactivo para el registro de huéspedes y asignación de habitaciones.|
+
+## 🚦 Stack Tecnológico
+    * Core: Angular v21.0.0 (Signals, Standalone Components).
+    * UI Framework: @tabler/core (Diseño administrativo responsive).
+    * Testing: vitest (Unit Testing de alta velocidad).
+    * Utilidades: jwt-decode (Manejo de claims de seguridad), rxjs.
+    * Backend Interface: Webhooks n8n (API v3).
 
 ---
 
@@ -74,6 +96,8 @@ Este dashboard es el componente app/dashboard dentro del ecosistema n8n Enterpri
 * JWT Service: Para validación de tokens RS256.
 * PostgreSQL + pgvector: Almacenamiento de metadatos de habitaciones y búsqueda semántica.
 * Nginx Proxy: Terminación SSL y endurecimiento de cabeceras.
+
+---
 
 ## 📄 Licencia
 Este proyecto está bajo la licencia n8n Sustainable Use License. Desarrollado para optimizar la presencia digital y la inteligencia de contenidos de Hosting3m.
