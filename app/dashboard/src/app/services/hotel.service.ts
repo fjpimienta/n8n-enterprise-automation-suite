@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Room } from '../models/hotel.types';
+import { Company, Room } from '../models/hotel.types';
 import { environment } from '../../environments/environment';
 import { ApiResponse } from '../interfaces/api-response.interface';
 
@@ -14,6 +14,8 @@ export class HotelService {
   // Signal para estado reactivo (Best Practice Angular 19+)
   rooms = signal<Room[]>([]);
   selectedRoom = signal<Room | null>(null); // Habitación para el detalle
+  companies = signal<Company[]>([]);
+  selectedCompany = signal<Company | null>(null); // Empresa para el detalle
 
   // Creamos un Signal computado para obtener solo las habitaciones que coinciden
   filteredRooms = computed(() => {
@@ -47,8 +49,13 @@ export class HotelService {
   }
 
   loadRooms() {
-    this.loading.set(true); // Empezamos carga
-    const payload = {
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+      console.warn('⚠️ Abortando carga: No hay token disponible aún.');
+      return;
+    }
+    this.loading.set(true);
+    const payloadRoom = {
       entity: 'hotel_rooms',
       table_name: 'hotel_rooms',
       operation: 'getall',
@@ -56,40 +63,43 @@ export class HotelService {
       filters: {}
     };
 
-    // 1. Tipamos el post con <ApiResponse<Room>>
-    this.http.post<ApiResponse<Room>>(`${this.apiUrl_crud}/${payload.entity}`, payload, {
+    this.http.post<ApiResponse<Room>>(`${this.apiUrl_crud}/${payloadRoom.table_name}`, payloadRoom, {
       headers: this.getAuthHeaders()
     })
       .subscribe({
         next: (res) => {
-          // 2. Gracias a la interfaz, TS sabe que res.data es un Room[]
-          const data = res.data || [];
-          // Ordenamos antes de setear el estado
-          const sortedRooms = data.sort((a, b) => {
-            // Usamos numeric: true para que ordene 1, 2, 10 en lugar de 1, 10, 2
-            return String(a.room_number).localeCompare(String(b.room_number), undefined, { numeric: true });
-          });
-          this.rooms.set(sortedRooms);
+          // VALIDACIÓN CRÍTICA: Verificamos que res y res.data existan
+          if (res && !res.error && res.data) {
+            const data = Array.isArray(res.data) ? res.data : [];
+            const sortedRooms = [...data].sort((a, b) =>
+              String(a.room_number).localeCompare(String(b.room_number), undefined, { numeric: true })
+            );
+            this.rooms.set(sortedRooms);
+          } else {
+            // Si n8n devuelve error pero entra por 'next' (status 200 con error JSON)
+            console.error('Respuesta de API no exitosa:', res);
+            this.rooms.set([]);
+          }
           this.loading.set(false);
         },
         error: (err) => {
-          console.error('Error en API:', err);
-          this.rooms.set([]); // Reset en caso de fallo
-          this.loading.set(false)
+          console.error('Error de red o servidor:', err);
+          this.rooms.set([]);
+          this.loading.set(false);
         }
       });
   }
 
   // Método rápido para Housekeeping
   updateRoomStatus(id: number, status: string) {
-    const payload = {
+    const payloadRoom = {
       entity: 'hotel_rooms',
       table_name: 'hotel_rooms',
       action: 'update',
       id: id,
       fields: { cleaning_status: status }
     };
-    return this.http.post(`${this.apiUrl_crud}/${payload.entity}`, payload, {
+    return this.http.post(`${this.apiUrl_crud}/${payloadRoom.table_name}`, payloadRoom, {
       headers: this.getAuthHeaders()
     });
   }
@@ -104,4 +114,35 @@ export class HotelService {
     this.selectedRoom.set(null);
   }
 
+  // Companies
+  loadCompanies() {
+    const payloadCompanies = {
+      entity: 'companys',
+      table_name: 'companys',
+      operation: 'getall',
+      action: 'list',
+      filters: {}
+    };
+
+    this.http.post<ApiResponse<Company>>(`${this.apiUrl_crud}/${payloadCompanies.table_name}`, payloadCompanies, {
+      headers: this.getAuthHeaders()
+    }).subscribe({
+      next: (res) => {
+        // 2. Gracias a la interfaz, TS sabe que res.data es un Room[]
+        const data = res.data || [];
+        // Ordenamos antes de setear el estado
+        const sortedCompanies = data.sort((a, b) => {
+          // Usamos numeric: true para que ordene 1, 2, 10 en lugar de 1, 10, 2
+          return String(a.id_company).localeCompare(String(b.id_company), undefined, { numeric: true });
+        });
+        this.companies.set(sortedCompanies);
+        this.loading.set(false);
+      },
+      error: (err) => {
+        console.error('Error en API:', err);
+        this.companies.set([]); // Reset en caso de fallo
+        this.loading.set(false)
+      }
+    });
+  }
 }

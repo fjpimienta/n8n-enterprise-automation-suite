@@ -38,6 +38,36 @@
         }
 
         <div class="mb-3">
+          <label class="form-label">Empresa / Sucursal</label>
+          <div class="input-group">
+            <span class="input-group-text">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
+                stroke-width="2" stroke="currentColor" fill="none">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                <path d="M3 21l18 0" />
+                <path d="M5 21v-14l8 -4l8 4v14" />
+                <path d="M19 21v-10l-6 -4" />
+                <path d="M9 9l0 .01" />
+                <path d="M9 12l0 .01" />
+                <path d="M9 15l0 .01" />
+                <path d="M9 18l0 .01" />
+              </svg>
+            </span>
+            <select class="form-select" formControlName="id_company" [class.is-invalid]="isFieldInvalid('id_company')">
+              <option value="" disabled selected>Seleccione una empresa...</option>
+              @for (company of hotelService.companies(); track company.id_company) {
+              <option [value]="company.id_company">
+                {{ company.company_name }}
+              </option>
+              }
+            </select>
+          </div>
+          @if (isFieldInvalid('id_company')) {
+          <div class="text-danger small mt-1">Debe seleccionar una empresa para continuar</div>
+          }
+        </div>
+
+        <div class="mb-3">
           <label class="form-label">Usuario</label>
           <div class="input-icon">
             <span class="input-icon-addon">
@@ -115,7 +145,7 @@
     </form>
 
     <div class="text-center text-muted mt-3">
-      ¿Olvidaste tu contraseña? <a href="#" tabindex="-1">Contactar Soporte IT</a>
+      ¿Olvidaste tu contraseña? <a href="https://hosting3m.com/#contact" tabindex="-1">Contactar Soporte IT</a>
     </div>
 
     <div class="text-center mb-4">

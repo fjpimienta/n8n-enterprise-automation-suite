@@ -20,3 +20,20 @@ export interface Booking {
   check_out: string;
   status: 'confirmed' | 'cancelled' | 'pending';
 }
+
+
+export interface Company {
+  id_company: number;
+  company_name: string;
+  relation_type?: string;
+  industry?: string;
+  company_size?: string;
+  location?: string;
+  employees?: number;
+  annual_revenue?: string;
+  priority_level?: string;
+  registration_date?: string | Date; // Date de Postgres llega como string ISO
+  last_contact?: string | Date;
+  notes?: string;
+  is_default: boolean;
+}

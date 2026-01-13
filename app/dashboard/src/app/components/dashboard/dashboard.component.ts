@@ -17,13 +17,14 @@ import { FormsModule } from '@angular/forms';
 export class DashboardComponent {
   private authService = inject(AuthService);
   private router = inject(Router);
-  public hotelService = inject(HotelService);
   private http = inject(HttpClient);
+  private readonly N8N_WHATSAPP_WEBHOOK = 'https://n8n.hosting3m.com/webhook/8cd04cee-6a56-4989-b36c-caf9473d7535/webhook';
+  public hotelService = inject(HotelService);
+  public usersList = signal<any[]>([]);
+  public isUserModalOpen = signal(false);
+  public selectedUser = signal<any>(null);
   reportFilter = signal<'day' | 'week' | 'month' | 'year'>('day');
   viewMode = signal<'details' | 'checkin' | 'checkout_validation'>('details');
-
-  // URL de tu Webhook de n8n para notificaciones
-  private readonly N8N_WHATSAPP_WEBHOOK = 'https://n8n.hosting3m.com/webhook/8cd04cee-6a56-4989-b36c-caf9473d7535/webhook';
 
   checkoutChecks = {
     tvRemote: false,
@@ -33,7 +34,6 @@ export class DashboardComponent {
   };
   activeBooking: any = null;
 
-  // Variables para el reporte
   showReportModal = false;
   dailyReport = {
     total: 0,

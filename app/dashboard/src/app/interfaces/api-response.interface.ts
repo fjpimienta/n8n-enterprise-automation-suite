@@ -4,4 +4,5 @@ export interface ApiResponse<T> {
   operation: string;
   data: T[];     // Aquí es donde viven tus habitaciones
   meta?: any;
+  message: string;
 }
