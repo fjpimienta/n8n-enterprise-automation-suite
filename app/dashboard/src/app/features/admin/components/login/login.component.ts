@@ -3,9 +3,9 @@ import { Component, inject, signal, effect } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 
-import { AuthService } from '../../services/auth.service';
 import { LoggerService } from '../../services/logger.service';
-import { HotelService } from '../../services/hotel.service';
+import { AuthService } from '@core/services/auth.service';
+import { HotelService } from '@features/dashboard/services/hotel.service';
 
 @Component({
   selector: 'app-login',

@@ -1,0 +1,52 @@
+@if (isOpen()) {
+<div class="modal-backdrop fade show"></div>
+<div class="modal modal-blur fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">{{ selectedUser() ? 'Editar' : 'Nuevo' }} Empleado</h5>
+                <button type="button" class="btn-close btn-close-white" (click)="onClose.emit()"></button>
+            </div>
+            <div class="modal-body p-4 bg-light text-dark">
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">Nombres</label>
+                        <input type="text" class="form-control shadow-sm" [(ngModel)]="userData().names">
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">Apellidos</label>
+                        <input type="text" class="form-control shadow-sm" [(ngModel)]="userData().lastname">
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">Teléfono</label>
+                        <input type="tel" class="form-control shadow-sm" [(ngModel)]="userData().phone">
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">Rol</label>
+                        <select class="form-select shadow-sm" [(ngModel)]="userData().role">
+                            <option value="ADMIN">Administrador</option>
+                            <option value="EDITOR">Recepcionista</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Correo Electrónico</label>
+                    <input type="email" class="form-control shadow-sm" [(ngModel)]="userData().email"
+                        [disabled]="selectedUser() !== null">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Contraseña</label>
+                    <input type="password" class="form-control shadow-sm" [(ngModel)]="userData().password"
+                        placeholder="Dejar vacío para no cambiar">
+                </div>
+            </div>
+            <div class="modal-footer bg-white">
+                <button class="btn btn-link text-muted" (click)="onClose.emit()">Cancelar</button>
+                <button class="btn btn-primary px-4 shadow-sm" (click)="onSave.emit()">Guardar Cambios</button>
+            </div>
+        </div>
+    </div>
+</div>
+}

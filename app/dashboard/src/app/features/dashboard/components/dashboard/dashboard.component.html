@@ -1,0 +1,64 @@
+<app-header (onRefresh)="refresh()" (onGenerateReport)="generateDailyReport()" (onLogout)="logout()">
+</app-header>
+
+<div class="page-body">
+  <div class="container-xl">
+
+    @if (viewMode() === 'details' || viewMode() === 'checkin' || viewMode() === 'checkout_validation') {
+    <app-room-filters [currentFilter]="hotelService.filter()" [isAdmin]="isAdmin"
+      (onFilterChange)="hotelService.filter.set($event)" (onManageUsers)="openUserManagement()">
+    </app-room-filters>
+
+    <div class="row row-cards g-2">
+      @if (hotelService.loading()) {
+      @for (i of [1,2,3,4,5,6,7,8]; track i) {
+      <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+        <app-room-skeleton></app-room-skeleton>
+      </div>
+      }
+      } @else {
+      @for (room of hotelService.filteredRooms(); track room.id) {
+      <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+        <app-room-card [room]="room" (onSelect)="onSelectRoom($event)"></app-room-card>
+      </div>
+      }
+      }
+    </div>
+    }
+
+    @if (viewMode() === 'checkin') {
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal modal-blur fade show d-block" tabindex="-1">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+          <app-checkin-form [room]="hotelService.selectedRoom()" (onClose)="viewMode.set('details')"
+            (saved)="handleCheckinSave($event)">
+          </app-checkin-form>
+        </div>
+      </div>
+    </div>
+    }
+
+    @if (viewMode() === 'user_mgmt') {
+    <app-user-list [users]="hotelService.users()" (onBack)="viewMode.set('details')" (onAdd)="openNewUserModal()"
+      (onEdit)="editUser($event)">
+    </app-user-list>
+    }
+  </div>
+</div>
+
+@if (hotelService.selectedRoom() && viewMode() !== 'checkin') {
+<app-room-detail-modal [room]="hotelService.selectedRoom()" [activeBooking]="activeBooking"
+  (onClose)="hotelService.clearSelection()" (onCheckin)="viewMode.set('checkin')" (onPay)="markAsPaid($event)"
+  (onCheckout)="handleCheckout()" (onMaintenance)="notifyN8N('maintenance')">
+</app-room-detail-modal>
+}
+
+<app-user-form-modal [isOpen]="isUserModalOpen()" [selectedUser]="hotelService.selectedUser()" [(userData)]="tempUser"
+  (onClose)="isUserModalOpen.set(false)" (onSave)="handleSaveUser()">
+</app-user-form-modal>
+
+<app-daily-report-modal [isOpen]="showReportModal" [reportData]="dailyReport" [currentFilter]="reportFilter()"
+  [roomsList]="hotelService.rooms()" (onClose)="showReportModal = false"
+  (onFilterChange)="handleReportFilterChange($event)">
+</app-daily-report-modal>

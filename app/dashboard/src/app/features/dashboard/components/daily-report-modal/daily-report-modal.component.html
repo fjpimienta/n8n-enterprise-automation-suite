@@ -1,0 +1,89 @@
+@if (isOpen()) {
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal modal-blur fade show d-block" tabindex="-1">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+          <div class="modal-header">
+            <h5 class="modal-title">📈 Reporte de Ventas</h5>
+            <div class="ms-auto d-flex gap-1 me-2">
+              <button class="btn btn-outline-primary btn-sm" [class.active]="currentFilter() === 'day'"
+                (click)="onFilterChange.emit('day')">Día</button>
+              <button class="btn btn-outline-primary btn-sm" [class.active]="currentFilter() === 'week'"
+                (click)="onFilterChange.emit('week')">Semana</button>
+              <button class="btn btn-outline-primary btn-sm" [class.active]="currentFilter() === 'month'"
+                (click)="onFilterChange.emit('month')">Mes</button>
+              <button class="btn btn-outline-primary btn-sm" [class.active]="currentFilter() === 'year'"
+                (click)="onFilterChange.emit('year')">Año</button>
+            </div>
+            <button type="button" class="btn-close" (click)="onClose.emit()"></button>
+          </div>
+          <div class="modal-body p-4 bg-light text-dark">
+            <div class="row row-cards mb-3">
+              <div class="col-4">
+                <div class="card card-sm bg-blue-lt p-3 text-center">
+                  <div class="text-muted small">VENTAS TOTALES</div>
+                  <div class="h2 fw-bold text-primary">${{ reportData().total | number:'1.2-2' }}</div>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="card card-sm bg-green-lt p-3 text-center">
+                  <div class="text-muted small">COBRADO (EFECTIVO)</div>
+                  <div class="h2 fw-bold text-success">${{ reportData().paid | number:'1.2-2' }}</div>
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="card card-sm bg-orange-lt p-3 text-center">
+                  <div class="text-muted small">POR COBRAR</div>
+                  <div class="h2 fw-bold text-warning">${{ reportData().pending | number:'1.2-2' }}</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card shadow-sm border-0">
+              <div class="card-header bg-white py-2">
+                <h4 class="card-title">DETALLE DE MOVIMIENTOS - {{ reportData().periodLabel }}</h4>
+              </div>
+              <div class="table-responsive" style="max-height: 300px;">
+                <table class="table table-vcenter card-table">
+                  <thead>
+                    <tr>
+                      <th>HORA</th>
+                      <th>HABITACIÓN</th>
+                      <th>ESTANCIA</th>
+                      <th>ESTADO</th>
+                      <th>MONTO</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    @for (t of reportData().transactions; track t.id) {
+                    <tr>
+                      <td>{{ t.created_at | date:'HH:mm' }}</td>
+                      <td class="fw-bold">Hab. {{ getRoomNumber(t.room_id) }}</td>
+                      <td>{{ getNights(t.check_in, t.check_out) }} noches</td>
+                      <td><span class="badge" [class.bg-success]="t.payment_status === 'paid'"
+                          [class.bg-warning]="t.payment_status !== 'paid'">{{ t.payment_status }}</span></td>
+                      <td class="fw-bold text-primary">${{ t.total_amount | number:'1.2-2' }}</td>
+                    </tr>
+                    } @empty {
+                    <tr>
+                      <td colspan="5" class="text-center py-4">📬<br>No se encontraron transacciones en este periodo.</td>
+                    </tr>
+                    }
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer bg-white">
+            <button class="btn btn-link text-muted" (click)="onClose.emit()">Cerrar</button>
+            <button class="btn btn-primary"><svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24"
+                viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                <path d="M17 17h2a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2h-14a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h2" />
+                <path d="M17 9v-4a2 2 0 0 0 -2 -2h-6a2 2 0 0 0 -2 2v4" />
+                <path d="M7 13m0 2a2 2 0 0 1 2 -2h6a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-6a2 2 0 0 1 -2 -2z" />
+              </svg> Imprimir Reporte</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    }

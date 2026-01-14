@@ -3,8 +3,44 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "baseUrl": "./",
     "outDir": "./out-tsc/app",
-    "types": []
+    "types": [],
+    "paths": {
+      "@core/*": [
+        "src/app/core/*"
+      ],
+      "@auth/*": [
+        "src/app/core/auth/*"
+      ],
+      "@models/*": [
+        "src/app/core/models/*"
+      ],
+      "@env/*": [
+        "src/environments/*"
+      ],
+      "@features/*": [
+        "src/app/features/*"
+      ],
+      "@dashboard/*": [
+        "src/app/features/dashboard/*"
+      ],
+      "@booking/*": [
+        "src/app/features/booking/*"
+      ],
+      "@finance/*": [
+        "src/app/features/finance/*"
+      ],
+      "@admin/*": [
+        "src/app/features/admin/*"
+      ],
+      "@shared/*": [
+        "src/app/shared/*"
+      ],
+      "@ui/*": [
+        "src/app/shared/ui/*"
+      ]
+    }
   },
   "include": [
     "src/**/*.ts"

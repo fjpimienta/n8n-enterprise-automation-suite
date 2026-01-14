@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { catchError, tap, throwError } from 'rxjs';
 import { jwtDecode } from 'jwt-decode';
-import { environment } from '../../environments/environment';
+import { environment } from '@env/environment';
 
 interface UserPayload {
   id: number;

@@ -1,7 +1,7 @@
 import { Component, Output, EventEmitter, input, OnInit } from '@angular/core';
 import { FormGroup, FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
-import { Room } from '../../models/hotel.types';
+import { Room } from '@core/models/hotel.types';
 
 @Component({
   selector: 'app-checkin-form',

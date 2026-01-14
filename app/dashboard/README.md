@@ -5,7 +5,7 @@
 ## 📝 Descripción
 AdminHotel es una aplicación web de alto rendimiento construida sobre Angular 21, diseñada como la interfaz administrativa oficial de la suite de automatización Hosting3M.
 
-Este dashboard actúa como el cliente principal del Dynamic CRUD Engine, permitiendo una gestión de datos en tiempo real (Reservas, Habitaciones, Check-ins) mediante una capa de abstracción basada en n8n y PostgreSQL. Se especializa en la gestión operativa de flujos de hospitalidad mediante el uso intensivo de Angular Signals.
+Este dashboard actúa como el cliente principal del Dynamic CRUD Engine, permitiendo una gestión de datos en tiempo real (Reservas, Habitaciones, Check-ins) mediante una capa de abstracción basada en n8n y PostgreSQL. Se especializa en la gestión operativa de flujos de hospitalidad mediante el uso intensivo de Angular Signals y una arquitectura de servicios desacoplados.
 
 ---
 
@@ -15,12 +15,13 @@ Este dashboard actúa como el cliente principal del Dynamic CRUD Engine, permiti
 | :--- | :--- | :--- | :--- | :--- |
 | **v0.1** | `Stable` | `Auth & Architecture` | Tabler + Bootstrap | Estructura base, JWT Auth, Signals. |
 | **v0.2** | `Stable` | `Room Rack v1` | CSS Grid / Cards | Gestión visual de 17 habitaciones. |
-| **v0.3** | `Develop`| `Ops & Finance`| Modals / Reports | Checkout con inventario, Reporte de Caja (D/S/M/Y) y Gestión de Usuarios. |
+| **v0.3** | `Stable`| `Ops & Finance`| Modals / Reports | Checkout con inventario, Reporte de Caja (D/S/M/Y) y Gestión de Usuarios. |
+| **v0.4** | `Latest` | `Pro UX & Patterns	Skeletons / Services` |	Refactorización a Services, Skeletons de carga, Promesas (Async/Await).|
 
 ---
 
 ## 🏗️ Arquitectura Técnica
-La aplicación implementa una arquitectura desacoplada donde el frontend delega la lógica de negocio y persistencia al orquestador n8n.
+La aplicación implementa una arquitectura Data-Access Service Pattern, donde la lógica de negocio se centraliza en servicios inyectables, dejando los componentes únicamente para la gestión de la UI.
 
 1. Flujo de Datos y Seguridad
     * API Gateway (n8n): Comunicación directa con Webhooks v3 para operaciones atómicas.
@@ -33,6 +34,10 @@ La aplicación implementa una arquitectura desacoplada donde el frontend delega 
 | Dashboard | /dashboard | Contenedor principal. Gestión de estados de habitaciones (Ocupada, Disponible, Sucia, Mantenimiento). |
 | Checkin-form | (Child) | Formulario reactivo con lógica ON CONFLICT para evitar duplicidad de huéspedes por doc_id. |
 | User-Mgmt | (Modal/View) | CRUD interno para administración de personal y credenciales de acceso. |
+3. Estructura de Servicios
+ * HotelService: Único punto de contacto para CRUD de habitaciones, huéspedes y reservas. Gestiona el estado global de rooms y loading mediante Signals.
+ * ReportService: Lógica matemática y de procesamiento de fechas para la generación de métricas financieras.
+ * AuthService: Gestión de identidad y persistencia de sesión.
 
 ## 🚦 Stack Tecnológico
 * **Core:** Angular v21.0.0 (Signals, Standalone Components, Signal Queries).
@@ -40,6 +45,7 @@ La aplicación implementa una arquitectura desacoplada donde el frontend delega 
 * **State Management:** Angular Signals (Reactividad fina sin Zone.js en componentes críticos).
 * **Backend Interface:** Webhooks n8n (API v3) operando sobre PostgreSQL.
 * **Utilidades:** DatePipe (Localizado para México), CurrencyPipe, jwt-decode.
+* **UX:** Implementación de Skeleton Screens para estados de carga asíncronos.
 
 ---
 
@@ -67,6 +73,7 @@ La aplicación implementa una arquitectura desacoplada donde el frontend delega 
 |Room Rack|✅ Finalizado|Grid visual del estado de habitaciones.|Webhook SQL Real-time.|
 |Check-out V2|✅ Finalizado|Validación de pago pendiente e inventario.|Update dinámico de hotel_rooms.|
 |Reporte de Caja|✅ Finalizado|Métricas de ventas por periodos (Día/Semana/Mes/Año).|Agregación vía MetaCRUD.|
+|UX Skeletons|✅ Finalizado|Feedback visual durante la carga de datos.|UI Reactiva (Signals).|
 |Smart Booking|⏳ Próximo|Integración con Agente de IA para reservas automáticas.|AI WhatsApp Agent (Módulo 05).|
 
 ---
