@@ -4,14 +4,14 @@ import { AuthService } from '../../services/auth.service';
 import { Router } from '@angular/router';
 import { HotelService } from '../../services/hotel.service';
 import { HttpClient } from '@angular/common/http';
-import { CheckinFormComponent } from '../checkin-form/checkin-form.component';
 import { environment } from '../../../environments/environment';
 import { FormsModule } from '@angular/forms';
+import { User } from '../../models/hotel.types';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, CheckinFormComponent, FormsModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './dashboard.component.html'
 })
 export class DashboardComponent {
@@ -24,7 +24,20 @@ export class DashboardComponent {
   public isUserModalOpen = signal(false);
   public selectedUser = signal<any>(null);
   reportFilter = signal<'day' | 'week' | 'month' | 'year'>('day');
-  viewMode = signal<'details' | 'checkin' | 'checkout_validation'>('details');
+  viewMode = signal<'details' | 'checkin' | 'checkout_validation' | 'user_mgmt'>('details');
+  showReportModal = false;
+
+  tempUser: User = {
+    email: '',
+    id_company: 1,
+    names: '',
+    lastname: '',
+    phone: '',
+    role: 'EDITOR',
+    password: '',
+    is_active: true,
+    created_at: new Date().toISOString()
+  };
 
   checkoutChecks = {
     tvRemote: false,
@@ -34,7 +47,6 @@ export class DashboardComponent {
   };
   activeBooking: any = null;
 
-  showReportModal = false;
   dailyReport = {
     total: 0,
     paid: 0,
@@ -43,12 +55,32 @@ export class DashboardComponent {
     periodLabel: 'Hoy'            // Filtro Reporte  Caja
   };
 
+  public get isAdmin(): boolean {
+    return this.authService.currentUser()?.role === 'ADMIN';
+  }
+
+  private resetUserForm() {
+    return {
+      names: '',
+      lastname: '',
+      email: '',
+      phone: '',
+      role: 'EDITOR',
+      password: '',
+      id_company: this.authService.currentUser()?.id_company || 1
+    };
+  }
+
   ngOnInit() {
     this.refresh();
   }
 
   refresh() {
     this.hotelService.loadRooms();
+    // Cargamos usuarios preventivamente si es admin
+    if (this.isAdmin) {
+      this.hotelService.loadUsers(this.authService.currentUser()?.id_company);
+    }
   }
 
   logout() {
@@ -497,6 +529,53 @@ export class DashboardComponent {
     const diffTime = Math.abs(end.getTime() - start.getTime());
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     return diffDays === 0 ? 1 : diffDays; // Si es el mismo día, cuenta como 1 noche
+  }
+
+  // --- GESTIÓN DE USUARIOS ---
+
+  openUserManagement() {
+    this.viewMode.set('user_mgmt');
+    this.hotelService.loadUsers(this.authService.currentUser()?.id_company);
+  }
+
+  openNewUserModal() {
+    this.hotelService.selectUser(null);
+    this.tempUser = {
+      email: '',
+      id_company: 1,
+      names: '',
+      lastname: '',
+      phone: '',
+      role: 'EDITOR',
+      password: '',
+      is_active: true,
+      created_at: new Date().toISOString()
+    };
+    this.isUserModalOpen.set(true);
+  }
+
+  editUser(user: any) {
+    this.hotelService.selectUser(user);
+    this.tempUser = {
+      ...user,
+      password: ''
+    };
+    this.isUserModalOpen.set(true);
+  }
+
+  async handleSaveUser() {
+    const selected = this.hotelService.selectedUser();
+    const operation = selected ? 'update' : 'insert';
+    const id = selected ? selected.email : undefined; // O el ID que uses como PK
+
+    this.hotelService.saveUser(this.tempUser, operation, id).subscribe({
+      next: () => {
+        alert('✅ Usuario guardado correctamente');
+        this.isUserModalOpen.set(false);
+        this.hotelService.loadUsers(this.authService.currentUser()?.id_company);
+      },
+      error: (err) => alert('❌ Error al guardar: ' + err.message)
+    });
   }
 
 }

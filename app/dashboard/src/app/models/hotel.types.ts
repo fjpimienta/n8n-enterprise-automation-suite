@@ -21,7 +21,6 @@ export interface Booking {
   status: 'confirmed' | 'cancelled' | 'pending';
 }
 
-
 export interface Company {
   id_company: number;
   company_name: string;
@@ -36,4 +35,16 @@ export interface Company {
   last_contact?: string | Date;
   notes?: string;
   is_default: boolean;
+}
+
+export interface User {
+  email: string;
+  id_company: number;
+  names: string;
+  lastname?: string;   // Opcional en DB
+  password?: string;   // Opcional en la interfaz si no quieres exponerlo en el frontend
+  is_active: boolean;
+  phone?: string;
+  role: 'ADMIN' | 'EDITOR' | 'CUSTOMER'; // Basado en tu CHECK constraint
+  created_at: string | Date; // Al igual que Company, llega como ISO string
 }

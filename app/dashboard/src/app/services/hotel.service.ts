@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Company, Room } from '../models/hotel.types';
+import { Company, Room, User } from '../models/hotel.types';
 import { environment } from '../../environments/environment';
 import { ApiResponse } from '../interfaces/api-response.interface';
 
@@ -16,6 +16,8 @@ export class HotelService {
   selectedRoom = signal<Room | null>(null); // Habitación para el detalle
   companies = signal<Company[]>([]);
   selectedCompany = signal<Company | null>(null); // Empresa para el detalle
+  users = signal<User[]>([]);
+  selectedUser = signal<User | null>(null); // Usuario para el detalle
 
   // Creamos un Signal computado para obtener solo las habitaciones que coinciden
   filteredRooms = computed(() => {
@@ -123,7 +125,6 @@ export class HotelService {
       action: 'list',
       filters: {}
     };
-
     this.http.post<ApiResponse<Company>>(`${this.apiUrl_crud}/${payloadCompanies.table_name}`, payloadCompanies, {
       headers: this.getAuthHeaders()
     }).subscribe({
@@ -144,5 +145,55 @@ export class HotelService {
         this.loading.set(false)
       }
     });
+  }
+
+  // Companies
+  loadUsers(id_company?: number) {
+    const payloadUsers = {
+      entity: 'users',
+      table_name: 'users',
+      operation: 'getall',
+      action: 'list',
+      filter: { id_company: id_company }
+    };
+    this.http.post<ApiResponse<User>>(`${this.apiUrl_crud}/${payloadUsers.table_name}`, payloadUsers, {
+      headers: this.getAuthHeaders()
+    }).subscribe({
+      next: (res) => {
+        const data = res.data || [];
+        const sortedUsers = data.sort((a, b) => {
+          return a.email.localeCompare(b.email);
+        });
+        this.users.set(sortedUsers);
+        this.loading.set(false);
+      },
+      error: (err) => {
+        console.error('Error en API:', err);
+        this.users.set([]); // Reset en caso de fallo
+        this.loading.set(false)
+      }
+    });
+  }
+
+  // hotel.service.ts - Añade estos métodos
+
+  /** Guarda o actualiza un usuario */
+  saveUser(user: Partial<User>, operation: 'insert' | 'update', email?: string) {
+    const payload = {
+      entity: 'users',
+      table_name: 'users',
+      operation: operation,
+      email: email, // Solo para update
+      fields: user
+    };
+
+    return this.http.post<ApiResponse<User>>(`${this.apiUrl_crud}/users`, payload, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  /** Selecciona un usuario para editarlo */
+  selectUser(user: User | null) {
+    this.selectedUser.set(user);
   }
 }

@@ -39,52 +39,103 @@
 
 <div class="page-body">
   <div class="container-xl">
-    <div class="d-flex flex-wrap gap-2 justify-content-center mb-4 px-2">
-      <button class="btn btn-pill btn-sm text-nowrap" [class.btn-primary]="hotelService.filter() === 'all'"
-        (click)="hotelService.filter.set('all')">Todas</button>
 
-      <button class="btn btn-pill btn-sm text-nowrap" [class.btn-success]="hotelService.filter() === 'available'"
-        (click)="hotelService.filter.set('available')">✅ Disponibles</button>
+    <div class="mb-4">
+      <div class="d-flex flex-wrap gap-2 justify-content-center mb-2 px-2">
+        <button class="btn btn-pill btn-sm text-nowrap" [class.btn-primary]="hotelService.filter() === 'all'"
+          (click)="hotelService.filter.set('all')">Todas</button>
 
-      <button class="btn btn-pill btn-sm text-nowrap" [class.btn-danger]="hotelService.filter() === 'occupied'"
-        (click)="hotelService.filter.set('occupied')">🏨 Ocupadas</button>
+        <button class="btn btn-pill btn-sm text-nowrap" [class.btn-success]="hotelService.filter() === 'available'"
+          (click)="hotelService.filter.set('available')">✅ Disponibles</button>
 
-      <button class="btn btn-pill btn-sm text-nowrap" [class.btn-warning]="hotelService.filter() === 'checkout'"
-        (click)="hotelService.filter.set('checkout')">🧹 Check-out</button>
+        <button class="btn btn-pill btn-sm text-nowrap" [class.btn-danger]="hotelService.filter() === 'occupied'"
+          (click)="hotelService.filter.set('occupied')">🏨 Ocupadas</button>
 
-      <button class="btn btn-pill btn-sm text-nowrap" [class.btn-secondary]="hotelService.filter() === 'maintenance'"
-        (click)="hotelService.filter.set('maintenance')">🛠️ Mantenimiento</button>
+        <button class="btn btn-pill btn-sm text-nowrap" [class.btn-warning]="hotelService.filter() === 'checkout'"
+          (click)="hotelService.filter.set('checkout')">🧹 Check-out</button>
+
+        <button class="btn btn-pill btn-sm text-nowrap" [class.btn-secondary]="hotelService.filter() === 'maintenance'"
+          (click)="hotelService.filter.set('maintenance')">🛠️ Mantenimiento</button>
+      </div>
+
+      @if (isAdmin && viewMode() !== 'user_mgmt') {
+      <div class="d-flex justify-content-center px-2">
+        <button (click)="openUserManagement()" class="btn btn-sm btn-outline-info shadow-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-users me-1" width="24" height="24"
+            viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+            <path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" />
+            <path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+            <path d="M21 21v-2a4 4 0 0 0 -3 -3.85" />
+          </svg>
+          Gestionar Personal
+        </button>
+      </div>
+      }
     </div>
 
-    <div class="row row-cards g-2"> @for (room of hotelService.filteredRooms(); track room.id) {
+    @if (viewMode() === 'user_mgmt') {
+    <div class="d-flex mb-3 align-items-center">
+      <button (click)="viewMode.set('details')" class="btn btn-sm btn-ghost-secondary me-3">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-arrow-back-up" width="24"
+          height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+          <path d="M9 14l-4 -4l4 -4" />
+          <path d="M5 10h11a4 4 0 1 1 0 8h-1" />
+        </svg>
+        Volver
+      </button>
+      <h2 class="text-white mb-0">Gestión de Personal</h2>
+      <button class="btn btn-primary btn-sm ms-auto" (click)="openNewUserModal()">+ Nuevo Empleado</button>
+    </div>
+
+    <div class="row row-cards">
+      @for (user of hotelService.users(); track user.email) {
+      <div class="col-12 col-md-6">
+        <div class="card shadow-sm border-0 mb-2">
+          <div class="card-body d-flex align-items-center p-3 text-dark bg-white rounded shadow-sm">
+            <span class="avatar avatar-sm me-3 bg-blue-lt text-uppercase fw-bold">
+              {{ (user.names || '?').charAt(0) }}{{ (user.lastname || '').charAt(0) }}
+            </span>
+            <div class="flex-fill">
+              <div class="fw-bold">{{ user.names }} {{ user.lastname }}</div>
+              <div class="text-muted small">{{ user.role }} • {{ user.email }}</div>
+            </div>
+            <button class="btn btn-icon btn-ghost-primary" (click)="editUser(user)">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-pencil" width="24" height="24"
+                viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+                <path d="M13.5 6.5l4 4" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      } @empty {
+      <div class="text-center py-5 text-muted">
+        <p>No hay empleados registrados.</p>
+      </div>
+      }
+    </div>
+    }
+
+    @else {
+    <div class="row row-cards g-2">
+      @for (room of hotelService.filteredRooms(); track room.id) {
       <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-        <div class="card card-sm shadow-sm border-0 h-100" [class.border-start]="isArrivalToday(room.next_reservation)"
-          style="border-left: 5px solid #206bc4 !important;" (click)="onSelectRoom(room)">
-
-          @if (isArrivalToday(room.next_reservation)) {
-          <div class="ribbon bg-azure">Llega Hoy</div>
-          }
-
-          <div class="card-body p-3">
+        <div class="card card-sm shadow-sm border-0 h-100"
+          [style.border-left]="isArrivalToday(room.next_reservation) ? '5px solid #206bc4' : 'none'"
+          style="cursor: pointer;" (click)="onSelectRoom(room)">
+          <div class="card-body p-3 bg-white rounded">
             <div class="d-flex align-items-center">
               <div class="h1 mb-0 me-3 fw-bold text-primary">{{ room.room_number }}</div>
-
-              <div class="flex-fill">
+              <div class="flex-fill text-dark">
                 <div class="font-weight-medium h4 mb-0 text-capitalize">{{ room.type }}</div>
-
-                @if (room.next_reservation && isArrivalToday(room.next_reservation)) {
-                <div class="ribbon bg-azure">Llega Hoy</div>
-                }
-
                 <div class="text-muted small mt-1">
                   @if (room.next_reservation) {
-                  <span class="text-azure fw-bold">
-                    📅 Prox: {{ room.next_reservation | date:'dd/MM' }}
-                  </span>
+                  <span class="text-azure fw-bold">📅 {{ room.next_reservation | date:'dd/MM' }}</span>
                   }
                 </div>
               </div>
-
               <div class="text-end">
                 <span class="badge" [class.bg-red-lt]="room.status === 'occupied'"
                   [class.bg-green-lt]="room.status === 'available'" [class.bg-dark-lt]="room.status === 'maintenance'">
@@ -101,313 +152,61 @@
       </div>
       }
     </div>
+    }
+
   </div>
 </div>
 
-@if (hotelService.selectedRoom()) {
+@if (isUserModalOpen()) {
 <div class="modal-backdrop fade show"></div>
-
 <div class="modal modal-blur fade show d-block" tabindex="-1">
-  <div class="modal-dialog modal-dialog-centered modal-fullscreen-sm-down" role="document">
-    <div class="modal-content shadow-lg border-0">
-
-      @if (viewMode() === 'details') {
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content shadow-lg">
       <div class="modal-header">
-        <h5 class="modal-title display-6">Habitación {{ hotelService.selectedRoom()?.room_number }}</h5>
-        <button type="button" class="btn-close" (click)="hotelService.clearSelection()"></button>
+        <h5 class="modal-title">{{ hotelService.selectedUser() ? 'Editar' : 'Nuevo' }} Empleado</h5>
+        <button type="button" class="btn-close" (click)="isUserModalOpen.set(false)"></button>
       </div>
-
       <div class="modal-body">
-        <div class="row mb-3 align-items-center">
-          <div class="col">
-            <label class="form-label text-muted text-uppercase item-label">Estado de Ocupación</label>
-            <div class="h3 mb-0 d-flex align-items-center gap-2">
-              @if(hotelService.selectedRoom()?.status === 'available') {
-              <span class="badge bg-success-lt p-2">🟢 Disponible para Venta</span>
-              } @else {
-              <span class="badge bg-danger-lt p-2">🔴 Habitación Ocupada</span>
-
-              }
-            </div>
+        <div class="row">
+          <div class="col-6 mb-3">
+            <label class="form-label text-dark">Nombres</label>
+            <input type="text" class="form-control" [(ngModel)]="tempUser.names">
           </div>
-          <div class="col-auto">
-            <label class="form-label text-muted text-uppercase item-label text-end">Precio/Noche</label>
-            <div class="h2 text-primary mb-0">${{ hotelService.selectedRoom()?.price_night }}
-              @if (activeBooking) {
-              <span class="badge p-2" [class.bg-success]="activeBooking.payment_status === 'paid'"
-                [class.bg-warning]="activeBooking.payment_status !== 'paid'">
-                {{ getSelectedRoomPaymentStatus() }}
-              </span>
-              }
+          <div class="col-6 mb-3">
+            <label class="form-label text-dark">Apellidos</label> <input type="text" class="form-control"
+              [(ngModel)]="tempUser.lastname">
+          </div>
+        </div>
 
-            </div>
+        <div class="row">
+          <div class="col-6 mb-3">
+            <label class="form-label text-dark">Teléfono</label> <input type="tel" class="form-control"
+              [(ngModel)]="tempUser.phone" placeholder="Ej: 9991234567">
+          </div>
+          <div class="col-6 mb-3">
+            <label class="form-label text-dark">Rol</label>
+            <select class="form-select" [(ngModel)]="tempUser.role">
+              <option value="ADMIN">Administrador</option>
+              <option value="EDITOR">Recepcionista</option>
+            </select>
           </div>
         </div>
 
         <div class="mb-3">
-          <label class="form-label text-muted text-uppercase item-label">Estado de Limpieza</label>
-          <div>
-            @if(hotelService.selectedRoom()?.cleaning_status === 'clean') {
-            <span class="text-success"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-inline" width="24"
-                height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
-                <path d="M5 12l5 5l10 -10" />
-              </svg> Lista para recibir huéspedes</span>
-            } @else {
-            <span class="text-warning"><svg xmlns="http://www.w3.org/2000/svg" class="icon icon-inline" width="24"
-                height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
-                <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" />
-                <path d="M12 9v4" />
-                <path d="M12 16v.01" />
-              </svg> Requiere limpieza urgente</span>
-            }
-          </div>
+          <label class="form-label text-dark">Correo Electrónico</label>
+          <input type="email" class="form-control" [(ngModel)]="tempUser.email"
+            [disabled]="hotelService.selectedUser() !== null">
         </div>
 
-        <div class="hr-text text-muted">Acciones Operativas</div>
-
-        <div class="d-grid gap-2">
-          @if(hotelService.selectedRoom()?.status === 'available' && hotelService.selectedRoom()?.cleaning_status ===
-          'clean') {
-          <button class="btn btn-primary btn-lg shadow-sm" (click)="viewMode.set('checkin')">
-            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
-              stroke-width="2" stroke="currentColor" fill="none">
-              <path d="M3 21l18 0" />
-              <path d="M5 21v-14l8 -4l8 4v14" />
-              <path d="M19 21v-10l-6 -4" />
-            </svg>
-            Registrar Check-in
-          </button>
-          }
-
-          @if(hotelService.selectedRoom()?.status === 'occupied') {
-          <button class="btn btn-outline-danger btn-lg" (click)="handleCheckout()">
-            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
-              stroke-width="2" stroke="currentColor" fill="none">
-              <path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2" />
-              <path d="M9 12h10l-3 -3m0 6l3 -3" />
-            </svg>
-            Registrar Check-out
-          </button>
-          }
-
-          @if(hotelService.selectedRoom()?.cleaning_status === 'dirty') {
-          <button class="btn btn-success" (click)="notifyN8N('clean_complete')">
-            ✨ Marcar como Limpia
-          </button>
-          }
-
-          @if(hotelService.selectedRoom()?.status === 'occupied' && activeBooking?.payment_status !== 'paid') {
-          <button class="btn btn-success btn-lg shadow-sm mb-2" (click)="markAsPaid(activeBooking)">
-            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
-              stroke-width="2" stroke="currentColor" fill="none">
-              <path d="M12 11v-4m-2 2h4m-8 9h12m-12 -4h12m-10 -10l10 10" />
-            </svg>
-            Registrar Pago Ahora
-          </button>
-          }
-
-          <button class="btn btn-ghost-warning" (click)="notifyN8N('maintenance')">
-            🛠️ Reportar Falla / Mantenimiento
-          </button>
-        </div>
-      </div>
-      }
-
-      @else if (viewMode() === 'checkin') {
-      <app-checkin-form [room]="hotelService.selectedRoom()" (saved)="handleCheckinSave($event)"
-        (canceled)="viewMode.set('details')">
-      </app-checkin-form>
-      }
-
-      @else if (viewMode() === 'checkout_validation') {
-      <div class="modal-header bg-danger text-white">
-        <h5 class="modal-title">Validación de Salida - Habitación {{ hotelService.selectedRoom()?.room_number }}</h5>
-        <button type="button" class="btn-close btn-close-white" (click)="viewMode.set('details')"></button>
-      </div>
-      <div class="modal-body">
-        <p class="text-muted mb-3">Por favor, verifica la entrega de los siguientes artículos:</p>
-
-        <div class="form-selectgroup form-selectgroup-boxes d-flex flex-column">
-          <label class="form-selectgroup-item flex-fill">
-            <input type="checkbox" [(ngModel)]="checkoutChecks.tvRemote" class="form-selectgroup-input">
-            <div class="form-selectgroup-label d-flex align-items-center p-3">
-              <div class="me-3"><span class="form-selectgroup-check"></span></div>
-              <div>📺 Control Remoto TV</div>
-            </div>
-          </label>
-
-          <label class="form-selectgroup-item flex-fill">
-            <input type="checkbox" [(ngModel)]="checkoutChecks.acRemote" class="form-selectgroup-input">
-            <div class="form-selectgroup-label d-flex align-items-center p-3">
-              <div class="me-3"><span class="form-selectgroup-check"></span></div>
-              <div>❄️ Control Aire Acondicionado</div>
-            </div>
-          </label>
-
-          <label class="form-selectgroup-item flex-fill">
-            <input type="checkbox" [(ngModel)]="checkoutChecks.keys" class="form-selectgroup-input">
-            <div class="form-selectgroup-label d-flex align-items-center p-3">
-              <div class="me-3"><span class="form-selectgroup-check"></span></div>
-              <div>🔑 Llaves de la Habitación</div>
-            </div>
-          </label>
-        </div>
-
-        <div class="mt-3">
-          <label class="form-label">Notas de Salida (daños o faltantes)</label>
-          <textarea class="form-control" [(ngModel)]="checkoutChecks.notes"
-            placeholder="Ej: Falta una toalla..."></textarea>
+        <div class="mb-3">
+          <label class="form-label text-dark">Contraseña</label>
+          <input type="password" class="form-control" [(ngModel)]="tempUser.password"
+            placeholder="Mín. 6 caract. (Dejar vacío para no cambiar)">
         </div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-link" (click)="viewMode.set('details')">Cancelar</button>
-        <button type="button" class="btn btn-danger"
-          [disabled]="!checkoutChecks.tvRemote || !checkoutChecks.acRemote || !checkoutChecks.keys"
-          (click)="confirmFullCheckout()">
-          Confirmar Entrega Total y Salida
-        </button>
-      </div>
-      }
-
-    </div>
-  </div>
-</div>
-}
-
-@if (showReportModal) {
-<div class="modal modal-blur fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5)">
-  <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
-    <div class="modal-content shadow-lg border-0">
-
-      <div class="modal-header border-0 pb-0 d-flex align-items-center justify-content-between">
-        <div>
-          <h5 class="modal-title h2 text-primary mb-0">📈 Reporte de Ventas</h5>
-        </div>
-
-        <div class="d-flex align-items-center gap-3">
-          <div class="btn-group shadow-sm">
-            <button (click)="reportFilter.set('day'); generateDailyReport()"
-              [class.btn-primary]="reportFilter() === 'day'" class="btn btn-outline-primary btn-sm">Día</button>
-            <button (click)="reportFilter.set('week'); generateDailyReport()"
-              [class.btn-primary]="reportFilter() === 'week'" class="btn btn-outline-primary btn-sm">Semana</button>
-            <button (click)="reportFilter.set('month'); generateDailyReport()"
-              [class.btn-primary]="reportFilter() === 'month'" class="btn btn-outline-primary btn-sm">Mes</button>
-            <button (click)="reportFilter.set('year'); generateDailyReport()"
-              [class.btn-primary]="reportFilter() === 'year'" class="btn btn-outline-primary btn-sm">Año</button>
-          </div>
-
-          <button type="button" class="btn-close static-close" (click)="showReportModal = false"
-            aria-label="Close"></button>
-        </div>
-      </div>
-
-      <div class="modal-body">
-        <div class="row row-cards mb-4">
-          <div class="col-4">
-            <div class="card card-sm bg-primary-lt border-0 shadow-sm">
-              <div class="card-body">
-                <div class="d-flex align-items-center">
-                  <div class="subheader text-primary">Ventas Totales</div>
-                </div>
-                <div class="h1 mb-0 fw-bold">{{ dailyReport.total | currency }}</div>
-              </div>
-            </div>
-          </div>
-          <div class="col-4">
-            <div class="card card-sm bg-success-lt border-0 shadow-sm">
-              <div class="card-body">
-                <div class="d-flex align-items-center">
-                  <div class="subheader text-success">Cobrado (Efectivo)</div>
-                </div>
-                <div class="h1 mb-0 fw-bold">{{ dailyReport.paid | currency }}</div>
-              </div>
-            </div>
-          </div>
-          <div class="col-4">
-            <div class="card card-sm bg-warning-lt border-0 shadow-sm">
-              <div class="card-body">
-                <div class="d-flex align-items-center">
-                  <div class="subheader text-warning">Pendiente por Cobrar</div>
-                </div>
-                <div class="h1 mb-0 fw-bold">{{ dailyReport.pending | currency }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card border-0 shadow-sm">
-          <div class="card-header bg-light py-2">
-            <h3 class="card-title text-muted small fw-bold text-uppercase">Detalle de Movimientos - {{
-              dailyReport.periodLabel }}</h3>
-          </div>
-          <div class="table-responsive" style="max-height: 400px;">
-            <table class="table table-vcenter table-nowrap card-table">
-              <thead>
-                <tr>
-                  <th class="w-1">Hora</th>
-                  <th>Habitación</th>
-                  <th>Estancia</th>
-                  <th>Estado</th>
-                  <th class="text-end">Monto</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (item of dailyReport.transactions; track item.id) {
-                <tr class="hover-shadow-sm">
-                  <td class="text-muted small">{{ item.created_at | date:'shortTime' }}</td>
-                  <td>
-                    <div class="d-flex align-items-center">
-                      <span class="avatar avatar-xs me-2 bg-blue-lt">{{ getRoomNumber(item.room_id) }}</span>
-                      <span class="fw-bold">Habitación {{ getRoomNumber(item.room_id) }}</span>
-                    </div>
-                  </td>
-                  <td class="small text-muted">
-                    {{ getNights(item.check_in, item.check_out) }} noche(s)
-                  </td>
-                  <td>
-                    @if(item.payment_status === 'paid') {
-                    <span class="badge badge-outline text-success fw-bold">
-                      <span class="badge-dot bg-success me-1"></span> PAGADO
-                    </span>
-                    } @else {
-                    <div class="d-flex align-items-center gap-2">
-                      <span class="badge badge-outline text-warning fw-bold">PENDIENTE</span>
-                      <button class="btn btn-ghost-success btn-icon btn-sm" (click)="markAsPaid(item)"
-                        title="Registrar Pago">
-                        <span class="small">💰 Cobrar</span>
-                      </button>
-                    </div>
-                    }
-                  </td>
-                  <td class="text-end fw-bold text-dark h4 mb-0">{{ item.total_amount | currency }}</td>
-                </tr>
-                } @empty {
-                <tr>
-                  <td colspan="5" class="text-center py-5 text-muted">
-                    <div class="mb-2">📭</div>
-                    No se encontraron transacciones en este periodo.
-                  </td>
-                </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <div class="modal-footer border-0">
-        <button type="button" class="btn btn-ghost-secondary" (click)="showReportModal = false">Cerrar</button>
-        <button type="button" class="btn btn-primary" onclick="window.print()">
-          <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-printer" width="24" height="24"
-            viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
-            stroke-linejoin="round">
-            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-            <path d="M17 17h2a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2h-14a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h2" />
-            <path d="M17 9v-4a2 2 0 0 0 -2 -2h-6a2 2 0 0 0 -2 2v4" />
-            <path d="M7 13m0 2a2 2 0 0 1 2 -2h6a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-6a2 2 0 0 1 -2 -2z" />
-          </svg>
-          Imprimir Reporte
-        </button>
+        <button class="btn btn-link" (click)="isUserModalOpen.set(false)">Cancelar</button>
+        <button class="btn btn-primary" (click)="handleSaveUser()">Guardar Cambios</button>
       </div>
     </div>
   </div>
