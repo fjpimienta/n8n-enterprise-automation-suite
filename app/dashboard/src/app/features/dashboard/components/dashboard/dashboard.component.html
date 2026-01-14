@@ -10,10 +10,10 @@
     </app-room-filters>
 
     <div class="row row-cards g-2">
-      @if (hotelService.loading()) {
+      @if (hotelService.loadingRooms()) {
       @for (i of [1,2,3,4,5,6,7,8]; track i) {
       <div class="col-12 col-sm-6 col-md-4 col-lg-3">
-        <app-room-skeleton></app-room-skeleton>
+        <app-skeleton></app-skeleton>
       </div>
       }
       } @else {
@@ -40,9 +40,28 @@
     }
 
     @if (viewMode() === 'user_mgmt') {
+    @if (hotelService.loadingUsers()) {
+    <div class="card">
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+          <tbody>
+            @for (i of [1,2,3,4,5]; track i) {
+            <tr>
+              <td><app-skeleton appearance="line"></app-skeleton></td>
+              <td><app-skeleton appearance="line" style="width: 50px;"></app-skeleton></td>
+              <td><app-skeleton appearance="line" style="width: 80px;"></app-skeleton></td>
+              <td class="w-1"><app-skeleton appearance="circle"></app-skeleton></td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+    } @else {
     <app-user-list [users]="hotelService.users()" (onBack)="viewMode.set('details')" (onAdd)="openNewUserModal()"
       (onEdit)="editUser($event)">
     </app-user-list>
+    }
     }
   </div>
 </div>
@@ -58,7 +77,14 @@
   (onClose)="isUserModalOpen.set(false)" (onSave)="handleSaveUser()">
 </app-user-form-modal>
 
+<!--
 <app-daily-report-modal [isOpen]="showReportModal" [reportData]="dailyReport" [currentFilter]="reportFilter()"
   [roomsList]="hotelService.rooms()" (onClose)="showReportModal = false"
   (onFilterChange)="handleReportFilterChange($event)">
+</app-daily-report-modal>
+-->
+
+<app-daily-report-modal [isOpen]="showReportModal" [isLoading]="hotelService.loadingReports()"
+  [reportData]="dailyReport" [currentFilter]="reportFilter()" [roomsList]="hotelService.rooms()"
+  (onClose)="showReportModal = false" (onFilterChange)="handleReportFilterChange($event)">
 </app-daily-report-modal>

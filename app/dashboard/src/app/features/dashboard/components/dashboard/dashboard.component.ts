@@ -6,24 +6,24 @@ import { FormsModule } from '@angular/forms';
 import { User } from '@core/models/hotel.types';
 import { environment } from '@env/environment';
 // Componentes Hijos
-import { CheckinFormComponent } from '@features/dashboard/components/checkin-form/checkin-form.component';
+import { CheckinFormComponent } from '@features/booking/components/checkin-form/checkin-form.component';
 import { HeaderComponent } from '@features/dashboard/components/header/header.component';
 import { RoomCardComponent } from '@features/dashboard/components/room-card/room-card.component';
-import { DailyReportModalComponent } from '@features/dashboard/components/daily-report-modal/daily-report-modal.component';
+import { DailyReportModalComponent } from '@features/finance/components/daily-report-modal/daily-report-modal.component';
 import { RoomFiltersComponent } from '@features/dashboard/components/room-filters/room-filters.component';
-import { RoomDetailModalComponent } from '@features/dashboard/components/room-detail-modal/room-detail-modal.component';
-import { UserFormModalComponent } from '@features/dashboard/components/user-form-modal/user-form-modal.component';
-import { UserListComponent } from '@features/dashboard/components/user-list/user-list.component';
+import { RoomDetailModalComponent } from '@features/booking/components/room-detail-modal/room-detail-modal.component';
+import { UserFormModalComponent } from '@features/admin/components/user-form-modal/user-form-modal.component';
+import { UserListComponent } from '@features/admin/components/user-list/user-list.component';
 // Servicios
 import { AuthService } from '@core/services/auth.service';
 import { HotelService } from '@features/dashboard/services/hotel.service';
-import { ReportService } from '@features/dashboard/services/report.service';
-import { RoomSkeletonComponent } from '@features/dashboard/components/room-skeleton/room-skeleton.component';
+import { ReportService } from '@features/finance/services/report.service';
+import { SkeletonComponent } from '@shared/ui/loader/skeleton/skeleton.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, CheckinFormComponent, HeaderComponent, RoomCardComponent, DailyReportModalComponent, RoomFiltersComponent, RoomDetailModalComponent, UserFormModalComponent, UserListComponent, RoomSkeletonComponent],
+  imports: [CommonModule, FormsModule, CheckinFormComponent, HeaderComponent, RoomCardComponent, DailyReportModalComponent, RoomFiltersComponent, RoomDetailModalComponent, UserFormModalComponent, UserListComponent, SkeletonComponent],
   templateUrl: './dashboard.component.html'
 })
 export class DashboardComponent {
@@ -154,8 +154,9 @@ export class DashboardComponent {
     }
   }
 
-  handleReportFilterChange(filter: 'day' | 'week' | 'month' | 'year') {
+  async handleReportFilterChange(filter: 'day' | 'week' | 'month' | 'year') {
     this.reportFilter.set(filter);
+    await new Promise(resolve => setTimeout(resolve, 1000));
     this.generateDailyReport();
   }
 

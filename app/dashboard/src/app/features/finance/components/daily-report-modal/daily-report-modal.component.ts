@@ -1,15 +1,17 @@
-import { Component, input, output } from '@angular/core';
+import { Component, Input, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { SkeletonComponent } from '@shared/ui/loader/skeleton/skeleton.component';
 
 @Component({
   selector: 'app-daily-report-modal',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule,
+    SkeletonComponent],
   templateUrl: './daily-report-modal.component.html',
   styleUrl: './daily-report-modal.component.css',
 })
 export class DailyReportModalComponent {
-  // --- Inputs con tipado fuerte ---
+  @Input() isLoading: boolean = false;
   isOpen = input.required<boolean>();
   reportData = input.required<{
     total: number;

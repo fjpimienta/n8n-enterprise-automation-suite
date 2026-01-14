@@ -8,8 +8,11 @@ import { lastValueFrom } from 'rxjs';
 @Injectable({ providedIn: 'root' })
 export class HotelService {
   private http = inject(HttpClient);
-  private apiUrl_crud = environment.apiUrl_crud; // Tu URL de n8n
-  public loading = signal<boolean>(false); // Nuevo Signal
+  private apiUrl_crud = environment.apiUrl_crud;
+  public loadingRooms = signal<boolean>(false);
+  public loadingUsers = signal<boolean>(false);
+  public loadingReports = signal<boolean>(false);
+  public loadingCompanies = signal<boolean>(false);
   filter = signal<'all' | 'available' | 'occupied' | 'checkout' | 'maintenance'>('available');
 
   // Signal para estado reactivo (Best Practice Angular 19+)
@@ -52,12 +55,12 @@ export class HotelService {
   }
 
   loadRooms() {
+    this.loadingRooms.set(true);
     const token = localStorage.getItem('authToken');
     if (!token) {
       console.warn('⚠️ Abortando carga: No hay token disponible aún.');
       return;
     }
-    this.loading.set(true);
     const payloadRoom = {
       entity: 'hotel_rooms',
       table_name: 'hotel_rooms',
@@ -83,12 +86,12 @@ export class HotelService {
             console.error('Respuesta de API no exitosa:', res);
             this.rooms.set([]);
           }
-          this.loading.set(false);
+          this.loadingRooms.set(false);
         },
         error: (err) => {
           console.error('Error de red o servidor:', err);
           this.rooms.set([]);
-          this.loading.set(false);
+          this.loadingRooms.set(false);
         }
       });
   }
@@ -119,6 +122,7 @@ export class HotelService {
 
   // Companies
   loadCompanies() {
+    this.loadingCompanies.set(true);
     const payloadCompanies = {
       entity: 'companys',
       table_name: 'companys',
@@ -138,18 +142,18 @@ export class HotelService {
           return String(a.id_company).localeCompare(String(b.id_company), undefined, { numeric: true });
         });
         this.companies.set(sortedCompanies);
-        this.loading.set(false);
+        this.loadingCompanies.set(false);
       },
       error: (err) => {
         console.error('Error en API:', err);
         this.companies.set([]); // Reset en caso de fallo
-        this.loading.set(false)
+        this.loadingCompanies.set(false)
       }
     });
   }
 
-  // Companies
   loadUsers(id_company?: number) {
+    this.loadingUsers.set(true);
     const payloadUsers = {
       entity: 'users',
       table_name: 'users',
@@ -166,19 +170,16 @@ export class HotelService {
           return a.email.localeCompare(b.email);
         });
         this.users.set(sortedUsers);
-        this.loading.set(false);
+        this.loadingUsers.set(false)
       },
       error: (err) => {
         console.error('Error en API:', err);
         this.users.set([]); // Reset en caso de fallo
-        this.loading.set(false)
+        this.loadingUsers.set(false)
       }
     });
   }
 
-  // hotel.service.ts - Añade estos métodos
-
-  /** Guarda o actualiza un usuario */
   saveUser(user: Partial<User>, operation: 'insert' | 'update', email?: string) {
     const payload = {
       entity: 'users',
@@ -329,13 +330,18 @@ export class HotelService {
      * Obtiene todas las reservas para procesamiento de reportes
      */
   async getRawBookingsForReport(): Promise<any[]> {
-    const res: any = await lastValueFrom(
-      this.http.post(`${this.apiUrl_crud}/hotel_bookings`, {
-        operation: 'getall',
-        fields: { id_company: 1 }
-      }, { headers: this.getAuthHeaders() })
-    );
-    return Array.isArray(res?.data) ? res.data : [];
+    this.loadingReports.set(true);
+    try {
+      const res: any = await lastValueFrom(
+        this.http.post(`${this.apiUrl_crud}/hotel_bookings`, {
+          operation: 'getall',
+          fields: { id_company: 1 }
+        }, { headers: this.getAuthHeaders() })
+      );
+      return Array.isArray(res?.data) ? res.data : [];
+    } finally {
+      this.loadingReports.set(false);
+    }
   }
 
 }
