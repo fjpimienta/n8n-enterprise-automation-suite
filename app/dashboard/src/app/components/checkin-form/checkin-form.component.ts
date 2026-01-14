@@ -14,6 +14,7 @@ export class CheckinFormComponent implements OnInit {
 
   @Output() saved = new EventEmitter<any>();
   @Output() canceled = new EventEmitter<void>();
+  @Output() onClose = new EventEmitter<void>();
 
   checkinForm = new FormGroup({
     full_name: new FormControl('', [Validators.required]),
@@ -78,6 +79,6 @@ export class CheckinFormComponent implements OnInit {
   }
 
   closeCheckinModal() {
-    this.canceled.emit();
+    this.onClose.emit();
   }
 }

@@ -7,11 +7,12 @@ import { HttpClient } from '@angular/common/http';
 import { environment } from '../../../environments/environment';
 import { FormsModule } from '@angular/forms';
 import { User } from '../../models/hotel.types';
+import { CheckinFormComponent } from '../checkin-form/checkin-form.component';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, CheckinFormComponent],
   templateUrl: './dashboard.component.html'
 })
 export class DashboardComponent {
@@ -176,8 +177,6 @@ export class DashboardComponent {
         console.error('Estructura no reconocida en guestRes:', guestRes);
         throw new Error("El sistema no devolvió el ID del huésped. Revisa la consola.");
       }
-
-      console.log('✅ Huésped procesado. ID:', guestId);
 
       // ------------------------------------------
       // PASO 2: CREAR RESERVA
@@ -535,6 +534,7 @@ export class DashboardComponent {
 
   openUserManagement() {
     this.viewMode.set('user_mgmt');
+    this.hotelService.clearSelection();
     this.hotelService.loadUsers(this.authService.currentUser()?.id_company);
   }
 
