@@ -39,6 +39,63 @@
     </div>
     }
 
+    @if (viewMode() === 'checkout_validation') {
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal modal-blur fade show d-block" tabindex="-1">
+      <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+          <div class="modal-header bg-warning-lt">
+            <h5 class="modal-title">📋 Revisión de Salida</h5>
+            <button type="button" class="btn-close" (click)="viewMode.set('details')"></button>
+          </div>
+          <div class="modal-body">
+            <p class="text-muted mb-3">Verifique la devolución de los artículos:</p>
+
+            <label class="form-check mb-2">
+              <input class="form-check-input" type="checkbox" [(ngModel)]="checkoutChecks.tvRemote">
+              <span class="form-check-label">📺 Control TV</span>
+            </label>
+
+            <label class="form-check mb-2">
+              <input class="form-check-input" type="checkbox" [(ngModel)]="checkoutChecks.acRemote">
+              <span class="form-check-label">❄️ Control A/C</span>
+            </label>
+
+            <label class="form-check mb-3">
+              <input class="form-check-input" type="checkbox" [(ngModel)]="checkoutChecks.keys">
+              <span class="form-check-label">🔑 Llaves entregadas</span>
+            </label>
+
+            <div class="mb-3">
+              <label class="form-label">Observaciones / Daños</label>
+              <textarea class="form-control" rows="2" [(ngModel)]="checkoutChecks.notes"
+                placeholder="Todo en orden..."></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-link link-secondary" (click)="viewMode.set('details')">Cancelar</button>
+
+            <button class="btn btn-danger ms-auto"
+              [disabled]="!checkoutChecks.tvRemote || !checkoutChecks.acRemote || !checkoutChecks.keys"
+              (click)="confirmFullCheckout()">
+
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-logout me-1" width="24"
+                height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                <path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2" />
+                <path d="M9 12h12l-3 -3" />
+                <path d="M18 15l3 -3" />
+              </svg>
+
+              Finalizar Salida
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    }
+
     @if (viewMode() === 'user_mgmt') {
     @if (hotelService.loadingUsers()) {
     <div class="card">
@@ -66,23 +123,16 @@
   </div>
 </div>
 
-@if (hotelService.selectedRoom() && viewMode() !== 'checkin') {
+@if (hotelService.selectedRoom() && viewMode() === 'details') {
 <app-room-detail-modal [room]="hotelService.selectedRoom()" [activeBooking]="activeBooking"
   (onClose)="hotelService.clearSelection()" (onCheckin)="viewMode.set('checkin')" (onPay)="markAsPaid($event)"
-  (onCheckout)="handleCheckout()" (onMaintenance)="notifyN8N('maintenance')">
+  (onMaintenance)="reportMaintenance()" (onFinishMaintenance)="handleFinishMaintenance()">
 </app-room-detail-modal>
 }
 
 <app-user-form-modal [isOpen]="isUserModalOpen()" [selectedUser]="hotelService.selectedUser()" [(userData)]="tempUser"
   (onClose)="isUserModalOpen.set(false)" (onSave)="handleSaveUser()">
 </app-user-form-modal>
-
-<!--
-<app-daily-report-modal [isOpen]="showReportModal" [reportData]="dailyReport" [currentFilter]="reportFilter()"
-  [roomsList]="hotelService.rooms()" (onClose)="showReportModal = false"
-  (onFilterChange)="handleReportFilterChange($event)">
-</app-daily-report-modal>
--->
 
 <app-daily-report-modal [isOpen]="showReportModal" [isLoading]="hotelService.loadingReports()"
   [reportData]="dailyReport" [currentFilter]="reportFilter()" [roomsList]="hotelService.rooms()"

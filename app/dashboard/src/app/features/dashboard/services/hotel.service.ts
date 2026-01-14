@@ -199,10 +199,6 @@ export class HotelService {
     this.selectedUser.set(user);
   }
 
-
-
-
-
   /**
    * Obtiene la reserva activa de una habitación
    */
@@ -216,8 +212,6 @@ export class HotelService {
     );
     return res.data && res.data.length > 0 ? res.data[0] : null;
   }
-
-
 
   /**
    * PROCESO COMPLETO DE CHECK-IN
@@ -264,9 +258,9 @@ export class HotelService {
     // 3. Cambiar estado de la Habitación a Ocupada
     await lastValueFrom(
       this.http.post(`${crudUrl}/hotel_rooms`, {
-        operation: 'update', // Usamos insert para el Upsert de tu API
+        operation: 'update',
+        id: room.id,
         fields: {
-          id: room.id,
           status: 'occupied',
           cleaning_status: 'clean'
         }
@@ -308,6 +302,8 @@ export class HotelService {
         }
       }, { headers: this.getAuthHeaders() })
     );
+
+    this.loadRooms();
   }
 
 
@@ -340,6 +336,32 @@ export class HotelService {
     } finally {
       this.loadingReports.set(false);
     }
+  }
+
+  async updateRoomMaintenance(roomId: number): Promise<any> {
+    return lastValueFrom( // Convertimos a promesa para usar tu async/await
+      this.http.post(`${this.apiUrl_crud}/hotel_rooms`, {
+        operation: 'update',
+        id: roomId,
+        fields: {
+          status: 'maintenance',
+          cleaning_status: 'dirty'
+        }
+      }, { headers: this.getAuthHeaders() })
+    );
+  }
+
+  async finishMaintenance(roomId: number): Promise<any> {
+    return lastValueFrom(
+      this.http.post(`${this.apiUrl_crud}/hotel_rooms`, {
+        operation: 'update',
+        id: roomId,
+        fields: {
+          status: 'available',
+          cleaning_status: 'dirty' // Pasa a limpieza antes de estar disponible
+        }
+      }, { headers: this.getAuthHeaders() })
+    );
   }
 
 }

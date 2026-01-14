@@ -90,7 +90,6 @@ export class DashboardComponent {
     const room = this.hotelService.selectedRoom();
     if (!room) return;
     try {
-      // Nota: Sería ideal mover este getActiveBooking al HotelService también
       const booking = await this.hotelService.getActiveBooking(room.id);
       if (booking) {
         this.activeBooking = booking;
@@ -108,6 +107,10 @@ export class DashboardComponent {
   }
 
   async confirmFullCheckout() {
+    if (!this.checkoutChecks.tvRemote || !this.checkoutChecks.acRemote || !this.checkoutChecks.keys) {
+      alert("⚠️ ALERTA: Debe validar la entrega de TV, Aire Acondicionado y Llaves antes de finalizar.");
+      return;
+    }
     const room = this.hotelService.selectedRoom();
     if (!room || !this.activeBooking) return;
     const reporte = `TV: ${this.checkoutChecks.tvRemote ? '✅' : '❌'}, AC: ${this.checkoutChecks.acRemote ? '✅' : '❌'}. Obs: ${this.checkoutChecks.notes}`;
@@ -123,11 +126,12 @@ export class DashboardComponent {
     if (!booking || !confirm(`¿Confirmar pago de $${booking.total_amount}?`)) return;
     try {
       await this.hotelService.registerPayment(booking.id);
-      if (this.activeBooking?.id === booking.id) {
-        this.activeBooking.payment_status = 'paid';
+      if (this.activeBooking && this.activeBooking.id === booking.id) {
+        this.activeBooking.payment_status = 'paid'; // <--- Esto permite que handleCheckout pase la validación
       }
       alert('✅ Pago registrado');
       if (this.showReportModal) this.generateDailyReport();
+      this.hotelService.loadRooms();
     } catch (error) {
       alert('Error al registrar pago');
     }
@@ -136,7 +140,6 @@ export class DashboardComponent {
   markAsClean() {
     const room = this.hotelService.selectedRoom();
     if (!room) return;
-    // Sugerencia: Mover a hotelService.updateRoomStatus(room.id, 'clean')
     this.hotelService.updateRoomStatus(room.id, 'clean').subscribe(() => {
       this.completeActionSuccess('✨ Habitación lista');
     });
@@ -144,24 +147,15 @@ export class DashboardComponent {
 
   // 5. SECCIÓN: REPORTES
   async generateDailyReport() {
-    // 1. Activar carga inmediatamente
     this.hotelService.loadingReports.set(true);
-
-    // 2. Mostrar el modal (aunque esté vacío o con skeletons)
     this.showReportModal = true;
-
     try {
       const allBookings = await this.hotelService.getRawBookingsForReport();
-
-      // Simulación de delay para que el skeleton sea visible
-      // await new Promise(resolve => setTimeout(resolve, 800));
-
       const stats = this.reportService.calculateDailyReport(allBookings, this.reportFilter());
       this.dailyReport = { ...stats, periodLabel: this.getPeriodLabel() };
     } catch (error) {
       console.error('Error:', error);
     } finally {
-      // 3. Apagar carga al final
       this.hotelService.loadingReports.set(false);
     }
   }
@@ -208,22 +202,62 @@ export class DashboardComponent {
     });
   }
 
-  // 7. SECCIÓN: SISTEMA Y COMUNICACIÓN EXTERNA (n8n / Auth)
-  notifyN8N(action: 'checkin' | 'checkout' | 'maintenance' | 'clean_complete' | 'inspected') {
+  // 7. SECCIÓN: SISTEMA Y COMUNICACIÓN EXTERNA
+  async reportMaintenance() {
     const room = this.hotelService.selectedRoom();
     if (!room) return;
-    const messages: any = { /* ... tus mensajes ... */ };
 
-    if (confirm(messages[action])) {
-      const payload = {
-        action, room_number: room.room_number, room_id: room.id,
-        user: this.authService.currentUser()?.name || 'Recepción'
-      };
-      this.http.post(this.N8N_WHATSAPP_WEBHOOK, payload).subscribe({
-        next: () => this.completeActionSuccess('Estado actualizado correctamente ✅'),
-        error: () => alert('Error al conectar con el servidor ❌')
-      });
+    // 1. Confirmación visual (Ahora con texto claro)
+    if (confirm(`¿Desea reportar la Habitación ${room.room_number} a Mantenimiento?`)) {
+      try {
+        // 2. Operación de Base de Datos (Tu método async/await)
+        await this.hotelService.updateRoomMaintenance(room.id);
+
+        // 3. (OPCIONAL) Notificación externa
+        // Si aún quieres mandar el WhatsApp, hazlo como un "extra", no como lo principal
+        this.http.post(this.N8N_WHATSAPP_WEBHOOK, {
+          action: 'maintenance',
+          room_number: room.room_number,
+          user: this.authService.currentUser()?.name
+        }).subscribe(); // No necesitamos esperar esto para continuar
+
+        // 4. Éxito visual y refresco
+        this.completeActionSuccess('Reporte enviado y habitación en mantenimiento ✅');
+        this.hotelService.clearSelection();
+        this.refresh();
+
+      } catch (error) {
+        console.error('Error:', error);
+        alert('Error al actualizar el estado en la base de datos ❌');
+      }
     }
+  }
+
+  async handleFinishMaintenance() {
+    const room = this.hotelService.selectedRoom();
+    if (!room) return;
+
+    if (confirm(`¿Desea marcar la Habitación ${room.room_number} como reparada?`)) {
+      try {
+        await this.hotelService.finishMaintenance(room.id);
+        this.completeActionSuccess('🔧 Mantenimiento finalizado. Enviada a limpieza.');
+        this.hotelService.clearSelection();
+        this.refresh();
+      } catch (error) {
+        alert('Error al actualizar el estado ❌');
+      }
+    }
+  }
+
+  // Función simplificada solo para NOTIFICAR
+  sendExternalNotification(action: string) {
+    const room = this.hotelService.selectedRoom();
+    const payload = {
+      action,
+      room_number: room?.room_number,
+      user: this.authService.currentUser()?.name
+    };
+    this.http.post(this.N8N_WHATSAPP_WEBHOOK, payload).subscribe();
   }
 
   logout() {

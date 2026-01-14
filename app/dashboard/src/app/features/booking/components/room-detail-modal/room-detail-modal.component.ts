@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, input, output } from '@angular/core';
+import { Component, EventEmitter, input, Output, output } from '@angular/core';
 
 @Component({
   selector: 'app-room-detail-modal',
@@ -9,6 +9,11 @@ import { Component, input, output } from '@angular/core';
   styleUrl: './room-detail-modal.component.css',
 })
 export class RoomDetailModalComponent {
+
+
+  @Output() onMaintenance = new EventEmitter<void>();
+  @Output() onFinishMaintenance = new EventEmitter<void>();
+
   room = input.required<any>();
   activeBooking = input<any>();
 
@@ -16,5 +21,5 @@ export class RoomDetailModalComponent {
   onCheckin = output<void>();
   onCheckout = output<void>();
   onPay = output<any>();
-  onMaintenance = output<void>();
+  // onMaintenance = output<void>();
 }

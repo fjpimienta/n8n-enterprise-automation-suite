@@ -74,11 +74,26 @@
                     }
                 </div>
 
+                @if (room().status === 'available') {
+                <button class="btn btn-outline-warning w-100" (click)="onMaintenance.emit()">
+                    🛠 Reportar Falla / Mantenimiento
+                </button>
+                }
+
+                @if (room().status === 'maintenance') {
+                <button class="btn btn-success w-100 d-flex align-items-center justify-content-center gap-2"
+                    (click)="onFinishMaintenance.emit()">
+                    <i class="ti ti-tools-off"></i>
+                    Finalizar Mantenimiento
+                </button>
+                }
+<!--
                 <div class="text-center mt-4">
                     <button class="btn btn-link text-warning btn-sm fw-medium" (click)="onMaintenance.emit()">
                         🛠 Reportar Falla / Mantenimiento
                     </button>
                 </div>
+            -->
             </div>
         </div>
     </div>
