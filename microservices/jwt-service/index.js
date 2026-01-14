@@ -7,7 +7,7 @@ const rateLimit = require('express-rate-limit');
 
 const app = express();
 app.use(express.json());
-app.use(cors({ 
+app.use(cors({
   origin: 'https://hosting3m.com',
   methods: ['POST'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -58,8 +58,8 @@ app.post('/generate-token', loginLimiter, async (req, res) => {
   // LOGS DE DEBUG (Añade estas líneas)
   console.log(`Intento de login para: ${user}`);
   console.log(`¿Llegó contraseña?: ${pass ? 'SÍ (longitud: ' + pass.length + ')' : 'NO'}`);
-  console.log(`Internal Secret recibido: ${internal_secret}`);  
-  
+  console.log(`Internal Secret recibido: ${internal_secret}`);
+
   if (internal_secret !== INTERNAL_SECRET) {
     return res.status(403).json({ error: 'Unauthorized' });
   }
@@ -74,6 +74,9 @@ app.post('/generate-token', loginLimiter, async (req, res) => {
 
     const { role, password: dbHash, id_company, names } = result.rows[0];
 
+    const crypto = require('crypto');
+    const inputHash = crypto.createHash('sha256').update(pass).digest('hex');
+
     /**
      * MEJOR PRÁCTICA: Transición a Bcrypt
      * Intentamos comparar con bcrypt. Si falla (porque la clave está en texto plano),
@@ -82,33 +85,34 @@ app.post('/generate-token', loginLimiter, async (req, res) => {
      */
     // Intentamos comparar con Bcrypt
     let isMatch = false;
-    
+
     // Verificamos si dbHash parece un hash de bcrypt (empieza con $2)
     if (dbHash && dbHash.startsWith('$2')) {
       isMatch = await bcrypt.compare(pass, dbHash);
     }
-    
+
     // Si no hubo match con bcrypt, probamos con texto plano (Fallback)
     if (!isMatch) {
-      isMatch = (pass === dbHash);
+      isMatch = (inputHash === dbHash);
     }
 
-    if (!isMatch) { 
+    if (!isMatch) {
+      console.log(`❌ Login fallido para ${user}: Los hashes no coinciden.`);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     // FIRMAMOS EL TOKEN con el "Scope" completo
     const token = jwt.sign(
-      { 
-        user, 
-        role, 
+      {
+        user,
+        role,
         id_company,
         name: names // Útil para mostrar en el frontend
-      }, 
-      JWT_SECRET, 
-      { expiresIn: '8h' } 
+      },
+      JWT_SECRET,
+      { expiresIn: '8h' }
     );
-    
+
     res.json({ token, role, id_company });
 
   } catch (err) {
@@ -126,13 +130,13 @@ app.post('/verify-token', verifyLimiter, (req, res) => {
 
   jwt.verify(token, JWT_SECRET, (err, decoded) => {
     if (err) return res.status(401).json({ valid: false, error: 'Invalid token' });
-    
+
     // Devolvemos TODO el contenido decodificado para que n8n lo use
-    res.json({ 
-      valid: true, 
-      user: decoded.user, 
+    res.json({
+      valid: true,
+      user: decoded.user,
       role: decoded.role,
-      id_company: decoded.id_company 
+      id_company: decoded.id_company
     });
   });
 });
