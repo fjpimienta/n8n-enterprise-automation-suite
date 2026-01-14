@@ -264,11 +264,9 @@ export class HotelService {
     // 3. Cambiar estado de la Habitación a Ocupada
     await lastValueFrom(
       this.http.post(`${crudUrl}/hotel_rooms`, {
-        operation: 'insert', // Usamos insert para el Upsert de tu API
+        operation: 'update', // Usamos insert para el Upsert de tu API
         fields: {
           id: room.id,
-          room_number: room.room_number,
-          type: room.type,
           status: 'occupied',
           cleaning_status: 'clean'
         }

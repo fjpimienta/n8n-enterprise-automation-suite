@@ -1,0 +1,49 @@
+@media print {
+  /* 1. Eliminar físicamente el dashboard y otros elementos del flujo de impresión */
+  body > :not(app-daily-report-modal),
+  .modal-backdrop,
+  header,
+  footer {
+    display: none !important;
+  }
+
+  /* 2. Forzar que el componente del modal ocupe todo el espacio superior */
+  app-daily-report-modal {
+    display: block !important;
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* 3. Resetear el comportamiento de 'ventana' de Bootstrap */
+  .modal {
+    position: static !important;
+    display: block !important;
+    overflow: visible !important;
+  }
+
+  .modal-dialog {
+    max-width: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  .modal-content {
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* 4. IMPORTANTE: Quitar scrolls para evitar la segunda página vacía */
+  .table-responsive {
+    overflow: visible !important;
+    max-height: none !important;
+  }
+
+  /* 5. Ocultar botones interactivos en papel */
+  .modal-footer, .btn-close, .ms-auto {
+    display: none !important;
+  }
+}

@@ -144,19 +144,30 @@ export class DashboardComponent {
 
   // 5. SECCIÓN: REPORTES
   async generateDailyReport() {
+    // 1. Activar carga inmediatamente
+    this.hotelService.loadingReports.set(true);
+
+    // 2. Mostrar el modal (aunque esté vacío o con skeletons)
+    this.showReportModal = true;
+
     try {
       const allBookings = await this.hotelService.getRawBookingsForReport();
+
+      // Simulación de delay para que el skeleton sea visible
+      // await new Promise(resolve => setTimeout(resolve, 800));
+
       const stats = this.reportService.calculateDailyReport(allBookings, this.reportFilter());
       this.dailyReport = { ...stats, periodLabel: this.getPeriodLabel() };
-      this.showReportModal = true;
     } catch (error) {
-      alert('Error al generar el reporte.');
+      console.error('Error:', error);
+    } finally {
+      // 3. Apagar carga al final
+      this.hotelService.loadingReports.set(false);
     }
   }
 
   async handleReportFilterChange(filter: 'day' | 'week' | 'month' | 'year') {
     this.reportFilter.set(filter);
-    await new Promise(resolve => setTimeout(resolve, 1000));
     this.generateDailyReport();
   }
 
