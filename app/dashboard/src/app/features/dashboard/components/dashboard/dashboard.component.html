@@ -1,0 +1,140 @@
+<app-header (onRefresh)="refresh()" (onGenerateReport)="generateDailyReport()" (onLogout)="logout()">
+</app-header>
+
+<div class="page-body">
+  <div class="container-xl">
+
+    @if (viewMode() === 'details' || viewMode() === 'checkin' || viewMode() === 'checkout_validation') {
+    <app-room-filters [currentFilter]="hotelService.filter()" [isAdmin]="isAdmin"
+      (onFilterChange)="hotelService.filter.set($event)" (onManageUsers)="openUserManagement()">
+    </app-room-filters>
+
+    <div class="row row-cards g-2">
+      @if (hotelService.loadingRooms()) {
+      @for (i of [1,2,3,4,5,6,7,8]; track i) {
+      <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+        <app-skeleton></app-skeleton>
+      </div>
+      }
+      } @else {
+      @for (room of hotelService.filteredRooms(); track room.id) {
+      <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+        <app-room-card [room]="room" (onSelect)="onSelectRoom($event)"></app-room-card>
+      </div>
+      }
+      }
+    </div>
+    }
+
+    @if (viewMode() === 'checkin') {
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal modal-blur fade show d-block" tabindex="-1">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+          <app-checkin-form [room]="hotelService.selectedRoom()" (onClose)="viewMode.set('details')"
+            (saved)="handleCheckinSave($event)">
+          </app-checkin-form>
+        </div>
+      </div>
+    </div>
+    }
+
+    @if (viewMode() === 'checkout_validation') {
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal modal-blur fade show d-block" tabindex="-1">
+      <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+          <div class="modal-header bg-warning-lt">
+            <h5 class="modal-title">📋 Revisión de Salida</h5>
+            <button type="button" class="btn-close" (click)="viewMode.set('details')"></button>
+          </div>
+          <div class="modal-body">
+            <p class="text-muted mb-3">Verifique la devolución de los artículos:</p>
+
+            <label class="form-check mb-2">
+              <input class="form-check-input" type="checkbox" [(ngModel)]="checkoutChecks.tvRemote">
+              <span class="form-check-label">📺 Control TV</span>
+            </label>
+
+            <label class="form-check mb-2">
+              <input class="form-check-input" type="checkbox" [(ngModel)]="checkoutChecks.acRemote">
+              <span class="form-check-label">❄️ Control A/C</span>
+            </label>
+
+            <label class="form-check mb-3">
+              <input class="form-check-input" type="checkbox" [(ngModel)]="checkoutChecks.keys">
+              <span class="form-check-label">🔑 Llaves entregadas</span>
+            </label>
+
+            <div class="mb-3">
+              <label class="form-label">Observaciones / Daños</label>
+              <textarea class="form-control" rows="2" [(ngModel)]="checkoutChecks.notes"
+                placeholder="Todo en orden..."></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button class="btn btn-link link-secondary" (click)="viewMode.set('details')">Cancelar</button>
+
+            <button class="btn btn-danger ms-auto"
+              [disabled]="!checkoutChecks.tvRemote || !checkoutChecks.acRemote || !checkoutChecks.keys"
+              (click)="confirmFullCheckout()">
+
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-logout me-1" width="24"
+                height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                <path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2" />
+                <path d="M9 12h12l-3 -3" />
+                <path d="M18 15l3 -3" />
+              </svg>
+
+              Finalizar Salida
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    }
+
+    @if (viewMode() === 'user_mgmt') {
+    @if (hotelService.loadingUsers()) {
+    <div class="card">
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+          <tbody>
+            @for (i of [1,2,3,4,5]; track i) {
+            <tr>
+              <td><app-skeleton appearance="line"></app-skeleton></td>
+              <td><app-skeleton appearance="line" style="width: 50px;"></app-skeleton></td>
+              <td><app-skeleton appearance="line" style="width: 80px;"></app-skeleton></td>
+              <td class="w-1"><app-skeleton appearance="circle"></app-skeleton></td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+    } @else {
+    <app-user-list [users]="hotelService.users()" (onBack)="viewMode.set('details')" (onAdd)="openNewUserModal()"
+      (onEdit)="editUser($event)">
+    </app-user-list>
+    }
+    }
+  </div>
+</div>
+
+@if (hotelService.selectedRoom() && viewMode() === 'details') {
+<app-room-detail-modal [room]="hotelService.selectedRoom()" [activeBooking]="activeBooking"
+  (onClose)="hotelService.clearSelection()" (onCheckin)="viewMode.set('checkin')" (onPay)="markAsPaid($event)"
+  (onMaintenance)="reportMaintenance()" (onFinishMaintenance)="handleFinishMaintenance()">
+</app-room-detail-modal>
+}
+
+<app-user-form-modal [isOpen]="isUserModalOpen()" [selectedUser]="hotelService.selectedUser()" [(userData)]="tempUser"
+  (onClose)="isUserModalOpen.set(false)" (onSave)="handleSaveUser()">
+</app-user-form-modal>
+
+<app-daily-report-modal [isOpen]="showReportModal" [isLoading]="hotelService.loadingReports()"
+  [reportData]="dailyReport" [currentFilter]="reportFilter()" [roomsList]="hotelService.rooms()"
+  (onClose)="showReportModal = false" (onFilterChange)="handleReportFilterChange($event)">
+</app-daily-report-modal>

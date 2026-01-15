@@ -1,0 +1,100 @@
+<div class="modal-backdrop fade show"></div>
+<div class="modal modal-blur fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header">
+                <h5 class="modal-title">Habitación {{ room().room_number }}</h5>
+                <button type="button" class="btn-close" (click)="onClose.emit()"></button>
+            </div>
+            <div class="modal-body p-4 text-dark bg-white">
+
+                <div class="row mb-3">
+                    <div class="col">
+                        <label class="form-label text-muted small">ESTADO DE OCUPACIÓN</label>
+                        @if (room().status === 'occupied') {
+                        <span class="badge bg-red-lt h3">● Ocupada</span>
+                        } @else {
+                        <span class="badge bg-green-lt h3">● Disponible</span>
+                        }
+                    </div>
+                    <div class="col-auto text-end">
+                        <label class="form-label text-muted small">PRECIO/NOCHE</label>
+                        <div class="h2 fw-bold text-primary">${{ room().price_night | number:'1.2-2' }}</div>
+                    </div>
+                </div>
+
+                @if (room().status === 'occupied' && activeBooking()) {
+                <div class="card bg-light border-0 mb-3">
+                    <div class="card-body p-3">
+                        <div class="small text-muted mb-1">HUÉSPED ACTUAL</div>
+                        <div class="fw-bold h4 mb-0 text-dark">{{ activeBooking().guest_name || 'Cargando...' }}</div>
+                        <div class="text-muted small">Check-out: {{ activeBooking().check_out | date:'dd/MM/yyyy' }}
+                        </div>
+                        <div class="mt-2">
+                            <span class="badge" [class.bg-success]="activeBooking().payment_status === 'paid'"
+                                [class.bg-warning]="activeBooking().payment_status !== 'paid'">
+                                PAGO: {{ activeBooking().payment_status | uppercase }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                }
+
+                <div class="hr-text my-4">ACCIONES OPERATIVAS</div>
+
+                <div class="d-grid gap-2">
+                    @if (room().status === 'available') {
+                    <button
+                        class="btn btn-outline-primary btn-lg d-flex align-items-center justify-content-between px-4"
+                        (click)="onCheckin.emit()">
+                        <div class="text-start">
+                            <div class="fw-bold">Registrar Check-in</div>
+                            <div class="small opacity-75">Asignar nuevo huésped</div>
+                        </div>
+                        <i class="ti ti-login"></i>
+                    </button>
+                    } @else if (room().status === 'occupied') {
+                    @if (activeBooking()?.payment_status !== 'paid') {
+                    <button class="btn btn-success btn-lg d-flex align-items-center justify-content-between px-4 mb-2"
+                        (click)="onPay.emit(activeBooking())">
+                        <div class="text-start">
+                            <div class="fw-bold">💰 Registrar Pago</div>
+                            <div class="small opacity-75">Monto: ${{ activeBooking()?.total_amount | number:'1.2-2' }}
+                            </div>
+                        </div>
+                    </button>
+                    }
+                    <button class="btn btn-outline-danger btn-lg d-flex align-items-center justify-content-between px-4"
+                        (click)="onCheckout.emit()">
+                        <div class="text-start">
+                            <div class="fw-bold">Realizar Check-out</div>
+                            <div class="small opacity-75">Finalizar estancia</div>
+                        </div>
+                    </button>
+                    }
+                </div>
+
+                @if (room().status === 'available') {
+                <button class="btn btn-outline-warning w-100" (click)="onMaintenance.emit()">
+                    🛠 Reportar Falla / Mantenimiento
+                </button>
+                }
+
+                @if (room().status === 'maintenance') {
+                <button class="btn btn-success w-100 d-flex align-items-center justify-content-center gap-2"
+                    (click)="onFinishMaintenance.emit()">
+                    <i class="ti ti-tools-off"></i>
+                    Finalizar Mantenimiento
+                </button>
+                }
+<!--
+                <div class="text-center mt-4">
+                    <button class="btn btn-link text-warning btn-sm fw-medium" (click)="onMaintenance.emit()">
+                        🛠 Reportar Falla / Mantenimiento
+                    </button>
+                </div>
+            -->
+            </div>
+        </div>
+    </div>
+</div>

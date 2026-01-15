@@ -1,0 +1,23 @@
+<div class="card card-sm shadow-sm border-0 h-100" [style.border-left]="isArrivalToday() ? '5px solid #206bc4' : 'none'"
+    style="cursor: pointer;" (click)="onSelect.emit(room())">
+    <div class="card-body p-3 bg-white rounded">
+        <div class="d-flex align-items-center">
+            <div class="h1 mb-0 me-3 fw-bold text-primary">{{ room().room_number }}</div>
+            <div class="flex-fill text-dark">
+                <div class="font-weight-medium h4 mb-0 text-capitalize">{{ room().type }}</div>
+                <div class="text-muted small mt-1">
+                    @if (room().next_reservation) {
+                    <span class="text-azure fw-bold">📅 {{ room().next_reservation | date:'dd/MM' }}</span>
+                    }
+                </div>
+            </div>
+            <div class="text-end">
+                <span class="badge" [class.bg-red-lt]="room().status === 'occupied'"
+                    [class.bg-green-lt]="room().status === 'available'"
+                    [class.bg-dark-lt]="room().status === 'maintenance'">
+                    {{ room().status | uppercase }}
+                </span>
+            </div>
+        </div>
+    </div>
+</div>

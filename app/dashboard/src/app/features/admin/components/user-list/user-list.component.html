@@ -1,0 +1,37 @@
+<div class="d-flex mb-3 align-items-center">
+    <button (click)="onBack.emit()" class="btn btn-sm btn-ghost-secondary me-3">
+        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-arrow-back-up" width="24"
+            height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+            <path d="M9 14l-4 -4l4 -4" />
+            <path d="M5 10h11a4 4 0 1 1 0 8h-1" />
+        </svg>
+        Volver
+    </button>
+    <h2 class="text-white mb-0">Gestión de Personal</h2>
+    <button class="btn btn-primary btn-sm ms-auto" (click)="onAdd.emit()">+ Nuevo Empleado</button>
+</div>
+
+<div class="row row-cards">
+    @for (user of users(); track user.email) {
+    <div class="col-12 col-md-6">
+        <div class="card shadow-sm border-0 mb-2">
+            <div class="card-body d-flex align-items-center p-3 text-dark bg-white rounded shadow-sm">
+                <span class="avatar avatar-sm me-3 bg-blue-lt text-uppercase fw-bold">
+                    {{ (user.names || '?').charAt(0) }}{{ (user.lastname || '').charAt(0) }}
+                </span>
+                <div class="flex-fill">
+                    <div class="fw-bold">{{ user.names }} {{ user.lastname }}</div>
+                    <div class="text-muted small">{{ user.role }} • {{ user.email }}</div>
+                </div>
+                <button class="btn btn-icon btn-ghost-primary" (click)="onEdit.emit(user)">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-pencil" width="24"
+                        height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                        <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+                        <path d="M13.5 6.5l4 4" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+    }
+</div>

@@ -1,0 +1,40 @@
+<div class="page-header d-print-none text-white bg-dark py-3">
+    <div class="container-xl">
+        <div class="row g-2 align-items-center">
+            <div class="col">
+                <div class="page-pretitle text-muted-light">Dashboard</div>
+                <h2 class="page-title text-white">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-building-skyscraper"
+                        width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M3 21l18 0" />
+                        <path d="M5 21v-14l8 -4l8 4v14" />
+                        <path d="M19 21v-10l-6 -4" />
+                        <path d="M9 9l0 .01" />
+                        <path d="M9 12l0 .01" />
+                        <path d="M9 15l0 .01" />
+                        <path d="M9 18l0 .01" />
+                    </svg>
+                    Hotel San José
+                </h2>
+            </div>
+            <div class="col-auto ms-auto d-flex gap-2">
+                <button class="btn btn-icon btn-dark" (click)="onRefresh.emit()" title="Refrescar">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
+                        stroke-width="2" stroke="currentColor" fill="none">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" />
+                        <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" />
+                    </svg>
+                </button>
+
+                <button (click)="onGenerateReport.emit()" class="btn btn-primary btn-sm me-2">
+                    💰 Caja
+                </button>
+
+                <button (click)="onLogout.emit()" class="btn btn-danger btn-sm">Salir</button>
+            </div>
+        </div>
+    </div>
+</div>
