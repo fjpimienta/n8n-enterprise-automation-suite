@@ -34,7 +34,7 @@
           </div>
           <div class="col-4">
             <div class="card card-sm bg-green-lt p-3 text-center">
-              <div class="text-muted small">COBRADO (EFECTIVO)</div>
+              <div class="text-muted small">COBRADO</div>
               <div class="h2 fw-bold text-primary d-flex align-items-center justify-content-center"
                 style="height: 32px;">
                 @if (isLoading) {
@@ -68,7 +68,7 @@
             <table class="table table-vcenter card-table">
               <thead>
                 <tr>
-                  <th>HORA</th>
+                  <th>{{ currentFilter() === 'day' ? 'HORA' : 'FECHA' }}</th>
                   <th>HABITACIÓN</th>
                   <th>ESTANCIA</th>
                   <th>ESTADO</th>
@@ -89,7 +89,13 @@
                 } @else {
                 @for (t of reportData().transactions; track t.id) {
                 <tr>
-                  <td>{{ t.created_at | date:'HH:mm' }}</td>
+                  <td>
+                    @if (currentFilter() === 'day') {
+                    {{ t.check_in | date:'HH:mm' }}
+                    } @else {
+                    {{ t.check_in | date:'dd/MM/yy' }}
+                    }
+                  </td>
                   <td class="fw-bold">Hab. {{ getRoomNumber(t.room_id) }}</td>
                   <td>{{ getNights(t.check_in, t.check_out) }} noches</td>
                   <td><span class="badge" [class.bg-success]="t.payment_status === 'paid'"
