@@ -58,14 +58,16 @@ npm install && ng serve
 A continuación se detalla la documentación técnica y el código fuente de cada módulo implementado en n8n:
 
 | ID | Módulo / Servicio | Función Principal | Stack & Integraciones | Documentación |
-| :--- | :--- | :--- | :--- | :---: |
-| `01` | **Auth JWT Gateway** 		| Middleware de seguridad. Valida tokens y protege webhooks públicos. 		| `Node.js` `Crypto` `JWT` | [📖 Ver Docs](workflows/01-auth-jwt-gateway/v1/README.md) |
-| `07` | **Contact & CRM Bridge**   | Sistema de captura de leads de Hosting3m.                                 | `Webhook` `JWT` `CRUD` `Mail` `Postgres` | [📖 Ver Docs](workflows/07-contact-automated/v2/README.md) |
-| `03` | **RAG News Intelligence** 	| Curaduría de noticias automatizada con análisis de sentimiento vectorial. | `Scraper` `OpenAI` `Pinecone/PgVector` | [📖 Ver Docs](workflows/03-rag-news-intelligence/v1/README.md) |
-| `04` | **Omnichannel Social** 	| Orquestador de publicación de contenido en redes sociales. 				| `HTTP Request` `Twitter API` `LinkedIn` | [📖 Ver Docs](workflows/04-omnichannel-social/v2/README.md) |
-| `05` | **AI WhatsApp Agent** 		| Asistente conversacional con memoria a largo plazo (RAG). 				| `WhatsApp` `Postgres` `OpenAI` | [📖 Ver Docs](workflows/05-ai-whatsapp-agent/v1/README.md) |
-| `06` | **Dynamic CRUD Engine**    | Capa de abstracción para gestión de entidades dinámica.                   | `Postgre` `JS Logic` `JWT` | [📖 Ver Docs](workflows/06-dynamic-crud-engine/v2/README.md) |
-| `07` | **AdminHotel Dashboard**    | Frontend administrativo para gestión de reservas y habitaciones.         | `Angular 21` `Tabler` `Vitest` | [📖 Ver Docs](app/dashboard/README.md) |
+| :---| :--- | :--- | :--- | :---: |
+| `01`|**Auth JWT Gateway**| Middleware de seguridad. Valida tokens y protege webhooks públicos.| `Node.js` `Crypto` `JWT` | [📖 Ver Docs](workflows/01-auth-jwt-gateway/v1/README.md)|
+| `02`|**Contact & CRM Bridge**|Sistema de captura de leads de Hosting3m.|`Webhook` `JWT` `CRUD` `Mail` `Postgres`|[📖 Ver Docs](workflows/07-contact-automated/v2/README.md)|
+| `03`|**RAG News Intelligence**|Curaduría de noticias automatizada con análisis de sentimiento vectorial.|`Scraper` `OpenAI` `Pinecone/PgVector`|[📖 Ver Docs](workflows/03-rag-news-intelligence/v1/README.md)|
+| `04`|**Omnichannel Social**|Orquestador de publicación de contenido en redes sociales.|`HTTP Request` `Twitter API` `LinkedIn`|[📖 Ver Docs](workflows/04-omnichannel-social/v2/README.md)|
+| `05`|**AI WhatsApp Agent**|Asistente conversacional con memoria a largo plazo (RAG).|`WhatsApp` `Postgres` `OpenAI`|[📖 Ver Docs](workflows/05-ai-whatsapp-agent/v1/README.md)|
+| `06`|**Dynamic CRUD Engine**|Capa de abstracción para gestión de entidades dinámica.|`Postgre` `JS Logic` `JWT`|[📖 Ver Docs](workflows/06-dynamic-crud-engine/v2/README.md)|
+| `07`|**AdminHotel Dashboard**|Frontend administrativo para gestión de reservas y habitaciones.|`Angular 21` `Tabler` `Vitest`|[📖 Ver Docs](app/dashboard/README.md)|
+| `08`|**MCP Server**| MCP Server: Hotel Management Core|`MCP` `Postgres` `OpenAI`|[📖 Ver Docs](workflows/07-MCP-server-hotel/README.md)|
+
 ---
 
 ## 📈 Roadmap & Gestión de Proyectos (GitHub Projects V3)
