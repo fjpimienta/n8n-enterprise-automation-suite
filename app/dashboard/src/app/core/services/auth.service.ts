@@ -58,7 +58,7 @@ export class AuthService {
   }
 
   logout() {
-    localStorage.removeItem('token');
+    localStorage.removeItem('authToken');
     localStorage.removeItem('role');
     this.currentUser.set(null);
   }
