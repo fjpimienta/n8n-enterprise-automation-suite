@@ -4,24 +4,25 @@
 ![Arquitectura n8n Enterprise](assets/AutomationSuiteHosting3M_by_Gemini.png)
 
 **Arquitecto:** Francisco Pérez (Senior Systems Engineer | PMP | Full Stack)
-**Stack:** n8n, Docker, PostgreSQL (pgvector), Node.js, OpenAI, Linux VPS.
+**Stack:** n8n, Docker, PostgreSQL (pgvector), Node.js, OpenAI (GPT-4o), MCP (Model Context Protocol). Linux VPS.
 
 ## 🎯 Objetivo del Proyecto
-Suite de automatización empresarial diseñada para alta disponibilidad y seguridad. A diferencia de implementaciones estándar SaaS, esta arquitectura Self-Hosted garantiza soberanía de datos, latencia mínima y personalización profunda mediante microservicios auxiliares y clientes frontend desacoplados.
+Suite de automatización empresarial de grado industrial diseñada para alta disponibilidad. Esta arquitectura trasciende el uso de simples "bots" para convertirse en un Hub de Servicios Inteligente que garantiza la soberanía de datos mediante un despliegue Self-Hosted, latencia mínima y una gestión de permisos basada en roles (RBAC) vinculada directamente a la base de datos central.
 
 ## 🏗 Arquitectura e Infraestructura (Infrastructure as Code)
-Desplegado en VPS Linux optimizado (2 vCore, 4GB RAM, NVMe) usando orquestación de contenedores.
+Desplegado en un entorno endurecido (Hardened VPS) utilizando orquestación de contenedores y redes aisladas.
 
-| Servicio 			| Tecnología 				| Función 															|
-| :--- 				| :--- 						| :--- 																|
-| **Orquestador** 	| n8n v2.1.4 (Enterprise) 	| Motor lógico de flujos. 											|
-| **Capa de Datos** | PostgreSQL + pgvector     | Almacenamiento relacional y base de datos vectorial para RAG.     |
-| **Seguridad**     | Node.js (JWT Service)     | Microservicio dedicado para firma y validación de tokens RS256.   |
-| **Agentes IA**    | OpenAI + LangChain Logic  | Procesamiento de lenguaje natural y razonamiento autónomo.        |
-| **Memoria IA** 	| PostgreSQL + pgvector 	| RAG (Retrieval-Augmented Generation) para contexto a largo plazo. |
-| **Proxy/Ingress** | Nginx                     | Terminación SSL, balanceo de carga y endurecimiento de cabeceras. |
-| **Ingesta** 		| Node.js Scraper 			| Motor de extracción de datos en tiempo real. 						|
-| **Contactos**     | n8n v2.1.4 (Enterprise)   | Flujo para recibir informacion de prospectos en Contacto.         |
+|Servicio|Tecnología|Función|
+|:---|:---|:---|
+|**Orquestador**|n8n v2.1.4 (Enterprise)|Motor lógico de flujos.|
+|**MCP Server**|Model Context Protocol|Protocolo de interoperabilidad para ejecutar SQL desde la IA.|
+|**Capa de Datos**|PostgreSQL + pgvector|Almacenamiento relacional y base de datos vectorial para RAG.|
+|**Seguridad**|Node.js (JWT Service)|Microservicio dedicado para firma y validación de tokens RS256.|
+|**Agentes IA**|OpenAI + LangChain Logic|Procesamiento de lenguaje natural y razonamiento autónomo.|
+|**Voz (STT/TTS)**|Whisper & OpenAI TTS|Conversión bidireccional de audio con normalización de buffers.|
+|**Memoria IA**|PostgreSQL + pgvector|RAG (Retrieval-Augmented Generation) para contexto a largo plazo.|
+|**Ingesta**|Node.js Scraper|Motor de extracción de datos en tiempo real.|
+|**Contactos**|n8n v2.1.4 (Enterprise)|Flujo para recibir informacion de prospectos en Contacto.|
 
 ## 📦 Módulos Implementados (Workflows)
 1.  **🔐 Secure Token Gateway:** Gestión de autenticación API-Key/JWT centralizada.
@@ -31,6 +32,8 @@ Desplegado en VPS Linux optimizado (2 vCore, 4GB RAM, NVMe) usando orquestación
 5.  **🤖 AI WhatsApp Agent (RAG):** Asistente inteligente con memoria persistente en Postgres.
 6.  **🛠️ Dynamic CRUD Engine:** Capa de abstracción de datos para gestión dinámica de entidades SQL.
 7.  **🏨 AdminHotel Dashboard:** Cliente Web SPA para la gestión visual del inventario hotelero (Consume Módulos 01 y 06).
+8.  **🤖 AI WhatsApp Agent v3 (Multi-Service Hub):** El corazón de la interacción con el cliente. Un agente multimodal que procesa texto y voz, identifica al usuario en PostgreSQL y enruta la conversación según la intención (HOSTING, HOTEL o NEUTRO).
+9.  **🏨 MCP Server: Hotel Management:** Un microservicio especializado que expone "herramientas" (Tools) a la IA. Permite que el Agente del Hotel consulte disponibilidad real (habitaciones limpias y disponibles) y registre reservas directamente en la DB sin intervención humana.
 
 ## 🚀 Despliegue
 ```bash
@@ -65,33 +68,30 @@ A continuación se detalla la documentación técnica y el código fuente de cad
 | `07` | **AdminHotel Dashboard**    | Frontend administrativo para gestión de reservas y habitaciones.         | `Angular 21` `Tabler` `Vitest` | [📖 Ver Docs](app/dashboard/README.md) |
 ---
 
-## GitHub Projects (Gestión Ágil)
-**Para este proyecto utilizo GitHub Projects V2 con un enfoque de entrega continua (CI/CD) y gestión de riesgos.**
+## 📈 Roadmap & Gestión de Proyectos (GitHub Projects V3)
+**Enfoque Actual: Interoperabilidad y Eficiencia IA.**
 
     * Backlog (R&D): Implementación de MCP (Model Context Protocol) para interoperabilidad entre LLMs y sistemas de archivos locales.
     * En Progreso: Optimización de búsqueda HNSW en pgvector para reducir la latencia en datasets de gran escala (>1M vectores).
     * Completado (Milestones): * Despliegue de infraestructura base con redes Docker aisladas.
         * Implementación del motor CRUD dinámico para reducción de deuda técnica.
 
-**Configuración del Tablero:**
+### Completado ✅:
+    * Migración de RBAC estático (JS) a RBAC dinámico (PostgreSQL).
+    * Pipeline de audio con Whisper y OpenAI TTS sincronizado.
+    * Implementación de lógica de resiliencia para vinculación de ítems en n8n.
 
-1.  **Nombre:** "n8n Automation Roadmap & Backlog".
-2.  **Vistas:**
-    * **Board:** Kanban clásico (Status: Todo, In Progress, Review, Done).
-    * **Roadmap:** Vista de Cronograma (Gantt) agrupado por "Milestones".
+### En Progreso 🏗️:
+    * Integración MCP: Expandiendo el catálogo de herramientas del servidor de hotel para incluir Check-out automático.
+    * Optimización RAG: Implementación de índices HNSW en pgvector para búsquedas vectoriales de alta velocidad.
 
-* **Columna "Backlog" (Futuro):**
-    * *Ticket:* "Implementar MCP (Model Context Protocol) para conectar Agente IA con sistema de archivos local." (Etiqueta: `R&D`, `AI`).
-    * *Ticket:* "Refactorizar `scraper-service` para usar Puppeteer en modo Cluster para escalabilidad." (Etiqueta: `Performance`).
-* **Columna "In Progress" (Lo que "estás haciendo"):**
-    * *Ticket:* "Optimización de índices HNSW en pgvector para reducir latencia de búsqueda en 100ms." (Muestra conocimiento de DB).
-* **Columna "Done" (Tus logros):**
-    * *Ticket:* "Despliegue de n8n v2.0.3 con Docker Compose y redes aisladas."
-    * *Ticket:* "Creación de Microservicio JWT para seguridad de webhooks."
-    * *Ticket:* "Configuración inicial de AdminHotel: Auth Guard, Interceptores JWT y Signals."
+### Backlog (R&D) 🚀:
+    * Implementación de agentes supervisores para control de calidad en respuestas automáticas.
+    * Refactorización del motor de scraping para soporte de Single Page Applications (SPA).
 
 ---
 
 Desarrollado por: Francisco Jesus Pérez Pimienta 
     - Ingeniero en Sistemas Computacionales.
     - Maestro en Administracion de Proyectos.
+    - Especialista en Automatización de Procesos y Soberanía de Datos.
