@@ -1,0 +1,166 @@
+{
+  "name": "MCP Server Hotel",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM hotel_rooms ORDER BY room_number ASC;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        64,
+        1024
+      ],
+      "id": "1c2c46e4-9bc9-4e5e-89b2-360ea0dd1765",
+      "name": "Consulta Todas las Habitaciones",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      },
+      "notes": "Busca habitaciones que estén disponibles y limpias para venta."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE hotel_rooms SET status = {{$json.status}}, cleaning_status = {{$json.cleaning}} WHERE id = {{$json.room_id}};",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        -592,
+        1024
+      ],
+      "id": "32d821aa-b378-4847-aa31-169ebe7406c3",
+      "name": "Marcar Habitacion Ocupada",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO hotel_bookings (room_id, guest_id, check_in, total_amount, status, payment_status, id_company) \nVALUES ({{$json.room_id}}, {{$json.guest_id}}, NOW(), {{$json.amount}}, 'confirmed', 'pending', 1);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        -384,
+        1024
+      ],
+      "id": "f52008ed-d019-4c75-adef-b3bf2ae1a8e0",
+      "name": "Registrar Nueva Reserva",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM hotel_rooms WHERE status = 'available' AND (cleaning_status = 'clean' OR cleaning_status = 'inspected');",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        -128,
+        1024
+      ],
+      "id": "f36628dc-0861-4075-b76e-c65cee255dbb",
+      "name": "Consultar Disponibilidad Real",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      },
+      "notes": "Busca habitaciones que estén disponibles y limpias para venta."
+    },
+    {
+      "parameters": {
+        "path": "hotel-management"
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
+      "typeVersion": 2,
+      "position": [
+        -544,
+        800
+      ],
+      "id": "fb21c286-eb17-405e-a46a-fa3bed1d7de9",
+      "name": "MCP Server Hotel",
+      "webhookId": "1f046f81-a131-4b6f-92f3-e1002564cbb6"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Consulta Todas las Habitaciones": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Hotel",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Marcar Habitacion Ocupada": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Hotel",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Nueva Reserva": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Hotel",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Consultar Disponibilidad Real": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Hotel",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "9SrVXdATmlrZemJT"
+  },
+  "versionId": "b5208814-4310-412a-b891-d5dc08339d6d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
+  },
+  "id": "PG3YQSeAop8nHNLc",
+  "tags": []
+}
