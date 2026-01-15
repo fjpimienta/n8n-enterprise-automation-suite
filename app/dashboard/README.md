@@ -5,7 +5,7 @@
 ## 📝 Descripción
 AdminHotel es una aplicación web de alto rendimiento construida sobre Angular 21, diseñada como la interfaz administrativa oficial de la suite de automatización Hosting3M.
 
-Este dashboard actúa como el cliente principal del Dynamic CRUD Engine, permitiendo una gestión de datos en tiempo real (Reservas, Habitaciones, Check-ins) mediante una capa de abstracción basada en n8n y PostgreSQL.
+Este dashboard actúa como el cliente principal del Dynamic CRUD Engine, permitiendo una gestión de datos en tiempo real (Reservas, Habitaciones, Check-ins) mediante una capa de abstracción basada en n8n y PostgreSQL. Se especializa en la gestión operativa de flujos de hospitalidad mediante el uso intensivo de Angular Signals y una arquitectura de servicios desacoplados.
 
 ---
 
@@ -13,30 +13,39 @@ Este dashboard actúa como el cliente principal del Dynamic CRUD Engine, permiti
 
 | Versión | Estado | Módulo Principal | Stack de UI | Cambios Principales |
 | :--- | :--- | :--- | :--- | :--- |
-| **v0.1** | `Develop` | `Auth & Architecture` | Tabler + Bootstrap | `Estructura base, JWT Auth, Signals.` |
-| **v0.2** | `Planned` | `Room Rack v1` | CSS Grid / Cards | `Gestión visual de 17 habitaciones.` |
+| **v0.1** | `Stable` | `Auth & Architecture` | Tabler + Bootstrap | Estructura base, JWT Auth, Signals. |
+| **v0.2** | `Stable` | `Room Rack v1` | CSS Grid / Cards | Gestión visual de 17 habitaciones. |
+| **v0.3** | `Stable`| `Ops & Finance`| Modals / Reports | Checkout con inventario, Reporte de Caja (D/S/M/Y) y Gestión de Usuarios. |
+| **v0.4** | `Latest` | `Pro UX & Patterns	Skeletons / Services` |	Refactorización a Services, Skeletons de carga, Promesas (Async/Await).|
 
 ---
 
 ## 🏗️ Arquitectura Técnica
-La aplicación implementa una arquitectura desacoplada donde el frontend delega la lógica de negocio y persistencia al orquestador n8n.
+La aplicación implementa una arquitectura Data-Access Service Pattern, donde la lógica de negocio se centraliza en servicios inyectables, dejando los componentes únicamente para la gestión de la UI.
 
 1. Flujo de Datos y Seguridad
     * API Gateway (n8n): Comunicación directa con Webhooks v3 para operaciones atómicas.
     * Seguridad: Implementación de auth.guard.ts que protege la ruta /dashboard.
     * Persistencia: Los formularios (como Checkin-form) envían payloads JSON que son procesados por flujos de trabajo en n8n y almacenados en PostgreSQL.
 2. Componentes Principales
-|Componente|Ruta|Descripción|
-|Login|/login|Puerta de entrada. Gestiona la obtención del JWT contra el servicio de Hosting3M.|
-|Dashboard|/dashboard|(Protegido) Contenedor principal. Renderiza la UI basada en Tabler.|
-|Checkin-form|(Child)|Formulario reactivo para el registro de huéspedes y asignación de habitaciones.|
+| Componente | Ruta / Tipo | Descripción |
+| :--- | :--- | :--- |
+| Login | /login | Puerta de entrada. Gestión de JWT y claims de rol. |
+| Dashboard | /dashboard | Contenedor principal. Gestión de estados de habitaciones (Ocupada, Disponible, Sucia, Mantenimiento). |
+| Checkin-form | (Child) | Formulario reactivo con lógica ON CONFLICT para evitar duplicidad de huéspedes por doc_id. |
+| User-Mgmt | (Modal/View) | CRUD interno para administración de personal y credenciales de acceso. |
+3. Estructura de Servicios
+ * HotelService: Único punto de contacto para CRUD de habitaciones, huéspedes y reservas. Gestiona el estado global de rooms y loading mediante Signals.
+ * ReportService: Lógica matemática y de procesamiento de fechas para la generación de métricas financieras.
+ * AuthService: Gestión de identidad y persistencia de sesión.
 
 ## 🚦 Stack Tecnológico
-    * Core: Angular v21.0.0 (Signals, Standalone Components).
-    * UI Framework: @tabler/core (Diseño administrativo responsive).
-    * Testing: vitest (Unit Testing de alta velocidad).
-    * Utilidades: jwt-decode (Manejo de claims de seguridad), rxjs.
-    * Backend Interface: Webhooks n8n (API v3).
+* **Core:** Angular v21.0.0 (Signals, Standalone Components, Signal Queries).
+* **UI Framework:** @tabler/core (Diseño administrativo responsive) + Bootstrap 5.
+* **State Management:** Angular Signals (Reactividad fina sin Zone.js en componentes críticos).
+* **Backend Interface:** Webhooks n8n (API v3) operando sobre PostgreSQL.
+* **Utilidades:** DatePipe (Localizado para México), CurrencyPipe, jwt-decode.
+* **UX:** Implementación de Skeleton Screens para estados de carga asíncronos.
 
 ---
 
@@ -51,18 +60,21 @@ La aplicación implementa una arquitectura desacoplada donde el frontend delega 
 ---
 
 ## 🚀 Capacidades de AdminHotel
-- **Seguridad Enterprise:** Autenticación robusta con jwt-decode y protección de rutas.
-- **UI Premium:** Interfaz basada en Tabler, optimizada para visualización de métricas y gestión de inventario.
-- **Testing de Alta Velocidad:** Configuración nativa con Vitest para un ciclo de desarrollo ágil.
-- **Dynamic CRUD Ready:** Formulario y servicios preparados para interactuar con cualquier tabla de PostgreSQL a través del motor n8n.
+- **Room Rack Inteligente:** Visualización por colores de estados (Verde: Disponible, Rojo: Ocupado, Amarillo: Check-out, Gris: Mantenimiento).
+- **Gestión de Huéspedes:** Registro robusto que captura datos de identidad, procedencia y notas especiales.
+- **Validación de Inventario:** Reporte financiero integrado que segmenta Ventas Totales, Cobrado (Efectivo) y Por Cobrar en tiempo real.
+- **Caja y Ventas:** Reporte financiero integrado que segmenta Ventas Totales, Cobrado (Efectivo) y Por Cobrar en tiempo real.
+- **Gestión de Personal:** Panel administrativo para el alta y edición de roles de empleados.
 
 ---
 
 ## 📊 Roadmap: Gestión de Hotel (17 Habitaciones)
-|Módulo|Descripción|Integración n8n|
-|Room Rack|Grid visual del estado de las 17 habitaciones (Libre/Ocupada).|Webhook en tiempo real.|
-|Smart Booking|CRUD de reservaciones conectado a la lógica de IA.|AI WhatsApp Agent (Módulo 05).|
-|Auto-Billing|Generación de recibos y control de pagos mediante Tabler UI.|CRM Bridge (Módulo 07).|
+|Módulo|Estado|Descripción|Integración n8n|
+|Room Rack|✅ Finalizado|Grid visual del estado de habitaciones.|Webhook SQL Real-time.|
+|Check-out V2|✅ Finalizado|Validación de pago pendiente e inventario.|Update dinámico de hotel_rooms.|
+|Reporte de Caja|✅ Finalizado|Métricas de ventas por periodos (Día/Semana/Mes/Año).|Agregación vía MetaCRUD.|
+|UX Skeletons|✅ Finalizado|Feedback visual durante la carga de datos.|UI Reactiva (Signals).|
+|Smart Booking|⏳ Próximo|Integración con Agente de IA para reservas automáticas.|AI WhatsApp Agent (Módulo 05).|
 
 ---
 
@@ -95,7 +107,7 @@ Este dashboard es el componente app/dashboard dentro del ecosistema n8n Enterpri
 
 * JWT Service: Para validación de tokens RS256.
 * PostgreSQL + pgvector: Almacenamiento de metadatos de habitaciones y búsqueda semántica.
-* Nginx Proxy: Terminación SSL y endurecimiento de cabeceras.
+* WhatsApp Bridge: Webhook dedicado para alertas inmediatas de limpieza o fallas técnicas reportadas desde el dashboard.
 
 ---
 

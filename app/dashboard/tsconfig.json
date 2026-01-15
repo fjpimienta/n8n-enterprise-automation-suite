@@ -3,6 +3,7 @@
 {
   "compileOnSave": false,
   "compilerOptions": {
+    "baseUrl": "./",
     "strict": true,
     "noImplicitOverride": true,
     "noPropertyAccessFromIndexSignature": true,
@@ -13,7 +14,42 @@
     "experimentalDecorators": true,
     "importHelpers": true,
     "target": "ES2022",
-    "module": "preserve"
+    "module": "preserve",
+    "paths": {
+      "@core/*": [
+        "src/app/core/*"
+      ],
+      "@auth/*": [
+        "src/app/core/auth/*"
+      ],
+      "@models/*": [
+        "src/app/core/models/*"
+      ],
+      "@env/*": [
+        "src/environments/*"
+      ],
+      "@features/*": [
+        "src/app/features/*"
+      ],
+      "@dashboard/*": [
+        "src/app/features/dashboard/*"
+      ],
+      "@booking/*": [
+        "src/app/features/booking/*"
+      ],
+      "@finance/*": [
+        "src/app/features/finance/*"
+      ],
+      "@admin/*": [
+        "src/app/features/admin/*"
+      ],
+      "@shared/*": [
+        "src/app/shared/*"
+      ],
+      "@ui/*": [
+        "src/app/shared/ui/*"
+      ]
+    }
   },
   "angularCompilerOptions": {
     "enableI18nLegacyMessageIdFormat": false,
