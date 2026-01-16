@@ -5,19 +5,19 @@
   <div class="container-xl">
 
     @if (viewMode() === 'details' || viewMode() === 'checkin' || viewMode() === 'checkout_validation') {
-    <app-room-filters [currentFilter]="hotelService.filter()" [isAdmin]="isAdmin"
-      (onFilterChange)="hotelService.filter.set($event)" (onManageUsers)="openUserManagement()">
+    <app-room-filters [currentFilter]="bookingService.filter()" [isAdmin]="isAdmin"
+      (onFilterChange)="bookingService.filter.set($event)" (onManageUsers)="openUserManagement()">
     </app-room-filters>
 
     <div class="row row-cards g-2">
-      @if (hotelService.loadingRooms()) {
+      @if (bookingService.loadingRooms()) {
       @for (i of [1,2,3,4,5,6,7,8]; track i) {
       <div class="col-12 col-sm-6 col-md-4 col-lg-3">
         <app-skeleton></app-skeleton>
       </div>
       }
       } @else {
-      @for (room of hotelService.filteredRooms(); track room.id) {
+      @for (room of bookingService.filteredRooms(); track room.id) {
       <div class="col-12 col-sm-6 col-md-4 col-lg-3">
         <app-room-card [room]="room" (onSelect)="onSelectRoom($event)"></app-room-card>
       </div>
@@ -97,7 +97,7 @@
     }
 
     @if (viewMode() === 'user_mgmt') {
-    @if (hotelService.loadingUsers()) {
+    @if (adminService.loadingUsers()) {
     <div class="card">
       <div class="table-responsive">
         <table class="table table-vcenter card-table">
@@ -115,7 +115,7 @@
       </div>
     </div>
     } @else {
-    <app-user-list [users]="hotelService.users()" (onBack)="viewMode.set('details')" (onAdd)="openNewUserModal()"
+    <app-user-list [users]="adminService.users()" (onBack)="viewMode.set('details')" (onAdd)="openNewUserModal()"
       (onEdit)="editUser($event)">
     </app-user-list>
     }
@@ -135,6 +135,6 @@
 </app-user-form-modal>
 
 <app-daily-report-modal [isOpen]="showReportModal" [isLoading]="hotelService.loadingReports()"
-  [reportData]="dailyReport" [currentFilter]="reportFilter()" [roomsList]="hotelService.rooms()"
+  [reportData]="dailyReport" [currentFilter]="reportFilter()" [roomsList]="bookingService.rooms()"
   (onClose)="showReportModal = false" (onFilterChange)="handleReportFilterChange($event)">
 </app-daily-report-modal>

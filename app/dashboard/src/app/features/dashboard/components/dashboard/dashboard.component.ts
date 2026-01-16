@@ -4,7 +4,6 @@ import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { User } from '@core/models/hotel.types';
-import { environment } from '@env/environment';
 // Componentes Hijos
 import { CheckinFormComponent } from '@features/booking/components/checkin-form/checkin-form.component';
 import { HeaderComponent } from '@features/dashboard/components/header/header.component';
@@ -18,7 +17,9 @@ import { UserListComponent } from '@features/admin/components/user-list/user-lis
 import { AuthService } from '@core/services/auth.service';
 import { HotelService } from '@features/dashboard/services/hotel.service';
 import { ReportService } from '@features/finance/services/report.service';
+import { BookingService } from '@features/booking/services/booking.service';
 import { SkeletonComponent } from '@shared/ui/loader/skeleton/skeleton.component';
+import { AdminService } from '@features/admin/services/admin.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -32,6 +33,8 @@ export class DashboardComponent {
   private router = inject(Router);
   private authService = inject(AuthService);
   public hotelService = inject(HotelService);
+  public adminService = inject(AdminService);
+  public bookingService = inject(BookingService);
   public reportService = inject(ReportService);
 
   private readonly N8N_WHATSAPP_WEBHOOK = 'https://n8n.hosting3m.com/webhook/8cd04cee-6a56-4989-b36c-caf9473d7535/webhook';
@@ -54,9 +57,9 @@ export class DashboardComponent {
   }
 
   refresh() {
-    this.hotelService.loadRooms();
+    this.bookingService.loadRooms();
     if (this.isAdmin) {
-      this.hotelService.loadUsers(this.authService.currentUser()?.id_company);
+      this.adminService.loadUsers(this.authService.currentUser()?.id_company);
     }
   }
 
@@ -68,7 +71,7 @@ export class DashboardComponent {
 
     if (room.status === 'occupied') {
       try {
-        this.activeBooking = await this.hotelService.getActiveBooking(room.id);
+        this.activeBooking = await this.bookingService.getActiveBooking(room.id);
       } catch (error) {
         console.error('Error al cargar reserva activa:', error);
       }
@@ -79,7 +82,7 @@ export class DashboardComponent {
     const room = this.hotelService.selectedRoom();
     if (!room) return;
     try {
-      await this.hotelService.processCheckin(formData, room);
+      await this.bookingService.processCheckin(formData, room);
       this.completeActionSuccess(`✅ Check-in exitoso en Hab. ${room.room_number}`);
     } catch (error: any) {
       alert(`Error: ${error.message}`);
@@ -90,7 +93,7 @@ export class DashboardComponent {
     const room = this.hotelService.selectedRoom();
     if (!room) return;
     try {
-      const booking = await this.hotelService.getActiveBooking(room.id);
+      const booking = await this.bookingService.getActiveBooking(room.id);
       if (booking) {
         this.activeBooking = booking;
         if (booking.payment_status !== 'paid') {
@@ -115,7 +118,7 @@ export class DashboardComponent {
     if (!room || !this.activeBooking) return;
     const reporte = `TV: ${this.checkoutChecks.tvRemote ? '✅' : '❌'}, AC: ${this.checkoutChecks.acRemote ? '✅' : '❌'}. Obs: ${this.checkoutChecks.notes}`;
     try {
-      await this.hotelService.processCheckout(room, this.activeBooking.id, reporte, this.checkoutChecks);
+      await this.bookingService.processCheckout(room, this.activeBooking.id, reporte, this.checkoutChecks);
       this.completeActionSuccess('✅ Check-out completado.');
     } catch (error) {
       alert('Fallo al procesar el Check-out.');
@@ -125,13 +128,13 @@ export class DashboardComponent {
   async markAsPaid(booking: any) {
     if (!booking || !confirm(`¿Confirmar pago de $${booking.total_amount}?`)) return;
     try {
-      await this.hotelService.registerPayment(booking.id);
+      await this.bookingService.registerPayment(booking.id);
       if (this.activeBooking && this.activeBooking.id === booking.id) {
         this.activeBooking.payment_status = 'paid'; // <--- Esto permite que handleCheckout pase la validación
       }
       alert('✅ Pago registrado');
       if (this.showReportModal) this.generateDailyReport();
-      this.hotelService.loadRooms();
+      this.bookingService.loadRooms();
     } catch (error) {
       alert('Error al registrar pago');
     }
@@ -173,7 +176,7 @@ export class DashboardComponent {
   openUserManagement() {
     this.viewMode.set('user_mgmt');
     this.hotelService.clearSelection();
-    this.hotelService.loadUsers(this.authService.currentUser()?.id_company);
+    this.adminService.loadUsers(this.authService.currentUser()?.id_company);
   }
 
   openNewUserModal() {
@@ -192,11 +195,11 @@ export class DashboardComponent {
     const selected = this.hotelService.selectedUser();
     const operation = selected ? 'update' : 'insert';
     const id = selected ? selected.email : undefined;
-    this.hotelService.saveUser(this.tempUser, operation, id).subscribe({
+    this.adminService.saveUser(this.tempUser, operation, id).subscribe({
       next: () => {
         alert('✅ Usuario guardado');
         this.isUserModalOpen.set(false);
-        this.hotelService.loadUsers(this.authService.currentUser()?.id_company);
+        this.adminService.loadUsers(this.authService.currentUser()?.id_company);
       },
       error: (err) => alert('❌ Error: ' + err.message)
     });
@@ -287,7 +290,7 @@ export class DashboardComponent {
   }
 
   getRoomNumber(id: number): string {
-    const found = this.hotelService.rooms().find((r: any) => r.id === id);
+    const found = this.bookingService.rooms().find((r: any) => r.id === id);
     return found ? found.room_number : '??';
   }
 
