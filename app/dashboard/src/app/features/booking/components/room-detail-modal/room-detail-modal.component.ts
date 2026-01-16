@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, input, Output, output } from '@angular/core';
+import { Component, EventEmitter, input, Output } from '@angular/core'; // Quita 'output' de aquí si no lo usas
 
 @Component({
   selector: 'app-room-detail-modal',
@@ -10,16 +10,16 @@ import { Component, EventEmitter, input, Output, output } from '@angular/core';
 })
 export class RoomDetailModalComponent {
 
-
-  @Output() onMaintenance = new EventEmitter<void>();
-  @Output() onFinishMaintenance = new EventEmitter<void>();
-
+  // ENTRADAS (Signals) - Esto está correcto
   room = input.required<any>();
   activeBooking = input<any>();
 
-  onClose = output<void>();
-  onCheckin = output<void>();
-  onCheckout = output<void>();
-  onPay = output<any>();
-  // onMaintenance = output<void>();
+  // SALIDAS (Eventos) - Estandarizado todo a @Output
+  @Output() onClose = new EventEmitter<void>();
+  @Output() onCheckin = new EventEmitter<void>();
+  @Output() onCheckout = new EventEmitter<void>(); // Ahora es un EventEmitter estándar
+  @Output() onPay = new EventEmitter<any>();
+  @Output() onMaintenance = new EventEmitter<void>();
+  @Output() onFinishMaintenance = new EventEmitter<void>();
+
 }
