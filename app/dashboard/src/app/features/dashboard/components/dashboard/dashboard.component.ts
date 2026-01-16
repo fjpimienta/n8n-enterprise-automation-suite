@@ -37,7 +37,7 @@ export class DashboardComponent {
   public bookingService = inject(BookingService);
   public reportService = inject(ReportService);
 
-  private readonly N8N_WHATSAPP_WEBHOOK = 'https://n8n.hosting3m.com/webhook/8cd04cee-6a56-4989-b36c-caf9473d7535/webhook';
+  // private readonly N8N_WHATSAPP_WEBHOOK = 'https://n8n.hosting3m.com/webhook/8cd04cee-6a56-4989-b36c-caf9473d7535/webhook';
 
   // 2. ESTADO (Signals y Variables)
   viewMode = signal<'details' | 'checkin' | 'checkout_validation' | 'user_mgmt'>('details');
@@ -218,11 +218,11 @@ export class DashboardComponent {
 
         // 3. (OPCIONAL) Notificación externa
         // Si aún quieres mandar el WhatsApp, hazlo como un "extra", no como lo principal
-        this.http.post(this.N8N_WHATSAPP_WEBHOOK, {
+        /*this.http.post(this.N8N_WHATSAPP_WEBHOOK, {
           action: 'maintenance',
           room_number: room.room_number,
           user: this.authService.currentUser()?.name
-        }).subscribe(); // No necesitamos esperar esto para continuar
+        }).subscribe();*/ // No necesitamos esperar esto para continuar
 
         // 4. Éxito visual y refresco
         this.completeActionSuccess('Reporte enviado y habitación en mantenimiento ✅');
@@ -253,6 +253,7 @@ export class DashboardComponent {
   }
 
   // Función simplificada solo para NOTIFICAR
+  /*
   sendExternalNotification(action: string) {
     const room = this.hotelService.selectedRoom();
     const payload = {
@@ -262,6 +263,7 @@ export class DashboardComponent {
     };
     this.http.post(this.N8N_WHATSAPP_WEBHOOK, payload).subscribe();
   }
+  */
 
   logout() {
     this.authService.logout();
