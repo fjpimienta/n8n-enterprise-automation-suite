@@ -13,6 +13,7 @@ import { RoomFiltersComponent } from '@features/dashboard/components/room-filter
 import { RoomDetailModalComponent } from '@features/booking/components/room-detail-modal/room-detail-modal.component';
 import { UserFormModalComponent } from '@features/admin/components/user-form-modal/user-form-modal.component';
 import { UserListComponent } from '@features/admin/components/user-list/user-list.component';
+import { ReservationFormComponent } from '@features/booking/components/reservation-form/reservation-form.component';
 // Servicios
 import { AuthService } from '@core/services/auth.service';
 import { HotelService } from '@features/dashboard/services/hotel.service';
@@ -24,11 +25,10 @@ import { AdminService } from '@features/admin/services/admin.service';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, CheckinFormComponent, HeaderComponent, RoomCardComponent, DailyReportModalComponent, RoomFiltersComponent, RoomDetailModalComponent, UserFormModalComponent, UserListComponent, SkeletonComponent],
+  imports: [CommonModule, FormsModule, CheckinFormComponent, HeaderComponent, RoomCardComponent, DailyReportModalComponent, RoomFiltersComponent, RoomDetailModalComponent, UserFormModalComponent, UserListComponent, SkeletonComponent, ReservationFormComponent],
   templateUrl: './dashboard.component.html'
 })
 export class DashboardComponent {
-  // 1. INYECCIONES Y CONFIGURACIÓN
   private http = inject(HttpClient);
   private router = inject(Router);
   private authService = inject(AuthService);
@@ -39,8 +39,7 @@ export class DashboardComponent {
 
   // private readonly N8N_WHATSAPP_WEBHOOK = 'https://n8n.hosting3m.com/webhook/8cd04cee-6a56-4989-b36c-caf9473d7535/webhook';
 
-  // 2. ESTADO (Signals y Variables)
-  viewMode = signal<'details' | 'checkin' | 'checkout_validation' | 'user_mgmt'>('details');
+  viewMode = signal<'details' | 'checkin' | 'checkout_validation' | 'user_mgmt' | 'reservation'>('details');
   reportFilter = signal<'day' | 'week' | 'month' | 'year'>('day');
   isUserModalOpen = signal(false);
   showReportModal = false;
@@ -51,33 +50,46 @@ export class DashboardComponent {
   checkoutChecks = { tvRemote: false, acRemote: false, keys: false, notes: '' };
   tempUser: User = this.getEmptyUser();
 
-  // 3. CICLO DE VIDA Y REFRESH
   ngOnInit() {
     this.refresh();
   }
 
+  /* 1. SECCIÓN: REFRESCO DE DATOS */
   refresh() {
     this.bookingService.loadRooms();
+    this.adminService.loadReservations()
+    setTimeout(() => {
+      console.log('Habitaciones en memoria:', this.bookingService.rooms().length);
+      console.log('Reservas en memoria:', this.adminService.reservations().length);
+      console.log('¿Hay alguna coincidencia?:', this.bookingService.roomsWithStatus().filter(r => r.status === 'reserved'));
+    }, 2000);
     if (this.isAdmin) {
       this.adminService.loadUsers(this.authService.currentUser()?.id_company);
     }
   }
 
-  // 4. SECCIÓN: GESTIÓN DE HABITACIONES Y RESERVAS (CORE)
+  /* 2. SECCIÓN: INTERACCIÓN CON HABITACIONES */
   async onSelectRoom(room: any) {
     this.viewMode.set('details');
     this.hotelService.selectRoom(room);
     this.activeBooking = null;
 
+    // 1. Si el estado es ocupado, buscamos OBLIGATORIAMENTE la estancia de hoy
     if (room.status === 'occupied') {
-      try {
-        this.activeBooking = await this.bookingService.getActiveBooking(room.id);
-      } catch (error) {
-        console.error('Error al cargar reserva activa:', error);
-      }
+      this.activeBooking = await this.bookingService.getActiveBooking(room.id);
+    } else {
+      // 2. Solo si NO está ocupada, buscamos si tiene una reserva futura para mostrar info
+      const allReservations = this.adminService.reservations();
+      const futureRes = allReservations.find(res =>
+        Number(res.room_id) === Number(room.id) &&
+        res.status === 'confirmed' &&
+        res.check_in.split(/[ T]/)[0] >= new Date().toLocaleDateString('sv-SE')
+      );
+      if (futureRes) this.activeBooking = futureRes;
     }
   }
 
+  /* 3. SECCIÓN: CHECK-IN Y CHECK-OUT */
   async handleCheckinSave(formData: any) {
     const room = this.hotelService.selectedRoom();
     if (!room) return;
@@ -89,6 +101,7 @@ export class DashboardComponent {
     }
   }
 
+  /* Inicia el proceso de check-out */
   async handleCheckout() {
     const room = this.hotelService.selectedRoom();
     if (!room) return;
@@ -109,6 +122,7 @@ export class DashboardComponent {
     }
   }
 
+  /* Completa el check-out tras validaciones */
   async confirmFullCheckout() {
     if (!this.checkoutChecks.tvRemote || !this.checkoutChecks.acRemote || !this.checkoutChecks.keys) {
       alert("⚠️ ALERTA: Debe validar la entrega de TV, Aire Acondicionado y Llaves antes de finalizar.");
@@ -125,6 +139,7 @@ export class DashboardComponent {
     }
   }
 
+  /* Marca una reserva como pagada */
   async markAsPaid(booking: any) {
     if (!booking || !confirm(`¿Confirmar pago de $${booking.total_amount}?`)) return;
     try {
@@ -140,6 +155,7 @@ export class DashboardComponent {
     }
   }
 
+  /* Marca una habitación como limpia */
   markAsClean() {
     const room = this.hotelService.selectedRoom();
     if (!room) return;
@@ -148,49 +164,60 @@ export class DashboardComponent {
     });
   }
 
-  // 5. SECCIÓN: REPORTES
+  /* 4. SECCIÓN: REPORTES DIARIOS */
   async generateDailyReport() {
-    this.hotelService.loadingReports.set(true);
+    this.reportService.loadingReports.set(true);
     this.showReportModal = true;
     try {
-      const allBookings = await this.hotelService.getRawBookingsForReport();
+      const allBookings = await this.reportService.getRawBookingsForReport();
       const stats = this.reportService.calculateDailyReport(allBookings, this.reportFilter());
       this.dailyReport = { ...stats, periodLabel: this.getPeriodLabel() };
     } catch (error) {
       console.error('Error:', error);
     } finally {
-      this.hotelService.loadingReports.set(false);
+      this.reportService.loadingReports.set(false);
     }
   }
 
+  /* Maneja el cambio de filtro en el reporte diario */
   async handleReportFilterChange(filter: 'day' | 'week' | 'month' | 'year') {
     this.reportFilter.set(filter);
     this.generateDailyReport();
   }
 
-  // 6. SECCIÓN: USUARIOS
+  /* 5. SECCIÓN: GESTIÓN DE USUARIOS */
   public get isAdmin(): boolean {
     return this.authService.currentUser()?.role === 'ADMIN';
   }
 
+  /* Abre la vista de gestión de usuarios */
   openUserManagement() {
     this.viewMode.set('user_mgmt');
     this.hotelService.clearSelection();
     this.adminService.loadUsers(this.authService.currentUser()?.id_company);
   }
 
+  /* Abre la vista de reservas */
+  openReservations() {
+    this.hotelService.clearSelection();
+    this.viewMode.set('reservation');
+  }
+
+  /* Abre el modal para crear un nuevo usuario */
   openNewUserModal() {
     this.hotelService.selectUser(null);
     this.tempUser = this.getEmptyUser();
     this.isUserModalOpen.set(true);
   }
 
+  /* Abre el modal para editar un usuario existente */
   editUser(user: any) {
     this.hotelService.selectUser(user);
     this.tempUser = { ...user, password: '' };
     this.isUserModalOpen.set(true);
   }
 
+  /* Guarda los cambios de un usuario (nuevo o editado) */
   async handleSaveUser() {
     const selected = this.hotelService.selectedUser();
     const operation = selected ? 'update' : 'insert';
@@ -205,7 +232,7 @@ export class DashboardComponent {
     });
   }
 
-  // 7. SECCIÓN: SISTEMA Y COMUNICACIÓN EXTERNA
+  /* 6. SECCIÓN: MANTENIMIENTO DE HABITACIONES */
   async reportMaintenance() {
     const room = this.hotelService.selectedRoom();
     if (!room) return;
@@ -236,6 +263,7 @@ export class DashboardComponent {
     }
   }
 
+  /* Finaliza el mantenimiento de una habitación */
   async handleFinishMaintenance() {
     const room = this.hotelService.selectedRoom();
     if (!room) return;
@@ -265,12 +293,13 @@ export class DashboardComponent {
   }
   */
 
+  /* 7. SECCIÓN: AUTENTICACIÓN Y NAVEGACIÓN */
   logout() {
     this.authService.logout();
     this.router.navigate(['/login']);
   }
 
-  // 8. HELPERS / UTILIDADES
+  /* Función auxiliar para completar acciones con éxito */
   private completeActionSuccess(message: string) {
     alert(message);
     this.viewMode.set('details');
@@ -278,6 +307,7 @@ export class DashboardComponent {
     this.refresh();
   }
 
+  /* Obtiene un usuario vacío para el formulario */
   private getEmptyUser(): User {
     return {
       email: '', id_company: 1, names: '', lastname: '',
@@ -286,16 +316,19 @@ export class DashboardComponent {
     };
   }
 
-  getPeriodLabel(): string {
+  /* Obtiene la etiqueta del período para el reporte */
+  private getPeriodLabel(): string {
     const labels = { 'day': 'Hoy', 'week': 'Última Semana', 'month': 'Mes Actual', 'year': 'Año Actual' };
     return labels[this.reportFilter()];
   }
 
+  /* Obtiene el número de habitación dado su ID */
   getRoomNumber(id: number): string {
     const found = this.bookingService.rooms().find((r: any) => r.id === id);
     return found ? found.room_number : '??';
   }
 
+  /* Calcula el número de noches entre dos fechas */
   getNights(checkIn: string, checkOut: string): number {
     const start = new Date(checkIn);
     const end = new Date(checkOut);
@@ -303,6 +336,7 @@ export class DashboardComponent {
     return diff === 0 ? 1 : diff;
   }
 
+  /* Obtiene el estado de pago de la reserva seleccionada */
   getSelectedRoomPaymentStatus(): string {
     if (!this.activeBooking) return 'Cargando...';
     return this.activeBooking.payment_status === 'paid' ? '✅' : '⏳';

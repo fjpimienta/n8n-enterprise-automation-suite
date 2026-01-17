@@ -1,8 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { BookingService } from '@features/booking/services/booking.service';
 import { ApiResponse } from '@core/interfaces/api-response.interface';
-import { Company, User } from '@core/models/hotel.types';
+import { Company, Room, User } from '@core/models/hotel.types';
 import { environment } from '@env/environment';
 
 @Injectable({
@@ -12,20 +11,30 @@ export class AdminService {
   private http = inject(HttpClient);
   private apiUrl_crud = environment.apiUrl_crud;
 
-  public bookingService = inject(BookingService);
   public loadingUsers = signal<boolean>(false);
   public loadingCompanies = signal<boolean>(false);
+  public loadingReservations = signal<boolean>(false);
 
   users = signal<User[]>([]);
+  public reservations = signal<any[]>([]);
   companies = signal<Company[]>([]);
   selectedUser = signal<User | null>(null);
 
+  /* Headers con token de autenticación */
   private getHeaders() {
     return new HttpHeaders({ 'Authorization': `Bearer ${localStorage.getItem('authToken')}` });
   }
 
-  // Companies
-  loadCompanies() {
+  /* Método para obtener los headers con el token de autenticación */
+  public getAuthHeaders() {
+    const authToken = localStorage.getItem('authToken'); // O de donde guardes tu JWT
+    return new HttpHeaders({
+      'Authorization': `Bearer ${authToken}`
+    });
+  }
+
+  /* Companies */
+  public loadCompanies() {
     this.loadingCompanies.set(true);
     const payloadCompanies = {
       entity: 'companys',
@@ -35,7 +44,7 @@ export class AdminService {
       filters: {}
     };
     this.http.post<ApiResponse<Company>>(`${this.apiUrl_crud}/${payloadCompanies.table_name}`, payloadCompanies, {
-      headers: this.bookingService.getAuthHeaders()
+      headers: this.getAuthHeaders()
     }).subscribe({
       next: (res) => {
         // 2. Gracias a la interfaz, TS sabe que res.data es un Room[]
@@ -56,7 +65,40 @@ export class AdminService {
     });
   }
 
-  // Users
+  /* Reservations */
+  public loadReservations() {
+    this.loadingReservations.set(true);
+
+    const payload = {
+      entity: 'hotel_bookings',
+      table_name: 'hotel_bookings',
+      operation: 'getall',
+      action: 'list',
+      filters: {
+        status: 'confirmed' // Solo nos interesan las que no se han cancelado ni terminado
+      }
+    };
+
+    this.http.post<ApiResponse<any>>(`${this.apiUrl_crud}/hotel_bookings`, payload, {
+      headers: this.getAuthHeaders()
+    }).subscribe({
+      next: (res) => {
+        if (res && !res.error && res.data) {
+          this.reservations.set(res.data);
+        } else {
+          this.reservations.set([]);
+        }
+        this.loadingReservations.set(false);
+      },
+      error: (err) => {
+        console.error('Error cargando reservas:', err);
+        this.reservations.set([]);
+        this.loadingReservations.set(false);
+      }
+    });
+  }
+
+  /* Users */
   public loadUsers(id_company?: number) {
     this.loadingUsers.set(true);
     const payloadUsers = {
@@ -67,7 +109,7 @@ export class AdminService {
       filter: { id_company: id_company }
     };
     this.http.post<ApiResponse<User>>(`${this.apiUrl_crud}/${payloadUsers.table_name}`, payloadUsers, {
-      headers: this.bookingService.getAuthHeaders()
+      headers: this.getAuthHeaders()
     }).subscribe({
       next: (res) => {
         const data = res.data || [];
@@ -85,7 +127,8 @@ export class AdminService {
     });
   }
 
-  saveUser(user: Partial<User>, operation: 'insert' | 'update', email?: string) {
+  /* Guardar o actualizar usuario */
+  public saveUser(user: Partial<User>, operation: 'insert' | 'update', email?: string) {
     const payload = {
       entity: 'users',
       table_name: 'users',
@@ -95,7 +138,7 @@ export class AdminService {
     };
 
     return this.http.post<ApiResponse<User>>(`${this.apiUrl_crud}/users`, payload, {
-      headers: this.bookingService.getAuthHeaders()
+      headers: this.getAuthHeaders()
     });
   }
 

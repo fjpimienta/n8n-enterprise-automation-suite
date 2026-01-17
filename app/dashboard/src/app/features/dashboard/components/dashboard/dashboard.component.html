@@ -6,7 +6,8 @@
 
     @if (viewMode() === 'details' || viewMode() === 'checkin' || viewMode() === 'checkout_validation') {
     <app-room-filters [currentFilter]="bookingService.filter()" [isAdmin]="isAdmin"
-      (onFilterChange)="bookingService.filter.set($event)" (onManageUsers)="openUserManagement()">
+      (onFilterChange)="bookingService.filter.set($event)" (onManageUsers)="openUserManagement()"
+      (onReservations)="openReservations()">
     </app-room-filters>
 
     <div class="row row-cards g-2">
@@ -96,6 +97,59 @@
     </div>
     }
 
+    @if (viewMode() === 'reservation') {
+    <div class="modal-backdrop fade show"></div>
+    <div class="modal modal-blur fade show d-block">
+      <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Calendario y Reservas</h5>
+            <button type="button" class="btn-close" (click)="viewMode.set('details')"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row">
+              <div class="col-md-4 border-end">
+                <app-reservation-form [reservations]="adminService.reservations()" [room]="hotelService.selectedRoom()"
+                  (onClose)="viewMode.set('details')" (saved)="refresh()">
+                </app-reservation-form>
+              </div>
+
+              <div class="col-md-8">
+                <h4 class="mb-3">Reservas Confirmadas</h4>
+                <div class="table-responsive" style="max-height: 400px;">
+                  <table class="table table-vcenter table-sm card-table">
+                    <thead>
+                      <tr>
+                        <th>Hab</th>
+                        <th>Entrada</th>
+                        <th>Salida</th>
+                        <th>Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (res of adminService.reservations(); track res.id) {
+                      <tr>
+                        <td><strong>{{ getRoomNumber(res.room_id) }}</strong></td>
+                        <td>{{ res.check_in | date:'dd MMM' }}</td>
+                        <td>{{ res.check_out | date:'dd MMM' }}</td>
+                        <td><span class="badge bg-success-lt">{{ res.status }}</span></td>
+                      </tr>
+                      } @empty {
+                      <tr>
+                        <td colspan="4" class="text-center text-muted">No hay reservas activas</td>
+                      </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    }
+
     @if (viewMode() === 'user_mgmt') {
     @if (adminService.loadingUsers()) {
     <div class="card">
@@ -125,8 +179,9 @@
 
 @if (hotelService.selectedRoom() && viewMode() === 'details') {
 <app-room-detail-modal [room]="hotelService.selectedRoom()" [activeBooking]="activeBooking"
-  (onClose)="hotelService.clearSelection()" (onCheckin)="viewMode.set('checkin')" (onCheckout)="handleCheckout()"
-  (onPay)="markAsPaid($event)" (onMaintenance)="reportMaintenance()" (onFinishMaintenance)="handleFinishMaintenance()">
+  (onClose)="hotelService.clearSelection()" (onCheckin)="viewMode.set('checkin')"
+  (onReservations)="viewMode.set('reservation')" (onCheckout)="handleCheckout()" (onPay)="markAsPaid($event)"
+  (onMaintenance)="reportMaintenance()" (onFinishMaintenance)="handleFinishMaintenance()">
 </app-room-detail-modal>
 }
 
@@ -134,7 +189,7 @@
   (onClose)="isUserModalOpen.set(false)" (onSave)="handleSaveUser()">
 </app-user-form-modal>
 
-<app-daily-report-modal [isOpen]="showReportModal" [isLoading]="hotelService.loadingReports()"
+<app-daily-report-modal [isOpen]="showReportModal" [isLoading]="reportService.loadingReports()"
   [reportData]="dailyReport" [currentFilter]="reportFilter()" [roomsList]="bookingService.rooms()"
   (onClose)="showReportModal = false" (onFilterChange)="handleReportFilterChange($event)">
 </app-daily-report-modal>

@@ -4,22 +4,20 @@ import { Company, Room, User } from '@core/models/hotel.types';
 import { environment } from '@env/environment';
 import { lastValueFrom } from 'rxjs';
 import { BookingService } from '@features/booking/services/booking.service';
+import { AdminService } from '@features/admin/services/admin.service';
 
 @Injectable({ providedIn: 'root' })
 export class HotelService {
   private http = inject(HttpClient);
   private apiUrl_crud = environment.apiUrl_crud;
-  public loadingReports = signal<boolean>(false);
-  public loadingCompanies = signal<boolean>(false);
+  public adminService = inject(AdminService);
   public bookingService = inject(BookingService);
 
-
-  // Signal para estado reactivo (Best Practice Angular 19+)
   selectedRoom = signal<Room | null>(null); // Habitación para el detalle
   selectedCompany = signal<Company | null>(null); // Empresa para el detalle
   selectedUser = signal<User | null>(null); // Usuario para el detalle
 
-  // Método rápido para Housekeeping
+  /* Obtener todas las habitaciones */
   updateRoomStatus(id: number, status: string) {
     const payloadRoom = {
       entity: 'hotel_rooms',
@@ -29,16 +27,16 @@ export class HotelService {
       fields: { cleaning_status: status }
     };
     return this.http.post(`${this.apiUrl_crud}/${payloadRoom.table_name}`, payloadRoom, {
-      headers: this.bookingService.getAuthHeaders()
+      headers: this.adminService.getAuthHeaders()
     });
   }
 
-  // Función para seleccionar
+  /** Selecciona una habitación para ver su detalle */
   selectRoom(room: Room) {
     this.selectedRoom.set(room);
   }
 
-  // Función para cerrar detalle
+  /** Limpia la selección de habitación */
   clearSelection() {
     this.selectedRoom.set(null);
   }
@@ -48,24 +46,7 @@ export class HotelService {
     this.selectedUser.set(user);
   }
 
-  /**
-     * Obtiene todas las reservas para procesamiento de reportes
-     */
-  async getRawBookingsForReport(): Promise<any[]> {
-    this.loadingReports.set(true);
-    try {
-      const res: any = await lastValueFrom(
-        this.http.post(`${this.apiUrl_crud}/hotel_bookings`, {
-          operation: 'getall',
-          fields: { id_company: 1 }
-        }, { headers: this.bookingService.getAuthHeaders() })
-      );
-      return Array.isArray(res?.data) ? res.data : [];
-    } finally {
-      this.loadingReports.set(false);
-    }
-  }
-
+  /** Selecciona una empresa para ver su detalle */
   async updateRoomMaintenance(roomId: number): Promise<any> {
     return lastValueFrom( // Convertimos a promesa para usar tu async/await
       this.http.post(`${this.apiUrl_crud}/hotel_rooms`, {
@@ -75,10 +56,11 @@ export class HotelService {
           status: 'maintenance',
           cleaning_status: 'dirty'
         }
-      }, { headers: this.bookingService.getAuthHeaders() })
+      }, { headers: this.adminService.getAuthHeaders() })
     );
   }
 
+  /** Finaliza el mantenimiento de una habitación */
   async finishMaintenance(roomId: number): Promise<any> {
     return lastValueFrom(
       this.http.post(`${this.apiUrl_crud}/hotel_rooms`, {
@@ -88,7 +70,7 @@ export class HotelService {
           status: 'available',
           cleaning_status: 'dirty' // Pasa a limpieza antes de estar disponible
         }
-      }, { headers: this.bookingService.getAuthHeaders() })
+      }, { headers: this.adminService.getAuthHeaders() })
     );
   }
 
