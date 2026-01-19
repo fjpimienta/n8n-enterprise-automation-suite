@@ -1,4 +1,4 @@
-# 💡 Social Media Intelligence & Omnichannel Automation Orchestrator
+# 💡 Social Media Intelligence & Omnichannel Automation Orchestrator v2
 
 **Concepto:** Microservices Integration / Modular Design
 
