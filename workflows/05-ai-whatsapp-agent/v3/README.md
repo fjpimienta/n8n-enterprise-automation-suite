@@ -1,12 +1,12 @@
 # 🤖 AI Agent WhatsApp v3: Multi-Service Hub & RBAC Dinámico
 
-**Concepto:** Orquestación Multi-Agente / Enrutamiento por Intenciones / Seguridad RBAC con PostgreSQL / Integración MCP.
+**Concepto:** Model Context Protocol (MCP) / PostgreSQL Auth / Data Integrity (MÉTACRUD)
 
-La versión 3 evoluciona de un asistente estático a un ecosistema empresarial. El sistema ahora consulta en tiempo real una base de datos para validar identidades, utiliza herramientas externas mediante MCP para gestionar el hotel y coordina tres personalidades distintas (Hosting, Hotel y Bienvenida) con memoria persistente.
+La versión 3 eleva el sistema a nivel empresarial. Se abandona la validación estática para integrar una base de datos en tiempo real y se implementa el estándar MCP para conectar la IA con herramientas de gestión hotelera sobre consultas de disponibilidad, huespedes y reservas.
 
 ## 📝 Descripción
 
-Este flujo avanzado en n8n actúa como un Gateway Inteligente. No solo procesa texto y voz, sino que realiza una "triple validación" (Tipo de medio, Identidad del usuario e Intención del mensaje) antes de ejecutar cualquier acción o respuesta de IA.
+Este flujo orquestado en n8n gestiona un hotel y una empresa de hosting simultáneamente. La gran evolución de la v3 es su capacidad de realizar operaciones de escritura seguras (Create/Update) mediante herramientas MCP, protegiendo la integridad de los datos con reglas estrictas de validación.
 
 ---
 
@@ -23,7 +23,7 @@ Este flujo avanzado en n8n actúa como un Gateway Inteligente. No solo procesa t
 ---
 
 ## ⚙️ Lógica del Workflow
-1. **Entrada Multimodal:** Soporta Audio, Texto e Imágenes.
+1. **Entrada Multimodal:** Ahora incluye un filtro para rechazar imágenes de forma educada, manteniendo el enfoque en texto y voz.
 2. **Filtro de Seguridad Inicial:** Si se detecta una imagen, el flujo se desvía a una respuesta controlada de "No admitido".
 3. **Capa de Datos:** Se recupera el perfil del usuario desde la DB. El nodo Set Role consolida el mensaje, el número y el rol.
 4. **Capa de Inteligencia:**

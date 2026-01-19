@@ -6,6 +6,7 @@ import { Router } from '@angular/router';
 import { LoggerService } from '../../services/logger.service';
 import { AuthService } from '@core/services/auth.service';
 import { HotelService } from '@features/dashboard/services/hotel.service';
+import { AdminService } from '@features/admin/services/admin.service';
 
 @Component({
   selector: 'app-login',
@@ -19,6 +20,7 @@ export class LoginComponent {
   private router = inject(Router);
   private logger = inject(LoggerService);
   public hotelService = inject(HotelService);
+  public adminService = inject(AdminService);
 
   // Estados reactivos con Signals (Angular 19 Best Practice)
   isLoading = signal(false);
@@ -34,7 +36,7 @@ export class LoginComponent {
   constructor() {
     // Creamos un efecto que reacciona cuando el signal de empresas cambia
     effect(() => {
-      const list = this.hotelService.companies();
+      const list = this.adminService.companies();
       if (list.length > 0) {
         // Buscamos la que tenga is_default true
         const defaultComp = list.find(c => c.is_default === true);
@@ -48,7 +50,7 @@ export class LoginComponent {
   }
 
   ngOnInit() {
-    this.hotelService.loadCompanies();
+    this.adminService.loadCompanies();
     this.loginForm.get('id_company')?.disable();
   }
 

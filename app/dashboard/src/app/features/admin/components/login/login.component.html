@@ -46,7 +46,7 @@
             </span>
             <select class="form-select" formControlName="id_company" [class.is-invalid]="isFieldInvalid('id_company')">
               <option value="" disabled selected>Seleccione una empresa...</option>
-              @for (company of hotelService.companies(); track company.id_company) {
+              @for (company of adminService.companies(); track company.id_company) {
               <option [value]="company.id_company">
                 {{ company.company_name }}
               </option>

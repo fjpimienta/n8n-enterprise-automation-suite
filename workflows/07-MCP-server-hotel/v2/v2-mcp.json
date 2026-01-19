@@ -1,0 +1,172 @@
+{
+  "name": "MCP Server Hotel",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "hotel-management"
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
+      "typeVersion": 2,
+      "position": [
+        -848,
+        800
+      ],
+      "id": "fb21c286-eb17-405e-a46a-fa3bed1d7de9",
+      "name": "MCP Server Hotel",
+      "webhookId": "1f046f81-a131-4b6f-92f3-e1002564cbb6"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM hotel_rooms WHERE status = 'available' AND (cleaning_status = 'clean' OR cleaning_status = 'inspected');",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        -960,
+        1024
+      ],
+      "id": "f36628dc-0861-4075-b76e-c65cee255dbb",
+      "name": "Query Available",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      },
+      "notes": "Busca habitaciones que estén disponibles y limpias para venta."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT type, COUNT(*) as cantidad, price_night\nFROM hotel_rooms\nWHERE status = 'available' AND (cleaning_status = 'clean' OR cleaning_status = 'inspected')\nGROUP BY type, price_night;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        -832,
+        1024
+      ],
+      "id": "1c2c46e4-9bc9-4e5e-89b2-360ea0dd1765",
+      "name": "Query Rooms",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      },
+      "notes": "Busca habitaciones que estén disponibles y limpias para venta."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT b.id, b.room_id, g.full_name, b.check_in, b.status \nFROM hotel_bookings b\nJOIN hotel_guests g ON b.guest_id = g.id\nWHERE g.full_name ILIKE '%' || {{ $json.full_name }} || '%'\nAND b.status = 'confirmed';",
+        "options": {
+          "queryReplacement": "{{$fromAI.guest_name}}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        -704,
+        1024
+      ],
+      "id": "26d18e67-1833-4302-804c-803ffeacb139",
+      "name": "Query Reservation By Name",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      },
+      "notes": "Busca habitaciones que estén disponibles y limpias para venta."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM hotel_rooms \nWHERE status = 'available' \n  AND room_number = '{{ $json.room_number }}'\n  AND (cleaning_status = 'clean' OR cleaning_status = 'inspected');",
+        "options": {
+          "queryReplacement": " {{$fromAI.room_number}}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        -576,
+        1024
+      ],
+      "id": "40497180-543c-43eb-aa5d-7c9ec2f0138a",
+      "name": "Query Available By Room",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      },
+      "notes": "Busca si una habitación específica está libre. REQUERIDO: room_number (número de habitación). NO LLAMAR a esta herramienta si el usuario no ha dicho un número de habitación."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Query Available": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Hotel",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Rooms": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Hotel",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Reservation By Name": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Hotel",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Available By Room": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Hotel",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "9SrVXdATmlrZemJT"
+  },
+  "versionId": "99d54603-26bd-4440-90fd-0e1b3710ad90",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
+  },
+  "id": "PG3YQSeAop8nHNLc",
+  "tags": []
+}
