@@ -1,0 +1,197 @@
+{
+  "name": "v3/SW ValidaToken",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "51275301-bea2-454d-b495-3f942bbdb9e6",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        992,
+        80
+      ],
+      "id": "597a8c7a-8690-4b63-b38b-537515020574",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://jwt-service:4000/verify-token",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $json.headers.authorization || $json.authorization}}"
+            },
+            {
+              "name": "internal_secret",
+              "value": "={{$env[\"INTERNAL_SECRET\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        768,
+        80
+      ],
+      "id": "c5a1a217-4e79-496f-bd68-bc09b2658947",
+      "name": "Verify Token",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        544,
+        80
+      ],
+      "id": "91866411-3c21-4d5c-9922-85c725a1af2e",
+      "name": "Execute Workflow Trigger"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"status\": \"success\",\n  \"data\": {\n    \"id_company\": {{ $json.id_company }},\n    \"user\": {\n      \"role\": \"{{ $json.role }}\",\n      \"user\": \"{{ $json.user }}\"\n    }\n  },\n  \"message\": \"Authorized\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1216,
+        -16
+      ],
+      "id": "68d11acd-51cb-4d2a-9ea5-536b5a2a0e12",
+      "name": "Send Token"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"status\": \"error\",\n  \"data\": null,\n  \"message\": \"Token inválido o expirado\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1216,
+        176
+      ],
+      "id": "7f0336c7-b037-4a3b-8207-f4a005e63234",
+      "name": "Stop and Error"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send Token",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stop and Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Token": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Verify Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Token": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "9SrVXdATmlrZemJT"
+  },
+  "versionId": "c5063b17-eef5-4c4c-a7a2-f958e93f30f6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
+  },
+  "id": "RSz6L3aXj3NfumwG",
+  "tags": [
+    {
+      "updatedAt": "2025-12-20T19:25:50.503Z",
+      "createdAt": "2025-12-20T19:25:50.503Z",
+      "id": "wJ0vNQ7idcCu9BGu",
+      "name": "JWT"
+    },
+    {
+      "updatedAt": "2025-12-20T19:25:45.288Z",
+      "createdAt": "2025-12-20T19:25:45.288Z",
+      "id": "TEcAAV8ImkhhzPtv",
+      "name": "Token"
+    },
+    {
+      "updatedAt": "2025-12-20T19:25:38.936Z",
+      "createdAt": "2025-12-20T19:24:03.065Z",
+      "id": "kej8yFK0WMHHioIl",
+      "name": "Security"
+    },
+    {
+      "updatedAt": "2025-12-20T19:25:08.685Z",
+      "createdAt": "2025-12-20T19:25:08.685Z",
+      "id": "ljhw24TcxNVpCPyc",
+      "name": "Webhook"
+    }
+  ]
+}
