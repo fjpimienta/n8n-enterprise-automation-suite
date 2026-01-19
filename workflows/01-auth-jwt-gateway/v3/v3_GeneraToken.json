@@ -1,0 +1,166 @@
+{
+  "name": "v3/GeneraToken",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "### 🔑 Orquestador de Autenticación v3\n---\n**DESCRIPCIÓN:** Gestiona la generación de tokens JWT actuando como bridge entre el exterior y el microservicio interno.\n\n**📥 ENTRADA (Webhook):**\n- **Endpoint:** `POST /v3/genera-token`\n- **Body:** `{ \"user\": \"string\", \"pass\": \"string\" }`\n\n**⚙️ LÓGICA INTERNA:**\n1. Valida credenciales contra `http://jwt-service:4000/generate-token`.\n2. Firma peticiones internas usando la variable `INTERNAL_SECRET`.\n3. Maneja errores de \"Usuario no encontrado\" de forma controlada.\n\n**🛡️ SEGURIDAD:**\n- CORS habilitado para entornos web.\n- Variable de entorno requerida: `INTERNAL_SECRET`.\n\n**🚀 AMBIENTE:** Enterprise Suite - Hosting3M",
+        "height": 384,
+        "width": 832
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -208,
+        -336
+      ],
+      "typeVersion": 1,
+      "id": "9b5fc996-ee29-4f6a-bec9-432f899919ef",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "v3/genera-token",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "https://hosting3m.com",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, GET, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, Authorization, x-jwt-claim-role"
+              },
+              {
+                "name": "Access-Control-Allow-Credentials",
+                "value": "true"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -96,
+        64
+      ],
+      "id": "8d35c4bd-c007-497f-89e7-a3d0bd0c7002",
+      "name": "WebhookToken",
+      "webhookId": "275a4bc0-7184-422a-8fad-725817e2741f"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://jwt-service:4000/generate-token",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "=Content-Type",
+              "value": "=application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "=user",
+              "value": "={{ $json.body.user || \"n8n@hosting3m.com\" }}"
+            },
+            {
+              "name": "internal_secret",
+              "value": "={{$env[\"INTERNAL_SECRET\"]}}"
+            },
+            {
+              "name": "pass",
+              "value": "={{ $json.body.pass || \"1234567890\" }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        128,
+        64
+      ],
+      "id": "3b094f9a-af07-4eb8-8ec3-39d1436e779a",
+      "name": "GenerateToken",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{\n  JSON.stringify({\n    \"status\": $json.error ? \"error\" : \"success\",\n    \"message\": $json.error ? \"Credenciales inválidas\" : \"Autenticación exitosa\",\n    \"data\": $json.error ? null : $json\n  })\n}}",
+        "options": {
+          "responseCode": "={{ $json.error ? 401 : 200 }}"
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        352,
+        64
+      ],
+      "id": "146d4297-5ac1-43ec-87df-8eb76a72586b",
+      "name": "RespondToken"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "WebhookToken": {
+      "main": [
+        [
+          {
+            "node": "GenerateToken",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GenerateToken": {
+      "main": [
+        [
+          {
+            "node": "RespondToken",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "9SrVXdATmlrZemJT"
+  },
+  "versionId": "a4f3c93a-36f8-4fa6-9da2-be69a7022715",
+  "meta": {
+    "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
+  },
+  "id": "BhgZNJ3e5b3k88wy43fSY",
+  "tags": [
+    {
+      "updatedAt": "2025-12-20T19:25:45.288Z",
+      "createdAt": "2025-12-20T19:25:45.288Z",
+      "id": "TEcAAV8ImkhhzPtv",
+      "name": "Token"
+    },
+    {
+      "updatedAt": "2025-12-20T19:25:50.503Z",
+      "createdAt": "2025-12-20T19:25:50.503Z",
+      "id": "wJ0vNQ7idcCu9BGu",
+      "name": "JWT"
+    }
+  ]
+}
