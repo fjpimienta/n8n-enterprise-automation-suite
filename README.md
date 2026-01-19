@@ -31,9 +31,9 @@ Desplegado en un entorno endurecido (Hardened VPS) utilizando orquestación de c
 4.  **📢 Social Media Orchestrator:** Generación de contenido omnicanal (X, FB, LinkedIn).
 5.  **🤖 AI WhatsApp Agent (RAG):** Asistente inteligente con memoria persistente en Postgres.
 6.  **🛠️ Dynamic CRUD Engine:** Capa de abstracción de datos para gestión dinámica de entidades SQL.
-7.  **🏨 AdminHotel Dashboard:** Cliente Web SPA para la gestión visual del inventario hotelero (Consume Módulos 01 y 06).
-8.  **🤖 AI WhatsApp Agent v3 (Multi-Service Hub):** El corazón de la interacción con el cliente. Un agente multimodal que procesa texto y voz, identifica al usuario en PostgreSQL y enruta la conversación según la intención (HOSTING, HOTEL o NEUTRO).
-9.  **🏨 MCP Server: Hotel Management:** Un microservicio especializado que expone "herramientas" (Tools) a la IA. Permite que el Agente del Hotel consulte disponibilidad real (habitaciones limpias y disponibles) y registre reservas directamente en la DB sin intervención humana.
+7.  **🤖 AI WhatsApp Agent v3 (Multi-Service Hub):** El corazón de la interacción con el cliente. Un agente multimodal que procesa texto y voz, identifica al usuario en PostgreSQL y enruta la conversación según la intención (HOSTING, HOTEL o NEUTRO).
+8.  **🏨 MCP Server: Hotel Management:** Un microservicio especializado que expone "herramientas" (Tools) a la IA. Permite que el Agente del Hotel consulte disponibilidad real (habitaciones limpias y disponibles) y registre reservas directamente en la DB sin intervención humana.
+9.  **🏨 AdminHotel Dashboard:** Cliente Web SPA para la gestión visual del inventario hotelero (Consume Módulos 01 y 06).
 
 ## 🚀 Despliegue
 ```bash
@@ -59,14 +59,14 @@ A continuación se detalla la documentación técnica y el código fuente de cad
 
 | ID | Módulo / Servicio | Función Principal | Stack & Integraciones | Documentación |
 | :---| :--- | :--- | :--- | :---: |
-| `01`|**Auth JWT Gateway**| Middleware de seguridad. Valida tokens y protege webhooks públicos.| `Node.js` `Crypto` `JWT` | [📖 Ver Docs](workflows/01-auth-jwt-gateway/v1/README.md)|
-| `02`|**Contact & CRM Bridge**|Sistema de captura de leads de Hosting3m.|`Webhook` `JWT` `CRUD` `Mail` `Postgres`|[📖 Ver Docs](workflows/07-contact-automated/v2/README.md)|
+| `01`|**Auth JWT Gateway**| Middleware de seguridad. Valida tokens y protege webhooks públicos.| `Node.js` `Crypto` `JWT` | [📖 Ver Docs](workflows/01-auth-jwt-gateway/v2/README.md)|
+| `02`|**Contact & CRM Bridge**|Sistema de captura de leads de Hosting3m.|`Webhook` `JWT` `CRUD` `Mail` `Postgres`|[📖 Ver Docs](workflows/02-leads-contact/v2/README.md)|
 | `03`|**RAG News Intelligence**|Curaduría de noticias automatizada con análisis de sentimiento vectorial.|`Scraper` `OpenAI` `Pinecone/PgVector`|[📖 Ver Docs](workflows/03-rag-news-intelligence/v1/README.md)|
 | `04`|**Omnichannel Social**|Orquestador de publicación de contenido en redes sociales.|`HTTP Request` `Twitter API` `LinkedIn`|[📖 Ver Docs](workflows/04-omnichannel-social/v2/README.md)|
-| `05`|**AI WhatsApp Agent**|Asistente conversacional con memoria a largo plazo (RAG).|`WhatsApp` `Postgres` `OpenAI`|[📖 Ver Docs](workflows/05-ai-whatsapp-agent/v1/README.md)|
-| `06`|**Dynamic CRUD Engine**|Capa de abstracción para gestión de entidades dinámica.|`Postgre` `JS Logic` `JWT`|[📖 Ver Docs](workflows/06-dynamic-crud-engine/v2/README.md)|
-| `07`|**AdminHotel Dashboard**|Frontend administrativo para gestión de reservas y habitaciones.|`Angular 21` `Tabler` `Vitest`|[📖 Ver Docs](app/dashboard/README.md)|
-| `08`|**MCP Server**| MCP Server: Hotel Management Core|`MCP` `Postgres` `OpenAI`|[📖 Ver Docs](workflows/07-MCP-server-hotel/v1/README.md)|
+| `05`|**AI WhatsApp Agent**|Asistente conversacional con memoria a largo plazo (RAG).|`WhatsApp` `Postgres` `OpenAI`|[📖 Ver Docs](workflows/05-ai-whatsapp-agent/v3/README.md)|
+| `06`|**Dynamic CRUD Engine**|Capa de abstracción para gestión de entidades dinámica.|`Postgre` `JS Logic` `JWT`|[📖 Ver Docs](workflows/06-dynamic-crud-engine/v3/README.md)|
+| `07`|**MCP Server**| MCP Server: Hotel Management Core|`MCP` `Postgres` `OpenAI`|[📖 Ver Docs](workflows/07-MCP-server-hotel/v2/README.md)|
+| `08`|**AdminHotel Dashboard**|Frontend administrativo para gestión de reservas y habitaciones.|`Angular 21` `Tabler` `Vitest`|[📖 Ver Docs](app/dashboard/README.md)|
 
 ---
 
