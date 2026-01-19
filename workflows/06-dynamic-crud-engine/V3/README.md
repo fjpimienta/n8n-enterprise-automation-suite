@@ -1,4 +1,4 @@
-# 🛠️ Dynamic CRUD Engine (PostgreSQL Abstractor)
+# 🛠️ Dynamic CRUD Engine v3: (PostgreSQL Abstractor)
 
 ## 📝 Descripción
 La versión 3.0 evoluciona de una simple Capa de Abstracción de Datos (DAL) a un Motor de Gestión de Datos Inteligente. Este workflow no solo centraliza las operaciones de base de datos, sino que ahora es capaz de auto-configurarse mediante IA, validar esquemas de datos en tiempo real y gestionar permisos granulares por roles.

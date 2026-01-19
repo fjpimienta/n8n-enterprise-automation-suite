@@ -1,4 +1,4 @@
-# 🏨 MCP Server: Hotel Management Core
+# 🏨 MCP Server v2: Hotel Management Core
 
 **Concepto:** Backend Microservice / Postgres Tool Abstraction / MCP Server.
 Este workflow funciona como un Servidor MCP (Model Context Protocol) dedicado. Su única función es exponer herramientas seguras de consulta de base de datos para que sean consumidas por los Agentes de IA (como el Agente v3 de WhatsApp).
