@@ -16,11 +16,11 @@ export class BookingService {
   public loadingRooms = signal<boolean>(false);
   public rooms = signal<Room[]>([]);
   public isProcessing = signal<boolean>(false);
-  public filter = signal<'all' | 'available' | 'occupied' | 'checkout' | 'maintenance' | 'reserved'>('available');
+  public filter = signal<'all' | 'available' | 'occupied' | 'dirty' | 'maintenance'>('available');
 
   /** Computed que filtra las habitaciones según el filtro seleccionado */
   public filteredRooms = computed(() => {
-    const rooms = this.roomsWithStatus();
+    const rooms = this.rooms();
     const currentFilter = this.filter();
 
     switch (currentFilter) {
@@ -28,27 +28,18 @@ export class BookingService {
         // Solo disponibles y limpias, SIN reservas para hoy
         return rooms.filter(r =>
           r.status === 'available' &&
-          (r.cleaning_status === 'clean' || r.cleaning_status === 'inspected') &&
-          !r.hasIncomingToday
+          (r.cleaning_status === 'clean' || r.cleaning_status === 'inspected') 
         );
 
       case 'occupied':
         // SOLO las que están físicamente ocupadas (Status 'occupied' en DB)
         return rooms.filter(r => r.status === 'occupied');
 
-      case 'reserved':
-        // Habitaciones LIBRES que reciben a alguien hoy 
-        // O habitaciones ocupadas que tienen una reserva futura (como tu Hab 1)
-        return rooms.filter(r =>
-          r.status === 'reserved' ||
-          r.hasIncomingReservation === true
-        );
-
-      case 'checkout':
+      case 'dirty':
         // Habitaciones que deben quedar libres hoy o están sucias
         return rooms.filter(r =>
           (r.status === 'available' && r.cleaning_status === 'dirty') ||
-          (r.status === 'occupied' && r.isCheckoutDate)
+          (r.status === 'occupied')
         );
 
       case 'maintenance':
@@ -92,15 +83,9 @@ export class BookingService {
       // USAMOS currentStay para la fecha de salida si está ocupada
       const currentCheckOut = currentStay ? currentStay.check_out.split(/[ T]/)[0] : null;
 
-      // Estado visual prioritario
-      let visualStatus = room.status;
-      if (room.status === 'available' && nextCheckIn !== null) {
-        visualStatus = 'reserved';
-      }
-
       return {
         ...room,
-        status: visualStatus,
+        status: room.status,
         displayDate: room.status === 'occupied' ? currentCheckOut : nextCheckIn,
         isCheckoutDate: room.status === 'occupied' && currentCheckOut === todayStr,
         hasIncomingReservation: nextCheckIn !== null,
@@ -235,7 +220,7 @@ export class BookingService {
     );
   }
 
-  /** Procesa el checkout: actualiza reserva y libera habitación */
+  /** Procesa el dirty: actualiza reserva y libera habitación */
   public async processCheckout(room: Room, bookingId: number, inventoryReport: string, checks: any): Promise<void> {
     const crudUrl = this.apiUrl_crud;
 

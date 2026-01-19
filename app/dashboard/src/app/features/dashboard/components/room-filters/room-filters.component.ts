@@ -21,16 +21,11 @@ export class RoomFiltersComponent {
   filterOptions = [
     { label: 'Todas', value: 'all', activeClass: 'btn-primary' },
     { label: '✅ Disponibles', value: 'available', activeClass: 'btn-success' },
-    { label: '📅 Reservadas', value: 'reserved', activeClass: 'btn-info' },
     { label: '🏨 Ocupadas', value: 'occupied', activeClass: 'btn-danger' },
-    { label: '🧹 Check-out', value: 'checkout', activeClass: 'btn-warning' },
+    { label: '🧹 Sucia', value: 'dirty', activeClass: 'btn-warning' },
     { label: '🛠️ Mantenimiento', value: 'maintenance', activeClass: 'btn-secondary' }
   ];
 
-  // El computed se queda igual, es perfecto
-  reservedCount = computed(() =>
-    this.rooms().filter(r => r.status === 'reserved').length
-  );
 
   setFilter(filter: string) {
     this.onFilterChange.emit(filter);

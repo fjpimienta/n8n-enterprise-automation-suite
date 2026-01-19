@@ -82,21 +82,30 @@
                         </div>
                     </button>
                     }
+
+                    @if (room().status === 'available') {
+                    <button
+                        class="btn btn-outline-warning btn-lg d-flex align-items-center justify-content-between px-4"
+                        (click)="onMaintenance.emit()">
+                        <div class="text-start">
+                            <div class="fw-bold">🛠 Reportar Falla</div>
+                            <i class="ti ti-tools-off"></i>
+                            <div class="small opacity-75">Mantenimiento</div>
+                        </div>
+                    </button>
+                    }
+
+                    @if (room().status === 'maintenance') {
+                    <button class="btn btn-success w-100 btn-lg d-flex align-items-center justify-content-between px-4"
+                        (click)="onFinishMaintenance.emit()">
+                        <div class="text-start">
+                            <div class="fw-bold">🛠 Finalizar</div>
+                            <div class="small opacity-75">Mantenimiento</div>
+                        </div>
+                        <i class="ti ti-tools-off"></i>
+                    </button>
+                    }
                 </div>
-
-                @if (room().status === 'available') {
-                <button class="btn btn-outline-warning w-100" (click)="onMaintenance.emit()">
-                    🛠 Reportar Falla / Mantenimiento
-                </button>
-                }
-
-                @if (room().status === 'maintenance') {
-                <button class="btn btn-success w-100 d-flex align-items-center justify-content-center gap-2"
-                    (click)="onFinishMaintenance.emit()">
-                    <i class="ti ti-tools-off"></i>
-                    Finalizar Mantenimiento
-                </button>
-                }
             </div>
         </div>
     </div>

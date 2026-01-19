@@ -11,8 +11,7 @@
             <span class="badge" [ngClass]="{
         'bg-success-lt': room().status === 'available',
         'bg-danger': room().status === 'occupied' && !room().hasIncomingReservation,
-        'bg-warning': room().status === 'occupied' && room().hasIncomingReservation,
-        'bg-info-lt': room().status === 'reserved'
+        'bg-warning': room().status === 'occupied' && room().hasIncomingReservation
       }">
                 {{ room().status | uppercase }}
                 {{ (room().status === 'occupied' && room().hasIncomingReservation) ? '+ RES' : '' }}

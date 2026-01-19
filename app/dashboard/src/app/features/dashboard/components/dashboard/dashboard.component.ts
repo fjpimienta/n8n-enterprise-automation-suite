@@ -61,7 +61,6 @@ export class DashboardComponent {
     setTimeout(() => {
       console.log('Habitaciones en memoria:', this.bookingService.rooms().length);
       console.log('Reservas en memoria:', this.adminService.reservations().length);
-      console.log('¿Hay alguna coincidencia?:', this.bookingService.roomsWithStatus().filter(r => r.status === 'reserved'));
     }, 2000);
     if (this.isAdmin) {
       this.adminService.loadUsers(this.authService.currentUser()?.id_company);

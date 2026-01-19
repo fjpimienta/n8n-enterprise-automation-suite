@@ -7,11 +7,6 @@
 
             {{ option.label }}
 
-            @if (option.value === 'reserved' && reservedCount() > 0) {
-            <span class="badge bg-white text-dark ms-2">
-                {{ reservedCount() }}
-            </span>
-            }
         </button>
         }
     </div>
