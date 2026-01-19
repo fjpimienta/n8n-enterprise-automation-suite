@@ -25,15 +25,27 @@ Desplegado en un entorno endurecido (Hardened VPS) utilizando orquestación de c
 |**Contactos**|n8n v2.1.4 (Enterprise)|Flujo para recibir informacion de prospectos en Contacto.|
 
 ## 📦 Módulos Implementados (Workflows)
-1.  **🔐 Secure Token Gateway:** Gestión de autenticación API-Key/JWT centralizada.
-2.  **🛠️ Contact & CRM Bridge v2 (n8n Workflow):** Sistema de captura de leads de Hosting3m.
-3.  **📰 Automated News Curator:** Scraping, resumen con IA y clasificación semántica.
-4.  **📢 Social Media Orchestrator:** Generación de contenido omnicanal (X, FB, LinkedIn).
-5.  **🤖 AI WhatsApp Agent (RAG):** Asistente inteligente con memoria persistente en Postgres.
-6.  **🛠️ Dynamic CRUD Engine:** Capa de abstracción de datos para gestión dinámica de entidades SQL.
-7.  **🤖 AI WhatsApp Agent v3 (Multi-Service Hub):** El corazón de la interacción con el cliente. Un agente multimodal que procesa texto y voz, identifica al usuario en PostgreSQL y enruta la conversación según la intención (HOSTING, HOTEL o NEUTRO).
-8.  **🏨 MCP Server: Hotel Management:** Un microservicio especializado que expone "herramientas" (Tools) a la IA. Permite que el Agente del Hotel consulte disponibilidad real (habitaciones limpias y disponibles) y registre reservas directamente en la DB sin intervención humana.
-9.  **🏨 AdminHotel Dashboard:** Cliente Web SPA para la gestión visual del inventario hotelero (Consume Módulos 01 y 06).
+1.  **🔐 Secure Token Gateway:** 
+    Sistema centralizado que gestiona tanto la validación de peticiones externas como la auto-generación de tokens para tareas cronometradas, permitiendo que los flujos operen de forma autónoma pero segura.
+2.  **🛠️ Contact & CRM Bridge v2 (n8n Workflow):**
+    La versión de este orquestador de contactos perfecciona la integración entre el frontend (formularios web) y el backend (CRM).
+3.  **📰 Automated News Curator:** 
+    Motor de curaduría que extrae noticias técnicas, realiza un filtrado semántico y genera una identidad visual única mediante IA generativa antes de persistir los datos en el CRUD central.
+4.  **📢 Social Media Orchestrator:**
+    Orquestador omnicanal con lógica de idempotencia. Verifica cuotas de publicación diarias y adapta el contenido (truncado de texto, tagging) para maximizar el engagement en X, Facebook y LinkedIn.
+5.  **🤖 Multi-Service WhatsApp Hub
+    Agente multimodal (Texto/Voz) con enrutamiento inteligente. Identifica al cliente en la DB y decide si la atención debe ser orientada a Hosting, Hotel o soporte general, utilizando memoria persistente pgvector.
+6.  **🛠️ Dynamic CRUD Engine:**
+    Capa de abstracción que procesa operaciones SQL complejas. Soporta inserciones masivas, joins dinámicos y validación de roles, actuando como el backend unificado para todos los frontends.
+7.  **🏨 MCP Server: Hotel Management:** 
+    Implementación avanzada del protocolo MCP que expone herramientas de base de datos a la IA. Permite consultas de disponibilidad en tiempo real y registro de reservas directas mediante lenguaje natural.
+8.  **🏨 AdminHotel Dashboard:** 
+    Cliente Web SPA para la gestión visual del inventario hotelero.
+    Consume Módulos:
+        * Secure Token Gateway
+        * Multi-Service WhatsApp Hub
+        * Dynamic CRUD Engine
+        * MCP Server: Hotel Management
 
 ## 🚀 Despliegue
 ```bash
@@ -59,10 +71,10 @@ A continuación se detalla la documentación técnica y el código fuente de cad
 
 | ID | Módulo / Servicio | Función Principal | Stack & Integraciones | Documentación |
 | :---| :--- | :--- | :--- | :---: |
-| `01`|**Auth JWT Gateway**| Middleware de seguridad. Valida tokens y protege webhooks públicos.| `Node.js` `Crypto` `JWT` | [📖 Ver Docs](workflows/01-auth-jwt-gateway/v2/README.md)|
-| `02`|**Contact & CRM Bridge**|Sistema de captura de leads de Hosting3m.|`Webhook` `JWT` `CRUD` `Mail` `Postgres`|[📖 Ver Docs](workflows/02-leads-contact/v2/README.md)|
-| `03`|**RAG News Intelligence**|Curaduría de noticias automatizada con análisis de sentimiento vectorial.|`Scraper` `OpenAI` `Pinecone/PgVector`|[📖 Ver Docs](workflows/03-rag-news-intelligence/v2/README.md)|
-| `04`|**Omnichannel Social**|Orquestador de publicación de contenido en redes sociales.|`HTTP Request` `Twitter API` `LinkedIn`|[📖 Ver Docs](workflows/04-omnichannel-social/v2/README.md)|
+| `01`|**Auth JWT Gateway**| Middleware de seguridad. Valida tokens y protege webhooks públicos.| `Node.js` `Crypto` `JWT` | [📖 Ver Docs](workflows/01-auth-jwt-gateway/v3/README.md)|
+| `02`|**Contact & CRM Bridge**|Sistema de captura de leads de Hosting3m.|`Webhook` `JWT` `CRUD` `Mail` `Postgres`|[📖 Ver Docs](workflows/02-leads-contact/v3/README.md)|
+| `03`|**RAG News Intelligence**|Curaduría de noticias automatizada con análisis de sentimiento vectorial.|`Scraper` `OpenAI` `Pinecone/PgVector`|[📖 Ver Docs](workflows/03-rag-news-intelligence/v3/README.md)|
+| `04`|**Omnichannel Social**|Orquestador de publicación de contenido en redes sociales.|`HTTP Request` `Twitter API` `LinkedIn`|[📖 Ver Docs](workflows/04-omnichannel-social/v3/README.md)|
 | `05`|**AI WhatsApp Agent**|Asistente conversacional con memoria a largo plazo (RAG).|`WhatsApp` `Postgres` `OpenAI`|[📖 Ver Docs](workflows/05-ai-whatsapp-agent/v3/README.md)|
 | `06`|**Dynamic CRUD Engine**|Capa de abstracción para gestión de entidades dinámica.|`Postgre` `JS Logic` `JWT`|[📖 Ver Docs](workflows/06-dynamic-crud-engine/v3/README.md)|
 | `07`|**MCP Server**| MCP Server: Hotel Management Core|`MCP` `Postgres` `OpenAI`|[📖 Ver Docs](workflows/07-MCP-server-hotel/v2/README.md)|
@@ -71,25 +83,21 @@ A continuación se detalla la documentación técnica y el código fuente de cad
 ---
 
 ## 📈 Roadmap & Gestión de Proyectos (GitHub Projects V3)
-**Enfoque Actual: Interoperabilidad y Eficiencia IA.**
+### Completado (Q4 2025 - Q1 2026) ✅
+    * Arquitectura Dual-Auth: Implementación de sub-workflows de validación y auto-generación de tokens (Módulos 01 y 07).
+    * Generación de Media IA: Integración nativa de Pollinations AI (Flux) en el pipeline de noticias y redes sociales.
+    * CRUD Transaccional: Motor dinámico v3 con soporte para operaciones seguras y mapeo de campos.
+    * MCP Hotel Core: Capacidad de la IA para interactuar directamente con el inventario de habitaciones.
 
-    * Backlog (R&D): Implementación de MCP (Model Context Protocol) para interoperabilidad entre LLMs y sistemas de archivos locales.
-    * En Progreso: Optimización de búsqueda HNSW en pgvector para reducir la latencia en datasets de gran escala (>1M vectores).
-    * Completado (Milestones): * Despliegue de infraestructura base con redes Docker aisladas.
-        * Implementación del motor CRUD dinámico para reducción de deuda técnica.
+### En Progreso (Q2 2026) 🏗️
+    * Optimización RAG HNSW: Migración de índices vectoriales para búsquedas en milisegundos sobre datasets extensos.
+    * Multi-Model Orchestration: Lógica para alternar entre GPT-4o, Claude 3.5 y modelos locales (Ollama) según el coste/complejidad de la tarea.
+    * Dashboard AdminHotel v2: Integración total con el CRUD v3 y el sistema de Auth centralizado.
 
-### Completado ✅:
-    * Migración de RBAC estático (JS) a RBAC dinámico (PostgreSQL).
-    * Pipeline de audio con Whisper y OpenAI TTS sincronizado.
-    * Implementación de lógica de resiliencia para vinculación de ítems en n8n.
-
-### En Progreso 🏗️:
-    * Integración MCP: Expandiendo el catálogo de herramientas del servidor de hotel para incluir Check-out automático.
-    * Optimización RAG: Implementación de índices HNSW en pgvector para búsquedas vectoriales de alta velocidad.
-
-### Backlog (R&D) 🚀:
-    * Implementación de agentes supervisores para control de calidad en respuestas automáticas.
-    * Refactorización del motor de scraping para soporte de Single Page Applications (SPA).
+### Backlog & R&D (Futuro) 🚀
+    * Agentes Supervisores: Implementación de una capa de "Quality Assurance" donde una IA audita las respuestas de los agentes de WhatsApp antes del envío.
+    * Auto-Checkout MCP: Expansión del servidor MCP para procesar pagos y cierres de cuenta automáticos.
+    * Resiliencia Geográfica: Clusterización de n8n para alta disponibilidad real.
 
 ---
 

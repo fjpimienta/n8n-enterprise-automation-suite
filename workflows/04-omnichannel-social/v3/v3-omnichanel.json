@@ -1,0 +1,922 @@
+{
+  "name": "v3/OmniChannel",
+  "nodes": [
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "hour": 6,
+              "minute": 5
+            },
+            {
+              "minute": 5
+            }
+          ]
+        }
+      },
+      "id": "77ffcfdb-2393-4a59-9ce7-ac98f2facb84",
+      "name": "Cron",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        -3760,
+        4512
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "67de7425-fb84-4c31-91fc-954061dc076d",
+              "name": "tweet_text",
+              "value": "={{ `💡 \"${$json.data[0].title}\". Echa un vistazo al análisis completo de ${$json.data[0].source}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M ➡️ ${$json.data[0].url}` }}\n",
+              "type": "string"
+            },
+            {
+              "id": "983175be-ce4b-4fbc-ad7d-bc2e7524096a",
+              "name": "fb_post_text",
+              "value": "={{ `💡 \"${$json.data[0].title}\", proveniente de ${$json.data[0].source}. ¿Qué opinas de este avance? ¡Comenta abajo! ⬇️ Lee más: ${$json.data[0].url}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M` }}",
+              "type": "string"
+            },
+            {
+              "id": "a9bee46a-2427-438a-a8df-3e6ba0b16ab5",
+              "name": "li_post_text",
+              "value": "={{ `💡 \"${$json.data[0].title}\". Fuente: ${$json.data[0].source} ➡️ ${$json.data[0].url}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M` }}",
+              "type": "string"
+            },
+            {
+              "id": "e7d15066-4754-4e2e-8de3-0fa4b5e5d9cc",
+              "name": "image",
+              "value": "={{ \n  (() => {\n    // 1. Obtenemos el título de la noticia desde el nodo anterior (Limit)\n    const title = $('Get Articles').item.json.title;\n    \n    // 2. Definimos un prompt base para asegurar el estilo \"Tech News\"\n    // \"Futuristic technology concept art about [Titulo], high quality, 4k, trending on artstation\"\n    const prompt = `Futuristic technology concept, editorial illustration about: ${title}, high detail, 8k, professional lighting`;\n  \n    // 3. Codificamos el prompt para URL\n    const encodedPrompt = encodeURIComponent(prompt);\n  \n    // 4. Retornamos la URL de Pollinations\n    // width=1000, height=800 (Coincide con tu nodo DownloadImage), model=flux, seed=random\n    const randomSeed = Math.floor(Math.random() * 1000);\n    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1000&height=800&model=flux&nologo=true&seed=${randomSeed}`;\n  })() \n}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -2416,
+        4432
+      ],
+      "id": "db93229e-015e-4cef-a37f-0c4af19f3494",
+      "name": "SetX"
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.tweet_text_fixed }}",
+        "additionalFields": {
+          "attachments": "={{ $json.media_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.twitter",
+      "typeVersion": 2,
+      "position": [
+        -624,
+        4048
+      ],
+      "id": "8c6f7dd4-20f0-49a3-a3c6-e75fb4c5a8a5",
+      "name": "CreateTweet",
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "wodh3s73zOu8505y",
+          "name": "X account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.image }}",
+        "options": {
+          "allowUnauthorizedCerts": true,
+          "redirect": {
+            "redirect": {
+              "maxRedirects": 10
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2192,
+        4368
+      ],
+      "id": "51154b7c-094e-4bfc-8c08-a1afbafbf259",
+      "name": "DownloadImage",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Nodo SaveImage - Código corregido\nconst binaryData = items[0].binary;\nconst jsonData = items[0].json;\n\nif (binaryData && (binaryData.data || binaryData.media)) {\n  return [{\n    json: { ...jsonData, image_status: \"SUCCESS\" },\n    binary: {\n      media: binaryData.data || binaryData.media\n    }\n  }];\n} else {\n  return [{\n    json: { ...jsonData, image_status: \"FAILED\" },\n  }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1520,
+        4240
+      ],
+      "id": "b6e0ace2-37e3-43a6-8db2-3aa29692e37b",
+      "name": "SaveImage"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://upload.twitter.com/1.1/media/upload.json",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "oAuth1Api",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "media",
+              "inputDataFieldName": "media"
+            },
+            {
+              "name": "media_category",
+              "value": "tweet_image"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1072,
+        4048
+      ],
+      "id": "3442fbc7-766c-419b-9f3e-0549ff3e2471",
+      "name": "UploadImageX",
+      "credentials": {
+        "oAuth1Api": {
+          "id": "P5Kmo1oGuqM9bVsr",
+          "name": "X API 1"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "graphApiVersion": "v20.0",
+        "node": "me",
+        "edge": "accounts",
+        "options": {
+          "queryParameters": {
+            "parameter": [
+              {
+                "name": "fields",
+                "value": "name,id,access_token"
+              }
+            ]
+          }
+        }
+      },
+      "id": "bce8c020-ab09-4454-85fe-9d5687dee2f9",
+      "name": "GetPageTokens",
+      "type": "n8n-nodes-base.facebookGraphApi",
+      "typeVersion": 1,
+      "position": [
+        -1072,
+        3856
+      ],
+      "credentials": {
+        "facebookGraphApi": {
+          "id": "tOR29lFnpSlRMKLF",
+          "name": "Facebook Graph Posts"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// --- CONFIGURACIÓN ---\nconst targetPageId = '103483927910104'; // Tu ID objetivo\n// ---------------------\n\n// 1. Detectar dónde están las páginas (Manejo de estructura variable)\nlet allPages = [];\n\nif (items.length > 0 && items[0].json.id && items[0].json.name) {\n    // CASO A: n8n ya desempaquetó la lista. Cada 'item' es una página.\n    allPages = items.map(i => i.json);\n} else if (items.length > 0 && items[0].json.data && Array.isArray(items[0].json.data)) {\n    // CASO B: Estructura cruda anidada en 'data'.\n    allPages = items[0].json.data;\n} else {\n    // CASO C: No se encontraron datos reconocibles\n    return [{\n        json: {\n            error: \"No se recibieron páginas de Facebook. Revisa el nodo anterior.\",\n            input_received: items[0]?.json\n        }\n    }];\n}\n\n// 2. Buscar tu página específica\nconst targetPage = allPages.find(p => p.id === targetPageId);\n\n// 3. Obtener el contenido del post (del nodo SetX)\n// Nota: Usamos $('SetX').first().json para ir a lo seguro\nlet postContent = {};\ntry {\n    postContent = $('SetX').first().json;\n} catch (e) {\n    postContent = { fb_post_text: \"Texto de prueba\", image: \"https://via.placeholder.com/150\" };\n}\n\n// 4. RESULTADO\nif (targetPage) {\n    // ¡ÉXITO! Encontramos el token\n    return [{\n        json: {\n            status: \"READY_TO_POST\",\n            page_token: targetPage.access_token,\n            page_id: targetPage.id,\n            page_name: targetPage.name,\n            message: postContent.fb_post_text,\n            link: postContent.image\n        }\n    }];\n} else {\n    // ERROR DE COINCIDENCIA (Diagnóstico)\n    // Devolvemos la lista de lo que SÍ encontró para que veas los IDs\n    return [{\n        json: {\n            status: \"ID_MISMATCH\",\n            error_message: `El ID ${targetPageId} no está en la lista de páginas disponibles.`,\n            found_pages: allPages.map(p => ({ name: p.name, id: p.id }))\n        }\n    }];\n}"
+      },
+      "id": "53adf37f-c62b-4033-9538-1eac23a0319d",
+      "name": "ExtractPageToken",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -848,
+        3856
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v19.0/{{ $json.page_id }}/feed",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "message",
+              "value": "={{ $json.message }}"
+            },
+            {
+              "name": "link",
+              "value": "={{ $json.link }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $json.page_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e68b9037-da8a-4e6a-8e3b-95827e43b41b",
+      "name": "PostToFacebookPage",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -624,
+        3856
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "authentication": "communityManagement",
+        "postAs": "organization",
+        "organization": "=90332415",
+        "text": "={{ $('SetX').item.json.li_post_text }}",
+        "shareMediaCategory": "IMAGE",
+        "binaryPropertyName": "media",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.linkedIn",
+      "typeVersion": 1,
+      "position": [
+        -624,
+        4240
+      ],
+      "id": "d6106002-c358-4356-a96c-1f7ff41ad08e",
+      "name": "Post Company",
+      "credentials": {
+        "linkedInCommunityManagementOAuth2Api": {
+          "id": "KQqFc6dzSde2tb0X",
+          "name": "LinkedIn Credential"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "authentication": "communityManagement",
+        "person": "0KuLF6TNs9",
+        "text": "={{ $('SetX').item.json.li_post_text }}",
+        "shareMediaCategory": "IMAGE",
+        "binaryPropertyName": "media",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.linkedIn",
+      "typeVersion": 1,
+      "position": [
+        -624,
+        4432
+      ],
+      "id": "36ad6071-48f3-4644-ade4-bf163d4cde0e",
+      "name": "Post Personal",
+      "credentials": {
+        "linkedInCommunityManagementOAuth2Api": {
+          "id": "KQqFc6dzSde2tb0X",
+          "name": "LinkedIn Credential"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -1968,
+        4432
+      ],
+      "id": "18e2e1e6-8f23-4be5-831e-33a647b1dec5",
+      "name": "HandleImageError"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b49b09f8-4a28-4bed-9ced-0c91f2d4649f",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "empty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1744,
+        4432
+      ],
+      "id": "c9889aad-7307-4876-8ef3-ad44ec46c3a6",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0f0a040c-5235-4de7-aae4-a2acc5f58e80",
+              "leftValue": "={{ $json.image_status }}",
+              "rightValue": "SUCCESS",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1296,
+        4240
+      ],
+      "id": "217b7579-b5a6-43d8-b9d4-f9c2030d4f97",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.hosting3m.com/webhook/46c903ec-0397-43ea-b99e-2606f8e4f0de/crud/v3/news_articles",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.token }}"
+            },
+            {
+              "name": "=x-jwt-claim-role",
+              "value": "={{ $json.data.role }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"operation\": \"getAll\",\n  \"fields\": {\n    \"created_at\": {\n      \"_gte\": \"{{ $now.startOf('day').toISO() }}\",\n      \"_lte\": \"{{ $now.endOf('day').toISO() }}\"\n    }\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -3088,
+        4512
+      ],
+      "id": "06a15705-5eaf-40e8-b03f-f3a77e83c901",
+      "name": "Check Publish"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "41424244-43fd-46ba-b215-ed8ad4e51ac6",
+              "leftValue": "={{ $json.data.length }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -2864,
+        4512
+      ],
+      "id": "1dfe01dd-ac39-46d7-8cc3-8d5663b10426",
+      "name": "Not Exist Pub"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.hosting3m.com/webhook/46c903ec-0397-43ea-b99e-2606f8e4f0de/crud/v3/news_articles",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$node[\"Genera Token\"].json.token}}"
+            },
+            {
+              "name": "x-jwt-claim-role",
+              "value": "={{ $('Genera Token').first().json.data.role }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ \n  {\n    \"operation\": \"insert\",\n    \"fields\": {\n      \"url\": $('Get Articles').item.json.data[0].url,\n      \"title\": $('Get Articles').item.json.data[0].title,\n      \"source\": \"https://hosting3m.com/#news\",\n      \"image\": $('SetX').item.json.image,\n      \"published_at\": new Date().toISOString()\n    }\n  } \n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -400,
+        4128
+      ],
+      "id": "4d475d96-328d-452c-9cc4-1343abb822f7",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Obtenemos el texto desde el nodo 'SetX' independientemente de dónde venga el flujo\nconst text = $('SetX').item.json.tweet_text;\n\nlet finalTweet = text;\n\n// Si el texto es muy largo, lo recortamos para X (Twitter)\nif (text && text.length > 270) {\n  finalTweet = text.substring(0, 150) + \"... Ver más en: https://hosting3m.com/#news\";\n}\n\n// Pasamos también el media_id que viene del nodo anterior para no perderlo\nreturn { \n  tweet_text_fixed: finalTweet,\n  media_id: $json.media_id_string \n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -848,
+        4048
+      ],
+      "id": "23989db6-39f3-4e86-a910-84f4278b2ad6",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.hosting3m.com/webhook/46c903ec-0397-43ea-b99e-2606f8e4f0de/crud/v3/news_articles",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$node[\"Genera Token\"].json.token}}"
+            },
+            {
+              "name": "x-jwt-claim-role",
+              "value": "={{$node[\"Genera Token\"].json.data.role}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"operation\": \"getall\",\n  \"fields\": {\n    \"published_at\": null \n  },\n  \"limit\": 1\n}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -2640,
+        4432
+      ],
+      "id": "9d5d2b3c-96b2-4959-b188-fbd3f3b99a88",
+      "name": "Get Articles",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "fnzdIRyMWYUHggME",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/fnzdIRyMWYUHggME",
+          "cachedResultName": "v3/SW Genera Token"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -3312,
+        4512
+      ],
+      "id": "90794097-bde8-4882-bfe0-dc451f9b2b19",
+      "name": "Genera Token"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5c668bbf-492c-4b67-af77-fce4d8c9b7bc",
+              "name": "user",
+              "value": "n8n@hosting3m.com",
+              "type": "string"
+            },
+            {
+              "id": "dd4c5764-354c-4088-9bc4-4fb19cba4d8b",
+              "name": "pass",
+              "value": "1234567890",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -3536,
+        4512
+      ],
+      "id": "e2dee457-f36f-4ff2-a0e6-76000104a3c7",
+      "name": "Set User"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"status\": \"error\",\n  \"data\": null,\n  \"message\": \"Token inválido o expirado\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1072,
+        4624
+      ],
+      "id": "1a8377f0-f1c4-4c26-8592-3233f8c1bec0",
+      "name": "Stop and Error"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Cron": {
+      "main": [
+        [
+          {
+            "node": "Set User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SetX": {
+      "main": [
+        [
+          {
+            "node": "DownloadImage",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HandleImageError",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "CreateTweet": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "DownloadImage": {
+      "main": [
+        [
+          {
+            "node": "HandleImageError",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SaveImage": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "UploadImageX": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GetPageTokens": {
+      "main": [
+        [
+          {
+            "node": "ExtractPageToken",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ExtractPageToken": {
+      "main": [
+        [
+          {
+            "node": "PostToFacebookPage",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PostToFacebookPage": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post Company": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post Personal": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HandleImageError": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "SaveImage",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stop and Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "GetPageTokens",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "UploadImageX",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Post Company",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Post Personal",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stop and Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Publish": {
+      "main": [
+        [
+          {
+            "node": "Not Exist Pub",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Not Exist Pub": {
+      "main": [
+        [
+          {
+            "node": "Get Articles",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stop and Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        []
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "CreateTweet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Articles": {
+      "main": [
+        [
+          {
+            "node": "SetX",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set User": {
+      "main": [
+        [
+          {
+            "node": "Genera Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Genera Token": {
+      "main": [
+        [
+          {
+            "node": "Check Publish",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "9SrVXdATmlrZemJT",
+    "timeSavedMode": "fixed",
+    "timeSavedPerExecution": 5
+  },
+  "versionId": "58f90993-b427-4312-9972-ca381930ffbf",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
+  },
+  "id": "A5slxzihaenYsaGB",
+  "tags": [
+    {
+      "updatedAt": "2025-12-20T20:05:36.237Z",
+      "createdAt": "2025-12-20T20:05:36.237Z",
+      "id": "P8B6SG9wkqyC8I5T",
+      "name": "Redes Sociales"
+    },
+    {
+      "updatedAt": "2025-12-20T20:05:16.332Z",
+      "createdAt": "2025-12-20T20:05:16.332Z",
+      "id": "GQLpF2Inwhd2fJzm",
+      "name": "Cron"
+    },
+    {
+      "updatedAt": "2025-12-20T20:03:46.545Z",
+      "createdAt": "2025-12-20T20:03:46.545Z",
+      "id": "jafWIhyZ3XGpyA6j",
+      "name": "Postgres"
+    },
+    {
+      "updatedAt": "2025-12-20T19:25:08.685Z",
+      "createdAt": "2025-12-20T19:25:08.685Z",
+      "id": "ljhw24TcxNVpCPyc",
+      "name": "Webhook"
+    }
+  ]
+}
