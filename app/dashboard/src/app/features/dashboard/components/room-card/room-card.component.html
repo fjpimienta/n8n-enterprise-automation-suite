@@ -1,23 +1,33 @@
-<div class="card card-sm shadow-sm border-0 h-100" [style.border-left]="isArrivalToday() ? '5px solid #206bc4' : 'none'"
-    style="cursor: pointer;" (click)="onSelect.emit(room())">
-    <div class="card-body p-3 bg-white rounded">
-        <div class="d-flex align-items-center">
-            <div class="h1 mb-0 me-3 fw-bold text-primary">{{ room().room_number }}</div>
-            <div class="flex-fill text-dark">
-                <div class="font-weight-medium h4 mb-0 text-capitalize">{{ room().type }}</div>
-                <div class="text-muted small mt-1">
-                    @if (room().next_reservation) {
-                    <span class="text-azure fw-bold">📅 {{ room().next_reservation | date:'dd/MM' }}</span>
-                    }
-                </div>
+<div class="card card-sm cursor-pointer mb-2" (click)="onSelect.emit(room())">
+    <div class="card-body p-3">
+        <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-baseline">
+                <h2 class="m-0 me-2 text-primary fw-bold">{{ room().room_number }}</h2>
+                <span class="text-muted small fw-medium">{{ room().description }}</span>
+                <div class="text-muted small">
+                    Check-out: {{ room().displayDate | date:'dd/MM/yyyy' }} </div>
             </div>
-            <div class="text-end">
-                <span class="badge" [class.bg-red-lt]="room().status === 'occupied'"
-                    [class.bg-green-lt]="room().status === 'available'"
-                    [class.bg-dark-lt]="room().status === 'maintenance'">
-                    {{ room().status | uppercase }}
-                </span>
-            </div>
+
+            <span class="badge" [ngClass]="{
+        'bg-success-lt': room().status === 'available',
+        'bg-danger': room().status === 'occupied' && !room().hasIncomingReservation,
+        'bg-warning': room().status === 'occupied' && room().hasIncomingReservation,
+        'bg-info-lt': room().status === 'reserved'
+      }">
+                {{ room().status | uppercase }}
+                {{ (room().status === 'occupied' && room().hasIncomingReservation) ? '+ RES' : '' }}
+            </span>
         </div>
+
+        @if (room().displayDate) {
+        <div class="mt-2 pt-2 border-top">
+            <span class="badge d-flex align-items-center gap-1 w-100 justify-content-center"
+                [ngClass]="room().isCheckoutDate ? 'bg-danger-lt' : 'bg-blue-lt'">
+                <i [class]="room().isCheckoutDate ? 'ti ti-logout' : 'ti ti-calendar'"></i>
+                {{ room().isCheckoutDate ? 'SALIDA' : 'RES' }}:
+                {{ room().displayDate | date:'dd MMM' }}
+            </span>
+        </div>
+        }
     </div>
 </div>

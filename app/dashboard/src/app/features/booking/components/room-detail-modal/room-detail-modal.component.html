@@ -53,6 +53,16 @@
                         </div>
                         <i class="ti ti-login"></i>
                     </button>
+                    <button
+                        class="btn btn-outline-primary btn-lg d-flex align-items-center justify-content-between px-4"
+                        (click)="onReservations.emit()">
+                        <div class="text-start">
+                            <div class="fw-bold">Reservaciones</div>
+                            <div class="small opacity-75">Asignar reserva</div>
+                        </div>
+                        <i class="ti ti-login"></i>
+                    </button>
+
                     } @else if (room().status === 'occupied') {
                     @if (activeBooking()?.payment_status !== 'paid') {
                     <button class="btn btn-success btn-lg d-flex align-items-center justify-content-between px-4 mb-2"
@@ -87,13 +97,6 @@
                     Finalizar Mantenimiento
                 </button>
                 }
-<!--
-                <div class="text-center mt-4">
-                    <button class="btn btn-link text-warning btn-sm fw-medium" (click)="onMaintenance.emit()">
-                        🛠 Reportar Falla / Mantenimiento
-                    </button>
-                </div>
-            -->
             </div>
         </div>
     </div>
