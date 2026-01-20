@@ -54,6 +54,9 @@ export class DashboardComponent {
   tempUser: User = this.getEmptyUser();
   tempGuest: Guest = this.getEmptyGuest();
 
+  currentPage = signal(1);
+  itemsPerPage = 5;
+
   ngOnInit() {
     this.refresh();
   }
@@ -416,7 +419,7 @@ export class DashboardComponent {
   /* Obtiene el número de habitación dado su ID */
   getRoomNumber(id: number): string {
     const found = this.bookingService.rooms().find((r: any) => r.id === id);
-    return found ? found.room_number : '??';
+    return found ? found.room_number : '';
   }
 
   /* Calcula el número de noches entre dos fechas */
@@ -444,4 +447,44 @@ export class DashboardComponent {
       alert('Error al actualizar el estado de limpieza');
     }
   }
+
+  // Función para paginar reservas
+  get filteredReservations() {
+    const all = this.adminService.reservations();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Ignorar hora para comparar solo fechas
+    return all
+      .filter(res => {
+        // SOLO mostrar confirmadas. Omitir 'checked_out' o 'cancelled'
+        // Y opcionalmente, que la fecha de salida sea hoy o futuro
+        const checkoutDate = new Date(res.check_out);
+        return res.status === 'confirmed' && checkoutDate >= today;
+      })
+      .sort((a, b) => {
+        // Ordenar por fecha de llegada (la más próxima primero)
+        return new Date(a.check_in).getTime() - new Date(b.check_in).getTime();
+      });
+  }
+
+  get paginatedReservations() {
+    const startIndex = (this.currentPage() - 1) * this.itemsPerPage;
+    return this.filteredReservations.slice(startIndex, startIndex + this.itemsPerPage);
+  }
+
+  get totalPages() {
+    return Math.ceil(this.filteredReservations.length / this.itemsPerPage);
+  }
+
+  nextPage() {
+    if (this.currentPage() < this.totalPages) {
+      this.currentPage.update(p => p + 1);
+    }
+  }
+
+  prevPage() {
+    if (this.currentPage() > 1) {
+      this.currentPage.update(p => p - 1);
+    }
+  }
+
 }

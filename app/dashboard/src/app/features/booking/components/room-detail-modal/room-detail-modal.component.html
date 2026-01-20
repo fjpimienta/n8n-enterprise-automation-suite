@@ -23,30 +23,13 @@
                     </div>
                 </div>
 
-                @if (room().status === 'occupied' && activeBooking()) {
-                <div class="card bg-light border-0 mb-3">
-                    <div class="card-body p-3">
-                        <div class="small text-muted mb-1">HUÉSPED ACTUAL</div>
-                        <div class="fw-bold h4 mb-0 text-dark">{{ activeBooking().guest_name || 'Cargando...' }}</div>
-                        <div class="text-muted small">Check-out: {{ activeBooking().check_out | date:'dd/MM/yyyy' }}
-                        </div>
-                        <div class="mt-2">
-                            <span class="badge" [class.bg-success]="activeBooking().payment_status === 'paid'"
-                                [class.bg-warning]="activeBooking().payment_status !== 'paid'">
-                                PAGO: {{ activeBooking().payment_status | uppercase }}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-                }
-
                 @if (activeBooking()) {
                 <div class="card border-0 mb-3" [ngClass]="room().status === 'occupied' ? 'bg-light' : 'bg-info-lt'">
                     <div class="card-body p-3">
                         <div class="small text-muted mb-1">
                             {{ room().status === 'occupied' ? 'HUÉSPED ACTUAL' : 'PRÓXIMA LLEGADA (RESERVA)' }}
                         </div>
-                        <div class="fw-bold h4 mb-0 text-dark">{{ activeBooking().guest_name || 'Huésped sin nombre' }}
+                        <div class="fw-bold h4 mb-0 text-dark">{{ activeBooking().hotel_guests_data?.full_name }} / {{ activeBooking().hotel_guests_data?.email }}
                         </div>
                         <div class="text-muted small">
                             {{ room().status === 'occupied' ? 'Check-out' : 'Entrada' }}:
