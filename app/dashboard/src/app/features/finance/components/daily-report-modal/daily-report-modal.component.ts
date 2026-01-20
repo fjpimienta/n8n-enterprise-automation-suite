@@ -30,7 +30,7 @@ export class DailyReportModalComponent {
   // --- Helpers de visualización ---
   getRoomNumber(id: number): string {
     const found = this.roomsList().find((r: any) => r.id === id);
-    return found ? found.room_number : '??';
+    return found ? found.room_number : '';
   }
 
   getNights(checkIn: string, checkOut: string): number {
