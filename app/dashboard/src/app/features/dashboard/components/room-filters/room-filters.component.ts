@@ -20,13 +20,12 @@ export class RoomFiltersComponent {
 
   filterOptions = [
     // { label: 'Todas', value: 'all', activeClass: 'btn-primary' },
-    { label: '✅ Disponible', value: 'available', activeClass: 'btn-success' },
-    { label: '🏨 Ocupada', value: 'occupied', activeClass: 'btn-danger' },
-    { label: '🧹 Sucia', value: 'dirty', activeClass: 'btn-warning' },
-    { label: '🛠️ Mantenimiento', value: 'maintenance', activeClass: 'btn-secondary' },
-    { label: '⏲ Reservada', value: 'reserved', activeClass: 'btn-info' }
+    { label: '🟢 Disponible', value: 'available', activeClass: 'btn-success' },
+    { label: '🔒 Ocupada', value: 'occupied', activeClass: 'btn-danger' },
+    { label: '🗑️ Aseo', value: 'dirty', activeClass: 'btn-warning' },
+    { label: '🔧 Servicio', value: 'maintenance', activeClass: 'btn-secondary' },
+    { label: '📅 Reservada', value: 'reserved', activeClass: 'btn-info' }
   ];
-
 
   setFilter(filter: string) {
     this.onFilterChange.emit(filter);

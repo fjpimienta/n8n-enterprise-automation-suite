@@ -17,6 +17,15 @@ export class BookingService {
   public rooms = signal<Room[]>([]);
   public isProcessing = signal<boolean>(false);
   public filter = signal<'all' | 'available' | 'occupied' | 'dirty' | 'maintenance' | 'reserved'>('all');
+  readonly translations: Record<'all' | 'available' | 'occupied' | 'dirty' | 'maintenance' | 'reserved', string> = {
+    all: 'ninguno',  // O 'todos' si prefieres, pero "en estado: ninguno" tiene más sentido si no hay habitaciones en general
+    available: 'disponible',
+    occupied: 'ocupada',
+    dirty: 'por limpiar',
+    maintenance: 'mantenimiento',
+    reserved: 'reservada'
+  };
+  translatedFilter = computed(() => this.translations[this.filter()]);
 
   /** Computed que filtra las habitaciones según el filtro seleccionado */
   public filteredRooms = computed(() => {
