@@ -16,7 +16,25 @@ Este dashboard actúa como el cliente principal del Dynamic CRUD Engine, permiti
 | **v0.1** | `Stable` | `Auth & Architecture` | Tabler + Bootstrap | Estructura base, JWT Auth, Signals. |
 | **v0.2** | `Stable` | `Room Rack v1` | CSS Grid / Cards | Gestión visual de 17 habitaciones. |
 | **v0.3** | `Stable`| `Ops & Finance`| Modals / Reports | Checkout con inventario, Reporte de Caja (D/S/M/Y) y Gestión de Usuarios. |
-| **v0.4** | `Latest` | `Pro UX & Patterns	Skeletons / Services` |	Refactorización a Services, Skeletons de carga, Promesas (Async/Await).|
+| **v0.4** | `Stable` | `Pro UX & Patterns	Skeletons / Services` |	Refactorización a Services, Skeletons de carga, Promesas (Async/Await).|
+| **v0.5** | `Latest` | `Full Operation & UX Polish` | Reseteo de Dashboard (Refresh Main), Gestión avanzada de Huéspedes, Sistema de Reservas dinámico, traducción de estados y Feedback Visual (Skeletons/Empty States).|
+
+---
+
+## 🆕 Novedades de la v0.5 (Changelog)
+1. ⚡ UX & Navegación Inteligente
+    * Refresh Main Engine: Implementación de un sistema de reseteo global que limpia el viewMode y regresa al usuario a la vista de habitaciones desde cualquier sección (Empleados/Huéspedes) al hacer clic en el título principal.
+    * Empty States UI: Nueva interfaz visual para habitaciones vacías y filtros sin resultados, mejorando la claridad cuando no hay datos que mostrar.
+    * Translation & Emojis: Localización completa de estados de habitación y uso de iconografía emocional (emojis) para una lectura rápida del estatus operativo.
+2. 📇 Gestión de Huéspedes y Usuarios (CRUD Pro)
+    * Smart Guest Management: Flujo completo de "Save Guest" y listas optimizadas con títulos dinámicos.
+    * Identity Updates: Mejoras en la documentación y actualización de datos de identidad de los clientes.
+3. 📅 Sistema de Reservas (Smart Booking)
+    * Form Reservation: Nuevo formulario especializado para la creación de reservas previas.
+    * Query & Logic Fixes: Optimización de las consultas de reservas para evitar colisiones de fechas y asegurar la disponibilidad real.
+    * Gestión de Ciclo de Vida: Botones de acción para actualización y eliminación de reservas directamente desde el dashboard.
+4. 🧹 Mantenimiento y Estados Críticos
+    * Dirty & Reserved States: Refinamiento visual y lógico para habitaciones en estado "Sucio" y "Reservado", asegurando que el flujo de limpieza sea prioritario para la disponibilidad.
 
 ---
 
@@ -74,7 +92,8 @@ La aplicación implementa una arquitectura desacoplada donde el frontend delega 
 |Check-out V2|✅ Finalizado|Validación de pago pendiente e inventario.|Update dinámico de hotel_rooms.|
 |Reporte de Caja|✅ Finalizado|Métricas de ventas por periodos (Día/Semana/Mes/Año).|Agregación vía MetaCRUD.|
 |UX Skeletons|✅ Finalizado|Feedback visual durante la carga de datos.|UI Reactiva (Signals).|
-|Smart Booking|⏳ Próximo|Integración con Agente de IA para reservas automáticas.|AI WhatsApp Agent (Módulo 05).|
+|Booking Engine|✅ Finalizado|Creación, consulta y eliminación de reservas.|
+|AI WhatsApp Agent|⏳ Próximo|Reservas automáticas vía Chatbot conectadas al nuevo Form.|
 
 ---
 
