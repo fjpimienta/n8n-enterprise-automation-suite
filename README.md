@@ -40,12 +40,12 @@ Desplegado en un entorno endurecido (Hardened VPS) utilizando orquestación de c
 7.  **🏨 MCP Server: Hotel Management:** 
     Implementación avanzada del protocolo MCP que expone herramientas de base de datos a la IA. Permite consultas de disponibilidad en tiempo real y registro de reservas directas mediante lenguaje natural.
 8.  **🏨 AdminHotel Dashboard:** 
-    Cliente Web SPA para la gestión visual del inventario hotelero.
-    Consume Módulos:
-        * Secure Token Gateway
-        * Multi-Service WhatsApp Hub
-        * Dynamic CRUD Engine
-        * MCP Server: Hotel Management
+    Cliente Web SPA de alto rendimiento para la gestión visual del inventario hotelero.
+    Novedades v0.5:
+        * Sistema de refresco inteligente (Refresh Main).
+        * Gestión dinámica de reservas.
+        * CRUD de huéspedes con validación de identidad y Room Rack con estados reactivos (Sucia, Disponible, Reservada, Ocupada). 
+        * Consume Módulos: Secure Token Gateway, Dynamic CRUD Engine, MCP Server.
 
 ## 🚀 Despliegue
 ```bash
