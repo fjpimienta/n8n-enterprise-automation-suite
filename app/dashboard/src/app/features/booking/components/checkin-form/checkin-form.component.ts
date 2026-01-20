@@ -1,4 +1,4 @@
-import { Component, Output, EventEmitter, input, OnInit } from '@angular/core';
+import { Component, Output, EventEmitter, input, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { FormGroup, FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Room } from '@core/models/hotel.types';
@@ -9,8 +9,9 @@ import { Room } from '@core/models/hotel.types';
   imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './checkin-form.component.html'
 })
-export class CheckinFormComponent implements OnInit {
+export class CheckinFormComponent implements OnInit, OnChanges {
   room = input.required<Room | null>();
+  reservation = input<any | null>(null);
 
   @Output() saved = new EventEmitter<any>();
   @Output() canceled = new EventEmitter<void>();
@@ -37,6 +38,28 @@ export class CheckinFormComponent implements OnInit {
     // Escuchar cambios en la fecha de salida para recalcular el monto
     this.checkinForm.get('check_out')?.valueChanges.subscribe(() => {
       this.calculateTotal();
+    });
+  }
+
+  // Detectar cuando llega la reserva para rellenar el formulario
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['reservation'] && this.reservation()) {
+      this.fillWithReservationData(this.reservation());
+    }
+  }
+
+  private fillWithReservationData(res: any) {
+    if (!res) return;
+
+    // Buscamos los datos del huésped dentro de la reserva 
+    // (Asumiendo que tu objeto reserva trae el objeto guest o lo tenemos en adminService)
+    this.checkinForm.patchValue({
+      full_name: res.guest_name || '', // Ajusta según el nombre del campo en tu objeto
+      phone: res.guest_phone || '',
+      email: res.guest_email || '',
+      check_out: res.check_out ? res.check_out.split(/[ T]/)[0] : '',
+      total_amount: res.total_amount || 0,
+      notes: res.notes || ''
     });
   }
 

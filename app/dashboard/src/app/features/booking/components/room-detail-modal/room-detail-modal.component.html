@@ -43,7 +43,25 @@
                 <div class="hr-text my-4">ACCIONES OPERATIVAS</div>
 
                 <div class="d-grid gap-2">
-                    @if (room().status === 'available') {
+
+                    @if (room().status === 'available' && room().cleaning_status === 'dirty') {
+                    <div class="alert alert-warning border-0 shadow-sm mb-2">
+                        <div class="d-flex">
+                            <div class="me-2">🧹</div>
+                            <div>La habitación debe limpiarse antes de recibir huéspedes.</div>
+                        </div>
+                    </div>
+                    <button class="btn btn-success btn-lg d-flex align-items-center justify-content-between px-4"
+                        (click)="onMarkAsClean.emit(room().id)">
+                        <div class="text-start">
+                            <div class="fw-bold">Finalizar Limpieza</div>
+                            <div class="small opacity-75">Cambiar a estado "Limpia"</div>
+                        </div>
+                        <i class="ti ti-brush"></i>
+                    </button>
+                    }
+
+                    @if (room().status === 'available' && room().cleaning_status !== 'dirty') {
                     <button
                         class="btn btn-outline-primary btn-lg d-flex align-items-center justify-content-between px-4"
                         (click)="onCheckin.emit()">

@@ -1,7 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { ApiResponse } from '@core/interfaces/api-response.interface';
-import { Company, Room, User } from '@core/models/hotel.types';
+import { Company, Guest, Room, User } from '@core/models/hotel.types';
 import { environment } from '@env/environment';
 
 @Injectable({
@@ -12,10 +12,12 @@ export class AdminService {
   private apiUrl_crud = environment.apiUrl_crud;
 
   public loadingUsers = signal<boolean>(false);
+  public loadingGuests = signal<boolean>(false);
   public loadingCompanies = signal<boolean>(false);
   public loadingReservations = signal<boolean>(false);
 
   users = signal<User[]>([]);
+  guests = signal<Guest[]>([]);
   public reservations = signal<any[]>([]);
   companies = signal<Company[]>([]);
   selectedUser = signal<User | null>(null);

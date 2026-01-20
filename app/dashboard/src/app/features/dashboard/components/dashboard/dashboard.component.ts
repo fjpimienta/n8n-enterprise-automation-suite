@@ -58,10 +58,6 @@ export class DashboardComponent {
   refresh() {
     this.bookingService.loadRooms();
     this.adminService.loadReservations()
-    setTimeout(() => {
-      console.log('Habitaciones en memoria:', this.bookingService.rooms().length);
-      console.log('Reservas en memoria:', this.adminService.reservations().length);
-    }, 2000);
     if (this.isAdmin) {
       this.adminService.loadUsers(this.authService.currentUser()?.id_company);
     }
@@ -75,16 +71,39 @@ export class DashboardComponent {
 
     // 1. Si el estado es ocupado, buscamos OBLIGATORIAMENTE la estancia de hoy
     if (room.status === 'occupied') {
-      this.activeBooking = await this.bookingService.getActiveBooking(room.id);
+      const booking = await this.bookingService.getActiveBooking(room.id);
+      if (booking && booking.id) {
+        this.activeBooking = booking;
+      }
     } else {
-      // 2. Solo si NO está ocupada, buscamos si tiene una reserva futura para mostrar info
       const allReservations = this.adminService.reservations();
-      const futureRes = allReservations.find(res =>
-        Number(res.room_id) === Number(room.id) &&
-        res.status === 'confirmed' &&
-        res.check_in.split(/[ T]/)[0] >= new Date().toLocaleDateString('sv-SE')
-      );
-      if (futureRes) this.activeBooking = futureRes;
+      // Buscamos si hay reserva para HOY
+      const todayStr = new Date().toLocaleDateString('sv-SE');
+      /*const res = allReservations.find(r =>
+        Number(r.room_id) === Number(room.id) &&
+        r.status === 'confirmed' &&
+        r.check_in.split(/[ T]/)[0] === todayStr
+      );*/
+      const res = allReservations.find(r => {
+        if (!r.check_in) return false; // Si no tiene fecha, no es el que buscamos
+
+        const reservationDate = r.check_in.split(/[ T]/)[0];
+        return Number(r.room_id) === Number(room.id) &&
+          r.status === 'confirmed' &&
+          reservationDate === todayStr;
+      });
+
+      if (res) {
+        // OPCIONAL: Si 'res' solo trae guest_id, podrías buscar el nombre del huésped aquí
+        // para que el formulario lo muestre de inmediato.
+        const guest = this.adminService.guests()?.find(g => g.id === res.guest_id);
+        this.activeBooking = {
+          ...res,
+          guest_name: guest?.full_name,
+          guest_phone: guest?.phone,
+          guest_email: guest?.email
+        };
+      }
     }
   }
 
@@ -92,10 +111,31 @@ export class DashboardComponent {
   async handleCheckinSave(formData: any) {
     const room = this.hotelService.selectedRoom();
     if (!room) return;
+
     try {
-      await this.bookingService.processCheckin(formData, room);
+      // 1. Buscamos si hay una reserva HOY para esta habitación en la lista global
+      const todayStr = new Date().toLocaleDateString('sv-SE');
+
+      const existingRes = this.adminService.reservations().find(res =>
+        Number(res.room_id) === Number(room.id) &&
+        res.status === 'confirmed' &&
+        res.check_in.split(/[ T]/)[0] === todayStr
+      );
+
+      const bookingId = existingRes ? existingRes.id : undefined;
+
+      if (bookingId) {
+        console.log(`Log: Realizando Check-in sobre reserva existente ID: ${bookingId}`);
+      } else {
+        console.log('Log: Realizando Check-in como Walk-in (Nueva reserva)');
+      }
+
+      // 2. Llamamos al servicio pasando el ID si existe
+      await this.bookingService.processCheckin(formData, room, bookingId);
+
       this.completeActionSuccess(`✅ Check-in exitoso en Hab. ${room.room_number}`);
     } catch (error: any) {
+      console.error('Error en Check-in:', error);
       alert(`Error: ${error.message}`);
     }
   }
@@ -339,5 +379,17 @@ export class DashboardComponent {
   getSelectedRoomPaymentStatus(): string {
     if (!this.activeBooking) return 'Cargando...';
     return this.activeBooking.payment_status === 'paid' ? '✅' : '⏳';
+  }
+
+  async markRoomAsClean() {
+    const room = this.hotelService.selectedRoom();
+    if (!room) return;
+
+    try {
+      await this.bookingService.updateCleaningStatus(room.id, 'clean');
+      this.completeActionSuccess('✨ Habitación lista para recibir huéspedes');
+    } catch (error) {
+      alert('Error al actualizar el estado de limpieza');
+    }
   }
 }

@@ -32,8 +32,8 @@
     <div class="modal modal-blur fade show d-block" tabindex="-1">
       <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content shadow-lg border-0">
-          <app-checkin-form [room]="hotelService.selectedRoom()" (onClose)="viewMode.set('details')"
-            (saved)="handleCheckinSave($event)">
+          <app-checkin-form [room]="hotelService.selectedRoom()" [reservation]="activeBooking"
+            (onClose)="viewMode.set('details')" (saved)="handleCheckinSave($event)">
           </app-checkin-form>
         </div>
       </div>
@@ -180,6 +180,7 @@
 @if (hotelService.selectedRoom() && viewMode() === 'details') {
 <app-room-detail-modal [room]="hotelService.selectedRoom()" [activeBooking]="activeBooking"
   (onClose)="hotelService.clearSelection()" (onCheckin)="viewMode.set('checkin')"
+  (onMarkAsClean)="markRoomAsClean()"
   (onReservations)="viewMode.set('reservation')" (onCheckout)="handleCheckout()" (onPay)="markAsPaid($event)"
   (onMaintenance)="reportMaintenance()" (onFinishMaintenance)="handleFinishMaintenance()">
 </app-room-detail-modal>
