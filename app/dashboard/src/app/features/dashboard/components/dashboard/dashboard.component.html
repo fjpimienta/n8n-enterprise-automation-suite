@@ -155,6 +155,25 @@
                     </tbody>
                   </table>
                 </div>
+                @if (totalPages > 1) {
+                <div class="d-flex align-items-center justify-content-between mt-3 border-top pt-2">
+                  <div class="text-muted small">
+                    Página <strong>{{ currentPage() }}</strong> de <strong>{{ totalPages }}</strong>
+                  </div>
+                  <ul class="pagination pagination-sm m-0">
+                    <li class="page-item" [class.disabled]="currentPage() === 1">
+                      <button class="page-link" (click)="prevPage()">
+                        <i class="ti ti-chevron-left"></i> Anterior
+                      </button>
+                    </li>
+                    <li class="page-item" [class.disabled]="currentPage() === totalPages">
+                      <button class="page-link" (click)="nextPage()">
+                        Siguiente <i class="ti ti-chevron-right"></i>
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+                }
               </div>
             </div>
           </div>
