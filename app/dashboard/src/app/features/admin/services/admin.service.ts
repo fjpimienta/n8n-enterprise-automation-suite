@@ -116,7 +116,7 @@ export class AdminService {
       next: (res) => {
         const data = res.data || [];
         const sortedUsers = data.sort((a, b) => {
-          return a.email.localeCompare(b.email);
+          return (a.email || '').localeCompare(b.email || '');
         });
         this.users.set(sortedUsers);
         this.loadingUsers.set(false)
@@ -125,6 +125,35 @@ export class AdminService {
         console.error('Error en API:', err);
         this.users.set([]); // Reset en caso de fallo
         this.loadingUsers.set(false)
+      }
+    });
+  }
+
+  /* Guests */
+  public loadGuests(id_company?: number) {
+    this.loadingGuests.set(true);
+    const payloadGuests = {
+      entity: 'hotel_guests',
+      table_name: 'hotel_guests',
+      operation: 'getall',
+      action: 'list',
+      filter: { id_company: id_company }
+    };
+    this.http.post<ApiResponse<Guest>>(`${this.apiUrl_crud}/${payloadGuests.table_name}`, payloadGuests, {
+      headers: this.getAuthHeaders()
+    }).subscribe({
+      next: (res) => {
+        const data = res.data || [];
+        const sortedGuests = data.sort((a, b) => {
+          return (a.email || '').localeCompare(b.email || '');
+        });
+        this.guests.set(sortedGuests);
+        this.loadingGuests.set(false)
+      },
+      error: (err) => {
+        console.error('Error en API:', err);
+        this.guests.set([]); // Reset en caso de fallo
+        this.loadingGuests.set(false)
       }
     });
   }

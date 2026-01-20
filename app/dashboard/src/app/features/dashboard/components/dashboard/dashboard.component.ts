@@ -57,7 +57,8 @@ export class DashboardComponent {
   /* 1. SECCIÓN: REFRESCO DE DATOS */
   refresh() {
     this.bookingService.loadRooms();
-    this.adminService.loadReservations()
+    this.adminService.loadReservations();
+    this.adminService.loadGuests();
     if (this.isAdmin) {
       this.adminService.loadUsers(this.authService.currentUser()?.id_company);
     }
@@ -124,11 +125,11 @@ export class DashboardComponent {
 
       const bookingId = existingRes ? existingRes.id : undefined;
 
-      if (bookingId) {
+      /*if (bookingId) {
         console.log(`Log: Realizando Check-in sobre reserva existente ID: ${bookingId}`);
       } else {
         console.log('Log: Realizando Check-in como Walk-in (Nueva reserva)');
-      }
+      }*/
 
       // 2. Llamamos al servicio pasando el ID si existe
       await this.bookingService.processCheckin(formData, room, bookingId);

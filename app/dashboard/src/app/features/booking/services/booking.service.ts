@@ -16,20 +16,25 @@ export class BookingService {
   public loadingRooms = signal<boolean>(false);
   public rooms = signal<Room[]>([]);
   public isProcessing = signal<boolean>(false);
-  public filter = signal<'all' | 'available' | 'occupied' | 'dirty' | 'maintenance'>('available');
+  public filter = signal<'all' | 'available' | 'occupied' | 'dirty' | 'maintenance' | 'reserved'>('all');
 
   /** Computed que filtra las habitaciones según el filtro seleccionado */
   public filteredRooms = computed(() => {
-    const rooms = this.rooms();
+    const rooms = this.roomsWithStatus();
     const currentFilter = this.filter();
 
     switch (currentFilter) {
       case 'available':
-        // Solo disponibles y limpias, SIN reservas para hoy
+        // Físicamente disponibles, limpias Y que NO tengan entrada hoy
         return rooms.filter(r =>
           r.status === 'available' &&
-          (r.cleaning_status === 'clean' || r.cleaning_status === 'inspected')
+          (r.cleaning_status === 'clean' || r.cleaning_status === 'inspected') &&
+          !r.hasIncomingToday
         );
+
+      case 'reserved':
+        // Habitaciones que tienen una reserva confirmada para entrar HOY
+        return rooms.filter(r => r.hasIncomingToday && r.status === 'available');
 
       case 'occupied':
         // SOLO las que están físicamente ocupadas (Status 'occupied' en DB)
@@ -37,10 +42,7 @@ export class BookingService {
 
       case 'dirty':
         // Habitaciones que deben quedar libres hoy o están sucias
-        return rooms.filter(r =>
-          (r.status === 'available' && r.cleaning_status === 'dirty') ||
-          (r.status === 'occupied')
-        );
+        return rooms.filter(r => r.cleaning_status === 'dirty');
 
       case 'maintenance':
         return rooms.filter(r => r.status === 'maintenance');
@@ -83,13 +85,20 @@ export class BookingService {
       // USAMOS currentStay para la fecha de salida si está ocupada
       const currentCheckOut = currentStay ? currentStay.check_out.split(/[ T]/)[0] : null;
 
+      // Buscamos si hay una reserva que inicia hoy
+      const hasIncomingToday = allReservations.some(res =>
+        Number(res.room_id) === Number(room.id) &&
+        res.status === 'confirmed' &&
+        res.check_in.split(/[ T]/)[0] === todayStr
+      );
+
       return {
         ...room,
         status: room.status,
         displayDate: room.status === 'occupied' ? currentCheckOut : nextCheckIn,
         isCheckoutDate: room.status === 'occupied' && currentCheckOut === todayStr,
         hasIncomingReservation: nextCheckIn !== null,
-        hasIncomingToday: nextCheckIn === todayStr
+        hasIncomingToday
       };
     });
   });
@@ -185,7 +194,7 @@ export class BookingService {
     try {
       // --- ESCENARIO A: TRANSICIÓN DE RESERVA (El cliente ya reservó) ---
       if (existingBookingId) {
-        console.log(`🔄 Procesando Check-in de Reserva existente: ${existingBookingId}`);
+        // console.log(`🔄 Procesando Check-in de Reserva existente: ${existingBookingId}`);
 
         // 1. Actualizamos la reserva existente para marcarla como ACTIVA
         // Cambiamos status a 'checked_in' (o 'confirmed' según tu lógica de negocio)

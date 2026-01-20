@@ -19,11 +19,12 @@ export class RoomFiltersComponent {
   onReservations = output<void>();
 
   filterOptions = [
-    { label: 'Todas', value: 'all', activeClass: 'btn-primary' },
-    { label: '✅ Disponibles', value: 'available', activeClass: 'btn-success' },
-    { label: '🏨 Ocupadas', value: 'occupied', activeClass: 'btn-danger' },
+    // { label: 'Todas', value: 'all', activeClass: 'btn-primary' },
+    { label: '✅ Disponible', value: 'available', activeClass: 'btn-success' },
+    { label: '🏨 Ocupada', value: 'occupied', activeClass: 'btn-danger' },
     { label: '🧹 Sucia', value: 'dirty', activeClass: 'btn-warning' },
-    { label: '🛠️ Mantenimiento', value: 'maintenance', activeClass: 'btn-secondary' }
+    { label: '🛠️ Mantenimiento', value: 'maintenance', activeClass: 'btn-secondary' },
+    { label: '⏲ Reservada', value: 'reserved', activeClass: 'btn-info' }
   ];
 
 

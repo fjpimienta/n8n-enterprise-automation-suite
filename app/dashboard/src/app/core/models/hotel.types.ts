@@ -10,6 +10,7 @@ export interface Room {
   description?: string;
   cleaning_status: CleaningStatus;
   next_reservation?: string; // Campo calculado que podemos traer del backend
+  hasIncomingToday?: boolean; // Campo calculado para saber si hay reserva que entra hoy
 }
 
 export interface Booking {
