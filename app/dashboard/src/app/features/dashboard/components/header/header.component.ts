@@ -10,6 +10,7 @@ import { CommonModule } from '@angular/common';
 })
 export class HeaderComponent {
   onRefresh = output<void>();
+  onRefreshMain = output<void>();
   onGenerateReport = output<void>();
   onLogout = output<void>();
 }
