@@ -16,21 +16,17 @@ export class RoomFiltersComponent {
 
   onFilterChange = output<any>();
   onManageUsers = output<void>();
+  onManageGuests = output<void>();
   onReservations = output<void>();
 
   filterOptions = [
-    { label: 'Todas', value: 'all', activeClass: 'btn-primary' },
-    { label: '✅ Disponibles', value: 'available', activeClass: 'btn-success' },
-    { label: '📅 Reservadas', value: 'reserved', activeClass: 'btn-info' },
-    { label: '🏨 Ocupadas', value: 'occupied', activeClass: 'btn-danger' },
-    { label: '🧹 Check-out', value: 'checkout', activeClass: 'btn-warning' },
-    { label: '🛠️ Mantenimiento', value: 'maintenance', activeClass: 'btn-secondary' }
+    // { label: 'Todas', value: 'all', activeClass: 'btn-primary' },
+    { label: '🟢 Disponible', value: 'available', activeClass: 'btn-success' },
+    { label: '🔒 Ocupada', value: 'occupied', activeClass: 'btn-danger' },
+    { label: '🗑️ Aseo', value: 'dirty', activeClass: 'btn-warning' },
+    { label: '🔧 Servicio', value: 'maintenance', activeClass: 'btn-secondary' },
+    { label: '📅 Reservada', value: 'reserved', activeClass: 'btn-info' }
   ];
-
-  // El computed se queda igual, es perfecto
-  reservedCount = computed(() =>
-    this.rooms().filter(r => r.status === 'reserved').length
-  );
 
   setFilter(filter: string) {
     this.onFilterChange.emit(filter);

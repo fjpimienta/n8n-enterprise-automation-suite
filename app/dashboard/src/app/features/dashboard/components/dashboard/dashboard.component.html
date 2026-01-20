@@ -6,8 +6,8 @@
 
     @if (viewMode() === 'details' || viewMode() === 'checkin' || viewMode() === 'checkout_validation') {
     <app-room-filters [currentFilter]="bookingService.filter()" [isAdmin]="isAdmin"
-      (onFilterChange)="bookingService.filter.set($event)" (onManageUsers)="openUserManagement()"
-      (onReservations)="openReservations()">
+      (onFilterChange)="bookingService.filter.set($event)" (onManageGuests)="openGuestManagement()"
+      (onManageUsers)="openUserManagement()" (onReservations)="openReservations()">
     </app-room-filters>
 
     <div class="row row-cards g-2">
@@ -19,8 +19,21 @@
       }
       } @else {
       @for (room of bookingService.filteredRooms(); track room.id) {
-      <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+      <div class="col-sm-6 col-lg-3">
         <app-room-card [room]="room" (onSelect)="onSelectRoom($event)"></app-room-card>
+      </div>
+      } @empty {
+      <div class="col-12">
+        <div class="card card-stacked py-5 border-0 shadow-none bg-transparent">
+          <div class="card-body text-center">
+            <div class="display-1 text-muted-lt mb-3"><i class="ti ti-ghost"></i></div>
+            <p class="h2">No hay habitaciones</p>
+            <p class="text-muted">
+              Actualmente no hay habitaciones en estado:
+              <span class="badge bg-primary-lt">{{ bookingService.translatedFilter() | uppercase }}</span>
+            </p>
+          </div>
+        </div>
       </div>
       }
       }
@@ -32,8 +45,8 @@
     <div class="modal modal-blur fade show d-block" tabindex="-1">
       <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content shadow-lg border-0">
-          <app-checkin-form [room]="hotelService.selectedRoom()" (onClose)="viewMode.set('details')"
-            (saved)="handleCheckinSave($event)">
+          <app-checkin-form [room]="hotelService.selectedRoom()" [reservation]="activeBooking"
+            (onClose)="viewMode.set('details')" (saved)="handleCheckinSave($event)">
           </app-checkin-form>
         </div>
       </div>
@@ -74,7 +87,7 @@
             </div>
           </div>
           <div class="modal-footer">
-            <button class="btn btn-link link-secondary" (click)="viewMode.set('details')">Cancelar</button>
+            <button class="btn btn-danger px-4 shadow-sm" (click)="viewMode.set('details')">Cancelar</button>
 
             <button class="btn btn-danger ms-auto"
               [disabled]="!checkoutChecks.tvRemote || !checkoutChecks.acRemote || !checkoutChecks.keys"
@@ -150,6 +163,31 @@
     </div>
     }
 
+    @if (viewMode() === 'guest_mgmt') {
+    @if (adminService.loadingGuests()) {
+    <div class="card">
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+          <tbody>
+            @for (i of [1,2,3,4,5]; track i) {
+            <tr>
+              <td><app-skeleton appearance="line"></app-skeleton></td>
+              <td><app-skeleton appearance="line" style="width: 50px;"></app-skeleton></td>
+              <td><app-skeleton appearance="line" style="width: 80px;"></app-skeleton></td>
+              <td class="w-1"><app-skeleton appearance="circle"></app-skeleton></td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+    } @else {
+    <app-guest-list [guests]="adminService.guests()" (onBack)="viewMode.set('details')" (onAdd)="openNewGuestModal()"
+      (onEdit)="editGuest($event)">
+    </app-guest-list>
+    }
+    }
+
     @if (viewMode() === 'user_mgmt') {
     @if (adminService.loadingUsers()) {
     <div class="card">
@@ -179,7 +217,7 @@
 
 @if (hotelService.selectedRoom() && viewMode() === 'details') {
 <app-room-detail-modal [room]="hotelService.selectedRoom()" [activeBooking]="activeBooking"
-  (onClose)="hotelService.clearSelection()" (onCheckin)="viewMode.set('checkin')"
+  (onClose)="hotelService.clearSelection()" (onCheckin)="viewMode.set('checkin')" (onMarkAsClean)="markRoomAsClean()"
   (onReservations)="viewMode.set('reservation')" (onCheckout)="handleCheckout()" (onPay)="markAsPaid($event)"
   (onMaintenance)="reportMaintenance()" (onFinishMaintenance)="handleFinishMaintenance()">
 </app-room-detail-modal>
@@ -188,6 +226,10 @@
 <app-user-form-modal [isOpen]="isUserModalOpen()" [selectedUser]="hotelService.selectedUser()" [(userData)]="tempUser"
   (onClose)="isUserModalOpen.set(false)" (onSave)="handleSaveUser()">
 </app-user-form-modal>
+
+<app-guest-form-modal [isOpen]="isGuestModalOpen()" [selectedGuest]="hotelService.selectedGuest()"
+  [(guestData)]="tempGuest" (onClose)="isGuestModalOpen.set(false)" (onSave)="handleSaveGuest()">
+</app-guest-form-modal>
 
 <app-daily-report-modal [isOpen]="showReportModal" [isLoading]="reportService.loadingReports()"
   [reportData]="dailyReport" [currentFilter]="reportFilter()" [roomsList]="bookingService.rooms()"
