@@ -87,7 +87,7 @@
             </div>
           </div>
           <div class="modal-footer">
-            <button class="btn btn-link link-secondary" (click)="viewMode.set('details')">Cancelar</button>
+            <button class="btn btn-danger px-4 shadow-sm" (click)="viewMode.set('details')">Cancelar</button>
 
             <button class="btn btn-danger ms-auto"
               [disabled]="!checkoutChecks.tvRemote || !checkoutChecks.acRemote || !checkoutChecks.keys"
@@ -186,7 +186,7 @@
       (onEdit)="editGuest($event)">
     </app-guest-list>
     }
-    } 
+    }
 
     @if (viewMode() === 'user_mgmt') {
     @if (adminService.loadingUsers()) {
@@ -226,6 +226,10 @@
 <app-user-form-modal [isOpen]="isUserModalOpen()" [selectedUser]="hotelService.selectedUser()" [(userData)]="tempUser"
   (onClose)="isUserModalOpen.set(false)" (onSave)="handleSaveUser()">
 </app-user-form-modal>
+
+<app-guest-form-modal [isOpen]="isGuestModalOpen()" [selectedGuest]="hotelService.selectedGuest()"
+  [(guestData)]="tempGuest" (onClose)="isGuestModalOpen.set(false)" (onSave)="handleSaveGuest()">
+</app-guest-form-modal>
 
 <app-daily-report-modal [isOpen]="showReportModal" [isLoading]="reportService.loadingReports()"
   [reportData]="dailyReport" [currentFilter]="reportFilter()" [roomsList]="bookingService.rooms()"

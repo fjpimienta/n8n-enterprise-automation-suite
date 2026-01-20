@@ -15,6 +15,7 @@ import { UserFormModalComponent } from '@features/admin/components/user-form-mod
 import { UserListComponent } from '@features/admin/components/user-list/user-list.component';
 import { ReservationFormComponent } from '@features/booking/components/reservation-form/reservation-form.component';
 import { SkeletonComponent } from '@shared/ui/loader/skeleton/skeleton.component';
+import { GuestFormModalComponent } from '@features/admin/components/guest-form-modal/guest-form-modal.component';
 import { GuestListComponent } from '@features/admin/components/guest-list/guest-list.component';
 // Servicios
 import { AuthService } from '@core/services/auth.service';
@@ -26,7 +27,7 @@ import { AdminService } from '@features/admin/services/admin.service';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, CheckinFormComponent, HeaderComponent, RoomCardComponent, DailyReportModalComponent, RoomFiltersComponent, RoomDetailModalComponent, UserFormModalComponent, UserListComponent, GuestListComponent, SkeletonComponent, ReservationFormComponent],
+  imports: [CommonModule, FormsModule, CheckinFormComponent, HeaderComponent, RoomCardComponent, DailyReportModalComponent, RoomFiltersComponent, RoomDetailModalComponent, UserFormModalComponent, UserListComponent, GuestFormModalComponent, GuestListComponent, SkeletonComponent, ReservationFormComponent],
   templateUrl: './dashboard.component.html'
 })
 export class DashboardComponent {
@@ -277,14 +278,14 @@ export class DashboardComponent {
 
   /* Abre el modal para crear un nuevo huésped */
   openNewGuestModal() {
-    this.hotelService.selectUser(null);
+    this.hotelService.selectGuest(null);
     this.tempGuest = this.getEmptyGuest();
     this.isGuestModalOpen.set(true);
   }
 
   /* Abre el modal para editar un huésped existente */
   editGuest(guest: any) {
-    this.hotelService.selectUser(guest);
+    this.hotelService.selectGuest(guest);
     this.tempGuest = { ...guest };
     this.isGuestModalOpen.set(true);
   }

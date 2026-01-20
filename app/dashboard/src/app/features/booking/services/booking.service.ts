@@ -238,7 +238,12 @@ export class BookingService {
                 doc_id: formData.doc_id,
                 id_company: 1,
                 email: formData.email || null,
-                country: formData.country || 'México'
+                country: formData.country || 'México',
+                state: formData.state || '',
+                city: formData.city || '',
+                notes: formData.notes || '',
+                vip_status: formData.vip_status || false,
+                requires_invoice: formData.requires_invoice || false
               }
             }, { headers: this.adminService.getAuthHeaders() })
           );
