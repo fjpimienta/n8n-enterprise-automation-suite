@@ -38,14 +38,14 @@ export class AdminService {
   /* Companies */
   public loadCompanies() {
     this.loadingCompanies.set(true);
-    const payloadCompanies = {
+    const payload = {
       entity: 'companys',
       table_name: 'companys',
       operation: 'getall',
       action: 'list',
       filters: {}
     };
-    this.http.post<ApiResponse<Company>>(`${this.apiUrl_crud}/${payloadCompanies.table_name}`, payloadCompanies, {
+    this.http.post<ApiResponse<Company>>(`${this.apiUrl_crud}/companys`, payload, {
       headers: this.getAuthHeaders()
     }).subscribe({
       next: (res) => {
@@ -103,19 +103,20 @@ export class AdminService {
   /* Users */
   public loadUsers(id_company?: number) {
     this.loadingUsers.set(true);
-    const payloadUsers = {
+    const payload = {
       entity: 'users',
       table_name: 'users',
       operation: 'getall',
       action: 'list',
       filter: { id_company: id_company }
     };
-    this.http.post<ApiResponse<User>>(`${this.apiUrl_crud}/${payloadUsers.table_name}`, payloadUsers, {
+    this.http.post<ApiResponse<User>>(`${this.apiUrl_crud}/users`, payload, {
       headers: this.getAuthHeaders()
     }).subscribe({
       next: (res) => {
-        const data = res.data || [];
-        const sortedUsers = data.sort((a, b) => {
+        const data =  Array.isArray(res.data) ? res.data : [];
+        const validData = data.filter(g => g && g.email && g.email.trim() !== '');
+        const sortedUsers = validData.sort((a, b) => {
           return (a.email || '').localeCompare(b.email || '');
         });
         this.users.set(sortedUsers);
@@ -125,35 +126,6 @@ export class AdminService {
         console.error('Error en API:', err);
         this.users.set([]); // Reset en caso de fallo
         this.loadingUsers.set(false)
-      }
-    });
-  }
-
-  /* Guests */
-  public loadGuests(id_company?: number) {
-    this.loadingGuests.set(true);
-    const payloadGuests = {
-      entity: 'hotel_guests',
-      table_name: 'hotel_guests',
-      operation: 'getall',
-      action: 'list',
-      filter: { id_company: id_company }
-    };
-    this.http.post<ApiResponse<Guest>>(`${this.apiUrl_crud}/${payloadGuests.table_name}`, payloadGuests, {
-      headers: this.getAuthHeaders()
-    }).subscribe({
-      next: (res) => {
-        const data = res.data || [];
-        const sortedGuests = data.sort((a, b) => {
-          return (a.email || '').localeCompare(b.email || '');
-        });
-        this.guests.set(sortedGuests);
-        this.loadingGuests.set(false)
-      },
-      error: (err) => {
-        console.error('Error en API:', err);
-        this.guests.set([]); // Reset en caso de fallo
-        this.loadingGuests.set(false)
       }
     });
   }
@@ -169,6 +141,53 @@ export class AdminService {
     };
 
     return this.http.post<ApiResponse<User>>(`${this.apiUrl_crud}/users`, payload, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+
+  /* Guests */
+  public loadGuests(id_company?: number) {
+    this.loadingGuests.set(true);
+    const payload = {
+      entity: 'hotel_guests',
+      table_name: 'hotel_guests',
+      operation: 'getall',
+      action: 'list',
+      filter: { id_company: id_company }
+    };
+    this.http.post<ApiResponse<Guest>>(`${this.apiUrl_crud}/hotel_guests`, payload, {
+      headers: this.getAuthHeaders()
+    }).subscribe({
+      next: (res) => {
+        const rawData = Array.isArray(res.data) ? res.data : [];
+        const validData = rawData.filter(g => g && g.email && g.email.trim() !== '');
+        const sortedGuests = validData.sort((a, b) => {
+          return (a.email || '').localeCompare(b.email || '');
+        });
+
+        this.guests.set(sortedGuests);
+        this.loadingGuests.set(false);
+      },
+      error: (err) => {
+        console.error('Error en API:', err);
+        this.guests.set([]); // Reset en caso de fallo
+        this.loadingGuests.set(false)
+      }
+    });
+  }
+
+  /* Guardar o actualizar huésped */
+  public saveGuest(guest: Partial<Guest>, operation: 'insert' | 'update', email?: string) {
+    const payload = {
+      entity: 'hotel_guests',
+      table_name: 'hotel_guests',
+      operation: operation,
+      email: email, // Solo para update
+      fields: guest
+    };
+
+    return this.http.post<ApiResponse<Guest>>(`${this.apiUrl_crud}/hotel_guests`, payload, {
       headers: this.getAuthHeaders()
     });
   }

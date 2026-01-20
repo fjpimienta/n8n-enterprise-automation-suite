@@ -6,8 +6,8 @@
 
     @if (viewMode() === 'details' || viewMode() === 'checkin' || viewMode() === 'checkout_validation') {
     <app-room-filters [currentFilter]="bookingService.filter()" [isAdmin]="isAdmin"
-      (onFilterChange)="bookingService.filter.set($event)" (onManageUsers)="openUserManagement()"
-      (onReservations)="openReservations()">
+      (onFilterChange)="bookingService.filter.set($event)" (onManageGuests)="openGuestManagement()"
+      (onManageUsers)="openUserManagement()" (onReservations)="openReservations()">
     </app-room-filters>
 
     <div class="row row-cards g-2">
@@ -162,6 +162,31 @@
       </div>
     </div>
     }
+
+    @if (viewMode() === 'guest_mgmt') {
+    @if (adminService.loadingGuests()) {
+    <div class="card">
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+          <tbody>
+            @for (i of [1,2,3,4,5]; track i) {
+            <tr>
+              <td><app-skeleton appearance="line"></app-skeleton></td>
+              <td><app-skeleton appearance="line" style="width: 50px;"></app-skeleton></td>
+              <td><app-skeleton appearance="line" style="width: 80px;"></app-skeleton></td>
+              <td class="w-1"><app-skeleton appearance="circle"></app-skeleton></td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+    } @else {
+    <app-guest-list [guests]="adminService.guests()" (onBack)="viewMode.set('details')" (onAdd)="openNewGuestModal()"
+      (onEdit)="editGuest($event)">
+    </app-guest-list>
+    }
+    } 
 
     @if (viewMode() === 'user_mgmt') {
     @if (adminService.loadingUsers()) {

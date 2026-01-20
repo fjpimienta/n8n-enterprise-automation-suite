@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
-import { User } from '@core/models/hotel.types';
+import { Guest, User } from '@core/models/hotel.types';
 // Componentes Hijos
 import { CheckinFormComponent } from '@features/booking/components/checkin-form/checkin-form.component';
 import { HeaderComponent } from '@features/dashboard/components/header/header.component';
@@ -14,18 +14,19 @@ import { RoomDetailModalComponent } from '@features/booking/components/room-deta
 import { UserFormModalComponent } from '@features/admin/components/user-form-modal/user-form-modal.component';
 import { UserListComponent } from '@features/admin/components/user-list/user-list.component';
 import { ReservationFormComponent } from '@features/booking/components/reservation-form/reservation-form.component';
+import { SkeletonComponent } from '@shared/ui/loader/skeleton/skeleton.component';
+import { GuestListComponent } from '@features/admin/components/guest-list/guest-list.component';
 // Servicios
 import { AuthService } from '@core/services/auth.service';
 import { HotelService } from '@features/dashboard/services/hotel.service';
 import { ReportService } from '@features/finance/services/report.service';
 import { BookingService } from '@features/booking/services/booking.service';
-import { SkeletonComponent } from '@shared/ui/loader/skeleton/skeleton.component';
 import { AdminService } from '@features/admin/services/admin.service';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, CheckinFormComponent, HeaderComponent, RoomCardComponent, DailyReportModalComponent, RoomFiltersComponent, RoomDetailModalComponent, UserFormModalComponent, UserListComponent, SkeletonComponent, ReservationFormComponent],
+  imports: [CommonModule, FormsModule, CheckinFormComponent, HeaderComponent, RoomCardComponent, DailyReportModalComponent, RoomFiltersComponent, RoomDetailModalComponent, UserFormModalComponent, UserListComponent, GuestListComponent, SkeletonComponent, ReservationFormComponent],
   templateUrl: './dashboard.component.html'
 })
 export class DashboardComponent {
@@ -39,9 +40,10 @@ export class DashboardComponent {
 
   // private readonly N8N_WHATSAPP_WEBHOOK = 'https://n8n.hosting3m.com/webhook/8cd04cee-6a56-4989-b36c-caf9473d7535/webhook';
 
-  viewMode = signal<'details' | 'checkin' | 'checkout_validation' | 'user_mgmt' | 'reservation'>('details');
+  viewMode = signal<'details' | 'checkin' | 'checkout_validation' | 'guest_mgmt' | 'user_mgmt' | 'reservation'>('details');
   reportFilter = signal<'day' | 'week' | 'month' | 'year'>('day');
   isUserModalOpen = signal(false);
+  isGuestModalOpen = signal(false);
   showReportModal = false;
 
   activeBooking: any = null;
@@ -49,6 +51,7 @@ export class DashboardComponent {
 
   checkoutChecks = { tvRemote: false, acRemote: false, keys: false, notes: '' };
   tempUser: User = this.getEmptyUser();
+  tempGuest: Guest = this.getEmptyGuest();
 
   ngOnInit() {
     this.refresh();
@@ -237,12 +240,6 @@ export class DashboardComponent {
     this.adminService.loadUsers(this.authService.currentUser()?.id_company);
   }
 
-  /* Abre la vista de reservas */
-  openReservations() {
-    this.hotelService.clearSelection();
-    this.viewMode.set('reservation');
-  }
-
   /* Abre el modal para crear un nuevo usuario */
   openNewUserModal() {
     this.hotelService.selectUser(null);
@@ -272,7 +269,49 @@ export class DashboardComponent {
     });
   }
 
-  /* 6. SECCIÓN: MANTENIMIENTO DE HABITACIONES */
+  /* 6. SECCIÓN: GESTIÓN DE GUESTS */
+  openGuestManagement() {
+    this.hotelService.clearSelection();
+    this.viewMode.set('guest_mgmt');
+  }
+
+  /* Abre el modal para crear un nuevo huésped */
+  openNewGuestModal() {
+    this.hotelService.selectUser(null);
+    this.tempGuest = this.getEmptyGuest();
+    this.isGuestModalOpen.set(true);
+  }
+
+  /* Abre el modal para editar un huésped existente */
+  editGuest(guest: any) {
+    this.hotelService.selectUser(guest);
+    this.tempGuest = { ...guest };
+    this.isGuestModalOpen.set(true);
+  }
+
+  /* Guarda los cambios de un huésped (nuevo o editado) */
+  async handleSaveGuest() {
+    const selected = this.hotelService.selectedGuest();
+    const operation = selected ? 'update' : 'insert';
+    const email = selected ? selected.email : undefined;
+    this.adminService.saveGuest(this.tempGuest, operation, email).subscribe({
+      next: () => {
+        alert('✅ Huésped guardado');
+        this.isGuestModalOpen.set(false);
+        this.adminService.loadGuests();
+      },
+      error: (err) => alert('❌ Error: ' + err.message)
+    });
+  }
+
+  /* 7. SECCIÓN: MANTENIMIENTO DE HABITACIONES */
+
+  /* Abre la vista de reservas */
+  openReservations() {
+    this.hotelService.clearSelection();
+    this.viewMode.set('reservation');
+  }
+
   async reportMaintenance() {
     const room = this.hotelService.selectedRoom();
     if (!room) return;
@@ -333,7 +372,7 @@ export class DashboardComponent {
   }
   */
 
-  /* 7. SECCIÓN: AUTENTICACIÓN Y NAVEGACIÓN */
+  /* 8. SECCIÓN: AUTENTICACIÓN Y NAVEGACIÓN */
   logout() {
     this.authService.logout();
     this.router.navigate(['/login']);
@@ -355,6 +394,17 @@ export class DashboardComponent {
       created_at: new Date().toISOString()
     };
   }
+
+  /* Obtiene un huésped vacío para el formulario */
+  private getEmptyGuest(): Guest {
+    return {
+      id: 0, full_name: '', phone: '', email: '', doc_id: '',
+      vip_status: false, created_at: new Date().toISOString(),
+      ine_front_url: '', ine_back_url: '', id_company: 1, city: '', state: '',
+      country: 'México', notes: '', requires_invoice: false, is_active: true
+    };
+  }
+
 
   /* Obtiene la etiqueta del período para el reporte */
   private getPeriodLabel(): string {

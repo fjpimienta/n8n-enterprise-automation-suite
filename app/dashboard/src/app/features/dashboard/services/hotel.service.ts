@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Company, Room, User } from '@core/models/hotel.types';
+import { Company, Guest, Room, User } from '@core/models/hotel.types';
 import { environment } from '@env/environment';
 import { lastValueFrom } from 'rxjs';
 import { BookingService } from '@features/booking/services/booking.service';
@@ -16,6 +16,7 @@ export class HotelService {
   selectedRoom = signal<Room | null>(null); // Habitación para el detalle
   selectedCompany = signal<Company | null>(null); // Empresa para el detalle
   selectedUser = signal<User | null>(null); // Usuario para el detalle
+  selectedGuest = signal<Guest | null>(null); // Usuario para el detalle
 
   /* Obtener todas las habitaciones */
   updateRoomStatus(id: number, status: string) {
@@ -44,6 +45,11 @@ export class HotelService {
   /** Selecciona un usuario para editarlo */
   selectUser(user: User | null) {
     this.selectedUser.set(user);
+  }
+  
+  /** Selecciona un huésped para editarlo */
+  selectGuest(guest: Guest | null) {
+    this.selectedGuest.set(guest);
   }
 
   /** Selecciona una empresa para ver su detalle */

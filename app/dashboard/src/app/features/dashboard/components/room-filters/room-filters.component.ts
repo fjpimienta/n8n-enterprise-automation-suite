@@ -16,6 +16,7 @@ export class RoomFiltersComponent {
 
   onFilterChange = output<any>();
   onManageUsers = output<void>();
+  onManageGuests = output<void>();
   onReservations = output<void>();
 
   filterOptions = [
