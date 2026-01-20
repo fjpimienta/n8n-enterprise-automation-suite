@@ -1,131 +1,100 @@
-<div class="card border-0 shadow-sm">
-    <div class="card-header bg-primary-lt py-3">
-        <h3 class="card-title text-primary d-flex align-items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-calendar-plus me-2" width="24"
-                height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
-                stroke-linecap="round" stroke-linejoin="round">
-                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                <path d="M12 21h-6a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v5"></path>
-                <path d="M16 3v4"></path>
-                <path d="M8 3v4"></path>
-                <path d="M4 11h16"></path>
-                <path d="M16 19h6"></path>
-                <path d="M19 16v6"></path>
-            </svg>
-            {{ room() ? 'Reservar Habitación ' + room()?.room_number : 'Nueva Reserva General' }}
+<div class="card border-0 shadow-sm h-100">
+    <div class="card-header bg-primary-lt py-2 px-3">
+        <h3 class="card-title text-primary d-flex align-items-center mb-0">
+            <i class="ti ti-calendar-plus me-2 fs-2"></i>
+            <span class="small fw-bold">
+                {{ room() ? 'Hab. ' + room()?.room_number : 'Nueva Reserva' }}
+            </span>
         </h3>
         <button type="button" class="btn-close ms-auto" (click)="onClose.emit()"></button>
     </div>
 
-    <div class="card-body">
-        <div class="section-title mb-3 text-uppercase text-muted fw-bold small">1. Período de Estancia</div>
-        <div class="row g-3 mb-4 align-items-end">
-            <div class="col-sm-5">
-                <label class="form-label required">Entrada (Check-in)</label>
-                <div class="input-icon">
-                    <span class="input-icon-addon">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
-                            stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
-                            stroke-linejoin="round">
-                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                            <path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12z" />
-                            <path d="M16 3v4" />
-                            <path d="M8 3v4" />
-                            <path d="M4 11h16" />
-                            <path d="M11 15h1" />
-                            <path d="M12 15v3" />
-                        </svg>
-                    </span>
-                    <input type="date" class="form-control" [(ngModel)]="dates.start">
-                </div>
+    <div class="card-body p-3">
+        <div class="section-title mb-2 text-uppercase text-muted fw-bold x-small" style="font-size: 0.7rem;">
+            1. Período de Estancia
+        </div>
+        
+        <div class="row g-2 mb-3">
+            <div class="col-12 col-xl-6">
+                <label class="form-label required mb-1 small">Entrada</label>
+                <input type="date" class="form-control form-control-sm" [(ngModel)]="dates.start">
             </div>
-            <div class="col-sm-5">
-                <label class="form-label required">Salida (Check-out)</label>
-                <div class="input-icon">
-                    <span class="input-icon-addon">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
-                            stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
-                            stroke-linejoin="round">
-                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                            <path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12z" />
-                            <path d="M16 3v4" />
-                            <path d="M8 3v4" />
-                            <path d="M4 11h16" />
-                            <path d="M11 15h1" />
-                            <path d="M12 15v3" />
-                        </svg>
-                    </span>
-                    <input type="date" class="form-control" [(ngModel)]="dates.end">
-                </div>
+            <div class="col-12 col-xl-6">
+                <label class="form-label required mb-1 small">Salida</label>
+                <input type="date" class="form-control form-control-sm" [(ngModel)]="dates.end">
             </div>
-            <div class="col-sm-2">
-                <button class="btn btn-primary w-100" [disabled]="isSearching()" (click)="searchRooms()">
-                    @if(isSearching()) { <span class="spinner-border spinner-border-sm me-2"></span> }
-                    @else { 🔍 }
-                    Buscar
+            <div class="col-12 mt-2">
+                <button class="btn btn-primary btn-sm w-100 py-2 shadow-sm" 
+                        [disabled]="isSearching()" (click)="searchRooms()">
+                    @if(isSearching()) { <span class="spinner-border spinner-border-sm me-2"></span> Buscando... }
+                    @else { <i class="ti ti-search me-1"></i> Buscar Disponibilidad }
                 </button>
             </div>
         </div>
 
-        <hr class="my-4">
+        <hr class="my-3 opacity-50">
 
         @if (availableRooms.length > 0) {
-        <div class="section-title mb-3 text-uppercase text-muted fw-bold small">2. Seleccione Habitación</div>
-        <div class="list-group list-group-flush border rounded-3 mb-4" style="max-height: 250px; overflow-y: auto;">
-            @for (r of availableRooms; track r.id) {
-            <label class="list-group-item list-group-item-action d-flex align-items-center py-3 cursor-pointer"
-                [class.bg-blue-lt]="selectedRoomForRes?.id === r.id">
-                <input class="form-check-input me-3" type="radio" name="roomSelection"
-                    [checked]="selectedRoomForRes?.id === r.id" (change)="selectedRoomForRes = r">
-                <div class="flex-fill">
-                    <div class="font-weight-bold mb-0 text-dark">Habitación {{ r.room_number }}</div>
-                    <div class="text-muted small text-capitalize">{{ r.type }}</div>
-                </div>
-                <div class="text-end">
-                    <span class="badge bg-green-lt fs-3 px-3 py-2">${{ r.price_night }}</span>
-                </div>
-            </label>
-            }
-        </div>
+            <div class="section-title mb-2 text-uppercase text-muted fw-bold x-small" style="font-size: 0.7rem;">
+                2. Seleccione Habitación
+            </div>
+            <div class="list-group list-group-flush border rounded-3 mb-3" 
+                 style="max-height: 180px; overflow-y: auto;">
+                @for (r of availableRooms; track r.id) {
+                <label class="list-group-item list-group-item-action d-flex align-items-center py-2 px-3 cursor-pointer"
+                    [class.bg-blue-lt]="selectedRoomForRes?.id === r.id">
+                    <input class="form-check-input me-3" type="radio" name="roomSelection"
+                        [checked]="selectedRoomForRes?.id === r.id" (change)="selectedRoomForRes = r">
+                    <div class="flex-fill">
+                        <div class="fw-bold mb-0 text-dark small text-truncate">Hab. {{ r.room_number }}</div>
+                        <div class="text-muted" style="font-size: 0.7rem;">{{ r.type | titlecase }}</div>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-green-lt">${{ r.price_night }}</span>
+                    </div>
+                </label>
+                }
+            </div>
         }
 
         @if (selectedRoomForRes && dates.start && dates.end) {
-        <div class="bg-light p-3 rounded-3 border">
-            <div class="section-title mb-3 text-uppercase text-primary fw-bold small">3. Datos del Huésped</div>
-            <div class="row g-2">
-                <div class="col-md-7">
-                    <div class="form-floating mb-2">
-                        <input type="text" class="form-control border-primary-subtle" id="guestName"
-                            placeholder="Nombre" [(ngModel)]="guest.name">
-                        <label for="guestName">Nombre Completo</label>
-                    </div>
+            <div class="bg-blue-faint p-3 rounded-3 border border-primary-subtle animate__animated animate__fadeIn">
+                <div class="section-title mb-2 text-uppercase text-primary fw-bold x-small" style="font-size: 0.7rem;">
+                    3. Datos del Huésped
                 </div>
-                <div class="col-md-5">
-                    <div class="form-floating mb-2">
-                        <input type="text" class="form-control border-primary-subtle" id="guestPhone"
-                            placeholder="Teléfono" [(ngModel)]="guest.phone">
-                        <label for="guestPhone">Teléfono</label>
-                    </div>
+                
+                <div class="mb-2">
+                    <label class="form-label small mb-1">Nombre Completo</label>
+                    <input type="text" class="form-control form-control-sm" placeholder="Ej: Juan Pérez" [(ngModel)]="guest.name">
                 </div>
-            </div>
 
-            <div class="mt-4">
-                <button class="btn btn-success btn-lg w-100 shadow-sm" [disabled]="isSaving() || !guest.name"
-                    (click)="confirmReservation()">
-                    @if(isSaving()) {
-                    <span class="spinner-border spinner-border-sm me-2"></span> Guardando Reserva...
-                    } @else {
-                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-check me-2" width="24"
-                        height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
-                        stroke-linecap="round" stroke-linejoin="round">
-                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                        <path d="M5 12l5 5l10 -10" />
-                    </svg>
-                    Confirmar Reserva de ${{ getNights(dates.start, dates.end) * selectedRoomForRes.price_night }}
-                    }
-                </button>
+                <div class="row g-2">
+                    <div class="col-12">
+                        <label class="form-label small mb-1">Correo (Opcional)</label>
+                        <input type="email" class="form-control form-control-sm" placeholder="email@ejemplo.com" [(ngModel)]="guest.email">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label small mb-1">Teléfono</label>
+                        <input type="tel" class="form-control form-control-sm" placeholder="999-000-000" [(ngModel)]="guest.phone">
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <button class="btn btn-success w-100 shadow-sm d-flex flex-column align-items-center py-2" 
+                        [disabled]="isSaving() || !guest.name"
+                        (click)="confirmReservation()">
+                        @if(isSaving()) {
+                            <span class="spinner-border spinner-border-sm mb-1"></span> 
+                            <span class="small">Guardando...</span>
+                        } @else {
+                            <span class="fw-bold">Confirmar Reserva</span>
+                            <span style="font-size: 0.7rem;" class="opacity-75">
+                                Total: ${{ getNights(dates.start, dates.end) * selectedRoomForRes.price_night | number:'1.2-2' }}
+                            </span>
+                        }
+                    </button>
+                </div>
             </div>
-        </div>
         }
     </div>
 </div>
