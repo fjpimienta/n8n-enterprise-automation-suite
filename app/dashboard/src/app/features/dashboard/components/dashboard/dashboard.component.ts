@@ -71,6 +71,32 @@ export class DashboardComponent {
     }
   }
 
+  /* 1. SECCIÓN: REFRESCO DE DATOS */
+  refreshMain() {
+    // 1. EL CAMBIO CLAVE: Resetear la vista a las habitaciones
+    this.viewMode.set('details');
+
+    // 2. Limpiar cualquier selección previa (si había un modal o cuarto abierto)
+    this.hotelService.clearSelection();
+    this.activeBooking = null;
+
+    // 3. Resetear filtros para ver "lo principal" (opcional)
+    // Esto asegura que veas todas las habitaciones disponibles al volver
+    this.bookingService.filter.set('all');
+
+    // 4. Recargar los datos de los servicios
+    this.bookingService.loadRooms();
+    this.adminService.loadReservations();
+    this.adminService.loadGuests();
+
+    if (this.isAdmin) {
+      this.adminService.loadUsers(this.authService.currentUser()?.id_company);
+    }
+
+    // 5. Resetear paginación
+    this.currentPage.set(1);
+  }
+
   /* 2. SECCIÓN: INTERACCIÓN CON HABITACIONES */
   async onSelectRoom(room: any) {
     this.viewMode.set('details');

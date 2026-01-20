@@ -27,7 +27,7 @@ export class ReservationFormComponent implements OnInit { // 2. Agregamos "imple
   dates = { start: '', end: '' };
   availableRooms: Room[] = [];
   selectedRoomForRes: Room | null = null;
-  guest = { name: '', phone: '' };
+  guest = { name: '', phone: '', email: '' };
 
   ngOnInit() {
     if (this.room()) {
@@ -96,6 +96,7 @@ export class ReservationFormComponent implements OnInit { // 2. Agregamos "imple
 
     const reservationData = {
       full_name: this.guest.name,
+      email: this.guest.email,
       phone: this.guest.phone,
       check_in: this.dates.start,
       check_out: this.dates.end,
