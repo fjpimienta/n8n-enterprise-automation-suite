@@ -22,5 +22,6 @@ export class RoomDetailModalComponent {
   @Output() onPay = new EventEmitter<any>();
   @Output() onMaintenance = new EventEmitter<void>();
   @Output() onFinishMaintenance = new EventEmitter<void>();
+  @Output() onMarkAsClean = new EventEmitter<void>();
 
 }

@@ -1,4 +1,4 @@
-export type RoomStatus = 'available' | 'occupied' | 'maintenance' | 'reserved' | 'checkout';
+export type RoomStatus = 'available' | 'occupied' | 'maintenance' | 'dirty';
 export type CleaningStatus = 'clean' | 'dirty' | 'inspected';
 
 export interface Room {
@@ -10,6 +10,7 @@ export interface Room {
   description?: string;
   cleaning_status: CleaningStatus;
   next_reservation?: string; // Campo calculado que podemos traer del backend
+  hasIncomingToday?: boolean; // Campo calculado para saber si hay reserva que entra hoy
 }
 
 export interface Booking {
@@ -47,4 +48,23 @@ export interface User {
   phone?: string;
   role: 'ADMIN' | 'EDITOR' | 'CUSTOMER'; // Basado en tu CHECK constraint
   created_at: string | Date; // Al igual que Company, llega como ISO string
+}
+
+export interface Guest {
+  id: number;
+  full_name: string;
+  phone?: string;
+  email?: string;
+  doc_id?: string;
+  vip_status: boolean;
+  created_at: string | Date;
+  ine_front_url?: string;
+  ine_back_url?: string;
+  id_company: number;
+  city?: string;
+  state?: string;
+  country: string;
+  notes?: string;
+  requires_invoice: boolean;
+  is_active: boolean;
 }
