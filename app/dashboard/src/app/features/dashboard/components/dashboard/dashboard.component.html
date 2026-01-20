@@ -19,8 +19,21 @@
       }
       } @else {
       @for (room of bookingService.filteredRooms(); track room.id) {
-      <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+      <div class="col-sm-6 col-lg-3">
         <app-room-card [room]="room" (onSelect)="onSelectRoom($event)"></app-room-card>
+      </div>
+      } @empty {
+      <div class="col-12">
+        <div class="card card-stacked py-5 border-0 shadow-none bg-transparent">
+          <div class="card-body text-center">
+            <div class="display-1 text-muted-lt mb-3"><i class="ti ti-ghost"></i></div>
+            <p class="h2">No hay habitaciones</p>
+            <p class="text-muted">
+              Actualmente no hay habitaciones en estado:
+              <span class="badge bg-primary-lt">{{ bookingService.filter() | uppercase }}</span>
+            </p>
+          </div>
+        </div>
       </div>
       }
       }
@@ -179,8 +192,7 @@
 
 @if (hotelService.selectedRoom() && viewMode() === 'details') {
 <app-room-detail-modal [room]="hotelService.selectedRoom()" [activeBooking]="activeBooking"
-  (onClose)="hotelService.clearSelection()" (onCheckin)="viewMode.set('checkin')"
-  (onMarkAsClean)="markRoomAsClean()"
+  (onClose)="hotelService.clearSelection()" (onCheckin)="viewMode.set('checkin')" (onMarkAsClean)="markRoomAsClean()"
   (onReservations)="viewMode.set('reservation')" (onCheckout)="handleCheckout()" (onPay)="markAsPaid($event)"
   (onMaintenance)="reportMaintenance()" (onFinishMaintenance)="handleFinishMaintenance()">
 </app-room-detail-modal>
