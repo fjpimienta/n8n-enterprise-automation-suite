@@ -13,3 +13,12 @@ Todos los cambios notables en este proyecto serán documentados en este archivo.
 - Actualizacion CRUD y los subworkflow Build Query y Normalize.
 - Actualizacion Contact.
 - Implementacion de versionado.
+
+## [3.0.0] - 2026-01-13
+### Añadido
+- Actualizacion OmniChannel.
+- Actualizacion CRUD y los subworkflow Build Query y Normalize.
+- Actualizacion Contact.
+- Actualizacion Autenticacion
+- Actualizacion News
+- Implementacion de App Gestion de Hotel.
