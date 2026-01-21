@@ -42,11 +42,11 @@ async function clickByText(page, text) {
     return found;
 }
 
-// --- NUEVA FUNCIÓN PARA RESOLVER CAPTCHA IMSS (Login y Modal) ---
+// --- FUNCIÓN SOLVER REFINADA (Para evitar rechazos de OpenAI) ---
 async function solveImssCaptcha(page, openai_key, captchaImgSelector, inputSelector) {
     try {
         const captchaElement = await page.waitForSelector(captchaImgSelector, { visible: true, timeout: 10000 });
-        await new Promise(r => setTimeout(r, 1000));
+        await new Promise(r => setTimeout(r, 800));
         const imageBuffer = await captchaElement.screenshot({ encoding: 'base64' });
 
         const gptResponse = await axios.post('https://api.openai.com/v1/chat/completions', {
@@ -55,24 +55,28 @@ async function solveImssCaptcha(page, openai_key, captchaImgSelector, inputSelec
                 {
                     role: "user",
                     content: [
-                        { type: "text", text: "Analiza este captcha. Devuelve UNICAMENTE los caracteres. Son usualmente 6 o 7 caracteres. Respeta mayúsculas y minúsculas. No pongas espacios ni nada extra." },
+                        { type: "text", text: "OCR Task: Extract the alphanumeric characters from this distorted image. Provide ONLY the characters. No conversation, no apologies." },
                         { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBuffer}` } }
                     ]
                 }
             ],
-            temperature: 0.0, // Menos creatividad, más precisión
-            max_tokens: 10
+            temperature: 0.0,
+            max_tokens: 15
         }, {
             headers: { 'Authorization': `Bearer ${openai_key}` }
         });
 
         let solution = gptResponse.data.choices[0].message.content.trim().replace(/[^a-zA-Z0-9]/g, '');
-        console.log(`[IMSS] Captcha procesado: ${solution}`);
+        
+        // Si OpenAI responde con su mensaje de "I'm sorry", forzamos el error para que el bucle reintente
+        if (solution.length > 15 || solution.toLowerCase().includes('sorry')) {
+            throw new Error("OpenAI se negó a resolver el captcha");
+        }
 
-        // Limpieza profunda del input antes de escribir
+        console.log(`[IMSS] Captcha procesado: ${solution}`);
         await page.click(inputSelector, { clickCount: 3 });
         await page.keyboard.press('Backspace');
-        await page.type(inputSelector, solution, { delay: 150 }); // Un poco más lento para simular humano
+        await page.type(inputSelector, solution, { delay: 100 });
 
         return true;
     } catch (e) {
