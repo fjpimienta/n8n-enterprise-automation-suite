@@ -7,6 +7,7 @@ const puppeteer = require('puppeteer');
 const ipaddr = require('ipaddr.js'); // Librería de seguridad
 const { URL } = require('url');      // Módulo nativo
 const { PORT, USER_AGENT } = require('./config');
+const axios = require('axios'); // Asegúrate de importarlo arriba
 
 const app = express();
 app.use(bodyParser.json());
@@ -63,6 +64,220 @@ function isSafeUrl(urlInput) {
 }
 
 // ... [Tus funciones scrapeGeneric y scrapeLinkedIn se mantienen igual] ...
+async function clickByText(page, text) {
+    const found = await page.evaluate((textToFind) => {
+        const elements = [...document.querySelectorAll('a, button, span, div, h4')];
+        const el = elements.find(element => element.innerText.includes(textToFind));
+        if (el) {
+            el.click();
+            return true;
+        }
+        return false;
+    }, text);
+    return found;
+}
+
+app.post('/automate/quoted-weeks', async (req, res) => {
+    const { curp, nss, email, openai_key } = req.body;
+    let browser = null;
+
+    if (!curp || !nss || !email) return res.status(400).json({ error: "Faltan datos (CURP, NSS, Email)." });
+
+    try {
+        console.log(`[IMSS] Iniciando proceso para: ${email}`);
+        console.log(`[DEBUG] Longitud de la clave recibida: ${openai_key ? openai_key.length : 0}`);
+        if (openai_key) {
+            console.log(`[DEBUG] Comienzo de la clave: ${openai_key.substring(0, 7)}...`);
+        }
+        browser = await puppeteer.launch({
+            executablePath: '/usr/bin/chromium-browser',
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage', // Usa /tmp en lugar de memoria compartida limitada
+                '--disable-gpu',
+                '--no-zygote',
+                '--hide-scrollbars',
+                '--mute-audio',
+                '--disable-breakpad'       // Evita reportes de crash que consumen recursos
+            ],
+            headless: "new",
+            protocolTimeout: 60000,
+        });
+
+        const page = await browser.newPage();
+        await page.setUserAgent(USER_AGENT);
+
+        // 1. Ir al sitio del IMSS
+        const targetUrl = 'https://serviciosdigitales.imss.gob.mx/semanascotizadas-web/usuarios/IngresoAsegurado';
+        await page.goto(targetUrl, { waitUntil: 'networkidle2', timeout: 60000 });
+        console.log("[IMSS] Página de login cargada.");
+
+        // Definimos selectores exactos (El IMSS es sensible a mayúsculas/minúsculas)
+        const selectors = {
+            curp: '#CURP',
+            nss: '#NSS',
+            email: '#Correo',
+            emailConfirm: '#CorreoConfirma', // Verificamos este ID
+            captchaImg: '#captchaImg',
+            captchaInput: '#captcha',
+            btnSubmit: '#btnAceptar, button[type="submit"], .btn-primary'
+        };
+        console.log("[IMSS] Esperando a que carguen los campos...");
+
+        // Esperamos a que el formulario principal esté visible
+        await page.waitForSelector(selectors.curp, { visible: true, timeout: 20000 });
+
+        // Escribimos con pequeños retrasos para simular a un humano y evitar bloqueos
+        await page.type(selectors.curp, curp, { delay: 50 });
+        await page.type(selectors.nss, nss, { delay: 50 });
+
+        // Esperamos explícitamente al campo de confirmación antes de escribir en él
+        await page.waitForSelector(selectors.emailConfirm, { visible: true, timeout: 5000 });
+
+        await page.type(selectors.email, email, { delay: 50 });
+        await page.type(selectors.emailConfirm, email, { delay: 50 });
+
+        // 3. Manejo del CAPTCHA con IA
+        // Localizar el elemento del captcha
+        const captchaElement = await page.$(selectors.captchaImg); // <--- REVISAR SELECTOR REAL
+        if (captchaElement) {
+            // Tomar screenshot solo del elemento captcha
+            const imageBuffer = await captchaElement.screenshot({ encoding: 'base64' });
+
+            // Consultar a OpenAI (GPT-4o) para resolverlo
+            const gptResponse = await axios.post('https://api.openai.com/v1/chat/completions', {
+                model: "gpt-4o",
+                messages: [
+                    {
+                        role: "user",
+                        content: [
+                            { type: "text", text: "What are the characters in this captcha image? Return ONLY the characters, no spaces, no text." },
+                            { type: "image_url", image_url: { url: `data:image/jpeg;base64,${imageBuffer}` } }
+                        ]
+                    }
+                ],
+                max_tokens: 10
+            }, {
+                headers: { 'Authorization': `Bearer ${openai_key}` }
+            });
+
+            const captchaSolution = gptResponse.data.choices[0].message.content.trim();
+            console.log(`[IMSS] Captcha resuelto: ${captchaSolution}`);
+
+            // Escribir captcha
+            await page.type('#captcha', captchaSolution); // <--- REVISAR SELECTOR REAL
+        }
+
+        // 4. Enviar Login
+        console.log("[IMSS] Haciendo clic en el botón de ingresar...");
+        await page.waitForSelector(selectors.btnSubmit, { visible: true, timeout: 30000 });
+        await Promise.all([
+            page.waitForNavigation({ waitUntil: 'networkidle2' }),
+            page.click(selectors.btnSubmit),
+        ]);
+
+        // --- VALIDACIÓN DE LOGIN ---
+        const pageContent = await page.content();
+        if (pageContent.includes("incorrecto") || pageContent.includes("error")) {
+            throw new Error("Login fallido: Captcha incorrecto o datos inválidos.");
+        }
+
+        /// 5. NAVEGACIÓN INTERNA
+        console.log("[IMSS] Login exitoso. Buscando botón de constancia...");
+
+        // Esperamos a que el panel de opciones esté presente
+        await page.waitForSelector('button[name="reporte"]', { timeout: 15000 });
+
+        // Paso A: Clic en "Constancia de Semanas Cotizadas en el IMSS"
+        // Usamos el selector específico que encontraste
+        await Promise.all([
+            page.waitForNavigation({ waitUntil: 'networkidle2' }),
+            page.click('button[name="reporte"]'),
+        ]);
+
+        console.log("[IMSS] Entrando a la configuración del reporte...");
+
+        // Paso B: Seleccionar "Reporte detallado"
+        // Este paso suele abrir una pantalla con un checkbox
+        try {
+            await page.waitForSelector('input[type="checkbox"]', { timeout: 10000 });
+            await page.evaluate(() => {
+                const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+                checkboxes.forEach(cb => {
+                    // Marcamos el checkbox (usualmente es el único en esta pantalla)
+                    if (!cb.checked) cb.click();
+                });
+            });
+            console.log("[IMSS] Reporte detallado marcado.");
+        } catch (e) {
+            console.log("[WARN] No se encontró checkbox de reporte detallado o ya estaba marcado.");
+        }
+
+        // Paso C: Clic en Continuar (el botón final para que envíen el PDF al correo)
+        const finalBtnSelector = 'button[type="submit"].btn-primary, #btnContinuar';
+        await page.waitForSelector(finalBtnSelector, { visible: true, timeout: 15000 });
+
+        console.log("[IMSS] Haciendo clic en Continuar final...");
+
+        // Ejecutamos el clic sin Promise.all(waitForNavigation) 
+        // porque el IMSS a veces no cambia de URL, solo muestra un mensaje.
+        await page.click(finalBtnSelector);
+
+        // 6. Confirmación final
+        console.log("[IMSS] Esperando mensaje de confirmación de envío...");
+
+        try {
+            // Esperamos a que aparezca texto de éxito en la pantalla
+            await page.waitForFunction(
+                () => {
+                    const text = document.body.innerText.toLowerCase();
+                    return text.includes("enviado") ||
+                        text.includes("exitosamente") ||
+                        text.includes("finalizado") ||
+                        text.includes("correo electrónico");
+                },
+                { timeout: 30000 }
+            );
+
+            const successMsg = await page.evaluate(() => document.body.innerText);
+            const cleanMsg = successMsg.replace(/\n/g, ' ').substring(0, 300);
+
+            console.log(`[IMSS] Finalizado con éxito.`);
+            return res.json({
+                status: "success",
+                message: "Constancia solicitada correctamente.",
+                details: cleanMsg
+            });
+        } catch (e) {
+            console.log("[IMSS] Tiempo de espera de confirmación agotado, verificando pantalla...");
+            const currentContent = await page.evaluate(() => document.body.innerText);
+
+            if (currentContent.includes("incorrecto")) {
+                throw new Error("El sistema indica un error en los datos o captcha al finalizar.");
+            }
+
+            return res.json({
+                status: "uncertain",
+                message: "Se hizo clic en finalizar pero no se detectó el mensaje de éxito.",
+                details: currentContent.substring(0, 200)
+            });
+        }
+
+    } catch (err) {
+        console.error(`[ERROR] ${err.message}`);
+        let errorShot = "";
+        if (browser) {
+            try {
+                const pages = await browser.pages();
+                if (pages.length > 0) errorShot = await pages[0].screenshot({ encoding: 'base64' });
+            } catch (e) { }
+        }
+        res.status(500).json({ error: err.message, screenshot: errorShot });
+    } finally {
+        if (browser) await browser.close();
+    }
+});
 
 app.post('/scrape', async (req, res) => {
     let browser = null;
@@ -73,7 +288,7 @@ app.post('/scrape', async (req, res) => {
         if (!url) return res.status(400).json({ error: "Se requiere 'url'." });
 
         // 2. Validación de Lista Blanca (Lo único que CodeQL acepta al 100%)
-        const ALLOWED_DOMAINS = ['linkedin.com', 'hosting3m.com'];
+        const ALLOWED_DOMAINS = ['linkedin.com', 'hosting3m.com', 'imss.gob.mx'];
         const parsedUrl = new URL(url);
         const host = parsedUrl.hostname.toLowerCase().replace('www.', '');
 
