@@ -7,45 +7,66 @@
 **Stack:** n8n, Docker, PostgreSQL (pgvector), Node.js, OpenAI (GPT-4o), MCP (Model Context Protocol). Linux VPS.
 
 ## 🎯 Objetivo del Proyecto
-Suite de automatización empresarial de grado industrial diseñada para alta disponibilidad. Esta arquitectura trasciende el uso de simples "bots" para convertirse en un Hub de Servicios Inteligente que garantiza la soberanía de datos mediante un despliegue Self-Hosted, latencia mínima y una gestión de permisos basada en roles (RBAC) vinculada directamente a la base de datos central.
+Suite de automatización empresarial de grado industrial diseñada para alta disponibilidad. Esta arquitectura trasciende el uso de simples "bots" para convertirse en un **Hub de Servicios Inteligente** que garantiza:
+
+1.  **Soberanía de Datos:** Despliegue 100% Self-Hosted.
+2.  **Latencia Mínima:** Optimización de redes internas Docker.
+3.  **Seguridad Corporativa:** Gestión de permisos basada en roles (RBAC) vinculada directamente a la base de datos central.
+
+---
 
 ## 🏗 Arquitectura e Infraestructura (Infrastructure as Code)
-Desplegado en un entorno endurecido (Hardened VPS) utilizando orquestación de contenedores y redes aisladas.
+Desplegado en un entorno endurecido (**Hardened VPS**) utilizando orquestación de contenedores y redes aisladas.
 
-|Servicio|Tecnología|Función|
-|:---|:---|:---|
-|**Orquestador**|n8n v2.1.4 (Enterprise)|Motor lógico de flujos.|
-|**MCP Server**|Model Context Protocol|Protocolo de interoperabilidad para ejecutar SQL desde la IA.|
-|**Capa de Datos**|PostgreSQL + pgvector|Almacenamiento relacional y base de datos vectorial para RAG.|
-|**Seguridad**|Node.js (JWT Service)|Microservicio dedicado para firma y validación de tokens RS256.|
-|**Agentes IA**|OpenAI + LangChain Logic|Procesamiento de lenguaje natural y razonamiento autónomo.|
-|**Voz (STT/TTS)**|Whisper & OpenAI TTS|Conversión bidireccional de audio con normalización de buffers.|
-|**Memoria IA**|PostgreSQL + pgvector|RAG (Retrieval-Augmented Generation) para contexto a largo plazo.|
-|**Ingesta**|Node.js Scraper|Motor de extracción de datos en tiempo real.|
-|**Contactos**|n8n v2.1.4 (Enterprise)|Flujo para recibir informacion de prospectos en Contacto.|
+| Servicio | Tecnología | Función Crítica |
+| :--- | :--- | :--- |
+| **Orquestador** | n8n v2.1.4 (Enterprise) | Motor lógico central de flujos. |
+| **IA Bridge** | Model Context Protocol (MCP) | Protocolo de interoperabilidad para ejecutar SQL seguro desde la IA. |
+| **Capa de Datos** | PostgreSQL + pgvector | Almacenamiento relacional transaccional y base de datos vectorial (RAG). |
+| **Seguridad** | Node.js (JWT Service) | Microservicio dedicado para firma y validación de tokens RS256. |
+| **Agentes IA** | OpenAI + LangChain | Procesamiento de lenguaje natural y razonamiento autónomo. |
+| **Voz (IO)** | Whisper & OpenAI TTS | Conversión bidireccional de audio con normalización de buffers. |
+| **Memoria IA** | PostgreSQL + pgvector | RAG (Retrieval-Augmented Generation) para contexto a largo plazo. |
+| **Ingesta** | Node.js Scraper | Motor de extracción de datos en tiempo real. |
+| **Contactos** | n8n v2.1.4 (Enterprise) | Orquestador de entrada de leads y CRM. |
+
+---
 
 ## 📦 Módulos Implementados (Workflows)
-1.  **🔐 Secure Token Gateway:** 
-    Sistema centralizado que gestiona tanto la validación de peticiones externas como la auto-generación de tokens para tareas cronometradas, permitiendo que los flujos operen de forma autónoma pero segura.
-2.  **🛠️ Contact & CRM Bridge v2 (n8n Workflow):**
-    La versión de este orquestador de contactos perfecciona la integración entre el frontend (formularios web) y el backend (CRM).
-3.  **📰 Automated News Curator:** 
-    Motor de curaduría que extrae noticias técnicas, realiza un filtrado semántico y genera una identidad visual única mediante IA generativa antes de persistir los datos en el CRUD central.
-4.  **📢 Social Media Orchestrator:**
-    Orquestador omnicanal con lógica de idempotencia. Verifica cuotas de publicación diarias y adapta el contenido (truncado de texto, tagging) para maximizar el engagement en X, Facebook y LinkedIn.
-5.  **🤖 Multi-Service WhatsApp Hub
-    Agente multimodal (Texto/Voz) con enrutamiento inteligente. Identifica al cliente en la DB y decide si la atención debe ser orientada a Hosting, Hotel o soporte general, utilizando memoria persistente pgvector.
-6.  **🛠️ Dynamic CRUD Engine:**
-    Capa de abstracción que procesa operaciones SQL complejas. Soporta inserciones masivas, joins dinámicos y validación de roles, actuando como el backend unificado para todos los frontends.
-7.  **🏨 MCP Server: Hotel Management:** 
-    Implementación avanzada del protocolo MCP que expone herramientas de base de datos a la IA. Permite consultas de disponibilidad en tiempo real y registro de reservas directas mediante lenguaje natural.
-8.  **🏨 AdminHotel Dashboard:** 
-    Cliente Web SPA de alto rendimiento para la gestión visual del inventario hotelero.
-    Novedades v0.5:
-        * Sistema de refresco inteligente (Refresh Main).
-        * Gestión dinámica de reservas.
-        * CRUD de huéspedes con validación de identidad y Room Rack con estados reactivos (Sucia, Disponible, Reservada, Ocupada). 
-        * Consume Módulos: Secure Token Gateway, Dynamic CRUD Engine, MCP Server.
+
+La suite se compone de 8 módulos principales que operan como microservicios interconectados:
+
+### 1. 🔐 Secure Token Gateway
+Sistema centralizado que gestiona tanto la validación de peticiones externas como la auto-generación de tokens para tareas cronometradas, permitiendo que los flujos operen de forma autónoma bajo un esquema "Zero Trust".
+
+### 2. 🛠️ Contact & CRM Bridge v2
+La versión avanzada del orquestador de contactos. Perfecciona la integración entre el frontend (formularios web) y el backend (CRM), asegurando sanitización de datos.
+
+### 3. 📰 Automated News Curator
+Motor de curaduría que extrae noticias técnicas, realiza un **filtrado semántico** y genera una identidad visual única mediante IA generativa antes de persistir los datos en el CRUD central.
+
+### 4. 📢 Social Media Orchestrator
+Orquestador omnicanal con lógica de **idempotencia**. Verifica cuotas de publicación diarias y adapta el contenido (truncado de texto, tagging) para maximizar el engagement en X, Facebook y LinkedIn.
+
+### 5. 🤖 Multi-Service WhatsApp Hub
+Agente multimodal (Texto/Voz) con **enrutamiento inteligente**. Identifica al cliente en la DB y decide si la atención debe ser orientada a Hosting, Hotel o soporte general, utilizando memoria persistente `pgvector`.
+
+### 6. 🛠️ Dynamic CRUD Engine
+Capa de abstracción que procesa operaciones SQL complejas. Soporta inserciones masivas, joins dinámicos y validación de roles, actuando como el backend unificado para todos los frontends.
+
+### 7. 🏨 MCP Server: Hotel Management
+Implementación avanzada del **Model Context Protocol**. Expone herramientas de base de datos a la IA, permitiendo consultas de disponibilidad en tiempo real y registro de reservas directas mediante lenguaje natural (SQL Gen).
+
+### 8. 🏨 AdminHotel Dashboard (Frontend)
+Cliente Web SPA de alto rendimiento para la gestión visual del inventario hotelero.
+* **Novedades v0.5:**
+    * Sistema de refresco inteligente (Refresh Main).
+    * Gestión dinámica de reservas.
+    * CRUD de huéspedes con validación de identidad.
+    * **Room Rack** con estados reactivos (Sucia, Disponible, Reservada, Ocupada).
+    * **Integración:** Consume Módulos Secure Token Gateway, Dynamic CRUD Engine y MCP Server.
+
+---
 
 ## 🚀 Despliegue
 ```bash
@@ -65,9 +86,9 @@ npm install && ng serve
 
 ## Documentación de Workflows Individuales
 
-### 📦 Catálogo de Microservicios y Flujos (Workflows)
+### 📚 Documentación Técnica por Módulo
 
-A continuación se detalla la documentación técnica y el código fuente de cada módulo implementado en n8n:
+Detalle técnico y código fuente de cada microservicio implementado en n8n:
 
 | ID | Módulo / Servicio | Función Principal | Stack & Integraciones | Documentación |
 | :---| :--- | :--- | :--- | :---: |
