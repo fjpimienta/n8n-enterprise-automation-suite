@@ -12,6 +12,8 @@ ollama-models/
 **/data/
 
 # --- Backups y Temporales ---
+*.tar.gz
+*.gz
 *.tar
 *.sqlite
 *.sql
