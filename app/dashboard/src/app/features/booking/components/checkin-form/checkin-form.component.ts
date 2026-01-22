@@ -50,14 +50,17 @@ export class CheckinFormComponent implements OnInit, OnChanges {
 
   private fillWithReservationData(res: any) {
     if (!res) return;
-
-    // Buscamos los datos del huésped dentro de la reserva 
-    // (Asumiendo que tu objeto reserva trae el objeto guest o lo tenemos en adminService)
+    // 1. Extraemos el objeto del huésped si existe
+    const guest = res.hotel_guests_data || res.guest || {};
+    // 2. Llenamos el formulario
     this.checkinForm.patchValue({
-      full_name: res.guest_name || '', // Ajusta según el nombre del campo en tu objeto
-      phone: res.guest_phone || '',
-      email: res.guest_email || '',
-      check_out: res.check_out ? res.check_out.split(/[ T]/)[0] : '',
+      // Datos del Huésped (buscamos dentro del objeto 'guest' que definimos arriba)
+      full_name: guest.full_name || res.guest_name || '',
+      phone: guest.phone || res.guest_phone || '',
+      email: guest.email || res.guest_email || '',
+      doc_id: guest.doc_id || res.guest_doc_id || '', // Nota: En tu log viene null, así que saldrá vacío
+      // Datos de la Reserva (están en la raíz del objeto 'res')
+      check_out: res.check_out ? res.check_out.split('T')[0] : '',
       total_amount: res.total_amount || 0,
       notes: res.notes || ''
     });
