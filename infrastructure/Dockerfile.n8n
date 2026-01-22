@@ -1,31 +1,16 @@
-FROM docker.n8n.io/n8nio/n8n:latest
+# Usamos la imagen oficial 'latest'.
+# Al no necesitar Python, esta imagen es perfecta: ligera, segura y mantenida por n8n.
+FROM n8nio/n8n:latest
+
 USER root
-RUN wget https://dl-cdn.alpinelinux.org/alpine/edge/main/x86_64/apk-tools-static-3.0.3-r1.apk && \
-    tar -xzf apk-tools-static-3.0.3-r1.apk && \
-    ./sbin/apk.static --repository https://dl-cdn.alpinelinux.org/alpine/edge/main --update-cache --allow-untrusted --initdb add apk-tools-static && \
-    ./sbin/apk.static update && \
-    ./sbin/apk.static --repository https://dl-cdn.alpinelinux.org/alpine/edge/main --update-cache --allow-untrusted add apk-tools && \
-    apk update && \
-    apk add --no-cache \
-    bash \
-    curl \
-    postgresql-client \
-    python3 \
-    py3-pip \
-    make \
-    g++ \
-    git \
-    build-base && \
-    npm install -g jsonwebtoken pdf-parse && \
+
+# Instalamos solo las librerías de Node.js que usas en tus scripts (Function Nodes)
+# y la extensión de LangChain.
+# El flag '--omit=dev' ahorra espacio y memoria al no bajar dependencias de desarrollo.
+RUN npm install -g jsonwebtoken pdf-parse && \
     mkdir -p /home/node/.n8n/custom && \
-    npm install --prefix /home/node/.n8n/custom @n8n/n8n-nodes-langchain@latest && \
-    npm cache clean --force && \
-    rm -rf /root/.npm /root/.cache /var/cache/apk/* && \
-    rm -f apk-tools-static-*.apk sbin/apk.static
-# Crear el archivo en una carpeta fuera de .n8n
-RUN echo "globalThis.Blob = require('buffer').Blob;" > /home/node/.n8n/custom/init-blob.js
-COPY wait-for-services.sh /wait-for-services.sh
-RUN chmod +x /wait-for-services.sh
+    npm install --prefix /home/node/.n8n/custom @n8n/n8n-nodes-langchain@latest --omit=dev && \
+    npm cache clean --force
+
+# Volvemos al usuario seguro 'node' para la ejecución
 USER node
-ENTRYPOINT ["/wait-for-services.sh"]
-CMD ["n8n"]
