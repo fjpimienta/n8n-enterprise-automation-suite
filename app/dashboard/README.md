@@ -1,11 +1,11 @@
 # 🏨 AdminHotel Dashboard
 
-🛠️ Integrated Frontend for Dynamic CRUD Engine
+### 🛠️ Integrated Frontend for Dynamic CRUD Engine
 
 ## 📝 Descripción
-AdminHotel es una aplicación web de alto rendimiento construida sobre Angular 21, diseñada como la interfaz administrativa oficial de la suite de automatización Hosting3M.
+**AdminHotel** es una aplicación web de alto rendimiento construida sobre Angular 21, diseñada como la interfaz administrativa oficial de la suite de automatización Hosting3M.
 
-Este dashboard actúa como el cliente principal del Dynamic CRUD Engine, permitiendo una gestión de datos en tiempo real (Reservas, Habitaciones, Check-ins) mediante una capa de abstracción basada en n8n y PostgreSQL. Se especializa en la gestión operativa de flujos de hospitalidad mediante el uso intensivo de Angular Signals y una arquitectura de servicios desacoplados.
+Este dashboard actúa como el cliente principal del **Dynamic CRUD Engine**, permitiendo una gestión de datos en tiempo real (Reservas, Habitaciones, Check-ins) mediante una capa de abstracción basada en n8n y PostgreSQL. Se especializa en la gestión operativa de flujos de hospitalidad mediante el uso intensivo de Angular Signals y una arquitectura de servicios desacoplados.
 
 ---
 
@@ -17,7 +17,7 @@ Este dashboard actúa como el cliente principal del Dynamic CRUD Engine, permiti
 | **v0.2** | `Stable` | `Room Rack v1` | CSS Grid / Cards | Gestión visual de 17 habitaciones. |
 | **v0.3** | `Stable`| `Ops & Finance`| Modals / Reports | Checkout con inventario, Reporte de Caja (D/S/M/Y) y Gestión de Usuarios. |
 | **v0.4** | `Stable` | `Pro UX & Patterns	Skeletons / Services` |	Refactorización a Services, Skeletons de carga, Promesas (Async/Await).|
-| **v0.5** | `Latest` | `Full Operation & UX Polish` | Reseteo de Dashboard (Refresh Main), Gestión avanzada de Huéspedes, Sistema de Reservas dinámico, traducción de estados y Feedback Visual (Skeletons/Empty States).|
+| **v0.5** | `Latest` | **Full Operation** | **Interactive UI** | **Refresh Engine**, Reservas dinámicas, Gestión avanzada de Huéspedes, Emojis & Traducciones. |
 
 ---
 
@@ -56,6 +56,8 @@ La aplicación implementa una arquitectura Data-Access Service Pattern, donde la
  * HotelService: Único punto de contacto para CRUD de habitaciones, huéspedes y reservas. Gestiona el estado global de rooms y loading mediante Signals.
  * ReportService: Lógica matemática y de procesamiento de fechas para la generación de métricas financieras.
  * AuthService: Gestión de identidad y persistencia de sesión.
+
+---
 
 ## 🚦 Stack Tecnológico
 * **Core:** Angular v21.0.0 (Signals, Standalone Components, Signal Queries).
