@@ -15,7 +15,6 @@ import { RoomDetailModalComponent } from '@features/booking/components/room-deta
 import { UserFormModalComponent } from '@features/admin/components/user-form-modal/user-form-modal.component';
 import { UserListComponent } from '@features/admin/components/user-list/user-list.component';
 import { ReservationManagerComponent } from '@features/booking/components/reservation-manager/reservation-manager.component';
-import { ReservationFormComponent } from '@features/booking/components/reservation-form/reservation-form.component';
 import { SkeletonComponent } from '@shared/ui/loader/skeleton/skeleton.component';
 import { GuestFormModalComponent } from '@features/admin/components/guest-form-modal/guest-form-modal.component';
 import { GuestListComponent } from '@features/admin/components/guest-list/guest-list.component';
@@ -29,7 +28,7 @@ import { AdminService } from '@features/admin/services/admin.service';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, CheckinFormComponent, CheckoutFormComponent, HeaderComponent, RoomCardComponent, DailyReportModalComponent, RoomFiltersComponent, RoomDetailModalComponent, UserFormModalComponent, UserListComponent, GuestFormModalComponent, GuestListComponent, SkeletonComponent, ReservationFormComponent, ReservationManagerComponent],
+  imports: [CommonModule, FormsModule, CheckinFormComponent, CheckoutFormComponent, HeaderComponent, RoomCardComponent, DailyReportModalComponent, RoomFiltersComponent, RoomDetailModalComponent, UserFormModalComponent, UserListComponent, GuestFormModalComponent, GuestListComponent, SkeletonComponent, ReservationManagerComponent],
   templateUrl: './dashboard.component.html'
 })
 export class DashboardComponent {

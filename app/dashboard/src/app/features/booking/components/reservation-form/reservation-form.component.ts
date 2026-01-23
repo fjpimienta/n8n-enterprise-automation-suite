@@ -1,8 +1,9 @@
-import { Component, Output, EventEmitter, input, inject, signal, OnInit } from '@angular/core'; // 1. Agregamos OnInit aquí
+import { Component, Output, EventEmitter, input, inject, signal, OnInit, computed } from '@angular/core'; // 1. Agregamos OnInit aquí
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Room } from '@core/models/hotel.types';
 import { BookingService } from '@features/booking/services/booking.service';
+import { DateUtilsService } from '@shared/services/data-utils.service';
 
 @Component({
   selector: 'app-reservation-form',
@@ -28,6 +29,14 @@ export class ReservationFormComponent implements OnInit { // 2. Agregamos "imple
   availableRooms: Room[] = [];
   selectedRoomForRes: Room | null = null;
   guest = { name: '', phone: '', email: '' };
+  dateUtils = inject(DateUtilsService);
+  minDate = this.dateUtils.todayStr;
+
+  // En el componente
+  totalReserva = computed(() => {
+    const noches = this.getNights(this.dates.start, this.dates.end);
+    return noches * (this.selectedRoomForRes?.price_night || 0);
+  });
 
   ngOnInit() {
     if (this.room()) {
