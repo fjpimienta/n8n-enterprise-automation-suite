@@ -5,14 +5,16 @@ import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { Guest, User } from '@core/models/hotel.types';
 // Componentes Hijos
-import { CheckinFormComponent } from '@features/booking/components/checkin-form/checkin-form.component';
 import { HeaderComponent } from '@features/dashboard/components/header/header.component';
+import { CheckinFormComponent } from '@features/booking/components/checkin-form/checkin-form.component';
+import { CheckoutFormComponent } from '@features/booking/components/checkout-form/checkout-form.component';
 import { RoomCardComponent } from '@features/dashboard/components/room-card/room-card.component';
 import { DailyReportModalComponent } from '@features/finance/components/daily-report-modal/daily-report-modal.component';
 import { RoomFiltersComponent } from '@features/dashboard/components/room-filters/room-filters.component';
 import { RoomDetailModalComponent } from '@features/booking/components/room-detail-modal/room-detail-modal.component';
 import { UserFormModalComponent } from '@features/admin/components/user-form-modal/user-form-modal.component';
 import { UserListComponent } from '@features/admin/components/user-list/user-list.component';
+import { ReservationManagerComponent } from '@features/booking/components/reservation-manager/reservation-manager.component';
 import { ReservationFormComponent } from '@features/booking/components/reservation-form/reservation-form.component';
 import { SkeletonComponent } from '@shared/ui/loader/skeleton/skeleton.component';
 import { GuestFormModalComponent } from '@features/admin/components/guest-form-modal/guest-form-modal.component';
@@ -27,7 +29,7 @@ import { AdminService } from '@features/admin/services/admin.service';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, CheckinFormComponent, HeaderComponent, RoomCardComponent, DailyReportModalComponent, RoomFiltersComponent, RoomDetailModalComponent, UserFormModalComponent, UserListComponent, GuestFormModalComponent, GuestListComponent, SkeletonComponent, ReservationFormComponent],
+  imports: [CommonModule, FormsModule, CheckinFormComponent, CheckoutFormComponent, HeaderComponent, RoomCardComponent, DailyReportModalComponent, RoomFiltersComponent, RoomDetailModalComponent, UserFormModalComponent, UserListComponent, GuestFormModalComponent, GuestListComponent, SkeletonComponent, ReservationFormComponent, ReservationManagerComponent],
   templateUrl: './dashboard.component.html'
 })
 export class DashboardComponent {
@@ -50,12 +52,8 @@ export class DashboardComponent {
   activeBooking: any = null;
   dailyReport = { total: 0, paid: 0, pending: 0, transactions: [] as any[], periodLabel: 'Hoy' };
 
-  checkoutChecks = { tvRemote: false, acRemote: false, keys: false, notes: '' };
   tempUser: User = this.getEmptyUser();
   tempGuest: Guest = this.getEmptyGuest();
-
-  currentPage = signal(1);
-  itemsPerPage = 5;
 
   ngOnInit() {
     this.refresh();
@@ -93,8 +91,6 @@ export class DashboardComponent {
       this.adminService.loadUsers(this.authService.currentUser()?.id_company);
     }
 
-    // 5. Resetear paginación
-    this.currentPage.set(1);
   }
 
   /* 2. SECCIÓN: INTERACCIÓN CON HABITACIONES */
@@ -175,41 +171,42 @@ export class DashboardComponent {
   }
 
   /* Inicia el proceso de check-out */
-  async handleCheckout() {
+  async startCheckoutProcess() {
     const room = this.hotelService.selectedRoom();
     if (!room) return;
+
     try {
+      // Buscamos la reserva activa
       const booking = await this.bookingService.getActiveBooking(room.id);
+
       if (booking) {
         this.activeBooking = booking;
+
+        // Validación de negocio: No dejar salir si no pagó
         if (booking.payment_status !== 'paid') {
-          this.viewMode.set('details');
+          // Si quieres ser estricto, muestra alerta y no cambies de vista
           alert(`⚠️ Saldo pendiente: $${booking.total_amount}. Registre el pago antes de salir.`);
+          // Opcional: Podrías retornar aquí si quieres bloquear el flujo
           return;
         }
+
+        // Si todo ok, cambiamos la vista para mostrar el componente hijo
+        this.viewMode.set('checkout_validation');
       }
-      this.checkoutChecks = { tvRemote: false, acRemote: false, keys: false, notes: '' };
-      this.viewMode.set('checkout_validation');
     } catch (error) {
-      console.error('Error en checkout:', error);
+      console.error('Error al iniciar checkout:', error);
     }
   }
 
-  /* Completa el check-out tras validaciones */
-  async confirmFullCheckout() {
-    if (!this.checkoutChecks.tvRemote || !this.checkoutChecks.acRemote || !this.checkoutChecks.keys) {
-      alert("⚠️ ALERTA: Debe validar la entrega de TV, Aire Acondicionado y Llaves antes de finalizar.");
-      return;
-    }
-    const room = this.hotelService.selectedRoom();
-    if (!room || !this.activeBooking) return;
-    const reporte = `TV: ${this.checkoutChecks.tvRemote ? '✅' : '❌'}, AC: ${this.checkoutChecks.acRemote ? '✅' : '❌'}. Obs: ${this.checkoutChecks.notes}`;
-    try {
-      await this.bookingService.processCheckout(room, this.activeBooking.id, reporte, this.checkoutChecks);
-      this.completeActionSuccess('✅ Check-out completado.');
-    } catch (error) {
-      alert('Fallo al procesar el Check-out.');
-    }
+  onCheckoutSuccess() {
+    alert('✅ Check-out completado exitosamente.');
+    this.viewMode.set('details');
+    this.hotelService.clearSelection();
+    this.refresh(); // Recargamos el grid de habitaciones
+  }
+
+  onCheckoutCancel() {
+    this.viewMode.set('details');
   }
 
   /* Marca una reserva como pagada */
@@ -352,15 +349,7 @@ export class DashboardComponent {
         // 2. Operación de Base de Datos (Tu método async/await)
         await this.hotelService.updateRoomMaintenance(room.id);
 
-        // 3. (OPCIONAL) Notificación externa
-        // Si aún quieres mandar el WhatsApp, hazlo como un "extra", no como lo principal
-        /*this.http.post(this.N8N_WHATSAPP_WEBHOOK, {
-          action: 'maintenance',
-          room_number: room.room_number,
-          user: this.authService.currentUser()?.name
-        }).subscribe();*/ // No necesitamos esperar esto para continuar
-
-        // 4. Éxito visual y refresco
+        // 3. Éxito visual y refresco
         this.completeActionSuccess('Reporte enviado y habitación en mantenimiento ✅');
         this.hotelService.clearSelection();
         this.refresh();
@@ -388,19 +377,6 @@ export class DashboardComponent {
       }
     }
   }
-
-  // Función simplificada solo para NOTIFICAR
-  /*
-  sendExternalNotification(action: string) {
-    const room = this.hotelService.selectedRoom();
-    const payload = {
-      action,
-      room_number: room?.room_number,
-      user: this.authService.currentUser()?.name
-    };
-    this.http.post(this.N8N_WHATSAPP_WEBHOOK, payload).subscribe();
-  }
-  */
 
   /* 8. SECCIÓN: AUTENTICACIÓN Y NAVEGACIÓN */
   logout() {
@@ -442,12 +418,6 @@ export class DashboardComponent {
     return labels[this.reportFilter()];
   }
 
-  /* Obtiene el número de habitación dado su ID */
-  getRoomNumber(id: number): string {
-    const found = this.bookingService.rooms().find((r: any) => r.id === id);
-    return found ? found.room_number : '';
-  }
-
   /* Calcula el número de noches entre dos fechas */
   getNights(checkIn: string, checkOut: string): number {
     const start = new Date(checkIn);
@@ -471,45 +441,6 @@ export class DashboardComponent {
       this.completeActionSuccess('✨ Habitación lista para recibir huéspedes');
     } catch (error) {
       alert('Error al actualizar el estado de limpieza');
-    }
-  }
-
-  // Función para paginar reservas
-  get filteredReservations() {
-    const all = this.adminService.reservations();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // Ignorar hora para comparar solo fechas
-    return all
-      .filter(res => {
-        // SOLO mostrar confirmadas. Omitir 'checked_out' o 'cancelled'
-        // Y opcionalmente, que la fecha de salida sea hoy o futuro
-        const checkoutDate = new Date(res.check_out);
-        return res.status === 'confirmed' && checkoutDate >= today;
-      })
-      .sort((a, b) => {
-        // Ordenar por fecha de llegada (la más próxima primero)
-        return new Date(a.check_in).getTime() - new Date(b.check_in).getTime();
-      });
-  }
-
-  get paginatedReservations() {
-    const startIndex = (this.currentPage() - 1) * this.itemsPerPage;
-    return this.filteredReservations.slice(startIndex, startIndex + this.itemsPerPage);
-  }
-
-  get totalPages() {
-    return Math.ceil(this.filteredReservations.length / this.itemsPerPage);
-  }
-
-  nextPage() {
-    if (this.currentPage() < this.totalPages) {
-      this.currentPage.update(p => p + 1);
-    }
-  }
-
-  prevPage() {
-    if (this.currentPage() > 1) {
-      this.currentPage.update(p => p - 1);
     }
   }
 

@@ -1,0 +1,69 @@
+<div class="modal-backdrop fade show"></div>
+<div class="modal modal-blur fade show d-block">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content shadow-lg">
+      <div class="modal-header">
+        <h5 class="modal-title">Calendario y Reservas</h5>
+        <button type="button" class="btn-close" (click)="onClose.emit()"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row">
+          <div class="col-md-4 border-end">
+            <app-reservation-form 
+              [reservations]="adminService.reservations()" 
+              [room]="hotelService.selectedRoom()"
+              (onClose)="onClose.emit()" 
+              (saved)="onSaved.emit()">
+            </app-reservation-form>
+          </div>
+
+          <div class="col-md-8">
+            <h4 class="mb-3">Reservas Confirmadas</h4>
+            <div class="table-responsive" style="max-height: 400px;">
+              <table class="table table-vcenter table-sm card-table">
+                <thead>
+                  <tr>
+                    <th>Hab</th>
+                    <th>Entrada</th>
+                    <th>Salida</th>
+                    <th>Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (res of paginatedReservations(); track res.id) {
+                  <tr>
+                    <td><strong>{{ getRoomNumber(res.room_id) }}</strong></td>
+                    <td>{{ res.check_in | date:'dd MMM' }}</td>
+                    <td>{{ res.check_out | date:'dd MMM' }}</td>
+                    <td><span class="badge bg-success-lt">{{ res.status }}</span></td>
+                  </tr>
+                  } @empty {
+                  <tr>
+                    <td colspan="4" class="text-center text-muted py-4">No hay reservas activas</td>
+                  </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            @if (totalPages() > 1) {
+            <div class="d-flex align-items-center justify-content-between mt-3 border-top pt-2">
+              <div class="text-muted small">
+                Página <strong>{{ currentPage() }}</strong> de <strong>{{ totalPages() }}</strong>
+              </div>
+              <ul class="pagination pagination-sm m-0">
+                <li class="page-item" [class.disabled]="currentPage() === 1">
+                  <button class="page-link" (click)="prevPage()">Anterior</button>
+                </li>
+                <li class="page-item" [class.disabled]="currentPage() === totalPages()">
+                  <button class="page-link" (click)="nextPage()">Siguiente</button>
+                </li>
+              </ul>
+            </div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

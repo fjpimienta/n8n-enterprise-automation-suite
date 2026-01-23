@@ -1,0 +1,54 @@
+<div class="modal-backdrop fade show"></div>
+<div class="modal modal-blur fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <form [formGroup]="checkoutForm" (ngSubmit)="confirmFullCheckout()">
+                <div class="modal-header bg-warning-lt">
+                    <h5 class="modal-title">📋 Revisión de Salida</h5>
+                    <button type="button" class="btn-close" (click)="onCancel()"></button>
+                </div>
+
+                <div class="modal-body">
+                    <p class="text-muted mb-3">Verifique la devolución de los artículos:</p>
+
+                    <label class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" formControlName="tvRemote">
+                        <span class="form-check-label">📺 Control TV</span>
+                    </label>
+
+                    <label class="form-check mb-2">
+                        <input class="form-check-input" type="checkbox" formControlName="acRemote">
+                        <span class="form-check-label">❄️ Control A/C</span>
+                    </label>
+
+                    <label class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" formControlName="keys">
+                        <span class="form-check-label">🔑 Llaves entregadas</span>
+                    </label>
+
+                    <div class="mb-3">
+                        <label class="form-label">Observaciones / Daños</label>
+                        <textarea class="form-control" rows="2" formControlName="notes"
+                            placeholder="Todo en orden..."></textarea>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger px-4 shadow-sm" (click)="onCancel()">Cancelar</button>
+
+                    <button type="submit" class="btn btn-primary ms-auto" [disabled]="checkoutForm.invalid">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-logout me-1"
+                            width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+                            fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                            <path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2" />
+                            <path d="M9 12h12l-3 -3" />
+                            <path d="M18 15l3 -3" />
+                        </svg>
+                        Finalizar Salida
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
