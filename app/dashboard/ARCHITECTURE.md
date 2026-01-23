@@ -43,7 +43,9 @@ Contiene elementos que se instancian una sola vez y son transversales a toda la 
 
 📂 src/app/features (Domain Logic)
 Aquí vive el negocio. Cada carpeta es un módulo autocontenido.
+
 | Feature| Responsabilidad | Componentes Clave | Servicios |
+| :--- | :--- | :--- | :--- |
 | Booking | Ciclo de vida de la reserva. | Reservation|Manager (Orquestador), ReservationForm, CheckinForm. | BookingService (Disponibilidad, Check-in). |
 | Dashboard | Vista operativa principal. | RoomCard (Estado visual), RoomFilters. | HotelService (Estado global de habitaciones). |
 | AdminGestión de entidades. | GuestList, UserList (Skeletons & Tables). | AdminService (CRUD genérico para admin).FinanceReportes y métricas.DailyReportModal. |ReportService (Cálculos financieros). |
