@@ -348,16 +348,19 @@ export class BookingService {
   }
 
   /** 1. VERIFICAR DISPONIBILIDAD DE HABITACIONES */
-  public async checkAvailability(checkIn: string, checkOut: string, allRooms: Room[]): Promise<Room[]> {
-    this.reportService.loadingReports.set(true); // Reusamos el loading o creamos uno nuevo
+  public async checkAvailability(
+    checkIn: string,
+    checkOut: string,
+    allRooms: Room[],
+    excludeId?: number
+  ): Promise<Room[]> {
+    this.reportService.loadingReports.set(true);
 
     try {
-      // Pedimos todas las reservas que estén confirmadas (status 'confirmed')
-      // Nota: Idealmente filtraríamos por fecha en n8n, pero traer todo y filtrar aquí es seguro para 17 habs.
       const payload = {
         operation: 'getall',
         table_name: 'hotel_bookings',
-        fields: { status: 'confirmed' } // Solo las activas
+        fields: { status: 'confirmed' }
       };
 
       const res: any = await lastValueFrom(
@@ -367,20 +370,29 @@ export class BookingService {
       );
 
       const bookings = res.data || [];
-      const start = new Date(checkIn).getTime();
-      const end = new Date(checkOut).getTime();
 
-      // Encontramos las habitaciones ocupadas en ese rango
+      // Normalización: Comparamos solo fechas (00:00:00) para evitar conflictos por horas
+      const start = new Date(checkIn).setHours(0, 0, 0, 0);
+      const end = new Date(checkOut).setHours(0, 0, 0, 0);
+
       const occupiedRoomIds = bookings
         .filter((b: any) => {
-          const bStart = new Date(b.check_in).getTime();
-          const bEnd = new Date(b.check_out).getTime();
-          // Lógica de solapamiento de fechas
+          // 1. Si estamos editando, omitimos la reserva actual del cálculo de colisiones
+          if (excludeId && Number(b.id) === Number(excludeId)) {
+            return false;
+          }
+
+          // 2. Normalizar fechas de la reserva existente
+          const bStart = new Date(b.check_in).setHours(0, 0, 0, 0);
+          const bEnd = new Date(b.check_out).setHours(0, 0, 0, 0);
+
+          // 3. Lógica de solapamiento estándar (Industry Standard)
+          // Permite que un Huésped B entre el mismo día que el Huésped A sale.
           return (start < bEnd && end > bStart);
         })
         .map((b: any) => b.room_id);
 
-      // Devolvemos las habitaciones que NO estén en la lista de ocupadas
+      // Retornar habitaciones que NO tienen colisiones
       return allRooms.filter(room => !occupiedRoomIds.includes(room.id));
 
     } finally {
@@ -427,6 +439,32 @@ export class BookingService {
 
       // ¡OJO! Aquí NO llamamos a updateRoomStatus. La habitación sigue disponible HOY.
 
+    } finally {
+      this.isProcessing.set(false);
+    }
+  }
+
+  /** Actualizar la reserva */
+  public async updateReservation(formData: any): Promise<void> {
+    this.isProcessing.set(true);
+    try {
+      await lastValueFrom(
+        this.http.post(`${this.apiUrl_crud}/hotel_bookings`, {
+          operation: 'update',
+          fields: {
+            id: formData.id,
+            room_id: formData.room_id,
+            check_in: formData.check_in,
+            check_out: formData.check_out,
+            total_amount: Number(formData.total_amount),
+            notes: formData.notes, // Incluimos las notas por si cambiaron
+            id_company: 1
+          }
+        }, { headers: this.adminService.getAuthHeaders() })
+      );
+    } catch (error) {
+      console.error("Error al actualizar reserva:", error);
+      throw error;
     } finally {
       this.isProcessing.set(false);
     }
