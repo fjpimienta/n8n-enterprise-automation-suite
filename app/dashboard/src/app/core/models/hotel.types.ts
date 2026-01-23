@@ -9,15 +9,15 @@ export interface Room {
   price_night: number;
   description?: string;
   cleaning_status: CleaningStatus;
-  next_reservation?: string; // Campo calculado que podemos traer del backend
-  hasIncomingToday?: boolean; // Campo calculado para saber si hay reserva que entra hoy
+  next_reservation?: string;
+  hasIncomingToday?: boolean;
 }
 
 export interface Booking {
   id: number;
   room_id: number;
   guest_id: number;
-  check_in: string; // Date string
+  check_in: string;
   check_out: string;
   status: 'confirmed' | 'cancelled' | 'pending';
 }
@@ -32,7 +32,7 @@ export interface Company {
   employees?: number;
   annual_revenue?: string;
   priority_level?: string;
-  registration_date?: string | Date; // Date de Postgres llega como string ISO
+  registration_date?: string | Date;
   last_contact?: string | Date;
   notes?: string;
   is_default: boolean;
@@ -42,12 +42,12 @@ export interface User {
   email: string;
   id_company: number;
   names: string;
-  lastname?: string;   // Opcional en DB
-  password?: string;   // Opcional en la interfaz si no quieres exponerlo en el frontend
+  lastname?: string;
+  password?: string;
   is_active: boolean;
   phone?: string;
-  role: 'ADMIN' | 'EDITOR' | 'CUSTOMER'; // Basado en tu CHECK constraint
-  created_at: string | Date; // Al igual que Company, llega como ISO string
+  role: 'ADMIN' | 'EDITOR' | 'CUSTOMER';
+  created_at: string | Date;
 }
 
 export interface Guest {

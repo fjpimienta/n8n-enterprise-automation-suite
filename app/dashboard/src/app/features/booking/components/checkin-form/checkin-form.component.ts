@@ -1,4 +1,4 @@
-import { Component, Output, EventEmitter, input, OnInit, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Output, EventEmitter, input, OnInit, OnChanges, SimpleChanges, effect } from '@angular/core';
 import { FormGroup, FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Room } from '@core/models/hotel.types';
@@ -28,20 +28,18 @@ export class CheckinFormComponent implements OnInit, OnChanges {
     check_out: new FormControl('', [Validators.required]),
     total_amount: new FormControl(0, [Validators.min(0)]),
     vip_status: new FormControl(false),
-    requires_invoice: new FormControl(false), // Nuevo campo
-    notes: new FormControl('') // Ahora sí coincidirá con la DB
+    requires_invoice: new FormControl(false),
+    notes: new FormControl('')
   });
 
   ngOnInit() {
     this.initDefaultValues();
 
-    // Escuchar cambios en la fecha de salida para recalcular el monto
     this.checkinForm.get('check_out')?.valueChanges.subscribe(() => {
       this.calculateTotal();
     });
   }
 
-  // Detectar cuando llega la reserva para rellenar el formulario
   ngOnChanges(changes: SimpleChanges) {
     if (changes['reservation'] && this.reservation()) {
       this.fillWithReservationData(this.reservation());
@@ -50,24 +48,33 @@ export class CheckinFormComponent implements OnInit, OnChanges {
 
   private fillWithReservationData(res: any) {
     if (!res) return;
-    // 1. Extraemos el objeto del huésped si existe
     const guest = res.hotel_guests_data || res.guest || {};
-    // 2. Llenamos el formulario
+    let docId = guest.doc_id || res.guest_doc_id || '';
+    let email = guest.email || res.guest_email || '';
+    if (docId && docId.startsWith('INT-')) {
+      docId = '';
+    }
+    if (email && email.startsWith('no-email-')) {
+      email = '';
+    }
     this.checkinForm.patchValue({
-      // Datos del Huésped (buscamos dentro del objeto 'guest' que definimos arriba)
       full_name: guest.full_name || res.guest_name || '',
       phone: guest.phone || res.guest_phone || '',
-      email: guest.email || res.guest_email || '',
-      doc_id: guest.doc_id || res.guest_doc_id || '', // Nota: En tu log viene null, así que saldrá vacío
-      // Datos de la Reserva (están en la raíz del objeto 'res')
+      email: email,
+      doc_id: docId,
+      city: guest.city || '',
+      state: guest.state || '',
+      country: guest.country || 'México',
       check_out: res.check_out ? res.check_out.split('T')[0] : '',
       total_amount: res.total_amount || 0,
+      vip_status: guest.vip_status || false,
+      requires_invoice: guest.requires_invoice || false,
       notes: res.notes || ''
     });
+    this.calculateTotal();
   }
 
   private initDefaultValues() {
-    // 1. Establecer fecha de mañana por defecto
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     const dateString = tomorrow.toISOString().split('T')[0];
@@ -75,8 +82,6 @@ export class CheckinFormComponent implements OnInit, OnChanges {
     this.checkinForm.patchValue({
       check_out: dateString
     });
-
-    // 2. Calcular monto inicial
     this.calculateTotal();
   }
 
@@ -89,7 +94,7 @@ export class CheckinFormComponent implements OnInit, OnChanges {
       start.setHours(0, 0, 0, 0);
       const end = new Date(checkOutDate);
 
-      // Calcular diferencia en días (mínimo 1 día)
+      /** Calcular diferencia en días (mínimo 1 día) */ 
       const diffTime = end.getTime() - start.getTime();
       const diffDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
 
@@ -101,6 +106,8 @@ export class CheckinFormComponent implements OnInit, OnChanges {
   confirmCheckin() {
     if (this.checkinForm.valid) {
       this.saved.emit(this.checkinForm.value);
+    } else {
+      this.checkinForm.markAllAsTouched();
     }
   }
 

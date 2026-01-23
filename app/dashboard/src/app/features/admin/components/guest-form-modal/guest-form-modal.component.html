@@ -21,8 +21,7 @@
                     </div>
                     <div class="col-6 mb-3">
                         <label class="form-label fw-bold">Correo Electrónico</label>
-                        <input type="email" class="form-control shadow-sm" [(ngModel)]="guestData().email"
-                            [disabled]="selectedGuest() !== null">
+                        <input type="email" class="form-control shadow-sm" [(ngModel)]="guestData().email">
                     </div>
                 </div>
                 <div class="row">
@@ -66,8 +65,12 @@
                 </div>
             </div>
             <div class="modal-footer bg-white">
-                <button class="btn btn-danger px-4 shadow-sm" (click)="onClose.emit()">Cancelar</button>
-                <button class="btn btn-primary px-4 shadow-sm" (click)="onSave.emit()">Guardar</button>
+                <button class="btn btn-outline-secondary px-4 shadow-sm" (click)="onClose.emit()">
+                    Cancelar
+                </button>
+                <button class="btn btn-primary px-4 shadow-sm" (click)="onSave.emit()">
+                    Guardar
+                </button>
             </div>
         </div>
     </div>

@@ -36,7 +36,23 @@
                 </span>
                 <div class="flex-fill">
                     <div class="fw-bold">{{ guest.full_name }}</div>
-                    <div class="text-muted small">{{ guest.email }} • {{ guest.phone }}</div>
+
+                    <div class="text-muted small d-flex align-items-center gap-1 flex-wrap">
+                        @if (guest.email && guest.email.startsWith('no-email-')) {
+                        <span class="badge badge-sm bg-secondary-lt text-dark" style="font-weight: normal;">
+                            Sin Correo
+                        </span>
+                        } @else {
+                        <span>{{ guest.email }}</span>
+                        }
+                        <span>•</span>
+                        <span>{{ guest.phone || 'Sin Tel.' }}</span>
+                        @if (guest.doc_id && guest.doc_id.startsWith('INT-')) {
+                        <span class="badge badge-sm bg-warning-lt ms-1" title="Falta identificación">
+                            Falta INE
+                        </span>
+                        }
+                    </div>
                 </div>
                 <button class="btn btn-icon btn-ghost-primary" (click)="onEdit.emit(guest)">
                     <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-pencil" width="24"

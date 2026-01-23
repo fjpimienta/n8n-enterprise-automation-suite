@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, inject, input, OnInit, Output } from '@angular/core';
-import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms'; // Añadir Validators
+import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Room } from '@core/models/hotel.types';
 import { BookingService } from '@features/booking/services/booking.service';
 import { HotelService } from '@features/dashboard/services/hotel.service';
@@ -8,21 +8,19 @@ import { HotelService } from '@features/dashboard/services/hotel.service';
 @Component({
   selector: 'app-checkout-form',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule], // Solo ReactiveFormsModule
+  imports: [CommonModule, ReactiveFormsModule],
   templateUrl: './checkout-form.component.html',
   styleUrl: './checkout-form.component.css',
 })
 export class CheckoutFormComponent implements OnInit {
   private bookingService = inject(BookingService);
 
-  // Inputs recibidos del Dashboard
   room = input.required<Room | null>();
   reservation = input.required<any>(); // Hacemos requerido la reserva
 
   @Output() saved = new EventEmitter<void>(); // Avisa que terminó bien
   @Output() canceled = new EventEmitter<void>(); // Avisa que canceló
 
-  // Formulario Reactivo
   checkoutForm = new FormGroup({
     tvRemote: new FormControl(false, Validators.requiredTrue), // Obligatorio true
     acRemote: new FormControl(false, Validators.requiredTrue), // Obligatorio true

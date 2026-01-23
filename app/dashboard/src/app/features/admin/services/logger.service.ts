@@ -4,7 +4,6 @@ import { Injectable, isDevMode } from '@angular/core';
   providedIn: 'root'
 })
 export class LoggerService {
-  // isDevMode() es una función nativa de Angular que detecta si estás en desarrollo
   private isDevelopment = isDevMode();
 
   log(msg: any, ...optionalParams: any[]) {
