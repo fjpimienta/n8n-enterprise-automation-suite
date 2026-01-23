@@ -9,16 +9,17 @@
       <div class="modal-body">
         <div class="row">
           <div class="col-md-4 border-end">
-            <app-reservation-form 
-              [reservations]="adminService.reservations()" 
-              [room]="hotelService.selectedRoom()"
-              (onClose)="onClose.emit()" 
-              (saved)="onSaved.emit()">
+            <app-reservation-form [reservations]="adminService.reservations()" [room]="hotelService.selectedRoom()"
+              [reservationToEdit]="selectedReservation()" (onClose)="onClose.emit()" (saved)="onReservationSaved()">
             </app-reservation-form>
           </div>
 
           <div class="col-md-8">
-            <h4 class="mb-3">Reservas Confirmadas</h4>
+            <h4 class="mb-3">
+              {{ hotelService.selectedRoom()
+              ? 'Reservas: Habitación ' + hotelService.selectedRoom()?.room_number
+              : 'Panorama Global de Reservas' }}
+            </h4>
             <div class="table-responsive" style="max-height: 400px;">
               <table class="table table-vcenter table-sm card-table">
                 <thead>
@@ -27,6 +28,7 @@
                     <th>Entrada</th>
                     <th>Salida</th>
                     <th>Estado</th>
+                    <th class="w-1"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -36,10 +38,35 @@
                     <td>{{ res.check_in | date:'dd MMM' }}</td>
                     <td>{{ res.check_out | date:'dd MMM' }}</td>
                     <td><span class="badge bg-success-lt">{{ res.status }}</span></td>
+                    <td class="text-end">
+                      <button class="btn btn-sm btn-outline-primary p-1" (click)="editReservation(res)"
+                        title="Editar Reserva"
+                        style="min-width: 32px; min-height: 32px; display: inline-flex; align-items: center; justify-content: center;">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                          <path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                        </svg>
+                      </button>
+                    </td>
                   </tr>
                   } @empty {
                   <tr>
-                    <td colspan="4" class="text-center text-muted py-4">No hay reservas activas</td>
+                    <td colspan="5" class="py-5 text-center">
+                      <div class="text-muted mb-2">
+                        <i class="ti ti-calendar-off fs-1"></i>
+                      </div>
+                      <p class="h4 mb-1">No hay reservas activas</p>
+                      <p class="text-muted small">
+                        {{ hotelService.selectedRoom()
+                        ? 'La habitación ' + hotelService.selectedRoom()?.room_number + ' está libre de compromisos
+                        próximos.'
+                        : 'El hotel no tiene reservaciones confirmadas para las fechas actuales.' }}
+                      </p>
+                      <button class="btn btn-sm btn-primary-lt mt-2" (click)="focusNewReservation()">
+                        Crear una reserva ahora
+                      </button>
+                    </td>
                   </tr>
                   }
                 </tbody>

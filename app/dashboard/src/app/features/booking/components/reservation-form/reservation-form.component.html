@@ -61,24 +61,29 @@
         <div class="bg-blue-faint p-3 rounded-3 border border-primary-subtle animate__animated animate__fadeIn">
             <div class="section-title mb-2 text-uppercase text-primary fw-bold x-small" style="font-size: 0.7rem;">
                 3. Datos del Huésped
+                @if (reservationToEdit()) {
+                <span class="badge bg-warning-lt ms-2">
+                    <i class="ti ti-lock me-1"></i> Solo lectura
+                </span>
+                }
             </div>
 
             <div class="mb-2">
                 <label class="form-label small mb-1">Nombre Completo</label>
                 <input type="text" class="form-control form-control-sm" placeholder="Ej: Juan Pérez"
-                    [(ngModel)]="guest.name">
+                    [(ngModel)]="guest.name" [disabled]="!!reservationToEdit()">
             </div>
 
             <div class="row g-2">
                 <div class="col-12">
                     <label class="form-label small mb-1">Correo (Opcional)</label>
                     <input type="email" class="form-control form-control-sm" placeholder="email@ejemplo.com"
-                        [(ngModel)]="guest.email">
+                        [(ngModel)]="guest.email" [disabled]="!!reservationToEdit()">
                 </div>
                 <div class="col-12">
                     <label class="form-label small mb-1">Teléfono</label>
                     <input type="tel" class="form-control form-control-sm" placeholder="999-000-000"
-                        [(ngModel)]="guest.phone">
+                        [(ngModel)]="guest.phone" [disabled]="!!reservationToEdit()">
                 </div>
             </div>
 

@@ -19,6 +19,8 @@ export class ReservationManagerComponent {
   @Output() onClose = new EventEmitter<void>();
   @Output() onSaved = new EventEmitter<void>();
 
+  selectedReservation = signal<any | null>(null);
+
   // Paginación local
   currentPage = signal(1);
   itemsPerPage = 5;
@@ -26,13 +28,19 @@ export class ReservationManagerComponent {
   // Lógica de filtrado y paginación movida aquí
   filteredReservations = computed(() => {
     const all = this.adminService.reservations();
+    const selectedRoom = this.hotelService.selectedRoom();
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     return all
       .filter(res => {
         const checkoutDate = new Date(res.check_out);
-        return res.status === 'confirmed' && checkoutDate >= today;
+        const matchesDate = res.status === 'confirmed' && checkoutDate >= today;
+
+        if (selectedRoom) {
+          return matchesDate && Number(res.room_id) === Number(selectedRoom.id);
+        }
+        return matchesDate;
       })
       .sort((a, b) => new Date(a.check_in).getTime() - new Date(b.check_in).getTime());
   });
@@ -55,5 +63,31 @@ export class ReservationManagerComponent {
 
   prevPage() {
     if (this.currentPage() > 1) this.currentPage.update(p => p - 1);
+  }
+
+  editReservation(res: any) {
+    // Buscamos la habitación asociada para que el formulario sepa cuál es
+    const room = this.bookingService.rooms().find(r => r.id === res.room_id);
+    if (room) {
+      this.hotelService.selectRoom(room);
+    }
+    this.selectedReservation.set(res);
+  }
+
+  onReservationSaved() {
+    this.selectedReservation.set(null);
+    this.onSaved.emit();
+  }
+
+  // Dentro de tu ReservationManagerComponent
+  focusNewReservation() {
+    // 1. Reseteamos la reserva seleccionada para que el formulario se ponga en modo "Nuevo"
+    this.selectedReservation.set(null);
+
+    // 2. Opcional: Si quieres que el cursor se mueva automáticamente al campo de fecha
+    const entryDateInput = document.querySelector('input[type="date"]') as HTMLElement;
+    if (entryDateInput) {
+      entryDateInput.focus();
+    }
   }
 }
