@@ -123,6 +123,7 @@ export class ReservationFormComponent implements OnInit, OnChanges { // 2. Agreg
 
     const reservationData = {
       id: isUpdate ? this.reservationToEdit().id : undefined,
+      room_id: this.selectedRoomForRes?.id,
       full_name: this.guest.name,
       email: this.guest.email,
       phone: this.guest.phone,

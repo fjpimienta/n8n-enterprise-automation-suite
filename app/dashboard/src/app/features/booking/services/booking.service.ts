@@ -448,38 +448,20 @@ export class BookingService {
   public async updateReservation(formData: any): Promise<void> {
     this.isProcessing.set(true);
     try {
-      // 1. Opcional: Actualizar los datos del huésped primero
-      // Si el huésped ya existe (tiene guest_id), actualizamos su info personal
-      if (formData.guest_id) {
-        await lastValueFrom(
-          this.http.post(`${this.apiUrl_crud}/hotel_guests`, {
-            operation: 'update',
-            fields: {
-              id: formData.guest_id, // Usamos el ID del huésped existente
-              full_name: formData.full_name,
-              email: formData.email,
-              phone: formData.phone
-            }
-          }, { headers: this.adminService.getAuthHeaders() })
-        );
-      }
-
-      // 2. Actualizar la Reserva (Booking)
       await lastValueFrom(
         this.http.post(`${this.apiUrl_crud}/hotel_bookings`, {
           operation: 'update',
           fields: {
             id: formData.id,
-            room_id: formData.room_id, // <--- CRÍTICO para permitir cambios de habitación
+            room_id: formData.room_id,
             check_in: formData.check_in,
             check_out: formData.check_out,
-            total_amount: Number(formData.total_amount), // Aseguramos formato numérico
+            total_amount: Number(formData.total_amount),
             notes: formData.notes, // Incluimos las notas por si cambiaron
             id_company: 1
           }
         }, { headers: this.adminService.getAuthHeaders() })
       );
-
     } catch (error) {
       console.error("Error al actualizar reserva:", error);
       throw error;
