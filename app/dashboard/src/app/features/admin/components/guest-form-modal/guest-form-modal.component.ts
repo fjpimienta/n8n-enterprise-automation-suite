@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, input, model, output } from '@angular/core';
+import { Component, input, model, output, effect } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 @Component({
@@ -11,9 +11,36 @@ import { FormsModule } from '@angular/forms';
 })
 export class GuestFormModalComponent {
   isOpen = input.required<boolean>();
-  selectedGuest = input<any>(null); // El usuario original para saber si es edición
-  guestData = model.required<any>(); // Usamos 'model' para sincronización bidireccional simple
+  selectedGuest = input<any>(null);
+  guestData = model.required<any>();
 
   onClose = output<void>();
   onSave = output<void>();
+
+  constructor() {
+    effect(() => {
+      if (this.isOpen() && this.guestData()) {
+        this.cleanDummyData();
+      }
+    });
+  }
+
+  private cleanDummyData() {
+    const currentData = { ...this.guestData() };
+    let hasChanges = false;
+
+    if (currentData.doc_id && currentData.doc_id.startsWith('INT-')) {
+      currentData.doc_id = '';
+      hasChanges = true;
+    }
+
+    if (currentData.email && currentData.email.startsWith('no-email-')) {
+      currentData.email = '';
+      hasChanges = true;
+    }
+
+    if (hasChanges) {
+      this.guestData.set(currentData);
+    }
+  }
 }

@@ -203,8 +203,6 @@ export class BookingService {
     try {
       // --- ESCENARIO A: TRANSICIÓN DE RESERVA (El cliente ya reservó) ---
       if (existingBookingId) {
-        // console.log(`🔄 Procesando Check-in de Reserva existente: ${existingBookingId}`);
-
         // 1. Actualizamos la reserva existente para marcarla como ACTIVA
         // Cambiamos status a 'checked_in' (o 'confirmed' según tu lógica de negocio)
         // y actualizamos la hora real de llegada.
@@ -401,44 +399,95 @@ export class BookingService {
   }
 
   /** 2. CREAR RESERVA FUTURA */
-  public async createFutureReservation(formData: any, roomId: number): Promise<void> {
+  public async createFutureReservation(formData: any, roomId: number): Promise<boolean> {
     this.isProcessing.set(true);
+    let guestIdToUse: number | null = null; // Variable para decidir qué ID usar
     try {
-      // A. Insertar o Buscar Huésped (Reutilizamos lógica o creamos nuevo)
-      const guestRes: any = await lastValueFrom(
-        this.http.post(`${this.apiUrl_crud}/hotel_guests`, {
-          operation: 'insert',
-          fields: {
-            full_name: formData.full_name,
-            phone: formData.phone,
-            doc_id: formData.doc_id, // Opcional si es reserva telefónica
-            id_company: 1
-          }
-        }, { headers: this.adminService.getAuthHeaders() })
+      // 1. BUSCAR DUPLICADOS
+      const duplicates: any = await lastValueFrom(
+        this.adminService.checkPossibleDuplicate(formData.full_name)
       );
 
-      const guestId = guestRes?.data?.[0]?.id || guestRes?.id;
+      // Filtramos basura de n8n
+      const realDuplicates = (duplicates.data || []).filter((d: any) => d.id && d.id > 0);
 
-      // B. Insertar la Reserva
+      // 2. TOMA DE DECISIÓN (SI ENCONTRAMOS ALGUIEN)
+      if (realDuplicates.length > 0) {
+        // Tomamos el primero de la lista (o el más reciente)
+        const existingGuest = realDuplicates[0];
+
+        const useExisting = window.confirm(
+          `🔍 ENCONTRADO: El huésped "${existingGuest.full_name}" ya existe en el sistema.\n` +
+          `(ID: ${existingGuest.id} - Email: ${existingGuest.email || 'Sin email'})\n\n` +
+          `¿Deseas ASIGNAR esta reserva al huésped existente?\n\n` +
+          `• Aceptar: SÍ, es la misma persona (Usar ID ${existingGuest.id}).\n` +
+          `• Cancelar: NO, es otra persona con el mismo nombre (Crear Nuevo).`
+        );
+
+        if (useExisting) {
+          // CAMINO A: REUTILIZAR
+          guestIdToUse = existingGuest.id;
+        }
+        // Si da Cancelar, guestIdToUse sigue siendo null, así que el código bajará a crear uno nuevo.
+      }
+
+      // 3. SI NO REUTILIZAMOS, CREAMOS UNO NUEVO (CAMINO B)
+      if (!guestIdToUse) {
+        // Generar datos ficticios si hacen falta
+        let finalDocId = formData.doc_id;
+        if (!finalDocId || finalDocId.trim() === '') {
+          finalDocId = this.adminService.generateInternalId();
+        }
+        let finalEmail = formData.email;
+        if (!finalEmail || finalEmail.trim() === '') {
+          finalEmail = this.adminService.generateDummyEmail();
+        }
+
+        const guestRes: any = await lastValueFrom(
+          this.http.post(`${this.apiUrl_crud}/hotel_guests`, {
+            operation: 'insert',
+            fields: {
+              full_name: formData.full_name,
+              phone: formData.phone,
+              email: finalEmail,
+              doc_id: finalDocId,
+              notes: formData.notes,
+              id_company: 1
+            }
+          }, { headers: this.adminService.getAuthHeaders() })
+        );
+
+        guestIdToUse = guestRes?.data?.[0]?.id || guestRes?.id;
+      }
+
+      // Validación de seguridad
+      if (!guestIdToUse) {
+        throw new Error("No se pudo obtener un ID de huésped válido (ni existente ni nuevo).");
+      }
+
+      // 4. CREAR LA RESERVA (Usando el guestIdToUse, sea viejo o nuevo)
       await lastValueFrom(
         this.http.post(`${this.apiUrl_crud}/hotel_bookings`, {
           operation: 'insert',
           fields: {
             room_id: roomId,
-            guest_id: guestId,
+            guest_id: guestIdToUse, // <--- Aquí usamos el ID decidido arriba
             check_in: formData.check_in,
             check_out: formData.check_out,
             total_amount: formData.total_amount || 0,
-            status: 'confirmed',     // Confirmada
-            payment_status: 'pending', // Generalmente se paga al llegar o anticipo
+            status: 'confirmed',
+            payment_status: 'pending',
             notes: 'Reserva Futura',
             id_company: 1
           }
         }, { headers: this.adminService.getAuthHeaders() })
       );
 
-      // ¡OJO! Aquí NO llamamos a updateRoomStatus. La habitación sigue disponible HOY.
+      return true;
 
+    } catch (error) {
+      console.error(error);
+      throw error;
     } finally {
       this.isProcessing.set(false);
     }
