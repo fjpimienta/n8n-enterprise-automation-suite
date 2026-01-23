@@ -114,7 +114,7 @@ export class AdminService {
       headers: this.getAuthHeaders()
     }).subscribe({
       next: (res) => {
-        const data =  Array.isArray(res.data) ? res.data : [];
+        const data = Array.isArray(res.data) ? res.data : [];
         const validData = data.filter(g => g && g.email && g.email.trim() !== '');
         const sortedUsers = validData.sort((a, b) => {
           return (a.email || '').localeCompare(b.email || '');
@@ -145,10 +145,10 @@ export class AdminService {
     });
   }
 
-
   /* Guests */
   public loadGuests(id_company?: number) {
     this.loadingGuests.set(true);
+
     const payload = {
       entity: 'hotel_guests',
       table_name: 'hotel_guests',
@@ -156,29 +156,55 @@ export class AdminService {
       action: 'list',
       filter: { id_company: id_company }
     };
+
     this.http.post<ApiResponse<Guest>>(`${this.apiUrl_crud}/hotel_guests`, payload, {
       headers: this.getAuthHeaders()
     }).subscribe({
       next: (res) => {
         const rawData = Array.isArray(res.data) ? res.data : [];
-        const validData = rawData.filter(g => g && g.email && g.email.trim() !== '');
-        const sortedGuests = validData.sort((a, b) => {
-          return (a.email || '').localeCompare(b.email || '');
+        const allGuests = rawData.filter(g => g);
+        const sortedGuests = allGuests.sort((a, b) => {
+          const nameA = a.full_name || '';
+          const nameB = b.full_name || '';
+          return nameA.localeCompare(nameB);
         });
-
         this.guests.set(sortedGuests);
         this.loadingGuests.set(false);
       },
       error: (err) => {
         console.error('Error en API:', err);
-        this.guests.set([]); // Reset en caso de fallo
-        this.loadingGuests.set(false)
+        this.guests.set([]);
+        this.loadingGuests.set(false);
       }
     });
   }
 
+  /* Guarda los cambios de un huésped (nuevo o editado) */
+  /* Genera un ID interno único si no hay documento */
+  public generateInternalId(): string {
+    // Retorna algo como: INT-1706289452123 (INT + Timestamp en milisegundos)
+    return `INT-${Date.now()}`;
+  }
+
+  /* Genera un email ficticio único si es necesario */
+  public generateDummyEmail(): string {
+    // Retorna: no-email-1706289452123@hosting3m.com
+    return `no-email-${Date.now()}@hosting3m.com`;
+  }
+
   /* Guardar o actualizar huésped */
   public saveGuest(guest: Partial<Guest>, operation: 'insert' | 'update', email?: string) {
+    console.log('guests: ', guest);
+    let finalDocId = guest.doc_id;
+    if (!finalDocId || finalDocId.trim() === '') {
+      finalDocId = this.generateInternalId();
+    }
+    let finalEmail = guest.email;
+    if (!finalEmail || finalEmail.trim() === '') {
+      finalEmail = this.generateDummyEmail();
+    }
+    guest.email= finalEmail;
+    guest.doc_id= finalDocId;
     const payload = {
       entity: 'hotel_guests',
       table_name: 'hotel_guests',
@@ -186,7 +212,6 @@ export class AdminService {
       email: email, // Solo para update
       fields: guest
     };
-
     return this.http.post<ApiResponse<Guest>>(`${this.apiUrl_crud}/hotel_guests`, payload, {
       headers: this.getAuthHeaders()
     });

@@ -29,7 +29,13 @@
                         <div class="small text-muted mb-1">
                             {{ room().status === 'occupied' ? 'HUÉSPED ACTUAL' : 'PRÓXIMA LLEGADA (RESERVA)' }}
                         </div>
-                        <div class="fw-bold h4 mb-0 text-dark">{{ activeBooking().hotel_guests_data?.full_name }} / {{ activeBooking().hotel_guests_data?.email }}
+                        <div class="fw-bold h4 mb-0 text-dark">
+                            {{ activeBooking().hotel_guests_data?.full_name }}
+
+                            @if (activeBooking().hotel_guests_data?.email &&
+                            !activeBooking().hotel_guests_data?.email.startsWith('no-email-')) {
+                            <span class="text-muted fw-normal"> / {{ activeBooking().hotel_guests_data?.email }}</span>
+                            }
                         </div>
                         <div class="text-muted small">
                             {{ room().status === 'occupied' ? 'Check-out' : 'Entrada' }}:

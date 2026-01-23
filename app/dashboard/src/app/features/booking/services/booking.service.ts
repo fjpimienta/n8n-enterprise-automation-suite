@@ -405,13 +405,24 @@ export class BookingService {
     this.isProcessing.set(true);
     try {
       // A. Insertar o Buscar Huésped (Reutilizamos lógica o creamos nuevo)
+      console.log('formData: ', formData);
+      let finalDocId = formData.doc_id;
+      if (!finalDocId || finalDocId.trim() === '') {
+        finalDocId = this.adminService.generateInternalId();
+      }
+      let finalEmail = formData.email;
+      if (!finalEmail || finalEmail.trim() === '') {
+        finalEmail = this.adminService.generateDummyEmail();
+      }
       const guestRes: any = await lastValueFrom(
         this.http.post(`${this.apiUrl_crud}/hotel_guests`, {
           operation: 'insert',
           fields: {
             full_name: formData.full_name,
             phone: formData.phone,
-            doc_id: formData.doc_id, // Opcional si es reserva telefónica
+            email: finalEmail, // Opcional si es reserva telefónica
+            doc_id: finalDocId, // Opcional si es reserva telefónica
+            notes: formData.notes,
             id_company: 1
           }
         }, { headers: this.adminService.getAuthHeaders() })

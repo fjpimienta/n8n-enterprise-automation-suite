@@ -29,7 +29,7 @@ export class ReservationFormComponent implements OnInit, OnChanges { // 2. Agreg
   dates = { start: '', end: '' };
   availableRooms: Room[] = [];
   selectedRoomForRes: Room | null = null;
-  guest = { name: '', phone: '', email: '' };
+  guest = { name: '', doc_id: '', phone: '', email: '', notes: '' };
   dateUtils = inject(DateUtilsService);
   minDate = this.dateUtils.todayStr;
 
@@ -51,8 +51,18 @@ export class ReservationFormComponent implements OnInit, OnChanges { // 2. Agreg
       this.dates.start = res.check_in.split('T')[0];
       this.dates.end = res.check_out.split('T')[0];
       this.guest.name = res.hotel_guests_data?.full_name || res.guest_name || '';
+      let doc_id = this.guest.doc_id;
+      if (doc_id && doc_id.startsWith('INT-')) {
+        doc_id = ''; // Lo dejamos vacío visualmente
+      }
+      let email = this.guest.email;
+      if (email && email.startsWith('no-email-')) {
+        email = ''; // Lo dejamos vacío visualmente
+      }
+      this.guest.doc_id = doc_id;
+      this.guest.email = email;
       this.guest.phone = res.hotel_guests_data?.phone || res.guest_phone || '';
-      this.guest.email = res.hotel_guests_data?.email || res.guest_email || '';
+      this.guest.notes = res.hotel_guests_data?.notes || res.guest_notes || '';
 
       // Ejecutamos la búsqueda para mostrar la habitación actual como seleccionada
       this.searchRooms();
@@ -121,12 +131,22 @@ export class ReservationFormComponent implements OnInit, OnChanges { // 2. Agreg
     const total = noches * (this.selectedRoomForRes?.price_night || 0);
     const isUpdate = !!this.reservationToEdit()?.id;
 
+    let doc_id = this.guest.doc_id;
+    if (doc_id && doc_id.startsWith('INT-')) {
+      doc_id = ''; // Lo dejamos vacío visualmente
+    }
+    let email = this.guest.email;
+    if (email && email.startsWith('no-email-')) {
+      email = ''; // Lo dejamos vacío visualmente
+    }
     const reservationData = {
       id: isUpdate ? this.reservationToEdit().id : undefined,
       room_id: this.selectedRoomForRes?.id,
       full_name: this.guest.name,
-      email: this.guest.email,
+      doc_id: doc_id,
+      email: email,
       phone: this.guest.phone,
+      notes: this.guest.notes,
       check_in: this.dates.start,
       check_out: this.dates.end,
       total_amount: total // 6. AHORA SÍ TIENE EL MONTO REAL

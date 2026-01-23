@@ -62,7 +62,7 @@ export class DashboardComponent {
   refresh() {
     this.bookingService.loadRooms();
     this.adminService.loadReservations();
-    this.adminService.loadGuests();
+    this.adminService.loadGuests(this.authService.currentUser()?.id_company);
     if (this.isAdmin) {
       this.adminService.loadUsers(this.authService.currentUser()?.id_company);
     }
@@ -84,7 +84,7 @@ export class DashboardComponent {
     // 4. Recargar los datos de los servicios
     this.bookingService.loadRooms();
     this.adminService.loadReservations();
-    this.adminService.loadGuests();
+    this.adminService.loadGuests(this.authService.currentUser()?.id_company);
 
     if (this.isAdmin) {
       this.adminService.loadUsers(this.authService.currentUser()?.id_company);
@@ -129,6 +129,7 @@ export class DashboardComponent {
         this.activeBooking = {
           ...res,
           guest_name: guest?.full_name,
+          guest_doc_id: guest?.doc_id,
           guest_phone: guest?.phone,
           guest_email: guest?.email
         };
@@ -316,15 +317,72 @@ export class DashboardComponent {
   }
 
   /* Guarda los cambios de un huésped (nuevo o editado) */
+  /* Genera un ID interno único si no hay documento */
+  private generateInternalId(): string {
+    // Retorna algo como: INT-1706289452123 (INT + Timestamp en milisegundos)
+    return `INT-${Date.now()}`;
+  }
+
+  /* Genera un email ficticio único si es necesario */
+  private generateDummyEmail(): string {
+    // Retorna: no-email-1706289452123@hosting3m.com
+    return `no-email-${Date.now()}@hosting3m.com`;
+  }
+
   async handleSaveGuest() {
-    const selected = this.hotelService.selectedGuest();
+    // 1. Obtener datos del formulario (asumo que están en this.tempGuest o el form)
+    // NOTA: Es importante leer lo que el usuario escribió en el input actual, 
+    // no solo del 'selected' (que es el dato viejo).
+
+    console.log('this.tempGuest: ', this.tempGuest);
+    const formData = this.tempGuest;
+    const selected = this.hotelService.selectedGuest(); // El original (si es edición)
+
     const operation = selected ? 'update' : 'insert';
-    const email = selected ? selected.email : undefined;
-    this.adminService.saveGuest(this.tempGuest, operation, email).subscribe({
+
+    // 2. Lógica para DOC_ID
+    // Si el usuario lo dejó vacío, generamos uno interno único.
+    let finalDocId = formData.doc_id;
+    if (!finalDocId || finalDocId.trim() === '') {
+      // Si ya existía un ID interno (empieza con INT-), lo conservamos para no cambiarlo.
+      if (selected && selected.doc_id && selected.doc_id.startsWith('INT-')) {
+        finalDocId = selected.doc_id;
+      } else {
+        // Si es nuevo o antes tenía INE real y lo borraron
+        finalDocId = this.generateInternalId();
+      }
+    }
+
+    // 3. Lógica para EMAIL
+    // Si no hay correo, tienes dos opciones: 
+    // A) Mandar null (Mejor práctica DB)
+    // B) Mandar email único generado (Para evitar error unique)
+    let finalEmail = formData.email;
+    if (!finalEmail || finalEmail.trim() === '') {
+      // OPCIÓN A: Usar NULL (Requieres quitar 'required': true en el JSON Schema de crud_models si lo tienes)
+      // finalEmail = null; 
+
+      // OPCIÓN B: Email único ficticio (Tu enfoque actual mejorado)
+      if (selected && selected.email && selected.email.includes('no-email-')) {
+        finalEmail = selected.email; // Mantenemos el ficticio anterior
+      } else {
+        finalEmail = this.generateDummyEmail();
+      }
+    }
+
+    // Actualizamos el objeto temporal antes de enviarlo
+    const guestPayload = {
+      ...this.tempGuest,
+      doc_id: finalDocId,
+      email: finalEmail
+    };
+
+    // Enviamos el payload limpio
+    this.adminService.saveGuest(guestPayload, operation).subscribe({
       next: () => {
-        alert('✅ Huésped guardado');
+        alert('✅ Huésped guardado correctamente');
         this.isGuestModalOpen.set(false);
-        this.adminService.loadGuests();
+        this.adminService.loadGuests(this.authService.currentUser()?.id_company);
       },
       error: (err) => alert('❌ Error: ' + err.message)
     });
