@@ -39,26 +39,14 @@ Este dashboard actúa como el cliente principal del **Dynamic CRUD Engine**, per
 ---
 
 ## 🏗️ Arquitectura Técnica
-La aplicación implementa una arquitectura **Data-Access Service Pattern**, donde la lógica de negocio se centraliza en servicios inyectables, dejando los componentes únicamente para la gestión de la UI.
+> 🚀 **Deep Dive:** Consulta el diagrama completo de flujo y decisiones de diseño en:
+<p align="center">
+  <a href="./ARCHITECTURE.md">
+    <img src="https://img.shields.io/badge/🏛️_Leer_Guía_de_Arquitectura-206bc4?style=for-the-badge&logo=readthedocs&logoColor=white" alt="Architecture Guide">
+  </a>
+</p>
 
-1. **Flujo de Datos y Seguridad**
-    * *API Gateway (n8n):* Comunicación directa con Webhooks v3 para operaciones atómicas.
-    * *Seguridad:* Implementación de `auth.guard.ts` que protege la ruta `/dashboard`.
-    * *Persistencia:* Los formularios (como Checkin-form) envían payloads JSON que son procesados por flujos de trabajo en n8n y almacenados en PostgreSQL.
-
-2. **Componentes Principales**
-
-| Componente | Ruta / Tipo | Descripción |
-| :--- | :--- | :--- |
-| Login | `/login` | Puerta de entrada. Gestión de JWT y claims de rol. |
-| Dashboard | `/dashboard` | Contenedor principal. Gestión de estados de habitaciones (Ocupada, Disponible, Sucia, Mantenimiento). |
-| Checkin-form | `(Child)` | Formulario reactivo con lógica ON CONFLICT para evitar duplicidad de huéspedes por doc_id. |
-| User-Mgmt | `(Modal/View)` | CRUD interno para administración de personal y credenciales de acceso. |
-
-3. **Estructura de Servicios**
- * `HotelService`: Único punto de contacto para CRUD de habitaciones, huéspedes y reservas. Gestiona el estado global de rooms y loading mediante Signals.
- * `ReportService`: Lógica matemática y de procesamiento de fechas para la generación de métricas financieras.
- * `AuthService`: Gestión de identidad y persistencia de sesión.
+La aplicación implementa una arquitectura **Data-Access Service Pattern**, donde la lógica de negocio se centraliza en servicios inyectables...
 
 ---
 
