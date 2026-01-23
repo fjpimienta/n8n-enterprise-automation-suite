@@ -69,7 +69,7 @@ El agente funciona de forma reactiva a los mensajes entrantes en la cuenta de Wh
 ---
 
 ## 🤝 Contribución
-###Si deseas mejorar este flujo o añadir validaciones adicionales (como MFA o logging avanzado):
+### Si deseas mejorar este flujo o añadir validaciones adicionales (como MFA o logging avanzado):
     1. Haz un Fork del repositorio.
     2. Crea una nueva rama (git checkout -b feature/MejoraSeguridad).
     3. Realiza tus cambios y haz un Commit (git commit -m 'Añadida validación de expiración').
@@ -79,7 +79,7 @@ El agente funciona de forma reactiva a los mensajes entrantes en la cuenta de Wh
 ---
 
 ## 📄 Licencia
-###Este proyecto demuestra la capacidad de integración de n8n con stacks modernos de backend:Este proyecto está bajo la licencia n8n Sustainable Use License. Eres libre de usarlo y modificarlo para fines personales o internos de empresa.
+### Este proyecto demuestra la capacidad de integración de n8n con stacks modernos de backend:Este proyecto está bajo la licencia n8n Sustainable Use License. Eres libre de usarlo y modificarlo para fines personales o internos de empresa.
 
 
 Desarrollado por: Francisco Jesus Pérez Pimienta - Ingeniero en Sistemas Computaciones y Maestro en Administracion de Proyectos.

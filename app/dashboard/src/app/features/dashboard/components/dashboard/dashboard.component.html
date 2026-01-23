@@ -42,145 +42,20 @@
     }
 
     @if (viewMode() === 'checkin') {
-    <div class="modal-backdrop fade show"></div>
-    <div class="modal modal-blur fade show d-block" tabindex="-1">
-      <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content shadow-lg border-0">
-          <app-checkin-form [room]="hotelService.selectedRoom()" [reservation]="activeBooking"
-            (onClose)="viewMode.set('details')" (saved)="handleCheckinSave($event)">
-          </app-checkin-form>
-        </div>
-      </div>
-    </div>
+    <app-checkin-form [room]="hotelService.selectedRoom()" [reservation]="activeBooking"
+      (onClose)="viewMode.set('details')" (saved)="handleCheckinSave($event)">
+    </app-checkin-form>
     }
 
     @if (viewMode() === 'checkout_validation') {
-    <div class="modal-backdrop fade show"></div>
-    <div class="modal modal-blur fade show d-block" tabindex="-1">
-      <div class="modal-dialog modal-sm modal-dialog-centered">
-        <div class="modal-content shadow-lg">
-          <div class="modal-header bg-warning-lt">
-            <h5 class="modal-title">📋 Revisión de Salida</h5>
-            <button type="button" class="btn-close" (click)="viewMode.set('details')"></button>
-          </div>
-          <div class="modal-body">
-            <p class="text-muted mb-3">Verifique la devolución de los artículos:</p>
-
-            <label class="form-check mb-2">
-              <input class="form-check-input" type="checkbox" [(ngModel)]="checkoutChecks.tvRemote">
-              <span class="form-check-label">📺 Control TV</span>
-            </label>
-
-            <label class="form-check mb-2">
-              <input class="form-check-input" type="checkbox" [(ngModel)]="checkoutChecks.acRemote">
-              <span class="form-check-label">❄️ Control A/C</span>
-            </label>
-
-            <label class="form-check mb-3">
-              <input class="form-check-input" type="checkbox" [(ngModel)]="checkoutChecks.keys">
-              <span class="form-check-label">🔑 Llaves entregadas</span>
-            </label>
-
-            <div class="mb-3">
-              <label class="form-label">Observaciones / Daños</label>
-              <textarea class="form-control" rows="2" [(ngModel)]="checkoutChecks.notes"
-                placeholder="Todo en orden..."></textarea>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button class="btn btn-danger px-4 shadow-sm" (click)="viewMode.set('details')">Cancelar</button>
-
-            <button class="btn btn-danger ms-auto"
-              [disabled]="!checkoutChecks.tvRemote || !checkoutChecks.acRemote || !checkoutChecks.keys"
-              (click)="confirmFullCheckout()">
-
-              <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-logout me-1" width="24"
-                height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
-                stroke-linecap="round" stroke-linejoin="round">
-                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                <path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2" />
-                <path d="M9 12h12l-3 -3" />
-                <path d="M18 15l3 -3" />
-              </svg>
-
-              Finalizar Salida
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+    <app-checkout-form [room]="hotelService.selectedRoom()" [reservation]="activeBooking" (saved)="onCheckoutSuccess()"
+      (canceled)="onCheckoutCancel()">
+    </app-checkout-form>
     }
 
     @if (viewMode() === 'reservation') {
-    <div class="modal-backdrop fade show"></div>
-    <div class="modal modal-blur fade show d-block">
-      <div class="modal-dialog modal-xl modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">Calendario y Reservas</h5>
-            <button type="button" class="btn-close" (click)="viewMode.set('details')"></button>
-          </div>
-          <div class="modal-body">
-            <div class="row">
-              <div class="col-md-4 border-end">
-                <app-reservation-form [reservations]="adminService.reservations()" [room]="hotelService.selectedRoom()"
-                  (onClose)="viewMode.set('details')" (saved)="refresh()">
-                </app-reservation-form>
-              </div>
-
-              <div class="col-md-8">
-                <h4 class="mb-3">Reservas Confirmadas</h4>
-                <div class="table-responsive" style="max-height: 400px;">
-                  <table class="table table-vcenter table-sm card-table">
-                    <thead>
-                      <tr>
-                        <th>Hab</th>
-                        <th>Entrada</th>
-                        <th>Salida</th>
-                        <th>Estado</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      @for (res of adminService.reservations(); track res.id) {
-                      <tr>
-                        <td><strong>{{ getRoomNumber(res.room_id) }}</strong></td>
-                        <td>{{ res.check_in | date:'dd MMM' }}</td>
-                        <td>{{ res.check_out | date:'dd MMM' }}</td>
-                        <td><span class="badge bg-success-lt">{{ res.status }}</span></td>
-                      </tr>
-                      } @empty {
-                      <tr>
-                        <td colspan="4" class="text-center text-muted">No hay reservas activas</td>
-                      </tr>
-                      }
-                    </tbody>
-                  </table>
-                </div>
-                @if (totalPages > 1) {
-                <div class="d-flex align-items-center justify-content-between mt-3 border-top pt-2">
-                  <div class="text-muted small">
-                    Página <strong>{{ currentPage() }}</strong> de <strong>{{ totalPages }}</strong>
-                  </div>
-                  <ul class="pagination pagination-sm m-0">
-                    <li class="page-item" [class.disabled]="currentPage() === 1">
-                      <button class="page-link" (click)="prevPage()">
-                        <i class="ti ti-chevron-left"></i> Anterior
-                      </button>
-                    </li>
-                    <li class="page-item" [class.disabled]="currentPage() === totalPages">
-                      <button class="page-link" (click)="nextPage()">
-                        Siguiente <i class="ti ti-chevron-right"></i>
-                      </button>
-                    </li>
-                  </ul>
-                </div>
-                }
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+    <app-reservation-manager (onClose)="viewMode.set('details')" (onSaved)="refresh()">
+    </app-reservation-manager>
     }
 
     @if (viewMode() === 'guest_mgmt') {
@@ -238,7 +113,7 @@
 @if (hotelService.selectedRoom() && viewMode() === 'details') {
 <app-room-detail-modal [room]="hotelService.selectedRoom()" [activeBooking]="activeBooking"
   (onClose)="hotelService.clearSelection()" (onCheckin)="viewMode.set('checkin')" (onMarkAsClean)="markRoomAsClean()"
-  (onReservations)="viewMode.set('reservation')" (onCheckout)="handleCheckout()" (onPay)="markAsPaid($event)"
+  (onReservations)="viewMode.set('reservation')" (onCheckout)="startCheckoutProcess()" (onPay)="markAsPaid($event)"
   (onMaintenance)="reportMaintenance()" (onFinishMaintenance)="handleFinishMaintenance()">
 </app-room-detail-modal>
 }

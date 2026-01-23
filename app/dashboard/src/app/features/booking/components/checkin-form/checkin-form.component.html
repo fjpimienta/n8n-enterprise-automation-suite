@@ -1,105 +1,112 @@
-<div class="card border-0 shadow-none">
-  <div class="card-header bg-primary-lt">
-    <h3 class="card-title">Registro de Huésped - Habitación {{ room()?.room_number }}</h3>
-  </div>
-
-  <form [formGroup]="checkinForm" (ngSubmit)="confirmCheckin()">
-    <div class="card-body p-3">
-      <div class="hr-text mt-0">Identificación</div>
-
-      <div class="mb-3">
-        <label class="form-label required">Nombre Completo</label>
-        <input type="text" class="form-control" formControlName="full_name" placeholder="Ej. Juan Pérez">
-      </div>
-
-      <div class="mb-3">
-        <label class="form-label required">Doc. ID (INE/Pasaporte)</label>
-        <input type="text" class="form-control" formControlName="doc_id">
-      </div>
-
-      <div class="row">
-        <div class="col-6">
-          <div class="mb-3">
-            <label class="form-label">Correo Electrónico</label>
-            <input type="email" class="form-control" formControlName="email" placeholder="usuario@ejemplo.com">
-          </div>
+<div class="modal-backdrop fade show"></div>
+<div class="modal modal-blur fade show d-block" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content shadow-lg border-0">
+      <div class="card border-0 shadow-none">
+        <div class="card-header bg-primary-lt">
+          <h3 class="card-title">Registro de Huésped - Habitación {{ room()?.room_number }}</h3>
         </div>
-        <div class="col-6">
-          <div class="mb-3">
-            <label class="form-label">Teléfono</label>
-            <input type="tel" class="form-control" formControlName="phone" placeholder="9933...">
-          </div>
-        </div>
-      </div>
 
-      <div class="row">
-        <div class="col-4">
-          <div class="mb-3">
-            <label class="form-label">Ciudad</label>
-            <input type="text" class="form-control" formControlName="city" placeholder="Ej: Cancún">
-          </div>
-        </div>
-        <div class="col-4">
-          <div class="mb-3">
-            <label class="form-label">Estado</label>
-            <input type="text" class="form-control" formControlName="state" placeholder="Ej: Q. Roo">
-          </div>
-        </div>
-        <div class="col-4">
-          <div class="mb-3">
-            <label class="form-label">País</label>
-            <input type="text" class="form-control" formControlName="country">
-          </div>
-        </div>
-      </div>
+        <form [formGroup]="checkinForm" (ngSubmit)="confirmCheckin()">
+          <div class="card-body p-3">
+            <div class="hr-text mt-0">Identificación</div>
 
-      <div class="hr-text">Detalles de Estancia</div>
+            <div class="mb-3">
+              <label class="form-label required">Nombre Completo</label>
+              <input type="text" class="form-control" formControlName="full_name" placeholder="Ej. Juan Pérez">
+            </div>
 
-      <div class="row">
-        <div class="col-6">
-          <div class="mb-3">
-            <label class="form-label required">Check-out (Salida)</label>
-            <input type="date" class="form-control" formControlName="check_out">
-          </div>
-        </div>
-        <div class="col-6">
-          <div class="mb-3">
-            <label class="form-label">Monto Total Estimado</label>
-            <div class="input-group">
-              <span class="input-group-text">$</span>
-              <input type="number" class="form-control" formControlName="total_amount">
+            <div class="mb-3">
+              <label class="form-label required">Doc. ID (INE/Pasaporte)</label>
+              <input type="text" class="form-control" formControlName="doc_id">
+            </div>
+
+            <div class="row">
+              <div class="col-6">
+                <div class="mb-3">
+                  <label class="form-label">Correo Electrónico</label>
+                  <input type="email" class="form-control" formControlName="email" placeholder="usuario@ejemplo.com">
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="mb-3">
+                  <label class="form-label">Teléfono</label>
+                  <input type="tel" class="form-control" formControlName="phone" placeholder="9933...">
+                </div>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col-4">
+                <div class="mb-3">
+                  <label class="form-label">Ciudad</label>
+                  <input type="text" class="form-control" formControlName="city" placeholder="Ej: Cancún">
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="mb-3">
+                  <label class="form-label">Estado</label>
+                  <input type="text" class="form-control" formControlName="state" placeholder="Ej: Q. Roo">
+                </div>
+              </div>
+              <div class="col-4">
+                <div class="mb-3">
+                  <label class="form-label">País</label>
+                  <input type="text" class="form-control" formControlName="country">
+                </div>
+              </div>
+            </div>
+
+            <div class="hr-text">Detalles de Estancia</div>
+
+            <div class="row">
+              <div class="col-6">
+                <div class="mb-3">
+                  <label class="form-label required">Check-out (Salida)</label>
+                  <input type="date" class="form-control" formControlName="check_out">
+                </div>
+              </div>
+              <div class="col-6">
+                <div class="mb-3">
+                  <label class="form-label">Monto Total Estimado</label>
+                  <div class="input-group">
+                    <span class="input-group-text">$</span>
+                    <input type="number" class="form-control" formControlName="total_amount">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="row mb-3">
+              <div class="col-6">
+                <label class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" formControlName="vip_status">
+                  <span class="form-check-label">Huésped VIP</span>
+                </label>
+              </div>
+              <div class="col-6">
+                <label class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" formControlName="requires_invoice">
+                  <span class="form-check-label">Requiere Factura</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Notas Adicionales</label>
+              <textarea class="form-control" formControlName="notes" rows="2"
+                placeholder="Ej: Entregar llaves adicionales, alergias, etc."></textarea>
             </div>
           </div>
-        </div>
-      </div>
 
-      <div class="row mb-3">
-        <div class="col-6">
-          <label class="form-check form-switch">
-            <input class="form-check-input" type="checkbox" formControlName="vip_status">
-            <span class="form-check-label">Huésped VIP</span>
-          </label>
-        </div>
-        <div class="col-6">
-          <label class="form-check form-switch">
-            <input class="form-check-input" type="checkbox" formControlName="requires_invoice">
-            <span class="form-check-label">Requiere Factura</span>
-          </label>
-        </div>
-      </div>
-
-      <div class="mb-3">
-        <label class="form-label">Notas Adicionales</label>
-        <textarea class="form-control" formControlName="notes" rows="2"
-          placeholder="Ej: Entregar llaves adicionales, alergias, etc."></textarea>
+          <div class="card-footer d-flex bg-light">
+            <button type="button" class="btn btn-danger px-4 shadow-sm" (click)="closeCheckinModal()">Cancelar</button>
+            <button type="submit" class="btn btn-primary ms-auto" [disabled]="checkinForm.invalid">
+              Confirmar Check-in
+            </button>
+          </div>
+        </form>
       </div>
     </div>
-
-    <div class="card-footer d-flex bg-light">
-      <button type="button" class="btn btn-danger px-4 shadow-sm" (click)="closeCheckinModal()">Cancelar</button>
-      <button type="submit" class="btn btn-primary ms-auto" [disabled]="checkinForm.invalid">
-        Confirmar Check-in
-      </button>
-    </div>
-  </form>
+  </div>
 </div>
