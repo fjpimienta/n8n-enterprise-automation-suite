@@ -29,7 +29,7 @@ export class AdminService {
 
   /* Método para obtener los headers con el token de autenticación */
   public getAuthHeaders() {
-    const authToken = localStorage.getItem('authToken'); // O de donde guardes tu JWT
+    const authToken = localStorage.getItem('authToken');
     return new HttpHeaders({
       'Authorization': `Bearer ${authToken}`
     });
@@ -49,11 +49,8 @@ export class AdminService {
       headers: this.getAuthHeaders()
     }).subscribe({
       next: (res) => {
-        // 2. Gracias a la interfaz, TS sabe que res.data es un Room[]
         const data = res.data || [];
-        // Ordenamos antes de setear el estado
         const sortedCompanies = data.sort((a, b) => {
-          // Usamos numeric: true para que ordene 1, 2, 10 en lugar de 1, 10, 2
           return String(a.id_company).localeCompare(String(b.id_company), undefined, { numeric: true });
         });
         this.companies.set(sortedCompanies);
@@ -61,7 +58,7 @@ export class AdminService {
       },
       error: (err) => {
         console.error('Error en API:', err);
-        this.companies.set([]); // Reset en caso de fallo
+        this.companies.set([]);
         this.loadingCompanies.set(false)
       }
     });
@@ -77,7 +74,7 @@ export class AdminService {
       operation: 'getall',
       action: 'list',
       filters: {
-        status: 'confirmed' // Solo nos interesan las que no se han cancelado ni terminado
+        status: 'confirmed'
       }
     };
 
@@ -115,17 +112,20 @@ export class AdminService {
     }).subscribe({
       next: (res) => {
         const data = Array.isArray(res.data) ? res.data : [];
-        const validData = data.filter(g => g && g.email && g.email.trim() !== '');
+
+        const validData = data.filter(u => u && u.email && u.email.trim() !== '');
+
         const sortedUsers = validData.sort((a, b) => {
           return (a.email || '').localeCompare(b.email || '');
         });
+
         this.users.set(sortedUsers);
-        this.loadingUsers.set(false)
+        this.loadingUsers.set(false);
       },
       error: (err) => {
         console.error('Error en API:', err);
-        this.users.set([]); // Reset en caso de fallo
-        this.loadingUsers.set(false)
+        this.users.set([]);
+        this.loadingUsers.set(false);
       }
     });
   }
@@ -136,7 +136,7 @@ export class AdminService {
       entity: 'users',
       table_name: 'users',
       operation: operation,
-      email: email, // Solo para update
+      email: email, 
       fields: user
     };
 
@@ -162,12 +162,15 @@ export class AdminService {
     }).subscribe({
       next: (res) => {
         const rawData = Array.isArray(res.data) ? res.data : [];
-        const allGuests = rawData.filter(g => g);
+
+        const allGuests = rawData.filter(g => g && g.id);
+
         const sortedGuests = allGuests.sort((a, b) => {
           const nameA = a.full_name || '';
           const nameB = b.full_name || '';
           return nameA.localeCompare(nameB);
         });
+
         this.guests.set(sortedGuests);
         this.loadingGuests.set(false);
       },
@@ -179,22 +182,33 @@ export class AdminService {
     });
   }
 
+  checkPossibleDuplicate(fullName: string) {
+    const payload = {
+      operation: 'getall',
+      table_name: 'hotel_guests',
+      filters: {
+        full_name: fullName
+      }
+    };
+    const data = this.http.post<ApiResponse<any>>(`${this.apiUrl_crud}/hotel_guests`, payload, {
+      headers: this.getAuthHeaders()
+    });
+    return data;
+  }
+
   /* Guarda los cambios de un huésped (nuevo o editado) */
   /* Genera un ID interno único si no hay documento */
   public generateInternalId(): string {
-    // Retorna algo como: INT-1706289452123 (INT + Timestamp en milisegundos)
     return `INT-${Date.now()}`;
   }
 
   /* Genera un email ficticio único si es necesario */
   public generateDummyEmail(): string {
-    // Retorna: no-email-1706289452123@hosting3m.com
     return `no-email-${Date.now()}@hosting3m.com`;
   }
 
   /* Guardar o actualizar huésped */
   public saveGuest(guest: Partial<Guest>, operation: 'insert' | 'update', email?: string) {
-    console.log('guests: ', guest);
     let finalDocId = guest.doc_id;
     if (!finalDocId || finalDocId.trim() === '') {
       finalDocId = this.generateInternalId();
@@ -203,13 +217,13 @@ export class AdminService {
     if (!finalEmail || finalEmail.trim() === '') {
       finalEmail = this.generateDummyEmail();
     }
-    guest.email= finalEmail;
-    guest.doc_id= finalDocId;
+    guest.email = finalEmail;
+    guest.doc_id = finalDocId;
     const payload = {
       entity: 'hotel_guests',
       table_name: 'hotel_guests',
       operation: operation,
-      email: email, // Solo para update
+      email: email,
       fields: guest
     };
     return this.http.post<ApiResponse<Guest>>(`${this.apiUrl_crud}/hotel_guests`, payload, {

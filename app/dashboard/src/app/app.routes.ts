@@ -5,11 +5,11 @@ import { authGuard } from './core/auth/auth.guard';
 
 export const routes: Routes = [
   { path: 'login', component: LoginComponent },
-  { path: '', redirectTo: 'login', pathMatch: 'full' }, // Redirige al inicio a /login
+  { path: '', redirectTo: 'login', pathMatch: 'full' },
   {
     path: 'dashboard',
     component: DashboardComponent,
-    canActivate: [authGuard] // 🔒 Aquí cerramos la puerta
+    canActivate: [authGuard]
   },
-  { path: '**', redirectTo: 'login' } // Si escriben cualquier cosa, al login
+  { path: '**', redirectTo: 'login' }
 ];

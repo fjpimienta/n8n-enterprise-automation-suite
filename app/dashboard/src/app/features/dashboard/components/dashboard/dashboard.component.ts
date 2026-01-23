@@ -24,6 +24,7 @@ import { HotelService } from '@features/dashboard/services/hotel.service';
 import { ReportService } from '@features/finance/services/report.service';
 import { BookingService } from '@features/booking/services/booking.service';
 import { AdminService } from '@features/admin/services/admin.service';
+import { lastValueFrom } from 'rxjs';
 
 @Component({
   selector: 'app-dashboard',
@@ -153,12 +154,6 @@ export class DashboardComponent {
       );
 
       const bookingId = existingRes ? existingRes.id : undefined;
-
-      /*if (bookingId) {
-        console.log(`Log: Realizando Check-in sobre reserva existente ID: ${bookingId}`);
-      } else {
-        console.log('Log: Realizando Check-in como Walk-in (Nueva reserva)');
-      }*/
 
       // 2. Llamamos al servicio pasando el ID si existe
       await this.bookingService.processCheckin(formData, room, bookingId);
@@ -330,13 +325,25 @@ export class DashboardComponent {
   }
 
   async handleSaveGuest() {
-    // 1. Obtener datos del formulario (asumo que están en this.tempGuest o el form)
-    // NOTA: Es importante leer lo que el usuario escribió en el input actual, 
-    // no solo del 'selected' (que es el dato viejo).
-
-    console.log('this.tempGuest: ', this.tempGuest);
+    // 1. Obtener datos del formulario
     const formData = this.tempGuest;
-    const selected = this.hotelService.selectedGuest(); // El original (si es edición)
+    const currentName = this.tempGuest.full_name;
+    const selected = this.hotelService.selectedGuest();
+
+    // --- CORRECCIÓN AQUÍ ---
+    // Agregamos ': any' para que TypeScript sepa que esta variable tendrá propiedades dinámicas como .data
+    const duplicates: any = await lastValueFrom(this.adminService.checkPossibleDuplicate(currentName));
+
+    // Ahora TypeScript ya no marcará error en .data
+    if (duplicates.data && duplicates.data.length > 0) {
+      const confirm = window.confirm(
+        `⚠️ Encontramos ${duplicates.data.length} persona(s) con el nombre "${currentName}".\n\n` +
+        `¿Estás SEGURO que es una persona diferente?\n` +
+        `(Acepta para crear uno NUEVO, Cancela para revisar los existentes)`
+      );
+
+      if (!confirm) return;
+    }
 
     const operation = selected ? 'update' : 'insert';
 

@@ -22,7 +22,6 @@ export class LoginComponent {
   public hotelService = inject(HotelService);
   public adminService = inject(AdminService);
 
-  // Estados reactivos con Signals (Angular 19 Best Practice)
   isLoading = signal(false);
   showPassword = signal(false);
   errorMessage = signal<string>('');
@@ -34,15 +33,12 @@ export class LoginComponent {
   });
 
   constructor() {
-    // Creamos un efecto que reacciona cuando el signal de empresas cambia
     effect(() => {
       const list = this.adminService.companies();
       if (list.length > 0) {
-        // Buscamos la que tenga is_default true
         const defaultComp = list.find(c => c.is_default === true);
 
         if (defaultComp) {
-          // Parchamos el formulario con el ID de la empresa por defecto
           this.loginForm.patchValue({ id_company: defaultComp.id_company });
         }
       }
@@ -54,13 +50,11 @@ export class LoginComponent {
     this.loginForm.get('id_company')?.disable();
   }
 
-  // Helper para validación visual en HTML
   isFieldInvalid(field: string): boolean {
     const control = this.loginForm.get(field);
     return !!(control && control.invalid && (control.dirty || control.touched));
   }
 
-  // Toggle para ver contraseña
   togglePassword(event: Event) {
     event.preventDefault();
     this.showPassword.update(value => !value);
@@ -68,7 +62,6 @@ export class LoginComponent {
 
   onSubmit() {
     if (this.loginForm.valid) {
-      // 1. Activar estado de carga y limpiar errores
       this.isLoading.set(true);
       this.errorMessage.set('');
 
@@ -77,16 +70,13 @@ export class LoginComponent {
       this.authService.login(this.loginForm.value).subscribe({
         next: (res) => {
           this.logger.log('✅ Login autorizado. Token recibido.');
-          // Importante: HotelService usa 'authToken', asegúrate de usar esa misma llave
           localStorage.setItem('authToken', res.data.token);
           this.router.navigate(['/dashboard']);
-          // No seteamos isLoading false aquí porque navegamos fuera
         },
         error: (err) => {
           this.isLoading.set(false);
           this.logger.error('❌ Acceso denegado', err);
 
-          // Mensaje amigable para el usuario final
           if (err.status === 401 || err.status === 403) {
             this.errorMessage.set('Usuario o contraseña incorrectos.');
           } else {
@@ -95,7 +85,7 @@ export class LoginComponent {
         }
       });
     } else {
-      this.loginForm.markAllAsTouched(); // Marca los campos rojos si intenta enviar vacío
+      this.loginForm.markAllAsTouched();
     }
   }
 

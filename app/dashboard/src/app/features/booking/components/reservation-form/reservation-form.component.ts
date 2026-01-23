@@ -124,21 +124,20 @@ export class ReservationFormComponent implements OnInit, OnChanges { // 2. Agreg
       return;
     }
 
-    this.isSaving.set(true); // 5. ENCENDEMOS EL LOADING DE GUARDADO
+    this.isSaving.set(true);
 
     // Calculamos el total real
     const noches = this.getNights(this.dates.start, this.dates.end);
     const total = noches * (this.selectedRoomForRes?.price_night || 0);
     const isUpdate = !!this.reservationToEdit()?.id;
 
+    // ... (Lógica de limpieza de dummies sigue igual) ...
     let doc_id = this.guest.doc_id;
-    if (doc_id && doc_id.startsWith('INT-')) {
-      doc_id = ''; // Lo dejamos vacío visualmente
-    }
+    if (doc_id && doc_id.startsWith('INT-')) doc_id = '';
+
     let email = this.guest.email;
-    if (email && email.startsWith('no-email-')) {
-      email = ''; // Lo dejamos vacío visualmente
-    }
+    if (email && email.startsWith('no-email-')) email = '';
+
     const reservationData = {
       id: isUpdate ? this.reservationToEdit().id : undefined,
       room_id: this.selectedRoomForRes?.id,
@@ -149,24 +148,36 @@ export class ReservationFormComponent implements OnInit, OnChanges { // 2. Agreg
       notes: this.guest.notes,
       check_in: this.dates.start,
       check_out: this.dates.end,
-      total_amount: total // 6. AHORA SÍ TIENE EL MONTO REAL
+      total_amount: total
     };
 
     try {
       if (isUpdate) {
+        // La actualización no suele tener chequeo de duplicados, así que sigue igual
         await this.bookingService.updateReservation(reservationData);
         alert('¡Reserva Actualizada!');
+        this.saved.emit();
+        this.onClose.emit();
       } else {
-        await this.bookingService.createFutureReservation(reservationData, this.selectedRoomForRes.id);
-        alert('¡Reserva Guardada con Éxito!');
+        // CAMBIO IMPORTANTE AQUÍ:
+        // Capturamos el resultado (true o false)
+        const success = await this.bookingService.createFutureReservation(reservationData, this.selectedRoomForRes.id);
+
+        // Solo si success es TRUE cerramos el modal
+        if (success) {
+          alert('¡Reserva Guardada con Éxito!');
+          this.saved.emit();
+          this.onClose.emit();
+        }
+        // Si success es false (Cancelado), no hacemos nada, el modal sigue abierto.
       }
-      this.saved.emit();
-      this.onClose.emit();
+
     } catch (error) {
       console.error(error);
       alert('Error al guardar la reserva');
     } finally {
-      this.isSaving.set(false); // 7. APAGAMOS EL LOADING
+      this.isSaving.set(false);
     }
   }
+
 }

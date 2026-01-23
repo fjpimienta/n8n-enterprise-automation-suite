@@ -11,8 +11,8 @@ import { FormsModule } from '@angular/forms';
 })
 export class UserFormModalComponent {
   isOpen = input.required<boolean>();
-  selectedUser = input<any>(null); // El usuario original para saber si es edición
-  userData = model.required<any>(); // Usamos 'model' para sincronización bidireccional simple
+  selectedUser = input<any>(null);
+  userData = model.required<any>();
 
   onClose = output<void>();
   onSave = output<void>();

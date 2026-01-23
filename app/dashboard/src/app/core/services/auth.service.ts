@@ -17,7 +17,7 @@ interface UserPayload {
 })
 export class AuthService {
   private http = inject(HttpClient);
-  private apiUrl_token = environment.apiUrl_token; // URL de n8n: v2/genera-token
+  private apiUrl_token = environment.apiUrl_token;
 
   // Usamos un Signal para el estado del usuario (Angular 21 style)
   currentUser = signal<UserPayload | null>(this.getUserFromStorage());
