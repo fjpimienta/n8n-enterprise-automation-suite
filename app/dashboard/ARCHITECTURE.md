@@ -1,17 +1,17 @@
 # 🏛️ Architecture Overview: AdminHotel Dashboard
 
 ## 📝 Descripción
-**Project** AdminHotel Dashboard (Hosting3M Automation Suite)
-**Version** v0.5 (Latest)
-**Stack** Angular 21 (Signals) | n8n (API Gateway) | PostgreSQL (Persistence)
-**Author** Francisco Jesus Pérez Pimienta
+**Project:** AdminHotel Dashboard (Hosting3M Automation Suite)  
+**Version:** v0.5 (Latest)  
+**Stack:** Angular 21 (Signals) | n8n (API Gateway) | PostgreSQL (Persistence)  
+**Author:** Francisco Jesus Pérez Pimienta
 
 **AdminHotel Dashboard** es una aplicación web de alto rendimiento construida sobre Angular 21, diseñada como la interfaz administrativa oficial de la suite de automatización Hosting3M.
 
 ## 1. High-Level Design (The "Big Picture")
-El sistema sigue una arquitectura Data-Access Service Pattern altamente desacoplada. El frontend no contiene lógica SQL ni reglas de negocio complejas del lado del servidor; actúa como un cliente inteligente que consume un Dynamic CRUD Engine.
+El sistema sigue una arquitectura **Data-Access Service Pattern** altamente desacoplada. El frontend no contiene lógica SQL ni reglas de negocio complejas del lado del servidor; actúa como un cliente inteligente que consume un **Dynamic CRUD Engine**.
 
-```
+```mermaid
 graph TD
     User[Client / Browser] -->|HTTPS + JWT| ANG[Angular 21 SPA]
     ANG -->|JSON Payload| N8N[n8n API Gateway]
@@ -43,10 +43,10 @@ Contiene elementos que se instancian una sola vez y son transversales a toda la 
 
 📂 src/app/features (Domain Logic)
 Aquí vive el negocio. Cada carpeta es un módulo autocontenido.
-|Feature|Responsabilidad|Componentes Clave|Servicios|
-|Booking|Ciclo de vida de la reserva.|Reservation|Manager (Orquestador), ReservationForm, CheckinForm.|BookingService (Disponibilidad, Check-in).|
-|Dashboard|Vista operativa principal.|RoomCard (Estado visual), RoomFilters.|HotelService (Estado global de habitaciones).|
-|AdminGestión de entidades.|GuestList, UserList (Skeletons & Tables).|AdminService (CRUD genérico para admin).FinanceReportes y métricas.DailyReportModal.|ReportService (Cálculos financieros).|
+| Feature| Responsabilidad | Componentes Clave | Servicios |
+| Booking | Ciclo de vida de la reserva. | Reservation|Manager (Orquestador), ReservationForm, CheckinForm. | BookingService (Disponibilidad, Check-in). |
+| Dashboard | Vista operativa principal. | RoomCard (Estado visual), RoomFilters. | HotelService (Estado global de habitaciones). |
+| AdminGestión de entidades. | GuestList, UserList (Skeletons & Tables). | AdminService (CRUD genérico para admin).FinanceReportes y métricas.DailyReportModal. |ReportService (Cálculos financieros). |
 
 📂 src/app/shared (Reusability)
     * UI: SkeletonComponent (Feedback de carga), Modales genéricos.
