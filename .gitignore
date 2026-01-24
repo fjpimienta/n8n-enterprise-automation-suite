@@ -1,6 +1,7 @@
 # --- Seguridad y Secretos ---
 .env
-**/ .env
+.env.*
+*.env
 credentials_export.txt
 documentos_legales.json
 
@@ -11,6 +12,10 @@ ollama-models/
 # Ignorar cualquier carpeta de datos interna
 **/data/
 
+# --- Docker Local Overrides ---
+docker-compose.override.yml
+docker-compose.override.yaml
+
 # --- Backups y Temporales ---
 *.tar.gz
 *.gz
@@ -20,6 +25,7 @@ ollama-models/
 *.log
 n8n_backup/
 local-files/
+sync_dbs.sh
 
 # --- Node.js / Microservicios ---
 node_modules/
@@ -43,6 +49,15 @@ app/dashboard/dist/
 app/dashboard/tmp/
 app/dashboard/out-tsc/
 app/dashboard/.angular/cache/
+
+# --- Angular (Pista Hielo App) ---
+app/pista-hielo/src/environments/
+app/pista-hielo/.vscode/
+app/pista-hielo/node_modules/
+app/pista-hielo/dist/
+app/pista-hielo/tmp/
+app/pista-hielo/out-tsc/
+app/pista-hielo/.angular/cache/
 
 # --- IDE Config ---
 .vscode/
