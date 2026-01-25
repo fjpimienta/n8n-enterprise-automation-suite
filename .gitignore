@@ -42,22 +42,26 @@ __pycache__/
 Thumbs.db
 
 # --- Angular (Dashboard App) ---
-app/dashboard/src/environments/
 app/dashboard/.vscode/
 app/dashboard/node_modules/
 app/dashboard/dist/
 app/dashboard/tmp/
 app/dashboard/out-tsc/
 app/dashboard/.angular/cache/
+app/dashboard/src/environments/environment.prod.ts
+app/dashboard/src/environments/environment.development.ts
+!app/dashboard/src/environments/environment.ts
 
 # --- Angular (Pista Hielo App) ---
-app/pista-hielo/src/environments/
 app/pista-hielo/.vscode/
 app/pista-hielo/node_modules/
 app/pista-hielo/dist/
 app/pista-hielo/tmp/
 app/pista-hielo/out-tsc/
 app/pista-hielo/.angular/cache/
+app/pista-hielo/src/environments/environment.prod.ts
+app/pista-hielo/src/environments/environment.development.ts
+!app/pista-hielo/src/environments/environment.ts
 
 # --- IDE Config ---
 .vscode/
