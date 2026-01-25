@@ -80,8 +80,7 @@ services:
         max-file: "3"
 
   postgres:
-    #image: ankane/pgvector:latest
-    image: postgres:15-alpine
+    image: ankane/pgvector:latest
     container_name: n8n-enterprise-db
     restart: always
     environment:
