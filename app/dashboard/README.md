@@ -1,11 +1,11 @@
-# ⛸️ PistaHielo Operations Center
+# 🏨 AdminHotel Dashboard
 
-### 🛠️ High-Precision Frontend for Time-Based Operations & Dual-Stage Billing
+### 🛠️ Integrated Frontend for Dynamic CRUD Engine
 
 ## 📝 Descripción
-**PistaHielo Dashboard** es una aplicación web de alto rendimiento construida sobre Angular 21, diseñada para modernizar la gestión operativa de pistas de patinaje (anteriormente basada en PHP 5.2 legacy).
+**AdminHotel** es una aplicación web de alto rendimiento construida sobre Angular 21, diseñada como la interfaz administrativa oficial de la suite de automatización Hosting3M.
 
-A diferencia de los sistemas de hospitalidad tradicionales, este dashboard implementa un Event-Driven State Machine para gestionar el "Ice Rack" (monitor de pista en tiempo real). Se especializa en procesos de dos tiempos: asignación inmediata de activos (Tiempo 1: Check-in) y liquidación financiera dinámica basada en tiempo real transcurrido (Tiempo 2: Check-out), todo orquestado por el Dynamic CRUD Engine de la suite Hosting3M.
+Este dashboard actúa como el cliente principal del **Dynamic CRUD Engine**, permitiendo una gestión de datos en tiempo real (Reservas, Habitaciones, Check-ins) mediante una capa de abstracción basada en n8n y PostgreSQL. Se especializa en la gestión operativa de flujos de hospitalidad mediante el uso intensivo de Angular Signals y una arquitectura de servicios desacoplados.
 
 ---
 
@@ -13,51 +13,50 @@ A diferencia de los sistemas de hospitalidad tradicionales, este dashboard imple
 
 | Versión | Estado | Módulo Principal | Stack de UI | Cambios Principales |
 | :--- | :--- | :--- | :--- | :--- |
-| **v0.1** | `Stable` | `Auth & Architecture` | Tabler + Bootstrap | Estructura base, JWT Auth, Ingesta de tablas ph_ legacy. |
-| **v0.2** | `In Dev` | `Ice Live Monitor` | Reactive CSS Grid | Visualización de patinadores activos (ACT/ON_ICE). |
-| **v0.3** | `Planned`| `Pricing Engine`| n8n Workflows | Lógica de Zamboni, descuentos de Hermanos y liquidación automática. |
-| **v0.4** | `Planned` | `VIP & Membership` | Member Skeletons | Gestión de vigencias de alumnos y alertas de renovación. |
+| **v0.1** | `Stable` | `Auth & Architecture` | Tabler + Bootstrap | Estructura base, JWT Auth, Signals. |
+| **v0.2** | `Stable` | `Room Rack v1` | CSS Grid / Cards | Gestión visual de 17 habitaciones. |
+| **v0.3** | `Stable`| `Ops & Finance`| Modals / Reports | Checkout con inventario, Reporte de Caja (D/S/M/Y) y Gestión de Usuarios. |
+| **v0.4** | `Stable` | `Pro UX & Patterns` | Skeletons / Services | Refactorización a Services, Skeletons de carga, Promesas (Async/Await).|
+| **v0.5** | `Latest` | **Full Operation** | **Interactive UI** | **Refresh Engine**, Reservas dinámicas, Gestión avanzada de Huéspedes, Emojis & Traducciones. |
 
 ---
 
-## 🆕 Características de la Arquitectura PistaHielo
-1. 🕒 Dual-Time Operation Pattern
-    * Check-in (Fast Path): Registro instantáneo de entrada para minimizar colas en taquilla.
-    * Check-out (Billing Path): Cálculo automático de excedentes, tolerancia de 10 minutos y ajustes por mantenimiento de hielo (Zamboni).
-
-2. ⛸️ Ice Live Monitor (The Rack)
-    * Interfaz reactiva mediante Angular Signals que muestra el estado de cada par de patines en uso, tiempo transcurrido y alertas de tiempo agotado.
-
-3. 💰 Intelligent Pricing Engine
-    *Delegación de la lógica de costos a Workflows de n8n, eliminando el cálculo manual de promociones (2x1, paquetes de 3/6 meses, descuentos por hermanos).
-
-4. 📊 Financial Closures (Corte X/Y)
-    * Automatización de cierres de turno y cierres de día con trazabilidad completa de pagos en Efectivo vs. Tarjeta.
+## 🆕 Novedades de la v0.5 (Changelog)
+1. **⚡ UX & Navegación Inteligente**
+    * *Refresh Main Engine:* Implementación de un sistema de reseteo global que limpia el viewMode y regresa al usuario a la vista de habitaciones desde cualquier sección (Empleados/Huéspedes) al hacer clic en el título principal.
+    * *Empty States UI:* Nueva interfaz visual para habitaciones vacías y filtros sin resultados, mejorando la claridad cuando no hay datos que mostrar.
+    * *Translation & Emojis:* Localización completa de estados de habitación y uso de iconografía emocional (emojis) para una lectura rápida del estatus operativo.
+2. **📇 Gestión de Huéspedes y Usuarios (CRUD Pro)**
+    * *Smart Guest Management:* Flujo completo de "Save Guest" y listas optimizadas con títulos dinámicos.
+    * *Identity Updates:* Mejoras en la documentación y actualización de datos de identidad de los clientes.
+3. **📅 Sistema de Reservas (Smart Booking)**
+    * *Form Reservation:* Nuevo formulario especializado para la creación de reservas previas.
+    * *Query & Logic Fixes:* Optimización de las consultas de reservas para evitar colisiones de fechas y asegurar la disponibilidad real.
+    * *Gestión de Ciclo de Vida:* Botones de acción para actualización y eliminación de reservas directamente desde el dashboard.
+4. **🧹 Mantenimiento y Estados Críticos**
+    * *Dirty & Reserved States:* Refinamiento visual y lógico para habitaciones en estado "Sucio" y "Reservado", asegurando que el flujo de limpieza sea prioritario para la disponibilidad.
 
 ---
 
 ## 🏗️ Arquitectura Técnica
-> 🚀 **Estrategia de Migración:** Esta aplicación consume los esquemas normalizados de PostgreSQL (*ph_clients, ph_transactions, ph_payments*) eliminando la dependencia de archivos PHP procedimentales.
+> 🚀 **Deep Dive:** Consulta el diagrama completo de flujo y decisiones de diseño en:
 <p align="center">
   <a href="./ARCHITECTURE.md">
     <img src="https://img.shields.io/badge/🏛️_Leer_Guía_de_Arquitectura-206bc4?style=for-the-badge&logo=readthedocs&logoColor=white" alt="Architecture Guide">
   </a>
 </p>
 
-La solución utiliza un patrón Smart Services / Dumb Components:
-
-    1. IceTimer Service: Un servicio especializado basado en interval para actualizar cronómetros visuales sin sobrecargar la base de datos.
-
-    2. Transaction Hook: n8n procesa cada cierre de renta, actualiza el inventario de patines y genera el registro en ph_payments de forma atómica.
+La aplicación implementa una arquitectura **Data-Access Service Pattern**, donde la lógica de negocio se centraliza en servicios inyectables...
 
 ---
 
 ## 🚦 Stack Tecnológico
 * **Core:** Angular v21.0.0 (Signals, Standalone Components, Signal Queries).
-* **UI Framework:** @tabler/core (Diseño administrativo responsive) + Bootstrap 5 (Dashboard Administrativo).
-* **Orquestador:** n8n v2.3.6 (Enterprise Edition).
-* **Base de Datos:** PostgreSQL + pgvector (Soberanía de datos y memoria RAG).
-* **Seguridad:** JWT (Microservicio Node.js) con roles de Supervisor/Cajero.
+* **UI Framework:** @tabler/core (Diseño administrativo responsive) + Bootstrap 5.
+* **State Management:** Angular Signals (Reactividad fina sin Zone.js en componentes críticos).
+* **Backend Interface:** Webhooks n8n (API v3) operando sobre PostgreSQL.
+* **Utilidades:** DatePipe (Localizado para México), CurrencyPipe, jwt-decode.
+* **UX:** Implementación de Skeleton Screens para estados de carga asíncronos.
 
 ---
 
@@ -71,11 +70,12 @@ La aplicación implementa una arquitectura desacoplada donde el frontend delega 
 
 ---
 
-## 🚀 Capacidades de PistaHielo Dashboard
-- **Monitoreo en Tiempo Real:** Quién está en el hielo, con qué patín y cuánto tiempo le queda.
-- **Gestión de Alumnos VIP:** Seguimiento de mensualidades con cálculo de vigencia automático.
-- **Ajuste de Zamboni:** Botón global para pausar/ajustar tiempos de todos los patinadores activos durante el mantenimiento.
-- **POS Integrado:** Venta de artículos (calcetas, dulces) y servicios (clases particulares) en la misma transacción.
+## 🚀 Capacidades de AdminHotel
+- **Room Rack Inteligente:** Visualización por colores de estados (Verde: Disponible, Rojo: Ocupado, Amarillo: Check-out, Gris: Mantenimiento).
+- **Gestión de Huéspedes:** Registro robusto que captura datos de identidad, procedencia y notas especiales.
+- **Validación de Inventario:** Check-out con validación de activos (Llaves, TV, A/C).
+- **Caja y Ventas:** Reporte financiero integrado que segmenta Ventas Totales, Cobrado (Efectivo) y Por Cobrar en tiempo real.
+- **Gestión de Personal:** Panel administrativo para el alta y edición de roles de empleados.
 
 ---
 
@@ -83,11 +83,12 @@ La aplicación implementa una arquitectura desacoplada donde el frontend delega 
 
 | Módulo | Estado | Descripción | Integración n8n |
 | :--- | :--- | :--- | :--- |
-| Check-in Form | ⏳ En Progreso | Registro de entrada de clientes y alumnos. | Webhook Entry Processor. |
-| Ice Rack UI | ⏳ En Progreso | Grid visual con cronómetros activos. | PostgreSQL Sync. |
-| Checkout Engine | 📅 Pendiente | Cálculo de costos y cierre de renta. | Workflow 10 (Pricing Engine). |
-| Cortes X / Y | 📅 Pendiente | Reporte de caja por turno y cierre diario. | MetaCRUD Aggregation. |
-| WhatsApp Alerts | 🚀 Futuro | Notificaciones de vencimiento a padres de familia. | Módulo 05 (AI Agent). |
+| Room Rack | ✅ Finalizado | Grid visual del estado de habitaciones. | Webhook SQL Real-time. |
+| Check-out V2 | ✅ Finalizado | Validación de pago pendiente e inventario. | Update dinámico de hotel_rooms. |
+| Reporte de Caja | ✅ Finalizado | Métricas de ventas por periodos (Día/Semana/Mes/Año). | Agregación vía MetaCRUD. |
+| UX Skeletons | ✅ Finalizado | Feedback visual durante la carga de datos. | UI Reactiva (Signals). |
+| Booking Engine | ✅ Finalizado | Creación, consulta y eliminación de reservas. | |
+| AI WhatsApp Agent | ⏳ Próximo | Reservas automáticas vía Chatbot conectadas al nuevo Form. | |
 
 ---
 
@@ -118,7 +119,7 @@ La aplicación implementa una arquitectura desacoplada donde el frontend delega 
 ---
 
 ## 📦 Integración con n8n Enterprise Suite
-Este app es el componente `app/pistahielo` dentro del ecosistema n8n Enterprise Suite. Se comunica directamente con los siguientes servicios:
+Este dashboard es el componente `app/dashboard` dentro del ecosistema n8n Enterprise Suite. Se comunica directamente con los siguientes servicios:
 
 * **JWT Service:** Para validación de tokens RS256.
 * **PostgreSQL + pgvector:** Almacenamiento de metadatos de habitaciones y búsqueda semántica.
