@@ -1,0 +1,87 @@
+/* To learn more about Typescript configuration file: https://www.typescriptlang.org/docs/handbook/tsconfig-json.html. */
+/* To learn more about Angular compiler options: https://angular.dev/reference/configs/angular-compiler-options. */
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "baseUrl": "./",
+    "strict": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "ES2022",
+    "module": "preserve",
+    "paths": {
+      /* --- Capa Core (Singletons & Auth) --- */
+      "@core/*": [
+        "src/app/core/*"
+      ],
+      "@auth/*": [
+        "src/app/core/auth/*"
+      ],
+      "@guards/*": [
+        "src/app/core/guards/*"
+      ],
+      "@interceptors/*": [
+        "src/app/core/interceptors/*"
+      ],
+      "@interfaces/*": [
+        "src/app/core/interfaces/*"
+      ],
+      "@models/*": [
+        "src/app/core/models/*"
+      ],
+      "@services/*": [
+        "src/app/core/services/*"
+      ],
+      /* --- Capa de Features (Lógica de PistaHielo) --- */
+      "@features/*": [
+        "src/app/features/*"
+      ],
+      "@operations/*": [
+        "src/app/features/operations/*"
+      ],
+      "@pos/*": [
+        "src/app/features/pos/*"
+      ],
+      "@finance/*": [
+        "src/app/features/finance/*"
+      ],
+      "@admin/*": [
+        "src/app/features/admin/*"
+      ],
+      "@closures/*": [
+        "src/app/features/closures/*"
+      ],
+      /* --- Capa Shared (UI & Utils) --- */
+      "@shared/*": [
+        "src/app/shared/*"
+      ],
+      "@ui/*": [
+        "src/app/shared/ui/*"
+      ],
+      "@env/*": [
+        "src/environments/*"
+      ]
+    }
+  },
+  "angularCompilerOptions": {
+    "enableI18nLegacyMessageIdFormat": false,
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true,
+    "strictTemplates": true
+  },
+  "files": [],
+  "references": [
+    {
+      "path": "./tsconfig.app.json"
+    },
+    {
+      "path": "./tsconfig.spec.json"
+    }
+  ]
+}
