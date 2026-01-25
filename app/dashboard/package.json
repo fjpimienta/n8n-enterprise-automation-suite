@@ -8,6 +8,9 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test"
   },
+  "overrides": {
+    "undici": "^7.18.2"
+  },
   "prettier": {
     "printWidth": 100,
     "singleQuote": true,
