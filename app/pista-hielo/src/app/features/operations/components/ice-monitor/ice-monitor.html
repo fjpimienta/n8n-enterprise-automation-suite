@@ -1,18 +1,19 @@
 <div class="container-xl">
     <div class="page-header d-print-none">
         <div class="row align-items-center">
-            <div class="col">
-                <h2 class="page-title">⛸️ Monitor de Pista en Vivo</h2>
+            <div class="col text-center">
+                <h2 class="page-title d-inline-block">⛸️ Monitor de Pista en Vivo</h2>
                 <div class="text-muted small mt-1">Sincronizado con n8n Dynamic Engine</div>
             </div>
-            <div class="col-auto ms-auto">
+
+            <div class="col-auto ms-auto d-print-none">
                 <button (click)="refresh()" class="btn btn-primary d-none d-sm-inline-block">
                     <lucide-icon name="refresh-cw" class="icon"></lucide-icon> Actualizar
                 </button>
             </div>
         </div>
     </div>
-
+    
     <div class="row row-cards mt-3">
         @if (iceService.isLoading()) {
         <app-skeleton [count]="4" layout="card"></app-skeleton>
