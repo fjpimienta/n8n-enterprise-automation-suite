@@ -11,12 +11,23 @@
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
+          "style": "css",
+          "changeDetection": "OnPush",
+          "displayBlock": true,
           "skipTests": true,
           "flat": false,
           "type": "component"
         },
         "@schematics/angular:service": {
+          "skipTests": true,
+          "flat": true,
           "type": "service"
+        },
+        "@schematics/angular:directive": {
+          "skipTests": true
+        },
+        "@schematics/angular:pipe": {
+          "skipTests": true
         }
       },
       "root": "",

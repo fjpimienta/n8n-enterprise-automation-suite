@@ -41,7 +41,7 @@ export class AuthService {
     return this.http.post<AuthResponse>(this.apiUrl_token, credentials).pipe(
       tap(response => {
         if (response.status === 'success' && response.data?.token) {
-          
+
           const token = response.data.token;
 
           // 1. Guardar en LocalStorage (USANDO SIEMPRE 'ph_token')
@@ -86,7 +86,7 @@ export class AuthService {
   getToken(): string | null {
     if (isPlatformBrowser(this.platformId)) {
       // Debe coincidir con lo que guardaste en el login
-      return localStorage.getItem('ph_token'); 
+      return localStorage.getItem('ph_token');
     }
     return null;
   }
@@ -103,9 +103,30 @@ export class AuthService {
     return null;
   }
 
+  // MEJORA: Esta función ahora valida que el token exista Y que no haya caducado
   private checkTokenExistence(): boolean {
     if (isPlatformBrowser(this.platformId)) {
-      return !!localStorage.getItem('ph_token');
+      const token = localStorage.getItem('ph_token');
+
+      if (!token) return false; // No hay token, fuera.
+
+      try {
+        const decoded: any = jwtDecode(token);
+        const currentTime = Date.now() / 1000; // Tiempo actual en segundos
+
+        // Si el token tiene campo 'exp' y ya pasó la fecha...
+        if (decoded.exp && decoded.exp < currentTime) {
+          console.warn('Token expirado, limpiando sesión...');
+          this.logout(); // Limpiamos storage
+          return false;  // Decimos que NO está autenticado
+        }
+
+        return true; // Token existe y es válido en tiempo
+      } catch (error) {
+        // Si el token es basura y no se puede decodificar
+        this.logout();
+        return false;
+      }
     }
     return false;
   }
