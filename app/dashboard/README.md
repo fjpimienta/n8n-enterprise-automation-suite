@@ -17,24 +17,32 @@ Este dashboard actúa como el cliente principal del **Dynamic CRUD Engine**, per
 | **v0.2** | `Stable` | `Room Rack v1` | CSS Grid / Cards | Gestión visual de 17 habitaciones. |
 | **v0.3** | `Stable`| `Ops & Finance`| Modals / Reports | Checkout con inventario, Reporte de Caja (D/S/M/Y) y Gestión de Usuarios. |
 | **v0.4** | `Stable` | `Pro UX & Patterns` | Skeletons / Services | Refactorización a Services, Skeletons de carga, Promesas (Async/Await).|
-| **v0.5** | `Latest` | **Full Operation** | **Interactive UI** | **Refresh Engine**, Reservas dinámicas, Gestión avanzada de Huéspedes, Emojis & Traducciones. |
+| **v0.5** | `Stable` | Full Operation | Interactive UI | Refresh Engine, Reservas dinámicas, Gestión avanzada de Huéspedes, Emojis & Traducciones. |
+| **v0.6** | `Stable` | Accessibility & Finance | Mobile Grid / CSS | Lógica de Descuentos, UX Accesible para Seniors (Fat-Finger Design), Filtros Grid. |
+| **v0.7** | `Planned` | **AI Integration** | **WhatsApp API** | Agentes IA para reservas y notificaciones automatizadas. |
+
 
 ---
 
-## 🆕 Novedades de la v0.5 (Changelog)
-1. **⚡ UX & Navegación Inteligente**
-    * *Refresh Main Engine:* Implementación de un sistema de reseteo global que limpia el viewMode y regresa al usuario a la vista de habitaciones desde cualquier sección (Empleados/Huéspedes) al hacer clic en el título principal.
-    * *Empty States UI:* Nueva interfaz visual para habitaciones vacías y filtros sin resultados, mejorando la claridad cuando no hay datos que mostrar.
-    * *Translation & Emojis:* Localización completa de estados de habitación y uso de iconografía emocional (emojis) para una lectura rápida del estatus operativo.
-2. **📇 Gestión de Huéspedes y Usuarios (CRUD Pro)**
-    * *Smart Guest Management:* Flujo completo de "Save Guest" y listas optimizadas con títulos dinámicos.
-    * *Identity Updates:* Mejoras en la documentación y actualización de datos de identidad de los clientes.
-3. **📅 Sistema de Reservas (Smart Booking)**
-    * *Form Reservation:* Nuevo formulario especializado para la creación de reservas previas.
-    * *Query & Logic Fixes:* Optimización de las consultas de reservas para evitar colisiones de fechas y asegurar la disponibilidad real.
-    * *Gestión de Ciclo de Vida:* Botones de acción para actualización y eliminación de reservas directamente desde el dashboard.
-4. **🧹 Mantenimiento y Estados Críticos**
-    * *Dirty & Reserved States:* Refinamiento visual y lógico para habitaciones en estado "Sucio" y "Reservado", asegurando que el flujo de limpieza sea prioritario para la disponibilidad.
+## 🆕 Novedades de la v0.6 (Changelog)
+1. 📱 UX Móvil & Accesibilidad (Senior-First Design)
+    * Diseño "Fat Finger": Reestructuración completa de la interfaz para pantallas táctiles. Los botones ahora son bloques grandes ("ladrillos") de fácil interacción, eliminando enlaces pequeños o difíciles de tocar.
+
+    * Semáforo Visual Inmersivo: Las tarjetas de habitación ya no dependen solo de texto; el fondo completo cambia de color (Verde/Rojo/Naranja) para una identificación cognitiva inmediata del estado.
+
+    * Grid Navigation: Se eliminó el scroll horizontal oculto en los filtros. Ahora se utiliza un CSS Grid Layout que despliega todas las opciones de filtrado y menús administrativos en una cuadrícula visible y ordenada automáticamente según el dispositivo.
+
+2. 💸 Lógica Financiera & Descuentos
+    * Cálculo Dinámico de Tarifas: Implementación de algoritmo que calcula automáticamente el precio de lista vs. el monto cobrado.
+
+    * Auditoría de Descuentos: Nueva lógica de base de datos (discount_amount) que registra la diferencia entre la tarifa oficial y el cobro real sin perder la trazabilidad financiera.
+
+    * Validación Condicional: Regla de negocio estricta implementada con Reactive Forms: si existe un descuento > 0, el campo de "Notas" se vuelve obligatorio para justificar la rebaja (ej. "Autorizado por Gerencia").
+
+3. ⚡ Mejoras Visuales y de Rendimiento
+Optimización de Espacio: Layout responsivo mejorado que pasa de columnas múltiples en escritorio a tarjetas de ancho completo en móviles para evitar errores de selección.
+
+    * Tipografía Jerárquica: Aumento significativo en el tamaño de fuentes para números de habitación y estados críticos.
 
 ---
 
@@ -87,8 +95,8 @@ La aplicación implementa una arquitectura desacoplada donde el frontend delega 
 | Check-out V2 | ✅ Finalizado | Validación de pago pendiente e inventario. | Update dinámico de hotel_rooms. |
 | Reporte de Caja | ✅ Finalizado | Métricas de ventas por periodos (Día/Semana/Mes/Año). | Agregación vía MetaCRUD. |
 | UX Skeletons | ✅ Finalizado | Feedback visual durante la carga de datos. | UI Reactiva (Signals). |
-| Booking Engine | ✅ Finalizado | Creación, consulta y eliminación de reservas. | |
-| AI WhatsApp Agent | ⏳ Próximo | Reservas automáticas vía Chatbot conectadas al nuevo Form. | |
+| Booking Engine | ✅ Finalizado | Creación, consulta y eliminación de reservas. | Update schema hotel_bookings. |
+| AI WhatsApp Agent | ⏳ Próximo (v0.7) | Reservas automáticas vía Chatbot conectadas al nuevo Form. | WhatsApp API + AI Agent. |
 
 ---
 
