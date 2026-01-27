@@ -1,4 +1,4 @@
-import { Component, Output, EventEmitter, input, OnInit, OnChanges, SimpleChanges, effect } from '@angular/core';
+import { Component, Output, EventEmitter, input, OnInit, OnChanges, SimpleChanges } from '@angular/core';
 import { FormGroup, FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Room } from '@core/models/hotel.types';
@@ -14,8 +14,12 @@ export class CheckinFormComponent implements OnInit, OnChanges {
   reservation = input<any | null>(null);
 
   @Output() saved = new EventEmitter<any>();
-  @Output() canceled = new EventEmitter<void>();
   @Output() onClose = new EventEmitter<void>();
+
+  // Variables para cálculos
+  standardPrice: number = 0; // El precio real según tarifa
+  discountAmount: number = 0; // La diferencia calculada
+  daysCount: number = 1;
 
   checkinForm = new FormGroup({
     full_name: new FormControl('', [Validators.required]),
@@ -26,18 +30,25 @@ export class CheckinFormComponent implements OnInit, OnChanges {
     state: new FormControl(''),
     country: new FormControl('México'),
     check_out: new FormControl('', [Validators.required]),
-    total_amount: new FormControl(0, [Validators.min(0)]),
+    total_amount: new FormControl(0, [Validators.required, Validators.min(0)]), // El cobro final
     vip_status: new FormControl(false),
     requires_invoice: new FormControl(false),
-    notes: new FormControl('')
+    notes: new FormControl('') // La validación se agrega dinámicamente
   });
 
   ngOnInit() {
     this.initDefaultValues();
 
+    // 1. Si cambian la fecha, recalculamos el precio estándar
     this.checkinForm.get('check_out')?.valueChanges.subscribe(() => {
-      this.calculateTotal();
+      this.calculateStandardPrice();
     });
+
+    // 2. Si cambian el monto manualmente, recalculamos el descuento
+    this.checkinForm.get('total_amount')?.valueChanges.subscribe((val) => {
+      this.calculateDiscount(val || 0);
+    });
+    this.calculateStandardPrice();
   }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -46,17 +57,74 @@ export class CheckinFormComponent implements OnInit, OnChanges {
     }
   }
 
+  // --- LÓGICA CORE ---
+
+  /**
+   * Calcula cuánto DEBERÍA costar la habitación (Precio Lista)
+   * y resetea el cobro sugerido.
+   */
+  calculateStandardPrice() {
+    const roomData = this.room();
+    const checkOutDate = this.checkinForm.get('check_out')?.value;
+
+    if (roomData && checkOutDate) {
+      const start = new Date();
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(checkOutDate);
+
+      // Calcular diferencia en días
+      const diffTime = end.getTime() - start.getTime();
+      this.daysCount = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
+
+      // Precio Base = Días * Precio Noche
+      this.standardPrice = this.daysCount * (roomData.price_night || 0);
+
+      // Seteamos el valor sugerido en el input (el usuario lo puede cambiar)
+      // emitEvent: true para que dispare el cálculo del descuento inmediatamente
+      this.checkinForm.patchValue({ total_amount: this.standardPrice });
+    }
+  }
+
+  /**
+   * Calcula el descuento basado en lo que el usuario escribió.
+   * Si cobra MENOS del estándar, hay descuento.
+   */
+  calculateDiscount(amountCharged: number) {
+    // El descuento es la diferencia. Si es negativo (cobró de más), el descuento es 0.
+    this.discountAmount = Math.max(0, this.standardPrice - amountCharged);
+
+    // REGLA DE NEGOCIO: Si hay descuento, nota obligatoria
+    const notesControl = this.checkinForm.get('notes');
+    if (this.discountAmount > 0) {
+      notesControl?.addValidators(Validators.required);
+    } else {
+      notesControl?.removeValidators(Validators.required);
+    }
+    notesControl?.updateValueAndValidity({ emitEvent: false });
+  }
+
+  // --- FIN LÓGICA CORE ---
+
+  private initDefaultValues() {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dateString = tomorrow.toISOString().split('T')[0];
+
+    this.checkinForm.patchValue({ check_out: dateString });
+    // Esto disparará calculateStandardPrice por la suscripción
+  }
+
   private fillWithReservationData(res: any) {
     if (!res) return;
     const guest = res.hotel_guests_data || res.guest || {};
+    
+    // Lógica para limpiar datos dummy
     let docId = guest.doc_id || res.guest_doc_id || '';
+    if (docId.startsWith('INT-')) docId = '';
+    
     let email = guest.email || res.guest_email || '';
-    if (docId && docId.startsWith('INT-')) {
-      docId = '';
-    }
-    if (email && email.startsWith('no-email-')) {
-      email = '';
-    }
+    if (email.startsWith('no-email-')) email = '';
+
     this.checkinForm.patchValue({
       full_name: guest.full_name || res.guest_name || '',
       phone: guest.phone || res.guest_phone || '',
@@ -71,41 +139,26 @@ export class CheckinFormComponent implements OnInit, OnChanges {
       requires_invoice: guest.requires_invoice || false,
       notes: res.notes || ''
     });
-    this.calculateTotal();
-  }
 
-  private initDefaultValues() {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const dateString = tomorrow.toISOString().split('T')[0];
-
-    this.checkinForm.patchValue({
-      check_out: dateString
+    // Importante: recalcular el estándar para saber si esta reserva traía descuento implícito
+    // Usamos setTimeout para asegurar que el DOM y valores iniciales estén listos
+    setTimeout(() => {
+        this.calculateStandardPrice(); 
+        // Sobreescribimos el total con el que venía en la reserva (porque calculateStandardPrice lo resetea)
+        if (res.total_amount) {
+            this.checkinForm.patchValue({ total_amount: res.total_amount });
+        }
     });
-    this.calculateTotal();
-  }
-
-  calculateTotal() {
-    const roomData = this.room();
-    const checkOutDate = this.checkinForm.get('check_out')?.value;
-
-    if (roomData && checkOutDate) {
-      const start = new Date();
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(checkOutDate);
-
-      /** Calcular diferencia en días (mínimo 1 día) */ 
-      const diffTime = end.getTime() - start.getTime();
-      const diffDays = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
-
-      const total = diffDays * (roomData.price_night || 0);
-      this.checkinForm.patchValue({ total_amount: total }, { emitEvent: false });
-    }
   }
 
   confirmCheckin() {
     if (this.checkinForm.valid) {
-      this.saved.emit(this.checkinForm.value);
+      // Preparamos el payload final
+      const payload = {
+        ...this.checkinForm.value,
+        discount_amount: this.discountAmount // Añadimos el campo calculado
+      };
+      this.saved.emit(payload);
     } else {
       this.checkinForm.markAllAsTouched();
     }

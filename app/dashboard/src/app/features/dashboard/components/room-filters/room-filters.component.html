@@ -1,51 +1,29 @@
 <div class="mb-4">
-    <div class="d-flex flex-wrap gap-2 justify-content-center mb-2 px-0">
+    <div class="filter-scroll-container">
         @for (option of filterOptions; track option.value) {
-        <button type="button" class="btn btn-sm btn-outline-info shadow-sm"
-            [class]="currentFilter() === option.value ? option.activeClass : 'btn-outline-secondary'"
-            (click)="setFilter(option.value)">
+        <button type="button" class="btn btn-pill-lg shadow-sm" [class.active-filter]="currentFilter() === option.value"
+            [class.btn-outline-secondary]="currentFilter() !== option.value" (click)="setFilter(option.value)">
             {{ option.label }}
         </button>
         }
     </div>
+
     @if (isAdmin()) {
-    <div class="d-flex flex-wrap gap-2 justify-content-center mb-2 px-2">
-        <div class="d-flex justify-content-center px-0">
-            <button (click)="onReservations.emit()" class="btn btn-sm btn-outline-info shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-users me-1" width="24"
-                    height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
-                    <path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" />
-                    <path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                    <path d="M21 21v-2a4 4 0 0 0 -3 -3.85" />
-                </svg>
-                Reservaciones
-            </button>
-        </div>
-        <div class="d-flex justify-content-center px-0">
-            <button (click)="onManageGuests.emit()" class="btn btn-sm btn-outline-info shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-users me-1" width="24"
-                    height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
-                    <path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" />
-                    <path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                    <path d="M21 21v-2a4 4 0 0 0 -3 -3.85" />
-                </svg>
-                Huesped
-            </button>
-        </div>
-        <div class="d-flex justify-content-center px-0">
-            <button (click)="onManageUsers.emit()" class="btn btn-sm btn-outline-info shadow-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-users me-1" width="24"
-                    height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
-                    <path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" />
-                    <path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
-                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                    <path d="M21 21v-2a4 4 0 0 0 -3 -3.85" />
-                </svg>
-                Personal
-            </button>
-        </div>
+    <div class="admin-actions-grid mt-3">
+        <button (click)="onReservations.emit()" class="btn btn-action-lg btn-cyan">
+            <i class="ti ti-calendar-event fs-2"></i>
+            <span>Reservas</span>
+        </button>
+
+        <button (click)="onManageGuests.emit()" class="btn btn-action-lg btn-purple">
+            <i class="ti ti-users fs-2"></i>
+            <span>Huéspedes</span>
+        </button>
+
+        <button (click)="onManageUsers.emit()" class="btn btn-action-lg btn-orange">
+            <i class="ti ti-user-cog fs-2"></i>
+            <span>Personal</span>
+        </button>
     </div>
     }
 </div>
