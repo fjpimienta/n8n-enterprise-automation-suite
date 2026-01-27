@@ -3,52 +3,61 @@
 ### 🛠️ High-Precision Frontend for Time-Based Operations & Dual-Stage Billing
 
 ## 📝 Descripción
-**PistaHielo Dashboard** es una aplicación web de alto rendimiento construida sobre Angular 21, diseñada para modernizar la gestión operativa de pistas de patinaje (anteriormente basada en PHP 5.2 legacy).
+**PistaHielo Dashboard** es la evolución de la gestión operativa para centros de entretenimiento. Construida sobre **Angular 21**, reemplaza sistemas legacy con una **WebApp Progresiva (PWA)** capaz de gestionar rentas por tiempo, control de inventario y cortes de caja en tiempo real.
 
-A diferencia de los sistemas de hospitalidad tradicionales, este dashboard implementa un Event-Driven State Machine para gestionar el "Ice Rack" (monitor de pista en tiempo real). Se especializa en procesos de dos tiempos: asignación inmediata de activos (Tiempo 1: Check-in) y liquidación financiera dinámica basada en tiempo real transcurrido (Tiempo 2: Check-out), todo orquestado por el Dynamic CRUD Engine de la suite Hosting3M.
-
----
-
-## 🚦 Versiones del Workflow
-
-| Versión | Estado | Módulo Principal | Stack de UI | Cambios Principales |
-| :--- | :--- | :--- | :--- | :--- |
-| **v0.1** | `Stable` | `Auth & Architecture` | Tabler + Bootstrap | Estructura base, JWT Auth, Ingesta de tablas ph_ legacy. |
-| **v0.2** | `In Dev` | `Ice Live Monitor` | Reactive CSS Grid | Visualización de patinadores activos (ACT/ON_ICE). |
-| **v0.3** | `Planned`| `Pricing Engine`| n8n Workflows | Lógica de Zamboni, descuentos de Hermanos y liquidación automática. |
-| **v0.4** | `Planned` | `VIP & Membership` | Member Skeletons | Gestión de vigencias de alumnos y alertas de renovación. |
+El sistema implementa una arquitectura de **"Caja de Cristal"**: Total transparencia en quién está en la pista, cuánto tiempo lleva y cuánto dinero ha ingresado al negocio, accesible desde cualquier dispositivo (Desktop o Móvil).
 
 ---
 
-## 🆕 Características de la Arquitectura PistaHielo
-1. 🕒 Dual-Time Operation Pattern
-    * Check-in (Fast Path): Registro instantáneo de entrada para minimizar colas en taquilla.
-    * Check-out (Billing Path): Cálculo automático de excedentes, tolerancia de 10 minutos y ajustes por mantenimiento de hielo (Zamboni).
+## 🚦 Versiones del Proyecto
 
-2. ⛸️ Ice Live Monitor (The Rack)
-    * Interfaz reactiva mediante Angular Signals que muestra el estado de cada par de patines en uso, tiempo transcurrido y alertas de tiempo agotado.
+| Versión | Estado | Módulo Principal | Cambios Clave |
+| :--- | :--- | :--- | :--- |
+| **v0.1** | `Stable` | `Auth & Architecture` | Estructura base, JWT Auth, Conexión a BD Legacy. |
+| **v0.2** | `Stable` | `Ice Live Monitor` | Visualización reactiva (Signals), Grid de Patines. |
+| **v0.3** | `Stable` | `Checkout Engine` | Cobro, Cálculo de Tiempos, Regla Zamboni, Modal de Pago. |
+| **v0.4** | `Stable` | `Financial Ops` | Reporte de Turno (Corte Z), Filtros de Fecha ISO, UI Financiera. |
+| **v0.5** | `Released` | `UX & Shell` | **MainLayout**, Menú Móvil Responsivo, Navegación Jerárquica. |
+| **v0.6** | `In Dev` | `VIP Membership` | Directorio de Alumnos, Historial de Clases. |
+---
 
-3. 💰 Intelligent Pricing Engine
-    *Delegación de la lógica de costos a Workflows de n8n, eliminando el cálculo manual de promociones (2x1, paquetes de 3/6 meses, descuentos por hermanos).
+## 🆕 Características Desplegadas (v0.5)
 
-4. 📊 Financial Closures (Corte X/Y)
-    * Automatización de cierres de turno y cierres de día con trazabilidad completa de pagos en Efectivo vs. Tarjeta.
+### 1. 📱 Mobile-First Operations Shell
+Implementación de un **MainLayout** responsivo.
+* **Desktop:** Menú lateral vertical fijo (Estilo Tabler).
+* **Móvil:** Header exclusivo con menú "Off-canvas" y lógica de auto-cierre al navegar. Permite a los monitores operar la pista desde una tablet o celular mientras caminan.
+
+### 2. 💰 Ciclo Financiero Cerrado
+El sistema ahora gestiona el ciclo de vida completo del dinero:
+* **Entrada:** Registro rápido (Touch UI).
+* **Salida:** Modal de cobro con desglose de tiempo y método de pago.
+* **Auditoría:** Pantalla de "Corte de Caja" que concilia en tiempo real el efectivo en cajón vs. vouchers de tarjeta.
+
+### 3. 🛠️ Ingeniería de Software Robusta
+* **SSR Safety:** Solución de conflictos de "Hydration" y Timers en el servidor usando `PLATFORM_ID`.
+* **Timezone Intelligence:** Manejo de fechas ISO (`sv-SE`) para asegurar que los reportes coincidan con la hora local de la pista, no la del servidor UTC.
 
 ---
 
 ## 🏗️ Arquitectura Técnica
-> 🚀 **Estrategia de Migración:** Esta aplicación consume los esquemas normalizados de PostgreSQL (*ph_clients, ph_transactions, ph_payments*) eliminando la dependencia de archivos PHP procedimentales.
+> 🚀 **Estrategia:** Frontend "Rico" (Angular) + Backend "Flexible" (n8n + Postgres).
 <p align="center">
   <a href="./ARCHITECTURE.md">
     <img src="https://img.shields.io/badge/🏛️_Leer_Guía_de_Arquitectura-206bc4?style=for-the-badge&logo=readthedocs&logoColor=white" alt="Architecture Guide">
   </a>
 </p>
 
-La solución utiliza un patrón Smart Services / Dumb Components:
+<p align="center">
+  <img src="https://img.shields.io/badge/Angular-DD0031?style=for-the-badge&logo=angular&logoColor=white" />
+  <img src="https://img.shields.io/badge/n8n-FF6584?style=for-the-badge&logo=n8n&logoColor=white" />
+  <img src="https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white" />
+</p>
 
-    1. IceTimer Service: Un servicio especializado basado en interval para actualizar cronómetros visuales sin sobrecargar la base de datos.
-
-    2. Transaction Hook: n8n procesa cada cierre de renta, actualiza el inventario de patines y genera el registro en ph_payments de forma atómica.
+### Componentes Clave:
+1.  **ClientService & CashRegisterService:** Servicios desacoplados que inyectan datos a la vista mediante Signals.
+2.  **CRUD Security:** Configuración de `allowed_ops` en base de datos para permitir transacciones (`INSERT/UPDATE`) mientras se protege la integridad histórica.
+3.  **One-Liner Deploy:** Script de despliegue optimizado para entornos Plesk/cPanel que gestiona la compilación y rotación de archivos.
 
 ---
 
