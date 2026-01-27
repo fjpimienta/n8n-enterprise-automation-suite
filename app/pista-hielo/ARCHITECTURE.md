@@ -2,42 +2,49 @@
 
 ## 📝 Descripción
 **Project:** PistaHielo Dashboard (Módulo de la Suite Hosting3M)
-**Version:** v0.1 (Enterprise Ready)
-**Stack:** Angular 21 (Signals) | n8n v2.1.4 (Orquestador) | PostgreSQL (pgvector) | Docker
-**Patrón Arquitectónico:** Event-Driven State Machine (Check-in/Check-out Logic).
+**Version:** v0.5 (Beta Operativa)
+**Stack:** Angular 21 (Signals & SSR Safe) | n8n v2.1.4 (Orquestador) | PostgreSQL (pgvector)
+**Patrón Arquitectónico:** Layout Shell Pattern + Event-Driven State Machine.
 **Author:** Francisco Jesus Pérez Pimienta
 
-**Pista de Hielo** es una aplicación web de alto rendimiento construida sobre Angular 21, diseñada como la interfaz administrativa oficial de la suite de automatización Hosting3M.
+**Pista de Hielo** es una aplicación web progresiva (PWA) de alto rendimiento, diseñada como la interfaz administrativa oficial de la suite de automatización Hosting3M. Integra operaciones de tiempo real con control financiero estricto.
 
-## 1. Diseño de Alto Nivel: El "Motor de Tiempos"
-A diferencia de un hotel donde las estancias son por días, la Pista de Hielo opera en minutos y segundos. La arquitectura se centra en una Máquina de Estados Transaccional gestionada por n8n.
+## 1. Diseño de Alto Nivel: Flujo de Navegación y Datos
+La arquitectura implementa un **"Main Layout Shell"** que mantiene el contexto de navegación (Menú/Sidebar) mientras el usuario alterna entre operaciones de pista y administración financiera.
 
 ```mermaid
 graph TD
-    User[Cajero / Instructor] -->|HTTPS + JWT| ANG[Angular 21 Dashboard]
-    ANG -->|Action: Check-in| N8N_ENTRY[Workflow 09: Entry Logic]
-    ANG -->|Action: Check-out| N8N_EXIT[Workflow 10: Exit & Pricing Engine]
+    User[Operador / Admin] -->|HTTPS + JWT| SHELL[MainLayout Shell (Sidebar + Header Mobile)]
     
-    N8N_ENTRY -->|Status: ACT/ON_ICE| PG[(PostgreSQL ph_tables)]
-    N8N_EXIT -->|Rules: Zamboni/Promos| PG
+    subgraph "Frontend (Angular 21)"
+    SHELL -->|Router Outlet| OPS[Módulo Operations]
+    SHELL -->|Router Outlet| ADMIN[Módulo Admin]
     
-    subgraph "Intelligent Rules Engine (n8n)"
-    N8N_ENTRY
-    N8N_EXIT
+    OPS -->|Signals| MON[IceMonitor (Live Rack)]
+    OPS -->|Form| ENT[EntryForm (Touch UI)]
+    OPS -->|Modal| CHK[CheckoutComponent]
+    
+    ADMIN -->|Service| REP[ShiftReport (Corte Z)]
+    ADMIN -->|CRUD| CLI[ClientDirectory]
     end
+
+    CHK -->|POST Update| N8N[n8n Automation Engine]
+    REP -->|POST Filter| N8N
+    
+    N8N -->|SQL: Transactions/Clients| PG[(PostgreSQL)]
 ```
 
 ### Principios Clave:
-1. **Dual-Time Operation Pattern:** Separación estricta entre la creación del registro (Tiempo 1) y el cierre contable (Tiempo 2).
+1. **Layout Shell Architecture:** Un componente padre (MainLayout) gestiona la estructura visual, la responsividad móvil (hamburguesa) y la sesión, desacoplando la navegación de la lógica de negocio.
 
-2. **Server-Side Pricing Engine:** El frontend no calcula precios. Envía el contexto (id_patin, id_cliente, flags) y n8n devuelve el monto final aplicando lógica de costo.class.php.
+2. **SSR Safe Polling:** El monitor en vivo utiliza isPlatformBrowser para evitar fugas de memoria y errores de "Injector Destroyed" en entornos de Server-Side Rendering.
 
-3. **Real-Time "Ice Rack":** Uso de Signals para monitorear quién está en la pista en tiempo real, similar al "Room Rack" del hotel.
+3. **Smart Date Filtering:** Solución al problema de Zona Horaria mediante el uso de formatos ISO locales (sv-SE) para garantizar la precisión de los reportes financieros diarios.
 
 ---
 
 ## 2. Frontend Structure (Modular Architecture)
-La aplicación sigue una estructura basada en Features (Funcionalidades), agrupando lógica por dominio en lugar de por tipo de archivo.
+La aplicación se ha reestructurado en dominios funcionales claros:
 
 📂 src/app/core (The Singleton Layer)
 Contiene elementos que se instancian una sola vez y son transversales a toda la app.
@@ -48,25 +55,29 @@ Contiene elementos que se instancian una sola vez y son transversales a toda la 
 📂 src/app/features/pista
 Aquí vive el negocio. Cada carpeta es un módulo autocontenido.
 
-| Sub-Módulo | Responsabilidad | Componente Clave | 
-| :--- | :--- | :--- | 
-| Operations | El "Ice Rack". Vista de patinadores activos. | IceLiveMonitor (Lista reactiva), SkateAssignmentForm. | 
-| POS (Punto de Venta) | Venta retail y cobro de membresías VIP. | TransactionManager, MemberSearch (Autocomplete). | 
-| Closures | Gestión de Corte X y Corte Y/Z. | ClosureHistory, DailyBalanceModal. |
+| Módulo | Componente | Responsabilidad | Componente Clave | 
+| :--- | :--- | :--- | :--- | 
+| Operations | IceMonitor | Visualización en tiempo real (Signals). Polling inteligente (30s). | 
+| | EntryForm | Interfaz "Touch-First" para registro rápido de patines. | 
+| | CheckoutModal | Cálculo de tiempo, regla "Zamboni" y cierre de transacción. |
+| ShiftReport | Dashboard financiero. Suma de efectivo vs tarjeta en tiempo real. |
+| | ClientList | Directorio de alumnos y gestión de membresías. |
 
 
 📂 src/app/shared (Reusability)
-    * UI: SkeletonComponent (Feedback de carga), Modales genéricos.
-    * Services: DateUtilsService (Normalización de fechas para evitar errores de zona horaria).
+    * MainLayout: Contenedor principal con lógica de menú responsivo (Tabler Vertical).
 
 ---
 
 ## 3. Capa de Negocio: Workflows de n8n Especializados
-Para PistaHielo, extenderemos el Dynamic CRUD Engine con dos sub-flujos de lógica pesada (reemplazando a las clases PHP):
+La lógica pesada reside en el backend, permitiendo cambios en reglas de negocio sin redesplegar el frontend.
 
-**Workflow 09:** ph-checkin-processor
-    * Trigger: Webhook desde Angular.
-    * Lógica: 1. Valida disponibilidad de patín (ph_inventory). 2. Si es ALUMNO, verifica membership_expiry. 3. Registra start_time en ph_transactions.
+**Workflow: ** Transaction Engine
+    * Trigger: Llamadas API desde Angular.
+    * Lógica: 
+        1. Valida disponibilidad de patín (ph_inventory). 
+        2. Si es ALUMNO, verifica membership_expiry. 
+        3. Registra start_time en ph_transactions.
     * Output: Confirmación y generación de ticket de entrada.
 
 **Workflow 10:** ph-checkout-pricing-engine
@@ -113,4 +124,4 @@ Separación de responsabilidades para la gestión de reservas:
         * Dashboard de analítica sobre rentabilidad por hora y ocupación de pista.
 
 
-Document generated regarding the v0.1 codebase state.
+Document generated regarding the v0.5 codebase state.
