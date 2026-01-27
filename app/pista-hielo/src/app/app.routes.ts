@@ -1,40 +1,41 @@
 import { Routes } from '@angular/router';
 import { LoginComponent } from './features/admin/components/login/login.component';
 import { authGuard } from '@core/auth/guards/auth-guard';
-import { IceMonitorComponent } from '@features/operations/components/ice-monitor/ice-monitor.component';
+import { MainLayoutComponent } from '@shared/layout/main-layout/main-layout.component';
 
 export const routes: Routes = [
-  // Ruta por defecto
-  { path: '', redirectTo: 'operations/monitor', pathMatch: 'full' },
-
-  // Ruta Pública
+  // 1. Ruta Pública (Sin Layout, pantalla completa)
   { path: 'login', component: LoginComponent },
 
-  // Rutas Protegidas (Módulo Operaciones)
+  // 2. Rutas Protegidas (DENTRO DEL MAIN LAYOUT)
   {
-    path: 'operations',
+    path: '',
+    component: MainLayoutComponent, // <--- El Padre de Todo
     canActivate: [authGuard],
     children: [
-      { path: 'monitor', component: IceMonitorComponent },
-      { path: 'entry', loadComponent: () => import('./features/operations/components/entry-form/entry-form.component').then(m => m.EntryFormComponent) },
+      // Redirección inicial
+      { path: '', redirectTo: 'operations/monitor', pathMatch: 'full' },
+
+      // OPERACIONES
+      {
+        path: 'operations',
+        children: [
+          { path: 'monitor', loadComponent: () => import('./features/operations/components/ice-monitor/ice-monitor.component').then(m => m.IceMonitorComponent) },
+          { path: 'entry', loadComponent: () => import('./features/operations/components/entry-form/entry-form.component').then(m => m.EntryFormComponent) },
+        ]
+      },
+
+      // ADMIN
+      {
+        path: 'admin',
+        children: [
+          { path: 'shift-report', loadComponent: () => import('./features/admin/components/shift-report/shift-report.component').then(m => m.ShiftReportComponent) },
+          { path: 'clients', loadComponent: () => import('./features/admin/components/client-list/client-list').then(m => m.ClientList) },
+        ]
+      }
     ]
   },
 
-  // Rutas Protegidas (Módulo Admin)
-  {
-    path: 'admin',
-    canActivate: [authGuard],
-    // 1. ELIMINAMOS el loadComponent de aquí (del padre)
-    children: [
-      {
-        path: 'shift-report',
-        loadComponent: () => import('./features/admin/components/shift-report/shift-report.component').then(m => m.ShiftReportComponent)
-      },
-      // 2. MOVEMOS ClientList aquí adentro como una ruta específica (ej: /admin/clients)
-      {
-        path: 'clients', 
-        loadComponent: () => import('./features/admin/components/client-list/client-list').then(m => m.ClientList)
-      }
-    ]
-  }
+  // Fallback
+  { path: '**', redirectTo: 'login' }
 ];
