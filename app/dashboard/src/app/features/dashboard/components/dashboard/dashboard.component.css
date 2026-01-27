@@ -1,43 +1,126 @@
-/* Mejora el scroll de los botones de filtro en móvil */
-.overflow-auto::-webkit-scrollbar {
+/* === AJUSTES GLOBALES PARA MÓVIL === */
+.page-body {
+  background-color: #f0f2f5; /* Fondo con contraste */
+  padding: 10px !important;
+}
+
+.container-xl {
+  padding: 0 !important;
+}
+
+/* === FILTROS SUPERIORES (Botones Grandes) === */
+/* Convertimos los filtros en una barra de desplazamiento horizontal */
+app-room-filters {
+  display: flex;
+  overflow-x: auto;
+  gap: 10px;
+  padding: 10px 5px;
+  margin-bottom: 15px;
+  -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
+  scrollbar-width: none; /* Ocultar scrollbar */
+}
+
+app-room-filters::-webkit-scrollbar {
   display: none;
 }
 
-/* Ajustes específicos para móviles */
+/* Estilo para los botones dentro del componente de filtros */
+/* NOTA: Asegúrate de aplicar esta clase a los botones en app-room-filters */
+.big-filter-btn {
+  flex: 0 0 auto;
+  padding: 12px 20px;
+  border-radius: 50px; /* Redondos */
+  font-size: 1.1rem;
+  font-weight: 700;
+  border: 2px solid #e0e0e0;
+  background: white;
+  color: #555;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+.big-filter-btn.active {
+  background-color: #206bc4;
+  color: white;
+  border-color: #206bc4;
+  transform: scale(1.05);
+}
+
+/* === TARJETAS DE HABITACIÓN (EL CAMBIO PRINCIPAL) === */
+.row-cards {
+  gap: 15px 0; /* Espacio vertical entre tarjetas */
+}
+
+/* Forzamos el estilo de la tarjeta aunque venga del componente hijo */
+/* Usa ::ng-deep si estás en styles encapsulados de Angular */
+::ng-deep .card {
+  border-radius: 16px !important;
+  border: none !important;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+  transition: transform 0.1s;
+  overflow: hidden;
+  height: 100%;
+}
+
+::ng-deep .card:active {
+  transform: scale(0.98); /* Efecto visual al tocar */
+}
+
+/* CONTENIDO DE LA TARJETA */
+::ng-deep .card-body {
+  padding: 1.5rem !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* NÚMERO DE HABITACIÓN GIGANTE */
+::ng-deep .card-title, 
+::ng-deep h3 {
+  font-size: 2.2rem !important; /* Muy grande */
+  font-weight: 800 !important;
+  margin: 0 !important;
+  line-height: 1;
+}
+
+/* ESTADOS DE COLOR (Semáforo) */
+/* Debes asignar estas clases condicionalmente en tu app-room-card */
+
+/* Disponible = VERDE CLARO */
+::ng-deep .status-available {
+  background-color: #e6f8ea !important;
+  border-left: 10px solid #2fb344 !important;
+}
+::ng-deep .status-available .card-title { color: #2fb344; }
+
+/* Ocupada = ROJO CLARO */
+::ng-deep .status-occupied {
+  background-color: #fcebeb !important;
+  border-left: 10px solid #d63939 !important;
+}
+::ng-deep .status-occupied .card-title { color: #d63939; }
+
+/* Sucia/Limpieza = NARANJA CLARO */
+::ng-deep .status-dirty {
+  background-color: #fff5eb !important;
+  border-left: 10px solid #f76707 !important;
+}
+::ng-deep .status-dirty .card-title { color: #f76707; }
+
+/* === LISTAS DE INVITADOS/USUARIOS (Tablas más grandes) === */
+.table td {
+  padding: 1rem 0.5rem;
+  font-size: 1.1rem;
+}
+
+/* === MODALES FULL SCREEN EN MÓVIL === */
 @media (max-width: 576px) {
-  .container-tight {
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
+  ::ng-deep .modal-dialog {
+    margin: 0;
+    max-width: 100%;
+    height: 100vh;
   }
-
-  .card-md {
-    border: none;
-    box-shadow: none;
-    /* En móvil se ve mejor más limpio */
-  }
-
-  /* Hacer los inputs y botones más grandes para dedos */
-  .form-control,
-  .btn {
-    padding: 0.75rem 1rem;
-    font-size: 1rem;
-  }
-
-  .display-6,
-  h1 {
-    font-size: 1.5rem !important;
-  }
-
-  .h1 {
-    font-size: 2.5rem !important;
-    /* El número de habitación será el protagonista */
-  }
-
-  .card-body {
-    padding: 1.25rem !important;
-  }
-
-  .page-title {
-    font-size: 1.2rem;
+  ::ng-deep .modal-content {
+    height: 100%;
+    border-radius: 0;
   }
 }

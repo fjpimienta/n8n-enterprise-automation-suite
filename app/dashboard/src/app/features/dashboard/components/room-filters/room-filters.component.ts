@@ -23,8 +23,8 @@ export class RoomFiltersComponent {
     // { label: 'Todas', value: 'all', activeClass: 'btn-primary' },
     { label: '🟢 Disponible', value: 'available', activeClass: 'btn-success' },
     { label: '🔒 Ocupada', value: 'occupied', activeClass: 'btn-danger' },
-    { label: '🗑️ Aseo', value: 'dirty', activeClass: 'btn-warning' },
-    { label: '🔧 Servicio', value: 'maintenance', activeClass: 'btn-secondary' },
+    { label: '🗑️ Limpieza', value: 'dirty', activeClass: 'btn-warning' },
+    { label: '🔧 Mantenimiento', value: 'maintenance', activeClass: 'btn-secondary' },
     { label: '📅 Reservada', value: 'reserved', activeClass: 'btn-info' }
   ];
 
