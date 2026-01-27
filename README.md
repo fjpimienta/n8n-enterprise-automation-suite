@@ -66,6 +66,12 @@ Cliente Web SPA de alto rendimiento para la gestión visual del inventario hotel
     * **Room Rack** con estados reactivos (Sucia, Disponible, Reservada, Ocupada).
     * **Integración:** Consume Módulos Secure Token Gateway, Dynamic CRUD Engine y MCP Server.
 
+### 9. ⛸️ PistaHielo Operations Center (Frontend)
+**Novedad v0.5:** PWA Administrativa para gestión de tiempos y finanzas en pista de patinaje.
+    * **Core:** Dual-Time Operation (Check-in/Check-out).
+    * **Finanzas:** Motores de cobro y Reportes de Corte Z (Efectivo vs Tarjeta).
+    * **UI:** Layout Responsivo Mobile-First con Signals.
+
 ---
 
 ## 🚀 Despliegue
@@ -100,26 +106,27 @@ Detalle técnico y código fuente de cada microservicio implementado en n8n:
 | `06`|**Dynamic CRUD Engine**|Capa de abstracción para gestión de entidades dinámica.|`Postgre` `JS Logic` `JWT`|[📖 Ver Docs](workflows/06-dynamic-crud-engine/v3/README.md)|
 | `07`|**MCP Server**| MCP Server: Hotel Management Core|`MCP` `Postgres` `OpenAI`|[📖 Ver Docs](workflows/07-MCP-server-hotel/v2/README.md)|
 | `08`|**AdminHotel Dashboard**|Frontend administrativo para gestión de reservas y habitaciones.|`Angular 21` `Tabler` `Vitest`|[📖 Ver Docs](app/dashboard/README.md)|
+| `09`|**PistaHielo Ops Center**|PWA para gestión de rentas por tiempo y cortes de caja.|`Angular 21` `Signals` `PWA`|[📖 Ver Docs](app/pista-hielo/README.md)|
 
 ---
 
 ## 📈 Roadmap & Gestión de Proyectos (GitHub Projects V3)
 ### Completado (Q4 2025 - Q1 2026) ✅
-    * Arquitectura Dual-Auth: Implementación de sub-workflows de validación y auto-generación de tokens (Módulos 01 y 07).
+    * * Arquitectura Dual-Auth: Implementación de sub-workflows de validación y auto-generación de tokens (Módulos 01 y 07).
     * Generación de Media IA: Integración nativa de Pollinations AI (Flux) en el pipeline de noticias y redes sociales.
     * CRUD Transaccional: Motor dinámico v3 con soporte para operaciones seguras y mapeo de campos.
     * MCP Hotel Core: Capacidad de la IA para interactuar directamente con el inventario de habitaciones.
 
 ### En Progreso (Q2 2026) 🏗️
+    * **PistaHielo Membership:** Integración de membresías VIP y directorio de alumnos en el Módulo 09.
     * Optimización RAG HNSW: Migración de índices vectoriales para búsquedas en milisegundos sobre datasets extensos.
     * Multi-Model Orchestration: Lógica para alternar entre GPT-4o, Claude 3.5 y modelos locales (Ollama) según el coste/complejidad de la tarea.
-    * Dashboard AdminHotel v2: Integración total con el CRUD v3 y el sistema de Auth centralizado.
 
 ### Backlog & R&D (Futuro) 🚀
-    * Agentes Supervisores: Implementación de una capa de "Quality Assurance" donde una IA audita las respuestas de los agentes de WhatsApp antes del envío.
+    ** Agentes Supervisores: Implementación de una capa de "Quality Assurance" donde una IA audita las respuestas de los agentes de WhatsApp antes del envío.
     * Auto-Checkout MCP: Expansión del servidor MCP para procesar pagos y cierres de cuenta automáticos.
     * Resiliencia Geográfica: Clusterización de n8n para alta disponibilidad real.
-
+    
 ---
 
 Desarrollado por: Francisco Jesus Pérez Pimienta 
