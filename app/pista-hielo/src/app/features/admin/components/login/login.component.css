@@ -1,0 +1,111 @@
+/* 1. Fondo Gradiente igual al de AdminHotel */
+.bg-ice-gradient {
+    background: linear-gradient(135deg, #f6f8fb 0%, #e9ecef 100%);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.text-primary-dark { color: #182433; }
+
+/* 2. Tarjeta con sombra suave */
+.touch-card {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.04);
+}
+
+/* 3. Logo Vectorial (El Patín) */
+.logo-container {
+    width: 80px;
+    height: 80px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #e6e7e9;
+}
+.icon-logo {
+    width: 48px;
+    height: 48px;
+    color: #206bc4; /* Azul Tabler */
+    fill: rgba(32, 107, 196, 0.08);
+}
+
+/* ---------------------------------------------------- */
+/* 4. LA SOLUCIÓN AL "ENCIMADO" (Input Groups Custom)   */
+/* ---------------------------------------------------- */
+
+.custom-input-group {
+    background-color: #fff;
+    border: 1px solid #dce1e7; /* Borde unificado */
+    border-radius: 6px;        /* Bordes redondeados */
+    height: 52px;              /* Altura fija cómoda para Touch */
+    display: flex;             /* Flexbox para alinear hijos */
+    align-items: center;       /* Centrado vertical perfecto */
+    transition: border-color 0.3s, box-shadow 0.3s;
+    overflow: hidden;          /* Evita que los hijos se salgan del radio */
+}
+
+/* Cuando el usuario hace click dentro */
+.custom-input-group:focus-within {
+    border-color: #90b4e6;
+    box-shadow: 0 0 0 3px rgba(32, 107, 196, 0.15);
+}
+
+/* Error visual (Borde Rojo) */
+.is-invalid-border {
+    border-color: #d63939 !important;
+}
+
+/* Quitar los bordes y fondos por defecto de Tabler/Bootstrap a los hijos */
+.custom-input-group .input-group-text,
+.custom-input-group .form-control, 
+.custom-input-group .form-select {
+    border: none !important;
+    background-color: transparent !important;
+    height: 100% !important; /* Ocupar toda la altura del padre */
+    box-shadow: none !important;
+}
+
+/* Ajuste fino para los iconos */
+.custom-input-group .input-group-text {
+    color: #6e7582;
+    padding-left: 15px;
+    padding-right: 12px;
+}
+
+/* Ajuste fino para el texto del input */
+.custom-input-group .form-control,
+.custom-input-group .form-select {
+    padding-left: 0; /* Pegado al icono izquierdo */
+    font-size: 1rem;
+    color: #182433;
+}
+
+/* 5. Botón Principal Estilizado */
+.touch-button {
+    height: 52px;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    background-color: #5b73e8; /* Azul moderno */
+    border: none;
+    transition: all 0.2s;
+}
+
+.touch-button:hover:not(:disabled) {
+    background-color: #4a63d9;
+    transform: translateY(-1px);
+}
+
+/* 6. Animación de entrada */
+.animate-fade-in {
+    animation: fadeIn 0.6s ease-out;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.cursor-pointer { cursor: pointer; }
