@@ -1,0 +1,18 @@
+/* --- FIX DEL BOTÓN CERRAR --- */
+/* ESTO DEBE IR EN room-filters.component.css */
+
+/* 1. Reactivar clicks para elementos interactivos */
+.input-icon-addon.cursor-pointer {
+    pointer-events: auto !important;
+}
+
+/* 2. Asegurar posición correcta a la derecha */
+.input-icon-addon.end-0 {
+    left: auto;
+    right: 10px;
+}
+
+/* 3. (Opcional) Asegurar que esté por encima del input */
+.input-icon-addon {
+    z-index: 5;
+}

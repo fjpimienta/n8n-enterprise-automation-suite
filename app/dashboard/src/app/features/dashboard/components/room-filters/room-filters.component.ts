@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, input, output } from '@angular/core';
+import { Component, computed, inject, input, output } from '@angular/core';
 import { Room } from '@core/models/hotel.types';
+import { BookingService } from '@features/booking/services/booking.service';
 
 @Component({
   selector: 'app-room-filters',
@@ -19,6 +20,8 @@ export class RoomFiltersComponent {
   onManageGuests = output<void>();
   onReservations = output<void>();
 
+  public bookingService = inject(BookingService);
+
   filterOptions = [
     // { label: 'Todas', value: 'all', activeClass: 'btn-primary' },
     { label: '🟢 Disponible', value: 'available', activeClass: 'btn-success' },
@@ -30,5 +33,14 @@ export class RoomFiltersComponent {
 
   setFilter(filter: string) {
     this.onFilterChange.emit(filter);
+  }
+
+  onSearch(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.bookingService.searchQuery.set(input.value);
+  }
+
+  clearSearch() {
+    this.bookingService.searchQuery.set('');
   }
 }
