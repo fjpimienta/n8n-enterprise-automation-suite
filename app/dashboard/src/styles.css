@@ -1,1 +1,133 @@
-/* You can add global styles to this file, and also import other style files */
+/* --- 1. FILTROS EN CUADRÍCULA (GRID) --- */
+/* Ya no usamos flex + scroll, usamos Grid para mostrar todo */
+.filter-scroll-container {
+    display: grid;
+    /* En móviles (pantallas pequeñas), crea 2 columnas del mismo ancho */
+    grid-template-columns: repeat(2, 1fr); 
+    gap: 10px; /* Espacio entre botones */
+    padding-bottom: 5px;
+    width: 100%;
+}
+
+/* Ajuste para pantallas un poco más grandes (Tablets/PC) */
+@media (min-width: 768px) {
+    .filter-scroll-container {
+        /* En pantallas grandes, que se pongan todos en una fila (hasta 6) */
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    }
+}
+
+.btn-pill-lg {
+    width: 100%; /* Que ocupe todo el hueco de su columna */
+    border-radius: 12px; /* Un poco menos redondo para aprovechar espacio */
+    padding: 12px 10px; /* Padding ajustado */
+    font-size: 1rem; /* Letra legible */
+    font-weight: 700;
+    border: 2px solid #e6e8eb;
+    background: white;
+    color: #666;
+    transition: all 0.2s;
+    /* Centrar texto e iconos */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+/* Estado Activo (Botón presionado) */
+.btn-pill-lg.active-filter {
+    background-color: #206bc4;
+    color: white;
+    border-color: #206bc4;
+    transform: translateY(-2px); /* Efecto de elevación */
+    box-shadow: 0 4px 8px rgba(32, 107, 196, 0.3);
+}
+
+/* --- OPTIMIZACIÓN DE ESPACIO VERTICAL --- */
+/* Reducimos un poco el margen del título para que quepa todo */
+.mb-4 {
+    margin-bottom: 1rem !important;
+}
+
+/* --- 2. GRID DE ACCIONES ADMIN --- */
+.admin-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* 3 columnas exactas */
+    gap: 10px;
+}
+
+.btn-action-lg {
+    display: flex;
+    flex-direction: column; /* Icono arriba, texto abajo */
+    align-items: center;
+    justify-content: center;
+    padding: 15px 5px;
+    border-radius: 12px;
+    border: none;
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.btn-action-lg span {
+    font-size: 0.85rem;
+    margin-top: 5px;
+}
+
+/* Colores distintivos para acciones */
+.btn-cyan { background: linear-gradient(135deg, #17a2b8, #117a8b); }
+.btn-purple { background: linear-gradient(135deg, #6f42c1, #59359a); }
+.btn-orange { background: linear-gradient(135deg, #fd7e14, #ca6510); }
+
+/* --- 3. TARJETAS DE HABITACIÓN (SEMÁFORO) --- */
+/* Esto asume que tienes control sobre el app-room-card, 
+   si no, aplica esto al div contenedor en app.component */
+
+.room-card-container {
+    /* Forzar altura mínima para dedo gordo */
+    min-height: 140px; 
+    border-radius: 16px !important;
+    border: none !important;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s;
+}
+
+.room-card-container:active {
+    transform: scale(0.98); /* Efecto de presión */
+}
+
+/* ESTADOS SEMÁFORO (Sobrescribir estilos base) */
+
+/* DISPONIBLE = VERDE CLARO */
+.status-available {
+    background-color: #d1e7dd !important; /* Verde pastel */
+    border-left: 8px solid #198754 !important; /* Borde fuerte */
+    color: #0f5132 !important;
+}
+
+/* OCUPADA = ROJO CLARO */
+.status-occupied {
+    background-color: #f8d7da !important; /* Rojo pastel */
+    border-left: 8px solid #dc3545 !important;
+    color: #842029 !important;
+}
+
+/* SUCIA/LIMPIEZA = AMARILLO/NARANJA CLARO */
+.status-dirty, .status-maintenance {
+    background-color: #fff3cd !important; /* Amarillo pastel */
+    border-left: 8px solid #ffc107 !important;
+    color: #664d03 !important;
+}
+
+/* TIPOGRAFÍA GIGANTE PARA EL NÚMERO */
+.room-number-big {
+    font-size: 3.5rem; /* Gigante */
+    font-weight: 800;
+    line-height: 1;
+    position: absolute;
+    right: 15px;
+    bottom: -5px;
+    opacity: 0.2; /* Marca de agua sutil */
+}

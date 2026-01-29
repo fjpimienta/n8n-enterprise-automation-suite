@@ -1,13 +1,13 @@
+import { CashRegisterService } from './cash-register.service';
 import { TestBed } from '@angular/core/testing';
 
-import { IceOperation } from './ice-operation';
 
-describe('IceOperation', () => {
-  let service: IceOperation;
+describe('CashRegister', () => {
+  let service: CashRegisterService;
 
   beforeEach(() => {
     TestBed.configureTestingModule({});
-    service = TestBed.inject(IceOperation);
+    service = TestBed.inject(CashRegister);
   });
 
   it('should be created', () => {

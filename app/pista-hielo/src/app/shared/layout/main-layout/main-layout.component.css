@@ -1,0 +1,31 @@
+/* Corrección para que el header móvil sea oscuro de verdad */
+header.navbar-dark {
+    background-color: #1e293b !important;
+    color: white;
+}
+
+/* Lógica para MOSTRAR el menú lateral en móvil cuando activamos el toggle */
+@media (max-width: 991.98px) {
+    aside.navbar-vertical {
+        display: none; /* Oculto por defecto en móvil */
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100vh;
+        z-index: 1050;
+        overflow-y: auto;
+        background-color: #1e293b !important; /* Fondo oscuro obligatorio */
+    }
+
+    /* Cuando Angular pone la clase .show-mobile, lo mostramos */
+    aside.navbar-vertical.show-mobile {
+        display: block !important;
+        animation: slideIn 0.3s ease-out;
+    }
+}
+
+@keyframes slideIn {
+    from { transform: translateX(-100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}

@@ -57,22 +57,40 @@
               </div>
             </div>
 
-            <div class="hr-text">Detalles de Estancia</div>
+            <div class="hr-text">Detalles de Estancia & Finanzas</div>
 
             <div class="row">
-              <div class="col-6">
+              <div class="col-md-4">
                 <div class="mb-3">
                   <label class="form-label required">Check-out (Salida)</label>
                   <input type="date" class="form-control" formControlName="check_out">
+                  <small class="text-muted" *ngIf="daysCount > 0">
+                    Estancia de {{ daysCount }} noche(s)
+                  </small>
                 </div>
               </div>
-              <div class="col-6">
+
+              <div class="col-md-4">
                 <div class="mb-3">
-                  <label class="form-label">Monto Total Estimado</label>
+                  <label class="form-label text-muted">Precio de Lista (Sugerido)</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-light border-end-0">$</span>
+                    <input type="text" class="form-control bg-light" [value]="standardPrice | number:'1.2-2'" readonly
+                      tabindex="-1">
+                  </div>
+                </div>
+              </div>
+
+              <div class="col-md-4">
+                <div class="mb-3">
+                  <label class="form-label required fw-bold text-primary">Total a Cobrar</label>
                   <div class="input-group">
                     <span class="input-group-text">$</span>
-                    <input type="number" class="form-control" formControlName="total_amount">
+                    <input type="number" class="form-control fw-bold" formControlName="total_amount">
                   </div>
+                  <small class="text-danger fw-bold" *ngIf="discountAmount > 0">
+                    ▼ Descuento aplicado: ${{ discountAmount | number:'1.2-2' }}
+                  </small>
                 </div>
               </div>
             </div>
@@ -93,9 +111,17 @@
             </div>
 
             <div class="mb-3">
-              <label class="form-label">Notas Adicionales</label>
-              <textarea class="form-control" formControlName="notes" rows="2"
-                placeholder="Ej: Entregar llaves adicionales, alergias, etc."></textarea>
+              <label class="form-label" [class.required]="discountAmount > 0">
+                Notas Adicionales
+                <span *ngIf="discountAmount > 0" class="text-danger text-xs">(Obligatorio por descuento)</span>
+              </label>
+              <textarea class="form-control"
+                [class.is-invalid]="checkinForm.get('notes')?.invalid && checkinForm.get('notes')?.touched"
+                formControlName="notes" rows="2"
+                placeholder="Ej: Autorizado por Gerencia, Promo Verano, etc."></textarea>
+              <div class="invalid-feedback">
+                Debe especificar el motivo del descuento.
+              </div>
             </div>
           </div>
 

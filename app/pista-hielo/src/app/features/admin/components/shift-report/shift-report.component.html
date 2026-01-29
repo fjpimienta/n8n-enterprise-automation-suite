@@ -1,0 +1,125 @@
+<div class="container-xl">
+  
+  <div class="page-header d-print-none mb-4">
+    <div class="row align-items-center">
+      <div class="col">
+        <div class="page-pretitle">Finanzas</div>
+        <h2 class="page-title">💰 Corte de Caja (Día Actual)</h2>
+      </div>
+      <div class="col-auto ms-auto">
+        <button class="btn btn-primary d-none d-sm-inline-block" (click)="printReport()">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"><path stroke="none" d="M0 0h24v24H0z" fill="none"/><path d="M17 17h2a2 2 0 0 0 2 -2v-4a2 2 0 0 0 -2 -2h-14a2 2 0 0 0 -2 2v4a2 2 0 0 0 2 2h2" /><path d="M17 9v-4a2 2 0 0 0 -2 -2h-6a2 2 0 0 0 -2 2v4" /><path d="M7 13m0 2a2 2 0 0 1 2 -2h6a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-6a2 2 0 0 1 -2 -2z" /></svg>
+          Imprimir Corte Z
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="row row-deck row-cards mb-4">
+    
+    <div class="col-sm-6 col-lg-4">
+      <div class="card card-active">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="subheader">Venta Total</div>
+          </div>
+          <div class="h1 mb-3 text-primary">{{ cashService.summary().total | currency }}</div>
+          <div class="d-flex mb-2">
+            <div>Transacciones cerradas</div>
+            <div class="ms-auto">
+              <span class="text-green d-inline-flex align-items-center lh-1">
+                {{ cashService.summary().count }} tickets
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-lg-4">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="subheader">Efectivo en Caja</div>
+            <div class="ms-auto lh-1">
+              <span class="badge bg-green-lt">CASH</span>
+            </div>
+          </div>
+          <div class="h1 mb-3">{{ cashService.summary().cash | currency }}</div>
+          <div class="text-muted small">Dinero físico que debes tener</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-sm-6 col-lg-4">
+      <div class="card">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="subheader">Terminal Bancaria</div>
+            <div class="ms-auto lh-1">
+              <span class="badge bg-blue-lt">CARD</span>
+            </div>
+          </div>
+          <div class="h1 mb-3">{{ cashService.summary().card | currency }}</div>
+          <div class="text-muted small">Vouchers acumulados</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <h3 class="card-title">Detalle de Movimientos</h3>
+    </div>
+    <div class="table-responsive">
+      <table class="table card-table table-vcenter text-nowrap datatable">
+        <thead>
+          <tr>
+            <th class="w-1">ID</th>
+            <th>Hora Salida</th>
+            <th>Cliente / Patín</th>
+            <th>Método</th>
+            <th class="text-end">Monto</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (t of cashService.todayTransactions(); track t.id) {
+            <tr>
+              <td><span class="text-muted">{{ t.id }}</span></td>
+              <td>{{ t.end_time | slice:0:5 }}</td>
+              <td>
+                <div class="d-flex py-1 align-items-center">
+                  <span class="avatar me-2" [class.bg-purple-lt]="t.metadata.client_type === 'ALUMNO'">
+                     {{ t.metadata.client_number || '#' + t.metadata.skate_number }}
+                  </span>
+                  <div class="flex-fill">
+                    <div class="font-weight-medium">Patín #{{ t.metadata.skate_number }}</div>
+                    <div class="text-muted">{{ t.metadata.client_type }}</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="badge" 
+                  [class.bg-green-lt]="t.payment_method === 'CASH'"
+                  [class.bg-blue-lt]="t.payment_method === 'CARD'">
+                  {{ t.payment_method === 'CASH' ? 'Efectivo' : 'Tarjeta' }}
+                </span>
+              </td>
+              <td class="text-end font-weight-bold">
+                {{ t.amount | currency }}
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="5" class="text-center py-4 text-muted">
+                No hay ventas registradas hoy
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>

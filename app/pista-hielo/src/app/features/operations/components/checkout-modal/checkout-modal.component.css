@@ -1,0 +1,26 @@
+/* Modal flotante y elegante */
+.touch-modal {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+/* Toggle del Zamboni grande */
+.touch-toggle {
+  cursor: pointer;
+  border-radius: 8px;
+  border: 1px solid #e6e8eb;
+  transition: all 0.2s;
+}
+
+.form-selectgroup-input:checked + .touch-toggle {
+  background-color: #f2f9ff;
+  border-color: #206bc4;
+  color: #206bc4;
+}
+
+/* Botones de Pago */
+.payment-btn {
+  height: 56px;
+  font-weight: 700;
+  border-radius: 8px;
+}

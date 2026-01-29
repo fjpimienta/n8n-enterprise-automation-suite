@@ -1,0 +1,68 @@
+/* Reutilizamos el estilo de la tarjeta flotante */
+.touch-card {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* INPUTS CUSTOM (Igual que Login) */
+.custom-input-group {
+  background-color: #fff;
+  border: 1px solid #dce1e7;
+  border-radius: 8px;
+  height: 64px; /* Un poco más alto para el Input Numérico Gigante */
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+  overflow: hidden;
+}
+
+.custom-input-group:focus-within {
+  border-color: #5b73e8;
+  box-shadow: 0 0 0 4px rgba(91, 115, 232, 0.15);
+}
+
+.is-invalid-border {
+  border-color: #d63939 !important;
+  background-color: #fff5f5;
+}
+
+/* Input Gigante para Números */
+.form-control.fs-2 {
+  font-size: 2rem !important; /* Texto MUY grande */
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: #1e293b;
+  height: 100%;
+}
+
+/* TOGGLES (Botones de Radio Estilizados) */
+.form-selectgroup-input:checked + .form-selectgroup-label {
+  background-color: #eef2ff;
+  border-color: #5b73e8;
+  color: #5b73e8;
+  font-weight: 700;
+  box-shadow: 0 2px 5px rgba(91, 115, 232, 0.1);
+}
+
+.touch-toggle {
+  height: 60px; /* Fácil de tocar */
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 1.1rem;
+}
+
+/* BOTÓN PRINCIPAL */
+.touch-button {
+  height: 60px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  background-color: #206bc4; /* Verde "Iniciar" o Azul Tabler */
+  border: none;
+}
+
+.touch-button:active {
+  transform: scale(0.98);
+}

@@ -17,11 +17,25 @@ export interface PhClient {
 
 export interface PhTransaction {
   id: number;
-  client_id: number;
-  amount: number;
-  transaction_type: string;
-  status: TransactionStatus;
+  transaction_type: 'RENTAL' | 'SALE';
+  status: 'ACT' | 'FIN' | 'CAN';
   start_time: string;
+  transaction_date: string;
+
   end_time?: string;
-  metadata?: any; // Para guardar el ID del Patín y Zamboni
+  amount?: number | string;
+  payment_method?: 'CASH' | 'CARD';
+
+  metadata: {
+    skate_number?: string;
+    client_type?: 'GENERAL' | 'ALUMNO';
+    client_name?: string;
+
+    // --- AGREGAR ESTO ---
+    client_number?: string; // <--- El campo que faltaba
+    // --------------------
+
+    notes?: string;
+  };
+
 }

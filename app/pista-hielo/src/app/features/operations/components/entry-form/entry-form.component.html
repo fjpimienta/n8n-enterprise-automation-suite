@@ -1,0 +1,120 @@
+<div class="container-xl">
+    <div class="page-header d-print-none mb-4">
+        <div class="row align-items-center">
+            <div class="col text-center">
+                <h2 class="page-title d-inline-block">⏱️ Nuevo Ingreso a Pista</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+
+            <form class="card touch-card shadow-lg border-0" [formGroup]="entryForm" (ngSubmit)="onSubmit()">
+                <div class="card-body p-4">
+
+                    <div class="mb-4">
+                        <label class="form-label text-center text-muted small text-uppercase fw-bold mb-3">TIPO DE
+                            CLIENTE</label>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label class="form-selectgroup-item w-100">
+                                    <input type="radio" formControlName="client_type" value="GENERAL"
+                                        class="form-selectgroup-input">
+                                    <span
+                                        class="form-selectgroup-label d-flex align-items-center justify-content-center p-3 touch-toggle">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24"
+                                            viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                            <path d="M15 5l0 2" />
+                                            <path d="M15 11l0 2" />
+                                            <path d="M15 17l0 2" />
+                                            <path
+                                                d="M5 5h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-3a2 2 0 0 0 0 -4v-3a2 2 0 0 1 2 -2" />
+                                        </svg>
+                                        General
+                                    </span>
+                                </label>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-selectgroup-item w-100">
+                                    <input type="radio" formControlName="client_type" value="ALUMNO"
+                                        class="form-selectgroup-input">
+                                    <span
+                                        class="form-selectgroup-label d-flex align-items-center justify-content-center p-3 touch-toggle">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24"
+                                            viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                            <path d="M12 3l-8 4.5l8 4.5l8 -4.5l-8 -4.5" />
+                                            <path d="M4 7.5v5.5" />
+                                            <path d="M12 12l8 -4.5" />
+                                            <path d="M12 12v9" />
+                                            <path d="M12 12l-8 -4.5" />
+                                            <path d="M16 5.25l-8 4.5" />
+                                        </svg>
+                                        Alumno
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label text-muted small text-uppercase fw-bold">No. Patín / ID</label>
+                        <div class="input-group custom-input-group"
+                            [class.is-invalid-border]="isFieldInvalid('skate_number')">
+                            <span class="input-group-text">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="icon text-primary" width="28" height="28"
+                                    viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                    <path d="M4 6.5l0 10.5l12.5 0a2.5 2.5 0 0 0 2.5 -2.5v-6.5l-4 -3l-5 0l-3 3z" />
+                                    <path d="M11 9l2 -2" />
+                                    <path
+                                        d="M4 17h13.8a2.2 2.2 0 0 1 2.2 2.2a1 1 0 0 1 -1 1h-14a1 1 0 0 1 -1 -1v-2.2" />
+                                </svg>
+                            </span>
+                            <input type="number" formControlName="skate_number"
+                                class="form-control form-control-lg fs-2" placeholder="00" #skateInput>
+                        </div>
+                        @if (isFieldInvalid('skate_number')) {
+                        <div class="text-danger small mt-1 animate-fade-in">Ingrese el número de patín</div>
+                        }
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label text-muted small text-uppercase fw-bold">Notas / Instructor</label>
+                        <div class="input-group custom-input-group">
+                            <span class="input-group-text">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="icon text-muted" width="24" height="24"
+                                    viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                    <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+                                    <path d="M13.5 6.5l4 4" />
+                                </svg>
+                            </span>
+                            <input type="text" formControlName="notes" class="form-control"
+                                placeholder="Opcional (Ej. Instructor Pedro)">
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 btn-lg touch-button shadow-sm mt-2"
+                        [disabled]="entryForm.invalid || isLoading()">
+                        @if (isLoading()) {
+                        <div class="spinner-border spinner-border-sm me-2"></div> Registrando...
+                        } @else {
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24"
+                            viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                            <path d="M12 5l0 14" />
+                            <path d="M5 12l14 0" />
+                        </svg>
+                        INICIAR TIEMPO
+                        }
+                    </button>
+
+                </div>
+            </form>
+
+        </div>
+    </div>
+</div>
