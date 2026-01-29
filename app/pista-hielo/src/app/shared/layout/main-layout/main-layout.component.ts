@@ -1,8 +1,9 @@
-import { Component, inject, signal } from '@angular/core'; // <--- Importar signal
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterModule, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
+import { ThemeService } from '@core/services/theme.service'; // <--- Importar
 
 @Component({
   selector: 'app-main-layout',
@@ -15,11 +16,12 @@ export class MainLayoutComponent {
   private authService = inject(AuthService);
   private router = inject(Router);
 
-  // Estado del menú móvil
+  // Hacemos el servicio público para usarlo directo en el HTML
+  public themeService = inject(ThemeService);
+
   isMobileMenuOpen = signal(false);
 
   constructor() {
-    // Truco UX: Cerrar el menú automáticamente cuando cambias de página
     this.router.events.pipe(
       filter(event => event instanceof NavigationEnd)
     ).subscribe(() => {

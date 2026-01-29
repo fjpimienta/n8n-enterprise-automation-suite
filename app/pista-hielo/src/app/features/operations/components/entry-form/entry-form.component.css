@@ -1,20 +1,59 @@
-/* Reutilizamos el estilo de la tarjeta flotante */
+/* =========================================
+   1. TARJETA PRINCIPAL
+   ========================================= */
 .touch-card {
   background: #ffffff;
   border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  border: none;
+  transition: background-color 0.3s, border-color 0.3s;
 }
 
-/* INPUTS CUSTOM (Igual que Login) */
+/* Modo Oscuro: Tarjeta más sólida */
+:host-context([data-bs-theme="dark"]) .touch-card {
+  background: #1e293b;
+  /* Slate 800 */
+  border: 1px solid #334155;
+  box-shadow: none;
+}
+
+/* =========================================
+   2. TEXTOS Y ETIQUETAS (EL CAMBIO CLAVE)
+   ========================================= */
+
+/* Forzar que las etiquetas "text-muted" sean blancas en modo oscuro */
+:host-context([data-bs-theme="dark"]) .text-muted {
+  color: #cbd5e1 !important;
+  /* Gris Perla Claro (Casi blanco) */
+}
+
+:host-context([data-bs-theme="dark"]) .form-label {
+  color: #f1f5f9;
+  /* Blanco Humo */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  /* Sombra suave para resaltar */
+}
+
+/* =========================================
+   3. INPUTS CUSTOM
+   ========================================= */
 .custom-input-group {
-  background-color: #fff;
+  background-color: #ffffff;
   border: 1px solid #dce1e7;
   border-radius: 8px;
-  height: 64px; /* Un poco más alto para el Input Numérico Gigante */
+  height: 64px;
   display: flex;
   align-items: center;
-  transition: all 0.2s;
   overflow: hidden;
+  transition: all 0.2s;
+}
+
+/* Modo Oscuro: Inputs oscuros pero legibles */
+:host-context([data-bs-theme="dark"]) .custom-input-group {
+  background-color: #0f172a;
+  /* Slate 900 (Muy oscuro para contraste) */
+  border-color: #475569;
+  /* Borde más visible */
 }
 
 .custom-input-group:focus-within {
@@ -22,22 +61,86 @@
   box-shadow: 0 0 0 4px rgba(91, 115, 232, 0.15);
 }
 
+/* Texto dentro del Input */
+.custom-input-group .form-control {
+  background: transparent;
+  border: none;
+  color: #1e293b;
+  /* Texto oscuro en modo claro */
+}
+
+/* Texto dentro del Input (MODO OSCURO) */
+:host-context([data-bs-theme="dark"]) .custom-input-group .form-control {
+  color: #ffffff !important;
+  /* BLANCO PURO */
+  font-weight: 500;
+}
+
+/* Placeholders (El texto de ayuda "Opcional...") */
+:host-context([data-bs-theme="dark"]) ::placeholder {
+  color: #64748b !important;
+  /* Gris medio, visible pero distinto al texto */
+  opacity: 1;
+}
+
+/* Iconos dentro de los inputs */
+:host-context([data-bs-theme="dark"]) .custom-input-group .input-group-text svg {
+  color: #94a3b8 !important;
+  /* Iconos gris claro */
+}
+
+:host-context([data-bs-theme="dark"]) .custom-input-group .input-group-text .text-primary {
+  color: #60a5fa !important;
+  /* Azul claro brillante para el icono del patín */
+}
+
+
+/* Error State */
 .is-invalid-border {
   border-color: #d63939 !important;
   background-color: #fff5f5;
 }
 
-/* Input Gigante para Números */
-.form-control.fs-2 {
-  font-size: 2rem !important; /* Texto MUY grande */
-  font-weight: 700;
-  letter-spacing: 2px;
-  color: #1e293b;
-  height: 100%;
+:host-context([data-bs-theme="dark"]) .is-invalid-border {
+  background-color: #450a0a;
+  /* Rojo oscuro fondo */
+  border-color: #f87171 !important;
+  /* Borde rojo claro brillante */
 }
 
-/* TOGGLES (Botones de Radio Estilizados) */
-.form-selectgroup-input:checked + .form-selectgroup-label {
+/* =========================================
+   4. TIPOGRAFÍA ESPECIAL (fs-2)
+   ========================================= */
+.form-control.fs-2 {
+  font-size: 2rem !important;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+/* =========================================
+   5. TOGGLES (Botones General/Alumno)
+   ========================================= */
+.touch-toggle {
+  height: 60px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background-color: #fff;
+  cursor: pointer;
+  font-size: 1.1rem;
+  transition: all 0.2s;
+  color: #64748b;
+}
+
+/* Modo Oscuro: Botones inactivos */
+:host-context([data-bs-theme="dark"]) .touch-toggle {
+  background-color: #0f172a;
+  border-color: #475569;
+  color: #cbd5e1;
+  /* Texto claro */
+}
+
+/* Estado SELECCIONADO */
+.form-selectgroup-input:checked+.form-selectgroup-label {
   background-color: #eef2ff;
   border-color: #5b73e8;
   color: #5b73e8;
@@ -45,21 +148,26 @@
   box-shadow: 0 2px 5px rgba(91, 115, 232, 0.1);
 }
 
-.touch-toggle {
-  height: 60px; /* Fácil de tocar */
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
-  cursor: pointer;
-  transition: all 0.2s;
-  font-size: 1.1rem;
+/* Estado SELECCIONADO en Modo Oscuro */
+:host-context([data-bs-theme="dark"]) .form-selectgroup-input:checked+.form-selectgroup-label {
+  background-color: #1e40af;
+  /* Azul intenso fondo */
+  border-color: #60a5fa;
+  /* Borde azul brillante */
+  color: #ffffff;
+  /* Texto Blanco */
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+  /* Resplandor */
 }
 
-/* BOTÓN PRINCIPAL */
+/* =========================================
+   6. BOTÓN PRINCIPAL
+   ========================================= */
 .touch-button {
   height: 60px;
   font-size: 1.2rem;
   font-weight: 700;
-  background-color: #206bc4; /* Verde "Iniciar" o Azul Tabler */
+  background-color: #206bc4;
   border: none;
 }
 
