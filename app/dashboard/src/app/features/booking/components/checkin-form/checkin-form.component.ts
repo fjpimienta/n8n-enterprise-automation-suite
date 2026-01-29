@@ -1,7 +1,8 @@
-import { Component, Output, EventEmitter, input, OnInit, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Output, EventEmitter, input, OnInit, OnChanges, SimpleChanges, inject } from '@angular/core';
 import { FormGroup, FormControl, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Room } from '@core/models/hotel.types';
+import { AdminService } from '@features/admin/services/admin.service';
 
 @Component({
   selector: 'app-checkin-form',
@@ -10,6 +11,8 @@ import { Room } from '@core/models/hotel.types';
   templateUrl: './checkin-form.component.html'
 })
 export class CheckinFormComponent implements OnInit, OnChanges {
+  private adminService = inject(AdminService);
+
   room = input.required<Room | null>();
   reservation = input<any | null>(null);
 
@@ -25,7 +28,7 @@ export class CheckinFormComponent implements OnInit, OnChanges {
     full_name: new FormControl('', [Validators.required]),
     phone: new FormControl(''),
     email: new FormControl('', [Validators.email]),
-    doc_id: new FormControl('', [Validators.required]),
+    doc_id: new FormControl(''),
     city: new FormControl(''),
     state: new FormControl(''),
     country: new FormControl('México'),
@@ -39,24 +42,33 @@ export class CheckinFormComponent implements OnInit, OnChanges {
   ngOnInit() {
     this.initDefaultValues();
 
-    // 1. Si cambian la fecha, recalculamos el precio estándar
     this.checkinForm.get('check_out')?.valueChanges.subscribe(() => {
       this.calculateStandardPrice();
     });
 
-    // 2. Si cambian el monto manualmente, recalculamos el descuento
     this.checkinForm.get('total_amount')?.valueChanges.subscribe((val) => {
       this.calculateDiscount(val || 0);
     });
-    this.calculateStandardPrice();
+
+    // Eliminamos la llamada directa aquí, porque quizás room() aun es null
+    // this.calculateStandardPrice(); 
   }
 
   ngOnChanges(changes: SimpleChanges) {
+    // 1. Si cambia la reserva (tu código original)
     if (changes['reservation'] && this.reservation()) {
       this.fillWithReservationData(this.reservation());
     }
-  }
 
+    // 2. AGREGADO: Si cambia la habitación (o llega por primera vez)
+    // Esto garantiza que tenemos datos para calcular el precio
+    if (changes['room'] && this.room()) {
+      // Pequeño timeout para asegurar que el formulario ya tenga fechas inicializadas
+      setTimeout(() => {
+        this.calculateStandardPrice();
+      });
+    }
+  }
   // --- LÓGICA CORE ---
 
   /**
@@ -117,11 +129,11 @@ export class CheckinFormComponent implements OnInit, OnChanges {
   private fillWithReservationData(res: any) {
     if (!res) return;
     const guest = res.hotel_guests_data || res.guest || {};
-    
+
     // Lógica para limpiar datos dummy
     let docId = guest.doc_id || res.guest_doc_id || '';
     if (docId.startsWith('INT-')) docId = '';
-    
+
     let email = guest.email || res.guest_email || '';
     if (email.startsWith('no-email-')) email = '';
 
@@ -143,20 +155,38 @@ export class CheckinFormComponent implements OnInit, OnChanges {
     // Importante: recalcular el estándar para saber si esta reserva traía descuento implícito
     // Usamos setTimeout para asegurar que el DOM y valores iniciales estén listos
     setTimeout(() => {
-        this.calculateStandardPrice(); 
-        // Sobreescribimos el total con el que venía en la reserva (porque calculateStandardPrice lo resetea)
-        if (res.total_amount) {
-            this.checkinForm.patchValue({ total_amount: res.total_amount });
-        }
+      this.calculateStandardPrice();
+      // Sobreescribimos el total con el que venía en la reserva (porque calculateStandardPrice lo resetea)
+      if (res.total_amount) {
+        this.checkinForm.patchValue({ total_amount: res.total_amount });
+      }
     });
   }
 
   confirmCheckin() {
+    const formVal = this.checkinForm.value;
+
+    // A) LOGICA DE AUTO-GENERACIÓN USANDO EL SERVICIO
+
+    // Si no puso INE/Pasaporte, pedimos uno al servicio
+    if (!formVal.doc_id || formVal.doc_id.trim() === '') {
+      this.checkinForm.patchValue({
+        doc_id: this.adminService.generateInternalId()
+      });
+    }
+
+    // Si no puso Correo, pedimos uno al servicio
+    if (!formVal.email || formVal.email.trim() === '') {
+      this.checkinForm.patchValue({
+        email: this.adminService.generateDummyEmail()
+      });
+    }
+
+    // B) VALIDAMOS Y ENVIAMOS
     if (this.checkinForm.valid) {
-      // Preparamos el payload final
       const payload = {
         ...this.checkinForm.value,
-        discount_amount: this.discountAmount // Añadimos el campo calculado
+        discount_amount: this.discountAmount
       };
       this.saved.emit(payload);
     } else {
@@ -167,4 +197,5 @@ export class CheckinFormComponent implements OnInit, OnChanges {
   closeCheckinModal() {
     this.onClose.emit();
   }
+
 }
