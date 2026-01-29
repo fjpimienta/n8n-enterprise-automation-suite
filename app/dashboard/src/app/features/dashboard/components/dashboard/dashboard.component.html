@@ -19,11 +19,7 @@
       </div>
       }
       } @else {
-      @for (room of bookingService.filteredRooms(); track room.id) {
-      <div class="col-sm-6 col-lg-3">
-        <app-room-card [room]="room" (onSelect)="onSelectRoom($event)"></app-room-card>
-      </div>
-      } @empty {
+      @if (bookingService.groupedRooms().length === 0) {
       <div class="col-12">
         <div class="card card-stacked py-5 border-0 shadow-none bg-transparent">
           <div class="card-body text-center">
@@ -35,6 +31,34 @@
             </p>
           </div>
         </div>
+      </div>
+      }
+
+      @for (group of bookingService.groupedRooms(); track group.key) {
+
+      <div class="room-group-container mb-4">
+
+        <div class="d-flex align-items-center mb-3 pb-2 border-bottom cursor-pointer user-select-none"
+          (click)="toggleGroup(group.key)">
+
+          <i class="ti ti-chevron-down me-2 transition-transform" [class.rotate-n90]="!isExpanded(group.key)"></i>
+
+          <h3 class="m-0 text-secondary fw-bold text-uppercase ls-1">
+            {{ group.label }}
+          </h3>
+
+          <span class="ms-2 badge bg-blue-lt">{{ group.rooms.length }}</span>
+        </div>
+
+        @if (isExpanded(group.key)) {
+        <div class="row row-cards g-2 animation-fade-in">
+          @for (room of group.rooms; track room.id) {
+          <div class="col-12 col-sm-6 col-lg-3">
+            <app-room-card [room]="room" (onSelect)="onSelectRoom($event)"></app-room-card>
+          </div>
+          }
+        </div>
+        }
       </div>
       }
       }

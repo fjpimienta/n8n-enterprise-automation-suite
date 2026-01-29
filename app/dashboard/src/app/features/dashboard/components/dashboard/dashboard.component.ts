@@ -48,6 +48,8 @@ export class DashboardComponent {
   isUserModalOpen = signal(false);
   isGuestModalOpen = signal(false);
   showReportModal = false;
+  collapsedGroups = signal<Set<string>>(new Set());
+  expandedGroups = signal<Set<string>>(new Set());
 
   activeBooking: any = null;
   dailyReport = { total: 0, paid: 0, pending: 0, transactions: [] as any[], periodLabel: 'Hoy' };
@@ -506,6 +508,27 @@ export class DashboardComponent {
     } catch (error) {
       alert('Error al actualizar el estado de limpieza');
     }
+  }
+
+  toggleGroup(groupKey: string) {
+    this.expandedGroups.update(set => {
+      const newSet = new Set(set);
+      if (newSet.has(groupKey)) {
+        newSet.delete(groupKey); // Cerrar
+      } else {
+        newSet.add(groupKey);    // Abrir
+      }
+      return newSet;
+    });
+  }
+
+  isExpanded(groupKey: string): boolean {
+    // UX MEJORADA: Si el usuario está buscando algo en el buscador, 
+    // FORZAMOS la expansión para que encuentre la habitación.
+    if (this.bookingService.searchQuery().trim().length > 0) {
+      return true;
+    }
+    return this.expandedGroups().has(groupKey);
   }
 
 }

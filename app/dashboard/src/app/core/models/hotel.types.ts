@@ -1,5 +1,6 @@
 export type RoomStatus = 'available' | 'occupied' | 'maintenance' | 'dirty';
 export type CleaningStatus = 'clean' | 'dirty' | 'inspected';
+export type RoomType = 'KING' | 'MATRIMONIAL' | 'DOBLE' | 'TRIPLE' | 'OTHER';
 
 export interface Room {
   id: number;
@@ -11,6 +12,13 @@ export interface Room {
   cleaning_status: CleaningStatus;
   next_reservation?: string;
   hasIncomingToday?: boolean;
+}
+
+export interface RoomGroup {
+  key: string;
+  label: string;
+  order: number;
+  rooms: Room[];
 }
 
 export interface Booking {

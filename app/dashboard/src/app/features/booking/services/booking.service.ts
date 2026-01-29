@@ -5,7 +5,7 @@ import { ApiResponse } from '@core/interfaces/api-response.interface';
 import { AdminService } from '@features/admin/services/admin.service';
 import { ReportService } from '@features/finance/services/report.service';
 import { environment } from '@env/environment';
-import { Room } from '@core/models/hotel.types';
+import { Room, RoomGroup } from '@core/models/hotel.types';
 
 @Injectable({ providedIn: 'root' })
 export class BookingService {
@@ -15,8 +15,12 @@ export class BookingService {
   public reportService = inject(ReportService);
   public loadingRooms = signal<boolean>(false);
   public rooms = signal<Room[]>([]);
+  public roomGroup = signal<RoomGroup[]>([]);
   public isProcessing = signal<boolean>(false);
+  public searchQuery = signal<string>('');
   public filter = signal<'all' | 'available' | 'occupied' | 'dirty' | 'maintenance' | 'reserved'>('all');
+  public translatedFilter = computed(() => this.translations[this.filter()]);
+
   readonly translations: Record<'all' | 'available' | 'occupied' | 'dirty' | 'maintenance' | 'reserved', string> = {
     all: 'ninguno',  // O 'todos' si prefieres, pero "en estado: ninguno" tiene más sentido si no hay habitaciones en general
     available: 'disponible',
@@ -25,11 +29,21 @@ export class BookingService {
     maintenance: 'mantenimiento',
     reserved: 'reservada'
   };
-  translatedFilter = computed(() => this.translations[this.filter()]);
+  private readonly roomTypeConfig = [
+    { key: 'MATRIMONIAL', label: '💑 Matrimonial', order: 1 },
+    { key: 'KING', label: '👑 King Size', order: 2 },
+    { key: 'DOBLE', label: '👯 Doble', order: 3 },
+    { key: 'TRIPLE', label: '👨‍👩‍👧 Triple', order: 4 },
+    { key: 'INDIVIDUAL', label: '👤 Individual', order: 5 } // Por si acaso
+  ];
 
   /** Computed que filtra las habitaciones según el filtro seleccionado */
   public filteredRooms = computed(() => {
-    const rooms = this.roomsWithStatus();
+    let rooms = this.roomsWithStatus();
+    const query = this.searchQuery().trim().toLowerCase();
+    if (query.length > 0) {
+      rooms = rooms.filter(r => r.room_number.toLowerCase().includes(query));
+    }
     const currentFilter = this.filter();
 
     switch (currentFilter) {
@@ -59,6 +73,69 @@ export class BookingService {
       default: // 'all'
         return rooms;
     }
+  });
+
+  /**  */
+  public groupedRooms = computed(() => {
+    // 1. Obtenemos las habitaciones ya filtradas por estado (Disponible, Sucia, etc.)
+    const currentRooms = this.filteredRooms();
+
+    // 2. Mapa temporal para agrupar
+    const groupsMap = new Map<string, Room[]>();
+
+    // 3. Barrido de agrupación
+    currentRooms.forEach(room => {
+      // Normalización: Convertir 'King' -> 'KING' y manejar nulos
+      // IMPORTANTE: Asegúrate que room.type coincida con las keys de tu config o usa un default
+      let typeKey = (room.type || 'OTHER').toUpperCase().trim();
+
+      // Mapeo de sinónimos comunes (opcional, por si la BD está sucia)
+      if (typeKey.includes('KING')) typeKey = 'KING';
+      else if (typeKey.includes('MATRIMONIAL')) typeKey = 'MATRIMONIAL';
+      else if (typeKey.includes('DOBLE')) typeKey = 'DOBLE';
+      else if (typeKey.includes('TRIPLE')) typeKey = 'TRIPLE';
+
+      if (!groupsMap.has(typeKey)) {
+        groupsMap.set(typeKey, []);
+      }
+      groupsMap.get(typeKey)!.push(room);
+    });
+
+    // 4. Construcción del resultado final ordenado
+    const resultGroups: RoomGroup[] = [];
+
+    // A) Primero agregamos los tipos configurados en el orden deseado
+    this.roomTypeConfig.forEach(config => {
+      const rooms = groupsMap.get(config.key);
+      if (rooms && rooms.length > 0) {
+        // Ordenamiento interno por número de habitación (Ej: 101, 102...)
+        // Usamos numeric: true para que '10' vaya después de '2'
+        rooms.sort((a, b) => a.room_number.localeCompare(b.room_number, undefined, { numeric: true }));
+
+        resultGroups.push({
+          key: config.key,
+          label: config.label,
+          order: config.order,
+          rooms: rooms
+        });
+        groupsMap.delete(config.key); // Lo quitamos del mapa
+      }
+    });
+
+    // B) Luego agregamos cualquier otro tipo "huérfano" que no estaba en la config
+    groupsMap.forEach((rooms, key) => {
+      if (rooms.length > 0) {
+        rooms.sort((a, b) => a.room_number.localeCompare(b.room_number, undefined, { numeric: true }));
+        resultGroups.push({
+          key: key,
+          label: `🛏️ ${key}`, // Label genérico
+          order: 99,
+          rooms: rooms
+        });
+      }
+    });
+
+    return resultGroups;
   });
 
   /** Computed que añade estado 'reserved' a habitaciones con reserva activa HOY */
