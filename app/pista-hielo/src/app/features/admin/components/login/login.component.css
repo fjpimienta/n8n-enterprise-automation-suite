@@ -180,3 +180,16 @@
     background-color: #1e293b !important;
     border-color: #334155 !important;
 }
+
+:host-context([data-bs-theme="dark"]) .custom-input-group .form-select {
+    color: #ffffff !important;
+    background-color: transparent !important;
+    /* Para que tome el fondo del grupo */
+}
+
+:host-context([data-bs-theme="dark"]) .custom-input-group .form-select option {
+    background-color: #1e293b;
+    /* Fondo oscuro para la lista */
+    color: #ffffff;
+    /* Letras blancas */
+}
