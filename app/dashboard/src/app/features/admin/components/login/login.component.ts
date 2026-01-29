@@ -7,6 +7,7 @@ import { LoggerService } from '../../services/logger.service';
 import { AuthService } from '@core/services/auth.service';
 import { HotelService } from '@features/dashboard/services/hotel.service';
 import { AdminService } from '@features/admin/services/admin.service';
+import { ThemeService } from '@core/services/theme.service';
 
 @Component({
   selector: 'app-login',
@@ -21,6 +22,7 @@ export class LoginComponent {
   private logger = inject(LoggerService);
   public hotelService = inject(HotelService);
   public adminService = inject(AdminService);
+  public themeService = inject(ThemeService);
 
   isLoading = signal(false);
   showPassword = signal(false);

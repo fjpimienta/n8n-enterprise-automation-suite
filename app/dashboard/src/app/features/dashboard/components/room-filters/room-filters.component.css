@@ -1,37 +1,29 @@
-/* === CONTENEDOR FILTROS SUPERIORES (WRAP) === */
+/* === CONTENEDOR FILTROS SUPERIORES === */
 .filters-scroll-container {
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
     gap: 8px;
-    /* Espacio reducido para que quepan más */
     padding: 2px;
     margin-bottom: 20px;
 }
 
-/* === BOTONES DE FILTRO (PÍLDORAS EQUILIBRADAS) === */
+/* === BOTONES DE FILTRO (PÍLDORAS) === */
 .big-filter-btn {
     flex: 0 0 auto;
-
-    /* TAMAÑO AJUSTADO (Ni muy chico, ni muy grande) */
     padding: 8px 16px;
-    /* Reducido de 12px 24px */
     min-height: 40px;
-    /* Altura cómoda */
     border-radius: 50px;
 
-    /* TIPOGRAFÍA */
     font-size: 0.95rem;
-    /* Tamaño estándar legible */
     font-weight: 700;
     white-space: nowrap;
 
-    /* ESTILO BASE */
+    /* COLORES BASE (MODO CLARO) */
     border: 2px solid #e0e0e0;
     background: white;
     color: #555;
 
-    /* INTERACCIÓN */
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     display: inline-flex;
     align-items: center;
@@ -39,36 +31,82 @@
     transition: all 0.2s ease;
 }
 
-/* Estado Activo Genérico */
-.big-filter-btn.active {
-    background-color: #206bc4;
-    color: white;
-    border-color: #206bc4;
-    transform: scale(1.02);
-    /* Efecto pop sutil */
-    box-shadow: 0 4px 8px rgba(32, 107, 196, 0.2);
+/* === BOTONES ADMIN (GRID) === */
+.admin-buttons-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 0 2px;
 }
 
-/* === COLORES SEMÁFORO (Se mantienen igual) === */
+.admin-btn {
+    width: 100%;
+    padding: 10px 4px;
+
+    /* COLORES BASE (MODO CLARO) */
+    background: white;
+    border: 2px solid #e6e8e9;
+    color: #444;
+    /* Texto oscuro original */
+
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 700;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.admin-btn span {
+    font-size: 1.6rem;
+    line-height: 1;
+}
+
+/* Hover y Active genéricos */
+.big-filter-btn.active,
+.admin-btn:active {
+    transform: scale(1.02);
+}
+
+/* === COLORES ACTIVOS (Estos NO cambian en dark mode, se ven bien) === */
 .big-filter-btn.active.filter-available {
     background-color: #2fb344;
     border-color: #2fb344;
-    box-shadow: 0 4px 8px rgba(47, 179, 68, 0.25);
+    color: white;
 }
 
 .big-filter-btn.active.filter-occupied {
     background-color: #d63939;
     border-color: #d63939;
-    box-shadow: 0 4px 8px rgba(214, 57, 57, 0.25);
+    color: white;
 }
 
 .big-filter-btn.active.filter-dirty {
     background-color: #f76707;
     border-color: #f76707;
-    box-shadow: 0 4px 8px rgba(247, 103, 7, 0.25);
+    color: white;
 }
 
-/* === SEPARADOR === */
+.big-filter-btn.active.filter-maintenance {
+    background-color: #206bc4;
+    border-color: #206bc4;
+    color: white;
+}
+
+.big-filter-btn.active.filter-reserved {
+    background-color: #17a2b8;
+    border-color: #17a2b8;
+    color: white;
+}
+
+/* Separador */
 .hr-text {
     font-size: 0.8rem;
     font-weight: 700;
@@ -89,78 +127,10 @@
     margin: 0 10px;
 }
 
-/* === BOTONES ADMIN (1 FILA FORZADA) === */
-.admin-buttons-grid {
-    display: grid;
-    /* FORZAMOS 3 COLUMNAS IGUALES PARA QUE ENTREN EN 1 FILA */
-    grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
-    /* Gap pequeño para que no se desborden */
-    padding: 0 2px;
-}
-
-.admin-btn {
-    width: 100%;
-    padding: 10px 4px;
-    /* Padding lateral mínimo para que quepa el texto */
-    background: white;
-    border: 2px solid #e6e8e9;
-    border-radius: 10px;
-
-    color: #444;
-    font-size: 0.9rem;
-    /* Texto ajustado para móviles estrechos */
-    font-weight: 700;
-
-    display: flex;
-    flex-direction: column;
-    /* Icono arriba siempre en móvil */
-    align-items: center;
-    justify-content: center;
-    gap: 5px;
-
-    cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-}
-
-.admin-btn span {
-    font-size: 1.6rem;
-    /* Icono grande pero no invasivo */
-    line-height: 1;
-}
-
-.admin-btn:active {
-    background-color: #f0f6fc;
-    border-color: #206bc4;
-    transform: scale(0.96);
-}
-
-/* Ajuste para tablets/PC: Icono al lado */
-@media (min-width: 576px) {
-    .admin-buttons-grid {
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-        /* Recupera flexibilidad en PC */
-        gap: 15px;
-    }
-
-    .admin-btn {
-        flex-direction: row;
-        padding: 14px 20px;
-        font-size: 1.1rem;
-    }
-
-    .admin-btn span {
-        margin-right: 8px;
-        font-size: 1.4rem;
-    }
-}
-
-/* --- FIX BUSCADOR --- */
+/* Fix Buscador */
 .input-icon .form-control {
     padding-left: 2.8rem;
     height: 48px;
-    /* Un poco menos alto */
     font-size: 1.1rem;
     border-radius: 24px;
     border: 2px solid #e0e0e0;
@@ -179,4 +149,67 @@
 .input-icon-addon.end-0 {
     left: auto;
     right: 15px;
+}
+
+/* Ajuste PC */
+@media (min-width: 576px) {
+    .admin-buttons-grid {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+        gap: 15px;
+    }
+
+    .admin-btn {
+        flex-direction: row;
+        padding: 14px 20px;
+        font-size: 1.1rem;
+    }
+
+    .admin-btn span {
+        margin-right: 8px;
+        font-size: 1.4rem;
+    }
+}
+
+
+/* =========================================
+   🔥🔥 AJUSTES ESPECÍFICOS MODO OSCURO 🔥🔥
+   (Esto arreglará que "se pierdan" los colores)
+   ========================================= */
+
+[data-bs-theme="dark"] .big-filter-btn:not(.active) {
+    background-color: #1e293b;
+    /* Gris oscuro elegante */
+    border-color: #334155;
+    /* Borde sutil */
+    color: #e2e8f0;
+    /* TEXTO CLARO */
+}
+
+[data-bs-theme="dark"] .admin-btn {
+    background-color: #1e293b;
+    /* Fondo oscuro */
+    border-color: #334155;
+    color: #f8fafc;
+    /* TEXTO BLANCO BRILLANTE */
+}
+
+[data-bs-theme="dark"] .admin-btn:hover {
+    background-color: #334155;
+    /* Un poco más claro al pasar el mouse */
+    border-color: #206bc4;
+}
+
+[data-bs-theme="dark"] .input-icon .form-control {
+    background-color: #1e293b;
+    border-color: #334155;
+    color: #fff;
+}
+
+[data-bs-theme="dark"] .hr-text {
+    color: #64748b;
+}
+
+[data-bs-theme="dark"] .hr-text::before,
+[data-bs-theme="dark"] .hr-text::after {
+    background: #334155;
 }
