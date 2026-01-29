@@ -1,71 +1,32 @@
 /* === AJUSTES GLOBALES PARA MÓVIL === */
 .page-body {
-  background-color: #f0f2f5; /* Fondo con contraste */
+  background-color: #f0f2f5;
   padding: 10px !important;
+  min-height: 100vh;
 }
 
 .container-xl {
   padding: 0 !important;
 }
 
-/* === FILTROS SUPERIORES (Botones Grandes) === */
-/* Convertimos los filtros en una barra de desplazamiento horizontal */
-app-room-filters {
-  display: flex;
-  overflow-x: auto;
-  gap: 10px;
-  padding: 10px 5px;
-  margin-bottom: 15px;
-  -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
-  scrollbar-width: none; /* Ocultar scrollbar */
-}
-
-app-room-filters::-webkit-scrollbar {
-  display: none;
-}
-
-/* Estilo para los botones dentro del componente de filtros */
-/* NOTA: Asegúrate de aplicar esta clase a los botones en app-room-filters */
-.big-filter-btn {
-  flex: 0 0 auto;
-  padding: 12px 20px;
-  border-radius: 50px; /* Redondos */
-  font-size: 1.1rem;
-  font-weight: 700;
-  border: 2px solid #e0e0e0;
-  background: white;
-  color: #555;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-}
-
-.big-filter-btn.active {
-  background-color: #206bc4;
-  color: white;
-  border-color: #206bc4;
-  transform: scale(1.05);
-}
-
-/* === TARJETAS DE HABITACIÓN (EL CAMBIO PRINCIPAL) === */
+/* === TARJETAS DE HABITACIÓN (STYLES) === */
 .row-cards {
-  gap: 15px 0; /* Espacio vertical entre tarjetas */
+  gap: 15px 0;
 }
 
-/* Forzamos el estilo de la tarjeta aunque venga del componente hijo */
-/* Usa ::ng-deep si estás en styles encapsulados de Angular */
+/* Forzamos estilos profundos para las tarjetas (Angular Encapsulation) */
 ::ng-deep .card {
   border-radius: 16px !important;
   border: none !important;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1) !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08) !important;
   transition: transform 0.1s;
-  overflow: hidden;
   height: 100%;
 }
 
 ::ng-deep .card:active {
-  transform: scale(0.98); /* Efecto visual al tocar */
+  transform: scale(0.98);
 }
 
-/* CONTENIDO DE LA TARJETA */
 ::ng-deep .card-body {
   padding: 1.5rem !important;
   display: flex;
@@ -73,59 +34,52 @@ app-room-filters::-webkit-scrollbar {
   justify-content: space-between;
 }
 
-/* NÚMERO DE HABITACIÓN GIGANTE */
-::ng-deep .card-title, 
+/* TIPOGRAFÍA GIGANTE PARA NÚMEROS */
+::ng-deep .card-title,
 ::ng-deep h3 {
-  font-size: 2.2rem !important; /* Muy grande */
+  font-size: 2.5rem !important;
+  /* AUMENTADO para seniors */
   font-weight: 800 !important;
   margin: 0 !important;
   line-height: 1;
 }
 
-/* ESTADOS DE COLOR (Semáforo) */
-/* Debes asignar estas clases condicionalmente en tu app-room-card */
-
-/* Disponible = VERDE CLARO */
+/* COLORES DE SEMÁFORO (Bordes más gruesos) */
 ::ng-deep .status-available {
   background-color: #e6f8ea !important;
-  border-left: 10px solid #2fb344 !important;
+  border-left: 12px solid #2fb344 !important;
+  /* Más visible */
 }
-::ng-deep .status-available .card-title { color: #2fb344; }
 
-/* Ocupada = ROJO CLARO */
+::ng-deep .status-available .card-title {
+  color: #2fb344;
+}
+
 ::ng-deep .status-occupied {
   background-color: #fcebeb !important;
-  border-left: 10px solid #d63939 !important;
+  border-left: 12px solid #d63939 !important;
 }
-::ng-deep .status-occupied .card-title { color: #d63939; }
 
-/* Sucia/Limpieza = NARANJA CLARO */
+::ng-deep .status-occupied .card-title {
+  color: #d63939;
+}
+
 ::ng-deep .status-dirty {
   background-color: #fff5eb !important;
-  border-left: 10px solid #f76707 !important;
+  border-left: 12px solid #f76707 !important;
 }
-::ng-deep .status-dirty .card-title { color: #f76707; }
 
-/* === LISTAS DE INVITADOS/USUARIOS (Tablas más grandes) === */
+::ng-deep .status-dirty .card-title {
+  color: #f76707;
+}
+
+/* === LISTAS Y TABLAS === */
 .table td {
   padding: 1rem 0.5rem;
   font-size: 1.1rem;
 }
 
-/* === MODALES FULL SCREEN EN MÓVIL === */
-@media (max-width: 576px) {
-  ::ng-deep .modal-dialog {
-    margin: 0;
-    max-width: 100%;
-    height: 100vh;
-  }
-  ::ng-deep .modal-content {
-    height: 100%;
-    border-radius: 0;
-  }
-}
-
-/* Animación suave al cargar los grupos */
+/* === ANIMACIONES === */
 .room-group-container {
   animation: slideIn 0.15s ease-out;
 }
@@ -136,86 +90,33 @@ app-room-filters::-webkit-scrollbar {
     transform: translateY(5px);
   }
 
-  /* Menos desplazamiento también ayuda */
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-/* Tipografía elegante para los encabezados */
-.ls-1 {
-  letter-spacing: 1px;
-  font-size: 0.95rem;
-  color: #6c757d;
-  /* Gris muted profesional */
-}
-
-/* Ajuste móvil */
-@media (max-width: 576px) {
-  .room-group-container {
-    margin-bottom: 2rem !important;
-    /* Más separación en celular */
-  }
-}
-
-/* Utilidad para rotar el icono */
-/* dashboard.component.css */
-
+/* === AJUSTES DE ACORDEÓN === */
 .transition-transform {
   transition: transform 0.2s ease;
 }
 
-/* Estado Cerrado: Flecha apunta a la derecha */
 .rotate-n90 {
   transform: rotate(-90deg);
-}
-
-/* Efecto hover en la X del buscador */
-.text-hover-danger:hover {
-  color: #d63939;
-  /* Rojo Bootstrap */
-}
-
-/* Asegurar que la X no se monte sobre el texto largo */
-.input-icon .form-control {
-  padding-right: 2.5rem;
-}
-
-.rotate-180 {
-  transform: rotate(-90deg);
-  /* Gira hacia la derecha cuando cierra */
 }
 
 .cursor-pointer {
   cursor: pointer;
 }
 
-/* Animación suave al abrir */
-.animation-fade-in {
-  animation: expandIn 0.3s ease-out;
+.ls-1 {
+  letter-spacing: 1px;
+  font-size: 0.95rem;
+  color: #6c757d;
 }
 
-@keyframes expandIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
+@media (max-width: 576px) {
+  .room-group-container {
+    margin-bottom: 2rem !important;
   }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Mejora visual del input de búsqueda en filtros */
-.input-icon {
-  position: relative;
-}
-
-.input-icon .form-control {
-  padding-left: 2.5rem;
-  /* Espacio para el icono */
-  border-radius: 20px;
-  /* Redondito tipo iOS/Android */
 }
