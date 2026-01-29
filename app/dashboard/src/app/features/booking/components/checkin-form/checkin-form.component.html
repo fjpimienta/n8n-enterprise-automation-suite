@@ -17,7 +17,7 @@
             </div>
 
             <div class="mb-3">
-              <label class="form-label required">Doc. ID (INE/Pasaporte)</label>
+              <label class="form-label">Doc. ID (INE/Pasaporte)</label>
               <input type="text" class="form-control" formControlName="doc_id">
             </div>
 
@@ -72,10 +72,11 @@
 
               <div class="col-md-4">
                 <div class="mb-3">
-                  <label class="form-label text-muted">Precio de Lista (Sugerido)</label>
+                  <label class="form-label">Precio de Lista (Sugerido)</label>
                   <div class="input-group">
-                    <span class="input-group-text bg-light border-end-0">$</span>
-                    <input type="text" class="form-control bg-light" [value]="standardPrice | number:'1.2-2'" readonly
+                    <span class="input-group-text border-end-0">$</span>
+
+                    <input type="text" class="form-control" [value]="standardPrice | number:'1.2-2'" readonly
                       tabindex="-1">
                   </div>
                 </div>
@@ -83,7 +84,7 @@
 
               <div class="col-md-4">
                 <div class="mb-3">
-                  <label class="form-label required fw-bold text-primary">Total a Cobrar</label>
+                  <label class="form-label requiredEs">Total a Cobrar</label>
                   <div class="input-group">
                     <span class="input-group-text">$</span>
                     <input type="number" class="form-control fw-bold" formControlName="total_amount">
@@ -126,9 +127,10 @@
           </div>
 
           <div class="card-footer d-flex bg-light">
-            <button class="btn btn-outline-secondary px-4 shadow-sm" (click)="closeCheckinModal()">
+            <button type="button" class="btn btn-outline-secondary px-4 shadow-sm" (click)="closeCheckinModal()">
               Cancelar
             </button>
+
             <button type="submit" class="btn btn-primary ms-auto" [disabled]="checkinForm.invalid">
               Confirmar Check-in
             </button>
