@@ -7,7 +7,9 @@
     justify-content: center;
 }
 
-.text-primary-dark { color: #182433; }
+.text-primary-dark {
+    color: #182433;
+}
 
 /* 2. Tarjeta con sombra suave */
 .touch-card {
@@ -25,10 +27,12 @@
     justify-content: center;
     border: 1px solid #e6e7e9;
 }
+
 .icon-logo {
     width: 48px;
     height: 48px;
-    color: #206bc4; /* Azul Tabler */
+    color: #206bc4;
+    /* Azul Tabler */
     fill: rgba(32, 107, 196, 0.08);
 }
 
@@ -38,13 +42,19 @@
 
 .custom-input-group {
     background-color: #fff;
-    border: 1px solid #dce1e7; /* Borde unificado */
-    border-radius: 6px;        /* Bordes redondeados */
-    height: 52px;              /* Altura fija cómoda para Touch */
-    display: flex;             /* Flexbox para alinear hijos */
-    align-items: center;       /* Centrado vertical perfecto */
+    border: 1px solid #dce1e7;
+    /* Borde unificado */
+    border-radius: 6px;
+    /* Bordes redondeados */
+    height: 52px;
+    /* Altura fija cómoda para Touch */
+    display: flex;
+    /* Flexbox para alinear hijos */
+    align-items: center;
+    /* Centrado vertical perfecto */
     transition: border-color 0.3s, box-shadow 0.3s;
-    overflow: hidden;          /* Evita que los hijos se salgan del radio */
+    overflow: hidden;
+    /* Evita que los hijos se salgan del radio */
 }
 
 /* Cuando el usuario hace click dentro */
@@ -60,11 +70,12 @@
 
 /* Quitar los bordes y fondos por defecto de Tabler/Bootstrap a los hijos */
 .custom-input-group .input-group-text,
-.custom-input-group .form-control, 
+.custom-input-group .form-control,
 .custom-input-group .form-select {
     border: none !important;
     background-color: transparent !important;
-    height: 100% !important; /* Ocupar toda la altura del padre */
+    height: 100% !important;
+    /* Ocupar toda la altura del padre */
     box-shadow: none !important;
 }
 
@@ -78,7 +89,8 @@
 /* Ajuste fino para el texto del input */
 .custom-input-group .form-control,
 .custom-input-group .form-select {
-    padding-left: 0; /* Pegado al icono izquierdo */
+    padding-left: 0;
+    /* Pegado al icono izquierdo */
     font-size: 1rem;
     color: #182433;
 }
@@ -89,7 +101,8 @@
     font-size: 1rem;
     font-weight: 600;
     letter-spacing: 0.5px;
-    background-color: #5b73e8; /* Azul moderno */
+    background-color: #5b73e8;
+    /* Azul moderno */
     border: none;
     transition: all 0.2s;
 }
@@ -103,9 +116,67 @@
 .animate-fade-in {
     animation: fadeIn 0.6s ease-out;
 }
+
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
-.cursor-pointer { cursor: pointer; }
+.cursor-pointer {
+    cursor: pointer;
+}
+
+
+/* ... Tus estilos anteriores ... */
+
+/* =========================================
+   DARK MODE LOGIN OVERRIDES
+   ========================================= */
+
+/* Fondo Gradiente Oscuro */
+:host-context([data-bs-theme="dark"]) .bg-ice-gradient {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+}
+
+/* Tarjeta de Login */
+:host-context([data-bs-theme="dark"]) .touch-card {
+    background-color: #1e293b !important;
+    border: 1px solid #334155;
+    box-shadow: none !important;
+}
+
+/* Textos */
+:host-context([data-bs-theme="dark"]) .text-primary-dark {
+    color: #f1f5f9 !important;
+}
+
+:host-context([data-bs-theme="dark"]) .text-muted {
+    color: #94a3b8 !important;
+}
+
+/* Inputs de Login */
+:host-context([data-bs-theme="dark"]) .custom-input-group {
+    background-color: #0f172a !important;
+    border-color: #334155 !important;
+}
+
+:host-context([data-bs-theme="dark"]) .custom-input-group .form-control {
+    color: #ffffff !important;
+}
+
+:host-context([data-bs-theme="dark"]) .custom-input-group .input-group-text svg {
+    color: #94a3b8 !important;
+}
+
+/* Logo container */
+:host-context([data-bs-theme="dark"]) .logo-container {
+    background-color: #1e293b !important;
+    border-color: #334155 !important;
+}

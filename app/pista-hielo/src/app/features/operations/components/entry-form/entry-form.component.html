@@ -1,8 +1,8 @@
-<div class="container-xl">
+<div class="container-xl animate-fade-in mt-3">
     <div class="page-header d-print-none mb-4">
         <div class="row align-items-center">
             <div class="col text-center">
-                <h2 class="page-title d-inline-block">⏱️ Nuevo Ingreso a Pista</h2>
+                <h2 class="page-title d-inline-block">⏱️ Nuevo Ingreso</h2>
             </div>
         </div>
     </div>
@@ -63,28 +63,26 @@
                         <label class="form-label text-muted small text-uppercase fw-bold">No. Patín / ID</label>
                         <div class="input-group custom-input-group"
                             [class.is-invalid-border]="isFieldInvalid('skate_number')">
-                            <span class="input-group-text">
+                            <span class="input-group-text ps-3">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="icon text-primary" width="28" height="28"
                                     viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none">
                                     <path stroke="none" d="M0 0h24v24H0z" fill="none" />
                                     <path d="M4 6.5l0 10.5l12.5 0a2.5 2.5 0 0 0 2.5 -2.5v-6.5l-4 -3l-5 0l-3 3z" />
                                     <path d="M11 9l2 -2" />
-                                    <path
-                                        d="M4 17h13.8a2.2 2.2 0 0 1 2.2 2.2a1 1 0 0 1 -1 1h-14a1 1 0 0 1 -1 -1v-2.2" />
                                 </svg>
                             </span>
                             <input type="number" formControlName="skate_number"
-                                class="form-control form-control-lg fs-2" placeholder="00" #skateInput>
+                                class="form-control form-control-lg fs-2 ps-2" placeholder="00" #skateInput>
                         </div>
                         @if (isFieldInvalid('skate_number')) {
-                        <div class="text-danger small mt-1 animate-fade-in">Ingrese el número de patín</div>
+                        <div class="text-danger small mt-1 animate-fade-in fw-bold">Ingrese el número de patín</div>
                         }
                     </div>
 
                     <div class="mb-4">
                         <label class="form-label text-muted small text-uppercase fw-bold">Notas / Instructor</label>
                         <div class="input-group custom-input-group">
-                            <span class="input-group-text">
+                            <span class="input-group-text ps-3">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="icon text-muted" width="24" height="24"
                                     viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none">
                                     <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -92,7 +90,7 @@
                                     <path d="M13.5 6.5l4 4" />
                                 </svg>
                             </span>
-                            <input type="text" formControlName="notes" class="form-control"
+                            <input type="text" formControlName="notes" class="form-control ps-2"
                                 placeholder="Opcional (Ej. Instructor Pedro)">
                         </div>
                     </div>
@@ -114,7 +112,6 @@
 
                 </div>
             </form>
-
         </div>
     </div>
 </div>

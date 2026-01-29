@@ -1,13 +1,18 @@
-/* Corrección para que el header móvil sea oscuro de verdad */
+/* =======================================================
+   1. HEADER MÓVIL (Barra Superior)
+   ======================================================= */
+/* Forzamos que el header móvil sea siempre oscuro para contraste */
 header.navbar-dark {
     background-color: #1e293b !important;
     color: white;
 }
 
-/* Lógica para MOSTRAR el menú lateral en móvil cuando activamos el toggle */
+/* =======================================================
+   2. MENÚ LATERAL (SIDEBAR) - COMPORTAMIENTO MÓVIL
+   ======================================================= */
 @media (max-width: 991.98px) {
     aside.navbar-vertical {
-        display: none; /* Oculto por defecto en móvil */
+        display: none;
         position: fixed;
         top: 0;
         left: 0;
@@ -15,10 +20,13 @@ header.navbar-dark {
         height: 100vh;
         z-index: 1050;
         overflow-y: auto;
-        background-color: #1e293b !important; /* Fondo oscuro obligatorio */
+
+        /* CORRECCIÓN AQUÍ: Por defecto BLANCO (Modo Claro) */
+        background-color: #ffffff;
+        transition: transform 0.3s ease-in-out, background-color 0.3s;
     }
 
-    /* Cuando Angular pone la clase .show-mobile, lo mostramos */
+    /* Mostrar menú al abrir */
     aside.navbar-vertical.show-mobile {
         display: block !important;
         animation: slideIn 0.3s ease-out;
@@ -26,6 +34,48 @@ header.navbar-dark {
 }
 
 @keyframes slideIn {
-    from { transform: translateX(-100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
+    from {
+        transform: translateX(-100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* =======================================================
+   3. OVERRIDES PARA MODO OSCURO (DARK MODE)
+   ======================================================= */
+
+/* A. Sidebar en Modo Oscuro (Móvil y Desktop) */
+/* El selector :host-context revisa si el body tiene data-bs-theme="dark" */
+:host-context([data-bs-theme="dark"]) aside.navbar-vertical {
+    background-color: #1e293b !important;
+    /* Slate 800 */
+    border-right: 1px solid #2d3748;
+}
+
+/* B. Ajuste de Gradientes de Fondo */
+:host-context([data-bs-theme="dark"]) .bg-ice-gradient {
+    background: linear-gradient(135deg, #111827 0%, #1f2937 100%) !important;
+}
+
+/* C. Tarjetas (Touch Card) */
+:host-context([data-bs-theme="dark"]) .touch-card {
+    background-color: #1e293b !important;
+    border: 1px solid #374151;
+    color: #f3f4f6;
+}
+
+/* D. Textos Primarios */
+:host-context([data-bs-theme="dark"]) .text-primary-dark {
+    color: #e2e8f0 !important;
+}
+
+/* E. Inputs Personalizados */
+:host-context([data-bs-theme="dark"]) .custom-input-group {
+    background-color: #0f172a !important;
+    border-color: #374151 !important;
 }
