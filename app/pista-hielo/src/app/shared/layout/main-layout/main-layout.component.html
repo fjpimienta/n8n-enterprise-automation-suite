@@ -2,6 +2,7 @@
 
   <header class="navbar navbar-expand-md navbar-dark d-lg-none d-print-none bg-dark">
     <div class="container-xl">
+
       <button class="navbar-toggler" type="button" (click)="toggleMobileMenu()">
         <span class="navbar-toggler-icon"></span>
       </button>
@@ -13,6 +14,33 @@
       </h1>
 
       <div class="navbar-nav flex-row order-md-last">
+
+        <div class="nav-item me-3">
+          <div class="btn-list">
+            <button class="btn btn-icon border-0 bg-transparent text-white" (click)="themeService.toggleTheme()"
+              title="Cambiar Tema">
+
+              @if (themeService.currentTheme() === 'dark') {
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-sun" width="24" height="24"
+                viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+                stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                <circle cx="12" cy="12" r="4"></circle>
+                <path d="M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7">
+                </path>
+              </svg>
+              } @else {
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-moon" width="24" height="24"
+                viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+                stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z"></path>
+              </svg>
+              }
+            </button>
+          </div>
+        </div>
+
         <div class="nav-item">
           <span class="avatar avatar-sm" style="background-image: url(./assets/user-avatar.png)">FP</span>
         </div>
@@ -20,12 +48,15 @@
     </div>
   </header>
 
-  <aside class="navbar navbar-vertical navbar-expand-lg navbar-dark" [class.show-mobile]="isMobileMenuOpen()">
+
+  <aside class="navbar navbar-vertical navbar-expand-lg" [class.navbar-dark]="themeService.currentTheme() === 'dark'"
+    [class.navbar-light]="themeService.currentTheme() === 'light'" [class.show-mobile]="isMobileMenuOpen()">
     <div class="container-fluid">
 
-      <button
-        class="navbar-toggler d-lg-none d-flex align-items-center text-white border-0 bg-transparent ps-0 mb-4 w-100"
-        type="button" (click)="closeMenu()" style="outline: none; box-shadow: none;">
+      <button class="navbar-toggler d-lg-none d-flex align-items-center border-0 bg-transparent ps-0 mb-4 w-100"
+        [class.text-white]="themeService.currentTheme() === 'dark'"
+        [class.text-dark]="themeService.currentTheme() === 'light'" type="button" (click)="closeMenu()"
+        style="outline: none; box-shadow: none;">
 
         <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-x me-2" width="24" height="24"
           viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
@@ -34,12 +65,12 @@
           <line x1="18" y1="6" x2="6" y2="18"></line>
           <line x1="6" y1="6" x2="18" y2="18"></line>
         </svg>
-
         <span class="h3 mb-0">Cerrar Menú</span>
       </button>
 
       <h1 class="navbar-brand navbar-brand-autodark d-none d-lg-block">
-        <a routerLink="/" class="text-decoration-none">
+        <a routerLink="/" class="text-decoration-none" [class.text-white]="themeService.currentTheme() === 'dark'"
+          [class.text-dark]="themeService.currentTheme() === 'light'">
           ⛸️ PistaHielo
         </a>
       </h1>
@@ -108,7 +139,39 @@
         </ul>
 
         <div class="mt-auto pb-4">
-          <button (click)="logout()" class="btn btn-outline-danger w-100 mt-4">
+
+          <div class="px-3 mb-3">
+            <button class="btn w-100 border-0" [class.btn-outline-light]="themeService.currentTheme() === 'dark'"
+              [class.btn-outline-dark]="themeService.currentTheme() === 'light'" (click)="themeService.toggleTheme()"
+              title="Cambiar Tema">
+
+              @if (themeService.currentTheme() === 'dark') {
+              <span class="d-flex align-items-center justify-content-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-sun me-2" width="24"
+                  height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                  <circle cx="12" cy="12" r="4"></circle>
+                  <path d="M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7">
+                  </path>
+                </svg>
+                Modo Claro
+              </span>
+              } @else {
+              <span class="d-flex align-items-center justify-content-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-moon me-2" width="24"
+                  height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                  <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z"></path>
+                </svg>
+                Modo Oscuro
+              </span>
+              }
+            </button>
+          </div>
+
+          <button (click)="logout()" class="btn btn-outline-danger w-100">
             <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24"
               stroke-width="2" stroke="currentColor" fill="none">
               <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -119,6 +182,7 @@
             Cerrar Sesión
           </button>
         </div>
+
       </div>
     </div>
   </aside>

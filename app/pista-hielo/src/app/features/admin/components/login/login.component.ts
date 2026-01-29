@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common'; // Necesario para pipes async si usas
 import { AuthService } from '@core/auth/auth.service';
 import { AdminService } from '@features/admin/services/admin.service';
+import { ThemeService } from '@core/services/theme.service';
 
 @Component({
   selector: 'app-login',
@@ -18,6 +19,7 @@ export class LoginComponent implements OnInit {
   private authService = inject(AuthService);
   private router = inject(Router);
   public adminService = inject(AdminService); // Público para usarlo en el HTML
+  public themeService = inject(ThemeService);
 
   // Estado UI
   isLoading = signal(false);
@@ -26,7 +28,7 @@ export class LoginComponent implements OnInit {
 
   // Formulario Reactivo
   loginForm: FormGroup = this.fb.group({
-    id_company: ['', Validators.required],
+    id_company: [3, Validators.required],
     user: ['', [Validators.required]],
     pass: ['', Validators.required]
   });
@@ -38,7 +40,7 @@ export class LoginComponent implements OnInit {
       if (list.length > 0) {
         const defaultComp = list.find(c => c.is_default);
         if (defaultComp) {
-          this.loginForm.patchValue({ id_company: defaultComp.id_company });
+          // this.loginForm.patchValue({ id_company: defaultComp.id_company });
         }
       }
     });
@@ -89,4 +91,5 @@ export class LoginComponent implements OnInit {
       }
     });
   }
+
 }
