@@ -124,3 +124,98 @@ app-room-filters::-webkit-scrollbar {
     border-radius: 0;
   }
 }
+
+/* Animación suave al cargar los grupos */
+.room-group-container {
+  animation: slideIn 0.15s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+
+  /* Menos desplazamiento también ayuda */
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Tipografía elegante para los encabezados */
+.ls-1 {
+  letter-spacing: 1px;
+  font-size: 0.95rem;
+  color: #6c757d;
+  /* Gris muted profesional */
+}
+
+/* Ajuste móvil */
+@media (max-width: 576px) {
+  .room-group-container {
+    margin-bottom: 2rem !important;
+    /* Más separación en celular */
+  }
+}
+
+/* Utilidad para rotar el icono */
+/* dashboard.component.css */
+
+.transition-transform {
+  transition: transform 0.2s ease;
+}
+
+/* Estado Cerrado: Flecha apunta a la derecha */
+.rotate-n90 {
+  transform: rotate(-90deg);
+}
+
+/* Efecto hover en la X del buscador */
+.text-hover-danger:hover {
+  color: #d63939;
+  /* Rojo Bootstrap */
+}
+
+/* Asegurar que la X no se monte sobre el texto largo */
+.input-icon .form-control {
+  padding-right: 2.5rem;
+}
+
+.rotate-180 {
+  transform: rotate(-90deg);
+  /* Gira hacia la derecha cuando cierra */
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+/* Animación suave al abrir */
+.animation-fade-in {
+  animation: expandIn 0.3s ease-out;
+}
+
+@keyframes expandIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mejora visual del input de búsqueda en filtros */
+.input-icon {
+  position: relative;
+}
+
+.input-icon .form-control {
+  padding-left: 2.5rem;
+  /* Espacio para el icono */
+  border-radius: 20px;
+  /* Redondito tipo iOS/Android */
+}
