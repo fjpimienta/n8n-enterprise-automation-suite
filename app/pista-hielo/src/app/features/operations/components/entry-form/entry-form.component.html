@@ -11,15 +11,35 @@
         <div class="col-md-6 col-lg-5">
 
             <form class="card touch-card shadow-lg border-0" [formGroup]="entryForm" (ngSubmit)="onSubmit()">
+
+                <div class="card-header p-2 bg-muted-lt d-flex justify-content-center">
+                    <ul class="nav nav-pills nav-fill bg-white rounded-3 p-1 w-100" role="tablist"
+                        style="box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                        <li class="nav-item">
+                            <button type="button" class="nav-link fw-bold py-2"
+                                [class.active]="operationMode() === 'FREE'" (click)="setMode('FREE')">
+                                ⛸️ Patinaje Libre
+                            </button>
+                        </li>
+                        <li class="nav-item">
+                            <button type="button" class="nav-link fw-bold py-2"
+                                [class.active]="operationMode() === 'CLASS'" (click)="setMode('CLASS')">
+                                🎓 Clase / Instructor
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
                 <div class="card-body p-4">
 
-                    <div class="mb-4">
+                    @if (operationMode() === 'FREE') {
+                    <div class="mb-4 animate-fade-in">
                         <label class="form-label text-center text-muted small text-uppercase fw-bold mb-3">TIPO DE
-                            CLIENTE</label>
+                            TICKET</label>
                         <div class="row g-2">
                             <div class="col-6">
                                 <label class="form-selectgroup-item w-100">
-                                    <input type="radio" formControlName="client_type" value="GENERAL"
+                                    <input type="radio" formControlName="rental_type" value="GENERAL"
                                         class="form-selectgroup-input">
                                     <span
                                         class="form-selectgroup-label d-flex align-items-center justify-content-center p-3 touch-toggle">
@@ -38,7 +58,7 @@
                             </div>
                             <div class="col-6">
                                 <label class="form-selectgroup-item w-100">
-                                    <input type="radio" formControlName="client_type" value="ALUMNO"
+                                    <input type="radio" formControlName="rental_type" value="ALUMNO"
                                         class="form-selectgroup-input">
                                     <span
                                         class="form-selectgroup-label d-flex align-items-center justify-content-center p-3 touch-toggle">
@@ -58,6 +78,40 @@
                             </div>
                         </div>
                     </div>
+                    }
+
+                    @if (operationMode() === 'CLASS') {
+                    <div class="mb-4 animate-fade-in">
+                        <label
+                            class="form-label text-center text-muted small text-uppercase fw-bold mb-3">SERVICIO</label>
+
+                        <div class="mb-3">
+                            <select class="form-select form-select-lg" formControlName="rental_type">
+                                <option value="INSTRUCTOR">Clase Completa (1 hr)</option>
+                                <option value="MEDIA_INSTRUCTOR">Media Clase (30 min)</option>
+                                <option value="RENTA_HIELO">Renta de Hielo (Privado)</option>
+                            </select>
+                        </div>
+
+                        <label class="form-label text-muted small text-uppercase fw-bold">INSTRUCTOR ASIGNADO</label>
+                        <div class="input-group custom-input-group mb-3">
+                            <span class="input-group-text ps-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
+                                    viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                    <path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" />
+                                    <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+                                </svg>
+                            </span>
+                            <select class="form-select" formControlName="instructor_id">
+                                <option value="" disabled selected>Seleccione Instructor...</option>
+                                <option value="1">Prof. Alejandro</option>
+                                <option value="2">Prof. Mariana</option>
+                                <option value="3">Staff Pista</option>
+                            </select>
+                        </div>
+                    </div>
+                    }
 
                     <div class="mb-4">
                         <label class="form-label text-muted small text-uppercase fw-bold">No. Patín / ID</label>
@@ -80,7 +134,7 @@
                     </div>
 
                     <div class="mb-4">
-                        <label class="form-label text-muted small text-uppercase fw-bold">Notas / Instructor</label>
+                        <label class="form-label text-muted small text-uppercase fw-bold">Notas Adicionales</label>
                         <div class="input-group custom-input-group">
                             <span class="input-group-text ps-3">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="icon text-muted" width="24" height="24"
@@ -90,23 +144,32 @@
                                     <path d="M13.5 6.5l4 4" />
                                 </svg>
                             </span>
-                            <input type="text" formControlName="notes" class="form-control ps-2"
-                                placeholder="Opcional (Ej. Instructor Pedro)">
+                            <input type="text" formControlName="notes" class="form-control ps-2" placeholder="Opcional">
                         </div>
                     </div>
 
                     <button type="submit" class="btn btn-primary w-100 btn-lg touch-button shadow-sm mt-2"
                         [disabled]="entryForm.invalid || isLoading()">
                         @if (isLoading()) {
-                        <div class="spinner-border spinner-border-sm me-2"></div> Registrando...
+                        <div class="spinner-border spinner-border-sm me-2"></div> Procesando...
                         } @else {
+                        @if(operationMode() === 'FREE') {
                         <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24"
                             viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
                             <path stroke="none" d="M0 0h24v24H0z" fill="none" />
                             <path d="M12 5l0 14" />
                             <path d="M5 12l14 0" />
                         </svg>
-                        INICIAR TIEMPO
+                        INICIAR TIEMPO LIBRE
+                        } @else {
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24"
+                            viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                            <path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" />
+                            <path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+                        </svg>
+                        REGISTRAR CLASE
+                        }
                         }
                     </button>
 
