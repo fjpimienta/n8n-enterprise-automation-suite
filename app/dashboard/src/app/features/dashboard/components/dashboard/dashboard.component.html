@@ -1,5 +1,5 @@
 <app-header (onRefresh)="refresh()" (onRefreshMain)="refreshMain()" (onGenerateReport)="generateDailyReport()"
-  (onLogout)="logout()">
+  [isAdmin]="isAdmin" (onLogout)="logout()">
 </app-header>
 
 <div class="page-body">

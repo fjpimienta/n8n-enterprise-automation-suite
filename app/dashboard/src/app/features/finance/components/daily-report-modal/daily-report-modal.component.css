@@ -47,3 +47,7 @@
     display: none !important;
   }
 }
+
+.bg-surface {
+  background-color: var(--tblr-card-bg, #fff); /* Usa la variable de fondo de tarjeta */
+}

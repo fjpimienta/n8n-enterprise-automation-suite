@@ -4,28 +4,37 @@
   <div class="modal-dialog modal-lg modal-dialog-centered">
     <div class="modal-content shadow-lg border-0">
 
-      <div class="modal-header bg-white border-bottom-0 pb-0">
+      <div class="modal-header border-bottom-0 pb-0">
         <h5 class="modal-title fw-bold text-primary">
-          <span class="me-2">📈</span>Reporte de Ventas
+          <span class="me-2">📈</span>Reporte de Caja
         </h5>
         <button type="button" class="btn-close" (click)="onClose.emit()"></button>
       </div>
 
-      <div class="modal-body p-4 bg-light text-dark">
+      <div class="modal-body p-4">
 
         <div class="d-flex justify-content-center mb-4">
           <div class="btn-group shadow-sm" role="group" aria-label="Filtro de fechas">
-            <button type="button" class="btn px-4" [class.btn-primary]="currentFilter() === 'day'"
-              [class.btn-white]="currentFilter() !== 'day'" (click)="onFilterChange.emit('day')">Día</button>
+            
+            <button type="button" class="btn px-4" 
+              [class.btn-primary]="currentFilter() === 'day'"
+              [class.btn-ghost-secondary]="currentFilter() !== 'day'" 
+              (click)="onFilterChange.emit('day')">Día</button>
 
-            <button type="button" class="btn px-4" [class.btn-primary]="currentFilter() === 'week'"
-              [class.btn-white]="currentFilter() !== 'week'" (click)="onFilterChange.emit('week')">Semana</button>
+            <button type="button" class="btn px-4" 
+              [class.btn-primary]="currentFilter() === 'week'"
+              [class.btn-ghost-secondary]="currentFilter() !== 'week'" 
+              (click)="onFilterChange.emit('week')">Semana</button>
 
-            <button type="button" class="btn px-4" [class.btn-primary]="currentFilter() === 'month'"
-              [class.btn-white]="currentFilter() !== 'month'" (click)="onFilterChange.emit('month')">Mes</button>
+            <button type="button" class="btn px-4" 
+              [class.btn-primary]="currentFilter() === 'month'"
+              [class.btn-ghost-secondary]="currentFilter() !== 'month'" 
+              (click)="onFilterChange.emit('month')">Mes</button>
 
-            <button type="button" class="btn px-4" [class.btn-primary]="currentFilter() === 'year'"
-              [class.btn-white]="currentFilter() !== 'year'" (click)="onFilterChange.emit('year')">Año</button>
+            <button type="button" class="btn px-4" 
+              [class.btn-primary]="currentFilter() === 'year'"
+              [class.btn-ghost-secondary]="currentFilter() !== 'year'" 
+              (click)="onFilterChange.emit('year')">Año</button>
           </div>
         </div>
 
@@ -69,19 +78,21 @@
         </div>
 
         <div class="card shadow-sm border-0 overflow-hidden">
-          <div class="card-header bg-white py-3 border-bottom">
+          <div class="card-header py-3 border-bottom">
             <h4 class="card-title m-0">Detalle de Movimientos <span class="fw-normal text-muted ms-2">- {{
                 reportData().periodLabel }}</span></h4>
           </div>
           <div class="table-responsive" style="max-height: 350px;">
             <table class="table table-vcenter table-hover card-table table-striped">
-              <thead class="sticky-top bg-white shadow-sm">
+              <thead class="sticky-top shadow-sm">
                 <tr>
-                  <th>{{ currentFilter() === 'day' ? 'HORA' : 'FECHA' }}</th>
-                  <th>HABITACIÓN</th>
-                  <th>ESTANCIA</th>
-                  <th>ESTADO</th>
-                  <th class="text-end">MONTO</th>
+                  <th class="bg-surface">
+                    {{ currentFilter() === 'day' ? 'HORA' : 'FECHA' }}
+                  </th>
+                  <th class="bg-surface">HABITACIÓN</th>
+                  <th class="bg-surface">ESTANCIA</th>
+                  <th class="bg-surface">ESTADO</th>
+                  <th class="text-end bg-surface">MONTO</th>
                 </tr>
               </thead>
               <tbody>
@@ -105,7 +116,8 @@
                     {{ t.check_in | date:'dd/MM/yy' }}
                     }
                   </td>
-                  <td class="fw-bold text-dark">Hab. {{ getRoomNumber(t.room_id) }}</td>
+                  
+                  <td class="fw-bold">Hab. {{ getRoomNumber(t.room_id) }}</td>
                   <td class="small">{{ getNights(t.check_in, t.check_out) }} noches</td>
                   <td>
                     <span class="badge badge-sm" [class.bg-success-lt]="t.payment_status === 'paid'"
@@ -130,7 +142,7 @@
         </div>
       </div>
 
-      <div class="modal-footer bg-light border-top-0">
+      <div class="modal-footer border-top-0">
         <button class="btn btn-outline-secondary px-4 shadow-sm" (click)="onClose.emit()">
           Cerrar
         </button>
