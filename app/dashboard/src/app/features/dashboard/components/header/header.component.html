@@ -53,10 +53,11 @@
                     }
                 </button>
 
+                @if (isAdmin()) {
                 <button (click)="onGenerateReport.emit()" class="btn btn-primary btn-sm me-2">
                     💰 Caja
                 </button>
-
+                }
                 <button (click)="onLogout.emit()" class="btn btn-danger btn-sm">Salir</button>
             </div>
         </div>
