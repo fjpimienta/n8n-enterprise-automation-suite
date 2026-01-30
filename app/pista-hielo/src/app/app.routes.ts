@@ -30,7 +30,12 @@ export const routes: Routes = [
         path: 'admin',
         children: [
           { path: 'shift-report', loadComponent: () => import('./features/admin/components/shift-report/shift-report.component').then(m => m.ShiftReportComponent) },
-          { path: 'clients', loadComponent: () => import('./features/admin/components/client-list/client-list').then(m => m.ClientList) },
+          { path: 'clients', loadComponent: () => import('./features/admin/components/client-list/client-list.component').then(m => m.ClientListComponent) },
+          {
+            path: 'instructors',
+            loadComponent: () => import('./features/admin/components/instructor-list/instructor-list.component')
+        .then(m => m.InstructorListComponent)
+          }
         ]
       }
     ]

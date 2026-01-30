@@ -1,0 +1,141 @@
+<div class="container-xl animate-fade-in">
+
+  <div class="page-header d-print-none">
+    <div class="row align-items-center">
+      <div class="col">
+        <h2 class="page-title">
+          🎓 Directorio de Alumnos
+        </h2>
+        <div class="text-muted mt-1">
+          Gestión de membresías y datos de contacto
+        </div>
+      </div>
+      <div class="col-auto ms-auto d-print-none">
+        <div class="btn-list">
+          <a routerLink="/admin/clients/new" class="btn btn-primary d-none d-sm-inline-block">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
+              stroke-width="2" stroke="currentColor" fill="none">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+              <line x1="12" y1="5" x2="12" y2="19" />
+              <line x1="5" y1="12" x2="19" y2="12" />
+            </svg>
+            Nuevo Alumno
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="page-body">
+    <div class="card">
+
+      @if (clientService.isLoading()) {
+      <div class="progress progress-sm">
+        <div class="progress-bar progress-bar-indeterminate"></div>
+      </div>
+      }
+
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+          <thead>
+            <tr>
+              <th>Nombre / Tutor</th>
+              <th>Contacto</th>
+              <th>Estado</th>
+              <th>Vigencia Membresía</th>
+              <th class="w-1"></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (student of clientService.clients(); track student.id) {
+            <tr>
+              <td>
+                <div class="d-flex py-1 align-items-center">
+                  <span class="avatar me-2" [class.bg-blue-lt]="!student.is_vip" [class.bg-yellow-lt]="student.is_vip">
+                    {{ student.full_name.charAt(0) }}
+                  </span>
+                  <div class="flex-fill">
+                    <div class="font-weight-medium">
+                      {{ student.full_name }}
+                      @if(student.is_vip) {
+                      <span class="badge bg-yellow-lt ms-1">VIP</span>
+                      }
+                    </div>
+                    @if(student.tutor_name) {
+                    <div class="text-muted small">
+                      Tutor: {{ student.tutor_name }}
+                    </div>
+                    }
+                  </div>
+                </div>
+              </td>
+
+              <td>
+                @if(student.email) {
+                <div class="text-muted text-truncate">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-inline me-1" width="24" height="24"
+                    viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                    <rect x="3" y="5" width="18" height="14" rx="2" />
+                    <polyline points="3 7 12 13 21 7" />
+                  </svg>
+                  {{ student.email }}
+                </div>
+                }
+                @if(student.phone) {
+                <div class="text-muted small mt-1">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-inline me-1" width="24" height="24"
+                    viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                    <path
+                      d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2" />
+                  </svg>
+                  {{ student.phone }}
+                </div>
+                }
+              </td>
+
+              <td>
+                <span class="status-dot me-1" [ngClass]="getStatusBadge(student.status)"></span>
+                {{ student.status === 'ACT' ? 'Activo' : 'Inactivo' }}
+              </td>
+
+              <td>
+                @if (student.membership_expiry) {
+                <div [class.text-danger]="clientService.isMembershipExpired(student.membership_expiry)">
+                  <strong>{{ student.membership_expiry | date:'dd MMM yyyy' }}</strong>
+                  @if(clientService.isMembershipExpired(student.membership_expiry)) {
+                  <div class="small text-danger">⚠️ Vencida</div>
+                  }
+                </div>
+                } @else {
+                <span class="text-muted">-</span>
+                }
+              </td>
+
+              <td>
+                <a routerLink="/admin/clients/edit/{{student.id}}" class="btn btn-ghost-secondary btn-icon btn-sm"
+                  aria-label="Editar">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
+                    stroke-width="2" stroke="currentColor" fill="none">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                    <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+                    <path d="M13.5 6.5l4 4" />
+                  </svg>
+                </a>
+              </td>
+            </tr>
+            }
+            @if (!clientService.isLoading() && clientService.clients().length === 0) {
+            <tr>
+              <td colspan="5" class="text-center py-4 text-muted">
+                No hay alumnos registrados.
+              </td>
+            </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
