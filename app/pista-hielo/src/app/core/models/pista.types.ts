@@ -1,19 +1,5 @@
-// src/app/core/models/pista.types.ts
-
 export type ClientCategory = 'ALUMNO' | 'GENERAL' | 'VIP';
 export type TransactionStatus = 'ACT' | 'PAG' | 'CAN'; // Mapeo de PHP Legacy
-
-export interface PhClient {
-  id: number;
-  full_name: string;
-  tutor_name?: string;
-  phone?: string;
-  email?: string;
-  client_category: ClientCategory;
-  is_vip: boolean;
-  membership_expiry?: string;
-  status: string;
-}
 
 export interface PhTransaction {
   id: number;
