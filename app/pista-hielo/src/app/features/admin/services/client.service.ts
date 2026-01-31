@@ -16,7 +16,7 @@ export class ClientService {
   isLoading = signal<boolean>(false);
 
   // --- ACTIONS ---
-  async loadStudents() {
+  async loadStudents(category: string = 'ALUMNO') {
     this.isLoading.set(true);
     try {
       // Petición al Dynamic CRUD Engine de n8n
@@ -24,7 +24,7 @@ export class ClientService {
         this.http.post<{ data: PhClient[] }>(this.apiUrl, {
           operation: 'getall',
           model: 'ph_clients', // Nombre de la tabla en BD
-          where: { status: 'ACT', client_category: 'ALUMNO' }
+          where: { status: 'ACT', client_category: category }
         })
       );
       // Actualizamos el Signal con datos reales
