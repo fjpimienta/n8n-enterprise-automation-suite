@@ -1,8 +1,8 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '@env/environment'; // Asegúrate que tu alias @environments funcione, si no usa '../environments/environment'
-import { PhTransaction } from '@core/models/pista.types';
 import { map } from 'rxjs';
+import { PhTransaction } from '@core/models/transaction.types';
 
 @Injectable({ providedIn: 'root' })
 export class CashRegisterService {
