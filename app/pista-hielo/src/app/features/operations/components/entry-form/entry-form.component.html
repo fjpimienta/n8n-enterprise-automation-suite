@@ -1,8 +1,18 @@
-<div class="container-xl animate-fade-in mt-3">
+<div class="container-xl animate-fade-in mt-3 position-relative">
+
+    @if (!catalogsReady()) {
+    <div class="position-absolute top-0 start-0 w-100 h-100 bg-white d-flex flex-column align-items-center justify-content-center"
+        style="z-index: 2000; opacity: 0.9; min-height: 300px;">
+        <div class="spinner-border text-primary mb-2" role="status"></div>
+        <div class="text-muted fw-bold">Sincronizando catálogos...</div>
+    </div>
+    }
+
     <div class="page-header d-print-none mb-4">
         <div class="row align-items-center">
             <div class="col text-center">
                 <h2 class="page-title d-inline-block">⏱️ Nuevo Ingreso</h2>
+                <div class="text-muted small">Use <kbd>F2</kbd> para guardar, <kbd>ESC</kbd> para limpiar</div>
             </div>
         </div>
     </div>
@@ -16,15 +26,17 @@
                     <ul class="nav nav-pills nav-fill bg-white rounded-3 p-1 w-100" role="tablist"
                         style="box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
                         <li class="nav-item">
-                            <button type="button" class="nav-link fw-bold py-2"
+                            <button type="button" class="nav-link fw-bold py-2 position-relative"
                                 [class.active]="operationMode() === 'FREE'" (click)="setMode('FREE')">
-                                ⛸️ Patinaje Libre
+                                ⛸️ Patinaje Libre <span class="badge bg-dark-lt ms-1"
+                                    style="font-size: 0.6rem">Alt+1</span>
                             </button>
                         </li>
                         <li class="nav-item">
-                            <button type="button" class="nav-link fw-bold py-2"
+                            <button type="button" class="nav-link fw-bold py-2 position-relative"
                                 [class.active]="operationMode() === 'CLASS'" (click)="setMode('CLASS')">
-                                🎓 Clase / Instructor
+                                🎓 Clase / Instructor <span class="badge bg-dark-lt ms-1"
+                                    style="font-size: 0.6rem">Alt+2</span>
                             </button>
                         </li>
                     </ul>
@@ -34,46 +46,55 @@
 
                     @if (operationMode() === 'FREE') {
                     <div class="mb-4 animate-fade-in">
-                        <label class="form-label text-center text-muted small text-uppercase fw-bold mb-3">TIPO DE
+                        <label class="form-label text-center text-muted small text-uppercase fw-bold mb-2">TIPO DE
                             TICKET</label>
-                        <div class="row g-2">
+                        <div class="row g-2 mb-3">
                             <div class="col-6">
                                 <label class="form-selectgroup-item w-100">
-                                    <input type="radio" formControlName="rental_type" value="GENERAL"
+                                    <input type="radio" formControlName="client_category" value="GENERAL"
                                         class="form-selectgroup-input">
                                     <span
-                                        class="form-selectgroup-label d-flex align-items-center justify-content-center p-3 touch-toggle">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24"
-                                            viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
-                                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                            <path d="M15 5l0 2" />
-                                            <path d="M15 11l0 2" />
-                                            <path d="M15 17l0 2" />
-                                            <path
-                                                d="M5 5h14a2 2 0 0 1 2 2v3a2 2 0 0 0 0 4v3a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-3a2 2 0 0 0 0 -4v-3a2 2 0 0 1 2 -2" />
-                                        </svg>
-                                        General
+                                        class="form-selectgroup-label d-flex align-items-center justify-content-center p-2 touch-toggle position-relative">
+                                        General <span class="badge bg-secondary-lt ms-2"
+                                            style="font-size:0.6rem">Alt+G</span>
                                     </span>
                                 </label>
                             </div>
                             <div class="col-6">
                                 <label class="form-selectgroup-item w-100">
-                                    <input type="radio" formControlName="rental_type" value="ALUMNO"
+                                    <input type="radio" formControlName="client_category" value="ALUMNO"
                                         class="form-selectgroup-input">
                                     <span
-                                        class="form-selectgroup-label d-flex align-items-center justify-content-center p-3 touch-toggle">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24"
-                                            viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
-                                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                            <path d="M12 3l-8 4.5l8 4.5l8 -4.5l-8 -4.5" />
-                                            <path d="M4 7.5v5.5" />
-                                            <path d="M12 12l8 -4.5" />
-                                            <path d="M12 12v9" />
-                                            <path d="M12 12l-8 -4.5" />
-                                            <path d="M16 5.25l-8 4.5" />
-                                        </svg>
-                                        Alumno
+                                        class="form-selectgroup-label d-flex align-items-center justify-content-center p-2 touch-toggle position-relative">
+                                        Alumno <span class="badge bg-secondary-lt ms-2"
+                                            style="font-size:0.6rem">Alt+A</span>
                                     </span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <label
+                            class="form-label text-center text-muted small text-uppercase fw-bold mb-2">DURACIÓN</label>
+                        <div class="row g-2">
+                            <div class="col-4">
+                                <label class="form-selectgroup-item w-100">
+                                    <input type="radio" formControlName="duration" [value]="30"
+                                        class="form-selectgroup-input">
+                                    <span class="form-selectgroup-label p-2 touch-toggle">30 min</span>
+                                </label>
+                            </div>
+                            <div class="col-4">
+                                <label class="form-selectgroup-item w-100">
+                                    <input type="radio" formControlName="duration" [value]="60"
+                                        class="form-selectgroup-input">
+                                    <span class="form-selectgroup-label p-2 touch-toggle">1 Hora</span>
+                                </label>
+                            </div>
+                            <div class="col-4">
+                                <label class="form-selectgroup-item w-100">
+                                    <input type="radio" formControlName="duration" [value]="0"
+                                        class="form-selectgroup-input">
+                                    <span class="form-selectgroup-label p-2 touch-toggle">Libre</span>
                                 </label>
                             </div>
                         </div>
@@ -83,40 +104,104 @@
                     @if (operationMode() === 'CLASS') {
                     <div class="mb-4 animate-fade-in">
                         <label
-                            class="form-label text-center text-muted small text-uppercase fw-bold mb-3">SERVICIO</label>
+                            class="form-label text-center text-muted small text-uppercase fw-bold mb-2">SERVICIO</label>
 
-                        <div class="mb-3">
-                            <select class="form-select form-select-lg" formControlName="rental_type">
-                                <option value="INSTRUCTOR">Clase Completa (1 hr)</option>
-                                <option value="MEDIA_INSTRUCTOR">Media Clase (30 min)</option>
-                                <option value="RENTA_HIELO">Renta de Hielo (Privado)</option>
-                            </select>
+                        <div class="row g-2 mb-3">
+                            <div class="col-12">
+                                <label class="form-selectgroup-item w-100">
+                                    <input type="radio" formControlName="rental_type" value="INSTRUCTOR"
+                                        class="form-selectgroup-input">
+                                    <span class="form-selectgroup-label d-flex align-items-center p-2 touch-toggle">
+                                        <span class="p-1 me-2 bg-primary-lt rounded">🎓</span> Clase Completa (1h)
+                                    </span>
+                                </label>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-selectgroup-item w-100">
+                                    <input type="radio" formControlName="rental_type" value="MEDIA_INSTRUCTOR"
+                                        class="form-selectgroup-input">
+                                    <span
+                                        class="form-selectgroup-label d-flex align-items-center justify-content-center p-2 touch-toggle">Media
+                                        Clase</span>
+                                </label>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-selectgroup-item w-100">
+                                    <input type="radio" formControlName="rental_type" value="RENTA_HIELO"
+                                        class="form-selectgroup-input">
+                                    <span
+                                        class="form-selectgroup-label d-flex align-items-center justify-content-center p-2 touch-toggle">Renta
+                                        Hielo</span>
+                                </label>
+                            </div>
                         </div>
 
-                        <label class="form-label text-muted small text-uppercase fw-bold">INSTRUCTOR ASIGNADO</label>
-                        <div class="input-group custom-input-group mb-3">
-                            <span class="input-group-text ps-3">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
-                                    viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
-                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                    <path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" />
-                                    <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
-                                </svg>
-                            </span>
-                            <select class="form-select" formControlName="instructor_id">
-                                <option value="" disabled selected>Seleccione Instructor...</option>
-                                <option value="1">Prof. Alejandro</option>
-                                <option value="2">Prof. Mariana</option>
-                                <option value="3">Staff Pista</option>
-                            </select>
+                        <div class="mb-3 position-relative">
+                            <label class="form-label text-muted small text-uppercase fw-bold">Instructor</label>
+                            <div class="input-group custom-input-group">
+                                <span class="input-group-text ps-3">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
+                                        viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                        <path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" />
+                                        <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+                                    </svg>
+                                </span>
+                                <input type="text" id="inputInstructor" [formControl]="searchInstructorControl"
+                                    class="form-control ps-2" placeholder="Buscar instructor..." autocomplete="off"
+                                    (blur)="onBlur(showInstructorDropdown)"
+                                    (focus)="onFocus(showInstructorDropdown, searchInstructorControl)">
+                            </div>
+                            @if (showInstructorDropdown() && instructorResults().length > 0) {
+                            <div class="dropdown-menu show search-dropdown">
+                                @for (ins of instructorResults(); track ins.id) {
+                                <button type="button" class="dropdown-item py-2" (click)="selectInstructor(ins)">
+                                    <span class="fw-bold">{{ ins.full_name }}</span>
+                                </button>
+                                }
+                            </div>
+                            }
                         </div>
                     </div>
                     }
 
-                    <div class="mb-4">
+                    <div class="mb-4 position-relative">
+                        <label class="form-label text-muted small text-uppercase fw-bold">
+                            {{ operationMode() === 'CLASS' || entryForm.get('client_category')?.value === 'ALUMNO' ?
+                            'Alumno (Requerido)' : 'Cliente (Opcional)' }}
+                        </label>
+                        <div class="input-group custom-input-group">
+                            <span class="input-group-text ps-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="icon text-muted" width="24" height="24"
+                                    viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                    <circle cx="12" cy="7" r="4" />
+                                    <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+                                </svg>
+                            </span>
+                            <input type="text" id="inputClient" [formControl]="searchClientControl"
+                                class="form-control ps-2" placeholder="Buscar cliente..." autocomplete="off"
+                                (blur)="onBlur(showClientDropdown)"
+                                (focus)="onFocus(showClientDropdown, searchClientControl)">
+                        </div>
+
+                        @if (showClientDropdown() && clientResults().length > 0) {
+                        <div class="dropdown-menu show search-dropdown animate-fade-in">
+                            @for (client of clientResults(); track client.id) {
+                            <button type="button" class="dropdown-item py-2" (click)="selectClient(client)">
+                                <div class="d-flex flex-column">
+                                    <span class="fw-bold">{{ client.full_name }}</span>
+                                    <span class="small text-muted">{{ client.client_category }}</span>
+                                </div>
+                            </button>
+                            }
+                        </div>
+                        }
+                    </div>
+
+                    <div class="mb-4 position-relative">
                         <label class="form-label text-muted small text-uppercase fw-bold">No. Patín / ID</label>
-                        <div class="input-group custom-input-group"
-                            [class.is-invalid-border]="isFieldInvalid('skate_number')">
+                        <div class="input-group custom-input-group">
                             <span class="input-group-text ps-3">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="icon text-primary" width="28" height="28"
                                     viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none">
@@ -125,11 +210,24 @@
                                     <path d="M11 9l2 -2" />
                                 </svg>
                             </span>
-                            <input type="number" formControlName="skate_number"
-                                class="form-control form-control-lg fs-2 ps-2" placeholder="00" #skateInput>
+                            <input type="text" id="inputSkate" [formControl]="searchSkateControl"
+                                class="form-control form-control-lg fs-2 ps-2" placeholder="00" autocomplete="off"
+                                #skateInput (blur)="onBlur(showSkateDropdown)"
+                                (focus)="onFocus(showSkateDropdown, searchSkateControl)">
                         </div>
-                        @if (isFieldInvalid('skate_number')) {
-                        <div class="text-danger small mt-1 animate-fade-in fw-bold">Ingrese el número de patín</div>
+
+                        @if (showSkateDropdown() && skateResults().length > 0) {
+                        <div class="dropdown-menu show w-100 mt-1 shadow-lg border-0"
+                            style="max-height: 200px; overflow-y: auto;">
+                            @for (skate of skateResults(); track skate.id) {
+                            <button type="button" class="dropdown-item py-2" (click)="selectSkate(skate)">
+                                <div class="d-flex align-items-center">
+                                    <span class="fw-bold fs-3 me-2 text-primary">#{{ skate.sku || skate.id }}</span>
+                                    <span class="text-muted small text-truncate">{{ skate.name }}</span>
+                                </div>
+                            </button>
+                            }
+                        </div>
                         }
                     </div>
 
@@ -148,7 +246,8 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary w-100 btn-lg touch-button shadow-sm mt-2"
+                    <button type="submit"
+                        class="btn btn-primary w-100 btn-lg touch-button shadow-sm mt-2 position-relative"
                         [disabled]="entryForm.invalid || isLoading()">
                         @if (isLoading()) {
                         <div class="spinner-border spinner-border-sm me-2"></div> Procesando...
@@ -160,7 +259,7 @@
                             <path d="M12 5l0 14" />
                             <path d="M5 12l14 0" />
                         </svg>
-                        INICIAR TIEMPO LIBRE
+                        INICIAR TICKET
                         } @else {
                         <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24"
                             viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
@@ -170,6 +269,8 @@
                         </svg>
                         REGISTRAR CLASE
                         }
+                        <span class="badge bg-white text-primary position-absolute end-0 me-3"
+                            style="top: 50%; transform: translateY(-50%); opacity: 0.8">F2</span>
                         }
                     </button>
 

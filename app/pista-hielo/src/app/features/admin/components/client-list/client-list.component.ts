@@ -15,7 +15,7 @@ export class ClientListComponent implements OnInit {
   public clientService = inject(ClientService);
 
   ngOnInit() {
-    this.clientService.loadStudents();
+    this.clientService.loadStudents('ALUMNO');
   }
 
   // Método helper para devolver clase de color según estatus
