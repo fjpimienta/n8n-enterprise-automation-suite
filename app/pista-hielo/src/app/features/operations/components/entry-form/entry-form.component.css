@@ -174,3 +174,49 @@
 .touch-button:active {
   transform: scale(0.98);
 }
+
+
+/* Asegura que el contenedor de búsqueda sea la referencia para el menú flotante */
+.position-relative {
+    position: relative !important;
+}
+
+/* El menú desplegable debe flotar sobre todo lo demás */
+.search-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    z-index: 1050; /* Más alto que los inputs y botones */
+    max-height: 250px;
+    overflow-y: auto;
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0,0,0,0.1);
+    border-radius: 0 0 8px 8px;
+    background: white;
+}
+
+/* Scrollbar bonita para la lista */
+.search-dropdown::-webkit-scrollbar {
+    width: 6px;
+}
+.search-dropdown::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+.search-dropdown::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+/* Estilo para items */
+.dropdown-item {
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.2s;
+}
+.dropdown-item:last-child {
+    border-bottom: none;
+}
+.dropdown-item:hover {
+    background-color: #f8f9fa;
+}
