@@ -1,14 +1,19 @@
 import { Injectable, signal, inject, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { environment } from '@env/environment';
-import { PhTransaction } from '@core/models/pista.types';
 import { PhClient } from '@core/models/client.types';
 import { PhInstructor } from '@core/models/instructor.types';
 import { firstValueFrom, tap, Observable, of } from 'rxjs';
+import { PhTransaction } from '@core/models/transaction.types';
 
 @Injectable({ providedIn: 'root' })
 export class IceOperationsService {
   private http = inject(HttpClient);
+
+  private PRICES = {
+    GENERAL: { 30: 50, 60: 80, 0: 100, EXTRA: 30 }, // 0 = Libre
+    ALUMNO: { 30: 30, 60: 50, 0: 70, EXTRA: 20 }
+  };
 
   // ==========================================================
   // 1. CONFIGURACIÓN DE ENDPOINTS
@@ -216,4 +221,49 @@ export class IceOperationsService {
       }
     ).pipe(tap(() => this.fetchActiveSkaters()));
   }
+
+  /**
+   * Obtiene el nombre del cliente desde el CACHÉ local usando su ID.
+   * Esto evita hacer JOINs complejos en el backend.
+   */
+  getClientName(clientId?: number): string {
+    if (!clientId) return 'Cliente Anónimo';
+    const client = this.clientsCache().find(c => c.id === clientId);
+    return client ? client.full_name : `Cliente #${clientId}`;
+  }
+
+  /**
+   * Calcula cuánto debe pagar el cliente en este momento exacto.
+   */
+  calculateSessionCost(metadata: any, elapsedMinutes: number) {
+    // Determinar categoría (Fallback a GENERAL si no existe)
+    const rawCat = metadata.client_category || (metadata.rental_type?.includes('ALUMNO') ? 'ALUMNO' : 'GENERAL');
+    const category = rawCat === 'ALUMNO' ? 'ALUMNO' : 'GENERAL';
+
+    const duration = metadata.duration || 0; // 0 = Libre
+    const rates = this.PRICES[category];
+
+    let total = 0;
+    let isOvertime = false;
+
+    // Lógica de Cobro
+    if (duration === 0) {
+      // Tarifa Libre (Pago único)
+      total = rates[0];
+    } else {
+      // Tarifa por Tiempo (30 o 60)
+      total = rates[duration as 30 | 60] || rates[60];
+
+      // Tiempo Extra (Tolerancia 5 min)
+      if (elapsedMinutes > (duration + 5)) {
+        isOvertime = true;
+        const extraMinutes = elapsedMinutes - duration;
+        const extraBlocks = Math.ceil(extraMinutes / 30); // Cobra por cada fracción de 30 min
+        total += (extraBlocks * rates.EXTRA);
+      }
+    }
+
+    return { total, isOvertime, categoryLabel: category };
+  }
+
 }
