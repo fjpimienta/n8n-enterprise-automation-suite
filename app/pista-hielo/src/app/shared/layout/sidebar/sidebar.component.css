@@ -1,0 +1,106 @@
+/* =========================================
+   ESTILOS BASE DEL SIDEBAR
+   ========================================= */
+:host {
+  display: block;
+}
+
+/* Sidebar Normal (Expandido) */
+.navbar-vertical {
+  width: 16rem;
+  /* Ancho fijo */
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 1040;
+  transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  /* Animación más suave */
+  overflow-y: auto;
+  /* Scroll vertical si hace falta */
+  overflow-x: hidden;
+  /* 🚫 ADIÓS SCROLL HORIZONTAL */
+  padding-bottom: 2rem;
+  box-shadow: 1px 0 0 rgba(0, 0, 0, 0.1);
+  /* Línea divisoria sutil */
+}
+
+/* Ajuste del contenedor interno para que no se desborde */
+.navbar-vertical .container-fluid {
+  padding-left: 1rem;
+  padding-right: 1rem;
+  /* Aseguramos que el contenido interno respete el ancho */
+  max-width: 100%;
+}
+
+/* =========================================
+   SCROLLBAR MODERNA (Estilizada)
+   ========================================= */
+/* Webkit (Chrome, Edge, Safari) */
+.navbar-vertical::-webkit-scrollbar {
+  width: 6px;
+  /* Muy delgada */
+}
+
+.navbar-vertical::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.navbar-vertical::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.2);
+  /* Gris sutil */
+  border-radius: 10px;
+}
+
+/* Scrollbar en Modo Oscuro */
+:host-context([data-bs-theme="dark"]) .navbar-vertical::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* =========================================
+   ESTADO COLAPSADO (MINI) 🤏
+   ========================================= */
+.navbar-vertical.collapsed {
+  width: 5rem !important;
+}
+
+/* Ocultar elementos sobrantes con !important para asegurar */
+.navbar-vertical.collapsed .nav-link-title,
+.navbar-vertical.collapsed .badge,
+.navbar-vertical.collapsed .dropdown-toggle::after,
+.navbar-vertical.collapsed .navbar-brand-autodark span,
+.navbar-vertical.collapsed .btn-text {
+  display: none !important;
+  opacity: 0;
+  width: 0;
+}
+
+/* Centrar iconos */
+.navbar-vertical.collapsed .nav-link {
+  justify-content: center;
+  padding: 0.75rem 0;
+}
+
+.navbar-vertical.collapsed .nav-link-icon {
+  margin-right: 0 !important;
+  font-size: 1.5rem;
+}
+
+/* Ajuste específico para los botones del footer en modo colapsado */
+.navbar-vertical.collapsed .btn {
+  padding-left: 0;
+  padding-right: 0;
+  justify-content: center;
+}
+
+.navbar-vertical.collapsed .btn .icon {
+  margin-right: 0 !important;
+}
+
+/* =========================================
+   AJUSTES DARK MODE
+   ========================================= */
+:host-context([data-bs-theme="dark"]) .navbar-vertical {
+  background-color: #1e293b !important;
+  border-right: 1px solid #374151;
+}

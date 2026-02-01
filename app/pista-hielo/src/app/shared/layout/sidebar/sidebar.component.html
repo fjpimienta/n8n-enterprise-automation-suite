@@ -1,0 +1,162 @@
+<aside class="navbar navbar-vertical navbar-expand-lg" [class.navbar-dark]="themeService.currentTheme() === 'dark'"
+    [class.navbar-light]="themeService.currentTheme() === 'light'" [class.show-mobile]="isMobileMenuOpen()"
+    [class.collapsed]="isCollapsed()">
+    <div class="container-fluid">
+
+        <button class="navbar-toggler d-lg-none d-flex align-items-center border-0 bg-transparent ps-0 mb-4 w-100"
+            (click)="closeMenu()">
+            <span class="h3 mb-0">Cerrar Menú</span>
+        </button>
+
+        <div class="d-flex justify-content-between align-items-center mb-3 w-100">
+
+            <h1 class="navbar-brand navbar-brand-autodark d-none d-lg-block mb-0">
+                <a routerLink="/" class="text-decoration-none"
+                    [class.text-white]="themeService.currentTheme() === 'dark'"
+                    [class.text-dark]="themeService.currentTheme() === 'light'">
+                    <span *ngIf="!isCollapsed()">⛸️ PistaHielo</span>
+                    <span *ngIf="isCollapsed()">⛸️</span>
+                </a>
+            </h1>
+
+            <button class="btn btn-ghost-secondary btn-icon btn-sm d-none d-lg-block" (click)="toggleCollapse()"
+                title="Colapsar menú">
+                <lucide-icon [name]="isCollapsed() ? 'chevrons-right' : 'chevrons-left'" class="icon"></lucide-icon>
+            </button>
+
+        </div>
+
+        <div class="collapse navbar-collapse show" id="sidebar-menu">
+            <ul class="navbar-nav pt-lg-3">
+
+                <li class="nav-item">
+                    <div class="nav-link-title text-uppercase small text-muted mt-2 mb-1 ms-2">Operación</div>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" routerLink="/operations/entry" routerLinkActive="active" (click)="closeMenu()">
+                        <span class="nav-link-icon"><svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24"
+                                height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                <path d="M12 5l0 14" />
+                                <path d="M5 12l14 0" />
+                            </svg></span>
+                        <span class="nav-link-title">Nuevo Ingreso</span>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" routerLink="/operations/monitor" routerLinkActive="active"
+                        (click)="closeMenu()">
+                        <span class="nav-link-icon"><svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24"
+                                height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+                                <path
+                                    d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6" />
+                            </svg></span>
+                        <span class="nav-link-title">Monitor en Vivo</span>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <div class="nav-link-title text-uppercase small text-muted mt-4 mb-1 ms-2">Administración</div>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" routerLink="/admin/shift-report" routerLinkActive="active"
+                        (click)="closeMenu()">
+                        <span class="nav-link-icon"><svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24"
+                                height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                <path
+                                    d="M17 8v-3a1 1 0 0 0 -1 -1h-10a2 2 0 0 0 0 4h12a1 1 0 0 1 1 1v3m0 4v3a1 1 0 0 1 -1 1h-12a2 2 0 0 1 -2 -2v-12" />
+                                <path d="M20 12v4h-4a2 2 0 0 1 0 -4h4" />
+                            </svg></span>
+                        <span class="nav-link-title">Corte de Caja</span>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" routerLink="/admin/clients" routerLinkActive="active" (click)="closeMenu()">
+                        <span class="nav-link-icon"><svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24"
+                                height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                <path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" />
+                                <path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                <path d="M21 21v-2a4 4 0 0 0 -3 -3.85" />
+                            </svg></span>
+                        <span class="nav-link-title">Directorio Alumnos</span>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" routerLink="/admin/instructors" routerLinkActive="active" (click)="closeMenu()">
+                        <span class="nav-link-icon"><svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24"
+                                height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                <path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" />
+                                <path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                <path d="M21 21v-2a4 4 0 0 0 -3 -3.85" />
+                            </svg></span>
+                        <span class="nav-link-title">Directorio Instructores</span>
+                    </a>
+                </li>
+            </ul>
+
+            <div class="mt-auto pb-4">
+
+                <div class="px-3 mb-3">
+                    <button class="btn w-100 border-0"
+                        [class.btn-outline-light]="themeService.currentTheme() === 'dark'"
+                        [class.btn-outline-dark]="themeService.currentTheme() === 'light'"
+                        (click)="themeService.toggleTheme()" title="Cambiar Tema">
+
+                        @if (themeService.currentTheme() === 'dark') {
+                        <span class="d-flex align-items-center justify-content-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-sun me-2"
+                                width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+                                fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                <circle cx="12" cy="12" r="4"></circle>
+                                <path
+                                    d="M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7">
+                                </path>
+                            </svg>
+                            <span class="btn-text">Modo Claro</span>
+                        </span>
+                        } @else {
+                        <span class="d-flex align-items-center justify-content-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-moon me-2"
+                                width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+                                fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                <path
+                                    d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z">
+                                </path>
+                            </svg>
+                            <span class="btn-text">Modo Oscuro</span>
+                        </span>
+                        }
+                    </button>
+                </div>
+
+                <div class="px-3"> <button (click)="logout()" class="btn btn-outline-danger w-100">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24"
+                            viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                            <path d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2" />
+                            <path d="M9 12h12l-3 -3" />
+                            <path d="M18 15l3 -3" />
+                        </svg>
+                        <span class="btn-text">Cerrar Sesión</span>
+                    </button>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</aside>
