@@ -2,13 +2,21 @@ import { Component, EventEmitter, Output, OnInit, input, inject, signal } from '
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IceOperationsService } from '@features/operations/services/ice-operation.service';
-import { LucideAngularModule } from 'lucide-angular';
 import { PhTransaction } from '@core/models/transaction.types';
+
+// 1. SOLO EL MÓDULO
+import { LucideAngularModule } from 'lucide-angular';
 
 @Component({
   selector: 'app-checkout-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, LucideAngularModule],
+  // 2. IMPORTS SIMPLE
+  imports: [
+    CommonModule, 
+    FormsModule, 
+    LucideAngularModule 
+  ],
+  // 3. SIN PROVIDERS
   templateUrl: './checkout-modal.component.html',
   styles: [`
     .modal-blur {
@@ -24,21 +32,15 @@ import { PhTransaction } from '@core/models/transaction.types';
 export class CheckoutModalComponent implements OnInit {
   private iceService = inject(IceOperationsService);
 
-  // Input requerido (Signal)
   data = input.required<PhTransaction>({ alias: 'transaction' });
-
   @Output() onClose = new EventEmitter<void>();
   @Output() onConfirm = new EventEmitter<any>();
 
-  // Estados Reactivos
   zamboniApplied = signal(false);
   paymentMethod = signal<'CASH' | 'CARD' | 'TRANSFER'>('CASH');
 
-  // --- VARIABLES CON NOMBRES QUE TU HTML ESPERA ---
-  public currentTime: string = '';      // Antes: endTime
-  public minutesElapsed: number = 0;    // Antes: rawElapsedMinutes
-
-  // Signals calculados (Precios)
+  public currentTime: string = '';
+  public minutesElapsed: number = 0;
   public finalMinutes = signal(0);
   public finalAmount = signal(0);
 
@@ -48,22 +50,16 @@ export class CheckoutModalComponent implements OnInit {
 
   initializeModal() {
     const tx = this.data();
-
-    // 1. Hora de Salida (currentTime en tu HTML)
     const now = new Date();
-    this.currentTime = now.toTimeString().split(' ')[0].substring(0, 5); // HH:mm
+    this.currentTime = now.toTimeString().split(' ')[0].substring(0, 5);
 
-    // 2. Calcular tiempo real
     const startTimeStr = tx.start_time || '00:00';
     const [startH, startM] = startTimeStr.split(':').map(Number);
-
     const startDate = new Date();
     startDate.setHours(startH, startM, 0);
 
     const diffMs = now.getTime() - startDate.getTime();
-    this.minutesElapsed = Math.max(0, Math.floor(diffMs / 60000)); // minutesElapsed en tu HTML
-
-    // 3. Calcular montos iniciales
+    this.minutesElapsed = Math.max(0, Math.floor(diffMs / 60000));
     this.recalculateTotals();
   }
 
@@ -77,19 +73,15 @@ export class CheckoutModalComponent implements OnInit {
   }
 
   recalculateTotals() {
-    // Si hay Zamboni, descontamos 15 min
     const adjustedMinutes = this.zamboniApplied()
       ? Math.max(0, this.minutesElapsed - 15)
       : this.minutesElapsed;
 
     this.finalMinutes.set(adjustedMinutes);
-
-    // Usamos el servicio para calcular precio exacto
     const costInfo = this.iceService.calculateSessionCost(this.data().metadata, adjustedMinutes);
     this.finalAmount.set(costInfo.total);
   }
 
-  // --- FUNCIÓN CON NOMBRE QUE TU HTML ESPERA ---
   confirmCheckout() {
     const payload = {
       transactionId: this.data().id,
