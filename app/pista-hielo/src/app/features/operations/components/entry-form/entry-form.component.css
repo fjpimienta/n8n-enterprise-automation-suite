@@ -178,45 +178,114 @@
 
 /* Asegura que el contenedor de búsqueda sea la referencia para el menú flotante */
 .position-relative {
-    position: relative !important;
+  position: relative !important;
 }
 
 /* El menú desplegable debe flotar sobre todo lo demás */
 .search-dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    width: 100%;
-    z-index: 1050; /* Más alto que los inputs y botones */
-    max-height: 250px;
-    overflow-y: auto;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    border: 1px solid rgba(0,0,0,0.1);
-    border-radius: 0 0 8px 8px;
-    background: white;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  z-index: 1050;
+  /* Más alto que los inputs y botones */
+  max-height: 250px;
+  overflow-y: auto;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 0 0 8px 8px;
+  background: white;
 }
 
 /* Scrollbar bonita para la lista */
 .search-dropdown::-webkit-scrollbar {
-    width: 6px;
+  width: 6px;
 }
+
 .search-dropdown::-webkit-scrollbar-track {
-    background: #f1f1f1;
+  background: #f1f1f1;
 }
+
 .search-dropdown::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 4px;
+  background: #c1c1c1;
+  border-radius: 4px;
 }
 
 /* Estilo para items */
 .dropdown-item {
-    cursor: pointer;
-    border-bottom: 1px solid #f0f0f0;
-    transition: background-color 0.2s;
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s;
 }
+
 .dropdown-item:last-child {
-    border-bottom: none;
+  border-bottom: none;
 }
+
 .dropdown-item:hover {
-    background-color: #f8f9fa;
+  background-color: #f8f9fa;
+}
+
+/* ============================================================
+   🌙 CORRECCIONES PARA DARK MODE (Angular Safe)
+   ============================================================ */
+
+/* 1. Fondo y Borde del Menú Desplegable */
+:host-context([data-bs-theme="dark"]) .search-dropdown {
+  background-color: #1f2937;
+  /* Gris oscuro azulado (Slate 800) */
+  border: 1px solid #374151;
+  /* Borde sutil */
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
+  /* Sombra profunda */
+}
+
+/* 2. Color del Texto de los Items */
+:host-context([data-bs-theme="dark"]) .dropdown-item {
+  color: #f3f4f6;
+  /* Blanco casi puro */
+  border-bottom: 1px solid #374151;
+  /* Separador oscuro */
+  background-color: #1f2937;
+  /* Asegurar fondo base */
+}
+
+/* 3. Efecto Hover (Al pasar el mouse o foco) */
+:host-context([data-bs-theme="dark"]) .dropdown-item:hover,
+:host-context([data-bs-theme="dark"]) .dropdown-item:focus {
+  background-color: #2563eb !important;
+  /* Azul intenso */
+  color: #ffffff !important;
+  border-color: #2563eb;
+}
+
+/* 4. Corrección de textos secundarios (Muted) dentro del item */
+:host-context([data-bs-theme="dark"]) .dropdown-item .text-muted {
+  color: #94a3b8 !important;
+  /* Gris claro legible */
+}
+
+/* Al hacer hover, el texto secundario se vuelve blanco para contraste */
+:host-context([data-bs-theme="dark"]) .dropdown-item:hover .text-muted,
+:host-context([data-bs-theme="dark"]) .dropdown-item:focus .text-muted {
+  color: #e2e8f0 !important;
+  /* Blanco suave */
+}
+
+/* 5. Scrollbar Oscuro */
+:host-context([data-bs-theme="dark"]) .search-dropdown::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
+:host-context([data-bs-theme="dark"]) .search-dropdown::-webkit-scrollbar-thumb {
+  background-color: #475569;
+  border-radius: 4px;
+  border: 2px solid #1f2937;
+}
+
+/* 6. Estado "Sin Resultados" o "Cargando" */
+:host-context([data-bs-theme="dark"]) .dropdown-item.disabled {
+  color: #94a3b8;
+  background-color: transparent;
+  pointer-events: none;
 }
