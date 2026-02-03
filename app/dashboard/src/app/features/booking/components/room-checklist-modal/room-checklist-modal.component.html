@@ -1,0 +1,203 @@
+<div class="modal-backdrop fade show"></div>
+<div class="modal modal-blur fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-teal-lt">
+                <h5 class="modal-title fw-bold">
+                    <i class="ti ti-clipboard-check me-2"></i>
+                    Rondín: Habitación {{ room().room_number }}
+                </h5>
+                <button type="button" class="btn-close" (click)="onClose.emit()"></button>
+            </div>
+
+            <div class="modal-body p-4 scroller">
+                <div class="d-flex justify-content-end mb-3">
+                    <button class="btn btn-sm btn-ghost-primary" (click)="markAll(true)">Marcar todo OK</button>
+                </div>
+
+                <div class="hr-text text-primary mt-0 mb-3">🏠 Estado General</div>
+                <div class="row g-3 mb-4">
+                    <div class="col-6 col-md-4"> <label class="form-selectgroup-item w-100">
+                            <input type="checkbox" class="form-selectgroup-input"
+                                [(ngModel)]="checklist.general.cama_tendida">
+                            <span class="form-selectgroup-label d-flex align-items-center p-2">
+                                <span class="me-2">🛏️</span> Cama Lista
+                            </span>
+                        </label>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <label class="form-selectgroup-item w-100">
+                            <input type="checkbox" class="form-selectgroup-input"
+                                [(ngModel)]="checklist.general.limpieza_pisos">
+                            <span class="form-selectgroup-label d-flex align-items-center p-2">
+                                <span class="me-2">✨</span> Pisos Limpios
+                            </span>
+                        </label>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-selectgroup-item w-100">
+                            <input type="checkbox" class="form-selectgroup-input"
+                                [(ngModel)]="checklist.general.techos_esquinas">
+                            <span class="form-selectgroup-label d-flex align-items-center p-2">
+                                <span class="me-2">🕸️</span> Techos/Sin Telarañas
+                            </span>
+                        </label>
+                    </div>
+                    <div class="col-6 col-md-6">
+                        <label class="form-selectgroup-item w-100">
+                            <input type="checkbox" class="form-selectgroup-input"
+                                [(ngModel)]="checklist.general.botes_basura">
+                            <span class="form-selectgroup-label d-flex align-items-center p-2">
+                                <span class="me-2">🗑️</span> Basura 0
+                            </span>
+                        </label>
+                    </div>
+                    <div class="col-6 col-md-6">
+                        <label class="form-selectgroup-item w-100">
+                            <input type="checkbox" class="form-selectgroup-input"
+                                [(ngModel)]="checklist.general.aroma_agradable">
+                            <span class="form-selectgroup-label d-flex align-items-center p-2">
+                                <span class="me-2">🌸</span> Aroma
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="hr-text text-info mb-3">🚿 Baño & Instalaciones</div>
+                <div class="row g-3 mb-4">
+                    <div class="col-6 col-md-4">
+                        <label class="form-selectgroup-item w-100">
+                            <input type="checkbox" class="form-selectgroup-input"
+                                [(ngModel)]="checklist.bano.limpieza_wc">
+                            <span class="form-selectgroup-label d-flex align-items-center p-2">
+                                <span class="me-2">🚽</span> WC Limpio
+                            </span>
+                        </label>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <label class="form-selectgroup-item w-100">
+                            <input type="checkbox" class="form-selectgroup-input"
+                                [(ngModel)]="checklist.bano.toallas_completas">
+                            <span class="form-selectgroup-label d-flex align-items-center p-2">
+                                <span class="me-2">🧖</span> Toallas (Jgo)
+                            </span>
+                        </label>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label class="form-selectgroup-item w-100">
+                            <input type="checkbox" class="form-selectgroup-input"
+                                [(ngModel)]="checklist.bano.amenidades_jabones">
+                            <span class="form-selectgroup-label d-flex align-items-center p-2">
+                                <span class="me-2">🧼</span> Jabón/Shampoo
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="col-4">
+                        <label class="form-selectgroup-item w-100">
+                            <input type="checkbox" class="form-selectgroup-input"
+                                [(ngModel)]="checklist.bano.agua_caliente">
+                            <span class="form-selectgroup-label d-flex align-items-center p-2 text-truncate">
+                                <span class="me-2">🔥</span> Agua Caliente
+                            </span>
+                        </label>
+                    </div>
+                    <div class="col-4">
+                        <label class="form-selectgroup-item w-100">
+                            <input type="checkbox" class="form-selectgroup-input"
+                                [(ngModel)]="checklist.bano.flujo_agua">
+                            <span class="form-selectgroup-label d-flex align-items-center p-2 text-truncate">
+                                <span class="me-2">🚰</span> Flujo Grifos
+                            </span>
+                        </label>
+                    </div>
+                    <div class="col-4">
+                        <label class="form-selectgroup-item w-100">
+                            <input type="checkbox" class="form-selectgroup-input"
+                                [(ngModel)]="checklist.bano.sin_fugas">
+                            <span class="form-selectgroup-label d-flex align-items-center p-2 text-truncate">
+                                <span class="me-2">🔧</span> Sin Fugas
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="hr-text text-warning mb-3">⚡ Equipamiento</div>
+                <div class="row g-3 mb-4">
+                    <div class="col-6 col-md-3">
+                        <label class="form-selectgroup-item w-100">
+                            <input type="checkbox" class="form-selectgroup-input"
+                                [(ngModel)]="checklist.equipamiento.control_tv_baterias">
+                            <span class="form-selectgroup-label d-flex align-items-center p-2">
+                                <span class="me-2">🔋</span> Pilas Control
+                            </span>
+                        </label>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-selectgroup-item w-100">
+                            <input type="checkbox" class="form-selectgroup-input"
+                                [(ngModel)]="checklist.equipamiento.tv_enciende">
+                            <span class="form-selectgroup-label d-flex align-items-center p-2">
+                                <span class="me-2">📺</span> TV Señal
+                            </span>
+                        </label>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-selectgroup-item w-100">
+                            <input type="checkbox" class="form-selectgroup-input"
+                                [(ngModel)]="checklist.equipamiento.ac_funcional">
+                            <span class="form-selectgroup-label d-flex align-items-center p-2">
+                                <span class="me-2">❄️</span> Aire Acond.
+                            </span>
+                        </label>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <label class="form-selectgroup-item w-100">
+                            <input type="checkbox" class="form-selectgroup-input"
+                                [(ngModel)]="checklist.equipamiento.luces_funcionan">
+                            <span class="form-selectgroup-label d-flex align-items-center p-2">
+                                <span class="me-2">💡</span> Iluminación OK
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="hr-text text-danger mb-3">🛡️ Seguridad</div>
+                <div class="row g-3 mb-4">
+                    <div class="col-6">
+                        <label class="form-selectgroup-item w-100">
+                            <input type="checkbox" class="form-selectgroup-input"
+                                [(ngModel)]="checklist.seguridad.llaves_tarjeta">
+                            <span class="form-selectgroup-label d-flex align-items-center p-2">
+                                <span class="me-2">🔑</span> Llaves/Tarj. en Cuarto
+                            </span>
+                        </label>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-selectgroup-item w-100">
+                            <input type="checkbox" class="form-selectgroup-input"
+                                [(ngModel)]="checklist.seguridad.puerta_cierra">
+                            <span class="form-selectgroup-label d-flex align-items-center p-2">
+                                <span class="me-2">🚪</span> Chapa/Seguro
+                            </span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Observaciones / Fallas encontradas</label>
+                    <textarea class="form-control" rows="3" [(ngModel)]="checklist.observaciones"
+                        placeholder="Ej: Falta control del A/C, Foco parpadea..."></textarea>
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-ghost-secondary px-4" (click)="onClose.emit()">Cancelar</button>
+                <button type="button" class="btn btn-teal ms-auto px-4" (click)="saveChecklist()">
+                    <i class="ti ti-check me-2"></i> Guardar Inspección
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
