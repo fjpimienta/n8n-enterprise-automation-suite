@@ -94,16 +94,16 @@ npm install && ng serve
 ### 📚 Documentación Técnica por Módulo
 
 | ID | Módulo / Servicio | Función Principal | Stack & Integraciones | Documentación |
-| --- | --- | --- | --- | --- |
-| `01` | **Auth JWT Gateway** | Middleware de seguridad. | `Node.js` `JWT` | [📖 Ver Docs](https://www.google.com/search?q=workflows/01-auth-jwt-gateway/README.md) |
-| `02` | **Contact & CRM Bridge** | Captura de leads Hosting3m. | `Webhook` `Postgres` | [📖 Ver Docs](https://www.google.com/search?q=workflows/02-leads-contact/README.md) |
-| `03` | **RAG News Intelligence** | Curaduría vectorial. | `OpenAI` `PgVector` | [📖 Ver Docs](https://www.google.com/search?q=workflows/03-rag-news-intelligence/README.md) |
-| `04` | **Omnichannel Social** | Orquestador de redes. | `Twitter API` `LinkedIn` | [📖 Ver Docs](https://www.google.com/search?q=workflows/04-omnichannel-social/README.md) |
-| `05` | **AI WhatsApp Agent** | Asistente con memoria RAG. | `WhatsApp` `Postgres` | [📖 Ver Docs](https://www.google.com/search?q=workflows/05-ai-whatsapp-agent/README.md) |
-| `06` | **Dynamic CRUD Engine** | Backend dinámico SQL/JSONB. | `JS Logic` `JWT` | [📖 Ver Docs](https://www.google.com/search?q=workflows/06-dynamic-crud-engine/README.md) |
-| `07` | **MCP Server** | IA Context Protocol Hotel. | `MCP` `Postgres` `OpenAI` | [📖 Ver Docs](https://www.google.com/search?q=workflows/07-MCP-server-hotel/README.md) |
-| `08` | **AdminHotel Dashboard** | Frontend Hotelero (v0.7). | `Angular 21` `Tabler` | [📖 Ver Docs](https://www.google.com/search?q=app/dashboard/README.md) |
-| `09` | **PistaHielo Ops Center** | Frontend Pista Hielo (v0.6). | `Angular 21` `Signals` | [📖 Ver Docs](https://www.google.com/search?q=app/pista-hielo/README.md) |
+| :---| :--- | :--- | :--- | :---: |
+| `01`|**Auth JWT Gateway**| Middleware de seguridad. Valida tokens y protege webhooks públicos.| `Node.js` `Crypto` `JWT` | [📖 Ver Docs](workflows/01-auth-jwt-gateway/v3/README.md)|
+| `02`|**Contact & CRM Bridge**|Sistema de captura de leads de Hosting3m.|`Webhook` `JWT` `CRUD` `Mail` `Postgres`|[📖 Ver Docs](workflows/02-leads-contact/v3/README.md)|
+| `03`|**RAG News Intelligence**|Curaduría de noticias automatizada con análisis de sentimiento vectorial.|`Scraper` `OpenAI` `Pinecone/PgVector`|[📖 Ver Docs](workflows/03-rag-news-intelligence/v3/README.md)|
+| `04`|**Omnichannel Social**|Orquestador de publicación de contenido en redes sociales.|`HTTP Request` `Twitter API` `LinkedIn`|[📖 Ver Docs](workflows/04-omnichannel-social/v3/README.md)|
+| `05`|**AI WhatsApp Agent**|Asistente conversacional con memoria a largo plazo (RAG).|`WhatsApp` `Postgres` `OpenAI`|[📖 Ver Docs](workflows/05-ai-whatsapp-agent/v3/README.md)|
+| `06`|**Dynamic CRUD Engine**|Capa de abstracción para gestión de entidades dinámica.|`Postgre` `JS Logic` `JWT`|[📖 Ver Docs](workflows/06-dynamic-crud-engine/v3/README.md)|
+| `07`|**MCP Server**| MCP Server: Hotel Management Core|`MCP` `Postgres` `OpenAI`|[📖 Ver Docs](workflows/07-MCP-server-hotel/v2/README.md)|
+| `08`|**AdminHotel Dashboard**|Frontend administrativo para gestión de reservas y habitaciones.|`Angular 21` `Tabler` `Vitest`|[📖 Ver Docs](app/dashboard/README.md)|
+| `09`|**PistaHielo Ops Center**|PWA para gestión de rentas por tiempo y cortes de caja.|`Angular 21` `Signals` `PWA`|[📖 Ver Docs](app/pista-hielo/README.md)|
 
 ---
 
