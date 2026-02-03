@@ -21,5 +21,6 @@ export class RoomDetailModalComponent {
   @Output() onMaintenance = new EventEmitter<void>();
   @Output() onFinishMaintenance = new EventEmitter<void>();
   @Output() onMarkAsClean = new EventEmitter<void>();
+  @Output() onOpenChecklist = new EventEmitter<void>();
 
 }

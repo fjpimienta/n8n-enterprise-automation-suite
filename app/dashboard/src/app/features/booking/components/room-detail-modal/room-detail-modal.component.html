@@ -6,7 +6,7 @@
                 <h5 class="modal-title">Habitación {{ room().room_number }}</h5>
                 <button type="button" class="btn-close" (click)="onClose.emit()"></button>
             </div>
-            
+
             <div class="modal-body p-4">
 
                 <div class="row mb-3">
@@ -25,12 +25,13 @@
                 </div>
 
                 @if (activeBooking()) {
-                <div class="card border-0 mb-3" [ngClass]="room().status === 'occupied' ? 'bg-secondary-lt' : 'bg-info-lt'">
+                <div class="card border-0 mb-3"
+                    [ngClass]="room().status === 'occupied' ? 'bg-secondary-lt' : 'bg-info-lt'">
                     <div class="card-body p-3">
                         <div class="small text-muted mb-1">
                             {{ room().status === 'occupied' ? 'HUÉSPED ACTUAL' : 'PRÓXIMA LLEGADA (RESERVA)' }}
                         </div>
-                        
+
                         <div class="fw-bold h4 mb-0">
                             {{ activeBooking().hotel_guests_data?.full_name }}
 
@@ -76,6 +77,7 @@
                     }
 
                     @if (room().status === 'available' && room().cleaning_status !== 'dirty') {
+
                     @if (activeBooking()) {
                     <button class="btn btn-primary btn-lg d-flex align-items-center justify-content-between px-4"
                         (click)="onCheckin.emit()">
@@ -107,7 +109,28 @@
                     </button>
                     }
 
-                    } @else if (room().status === 'occupied') {
+                    <button
+                        class="btn btn-outline-teal btn-lg d-flex align-items-center justify-content-between px-4 mt-2"
+                        (click)="onOpenChecklist.emit()">
+                        <div class="text-start">
+                            <div class="fw-bold">📋 Realizar Rondín</div>
+                            <div class="small opacity-75">Inspección de calidad</div>
+                        </div>
+                        <i class="ti ti-list-check fs-2"></i>
+                    </button>
+
+                    <button
+                        class="btn btn-outline-warning btn-lg d-flex align-items-center justify-content-between px-4"
+                        (click)="onMaintenance.emit()">
+                        <div class="text-start">
+                            <div class="fw-bold">🛠 Reportar Falla</div>
+                            <div class="small opacity-75">Mantenimiento</div>
+                        </div>
+                    </button>
+
+                    }
+
+                    @else if (room().status === 'occupied') {
                     @if (activeBooking()?.payment_status !== 'paid') {
                     <button class="btn btn-success btn-lg d-flex align-items-center justify-content-between px-4 mb-2"
                         (click)="onPay.emit(activeBooking())">
@@ -123,17 +146,6 @@
                         <div class="text-start">
                             <div class="fw-bold">Realizar Check-out</div>
                             <div class="small opacity-75">Finalizar estancia</div>
-                        </div>
-                    </button>
-                    }
-
-                    @if (room().status === 'available') {
-                    <button
-                        class="btn btn-outline-warning btn-lg d-flex align-items-center justify-content-between px-4"
-                        (click)="onMaintenance.emit()">
-                        <div class="text-start">
-                            <div class="fw-bold">🛠 Reportar Falla</div>
-                            <div class="small opacity-75">Mantenimiento</div>
                         </div>
                     </button>
                     }

@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Company, Guest, Room, User } from '@core/models/hotel.types';
 import { environment } from '@env/environment';
-import { lastValueFrom } from 'rxjs';
+import { lastValueFrom, map, Observable } from 'rxjs';
 import { BookingService } from '@features/booking/services/booking.service';
 import { AdminService } from '@features/admin/services/admin.service';
 
@@ -46,7 +46,7 @@ export class HotelService {
   selectUser(user: User | null) {
     this.selectedUser.set(user);
   }
-  
+
   /** Selecciona un huésped para editarlo */
   selectGuest(guest: Guest | null) {
     this.selectedGuest.set(guest);
@@ -78,6 +78,83 @@ export class HotelService {
         }
       }, { headers: this.adminService.getAuthHeaders() })
     );
+  }
+
+  /**
+   * ✅ CORREGIDO: Usamos POST con el formato que tu n8n espera (CRUD V3)
+   */
+  getTodayChecklist(roomId: number): Observable<any | null> {
+    const today = new Date().toISOString().split('T')[0];
+
+    // Estructura idéntica a la que usas para 'hotel_bookings'
+    const payload = {
+      entity: "hotel_room_inspections",
+      table_name: "hotel_room_inspections",
+      operation: "getall", // Usamos getall + filtros para buscar
+      action: "list",
+      filters: {
+        room_id: roomId,
+        inspection_date: today
+      }
+    };
+
+    // Apuntamos al webhook base pasando el modelo en la URL si es necesario, 
+    // o simplemente al endpoint principal.
+    // Basado en tu URL: .../crud/v3/:model
+    return this.http.post<any>(`${this.apiUrl_crud}/hotel_room_inspections`, payload).pipe(
+      map((response: any) => {
+        const data = response.data || response;
+
+        if (Array.isArray(data) && data.length > 0) {
+          return data[0];
+        }
+        return null;
+      })
+    );
+  }
+
+  /**
+   * ✅ Guardar Rondín (Create)
+   */
+  saveChecklist(roomId: number, checklist: any, observaciones: string): Observable<any> {
+    const payload = {
+      entity: "hotel_room_inspections",
+      table_name: "hotel_room_inspections",
+      operation: "insert", // Mantenemos "insert" para que entre en el case correcto
+      action: "insert",
+
+      // ✅ CORRECCIÓN: Cambiamos 'data' por 'fields'
+      // Así el script de n8n sabrá exactamente qué insertar.
+      fields: {
+        room_id: roomId,
+        checklist_data: checklist,
+        observaciones: observaciones || "",
+        inspection_date: new Date().toISOString().split('T')[0],
+        id_company: 1
+      }
+    };
+
+    return this.http.post(`${this.apiUrl_crud}/hotel_room_inspections`, payload);
+  }
+
+  /**
+   * Actualiza un rondín existente (UPDATE)
+   */
+  updateChecklist(inspectionId: number, checklist: any, observaciones: string): Observable<any> {
+    const payload = {
+      entity: "hotel_room_inspections",
+      table_name: "hotel_room_inspections",
+      operation: "update", // 👈 La clave es cambiar a 'update'
+      action: "update",
+
+      fields: {
+        id: inspectionId,
+        checklist_data: checklist,
+        observaciones: observaciones || ""
+      }
+    };
+
+    return this.http.post(`${this.apiUrl_crud}/hotel_room_inspections`, payload);
   }
 
 }
