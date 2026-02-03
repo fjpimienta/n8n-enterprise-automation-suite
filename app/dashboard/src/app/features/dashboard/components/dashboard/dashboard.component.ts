@@ -18,6 +18,7 @@ import { ReservationManagerComponent } from '@features/booking/components/reserv
 import { SkeletonComponent } from '@shared/ui/loader/skeleton/skeleton.component';
 import { GuestFormModalComponent } from '@features/admin/components/guest-form-modal/guest-form-modal.component';
 import { GuestListComponent } from '@features/admin/components/guest-list/guest-list.component';
+import { RoomChecklistModalComponent } from '@features/booking/components/room-checklist-modal/room-checklist-modal.component';
 // Servicios
 import { AuthService } from '@core/services/auth.service';
 import { HotelService } from '@features/dashboard/services/hotel.service';
@@ -29,7 +30,7 @@ import { lastValueFrom } from 'rxjs';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, CheckinFormComponent, CheckoutFormComponent, HeaderComponent, RoomCardComponent, DailyReportModalComponent, RoomFiltersComponent, RoomDetailModalComponent, UserFormModalComponent, UserListComponent, GuestFormModalComponent, GuestListComponent, SkeletonComponent, ReservationManagerComponent],
+  imports: [CommonModule, FormsModule, CheckinFormComponent, CheckoutFormComponent, HeaderComponent, RoomCardComponent, DailyReportModalComponent, RoomFiltersComponent, RoomDetailModalComponent, UserFormModalComponent, UserListComponent, GuestFormModalComponent, GuestListComponent, SkeletonComponent, ReservationManagerComponent, RoomChecklistModalComponent],
   templateUrl: './dashboard.component.html'
 })
 export class DashboardComponent {
@@ -43,7 +44,7 @@ export class DashboardComponent {
 
   // private readonly N8N_WHATSAPP_WEBHOOK = 'https://n8n.hosting3m.com/webhook/8cd04cee-6a56-4989-b36c-caf9473d7535/webhook';
 
-  viewMode = signal<'details' | 'checkin' | 'checkout_validation' | 'guest_mgmt' | 'user_mgmt' | 'reservation'>('details');
+  viewMode = signal<'details' | 'checkin' | 'checkout_validation' | 'guest_mgmt' | 'user_mgmt' | 'reservation' | 'checklist'>('details');
   reportFilter = signal<'day' | 'week' | 'month' | 'year'>('day');
   isUserModalOpen = signal(false);
   isGuestModalOpen = signal(false);
@@ -531,4 +532,27 @@ export class DashboardComponent {
     return this.expandedGroups().has(groupKey);
   }
 
+  handleChecklistSave(apiResponse: any) {
+    // 1. CORRECCIÓN: Validamos que apiResponse no sea null/undefined antes de leer .error
+    if (!apiResponse || apiResponse.error) {
+      const msg = apiResponse?.message || 'Error desconocido del servidor';
+      alert('❌ Error al guardar el rondín: ' + msg);
+      return;
+    }
+
+    // 2. Extraer los datos reales
+    const savedRecord = apiResponse.data && apiResponse.data.length > 0 ? apiResponse.data[0] : null;
+
+    if (savedRecord) {
+      const obs = savedRecord.observaciones || savedRecord.checklist_data?.observaciones;
+      const statusText = obs ? '⚠️ Con Observaciones' : '✅ Todo OK';
+      alert(`Rondín guardado correctamente.\nEstado: ${statusText}`);
+    } else {
+      // Si llegó hasta aquí con éxito pero sin data devuelta (a veces pasa en inserts)
+      alert('✅ Rondín registrado con éxito.');
+    }
+
+    // 3. Cerrar
+    this.viewMode.set('details');
+  }
 }

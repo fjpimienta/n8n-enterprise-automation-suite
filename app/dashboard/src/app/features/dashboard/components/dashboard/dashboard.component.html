@@ -138,8 +138,8 @@
 <app-room-detail-modal [room]="hotelService.selectedRoom()" [activeBooking]="activeBooking"
   (onClose)="hotelService.clearSelection()" (onCheckin)="viewMode.set('checkin')" (onMarkAsClean)="markRoomAsClean()"
   (onReservations)="viewMode.set('reservation')" (onCheckout)="startCheckoutProcess()" (onPay)="markAsPaid($event)"
-  (onMaintenance)="reportMaintenance()" (onFinishMaintenance)="handleFinishMaintenance()">
-</app-room-detail-modal>
+  (onMaintenance)="reportMaintenance()" (onFinishMaintenance)="handleFinishMaintenance()"
+  (onOpenChecklist)="viewMode.set('checklist')"> </app-room-detail-modal>
 }
 
 <app-user-form-modal [isOpen]="isUserModalOpen()" [selectedUser]="hotelService.selectedUser()" [(userData)]="tempUser"
@@ -154,3 +154,9 @@
   [reportData]="dailyReport" [currentFilter]="reportFilter()" [roomsList]="bookingService.rooms()"
   (onClose)="showReportModal = false" (onFilterChange)="handleReportFilterChange($event)">
 </app-daily-report-modal>
+
+@if (viewMode() === 'checklist') {
+<app-room-checklist-modal [room]="hotelService.selectedRoom()" (onClose)="viewMode.set('details')"
+  (onSave)="handleChecklistSave($event)">
+</app-room-checklist-modal>
+}
