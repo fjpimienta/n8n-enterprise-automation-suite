@@ -295,7 +295,6 @@ export class EntryFormComponent implements AfterViewInit {
           // CREAR CLIENTE NUEVO AL VUELO
           const newClient = await this.iceService.createQuickClient(typedName);
           finalClientId = newClient.id;
-          console.log('✨ Nuevo cliente creado al vuelo:', newClient.full_name);
         }
       }
       // ---------------------------------------------------------

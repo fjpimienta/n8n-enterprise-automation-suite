@@ -1,25 +1,30 @@
-import { ApplicationConfig, importProvidersFrom, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { ApplicationConfig, importProvidersFrom } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
-import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
+// 1. IMPORTANTE: Agregar 'withInterceptors' aquí
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
-import { RefreshCw, Snowflake } from 'lucide-angular';
+
+// 2. IMPORTANTE: Importar tu interceptor (ajusta la ruta si es diferente, usé la de tu versión anterior)
 import { authInterceptor } from '@core/auth/auth-interceptor';
+
 import {
   LucideAngularModule,
   ChevronsLeft, ChevronsRight, X, Sun, Moon,
   Monitor, FileText, Users, LogOut, Plus, Briefcase,
-  Banknote, CreditCard, Check
+  Banknote, CreditCard, Check,
+  RefreshCw
 } from 'lucide-angular';
+
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideBrowserGlobalErrorListeners(),
     provideRouter(routes),
-    provideClientHydration(withEventReplay()),
+
+    // 3. AQUÍ ESTABA EL ERROR: Se agrega withInterceptors para activar el token
     provideHttpClient(
       withFetch(),
       withInterceptors([authInterceptor])
     ),
+
     importProvidersFrom(LucideAngularModule.pick({
       ChevronsLeft,
       ChevronsRight,
@@ -34,7 +39,8 @@ export const appConfig: ApplicationConfig = {
       Briefcase,
       Banknote,
       CreditCard,
-      Check
+      Check,
+      RefreshCw
     }))
   ]
 };

@@ -126,7 +126,6 @@ export class IceMonitorComponent implements OnInit, OnDestroy {
     this.closeModal();
     this.iceService.closeSession(result).subscribe({
       next: () => {
-        console.log('✅ Cobro registrado');
         this.refresh(); // Actualizar lista inmediatamente
       },
       error: (err) => {
