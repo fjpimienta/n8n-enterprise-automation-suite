@@ -3,6 +3,20 @@ Todos los cambios notables en el módulo **PistaHielo Operations Center** (Módu
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.6.0] - 2026-02-03
+### Fixed
+- **Checkout "Midnight Bug":** Corrección crítica en la lógica de cálculo de tiempo. Ahora detecta correctamente si un turno cruzó la medianoche (ej: entrada 23:00, salida 00:30) evitando el error de "0 minutos".
+- **n8n Reporting:** Parche en el nodo Javascript "Build Query" en n8n. Se corrigió una variable (`val` vs `value`) que impedía filtrar reportes por fecha exacta.
+- **Icon Crash:** Solución definitiva al error `Icon not provided`. Se migró a una estrategia de `Global Providers` en `app.config.ts`.
+- **Layout Overflow:** Eliminación del scroll horizontal no deseado en el sidebar.
+
+### Changed
+- **Checkout Engine:** Refactorización completa a **Reactive Signals**. El modal ahora recalcula la hora actual automáticamente al abrirse, sin depender del ciclo de vida `ngOnInit`.
+- **UI/UX:** Implementación de **Sidebar Colapsable** (Mini Mode) con animaciones CSS y ocultamiento inteligente de textos.
+- **Dark Mode:** Mejoras de legibilidad en inputs y dropdowns bajo el tema oscuro.
+
+---
+
 ## [v0.5.0] - 2026-01-27
 ### Added
 - **MainLayout Shell:** Implementación de una arquitectura de "Cascarón" (`MainLayoutComponent`) que contiene el menú lateral y el header.
