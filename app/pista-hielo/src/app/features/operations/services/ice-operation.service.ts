@@ -85,8 +85,6 @@ export class IceOperationsService {
       this.dataLoaded.instructors = true;
       this.catalogsLoaded.set(true);
 
-      console.log('✅ Catálogos listos en memoria RAM');
-
     } catch (error) {
       console.error('❌ Error precargando catálogos:', error);
     }
@@ -189,12 +187,14 @@ export class IceOperationsService {
   startSession(payload: { skate_number: string; rental_type: string; instructor_id?: string; notes?: string; client_id?: number; duration?: number }) {
     const now = new Date();
     const timeString = now.toTimeString().split(' ')[0];
-    const dateString = now.toISOString().split('T')[0];
+
+    // CAMBIO: Usamos la función local en lugar de toISOString() que usa UTC
+    const localDateISO = this.getLocalDateISO(); // <--- NUEVA LÍNEA
 
     const fields: any = {
       transaction_type: payload.rental_type.includes('LIBRE') ? 'RENTAL' : 'CLASS',
       status: 'ACT',
-      transaction_date: dateString,
+      transaction_date: localDateISO, // <--- CAMBIADO (antes era dateString)
       start_time: timeString,
       metadata: {
         skate_number: payload.skate_number,
@@ -264,6 +264,26 @@ export class IceOperationsService {
     }
 
     return { total, isOvertime, categoryLabel: category };
+  }
+
+  // ==========================================================
+  // 5. HELPERS PRIVADOS
+  // ==========================================================
+
+  /**
+   * Genera un string de fecha local (YYYY-MM-DDTHH:mm:ss)
+   * Evita el problema de UTC que cambia el día si es tarde en la noche.
+   */
+  private getLocalDateISO(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+
+    return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
   }
 
 }

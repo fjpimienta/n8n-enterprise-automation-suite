@@ -1,0 +1,59 @@
+{
+  "name": "v3/Normalize",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -432,
+        -112
+      ],
+      "id": "88eb8491-d521-4240-a930-eba828ed848f",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Recuperamos datos del input\nconst sqlResults = $json.sql_results || []; \nconst operationRaw = $json.operation || 'unknown';\nconst operation = operationRaw.toLowerCase();\nconst modelConfig = $json.model_config || {};\nconst modelHooks = modelConfig.hooks || { pre: [], post: [] };\n\nconst rows = Array.isArray(sqlResults) \n  ? sqlResults.filter(row => row && typeof row === 'object' && Object.keys(row).length > 0 && !row.hasOwnProperty('success'))\n  : [];\n\nlet data = rows;\nlet resultStatus = \"success\";\nlet message = undefined;\nlet foundRecords = rows.length;\n\n// Lógica de validación por operación\nswitch (operation.toLowerCase()) {\n  case 'getone':\n    if (rows.length === 0) {\n      data = null;\n      resultStatus = \"error\";\n      message = \"Registro no encontrado.\";\n      foundRecords = 0;\n    } else {\n      data = rows[0];\n      foundRecords = 1;\n    }\n    break;\n\n  case 'update':\n    if (rows.length === 0) {\n      data = [];\n      resultStatus = \"error\";\n      message = \"No se actualizó ningún registro. Verifica que el ID sea correcto.\";\n      foundRecords = 0;\n    }\n    break;\n\n  case 'delete':\n    if (rows.length === 0) {\n      data = [];\n      resultStatus = \"error\";\n      message = \"No se pudo eliminar. El registro no existe.\";\n      foundRecords = 0;\n    } else {\n      message = \"Registro eliminado con éxito.\";\n    }\n    break;\n\n  case 'getall':\n    data = rows;\n    foundRecords = rows.length;\n    break;\n\n  case 'insert':\n    data = rows[0] || rows;\n    foundRecords = rows.length;\n    break;\n}\n\n// Solo ejecutamos hooks post-execution si la operación principal fue exitosa\nlet postHooks = [];\nif (resultStatus === \"success\" && modelHooks.post && modelHooks.post.length > 0) {\n    postHooks = modelHooks.post; \n}\n\nreturn [{\n  json: {\n    error: resultStatus !== \"success\",\n    operation,\n    data,\n    meta: {\n      foundRecords,\n      model: modelConfig.model_name,\n      timestamp: new Date().toISOString()\n    }\n  }\n}];\n\n\n/*\nreturn [{\n  json: {\n    operation,\n    result: resultStatus,\n    data: (operation === 'getone' || operation === 'insert') ? (rows[0] || rows) : rows,\n    execution_info: {\n        timestamp: new Date().toISOString(),\n        model: modelConfig.model_name,\n        has_post_hooks: postHooks.length > 0,\n        hooks_to_execute: postHooks\n    }\n  }\n}];\n*/"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -256,
+        -112
+      ],
+      "id": "c9fa45e4-10d5-46a9-aee3-3890d6ec8ce0",
+      "name": "Normalize"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Normalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "9SrVXdATmlrZemJT"
+  },
+  "versionId": "f13035cd-6015-45e1-a267-a59fa3eba0b5",
+  "meta": {
+    "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
+  },
+  "id": "xehywaCPbjt5XfUd",
+  "tags": []
+}
