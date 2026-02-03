@@ -3,6 +3,19 @@ Todos los cambios notables en el proyecto **n8n Enterprise Automation Suite** se
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/), y este proyecto se adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [0.7.0] - 2026-02-03
+### 🚀 Añadido (New Features)
+- **Quality Assurance Module (Rondines):** Sistema integral para la inspección diaria de habitaciones.
+    - **Checklist Dinámico:** Formulario agrupado por zonas (General, Baño, Equipamiento, Seguridad) persistido como JSONB para flexibilidad futura.
+    - **Smart Save Logic:** El frontend detecta automáticamente si debe crear (`INSERT`) o actualizar (`UPDATE`) el registro del día.
+    - **Fusión Segura (Smart Merge):** Algoritmo en frontend que combina datos históricos con la estructura actual del formulario para evitar inconsistencias si el esquema cambia.
+- **Hybrid Persistence:** Implementación de tablas mixtas (Columnas SQL para búsquedas + JSONB para detalles) en PostgreSQL.
+
+### 🔄 Cambiado (Improvements)
+- **n8n Integration Protocol:** Estandarización del payload de Angular. Ahora se envían los datos dentro de la propiedad `fields` en lugar de `data` para compatibilidad nativa con los scripts de Node.js en n8n.
+- **DevOps / Networking:** Configuración de Proxy Reverso en Angular (`proxy.conf.json`) para solucionar conflictos de CORS y preflight requests (OPTIONS) contra el webhook de n8n.
+- **HotelService Refactor:** Soporte explícito para operaciones `create` y `update` separadas.
+
 ## [0.6.0] - 2026-01-27
 ### 🚀 Añadido (New Features)
 - **Finance Module (Hotel):** Lógica financiera avanzada integrada en el flujo de Check-in.
