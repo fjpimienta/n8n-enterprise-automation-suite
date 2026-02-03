@@ -1,43 +1,44 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { environment } from '@env/environment'; // Asegúrate que tu alias @environments funcione, si no usa '../environments/environment'
+import { environment } from '@env/environment';
 import { map } from 'rxjs';
 import { PhTransaction } from '@core/models/transaction.types';
 
 @Injectable({ providedIn: 'root' })
 export class CashRegisterService {
   private http = inject(HttpClient);
-  // Usamos la misma API de transacciones o la específica de CRUD
-  private apiUrl = `${(environment as any).apiUrl_crud}/transactions` || `${environment.apiUrl_crud}/webhook/46c903ec-0397-43ea-b99e-2606f8e4f0de/crud/v3/transactions`;
+  // Ajusta esto según tu environment real
+  private apiUrl = `${environment.apiUrl_crud}/transactions`;
 
   // Signals para el reporte
   public todayTransactions = signal<PhTransaction[]>([]);
   public summary = signal({ cash: 0, card: 0, total: 0, count: 0 });
 
-  /**
-   * Obtiene todas las ventas FINALIZADAS de HOY
-   */
   loadDailyReport() {
-    // Usamos 'sv-SE' (formato sueco) que es el estándar ISO local para evitar problemas de zona horaria (UTC vs Mexico)
+    // Genera fecha formato YYYY-MM-DD
     const localDate = new Date().toLocaleDateString('sv-SE');
+
+    console.log('📅 Consultando fecha:', localDate); // DEBUG: Ver qué fecha enviamos
 
     return this.http.post<{ data: PhTransaction[] }>(this.apiUrl, {
       operation: 'getall',
       model: 'transactions',
       filters: {
-        // 3. Usamos sintaxis de Objeto {_eq} para entrar al bloque "Inteligente" de n8n
-        // Esto generará en SQL: WHERE transaction_date::date = '2026-01-26'::date
-        transaction_date: localDate,
+        // Envolvemos en _eq para activar la lógica de fecha en n8n
+        transaction_date: { _eq: localDate },
         status: 'FIN'
       }
     }).pipe(
       map(res => res.data || [])
     ).subscribe({
       next: (data) => {
+        console.log('✅ Datos recibidos:', data.length, 'registros'); // DEBUG
+
+        // ¡ESTO FALTABA! Actualizar los signals para que la pantalla cambie
         this.todayTransactions.set(data);
         this.calculateTotals(data);
       },
-      error: (err) => console.error('Error cargando corte:', err)
+      error: (err) => console.error('❌ Error cargando corte:', err)
     });
   }
 
