@@ -18,13 +18,8 @@ export class CashRegisterService {
    * Obtiene todas las ventas FINALIZADAS de HOY
    */
   loadDailyReport() {
-    // 1. Obtenemos la fecha de hoy en formato YYYY-MM-DD
     // Usamos 'sv-SE' (formato sueco) que es el estándar ISO local para evitar problemas de zona horaria (UTC vs Mexico)
     const localDate = new Date().toLocaleDateString('sv-SE');
-
-    // 2. TRUCO CRÍTICO: Le pegamos una "T" falsa para que n8n detecte que es fecha
-    // Tu backend hace: val.split('T')[0], así que tomará solo la fecha correcta.
-    const dateForN8n = `${localDate}T00:00:00.000Z`;
 
     return this.http.post<{ data: PhTransaction[] }>(this.apiUrl, {
       operation: 'getall',
@@ -32,14 +27,13 @@ export class CashRegisterService {
       filters: {
         // 3. Usamos sintaxis de Objeto {_eq} para entrar al bloque "Inteligente" de n8n
         // Esto generará en SQL: WHERE transaction_date::date = '2026-01-26'::date
-        transaction_date: { _eq: dateForN8n },
+        transaction_date: localDate,
         status: 'FIN'
       }
     }).pipe(
       map(res => res.data || [])
     ).subscribe({
       next: (data) => {
-        console.log('💰 Datos recibidos:', data); // Debug para ver si llega algo
         this.todayTransactions.set(data);
         this.calculateTotals(data);
       },

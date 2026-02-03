@@ -104,3 +104,24 @@
   background-color: #1e293b !important;
   border-right: 1px solid #374151;
 }
+
+/* =========================================
+   RESPONSIVE / MÓVIL 📱
+   (Agregar al final de sidebar.component.css)
+   ========================================= */
+@media (max-width: 992px) {
+  .navbar-vertical {
+    /* En móvil forzamos sombra fuerte porque va a flotar encima del contenido */
+    box-shadow: 0 0 50px rgba(0, 0, 0, 0.5) !important;
+    border-right: none;
+  }
+
+  /* OPCIONAL: Si en móvil quieres que "colapsado" signifique "oculto totalmente"
+     descomenta esto. Si prefieres que se vea el mini-menu, déjalo así.
+  */
+  .navbar-vertical.collapsed {
+    transform: translateX(-100%);
+    width: 16rem !important;
+  }
+
+}

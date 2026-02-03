@@ -1,1 +1,31 @@
-/* You can add global styles to this file, and also import other style files */
+/* =========================================
+   RESPONSIVE / MÓVIL 📱 (CORREGIDO)
+   ========================================= */
+@media (max-width: 992px) {
+    .navbar-vertical {
+        position: fixed !important;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        z-index: 1050;
+        width: 16rem !important;
+        /* Forzamos el ancho completo en móvil */
+
+        /* 1. ESTADO POR DEFECTO: OCULTO (Fuera de la pantalla a la izquierda) */
+        transform: translateX(-100%);
+
+        /* Animación suave al entrar y salir */
+        transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+
+        border-right: none;
+    }
+
+    /* 2. ESTADO ACTIVO: VISIBLE (Angular agrega esta clase al abrir) */
+    .navbar-vertical.show-mobile {
+        /* Lo movemos a su posición original */
+        transform: translateX(0) !important;
+
+        /* Sombra fuerte para resaltar sobre el contenido */
+        box-shadow: 0 0 50px rgba(0, 0, 0, 0.5) !important;
+    }
+}
