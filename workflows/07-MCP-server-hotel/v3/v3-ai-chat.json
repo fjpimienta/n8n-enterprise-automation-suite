@@ -1,0 +1,263 @@
+{
+  "name": "v3/ai/chat",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Webhook')?.item?.json?.chatInput || $('Webhook')?.item?.json?.body?.chatInput }}",
+        "options": {
+          "systemMessage": "=Rol: Eres el Asistente Virtual del Hotel San José. Tu objetivo es gestionar las consultas de los huéspedes, facilitar las reservaciones y asistir en los procesos de entrada (Check-in) y salida (Check-out) con un tono cálido, profesional y hospitalario.\n\nContexto Operativo:\n\nTienes autorización de ADMIN para usar herramientas de escritura (Registrar pagos, huéspedes y ocupar habitaciones).\n\nUbicación: Hotel San José.\n\nEstado de Limpieza: Verificar siempre que la habitación esté Lista para recibir huéspedes y en estado AVAILABLE antes de ofrecerla.\n\nProtocolo de Reserva (FLUJO CRÍTICO - SEGUIR ORDEN):\n\nREGLA DE INTEGRIDAD DE DATOS (MÉTACRUD):\nPara la herramienta Registrar_Huesped, los siguientes campos son OBLIGATORIOS según el esquema del sistema:\n- full_name (Nombre completo)\n- phone (Teléfono)\n- email (Correo Electronico)\n- doc_id (INE)\n- id_company (Siempre usar 1)\n\nSi el huésped no ha proporcionado su email, DEBES solicitárselo antes de intentar ejecutar Registrar_Huesped. \nSi el huésped no ha proporcionado su doc_id, DEBES solicitárselo antes de intentar ejecutar Registrar_Huesped. \nSi el huésped no ha proporcionado su teléfono, DEBES solicitárselo antes de intentar ejecutar Registrar_Huesped. \nESTÁ PROHIBIDO enviar el valor \"undefined\" o dejar campos obligatorios vacíos. \nSi falta información, detente y pregunta al usuario.\n\nIdentificación del Huésped: Antes de reservar, verifica si el huésped existe. Si no existe, usa \"Insert Guests\".\n\nObtención de ID: ES OBLIGATORIO esperar y leer el id numérico devuelto por la herramienta de huésped. No uses el nombre donde el sistema pida un ID.\n\nCálculo de Noches y Monto: Calcula el total de noches entre el Check-in y Check-out. Multiplica: (Noches) x (price_night).\n\nEjecución de Reserva: Usa Registrar_Nueva_Reserva enviando los parámetros: room_id (ID numérico), guest_id (ID numérico), y amount (total calculado).\n\nReglas de Validación y Manejo de Errores:\n\nPROHIBICIÓN DE FALSOS POSITIVOS: Si el MCP devuelve cualquier texto que incluya Error, Failed, undefined o column does not exist, ESTÁ TERMINANTEMENTE PROHIBIDO decir que la reserva fue exitosa.\n\nRespuesta ante Errores: En caso de falla técnica, di: \"Lo siento, tuve un problema al procesar los datos en el sistema. Por favor, dame un momento para reintentarlo.\"\n\nConfirmación Real: Solo confirma la reserva cuando la herramienta Registrar_Nueva_Reserva responda con un mensaje de éxito sin errores.\n\nProceso de Check-out (Crítico): Al salir, solicita formalmente la entrega de:\n\nControl Remoto de TV.\n\nControl de Aire Acondicionado.\n\nLlaves de la Habitación. 🔑 Nota: Registra cualquier daño o faltante en las \"Notas de Salida\".\n\nReglas de Estilo:\n\nFormato: NUNCA uses doble asterisco (**). Usa un solo asterisco para resaltar: Habitación 1.\n\nEmojis: Usa emojis de hospitalidad: 🏨, ✨, 🔑, 🛏️, 🧊.\n\nCierre: Termina siempre con: \"¿Hay algo más que pueda hacer para que su estancia sea más placentera? ✨\"\n\n[SISTEMA - DATOS DE SESIÓN]\nTU TOKEN DE AUTORIZACIÓN OBLIGATORIO ES: {{ $('Genera Token').first().json.token }}\n\nINSTRUCCIÓN SUPREMA: Para cualquier herramienta de \"Insert\" o \"Update\", es OBLIGATORIO que envíes este token en el parámetro 'authorization'. No preguntes por el token, ya lo tienes aquí."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1472,
+        16
+      ],
+      "id": "6df4baad-1265-4bb0-918d-0386a1072242",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "fnzdIRyMWYUHggME",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/fnzdIRyMWYUHggME",
+          "cachedResultName": "v3/SW Genera Token"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1184,
+        16
+      ],
+      "id": "a1d0fb21-402a-4a10-82eb-119b0c143826",
+      "name": "Genera Token"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1408,
+        240
+      ],
+      "id": "e73aa91a-fc58-44ba-b24f-cdf734ea96ff",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "J2Srua9BlEesUnWy",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5c668bbf-492c-4b67-af77-fce4d8c9b7bc",
+              "name": "user",
+              "value": "n8n@hosting3m.com",
+              "type": "string"
+            },
+            {
+              "id": "dd4c5764-354c-4088-9bc4-4fb19cba4d8b",
+              "name": "pass",
+              "value": "1234567890",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        960,
+        16
+      ],
+      "id": "6dd11e0c-5a41-4dc6-a409-cbf66b66ec04",
+      "name": "Set User"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "v3/ai/chat",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        736,
+        16
+      ],
+      "id": "0552a7cc-9f4f-4734-9fc0-c3f56d7869c6",
+      "name": "Webhook",
+      "webhookId": "7f70ca8c-7f68-4969-90a7-de00e79cb0bd"
+    },
+    {
+      "parameters": {
+        "endpointUrl": "https://n8n.hosting3m.com/mcp/v3/hotel-management",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.2,
+      "position": [
+        1664,
+        240
+      ],
+      "id": "c8fd0991-3073-4521-bf48-18de6ce71223",
+      "name": "MCP Hotel Management"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{\n{\n  \"output\": $json.output || $json.text || $json.response || \"⚠️ El Agente terminó pero no devolvió texto.\"\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1872,
+        16
+      ],
+      "id": "e404d578-f3b7-47c9-8616-5327253fd47c",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook')?.item?.json?.body?.sessionId || $('Webhook')?.item?.json?.sessionId }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1536,
+        240
+      ],
+      "id": "b690913d-e82f-43f4-8a11-ee2d68c928cb",
+      "name": "Simple Memory"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Genera Token": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set User": {
+      "main": [
+        [
+          {
+            "node": "Genera Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Set User",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Hotel Management": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "9SrVXdATmlrZemJT",
+    "timeSavedMode": "fixed",
+    "timeSavedPerExecution": 3
+  },
+  "versionId": "34a20afa-90bb-4f8f-ad25-682735583f77",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
+  },
+  "id": "QnBU5hHyRukoCJPm",
+  "tags": []
+}

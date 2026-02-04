@@ -1,0 +1,182 @@
+.chat-fab {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 70px;
+    /* Un poco más grande para que luzca el logo */
+    height: 70px;
+    border-radius: 50%;
+
+    background: #ffffff;
+    /* Fondo blanco para que el logo resalte */
+    /* Cambiamos el borde azul por uno verde que combine con tu logo */
+    border: 2px solid #6c9a40;
+
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    z-index: 1050;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    /* Efecto rebote suave */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+
+    &:hover {
+        transform: scale(1.1);
+    }
+
+    &.active {
+        background: #d63939;
+        /* Rojo al estar abierto (para cerrar) */
+        border-color: #d63939;
+        transform: rotate(90deg);
+    }
+
+    .icon-container {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .custom-icon {
+        width: 90%;
+        /* Ajuste para que no toque los bordes si el logo es redondo */
+        height: 90%;
+        object-fit: contain;
+    }
+
+    .close-icon {
+        color: white;
+        font-size: 28px;
+        font-weight: bold;
+    }
+}
+
+.chat-fab {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: #206bc4;
+    /* Color primario Tabler */
+    color: white;
+    border: none;
+    font-size: 28px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    z-index: 1050;
+    cursor: pointer;
+    transition: transform 0.2s;
+
+    &:hover {
+        transform: scale(1.1);
+    }
+
+    &.active {
+        background: #d63939;
+        transform: rotate(90deg);
+    }
+}
+
+.chat-window {
+    position: fixed;
+    bottom: 90px;
+    right: 20px;
+    width: 350px;
+    height: 500px;
+    display: flex;
+    flex-direction: column;
+    z-index: 1049;
+    border-radius: 12px;
+    overflow: hidden;
+    animation: slideUp 0.3s ease;
+
+    .chat-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 1rem;
+        background: #f8f9fa;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+}
+
+.chat-bubble {
+    max-width: 80%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    position: relative;
+
+    &.bot {
+        align-self: flex-start;
+        background: white;
+        border: 1px solid #e2e8f0;
+        border-bottom-left-radius: 2px;
+        color: #333;
+    }
+
+    &.user {
+        align-self: flex-end;
+        background: #206bc4;
+        color: white;
+        border-bottom-right-radius: 2px;
+    }
+
+    .message-time {
+        display: block;
+        font-size: 0.7rem;
+        margin-top: 4px;
+        opacity: 0.7;
+        text-align: right;
+    }
+}
+
+.typing {
+    font-style: italic;
+    color: #888;
+
+    .dot {
+        animation: blink 1.4s infinite both;
+    }
+
+    .dot:nth-child(2) {
+        animation-delay: 0.2s;
+    }
+
+    .dot:nth-child(3) {
+        animation-delay: 0.4s;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes blink {
+    0% {
+        opacity: .2;
+    }
+
+    20% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: .2;
+    }
+}
