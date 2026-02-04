@@ -19,12 +19,10 @@ export class AuthService {
   private http = inject(HttpClient);
   private apiUrl_token = environment.apiUrl_token;
 
-  // Usamos un Signal para el estado del usuario (Angular 21 style)
-  currentUser = signal<UserPayload | null>(this.getUserFromStorage());
+  // CORRECCIÓN 1: Usar la misma llave 'authToken' para inicializar
+  isAuthenticated = signal<boolean>(!!localStorage.getItem('authToken'));
 
-  isLoggedIn(): boolean {
-    return !!localStorage.getItem('authToken');
-  }
+  currentUser = signal<UserPayload | null>(this.getUserFromStorage());
 
   private getUserFromStorage(): UserPayload | null {
     const token = localStorage.getItem('authToken');
@@ -39,19 +37,24 @@ export class AuthService {
   login(credentials: { user: string; pass: string }) {
     return this.http.post<any>(this.apiUrl_token, credentials).pipe(
       tap(response => {
-        // Usamos la estructura que definimos en n8n: { status, data, message }
         if (response.status === 'success' && response.data?.token) {
-          localStorage.setItem('authToken', response.data.token);
-          const decoded = jwtDecode<UserPayload>(response.data.token);
+          const token = response.data.token;
+          
+          // Guardamos en LocalStorage
+          localStorage.setItem('authToken', token);
+          
+          // Decodificamos usuario
+          const decoded = jwtDecode<UserPayload>(token);
           this.currentUser.set(decoded);
+
+          // CORRECCIÓN 2: ¡Avisar a la app que ya estamos logueados!
+          this.isAuthenticated.set(true); 
         }
       }),
       catchError(err => {
-        // Si n8n responde 401, lanzamos un error con mensaje personalizado
         if (err.status === 401) {
           return throwError(() => new Error('Credenciales inválidas'));
         }
-        // Si es otro error (500, 404), pasamos el error original
         return throwError(() => err);
       })
     );
@@ -59,8 +62,11 @@ export class AuthService {
 
   logout() {
     localStorage.removeItem('authToken');
-    localStorage.removeItem('role');
+    localStorage.removeItem('role'); // Si usas esto
+    
+    // CORRECCIÓN 3: Limpiar estado reactivo
     this.currentUser.set(null);
+    this.isAuthenticated.set(false); 
   }
 
   isAdmin(): boolean {

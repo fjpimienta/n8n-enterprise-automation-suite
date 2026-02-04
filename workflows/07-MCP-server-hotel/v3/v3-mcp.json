@@ -1,0 +1,231 @@
+{
+  "name": "v3/MCP Server Hotel",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "v3/hotel-management"
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "1e677192-7fb6-44a5-a8b9-9ec76daac686",
+      "name": "MCP Server Hotel",
+      "webhookId": "958334f6-de7d-4837-872a-a1785fa50f6f"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM hotel_rooms WHERE status = 'available' AND (cleaning_status = 'clean' OR cleaning_status = 'inspected');",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        -176,
+        224
+      ],
+      "id": "e22f2ddf-c0a8-498c-9b93-6ad3462378a6",
+      "name": "Query Available",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      },
+      "notes": "Busca habitaciones que estén disponibles y limpias para venta."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT type, COUNT(*) as cantidad, price_night\nFROM hotel_rooms\nWHERE status = 'available' AND (cleaning_status = 'clean' OR cleaning_status = 'inspected')\nGROUP BY type, price_night;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        -48,
+        224
+      ],
+      "id": "39edd16f-2d46-4d4c-9860-15c3dec4e510",
+      "name": "Query Rooms",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      },
+      "notes": "Busca habitaciones que estén disponibles y limpias para venta."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT b.id, b.room_id, g.full_name, b.check_in, b.status \nFROM hotel_bookings b\nJOIN hotel_guests g ON b.guest_id = g.id\nWHERE g.full_name ILIKE '%' || {{ $json.full_name }} || '%'\nAND b.status = 'confirmed';",
+        "options": {
+          "queryReplacement": "{{$fromAI.guest_name}}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        80,
+        224
+      ],
+      "id": "14f196e2-0986-4900-8cf2-6e89aff430da",
+      "name": "Query Reservation By Name",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      },
+      "notes": "Busca habitaciones que estén disponibles y limpias para venta."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT * FROM hotel_rooms \nWHERE status = 'available' \n  AND room_number = '{{ $json.room_number }}'\n  AND (cleaning_status = 'clean' OR cleaning_status = 'inspected');",
+        "options": {
+          "queryReplacement": " {{$fromAI.room_number}}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        208,
+        224
+      ],
+      "id": "42b02774-08c6-4962-88b2-3c33b2505a47",
+      "name": "Query Available By Room",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      },
+      "notes": "Busca si una habitación específica está libre. REQUERIDO: room_number (número de habitación). NO LLAMAR a esta herramienta si el usuario no ha dicho un número de habitación."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n    r.room_number,\n    i.inspection_date,\n    i.observaciones,\n    i.checklist_data->'equipamiento' as fallas_equipos,\n    i.checklist_data->'bano' as fallas_bano\nFROM hotel_room_inspections i\nJOIN hotel_rooms r ON i.room_id = r.id\nWHERE \n    (i.observaciones IS NOT NULL AND i.observaciones != '')\n    AND i.inspection_date >= CURRENT_DATE - INTERVAL '15 days'\nORDER BY i.inspection_date DESC;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        464,
+        208
+      ],
+      "id": "24661db0-52c1-433f-9fce-aa32a6c7430b",
+      "name": "Get Inspection Issues",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      },
+      "notes": "Obtiene las observaciones, fallas y reportes de mantenimiento generados durante las inspecciones (rondines) de las habitaciones en los últimos 15 días. Úsalo cuando el usuario pida reportes de daños, cosas por reparar o resumen de calidad."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Query Available": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Hotel",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Rooms": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Hotel",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Reservation By Name": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Hotel",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Available By Room": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Hotel",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Inspection Issues": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Hotel",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "timeSavedPerExecution": 3,
+    "errorWorkflow": "9SrVXdATmlrZemJT"
+  },
+  "versionId": "c539e343-91ba-42be-95df-f553b1fd4d61",
+  "meta": {
+    "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
+  },
+  "id": "2hF55zB2LoqFxXOoAjgEx",
+  "tags": [
+    {
+      "updatedAt": "2025-12-23T12:12:28.399Z",
+      "createdAt": "2025-12-23T12:12:28.399Z",
+      "id": "RWBzILPfFXEtEcLf",
+      "name": "AI Agent"
+    },
+    {
+      "updatedAt": "2025-12-23T12:12:58.230Z",
+      "createdAt": "2025-12-23T12:12:58.230Z",
+      "id": "MKrwsTVnLLBXLfUP",
+      "name": "Chat"
+    },
+    {
+      "updatedAt": "2025-12-31T16:55:06.301Z",
+      "createdAt": "2025-12-31T16:55:06.301Z",
+      "id": "ts9FABk8F02a5xrA",
+      "name": "Agent IA"
+    },
+    {
+      "updatedAt": "2026-02-03T23:31:15.416Z",
+      "createdAt": "2026-02-03T23:31:15.416Z",
+      "id": "y01sGd6r5K66E2qb",
+      "name": "v3"
+    }
+  ]
+}
