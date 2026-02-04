@@ -14,9 +14,8 @@ export interface ChatMessage {
 })
 export class AiService {
   private http = inject(HttpClient);
-  // URL del webhook de n8n (Ajusta según tu proxy)
   private apiUrl_ai = environment.apiUrl_ai;
-  private sessionId = 'web-' + Math.random().toString(36).substring(7);
+  private sessionId = 'web-' + crypto.randomUUID();
 
   // Estado reactivo del chat
   messages = signal<ChatMessage[]>([
