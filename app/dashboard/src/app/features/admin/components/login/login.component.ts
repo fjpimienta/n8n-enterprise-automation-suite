@@ -67,12 +67,15 @@ export class LoginComponent {
       this.isLoading.set(true);
       this.errorMessage.set('');
 
-      this.logger.log('🔐 Iniciando handshake de seguridad para:', this.loginForm.value.user);
-
+      // Llamamos al login
       this.authService.login(this.loginForm.value).subscribe({
         next: (res) => {
           this.logger.log('✅ Login autorizado. Token recibido.');
-          localStorage.setItem('authToken', res.data.token);
+
+          // ELIMINADO: this.authService.login(res.data.token); (Esto estaba mal y causaba error)
+          // ELIMINADO: localStorage.setItem... (El servicio ya lo hace en el tap)
+
+          // Solo navegamos, la reactividad del servicio hará el resto
           this.router.navigate(['/dashboard']);
         },
         error: (err) => {
