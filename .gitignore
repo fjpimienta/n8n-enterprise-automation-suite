@@ -27,12 +27,11 @@ n8n_backup/
 local-files/
 sync_dbs.sh
 
-# --- Node.js / Microservicios ---
+# --- Node.js Global ---
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
 # --- Python (si usas para agentes) ---
 __pycache__/
 *.py[cod]
@@ -40,28 +39,34 @@ __pycache__/
 # --- OS específicos ---
 .DS_Store
 Thumbs.db
+.idea/
 
-# --- Angular (Dashboard App) ---
-app/dashboard/.vscode/
-app/dashboard/node_modules/
-app/dashboard/dist/
-app/dashboard/tmp/
-app/dashboard/out-tsc/
-app/dashboard/.angular/cache/
-app/dashboard/src/environments/environment.prod.ts
-app/dashboard/src/environments/environment.development.ts
-!app/dashboard/src/environments/environment.ts
+# --- ANGULAR WORKSPACE (La parte importante) ---
+# Ignorar la caché global del workspace (Lo que se ve en tu imagen)
+.angular/
+.angular/cache/
 
-# --- Angular (Pista Hielo App) ---
-app/pista-hielo/.vscode/
-app/pista-hielo/node_modules/
-app/pista-hielo/dist/
-app/pista-hielo/tmp/
-app/pista-hielo/out-tsc/
-app/pista-hielo/.angular/cache/
-app/pista-hielo/src/environments/environment.prod.ts
-app/pista-hielo/src/environments/environment.development.ts
-!app/pista-hielo/src/environments/environment.ts
+# Ignorar carpetas de compilación
+dist/
+tmp/
+out-tsc/
+bazel-out/
 
-# --- IDE Config ---
+# --- Configuraciones de IDE ---
 .vscode/
+*.suo
+*.ntvs
+*.njsproj
+*.sln
+*.sw?
+
+# --- Environments (Ajustado a la nueva estructura /projects) ---
+# Ignora los de producción/desarrollo por seguridad si tienen claves
+projects/**/src/environments/environment.prod.ts
+projects/**/src/environments/environment.development.ts
+
+# ¡IMPORTANTE! Forzamos que SÍ se suba el environment base (esqueleto)
+!projects/**/src/environments/environment.ts
+
+# Ignorar la carpeta vieja de respaldo
+app/
