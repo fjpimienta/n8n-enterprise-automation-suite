@@ -1,0 +1,108 @@
+<div class="container-xl animate-fade-in">
+    <div class="page-header d-print-none">
+        <div class="row align-items-center">
+            <div class="col text-center">
+                <h2 class="page-title d-inline-block">⛸️ Monitor de Pista en Vivo</h2>
+                <div class="text-muted small mt-1">Sincronizado con n8n Dynamic Engine</div>
+            </div>
+
+            <div class="col-auto ms-auto d-print-none">
+                <button (click)="refresh()" class="btn btn-primary d-none d-sm-inline-block">
+                    <lucide-icon name="refresh-cw" class="icon"></lucide-icon> Actualizar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row row-cards mt-3">
+        @if (iceService.isLoading() && displaySkaters().length === 0) {
+        <app-skeleton [count]="4" layout="card"></app-skeleton>
+        } @else {
+        @for (skater of displaySkaters(); track skater.id) {
+        <div class="col-12 col-md-6 col-lg-4 col-xl-3">
+            <div class="card card-sm border-start-lg shadow-sm touch-card"
+                [class.border-start-primary]="!skater.isOvertime" [class.border-start-danger]="skater.isOvertime">
+
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-2">
+                        <span class="avatar avatar-md me-3 fs-3 fw-bold"
+                            [class.bg-azure-lt]="skater.categoryLabel === 'GENERAL'"
+                            [class.bg-purple-lt]="skater.categoryLabel === 'ALUMNO'">
+                            {{ skater.metadata?.skate_number || '00' }}
+                        </span>
+
+                        <div class="text-truncate">
+                            <h4 class="m-0 text-truncate" [title]="skater.displayName">
+                                {{ skater.displayName }}
+                            </h4>
+                            <div class="text-muted small">
+                                {{ skater.categoryLabel | titlecase }}
+                                @if(skater.metadata?.duration) {
+                                • {{ skater.metadata!.duration }} min
+                                } @else {
+                                • Libre
+                                }
+                            </div>
+                        </div>
+
+                        <div class="ms-auto text-end">
+                            <div class="h3 mb-0" [class.text-danger]="skater.isOvertime">
+                                ${{ skater.currentCost }}
+                            </div>
+                            <div class="small text-muted" style="font-size: 0.7rem">MXN</div>
+                        </div>
+                    </div>
+
+                    <div class="mt-3">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="fw-bold">{{ skater.start_time | slice:0:5 }}</span>
+                            <span class="badge" [class.bg-secondary-lt]="!skater.isOvertime"
+                                [class.bg-danger-lt]="skater.isOvertime">
+                                ⏱️ {{ skater.elapsedMinutes }} min
+                            </span>
+                        </div>
+
+                        <div class="progress progress-sm">
+                            @let duration = skater.metadata?.duration || 60;
+                            @let percent = (skater.elapsedMinutes / duration) * 100;
+
+                            <div class="progress-bar progress-bar-striped progress-bar-animated"
+                                [style.width.%]="percent > 100 ? 100 : percent" [class.bg-primary]="!skater.isOvertime"
+                                [class.bg-danger]="skater.isOvertime">
+                            </div>
+                        </div>
+
+                        @if(skater.metadata?.notes) {
+                        <div class="mt-2 p-1 bg-muted-lt rounded small text-truncate">
+                            📝 {{ skater.metadata!.notes }}
+                        </div>
+                        }
+                    </div>
+
+                    <div class="d-flex mt-3 gap-2">
+                        <button class="btn btn-outline-danger btn-sm w-50">Cancelar</button>
+
+                        <button class="btn btn-primary btn-sm w-50" (click)="openCheckout(skater)">
+                            <lucide-icon name="credit-card" class="icon icon-sm me-1"></lucide-icon>
+                            Cobrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        } @empty {
+        <div class="empty mt-5">
+            <div class="empty-icon">❄️</div>
+            <p class="empty-title">Pista Vacía</p>
+            <p class="empty-subtitle text-muted">No hay patinadores activos. Registra una entrada con F2.</p>
+        </div>
+        }
+        }
+    </div>
+</div>
+
+@if (selectedTransaction()) {
+<app-checkout-modal [transaction]="selectedTransaction()!" (onClose)="closeModal()"
+    (onConfirm)="handleCheckout($event)">
+</app-checkout-modal>
+}

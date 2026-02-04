@@ -1,0 +1,291 @@
+/* =========================================
+   1. TARJETA PRINCIPAL
+   ========================================= */
+.touch-card {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+  border: none;
+  transition: background-color 0.3s, border-color 0.3s;
+}
+
+/* Modo Oscuro: Tarjeta más sólida */
+:host-context([data-bs-theme="dark"]) .touch-card {
+  background: #1e293b;
+  /* Slate 800 */
+  border: 1px solid #334155;
+  box-shadow: none;
+}
+
+/* =========================================
+   2. TEXTOS Y ETIQUETAS (EL CAMBIO CLAVE)
+   ========================================= */
+
+/* Forzar que las etiquetas "text-muted" sean blancas en modo oscuro */
+:host-context([data-bs-theme="dark"]) .text-muted {
+  color: #cbd5e1 !important;
+  /* Gris Perla Claro (Casi blanco) */
+}
+
+:host-context([data-bs-theme="dark"]) .form-label {
+  color: #f1f5f9;
+  /* Blanco Humo */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  /* Sombra suave para resaltar */
+}
+
+/* =========================================
+   3. INPUTS CUSTOM
+   ========================================= */
+.custom-input-group {
+  background-color: #ffffff;
+  border: 1px solid #dce1e7;
+  border-radius: 8px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  transition: all 0.2s;
+}
+
+/* Modo Oscuro: Inputs oscuros pero legibles */
+:host-context([data-bs-theme="dark"]) .custom-input-group {
+  background-color: #0f172a;
+  /* Slate 900 (Muy oscuro para contraste) */
+  border-color: #475569;
+  /* Borde más visible */
+}
+
+.custom-input-group:focus-within {
+  border-color: #5b73e8;
+  box-shadow: 0 0 0 4px rgba(91, 115, 232, 0.15);
+}
+
+/* Texto dentro del Input */
+.custom-input-group .form-control {
+  background: transparent;
+  border: none;
+  color: #1e293b;
+  /* Texto oscuro en modo claro */
+}
+
+/* Texto dentro del Input (MODO OSCURO) */
+:host-context([data-bs-theme="dark"]) .custom-input-group .form-control {
+  color: #ffffff !important;
+  /* BLANCO PURO */
+  font-weight: 500;
+}
+
+/* Placeholders (El texto de ayuda "Opcional...") */
+:host-context([data-bs-theme="dark"]) ::placeholder {
+  color: #64748b !important;
+  /* Gris medio, visible pero distinto al texto */
+  opacity: 1;
+}
+
+/* Iconos dentro de los inputs */
+:host-context([data-bs-theme="dark"]) .custom-input-group .input-group-text svg {
+  color: #94a3b8 !important;
+  /* Iconos gris claro */
+}
+
+:host-context([data-bs-theme="dark"]) .custom-input-group .input-group-text .text-primary {
+  color: #60a5fa !important;
+  /* Azul claro brillante para el icono del patín */
+}
+
+
+/* Error State */
+.is-invalid-border {
+  border-color: #d63939 !important;
+  background-color: #fff5f5;
+}
+
+:host-context([data-bs-theme="dark"]) .is-invalid-border {
+  background-color: #450a0a;
+  /* Rojo oscuro fondo */
+  border-color: #f87171 !important;
+  /* Borde rojo claro brillante */
+}
+
+/* =========================================
+   4. TIPOGRAFÍA ESPECIAL (fs-2)
+   ========================================= */
+.form-control.fs-2 {
+  font-size: 2rem !important;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+/* =========================================
+   5. TOGGLES (Botones General/Alumno)
+   ========================================= */
+.touch-toggle {
+  height: 60px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background-color: #fff;
+  cursor: pointer;
+  font-size: 1.1rem;
+  transition: all 0.2s;
+  color: #64748b;
+}
+
+/* Modo Oscuro: Botones inactivos */
+:host-context([data-bs-theme="dark"]) .touch-toggle {
+  background-color: #0f172a;
+  border-color: #475569;
+  color: #cbd5e1;
+  /* Texto claro */
+}
+
+/* Estado SELECCIONADO */
+.form-selectgroup-input:checked+.form-selectgroup-label {
+  background-color: #eef2ff;
+  border-color: #5b73e8;
+  color: #5b73e8;
+  font-weight: 700;
+  box-shadow: 0 2px 5px rgba(91, 115, 232, 0.1);
+}
+
+/* Estado SELECCIONADO en Modo Oscuro */
+:host-context([data-bs-theme="dark"]) .form-selectgroup-input:checked+.form-selectgroup-label {
+  background-color: #1e40af;
+  /* Azul intenso fondo */
+  border-color: #60a5fa;
+  /* Borde azul brillante */
+  color: #ffffff;
+  /* Texto Blanco */
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+  /* Resplandor */
+}
+
+/* =========================================
+   6. BOTÓN PRINCIPAL
+   ========================================= */
+.touch-button {
+  height: 60px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  background-color: #206bc4;
+  border: none;
+}
+
+.touch-button:active {
+  transform: scale(0.98);
+}
+
+
+/* Asegura que el contenedor de búsqueda sea la referencia para el menú flotante */
+.position-relative {
+  position: relative !important;
+}
+
+/* El menú desplegable debe flotar sobre todo lo demás */
+.search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  z-index: 1050;
+  /* Más alto que los inputs y botones */
+  max-height: 250px;
+  overflow-y: auto;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 0 0 8px 8px;
+  background: white;
+}
+
+/* Scrollbar bonita para la lista */
+.search-dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+
+.search-dropdown::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.search-dropdown::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 4px;
+}
+
+/* Estilo para items */
+.dropdown-item {
+  cursor: pointer;
+  border-bottom: 1px solid #f0f0f0;
+  transition: background-color 0.2s;
+}
+
+.dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.dropdown-item:hover {
+  background-color: #f8f9fa;
+}
+
+/* ============================================================
+   🌙 CORRECCIONES PARA DARK MODE (Angular Safe)
+   ============================================================ */
+
+/* 1. Fondo y Borde del Menú Desplegable */
+:host-context([data-bs-theme="dark"]) .search-dropdown {
+  background-color: #1f2937;
+  /* Gris oscuro azulado (Slate 800) */
+  border: 1px solid #374151;
+  /* Borde sutil */
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
+  /* Sombra profunda */
+}
+
+/* 2. Color del Texto de los Items */
+:host-context([data-bs-theme="dark"]) .dropdown-item {
+  color: #f3f4f6;
+  /* Blanco casi puro */
+  border-bottom: 1px solid #374151;
+  /* Separador oscuro */
+  background-color: #1f2937;
+  /* Asegurar fondo base */
+}
+
+/* 3. Efecto Hover (Al pasar el mouse o foco) */
+:host-context([data-bs-theme="dark"]) .dropdown-item:hover,
+:host-context([data-bs-theme="dark"]) .dropdown-item:focus {
+  background-color: #2563eb !important;
+  /* Azul intenso */
+  color: #ffffff !important;
+  border-color: #2563eb;
+}
+
+/* 4. Corrección de textos secundarios (Muted) dentro del item */
+:host-context([data-bs-theme="dark"]) .dropdown-item .text-muted {
+  color: #94a3b8 !important;
+  /* Gris claro legible */
+}
+
+/* Al hacer hover, el texto secundario se vuelve blanco para contraste */
+:host-context([data-bs-theme="dark"]) .dropdown-item:hover .text-muted,
+:host-context([data-bs-theme="dark"]) .dropdown-item:focus .text-muted {
+  color: #e2e8f0 !important;
+  /* Blanco suave */
+}
+
+/* 5. Scrollbar Oscuro */
+:host-context([data-bs-theme="dark"]) .search-dropdown::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+
+:host-context([data-bs-theme="dark"]) .search-dropdown::-webkit-scrollbar-thumb {
+  background-color: #475569;
+  border-radius: 4px;
+  border: 2px solid #1f2937;
+}
+
+/* 6. Estado "Sin Resultados" o "Cargando" */
+:host-context([data-bs-theme="dark"]) .dropdown-item.disabled {
+  color: #94a3b8;
+  background-color: transparent;
+  pointer-events: none;
+}

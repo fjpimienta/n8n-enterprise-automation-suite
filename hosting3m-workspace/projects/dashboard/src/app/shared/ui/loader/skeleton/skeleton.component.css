@@ -1,0 +1,56 @@
+.skeleton-container {
+    background: #ffffff;
+    min-height: 120px;
+    border: 1px solid #e6e8e9 !important;
+}
+
+.skeleton-avatar {
+    width: 40px;
+    height: 40px;
+    background: #f2f4f6;
+    border-radius: 8px;
+}
+
+.skeleton-title {
+    height: 20px;
+    width: 60%;
+    background: #f2f4f6;
+    margin-left: 12px;
+    border-radius: 4px;
+}
+
+.skeleton-line {
+    height: 12px;
+    background: #f2f4f6;
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+.skeleton-line.full {
+    width: 100%;
+}
+
+.skeleton-line.short {
+    width: 40%;
+}
+
+/* Animación de Pulso */
+.skeleton-avatar,
+.skeleton-title,
+.skeleton-line {
+    animation: pulse 1.5s infinite ease-in-out;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.4;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}

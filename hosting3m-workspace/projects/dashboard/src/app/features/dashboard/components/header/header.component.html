@@ -1,0 +1,65 @@
+<div class="page-header d-print-none text-white bg-dark py-3">
+    <div class="container-xl">
+        <div class="row g-2 align-items-center">
+            <div class="col">
+                <!-- <div class="page-pretitle text-muted-light">Dashboard</div> -->
+                <h2 class="page-title text-white" (click)="onRefreshMain.emit()"
+                    style="cursor: pointer; user-select: none;" title="Click para refrescar datos">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-building-skyscraper"
+                        width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M3 21l18 0" />
+                        <path d="M5 21v-14l8 -4l8 4v14" />
+                        <path d="M19 21v-10l-6 -4" />
+                        <path d="M9 9l0 .01" />
+                        <path d="M9 12l0 .01" />
+                        <path d="M9 15l0 .01" />
+                        <path d="M9 18l0 .01" />
+                    </svg>
+                    &nbsp;Hotel San José
+                </h2>
+            </div>
+            <div class="col-auto ms-auto d-flex gap-2">
+                <button class="btn btn-icon btn-dark" (click)="onRefresh.emit()" title="Refrescar">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
+                        stroke-width="2" stroke="currentColor" fill="none">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4" />
+                        <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4" />
+                    </svg>
+                </button>
+
+                <button class="btn btn-icon" (click)="themeService.toggleTheme()"
+                    [class.btn-dark]="themeService.currentTheme() === 'light'"
+                    [class.btn-light]="themeService.currentTheme() === 'dark'" title="Cambiar tema">
+
+                    @if (themeService.currentTheme() === 'dark') {
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
+                        stroke-width="2" stroke="currentColor" fill="none">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" />
+                        <path
+                            d="M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7" />
+                    </svg>
+                    }
+
+                    @else {
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
+                        stroke-width="2" stroke="currentColor" fill="none">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+                    </svg>
+                    }
+                </button>
+
+                @if (isAdmin()) {
+                <button (click)="onGenerateReport.emit()" class="btn btn-primary btn-sm me-2">
+                    💰 Caja
+                </button>
+                }
+                <button (click)="onLogout.emit()" class="btn btn-danger btn-sm">Salir</button>
+            </div>
+        </div>
+    </div>
+</div>

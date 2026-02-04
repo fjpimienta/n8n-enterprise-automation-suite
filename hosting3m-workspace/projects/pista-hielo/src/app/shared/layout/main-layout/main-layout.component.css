@@ -1,0 +1,26 @@
+/* El contenedor de las páginas */
+.page-wrapper {
+    /* Estado Normal: Deja espacio de 16rem a la izquierda */
+    margin-left: 16rem;
+    transition: margin-left 0.3s ease-in-out;
+    min-height: 100vh;
+    padding-top: 1rem;
+}
+
+/* Estado Expandido (Cuando el sidebar es Mini) */
+.page-wrapper.expanded-content {
+    /* Estado Mini: Solo deja 5rem de espacio */
+    margin-left: 5rem !important;
+}
+
+/* =========================================
+   MÓVIL (Pantallas pequeñas)
+   ========================================= */
+@media (max-width: 991.98px) {
+
+    /* En móvil el sidebar flota, así que el margen es 0 siempre */
+    .page-wrapper,
+    .page-wrapper.expanded-content {
+        margin-left: 0 !important;
+    }
+}
