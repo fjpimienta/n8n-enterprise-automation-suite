@@ -4,14 +4,14 @@
 ![Arquitectura n8n Enterprise](assets/AutomationSuiteHosting3M_by_Gemini.png)
 
 **Arquitecto:** Francisco Pérez (Senior Systems Engineer | PMP | Full Stack)
-**Stack:** n8n, Docker, PostgreSQL (pgvector), Node.js, OpenAI (GPT-4o), MCP (Model Context Protocol). Linux VPS.
+**Stack:** n8n v2.4.6, Docker, PostgreSQL (pgvector + JSONB), Node.js, OpenAI (GPT-4o), Angular 21 (Signals). Linux VPS.
 
 ## 🎯 Objetivo del Proyecto
 Suite de automatización empresarial de grado industrial diseñada para alta disponibilidad. Esta arquitectura trasciende el uso de simples "bots" para convertirse en un **Hub de Servicios Inteligente** que garantiza:
 
 1.  **Soberanía de Datos:** Despliegue 100% Self-Hosted.
 2.  **Latencia Mínima:** Optimización de redes internas Docker.
-3.  **Seguridad Corporativa:** Gestión de permisos basada en roles (RBAC) vinculada directamente a la base de datos central.
+3.  **Seguridad Corporativa:** Gestión de permisos basada en roles (RBAC) y validación de tokens RS256.
 
 ---
 
@@ -20,57 +20,55 @@ Desplegado en un entorno endurecido (**Hardened VPS**) utilizando orquestación 
 
 | Servicio | Tecnología | Función Crítica |
 | :--- | :--- | :--- |
-| **Orquestador** | n8n v2.1.4 (Enterprise) | Motor lógico central de flujos. |
-| **IA Bridge** | Model Context Protocol (MCP) | Protocolo de interoperabilidad para ejecutar SQL seguro desde la IA. |
-| **Capa de Datos** | PostgreSQL + pgvector | Almacenamiento relacional transaccional y base de datos vectorial (RAG). |
+| **Orquestador** | n8n v2.4.6 (Enterprise) | Motor lógico central de flujos. |
+| **IA Bridge** | MCP Protocol | Interoperabilidad para ejecutar SQL seguro desde la IA. |
+| **Capa de Datos** | PostgreSQL + pgvector | Almacenamiento híbrido (Relacional + JSONB) y base de datos vectorial. |
 | **Seguridad** | Node.js (JWT Service) | Microservicio dedicado para firma y validación de tokens RS256. |
 | **Agentes IA** | OpenAI + LangChain | Procesamiento de lenguaje natural y razonamiento autónomo. |
-| **Voz (IO)** | Whisper & OpenAI TTS | Conversión bidireccional de audio con normalización de buffers. |
-| **Memoria IA** | PostgreSQL + pgvector | RAG (Retrieval-Augmented Generation) para contexto a largo plazo. |
+| **Frontend Hotel** | Angular 21 SPA | Dashboard administrativo con gestión de estado reactivo (Signals). |
+| **Frontend Pista**| Angular 21 PWA | WebApp progresiva para operaciones de tiempo real y cobros. |
 | **Ingesta** | Node.js Scraper | Motor de extracción de datos en tiempo real. |
-| **Contactos** | n8n v2.1.4 (Enterprise) | Orquestador de entrada de leads y CRM. |
+| **Contactos** | n8n v2.4.6 (Enterprise) | Orquestador de entrada de leads y CRM. |
 
 ---
 
 ## 📦 Módulos Implementados (Workflows)
 
-La suite se compone de 8 módulos principales que operan como microservicios interconectados:
+La suite se compone de 9 módulos principales que operan como microservicios interconectados:
 
 ### 1. 🔐 Secure Token Gateway
-Sistema centralizado que gestiona tanto la validación de peticiones externas como la auto-generación de tokens para tareas cronometradas, permitiendo que los flujos operen de forma autónoma bajo un esquema "Zero Trust".
+Sistema centralizado que gestiona tanto la validación de peticiones externas como la auto-generación de tokens para tareas cronometradas (Zero Trust).
 
 ### 2. 🛠️ Contact & CRM Bridge v2
-La versión avanzada del orquestador de contactos. Perfecciona la integración entre el frontend (formularios web) y el backend (CRM), asegurando sanitización de datos.
+Orquestador de entrada de leads con validación estricta de tipos y sanitización antes de la persistencia en CRM.
 
 ### 3. 📰 Automated News Curator
-Motor de curaduría que extrae noticias técnicas, realiza un **filtrado semántico** y genera una identidad visual única mediante IA generativa antes de persistir los datos en el CRUD central.
+Motor de curaduría que extrae noticias técnicas, realiza un **filtrado semántico** y genera una identidad visual única mediante IA generativa.
 
 ### 4. 📢 Social Media Orchestrator
-Orquestador omnicanal con lógica de **idempotencia**. Verifica cuotas de publicación diarias y adapta el contenido (truncado de texto, tagging) para maximizar el engagement en X, Facebook y LinkedIn.
+Orquestador omnicanal con lógica de **idempotencia**. Verifica cuotas de publicación diarias y adapta el contenido para X, Facebook y LinkedIn.
 
 ### 5. 🤖 Multi-Service WhatsApp Hub
-Agente multimodal (Texto/Voz) con **enrutamiento inteligente**. Identifica al cliente en la DB y decide si la atención debe ser orientada a Hosting, Hotel o soporte general, utilizando memoria persistente `pgvector`.
+Agente multimodal (Texto/Voz) con enrutamiento inteligente basado en memoria persistente `pgvector`.
 
 ### 6. 🛠️ Dynamic CRUD Engine
-Capa de abstracción que procesa operaciones SQL complejas. Soporta inserciones masivas, joins dinámicos y validación de roles, actuando como el backend unificado para todos los frontends.
+Capa de abstracción SQL que actúa como backend unificado. **Novedad v3:** Soporte para persistencia híbrida (SQL para búsquedas + JSONB para esquemas flexibles).
 
 ### 7. 🏨 MCP Server: Hotel Management
-Implementación avanzada del **Model Context Protocol**. Expone herramientas de base de datos a la IA, permitiendo consultas de disponibilidad en tiempo real y registro de reservas directas mediante lenguaje natural (SQL Gen).
+Implementación avanzada del **Model Context Protocol**. Expone herramientas de base de datos a la IA para consultas de inventario en tiempo real.
 
-### 8. 🏨 AdminHotel Dashboard (Frontend)
-Cliente Web SPA de alto rendimiento para la gestión visual del inventario hotelero.
-* **Novedades v0.5:**
-    * Sistema de refresco inteligente (Refresh Main).
-    * Gestión dinámica de reservas.
-    * CRUD de huéspedes con validación de identidad.
-    * **Room Rack** con estados reactivos (Sucia, Disponible, Reservada, Ocupada).
-    * **Integración:** Consume Módulos Secure Token Gateway, Dynamic CRUD Engine y MCP Server.
+### 8. 🏨 AdminHotel Dashboard (v0.7)
+Cliente Web SPA para la gestión hotelera integral.
+* **Core:** Angular 21 + Tabler UI.
+* **Módulo QA:** Nuevo sistema de **Rondines** con formularios dinámicos y "Smart Merge" de datos.
+* **Room Rack:** Semáforo visual de estados (Sucia, Disponible, Ocupada).
+* **Finance:** Auditoría de fugas y descuentos dinámicos.
 
-### 9. ⛸️ PistaHielo Operations Center (Frontend)
-**Novedad v0.5:** PWA Administrativa para gestión de tiempos y finanzas en pista de patinaje.
-    * **Core:** Dual-Time Operation (Check-in/Check-out).
-    * **Finanzas:** Motores de cobro y Reportes de Corte Z (Efectivo vs Tarjeta).
-    * **UI:** Layout Responsivo Mobile-First con Signals.
+### 9. ⛸️ PistaHielo Operations Center (v0.6)
+PWA Administrativa para gestión de centros de entretenimiento.
+* **Core:** Angular 21 + Reactive Signals.
+* **Dual-Stage Billing:** Motor de cobro de alta precisión con soporte para **"Midnight Crossing"** (turnos que cruzan la medianoche).
+* **Ops:** Monitoreo en tiempo real y reportes de Corte Z (Efectivo vs Tarjeta).
 
 ---
 
@@ -79,13 +77,14 @@ Cliente Web SPA de alto rendimiento para la gestión visual del inventario hotel
 # Clonar repositorio
 git clone [https://github.com/tu-usuario/n8n-enterprise-suite.git](https://github.com/tu-usuario/n8n-enterprise-suite.git)
 
-# Levantar infraestructura
+# Levantar infraestructura Backend
 cd infrastructure
 docker-compose up -d
 
-# Levantar Clientes Frontend (Opcional)
+# Levantar Clientes Frontend (Ejemplo)
 cd apps/admin-hotel
 npm install && ng serve
+
 ```
 
 ---
@@ -93,8 +92,6 @@ npm install && ng serve
 ## Documentación de Workflows Individuales
 
 ### 📚 Documentación Técnica por Módulo
-
-Detalle técnico y código fuente de cada microservicio implementado en n8n:
 
 | ID | Módulo / Servicio | Función Principal | Stack & Integraciones | Documentación |
 | :---| :--- | :--- | :--- | :---: |
@@ -111,25 +108,28 @@ Detalle técnico y código fuente de cada microservicio implementado en n8n:
 ---
 
 ## 📈 Roadmap & Gestión de Proyectos (GitHub Projects V3)
+
 ### Completado (Q4 2025 - Q1 2026) ✅
-    * * Arquitectura Dual-Auth: Implementación de sub-workflows de validación y auto-generación de tokens (Módulos 01 y 07).
-    * Generación de Media IA: Integración nativa de Pollinations AI (Flux) en el pipeline de noticias y redes sociales.
-    * CRUD Transaccional: Motor dinámico v3 con soporte para operaciones seguras y mapeo de campos.
-    * MCP Hotel Core: Capacidad de la IA para interactuar directamente con el inventario de habitaciones.
+
+* **Infraestructura:** Despliegue de redes Docker aisladas y Auth Gateway RS256.
+* **Hotel Core:** Dashboard v0.7 con Módulo de Calidad (Rondines) y persistencia híbrida.
+* **Pista Hielo:** PWA v0.6 con corrección de cálculo de tiempos (Midnight Bug) y reportes financieros.
+* **Backend:** Dynamic CRUD Engine v3 con soporte JSONB.
 
 ### En Progreso (Q2 2026) 🏗️
-    * **PistaHielo Membership:** Integración de membresías VIP y directorio de alumnos en el Módulo 09.
-    * Optimización RAG HNSW: Migración de índices vectoriales para búsquedas en milisegundos sobre datasets extensos.
-    * Multi-Model Orchestration: Lógica para alternar entre GPT-4o, Claude 3.5 y modelos locales (Ollama) según el coste/complejidad de la tarea.
 
-### Backlog & R&D (Futuro) 🚀
-    ** Agentes Supervisores: Implementación de una capa de "Quality Assurance" donde una IA audita las respuestas de los agentes de WhatsApp antes del envío.
-    * Auto-Checkout MCP: Expansión del servidor MCP para procesar pagos y cierres de cuenta automáticos.
-    * Resiliencia Geográfica: Clusterización de n8n para alta disponibilidad real.
-    
+* **PistaHielo Membership:** Integración de directorio de alumnos VIP y control de mensualidades.
+* **Optimización RAG:** Migración a índices HNSW en pgvector para búsquedas masivas.
+
+### Backlog (Futuro) 🚀
+
+* **Agentes Supervisores:** IA de control de calidad para auditar respuestas de bots.
+* **Auto-Checkout MCP:** Pagos automatizados mediante IA.
+
 ---
 
-Desarrollado por: Francisco Jesus Pérez Pimienta 
-    - Ingeniero en Sistemas Computacionales.
-    - Maestro en Administracion de Proyectos.
-    - Especialista en Automatización de Procesos y Soberanía de Datos.
+Desarrollado por: **Francisco Jesus Pérez Pimienta**
+
+* Ingeniero en Sistemas Computacionales | PMP | Full Stack.
+* Especialista en Automatización de Procesos y Soberanía de Datos.
+
