@@ -1,0 +1,10 @@
+body, .page, .page-wrapper {
+    background-color: var(--tblr-body-bg, #1a2234) !important;
+    color: var(--tblr-body-color, #ffffff);
+}
+
+// Si las tarjetas (cards) también se ven blancas:
+.card {
+    background-color: var(--tblr-card-bg, #1f2937) !important;
+    color: inherit;
+}
