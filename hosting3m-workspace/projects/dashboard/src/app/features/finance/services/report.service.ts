@@ -24,16 +24,27 @@ export class ReportService {
       const createdStr = this.getLocalDateString(createdDate);
 
       switch (filter) {
-        case 'day': return createdStr === todayStr;
+        case 'day':
+          return createdStr === todayStr;
+
+        // ✅ CORRECCIÓN: Semana Calendario (Domingo a Hoy)
         case 'week':
-          const weekAgo = new Date();
-          weekAgo.setDate(now.getDate() - 7);
-          return createdDate >= weekAgo;
+          const startOfWeek = new Date(now);
+          // Restamos el número de día actual (0=Domingo, 1=Lunes...) para volver al Domingo
+          startOfWeek.setDate(now.getDate() - now.getDay());
+          // Reseteamos la hora para incluir transacciones desde la madrugada del Domingo
+          startOfWeek.setHours(0, 0, 0, 0);
+
+          return createdDate >= startOfWeek;
+
         case 'month':
           return createdDate.getMonth() === now.getMonth() && createdDate.getFullYear() === now.getFullYear();
+
         case 'year':
           return createdDate.getFullYear() === now.getFullYear();
-        default: return createdStr === todayStr;
+
+        default:
+          return createdStr === todayStr;
       }
     });
 
@@ -48,7 +59,6 @@ export class ReportService {
 
     return stats;
   }
-
   /* Convierte una fecha a string local YYYY-MM-DD */
   private getLocalDateString(date: Date): string {
     const offset = date.getTimezoneOffset();

@@ -52,7 +52,7 @@ export class DashboardComponent {
   collapsedGroups = signal<Set<string>>(new Set());
   expandedGroups = signal<Set<string>>(new Set());
 
-  activeBooking: any = null;
+  activeBooking = signal<any>(null);
   dailyReport = { total: 0, paid: 0, pending: 0, transactions: [] as any[], periodLabel: 'Hoy' };
 
   tempUser: User = this.getEmptyUser();
@@ -79,7 +79,7 @@ export class DashboardComponent {
 
     // 2. Limpiar cualquier selección previa (si había un modal o cuarto abierto)
     this.hotelService.clearSelection();
-    this.activeBooking = null;
+    this.activeBooking.set(null);
 
     // 3. Resetear filtros para ver "lo principal" (opcional)
     // Esto asegura que veas todas las habitaciones disponibles al volver
@@ -100,13 +100,14 @@ export class DashboardComponent {
   async onSelectRoom(room: any) {
     this.viewMode.set('details');
     this.hotelService.selectRoom(room);
-    this.activeBooking = null;
+    this.activeBooking.set(null);
 
     // 1. Si el estado es ocupado, buscamos OBLIGATORIAMENTE la estancia de hoy
     if (room.status === 'occupied') {
       const booking = await this.bookingService.getActiveBooking(room.id);
+      console.log('📦 Reserva cargada:', booking);
       if (booking && booking.id) {
-        this.activeBooking = booking;
+        this.activeBooking.set(booking);
       }
     } else {
       const allReservations = this.adminService.reservations();
@@ -130,13 +131,13 @@ export class DashboardComponent {
         // OPCIONAL: Si 'res' solo trae guest_id, podrías buscar el nombre del huésped aquí
         // para que el formulario lo muestre de inmediato.
         const guest = this.adminService.guests()?.find(g => g.id === res.guest_id);
-        this.activeBooking = {
+        this.activeBooking.set({
           ...res,
           guest_name: guest?.full_name,
           guest_doc_id: guest?.doc_id,
           guest_phone: guest?.phone,
           guest_email: guest?.email
-        };
+        });
       }
     }
   }
@@ -178,7 +179,7 @@ export class DashboardComponent {
       const booking = await this.bookingService.getActiveBooking(room.id);
 
       if (booking) {
-        this.activeBooking = booking;
+        this.activeBooking.set(booking);
 
         // Validación de negocio: No dejar salir si no pagó
         if (booking.payment_status !== 'paid') {
@@ -212,8 +213,10 @@ export class DashboardComponent {
     if (!booking || !confirm(`¿Confirmar pago de $${booking.total_amount}?`)) return;
     try {
       await this.bookingService.registerPayment(booking.id);
-      if (this.activeBooking && this.activeBooking.id === booking.id) {
-        this.activeBooking.payment_status = 'paid'; // <--- Esto permite que handleCheckout pase la validación
+      const current = this.activeBooking(); // Leemos el valor actual
+      if (current && current.id === booking.id) {
+        // Usamos update para cambiar solo esa propiedad de forma reactiva
+        this.activeBooking.update(val => ({ ...val, payment_status: 'paid' }));
       }
       alert('✅ Pago registrado');
       if (this.showReportModal) this.generateDailyReport();
@@ -495,8 +498,9 @@ export class DashboardComponent {
 
   /* Obtiene el estado de pago de la reserva seleccionada */
   getSelectedRoomPaymentStatus(): string {
-    if (!this.activeBooking) return 'Cargando...';
-    return this.activeBooking.payment_status === 'paid' ? '✅' : '⏳';
+    const booking = this.activeBooking(); // <--- Leemos el Signal con ()
+    if (!booking) return 'Cargando...';
+    return booking.payment_status === 'paid' ? '✅' : '⏳';
   }
 
   async markRoomAsClean() {
