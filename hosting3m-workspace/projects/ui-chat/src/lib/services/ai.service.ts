@@ -2,6 +2,8 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { map, catchError, of, finalize } from 'rxjs';
 import { CHAT_CONFIG } from 'ui-chat';
+// 👇 IMPORTA LA INTERFAZ DESDE SU ARCHIVO ORIGINAL
+import { ChatConfig } from '../interfaces/chat-config';
 
 export interface ChatMessage {
   text: string;
@@ -9,17 +11,16 @@ export interface ChatMessage {
   timestamp: Date;
 }
 
-@Injectable({
-  providedIn: 'root'
-})
 @Injectable({ providedIn: 'root' })
 export class AiService {
   private http = inject(HttpClient);
-  private config = inject(CHAT_CONFIG); // Inyectamos la config
-  private apiUrl_ai = this.config.apiUrl_ai; // Ya no usamos "environment.apiUrl_ai"
+  private config = inject(CHAT_CONFIG);
+
+  // 🚫 BORRA la definición de "export interface ChatConfig" que tenías aquí
+
+  private apiUrl_ai = this.config.apiUrl_ai;
   private sessionId = 'web-' + crypto.randomUUID();
 
-  // Estado reactivo del chat
   messages = signal<ChatMessage[]>([
     { text: '👋 Hola, soy tu Asistente de Operaciones. ¿En qué puedo ayudarte hoy?', sender: 'bot', timestamp: new Date() }
   ]);
@@ -27,13 +28,11 @@ export class AiService {
   isLoading = signal<boolean>(false);
 
   sendMessage(query: string) {
-    if (!query.trim()) return;
+    if (!query.trim() || !this.apiUrl_ai) return;
 
-    // 1. Agregar mensaje del usuario
     this.updateChat(query, 'user');
     this.isLoading.set(true);
 
-    // 2. Llamar a n8n
     this.http.post<{ output: string }>(this.apiUrl_ai, {
       chatInput: query,
       sessionId: this.sessionId
@@ -45,7 +44,6 @@ export class AiService {
       }),
       finalize(() => this.isLoading.set(false))
     ).subscribe((responseText) => {
-      // 3. Agregar respuesta del bot
       this.updateChat(responseText, 'bot');
     });
   }

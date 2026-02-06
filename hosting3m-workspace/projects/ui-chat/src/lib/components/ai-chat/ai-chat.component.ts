@@ -2,6 +2,7 @@ import { Component, inject, signal, ElementRef, ViewChild, effect } from '@angul
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AiService } from '../../services/ai.service';
+import { CHAT_CONFIG } from 'ui-chat/tokens/chat.token';
 
 @Component({
   selector: 'app-ai-chat',
@@ -11,7 +12,8 @@ import { AiService } from '../../services/ai.service';
   styleUrls: ['./ai-chat.component.css']
 })
 export class AiChatComponent {
-  aiService = inject(AiService);
+  public config = inject(CHAT_CONFIG);
+  public aiService = inject(AiService);
 
   isOpen = signal(false);
   userInput = '';

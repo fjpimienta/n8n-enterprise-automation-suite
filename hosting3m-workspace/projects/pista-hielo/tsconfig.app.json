@@ -5,15 +5,39 @@
     "types": [],
     "baseUrl": ".",
     "paths": {
-      "@core/*": ["src/app/core/*"],
-      "@shared/*": ["src/app/shared/*"],
-      "@features/*": ["src/app/features/*"],
-      "@env/*": ["src/environments/*"],
-      "@interfaces/*": ["src/app/core/interfaces/*"],
-      "@services/*": ["src/app/core/services/*"],
-      "@admin/*": ["src/app/features/admin/*"]
+      "ui-chat": [
+        "../ui-chat/src/public-api.ts"
+      ],
+      "ui-chat/*": [
+        "../ui-chat/src/lib/*"
+      ],
+      "@core/*": [
+        "src/app/core/*"
+      ],
+      "@shared/*": [
+        "src/app/shared/*"
+      ],
+      "@features/*": [
+        "src/app/features/*"
+      ],
+      "@env/*": [
+        "src/environments/*"
+      ],
+      "@interfaces/*": [
+        "src/app/core/interfaces/*"
+      ],
+      "@services/*": [
+        "src/app/core/services/*"
+      ],
+      "@admin/*": [
+        "src/app/features/admin/*"
+      ]
     }
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.spec.ts"]
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "src/**/*.spec.ts"
+  ]
 }

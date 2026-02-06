@@ -1,4 +1,4 @@
-import { ApplicationConfig, provideZonelessChangeDetection } from '@angular/core'; // <--- Nombre actualizado
+import { ApplicationConfig, provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 
@@ -9,9 +9,17 @@ import { environment } from '@env/environment';
 
 export const appConfig: ApplicationConfig = {
   providers: [
-    provideZonelessChangeDetection(), // <--- Sin la palabra "Experimental"
+    provideZonelessChangeDetection(),
     provideRouter(routes),
     provideHttpClient(withInterceptors([authInterceptor])),
-    { provide: CHAT_CONFIG, useValue: { apiUrl_ai: environment.apiUrl_ai } }
+    {
+      provide: CHAT_CONFIG,
+      useValue: {
+        apiUrl_ai: environment.apiUrl_ai,
+        logoUrl: 'assets/images/logo_hotel_san_jose.png',
+        title: 'Asistente Hotel San José',
+        primaryColor: '#6c9a40'
+      }
+    }
   ]
 };

@@ -1,3 +1,4 @@
+import { CHAT_CONFIG } from 'ui-chat';
 import { ApplicationConfig, importProvidersFrom } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
@@ -6,6 +7,7 @@ import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/
 
 // 2. IMPORTANTE: Importar tu interceptor (ajusta la ruta si es diferente, usé la de tu versión anterior)
 import { authInterceptor } from '@core/auth/auth-interceptor';
+import { environment } from '@env/environment';
 
 import {
   LucideAngularModule,
@@ -24,7 +26,15 @@ export const appConfig: ApplicationConfig = {
       withFetch(),
       withInterceptors([authInterceptor])
     ),
-
+    {
+      provide: CHAT_CONFIG,
+      useValue: {
+        apiUrl_ai: environment.apiUrl_ai,
+        title: 'Asistente Pista Hielo',
+        logoUrl: 'assets/images/logo_pista.png',
+        primaryColor: '#00d2ff'
+      }
+    },
     importProvidersFrom(LucideAngularModule.pick({
       ChevronsLeft,
       ChevronsRight,

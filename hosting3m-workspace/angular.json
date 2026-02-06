@@ -54,7 +54,10 @@
               {
                 "glob": "**/*",
                 "input": "projects/dashboard/public"
-              }
+              },
+              "projects/dashboard/src/favicon.ico",
+              "projects/dashboard/src/assets",
+              "projects/dashboard/public"
             ],
             "styles": [
               "projects/dashboard/src/styles.scss"
@@ -122,7 +125,10 @@
               {
                 "glob": "**/*",
                 "input": "projects/pista-hielo/public"
-              }
+              },
+              "projects/pista-hielo/src/favicon.ico",
+              "projects/pista-hielo/src/assets",
+              "projects/pista-hielo/public"
             ],
             "styles": [
               "projects/pista-hielo/src/styles.scss"

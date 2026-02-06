@@ -5,17 +5,39 @@
     "types": [],
     "baseUrl": ".",
     "paths": {
-      "ui-chat": ["../ui-chat/src/public-api.ts"],
-      "ui-chat/*": ["../ui-chat/src/lib/*"],
-      "@core/*": ["src/app/core/*"],
-      "@shared/*": ["src/app/shared/*"],
-      "@features/*": ["src/app/features/*"],
-      "@env/*": ["src/environments/*"],
-      "@auth/*": ["src/app/core/auth/*"],
-      "@models/*": ["src/app/core/models/*"],
-      "@ui/*": ["src/app/shared/ui/*"]
+      "ui-chat": [
+        "../ui-chat/src/public-api.ts"
+      ],
+      "ui-chat/*": [
+        "../ui-chat/src/lib/*"
+      ],
+      "@core/*": [
+        "src/app/core/*"
+      ],
+      "@shared/*": [
+        "src/app/shared/*"
+      ],
+      "@features/*": [
+        "src/app/features/*"
+      ],
+      "@env/*": [
+        "src/environments/*"
+      ],
+      "@auth/*": [
+        "src/app/core/auth/*"
+      ],
+      "@models/*": [
+        "src/app/core/models/*"
+      ],
+      "@ui/*": [
+        "src/app/shared/ui/*"
+      ]
     }
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.spec.ts"]
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "src/**/*.spec.ts"
+  ]
 }
