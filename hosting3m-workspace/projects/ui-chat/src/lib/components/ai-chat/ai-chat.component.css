@@ -1,0 +1,278 @@
+/* =========================================
+   BOTÓN FLOTANTE (CÍRCULO PERFECTO)
+   ========================================= */
+.chat-fab {
+    /* Posición fija en la esquina inferior derecha */
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1050;
+
+    /* Forma y Tamaño */
+    width: 65px;
+    height: 65px;
+    border-radius: 50%;
+    /* Esto hace el círculo perfecto */
+
+    /* Estilo Visual */
+    background-color: #ffffff;
+    /* Fondo blanco */
+    border: none;
+    /* Sin bordes grises ni líneas raras */
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    /* Sombra para dar profundidad */
+
+    /* Comportamiento */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    overflow: hidden;
+    /* IMPORTANTE: Recorta la imagen para que no se salga del círculo */
+
+    /* Animación suave */
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Efecto al pasar el mouse (Hover) */
+.chat-fab:hover {
+    transform: scale(1.1);
+    /* Crece un 10% */
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Estado ACTIVO (Cuando el chat está abierto) */
+.chat-fab.active {
+    background-color: #d63939;
+    /* Se vuelve rojo */
+    transform: rotate(90deg);
+    /* Gira */
+}
+
+/* =========================================
+   LA IMAGEN DEL LOGO
+   ========================================= */
+.icon-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.custom-icon {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    /* MAGIA: Llena todo el círculo sin deformarse */
+    display: block;
+}
+
+/* =========================================
+   ÍCONO DE CERRAR (X)
+   ========================================= */
+.close-icon {
+    color: white;
+    font-size: 24px;
+    font-weight: bold;
+    line-height: 1;
+}
+
+/* =========================================
+   VENTANA DEL CHAT
+   ========================================= */
+.chat-window {
+    position: fixed;
+    bottom: 95px;
+    /* Un poco arriba del botón */
+    right: 20px;
+    width: 350px;
+    height: 500px;
+    display: flex;
+    flex-direction: column;
+    z-index: 1049;
+
+    /* Estilo de la tarjeta */
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 5px 25px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    /* Para respetar los bordes redondeados */
+
+    /* Animación de entrada */
+    animation: slideUp 0.3s ease;
+}
+
+/* Cabecera del chat (azul o color primario) */
+.card-header {
+    padding: 15px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.card-title {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.status-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 5px;
+}
+
+.bg-green {
+    background-color: #2fb344;
+}
+
+/* Cuerpo del chat (Mensajes) */
+.chat-body {
+    flex: 1;
+    /* Ocupa el espacio restante */
+    overflow-y: auto;
+    /* Scroll vertical */
+    padding: 15px;
+    background: #f8f9fa;
+    /* Gris muy clarito de fondo */
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* =========================================
+   BURBUJAS DE MENSAJE
+   ========================================= */
+.chat-bubble {
+    max-width: 80%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    position: relative;
+    word-wrap: break-word;
+}
+
+/* Mensajes del BOT */
+.chat-bubble.bot {
+    align-self: flex-start;
+    background: white;
+    border: 1px solid #e2e8f0;
+    color: #333;
+    border-bottom-left-radius: 2px;
+}
+
+/* Mensajes del USUARIO */
+.chat-bubble.user {
+    align-self: flex-end;
+    background: var(--primary-color, #206bc4);
+    /* Usa variable o azul por defecto */
+    color: white;
+    border-bottom-right-radius: 2px;
+}
+
+.message-time {
+    display: block;
+    font-size: 0.7rem;
+    margin-top: 4px;
+    opacity: 0.7;
+    text-align: right;
+}
+
+/* =========================================
+   ANIMACIÓN DE "ESCRIBIENDO..."
+   ========================================= */
+.typing {
+    font-style: italic;
+    color: #888;
+    display: flex;
+    gap: 2px;
+}
+
+.dot {
+    animation: blink 1.4s infinite both;
+}
+
+.dot:nth-child(2) {
+    animation-delay: 0.2s;
+}
+
+.dot:nth-child(3) {
+    animation-delay: 0.4s;
+}
+
+/* =========================================
+   FOOTER (INPUT)
+   ========================================= */
+.chat-footer {
+    padding: 10px;
+    border-top: 1px solid #eee;
+    background: white;
+}
+
+.input-group {
+    display: flex;
+    gap: 5px;
+}
+
+.form-control {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 20px;
+    outline: none;
+}
+
+.form-control:focus {
+    border-color: #206bc4;
+}
+
+.btn-primary {
+    background: #206bc4;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-primary:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+/* =========================================
+   ANIMACIONES KEYFRAMES
+   ========================================= */
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes blink {
+    0% {
+        opacity: .2;
+    }
+
+    20% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: .2;
+    }
+}

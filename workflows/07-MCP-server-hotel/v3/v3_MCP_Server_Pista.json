@@ -1,0 +1,195 @@
+{
+  "name": "v3/MCP Server Pista",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "v3/pista-management"
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
+      "typeVersion": 1,
+      "position": [
+        912,
+        -128
+      ],
+      "id": "64a489db-0a37-4c0f-9c61-5b87793d8a0d",
+      "name": "MCP Pista Hielo",
+      "webhookId": "c9954483-87fe-4a26-a15e-25a458bfb5de"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n    id, \n    start_time, \n    metadata->>'skate_number' as patin, \n    metadata->>'client_category' as tipo, \n    metadata->>'duration' as duracion_plan,\n    (EXTRACT(EPOCH FROM (NOW() - (CURRENT_DATE + start_time)::timestamp)) / 60)::int as minutos_transcurridos\nFROM ph_transactions \nWHERE status = 'ACT'\nORDER BY start_time DESC;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        784,
+        96
+      ],
+      "id": "eab1fc7e-6b5a-4cda-96e7-7b02fec57ed1",
+      "name": "Ver Pista Activa",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      },
+      "notes": "Úsalo cuando pregunten quién está en la pista, qué patines están ocupados o cuánto tiempo llevan patinando las personas actualmente."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n    payment_method,\n    COUNT(*) as tickets,\n    SUM(amount) as total_dinero\nFROM ph_transactions\nWHERE \n    status = 'FIN' \n    AND transaction_date::date = CURRENT_DATE\nGROUP BY payment_method;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        912,
+        96
+      ],
+      "id": "e1947053-d5cb-4540-b9ef-1f8f05d5b1be",
+      "name": "Reporte Ventas Hoy",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      },
+      "notes": "Úsalo cuando pregunten cuánto se ha vendido hoy, el corte de caja o el total de ingresos del día."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n    full_name, \n    client_type, \n    membership_expiry, \n    is_vip,\n    notes\nFROM ph_clients \nWHERE full_name ILIKE '%' || {{ $fromAI.nombre_cliente }} || '%'\nLIMIT 5;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        1040,
+        96
+      ],
+      "id": "1d46c3ae-462d-4248-8c27-262decf07de1",
+      "name": "Buscar Cliente",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      },
+      "notes": "Úsalo para buscar información de un alumno o cliente por su nombre. Útil para ver vigencia de membresía."
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n    t.id as ticket_id,\n    t.start_time,\n    t.metadata->>'client_category' as quien_lo_tiene\nFROM ph_transactions t\nWHERE \n    t.status = 'ACT' \n    AND t.metadata->>'skate_number' = '{{ $fromAI.numero_patin }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        1168,
+        96
+      ],
+      "id": "10c0bb1d-f5e5-4ecf-a705-c32062a50a98",
+      "name": "Verificar Patin",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      },
+      "notes": "Úsalo cuando pregunten específicamente si un número de patín está disponible o quién lo tiene. El input debe ser el número (ej: '05')."
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Ver Pista Activa": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Pista Hielo",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reporte Ventas Hoy": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Pista Hielo",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Cliente": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Pista Hielo",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verificar Patin": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Pista Hielo",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "timeSavedPerExecution": 3,
+    "errorWorkflow": "9SrVXdATmlrZemJT"
+  },
+  "versionId": "0721f9ea-b002-407a-b116-8b2febdfac3a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
+  },
+  "id": "gxf1MFJVQAvDzEJA",
+  "tags": [
+    {
+      "updatedAt": "2025-12-23T12:12:28.399Z",
+      "createdAt": "2025-12-23T12:12:28.399Z",
+      "id": "RWBzILPfFXEtEcLf",
+      "name": "AI Agent"
+    },
+    {
+      "updatedAt": "2025-12-23T12:12:58.230Z",
+      "createdAt": "2025-12-23T12:12:58.230Z",
+      "id": "MKrwsTVnLLBXLfUP",
+      "name": "Chat"
+    },
+    {
+      "updatedAt": "2025-12-31T16:55:06.301Z",
+      "createdAt": "2025-12-31T16:55:06.301Z",
+      "id": "ts9FABk8F02a5xrA",
+      "name": "Agent IA"
+    },
+    {
+      "updatedAt": "2026-02-03T23:31:15.416Z",
+      "createdAt": "2026-02-03T23:31:15.416Z",
+      "id": "y01sGd6r5K66E2qb",
+      "name": "v3"
+    }
+  ]
+}

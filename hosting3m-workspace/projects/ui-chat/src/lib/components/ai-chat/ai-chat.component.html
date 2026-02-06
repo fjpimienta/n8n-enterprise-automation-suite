@@ -1,0 +1,49 @@
+<button class="chat-fab" (click)="toggleChat()" [class.active]="isOpen()">
+
+    <div *ngIf="!isOpen()" class="icon-container">
+        <img [src]="config.logoUrl" [alt]="config.title" class="custom-icon">
+    </div>
+
+    <span *ngIf="isOpen()" class="close-icon">✕</span>
+
+</button>
+
+<div class="chat-window" *ngIf="isOpen()">
+
+    <div class="card-header bg-primary text-white">
+        <h3 class="card-title">{{ config.title }}</h3>
+        <div class="card-actions">
+            <span class="status-dot bg-green"></span> Online
+        </div>
+    </div>
+
+    <div class="chat-body" #scrollContainer>
+
+        @for (msg of aiService.messages(); track $index) {
+        <div class="chat-bubble" [ngClass]="{'user': msg.sender === 'user', 'bot': msg.sender === 'bot'}">
+            <div class="message-content">
+                {{ msg.text }}
+            </div>
+            <small class="message-time">{{ msg.timestamp | date:'shortTime' }}</small>
+        </div>
+        }
+
+        @if (aiService.isLoading()) {
+        <div class="chat-bubble bot typing">
+            <span>Escribiendo</span>
+            <span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
+        </div>
+        }
+    </div>
+
+    <div class="chat-footer">
+        <div class="input-group">
+            <input type="text" class="form-control" placeholder="Escribe tu consulta..." [(ngModel)]="userInput"
+                (keyup.enter)="send()">
+
+            <button class="btn btn-primary" (click)="send()" [disabled]="!userInput.trim() || aiService.isLoading()">
+                ➤
+            </button>
+        </div>
+    </div>
+</div>

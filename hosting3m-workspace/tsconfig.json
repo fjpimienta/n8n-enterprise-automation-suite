@@ -1,0 +1,90 @@
+/* To learn more about Typescript configuration file: https://www.typescriptlang.org/docs/handbook/tsconfig-json.html. */
+/* To learn more about Angular compiler options: https://angular.dev/reference/configs/angular-compiler-options. */
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "baseUrl": ".",
+    "strict": true,
+    "noImplicitOverride": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "isolatedModules": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "ES2022",
+    "module": "preserve",
+    "paths": {
+      "ui-chat": [
+        "projects/ui-chat/src/public-api.ts"
+      ],
+      "ui-chat/*": [
+        "projects/ui-chat/src/lib/*"
+      ],
+      /* --- Dashboard (Hotel) --- */
+      "@dashboard-core/*": [
+        "projects/dashboard/src/app/core/*"
+      ],
+      "@dashboard-features/*": [
+        "projects/dashboard/src/app/features/*"
+      ],
+      "@dashboard-env/*": [
+        "projects/dashboard/src/environments/*"
+      ],
+      "@dashboard-shared/*": [
+        "projects/dashboard/src/app/shared/*"
+      ],
+      /* --- Pista de Hielo --- */
+      "@pista-core/*": [
+        "projects/pista-hielo/src/app/core/*"
+      ],
+      "@pista-features/*": [
+        "projects/pista-hielo/src/app/features/*"
+      ],
+      "@pista-env/*": [
+        "projects/pista-hielo/src/environments/*"
+      ],
+      "@pista-shared/*": [
+        "projects/pista-hielo/src/app/shared/*"
+      ],
+      /* --- Alias Genéricos (Si quieres mantener los nombres originales) --- */
+      /* OJO: Esto puede causar confusión si ambas apps usan @core/* */
+      "@core/*": [
+        "projects/dashboard/src/app/core/*",
+        "projects/pista-hielo/src/app/core/*"
+      ],
+      "@shared/*": [
+        "projects/dashboard/src/app/shared/*",
+        "projects/pista-hielo/src/app/shared/*"
+      ]
+    }
+  },
+  "angularCompilerOptions": {
+    "enableI18nLegacyMessageIdFormat": false,
+    "strictInjectionParameters": true,
+    "strictInputAccessModifiers": true,
+    "strictTemplates": true
+  },
+  "files": [],
+  "references": [
+    {
+      "path": "./projects/ui-chat/tsconfig.lib.json"
+    },
+    {
+      "path": "./projects/ui-chat/tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/dashboard/tsconfig.app.json"
+    },
+    {
+      "path": "./projects/dashboard/tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/pista-hielo/tsconfig.app.json"
+    },
+    {
+      "path": "./projects/pista-hielo/tsconfig.spec.json"
+    }
+  ]
+}
