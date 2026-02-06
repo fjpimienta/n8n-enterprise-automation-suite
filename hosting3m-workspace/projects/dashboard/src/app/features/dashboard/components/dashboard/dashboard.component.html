@@ -135,7 +135,7 @@
 </div>
 
 @if (hotelService.selectedRoom() && viewMode() === 'details') {
-<app-room-detail-modal [room]="hotelService.selectedRoom()" [activeBooking]="activeBooking"
+<app-room-detail-modal [room]="hotelService.selectedRoom()" [activeBooking]="activeBooking()"
   (onClose)="hotelService.clearSelection()" (onCheckin)="viewMode.set('checkin')" (onMarkAsClean)="markRoomAsClean()"
   (onReservations)="viewMode.set('reservation')" (onCheckout)="startCheckoutProcess()" (onPay)="markAsPaid($event)"
   (onMaintenance)="reportMaintenance()" (onFinishMaintenance)="handleFinishMaintenance()"
