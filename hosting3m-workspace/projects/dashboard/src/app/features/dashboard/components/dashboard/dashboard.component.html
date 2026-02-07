@@ -152,11 +152,21 @@
 
 <app-daily-report-modal [isOpen]="showReportModal" [isLoading]="reportService.loadingReports()"
   [reportData]="dailyReport" [currentFilter]="reportFilter()" [roomsList]="bookingService.rooms()"
-  (onClose)="showReportModal = false" (onFilterChange)="handleReportFilterChange($event)">
-</app-daily-report-modal>
-
+  (onClose)="showReportModal = false" (onFilterChange)="handleReportFilterChange($event)"> </app-daily-report-modal>
 @if (viewMode() === 'checklist') {
 <app-room-checklist-modal [room]="hotelService.selectedRoom()" (onClose)="viewMode.set('details')"
   (onSave)="handleChecklistSave($event)">
 </app-room-checklist-modal>
 }
+
+<button
+  class="btn btn-danger btn-icon shadow-lg rounded-circle position-fixed d-flex align-items-center justify-content-center p-0"
+  style="bottom: 25px; left: 25px; width: 65px; height: 65px; z-index: 1040; border: 2px solid white; box-shadow: 0 8px 15px rgba(0,0,0,0.2) !important; transition: transform 0.2s; font-size: 35px;"
+  onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'"
+  (click)="isExpenseModalOpen.set(true)" title="Registrar Gasto / Salida">
+  💵
+</button>
+
+<app-expense-form-modal [isOpen]="isExpenseModalOpen()" (onClose)="isExpenseModalOpen.set(false)"
+  (onSave)="refreshMain()">
+</app-expense-form-modal>
