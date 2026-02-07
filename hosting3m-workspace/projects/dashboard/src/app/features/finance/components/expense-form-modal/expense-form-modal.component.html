@@ -1,0 +1,74 @@
+@if (isOpen) {
+<div class="modal modal-blur fade show d-block" tabindex="-1" style="background: rgba(0,0,0,0.5)">
+  <div class="modal-dialog modal-dialog-centered" role="document">
+    <div class="modal-content shadow-lg">
+      <div class="modal-header bg-danger-lt">
+        <h5 class="modal-title text-danger">💸 Registrar Gasto / Salida</h5>
+        <button type="button" class="btn-close" (click)="close()"></button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="row g-3">
+          
+          <div class="col-12">
+            <label class="form-label required">Concepto</label>
+            <input type="text" class="form-control" [(ngModel)]="expenseData.description" 
+                   placeholder="Ej. Compra de cloro, Taxi, Reparación..." autofocus>
+          </div>
+
+          <div class="col-6">
+            <label class="form-label required">Monto ($)</label>
+            <div class="input-group">
+              <span class="input-group-text">$</span>
+              <input type="number" class="form-control" [(ngModel)]="expenseData.amount" placeholder="0.00">
+            </div>
+          </div>
+
+          <div class="col-6">
+            <label class="form-label">Fecha</label>
+            <input type="date" class="form-control" [(ngModel)]="expenseData.expense_date">
+          </div>
+
+          <div class="col-6">
+            <label class="form-label">Categoría</label>
+            <select class="form-select" [(ngModel)]="expenseData.category">
+              @for (cat of categories; track cat) {
+                <option [value]="cat">{{ cat }}</option>
+              }
+            </select>
+          </div>
+
+          <div class="col-6">
+            <label class="form-label">Método Pago</label>
+            <select class="form-select" [(ngModel)]="expenseData.payment_method">
+              @for (method of paymentMethods; track method) {
+                <option [value]="method">{{ method }}</option>
+              }
+            </select>
+          </div>
+
+          @if (roomId) {
+            <div class="col-12">
+              <div class="alert alert-info py-2">
+                <small>📍 Este gasto se asignará a la <strong>Habitación #{{ roomId }}</strong></small>
+              </div>
+            </div>
+          }
+
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button type="button" class="btn btn-link link-secondary" (click)="close()">
+          Cancelar
+        </button>
+        <button type="button" class="btn btn-danger ms-auto" (click)="submit()" 
+                [disabled]="isSaving() || !expenseData.amount">
+          @if (isSaving()) { <span class="spinner-border spinner-border-sm me-2"></span> }
+          💾 Registrar Salida
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+}
