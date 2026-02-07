@@ -19,6 +19,7 @@ import { SkeletonComponent } from '@shared/ui/loader/skeleton/skeleton.component
 import { GuestFormModalComponent } from '@features/admin/components/guest-form-modal/guest-form-modal.component';
 import { GuestListComponent } from '@features/admin/components/guest-list/guest-list.component';
 import { RoomChecklistModalComponent } from '@features/booking/components/room-checklist-modal/room-checklist-modal.component';
+import { ExpenseFormModalComponent } from '@features/finance/components/expense-form-modal/expense-form-modal.component';
 // Servicios
 import { AuthService } from '@core/services/auth.service';
 import { HotelService } from '@features/dashboard/services/hotel.service';
@@ -30,7 +31,9 @@ import { lastValueFrom } from 'rxjs';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, CheckinFormComponent, CheckoutFormComponent, HeaderComponent, RoomCardComponent, DailyReportModalComponent, RoomFiltersComponent, RoomDetailModalComponent, UserFormModalComponent, UserListComponent, GuestFormModalComponent, GuestListComponent, SkeletonComponent, ReservationManagerComponent, RoomChecklistModalComponent],
+  imports: [CommonModule, FormsModule, CheckinFormComponent, CheckoutFormComponent, HeaderComponent, RoomCardComponent, DailyReportModalComponent,
+    RoomFiltersComponent, RoomDetailModalComponent, UserFormModalComponent, UserListComponent, GuestFormModalComponent, GuestListComponent,
+    SkeletonComponent, ReservationManagerComponent, RoomChecklistModalComponent, ExpenseFormModalComponent],
   templateUrl: './dashboard.component.html'
 })
 export class DashboardComponent {
@@ -48,15 +51,27 @@ export class DashboardComponent {
   reportFilter = signal<'day' | 'week' | 'month' | 'year'>('day');
   isUserModalOpen = signal(false);
   isGuestModalOpen = signal(false);
+  isExpenseModalOpen = signal(false);
   showReportModal = false;
   collapsedGroups = signal<Set<string>>(new Set());
   expandedGroups = signal<Set<string>>(new Set());
 
   activeBooking = signal<any>(null);
-  dailyReport = { total: 0, paid: 0, pending: 0, transactions: [] as any[], periodLabel: 'Hoy' };
+  //dailyReport = { total: 0, paid: 0, pending: 0, transactions: [] as any[], periodLabel: 'Hoy' };
 
   tempUser: User = this.getEmptyUser();
   tempGuest: Guest = this.getEmptyGuest();
+
+  dailyReport = {
+    total_sales: 0,
+    paid_in: 0,
+    pending: 0,
+    total_expenses: 0,
+    balance: 0,
+    transactions: [] as any[],
+    expenseTransactions: [] as any[],
+    periodLabel: 'Hoy'
+  };
 
   ngOnInit() {
     this.refresh();
@@ -105,7 +120,6 @@ export class DashboardComponent {
     // 1. Si el estado es ocupado, buscamos OBLIGATORIAMENTE la estancia de hoy
     if (room.status === 'occupied') {
       const booking = await this.bookingService.getActiveBooking(room.id);
-      console.log('📦 Reserva cargada:', booking);
       if (booking && booking.id) {
         this.activeBooking.set(booking);
       }
@@ -236,24 +250,32 @@ export class DashboardComponent {
   }
 
   /* 4. SECCIÓN: REPORTES DIARIOS */
+  // Cuando el usuario da clic en "Semana" en el modal
+  handleReportFilterChange(filter: 'day' | 'week' | 'month' | 'year') {
+    this.reportFilter.set(filter); // 1. Actualiza el signal
+    this.generateDailyReport();    // 2. Recalcula los datos con el nuevo filtro
+  }
+
+  /* La función de generación actualizada */
   async generateDailyReport() {
     this.reportService.loadingReports.set(true);
     this.showReportModal = true;
     try {
-      const allBookings = await this.reportService.getRawBookingsForReport();
-      const stats = this.reportService.calculateDailyReport(allBookings, this.reportFilter());
-      this.dailyReport = { ...stats, periodLabel: this.getPeriodLabel() };
+      // Pedimos TODO (Ventas y Gastos)
+      const [allBookings, allExpenses] = await Promise.all([
+        this.reportService.getRawBookingsForReport(),
+        this.reportService.getRawExpensesForReport()
+      ]);
+
+      // Calculamos el reporte pasando 'this.reportFilter()'
+      const stats = this.reportService.calculateDailyReport(allBookings, allExpenses, this.reportFilter());
+
+      this.dailyReport = stats; // Asignamos el resultado completo
     } catch (error) {
       console.error('Error:', error);
     } finally {
       this.reportService.loadingReports.set(false);
     }
-  }
-
-  /* Maneja el cambio de filtro en el reporte diario */
-  async handleReportFilterChange(filter: 'day' | 'week' | 'month' | 'year') {
-    this.reportFilter.set(filter);
-    this.generateDailyReport();
   }
 
   /* 5. SECCIÓN: GESTIÓN DE USUARIOS */

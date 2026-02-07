@@ -74,7 +74,6 @@ export class RoomChecklistModalComponent {
           };
 
         } else {
-          console.log('🆕 Nuevo rondín (Modo Creación)');
           this.existingInspectionId = null;
         }
         this.isLoading = false;
