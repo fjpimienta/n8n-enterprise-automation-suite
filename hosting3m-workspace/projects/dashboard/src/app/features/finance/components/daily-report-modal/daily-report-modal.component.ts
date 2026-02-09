@@ -1,11 +1,10 @@
 import { Component, Input, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { SkeletonComponent } from '@shared/ui/loader/skeleton/skeleton.component';
 
 @Component({
   selector: 'app-daily-report-modal',
   standalone: true,
-  imports: [CommonModule, SkeletonComponent],
+  imports: [CommonModule],
   templateUrl: './daily-report-modal.component.html',
   styleUrl: './daily-report-modal.component.css',
 })
