@@ -1,63 +1,73 @@
-# UiChat
+# 💬 UI Chat Library
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.1.0.
+### 🤖 Angular Reusable AI Chat Interface
 
-## Code scaffolding
+## 📝 Descripción
+**UI Chat** es una librería de Angular diseñada para integrar asistentes virtuales basados en LLMs (como GPT-4o vía n8n) en cualquier aplicación de la suite Hosting3M. Provee una interfaz moderna, limpia y lista para usar, encapsulando la complejidad de la comunicación HTTP y la gestión de sesiones.
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+---
 
-```bash
-ng generate component component-name
+## 🚀 Instalación e Integración
+
+Esta librería está diseñada para ser consumida localmente dentro del monorepo.
+
+### 1. Importación en la Aplicación Host (Ej. Dashboard)
+
+En tu `app.config.ts` o módulo principal, provee la configuración del chat:
+
+```typescript
+import { provideUiChat } from '@ui-chat'; // Alias configurado en tsconfig
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    // ... otros providers
+    provideUiChat({
+      apiUrl: '[https://n8n.hosting3m.com/webhook/v3/ai/chat](https://n8n.hosting3m.com/webhook/v3/ai/chat)', // Webhook de n8n
+      botName: 'San José Concierge',
+      primaryColor: '#0d6efd' // Bootstrap Primary
+    })
+  ]
+};
+
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+### 2. Uso en el Template
 
-```bash
-ng generate --help
+Simplemente agrega el selector en tu `app.component.html` o layout principal. El componente maneja su propia posición fija (bottom-right).
+
+```html
+<lib-ai-chat></lib-ai-chat>
+
 ```
 
-## Building
+---
 
-To build the library, run:
+## ⚙️ Configuración (Inputs)
 
-```bash
-ng build ui-chat
-```
+El componente `<lib-ai-chat>` acepta los siguientes inputs para personalización rápida:
 
-This command will compile your project, and the build artifacts will be placed in the `dist/` directory.
+| Input | Tipo | Default | Descripción |
+| --- | --- | --- | --- |
+| `isOpen` | `boolean` | `false` | Estado inicial del chat (abierto/cerrado). |
+| `placeholder` | `string` | `'Escribe tu duda...'` | Texto de ayuda en el input. |
+| `showAvatar` | `boolean` | `true` | Muestra el avatar del bot en los mensajes. |
 
-### Publishing the Library
+---
 
-Once the project is built, you can publish your library by following these steps:
+## 🏗️ Stack Tecnológico
 
-1. Navigate to the `dist` directory:
-   ```bash
-   cd dist/ui-chat
-   ```
+* **Framework:** Angular 21
+* **Estilos:** SCSS (Scoped) + Bootstrap Utilities
+* **Iconos:** SVG Nativos (No requiere dependencias de fuentes externas).
 
-2. Run the `npm publish` command to publish your library to the npm registry:
-   ```bash
-   npm publish
-   ```
+---
 
-## Running unit tests
+## 🔮 Roadmap
 
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
+* **v0.2:** Soporte para Markdown avanzado (Tablas, Listas, Bloques de código).
+* **v0.3:** Soporte para respuestas con "Acciones Sugeridas" (Botones rápidos).
+* **v0.4:** Integración de "Feedback Loop" (Thumbs up/down) para entrenar al agente.
 
-```bash
-ng test
-```
+---
 
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+**Desarrollado por:** Francisco Jesus Pérez Pimienta para Hosting3M Automation Suite.

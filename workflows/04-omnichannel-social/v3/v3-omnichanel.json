@@ -31,25 +31,25 @@
             {
               "id": "67de7425-fb84-4c31-91fc-954061dc076d",
               "name": "tweet_text",
-              "value": "={{ `💡 \"${$json.data[0].title}\". Echa un vistazo al análisis completo de ${$json.data[0].source}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M ➡️ ${$json.data[0].url}` }}\n",
+              "value": "={{ `💡 \"${$json.data[0].title}\". Echa un vistazo al análisis completo de https://hosting3m.com/#news. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M ➡️ ${$json.data[0].url}` }}\n",
               "type": "string"
             },
             {
               "id": "983175be-ce4b-4fbc-ad7d-bc2e7524096a",
               "name": "fb_post_text",
-              "value": "={{ `💡 \"${$json.data[0].title}\", proveniente de ${$json.data[0].source}. ¿Qué opinas de este avance? ¡Comenta abajo! ⬇️ Lee más: ${$json.data[0].url}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M` }}",
+              "value": "={{ `💡 \"${$json.data[0].title}\", proveniente de https://hosting3m.com/#news. ¿Qué opinas de este avance? ¡Comenta abajo! ⬇️ Lee más: ${$json.data[0].url}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M` }}",
               "type": "string"
             },
             {
               "id": "a9bee46a-2427-438a-a8df-3e6ba0b16ab5",
               "name": "li_post_text",
-              "value": "={{ `💡 \"${$json.data[0].title}\". Fuente: ${$json.data[0].source} ➡️ ${$json.data[0].url}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M` }}",
+              "value": "={{ `💡 \"${$json.data[0].title}\". Fuente: https://hosting3m.com/#news ➡️ ${$json.data[0].url}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M` }}",
               "type": "string"
             },
             {
               "id": "e7d15066-4754-4e2e-8de3-0fa4b5e5d9cc",
               "name": "image",
-              "value": "={{ \n  (() => {\n    // 1. Obtenemos el título de la noticia desde el nodo anterior (Limit)\n    const title = $('Get Articles').item.json.title;\n    \n    // 2. Definimos un prompt base para asegurar el estilo \"Tech News\"\n    // \"Futuristic technology concept art about [Titulo], high quality, 4k, trending on artstation\"\n    const prompt = `Futuristic technology concept, editorial illustration about: ${title}, high detail, 8k, professional lighting`;\n  \n    // 3. Codificamos el prompt para URL\n    const encodedPrompt = encodeURIComponent(prompt);\n  \n    // 4. Retornamos la URL de Pollinations\n    // width=1000, height=800 (Coincide con tu nodo DownloadImage), model=flux, seed=random\n    const randomSeed = Math.floor(Math.random() * 1000);\n    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1000&height=800&model=flux&nologo=true&seed=${randomSeed}`;\n  })() \n}}",
+              "value": "={{ \n  (() => {\n    // 1. Obtenemos el título de la noticia desde el nodo anterior (Limit)\n    const title = $('Get Articles').item.json.title;\n    \n    // 2. Definimos un prompt base para asegurar el estilo \"Tech News\"\n    // \"Futuristic technology concept art about [Titulo], high quality, 4k, trending on artstation\"\n    const prompt = `Futuristic technology concept, editorial illustration about: ${title}, high detail, 8k, professional lighting`;\n  \n    // 3. Codificamos el prompt para URL\n    const encodedPrompt = encodeURIComponent(prompt);\n  \n    // 4. Retornamos la URL de Pollinations\n    // width=1000, height=800 (Coincide con tu nodo DownloadImage), model=flux, seed=random\n    const randomSeed = Math.floor(Math.random() * 1000);\n    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1000&height=800&model=flux&nologo=true&seed=${randomSeed}`;\n  })() \n}}{{ \n  (() => {\n    // 1. Obtenemos el título de la noticia\n    const title = $('Get Articles').item.json.title;\n    \n    // 2. DEFINIMOS UNA LISTA DE ESTILOS VARIADOS\n    // Puedes agregar o quitar los que quieras de esta lista\n    const styles = [\n      \"Futuristic technology concept art, neon blue lighting, unreal engine 5\", // El clásico\n      \"Isometric 3D render, clean white background, corporate tech style\", // Estilo limpio 3D\n      \"Minimalist flat vector art, trending on behance, colorful\", // Estilo ilustración plana\n      \"Cyberpunk city atmosphere, dark and moody, cinematic lighting\", // Estilo oscuro/hacker\n      \"Abstract data visualization, geometric shapes, network connection nodes\", // Estilo abstracto\n      \"Retro synthwave 80s style, grid background, magenta and cyan\", // Estilo Retro\n      \"Photorealistic macro photography of computer hardware, depth of field\", // Estilo realista\n      \"Digital oil painting, expressive brushstrokes, conceptual art\" // Estilo artístico\n    ];\n\n    // 3. Seleccionamos un estilo al azar de la lista\n    const randomStyle = styles[Math.floor(Math.random() * styles.length)];\n  \n    // 4. Combinamos el estilo elegido con el título\n    const prompt = `${randomStyle}, editorial illustration about: ${title}, high detail, 8k, professional quality`;\n  \n    // 5. Codificamos el prompt para URL\n    const encodedPrompt = encodeURIComponent(prompt);\n  \n    // 6. Generamos semilla aleatoria y retornamos URL\n    const randomSeed = Math.floor(Math.random() * 1000);\n    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1000&height=800&model=flux&nologo=true&seed=${randomSeed}`;\n  })() \n}}",
               "type": "string"
             }
           ]
@@ -64,29 +64,6 @@
       ],
       "id": "db93229e-015e-4cef-a37f-0c4af19f3494",
       "name": "SetX"
-    },
-    {
-      "parameters": {
-        "text": "={{ $json.tweet_text_fixed }}",
-        "additionalFields": {
-          "attachments": "={{ $json.media_id }}"
-        }
-      },
-      "type": "n8n-nodes-base.twitter",
-      "typeVersion": 2,
-      "position": [
-        -624,
-        4048
-      ],
-      "id": "8c6f7dd4-20f0-49a3-a3c6-e75fb4c5a8a5",
-      "name": "CreateTweet",
-      "credentials": {
-        "twitterOAuth2Api": {
-          "id": "wodh3s73zOu8505y",
-          "name": "X account"
-        }
-      },
-      "onError": "continueRegularOutput"
     },
     {
       "parameters": {
@@ -321,7 +298,7 @@
           "conditions": [
             {
               "id": "b49b09f8-4a28-4bed-9ced-0c91f2d4649f",
-              "leftValue": "={{ $json.error }}",
+              "leftValue": "={{ $json.error ? JSON.stringify($json.error) : \"\" }}",
               "rightValue": "",
               "operator": {
                 "type": "string",
@@ -467,7 +444,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ \n  {\n    \"operation\": \"insert\",\n    \"fields\": {\n      \"url\": $('Get Articles').item.json.data[0].url,\n      \"title\": $('Get Articles').item.json.data[0].title,\n      \"source\": \"https://hosting3m.com/#news\",\n      \"image\": $('SetX').item.json.image,\n      \"published_at\": new Date().toISOString()\n    }\n  } \n}}",
+        "jsonBody": "={{ \n  {\n    \"operation\": \"update\",\n    \"id\": $('Get Articles').item.json.data[0].id, \n    \"fields\": {\n      \"published_at\": new Date().toISOString()\n    }\n  } \n}}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
@@ -481,7 +458,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Obtenemos el texto desde el nodo 'SetX' independientemente de dónde venga el flujo\nconst text = $('SetX').item.json.tweet_text;\n\nlet finalTweet = text;\n\n// Si el texto es muy largo, lo recortamos para X (Twitter)\nif (text && text.length > 270) {\n  finalTweet = text.substring(0, 150) + \"... Ver más en: https://hosting3m.com/#news\";\n}\n\n// Pasamos también el media_id que viene del nodo anterior para no perderlo\nreturn { \n  tweet_text_fixed: finalTweet,\n  media_id: $json.media_id_string \n};"
+        "jsCode": "// Obtenemos el texto desde el nodo 'SetX' independientemente de dónde venga el flujo\nconst text = $('SetX').item.json.tweet_text;\n\nlet finalTweet = text;\n\n// Si el texto es muy largo, lo recortamos para X (Twitter)\nif (text && text.length > 270) {\n  finalTweet = text.substring(0, 150) + \"... Ver más en: https://hosting3m.com/#news\";\n}\n\n// Pasamos también el media_id que viene del nodo anterior para no perderlo\nconst safeMediaId = $json.media_id_string ? $json.media_id_string : String($json.media_id);\n\nreturn { \n  tweet_text_fixed: finalTweet,\n  media_id: safeMediaId \n};"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -607,6 +584,32 @@
       ],
       "id": "1a8377f0-f1c4-4c26-8592-3233f8c1bec0",
       "name": "Stop and Error"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.twitter.com/2/tweets",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "twitterOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n  {\n    \"text\": $json.tweet_text_fixed,\n    \"media\": {\n      \"media_ids\": [\n        $json.media_id\n      ]\n    }\n  }\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -624,
+        4048
+      ],
+      "id": "c1c6ae58-bfc1-48e4-8e90-09ce1a5257f3",
+      "name": "Create X",
+      "credentials": {
+        "twitterOAuth2Api": {
+          "id": "wodh3s73zOu8505y",
+          "name": "X account"
+        }
+      }
     }
   ],
   "pinData": {},
@@ -634,17 +637,6 @@
             "node": "HandleImageError",
             "type": "main",
             "index": 1
-          }
-        ]
-      ]
-    },
-    "CreateTweet": {
-      "main": [
-        [
-          {
-            "node": "HTTP Request",
-            "type": "main",
-            "index": 0
           }
         ]
       ]
@@ -837,7 +829,7 @@
       "main": [
         [
           {
-            "node": "CreateTweet",
+            "node": "Create X",
             "type": "main",
             "index": 0
           }
@@ -876,6 +868,17 @@
           }
         ]
       ]
+    },
+    "Create X": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -887,7 +890,7 @@
     "timeSavedMode": "fixed",
     "timeSavedPerExecution": 5
   },
-  "versionId": "58f90993-b427-4312-9972-ca381930ffbf",
+  "versionId": "3dda7005-d894-4989-9106-456536979fbb",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"

@@ -25,23 +25,7 @@
         "path": "crud/v3/:model",
         "responseMode": "responseNode",
         "options": {
-          "allowedOrigins": "http://localhost:4200",
-          "responseHeaders": {
-            "entries": [
-              {
-                "name": "Access-Control-Allow-Methods",
-                "value": "POST, GET, OPTIONS"
-              },
-              {
-                "name": "Access-Control-Allow-Headers",
-                "value": "Content-Type, Authorization, x-jwt-claim-role"
-              },
-              {
-                "name": "Access-Control-Allow-Credentials",
-                "value": "true"
-              }
-            ]
-          }
+          "allowedOrigins": "https://hosting3m.com"
         }
       },
       "id": "990f30c3-7ce3-4b12-963b-482e04700a0f",
@@ -942,7 +926,7 @@
     "timeSavedMode": "fixed",
     "timeSavedPerExecution": 1
   },
-  "versionId": "b6380ffb-d2c7-4f70-8bca-906b167d05cd",
+  "versionId": "90eb1169-e3a0-4556-bab1-8750c0f74ed4",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"

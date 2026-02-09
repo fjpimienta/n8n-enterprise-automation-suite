@@ -3,7 +3,23 @@ Todos los cambios notables en el proyecto **n8n Enterprise Automation Suite** se
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/), y este proyecto se adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
-## [0.7.0] - 2026-02-03
+## [0.7.0] - 2026-02-09
+### 🚀 Añadido (New Features)
+- **AI Concierge Module (v1):** Implementación de un Asistente Virtual Inteligente capaz de gestionar operaciones hoteleras mediante lenguaje natural.
+    - **Architecture MCP (Model Context Protocol):** Desacoplamiento total entre el LLM y la base de datos.
+        - **MCP Server:** Microservicio en n8n que expone herramientas seguras (`Query Available`, `Query Reservation`, `Get Inspection Issues`) conectadas a PostgreSQL.
+        - **MCP Client:** Agente autónomo que consume dichas herramientas bajo demanda.
+    - **Strict Business Logic:** El "System Prompt" del agente ahora impone reglas de integridad referencial (validación obligatoria de `email`, `phone`, `doc_id` antes de insertar).
+    - **Context Awareness:** Memoria a corto plazo (`Memory Buffer Window`) para mantener el hilo de la conversación con el huésped o recepcionista.
+
+### 🔄 Cambiado (Improvements)
+- **Security Hardening:** El Agente de IA ahora genera y utiliza sus propios tokens de autorización (`Genera Token` sub-workflow) para firmar transacciones de escritura (`INSERT/UPDATE`) sin intervención humana.
+- **Error Handling:** Protocolo "Zero-Hallucination" implementado en el prompt. Si la base de datos falla o devuelve `undefined`, el agente está programado para reportar el error técnico en lugar de inventar una confirmación de reserva.
+
+### 🔧 Tech Stack Update
+- **LLM Engine:** Integración de `gpt-4o-mini` para balancear velocidad y costo en operaciones transaccionales.
+
+## [0.6.1] - 2026-02-03
 ### 🚀 Añadido (New Features)
 - **Quality Assurance Module (Rondines):** Sistema integral para la inspección diaria de habitaciones.
     - **Checklist Dinámico:** Formulario agrupado por zonas (General, Baño, Equipamiento, Seguridad) persistido como JSONB para flexibilidad futura.
