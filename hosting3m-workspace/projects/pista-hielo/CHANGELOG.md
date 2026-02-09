@@ -3,6 +3,22 @@ Todos los cambios notables en el módulo **PistaHielo Operations Center** (Módu
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.7.0] - 2026-02-09
+### Added
+- **AI Agent Integration (v3):** Despliegue del Asistente Virtual Operativo con personalidad de Pista de Hielo (eliminado rastro de Hotel).
+- **MCP Server Pista:** Implementación de herramientas de servidor para que la IA consulte el Rack en vivo, reporte ventas y verifique disponibilidad de patines.
+- **JOIN Logic en IA:** Las consultas de "Pista Activa" ahora devuelven nombres de clientes reales en lugar de solo IDs.
+- **MÉTACRUD Validation:** El asistente valida campos obligatorios (`full_name`, `phone`, `email`, `doc_id`) antes de registrar nuevos ingresos.
+
+### Fixed
+- **Time Calculation Precision:** Se migró el cálculo de minutos en el MCP de `start_time` (string) a `created_at` (timestamp) para evitar errores de redondeo.
+- **Zamboni AI Rule:** El asistente ahora reconoce comandos de "Zamboni" y ajusta el cálculo de tiempo para el cobro final.
+
+### Changed
+- **System Instructions:** Refactorización total del prompt del sistema para enfocarse en rentas por hora, clases e instructores.
+
+---
+
 ## [v0.6.0] - 2026-02-03
 ### Fixed
 - **Checkout "Midnight Bug":** Corrección crítica en la lógica de cálculo de tiempo. Ahora detecta correctamente si un turno cruzó la medianoche (ej: entrada 23:00, salida 00:30) evitando el error de "0 minutos".

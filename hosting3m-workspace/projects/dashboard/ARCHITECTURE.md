@@ -12,14 +12,17 @@
 El sistema sigue una arquitectura **Data-Access Service Pattern** altamente desacoplada. El frontend no contiene lógica SQL ni reglas de negocio complejas del lado del servidor; actúa como un cliente inteligente que consume un **Dynamic CRUD Engine**.
 
 ```mermaid
-graph TD
-    User["Client / Browser"] -->|"HTTPS + JWT"| ANG["Angular 21 SPA"]
-    ANG -->|"JSON Payload (fields)"| N8N["n8n API Gateway"]
-    N8N -->|"Validate via crud_models"| PG[("PostgreSQL")]
+graph LR
+    User["Chat Interface"] -->|"Natural Language"| Agent["AI Agent (Client)"]
+    Agent -->|"MCP Protocol"| Server["MCP Server (n8n)"]
+    Server -->|"SQL Queries"| PG[("PostgreSQL")]
     
-    subgraph "Dynamic Engine"
-    N8N
-    PG
+    subgraph "Brain (Cognitive)"
+    Agent
+    end
+    
+    subgraph "Skills (Tools)"
+    Server
     end
 ```
 

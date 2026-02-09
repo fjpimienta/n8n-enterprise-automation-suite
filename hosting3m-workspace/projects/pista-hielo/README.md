@@ -17,25 +17,23 @@ El sistema implementa una arquitectura de **"Caja de Cristal"**: Total transpare
 | **v0.2** | `Stable` | `Ice Live Monitor` | Visualización reactiva (Signals), Grid de Patines. |
 | **v0.3** | `Stable` | `Checkout Engine` | Cobro, Regla Zamboni, Modal de Pago. |
 | **v0.4** | `Stable` | `Financial Ops` | Reporte de Turno (Corte Z), Filtros de Fecha ISO. |
-| **v0.5** | `Released` | `UX & Shell` | **MainLayout**, Menú Móvil, Navegación Jerárquica. |
-| **v0.5.2** | `Current` | `Stability Patch` | **Fix Medianoche**, Fix Reportes n8n, Mini-Sidebar, Global Icons. |
-| **v0.6** | `In Dev` | `VIP Membership` | Directorio de Alumnos, Historial de Clases. |
+| **v0.5** | `Stable` | `UX & Shell` | **MainLayout**, Menú Móvil, Navegación Jerárquica. |
+| **v0.6** | `Stable` | `Stability Patch` | **Fix Medianoche**, Fix Reportes n8n, Mini-Sidebar, Global Icons. |
+| **v0.7** | `Current` | `VIP Membership` | Directorio de Alumnos, Historial de Clases. |
 ---
 
-## 🆕 Características Desplegadas (v0.6)
+## 🆕 Características Desplegadas (v0.7)
 
-### 1. ⏱️ Motor de Cobro de Alta Precisión
-Se eliminaron los errores de cálculo en turnos nocturnos.
-* **Midnight-Proof:** El sistema detecta automáticamente si un ticket cruza la medianoche (ej: entrada ayer, salida hoy) y calcula el tiempo exacto.
-* **Reactive UI:** Los cronómetros y totales se actualizan instantáneamente al abrir el modal de cobro, gracias al uso de Angular Signals.
+### 1. 🤖 Asistente Operativo con IA
+Integración de un Agente de IA basado en **GPT-4o-mini** y **n8n LangChain**.
+* **Consultas Naturales:** "¿Quién está en pista?", "¿Cuánto hemos vendido hoy?" o "¿El patín 05 está libre?".
+* **Lógica de Cobro:** El asistente identifica si un cliente ha excedido su tiempo rentado y sugiere el cobro adicional correspondiente.
+* **Regla Zamboni:** Integración automática del descuento de 15 minutos en el flujo de conversación.
 
-### 2. 📱 UX Refinada (Mini Sidebar)
-Mejor aprovechamiento del espacio en pantalla.
-* **Colapsable:** El menú lateral puede minimizarse a 5rem, dejando más espacio para el Monitor de Pista o reportes extensos.
-* **Dark Mode Nativo:** Corrección total de colores y contrastes en formularios y menús desplegables.
-
-### 3. 💰 Reportes Financieros Confiables
-* **Corrección Backend:** Se optimizó el motor de consultas en n8n para interpretar correctamente las fechas sin hora, asegurando que el "Corte del Día" traiga todas las ventas, sin importar la hora de registro.
+### 2. 📊 MCP Server (Tools de Pista)
+Conjunto de herramientas de alta precisión que permiten a la IA interactuar con la base de datos:
+* **Ver Pista Activa:** Reporte detallado de patinadores actuales con tiempos de permanencia calculados al segundo.
+* **Ventas Real-time:** Conciliación inmediata de ingresos por Efectivo y Tarjeta.
 
 ---
 
@@ -52,6 +50,14 @@ Mejor aprovechamiento del espacio en pantalla.
   <img src="https://img.shields.io/badge/n8n-FF6584?style=for-the-badge&logo=n8n&logoColor=white" />
   <img src="https://img.shields.io/badge/PostgreSQL-316192?style=for-the-badge&logo=postgresql&logoColor=white" />
 </p>
+
+---
+
+### Componentes de IA:
+1. **AiService:** Gestiona la comunicación reactiva entre el chat de la UI y el Webhook de n8n.
+2. **MCP Trigger:** Punto de entrada para las herramientas del servidor que exponen el esquema de `ph_transactions` a la IA.
+
+---
 
 ### Componentes Clave:
 1.  **Global Icon Providers:** Estrategia de inyección única en `app.config.ts` para estabilidad y rendimiento.
