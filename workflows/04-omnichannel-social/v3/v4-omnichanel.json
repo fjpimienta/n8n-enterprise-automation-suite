@@ -1,5 +1,5 @@
 {
-  "name": "v3/OmniChannel",
+  "name": "v4/OmniChannel",
   "nodes": [
     {
       "parameters": {
@@ -15,13 +15,13 @@
           ]
         }
       },
-      "id": "77ffcfdb-2393-4a59-9ce7-ac98f2facb84",
+      "id": "404c9c8b-38d4-48f7-954a-b5ad42290c66",
       "name": "Cron",
       "type": "n8n-nodes-base.cron",
       "typeVersion": 1,
       "position": [
         -3760,
-        3728
+        3944
       ]
     },
     {
@@ -51,6 +51,12 @@
               "name": "image",
               "value": "={{ \n  (() => {\n    // 1. Obtenemos el título de la noticia desde el nodo anterior (Limit)\n    const title = $('Get Articles').item.json.title;\n    \n    // 2. Definimos un prompt base para asegurar el estilo \"Tech News\"\n    // \"Futuristic technology concept art about [Titulo], high quality, 4k, trending on artstation\"\n    const prompt = `Futuristic technology concept, editorial illustration about: ${title}, high detail, 8k, professional lighting`;\n  \n    // 3. Codificamos el prompt para URL\n    const encodedPrompt = encodeURIComponent(prompt);\n  \n    // 4. Retornamos la URL de Pollinations\n    // width=1000, height=800 (Coincide con tu nodo DownloadImage), model=flux, seed=random\n    const randomSeed = Math.floor(Math.random() * 1000);\n    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1000&height=800&model=flux&nologo=true&seed=${randomSeed}`;\n  })() \n}}{{ \n  (() => {\n    // 1. Obtenemos el título de la noticia\n    const title = $('Get Articles').item.json.title;\n    \n    // 2. DEFINIMOS UNA LISTA DE ESTILOS VARIADOS\n    // Puedes agregar o quitar los que quieras de esta lista\n    const styles = [\n      \"Futuristic technology concept art, neon blue lighting, unreal engine 5\", // El clásico\n      \"Isometric 3D render, clean white background, corporate tech style\", // Estilo limpio 3D\n      \"Minimalist flat vector art, trending on behance, colorful\", // Estilo ilustración plana\n      \"Cyberpunk city atmosphere, dark and moody, cinematic lighting\", // Estilo oscuro/hacker\n      \"Abstract data visualization, geometric shapes, network connection nodes\", // Estilo abstracto\n      \"Retro synthwave 80s style, grid background, magenta and cyan\", // Estilo Retro\n      \"Photorealistic macro photography of computer hardware, depth of field\", // Estilo realista\n      \"Digital oil painting, expressive brushstrokes, conceptual art\" // Estilo artístico\n    ];\n\n    // 3. Seleccionamos un estilo al azar de la lista\n    const randomStyle = styles[Math.floor(Math.random() * styles.length)];\n  \n    // 4. Combinamos el estilo elegido con el título\n    const prompt = `${randomStyle}, editorial illustration about: ${title}, high detail, 8k, professional quality`;\n  \n    // 5. Codificamos el prompt para URL\n    const encodedPrompt = encodeURIComponent(prompt);\n  \n    // 6. Generamos semilla aleatoria y retornamos URL\n    const randomSeed = Math.floor(Math.random() * 1000);\n    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1000&height=800&model=flux&nologo=true&seed=${randomSeed}`;\n  })() \n}}",
               "type": "string"
+            },
+            {
+              "id": "df498114-78c1-42bb-887a-b4c677210607",
+              "name": "ig_post_text",
+              "value": "={{ `💡 ${$json.data[0].title}\n\n📰 Fuente oficial: https://hosting3m.com/#news\n\nUn vistazo profundo al futuro de la tecnología. ¿Qué impacto crees que tendrá esto? ¡Te leemos en los comentarios! 👇\n\n🔗 Para leer el artículo completo, ve al enlace de nuestra BIO 📲\n\n.\n#TechNews #IA #Innovación #FuturoDigital #Technology #Hosting3M` }}",
+              "type": "string"
             }
           ]
         },
@@ -60,9 +66,9 @@
       "typeVersion": 3.4,
       "position": [
         -2416,
-        3648
+        3872
       ],
-      "id": "db93229e-015e-4cef-a37f-0c4af19f3494",
+      "id": "a891d9e5-0f48-4dde-bb61-8915636571c9",
       "name": "SetX"
     },
     {
@@ -81,9 +87,9 @@
       "typeVersion": 4.3,
       "position": [
         -2192,
-        3584
+        3800
       ],
-      "id": "51154b7c-094e-4bfc-8c08-a1afbafbf259",
+      "id": "3ae09358-6463-4a3a-9928-23cc0a3c6577",
       "name": "DownloadImage",
       "onError": "continueRegularOutput"
     },
@@ -95,9 +101,9 @@
       "typeVersion": 2,
       "position": [
         -1520,
-        3456
+        3680
       ],
-      "id": "b6e0ace2-37e3-43a6-8db2-3aa29692e37b",
+      "id": "262ddc44-80e5-42bd-8ca2-5b5b15d71528",
       "name": "SaveImage"
     },
     {
@@ -128,10 +134,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -1072,
-        3264
+        -624,
+        3488
       ],
-      "id": "3442fbc7-766c-419b-9f3e-0549ff3e2471",
+      "id": "30d7d65b-34c2-4eb6-a4a1-f407f24f2a1f",
       "name": "UploadImageX",
       "credentials": {
         "oAuth1Api": {
@@ -156,13 +162,13 @@
           }
         }
       },
-      "id": "bce8c020-ab09-4454-85fe-9d5687dee2f9",
+      "id": "48b2b365-1fa4-4c3b-9c26-cc154ee2b92e",
       "name": "GetPageTokens",
       "type": "n8n-nodes-base.facebookGraphApi",
       "typeVersion": 1,
       "position": [
         -1072,
-        2960
+        3176
       ],
       "credentials": {
         "facebookGraphApi": {
@@ -176,13 +182,13 @@
       "parameters": {
         "jsCode": "// Capturamos los datos directos de la página\nconst pageData = items[0].json;\n\n// Obtenemos el contenido del post (del nodo SetX)\nlet postContent = {};\ntry { \n    postContent = $('SetX').first().json; \n} catch (e) {\n    postContent = { fb_post_text: \"Post automático\", image: \"https://hosting3m.com/news-placeholder.jpg\" };\n}\n\n// Extraemos el ID de Instagram si existe\nconst igId = pageData.instagram_business_account ? pageData.instagram_business_account.id : null;\n\nreturn [{\n    json: {\n        status: \"READY\",\n        // Datos para Facebook\n        page_token: pageData.access_token,\n        page_id: pageData.id,\n        // Datos para Instagram\n        instagram_business_id: igId,\n        // Contenido compartido\n        message: postContent.fb_post_text,\n        image: postContent.image\n    }\n}];"
       },
-      "id": "53adf37f-c62b-4033-9538-1eac23a0319d",
+      "id": "a534c19d-ab6a-4b00-b0cd-9bd136cd0ef2",
       "name": "ExtractPageToken",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         -848,
-        2960
+        3176
       ],
       "onError": "continueRegularOutput"
     },
@@ -209,13 +215,13 @@
         },
         "options": {}
       },
-      "id": "e68b9037-da8a-4e6a-8e3b-95827e43b41b",
+      "id": "1be01952-0b2f-4663-99c2-600faa27133e",
       "name": "PostToFacebookPage",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -624,
-        2880
+        -176,
+        3104
       ],
       "onError": "continueRegularOutput"
     },
@@ -232,10 +238,10 @@
       "type": "n8n-nodes-base.linkedIn",
       "typeVersion": 1,
       "position": [
-        -624,
-        3456
+        -176,
+        3680
       ],
-      "id": "d6106002-c358-4356-a96c-1f7ff41ad08e",
+      "id": "30c6e8e7-8cb3-4d25-b75d-dfc654e6424c",
       "name": "Post Company",
       "credentials": {
         "linkedInCommunityManagementOAuth2Api": {
@@ -257,10 +263,10 @@
       "type": "n8n-nodes-base.linkedIn",
       "typeVersion": 1,
       "position": [
-        -624,
-        3648
+        -176,
+        3872
       ],
-      "id": "36ad6071-48f3-4644-ade4-bf163d4cde0e",
+      "id": "ed955694-06a7-4d93-8fe6-2438110c5ed6",
       "name": "Post Personal",
       "credentials": {
         "linkedInCommunityManagementOAuth2Api": {
@@ -280,9 +286,9 @@
       "typeVersion": 3.2,
       "position": [
         -1968,
-        3648
+        3872
       ],
-      "id": "18e2e1e6-8f23-4be5-831e-33a647b1dec5",
+      "id": "942f6d0f-b157-4baa-bb08-ff532f3bbc64",
       "name": "HandleImageError"
     },
     {
@@ -314,9 +320,9 @@
       "typeVersion": 2.3,
       "position": [
         -1744,
-        3648
+        3872
       ],
-      "id": "c9889aad-7307-4876-8ef3-ad44ec46c3a6",
+      "id": "a91a1c7a-7071-428f-9c8b-213a15c587ac",
       "name": "If1"
     },
     {
@@ -347,9 +353,9 @@
       "typeVersion": 2.3,
       "position": [
         -1296,
-        3456
+        3680
       ],
-      "id": "217b7579-b5a6-43d8-b9d4-f9c2030d4f97",
+      "id": "a6e9685e-edfa-4175-8e3f-acd1025f9b93",
       "name": "If2"
     },
     {
@@ -382,9 +388,9 @@
       "typeVersion": 4.3,
       "position": [
         -3088,
-        3728
+        3944
       ],
-      "id": "06a15705-5eaf-40e8-b03f-f3a77e83c901",
+      "id": "f65d7484-eb44-4067-81f9-0c9ddc3b7597",
       "name": "Check Publish"
     },
     {
@@ -415,9 +421,9 @@
       "typeVersion": 2.3,
       "position": [
         -2864,
-        3728
+        3944
       ],
-      "id": "1dfe01dd-ac39-46d7-8cc3-8d5663b10426",
+      "id": "deb599cb-6940-46e9-84d4-23ac83baf90d",
       "name": "Not Exist Pub"
     },
     {
@@ -449,10 +455,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -400,
-        3248
+        48,
+        3464
       ],
-      "id": "4d475d96-328d-452c-9cc4-1343abb822f7",
+      "id": "5d7eccee-3530-4332-865b-d7057d6dc432",
       "name": "HTTP Request"
     },
     {
@@ -462,10 +468,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -848,
-        3264
+        -400,
+        3488
       ],
-      "id": "23989db6-39f3-4e86-a910-84f4278b2ad6",
+      "id": "f012f54d-273b-45c9-a020-fd2eb4abd0c9",
       "name": "Code in JavaScript"
     },
     {
@@ -504,9 +510,9 @@
       "typeVersion": 4.3,
       "position": [
         -2640,
-        3648
+        3872
       ],
-      "id": "9d5d2b3c-96b2-4959-b188-fbd3f3b99a88",
+      "id": "2e2eadff-7aeb-4ddc-8999-b5a407bac79a",
       "name": "Get Articles",
       "alwaysOutputData": true
     },
@@ -535,9 +541,9 @@
       "typeVersion": 1.3,
       "position": [
         -3312,
-        3728
+        3944
       ],
-      "id": "90794097-bde8-4882-bfe0-dc451f9b2b19",
+      "id": "107118ec-52c7-4b2b-88fe-2192f0223827",
       "name": "Genera Token"
     },
     {
@@ -564,9 +570,9 @@
       "typeVersion": 3.4,
       "position": [
         -3536,
-        3728
+        3944
       ],
-      "id": "e2dee457-f36f-4ff2-a0e6-76000104a3c7",
+      "id": "b887dea8-5605-43b8-a6ed-8af313b6967c",
       "name": "Set User"
     },
     {
@@ -579,9 +585,9 @@
       "typeVersion": 3.4,
       "position": [
         -1072,
-        3840
+        4064
       ],
-      "id": "1a8377f0-f1c4-4c26-8592-3233f8c1bec0",
+      "id": "247c766f-5f8c-480e-8281-5703eed70d58",
       "name": "Stop and Error"
     },
     {
@@ -598,10 +604,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        -624,
-        3264
+        -176,
+        3488
       ],
-      "id": "c1c6ae58-bfc1-48e4-8e90-09ce1a5257f3",
+      "id": "f9cf7846-e7f5-41ab-af9c-a292b0cd035b",
       "name": "Create X",
       "credentials": {
         "twitterOAuth2Api": {
@@ -620,17 +626,90 @@
       "type": "@mookielianhd/n8n-nodes-instagram.instagram",
       "typeVersion": 1,
       "position": [
-        -624,
-        3072
+        -3760,
+        2880
       ],
-      "id": "87f76fa2-f9e6-4390-9465-af9869ab783e",
+      "id": "58a28a4a-e576-44dd-a129-7152458d5545",
       "name": "Publish",
       "credentials": {
         "instagramApi": {
           "id": "2Oj3a0Txy6bmygIj",
           "name": "Instagram account"
         }
-      }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $('ExtractPageToken').item.json.instagram_business_id }}/media",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "image_url",
+              "value": "={{ $('ExtractPageToken').item.json.image }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $('SetX').item.json.ig_post_text }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $('ExtractPageToken').item.json.page_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "290cb6b0-db66-4b9a-a2d5-265970ce717b",
+      "name": "Paso 1: Subir Foto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -624,
+        3296
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $('ExtractPageToken').item.json.instagram_business_id }}/media_publish",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "creation_id",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $('ExtractPageToken').item.json.page_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a0e0516d-cbe7-4ac1-9829-3cc0dbf51bcd",
+      "name": "Paso 2: Publicar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        -176,
+        3296
+      ]
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -400,
+        3296
+      ],
+      "id": "ca8119f6-71df-4cb5-8402-4cbc14a04acb",
+      "name": "Wait",
+      "webhookId": "bc2805c9-debe-4eec-965f-299cbb23ca0a"
     }
   ],
   "pinData": {},
@@ -715,7 +794,7 @@
             "index": 0
           },
           {
-            "node": "Publish",
+            "node": "Paso 1: Subir Foto",
             "type": "main",
             "index": 0
           }
@@ -908,6 +987,22 @@
     },
     "Publish": {
       "main": [
+        []
+      ]
+    },
+    "Paso 1: Subir Foto": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Paso 2: Publicar": {
+      "main": [
         [
           {
             "node": "HTTP Request",
@@ -916,9 +1011,20 @@
           }
         ]
       ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Paso 2: Publicar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "active": true,
+  "active": false,
   "settings": {
     "executionOrder": "v1",
     "callerPolicy": "workflowsFromSameOwner",
@@ -927,24 +1033,18 @@
     "timeSavedMode": "fixed",
     "timeSavedPerExecution": 5
   },
-  "versionId": "a72f617c-9f9e-4b27-a25d-0661903c193b",
+  "versionId": "365f9ca4-dbed-45be-a9a9-909f4eb4c5cb",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
   },
-  "id": "A5slxzihaenYsaGB",
+  "id": "ycRrCgAS3a3DgTXe",
   "tags": [
     {
-      "updatedAt": "2025-12-20T20:05:36.237Z",
-      "createdAt": "2025-12-20T20:05:36.237Z",
-      "id": "P8B6SG9wkqyC8I5T",
-      "name": "Redes Sociales"
-    },
-    {
-      "updatedAt": "2025-12-20T20:05:16.332Z",
-      "createdAt": "2025-12-20T20:05:16.332Z",
-      "id": "GQLpF2Inwhd2fJzm",
-      "name": "Cron"
+      "updatedAt": "2025-12-20T19:25:08.685Z",
+      "createdAt": "2025-12-20T19:25:08.685Z",
+      "id": "ljhw24TcxNVpCPyc",
+      "name": "Webhook"
     },
     {
       "updatedAt": "2025-12-20T20:03:46.545Z",
@@ -953,10 +1053,16 @@
       "name": "Postgres"
     },
     {
-      "updatedAt": "2025-12-20T19:25:08.685Z",
-      "createdAt": "2025-12-20T19:25:08.685Z",
-      "id": "ljhw24TcxNVpCPyc",
-      "name": "Webhook"
+      "updatedAt": "2025-12-20T20:05:16.332Z",
+      "createdAt": "2025-12-20T20:05:16.332Z",
+      "id": "GQLpF2Inwhd2fJzm",
+      "name": "Cron"
+    },
+    {
+      "updatedAt": "2025-12-20T20:05:36.237Z",
+      "createdAt": "2025-12-20T20:05:36.237Z",
+      "id": "P8B6SG9wkqyC8I5T",
+      "name": "Redes Sociales"
     }
   ]
 }
