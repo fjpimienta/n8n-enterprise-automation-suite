@@ -334,7 +334,7 @@
           "parameters": [
             {
               "name": "secret",
-              "value": "0x4AAAAAACaIUPqZJgmt4kZOfe-bVwRfmxY"
+              "value": "={{$env[\"CLOUDFREE_SECRET_KEY\"]}}"
             },
             {
               "name": "response",
@@ -662,7 +662,7 @@
     "timeSavedMode": "fixed",
     "timeSavedPerExecution": 5
   },
-  "versionId": "5a690102-9ecf-44be-914f-210c62a6f4a8",
+  "versionId": "78f0f426-dc64-4f1c-9ecf-69fae96ff525",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
@@ -670,22 +670,10 @@
   "id": "nwdUJSP5n47M0jee",
   "tags": [
     {
-      "updatedAt": "2025-12-20T20:03:46.545Z",
-      "createdAt": "2025-12-20T20:03:46.545Z",
-      "id": "jafWIhyZ3XGpyA6j",
-      "name": "Postgres"
-    },
-    {
-      "updatedAt": "2025-12-20T20:03:43.499Z",
-      "createdAt": "2025-12-20T20:03:43.499Z",
-      "id": "6dOXPBVsMw3OlOvZ",
-      "name": "Mail"
-    },
-    {
-      "updatedAt": "2025-12-20T20:03:23.298Z",
-      "createdAt": "2025-12-20T20:03:23.298Z",
-      "id": "UUN2qPnY76eYwC1y",
-      "name": "CRUD"
+      "updatedAt": "2025-12-20T19:25:08.685Z",
+      "createdAt": "2025-12-20T19:25:08.685Z",
+      "id": "ljhw24TcxNVpCPyc",
+      "name": "Webhook"
     },
     {
       "updatedAt": "2025-12-20T19:25:50.503Z",
@@ -694,10 +682,22 @@
       "name": "JWT"
     },
     {
-      "updatedAt": "2025-12-20T19:25:08.685Z",
-      "createdAt": "2025-12-20T19:25:08.685Z",
-      "id": "ljhw24TcxNVpCPyc",
-      "name": "Webhook"
+      "updatedAt": "2025-12-20T20:03:23.298Z",
+      "createdAt": "2025-12-20T20:03:23.298Z",
+      "id": "UUN2qPnY76eYwC1y",
+      "name": "CRUD"
+    },
+    {
+      "updatedAt": "2025-12-20T20:03:43.499Z",
+      "createdAt": "2025-12-20T20:03:43.499Z",
+      "id": "6dOXPBVsMw3OlOvZ",
+      "name": "Mail"
+    },
+    {
+      "updatedAt": "2025-12-20T20:03:46.545Z",
+      "createdAt": "2025-12-20T20:03:46.545Z",
+      "id": "jafWIhyZ3XGpyA6j",
+      "name": "Postgres"
     }
   ]
 }
