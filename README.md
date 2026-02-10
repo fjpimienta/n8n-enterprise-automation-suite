@@ -1,82 +1,98 @@
 # n8n Enterprise Automation Suite 🚀
-### Arquitectura de Orquestación de IA & Microservicios (Self-Hosted)
 
-![Arquitectura n8n Enterprise](assets/AutomationSuiteHosting3M_by_Gemini.png)
+### CloudFree Architecture: Orquestación de IA & Microservicios (Self-Hosted)
 
-> **Arquitecto:** Francisco Pérez (Senior Systems Engineer | PMP | Full Stack)  
-> **Core Stack:** n8n v2.4.6, Docker, PostgreSQL (pgvector + JSONB), Node.js, OpenAI (GPT-4o), Angular 21 (Signals).  
-> **Infraestructura:** Linux VPS.
+> **Arquitecto:** Francisco Pérez (Senior Systems Engineer | PMP | Full Stack)
+> **Core Stack:** n8n v2.4.6, Docker, PostgreSQL (pgvector + JSONB), Node.js, OpenAI (GPT-4o) & Flux (Image Gen), Angular 21.
+> **Infraestructura:** CloudFree VPS (Hardened Linux).
 
 ---
 
 ## 🎯 Objetivo del Proyecto
 
-Suite de automatización empresarial de grado industrial diseñada para alta disponibilidad y escalabilidad.
+Suite de automatización empresarial de **grado industrial** diseñada bajo la filosofía **"CloudFree"**: máxima potencia computacional con cero dependencia de licencias SaaS costosas.
 
-La arquitectura trasciende el uso de simples "bots" para convertirse en un **Hub de Servicios Inteligente** que garantiza:
+Esta arquitectura transforma la automatización convencional en un **Hub de Servicios Inteligente** que garantiza:
 
-1.  **Soberanía de Datos:** Despliegue 100% Self-Hosted.
-2.  **Latencia Mínima:** Optimización de redes internas Docker.
-3.  **Seguridad Corporativa:** Gestión de permisos basada en roles (RBAC) y validación de tokens RS256.
+1. **Soberanía Total de Datos:** Despliegue 100% Self-Hosted (Sin Vendor Lock-in).
+2. **Cost-Efficiency:** Uso de modelos de IA optimizados (Turbo/Flux) y almacenamiento vectorial propio.
+3. **Alta Disponibilidad:** Orquestación mediante Docker con redes internas de latencia cero.
+4. **Seguridad Corporativa:** Gestión de identidad RBAC y validación de tokens RS256.
 
 ---
 
 ## 🏗 Arquitectura e Infraestructura (IaC)
 
-El ecosistema está desplegado en un entorno endurecido (**Hardened VPS**) utilizando orquestación de contenedores y redes aisladas.
+El ecosistema opera en un entorno de alta densidad, maximizando los recursos del VPS mediante una arquitectura de microservicios:
 
 | Servicio | Tecnología | Función Crítica |
-| :--- | :--- | :--- |
-| **Orquestador** | n8n v2.4.6 (Enterprise) | Motor lógico central de flujos y reglas de negocio. |
-| **IA Bridge** | MCP Protocol | Interoperabilidad segura para que la IA ejecute SQL. |
-| **Capa de Datos** | PostgreSQL + pgvector | Almacenamiento híbrido (Relacional + JSONB) y vectorial. |
+| --- | --- | --- |
+| **Orquestador** | n8n v2.4.6 (Enterprise) | Motor lógico central. Manejo de concurrencia y reintentos (Retry Logic). |
+| **Media Gen** | Pollinations AI (Flux/Turbo) | **Nuevo:** Generación de assets visuales ilimitados sin coste de API. |
+| **Capa de Datos** | PostgreSQL + pgvector | Almacenamiento híbrido: Relacional (Negocio) + Vectorial (Memoria IA). |
+| **Social API** | Facebook Graph v23.0 | **Nuevo:** Integración nativa para publicación estable en Instagram/Facebook. |
 | **Seguridad** | Node.js (JWT Service) | Microservicio dedicado para firma y validación de tokens RS256. |
-| **Agentes IA** | OpenAI + LangChain | Procesamiento de lenguaje natural y razonamiento autónomo. |
+| **Agentes IA** | OpenAI + LangChain | Razonamiento autónomo y RAG (Retrieval-Augmented Generation). |
 | **Frontend Hotel** | Angular 21 SPA | Dashboard administrativo con gestión de estado reactivo (Signals). |
 | **Frontend Pista** | Angular 21 PWA | WebApp progresiva para operaciones de tiempo real y cobros. |
-| **Ingesta** | Node.js Scraper | Motor de extracción de datos no estructurados en tiempo real. |
-| **Contactos** | n8n v2.4.6 (Enterprise) | Orquestador de entrada de leads y CRM. |
 
 ---
 
-## 📦 Módulos Implementados (Workflows)
+## 📦 Módulos Implementados (Workflows v3)
 
-La suite se compone de 9 módulos principales que operan como microservicios interconectados:
+La suite se compone de módulos interconectados que operan como una malla de servicios:
 
 ### 1. 🔐 Secure Token Gateway
+
 Sistema centralizado de **Gestión de Identidad**. Administra la validación de peticiones externas y la auto-generación de tokens para tareas cronometradas bajo un esquema "Zero Trust".
 
 ### 2. 🛠️ Contact & CRM Bridge v2
-Orquestador de entrada de leads. Realiza validación estricta de tipos y sanitización de datos antes de la persistencia en el CRM.
 
-### 3. 📰 Automated News Curator
-Motor de inteligencia competitiva. Extrae noticias técnicas, realiza un **filtrado semántico** y genera una identidad visual única mediante IA generativa.
+Orquestador de entrada de leads. Realiza validación estricta de tipos (`Strong Typing`) y sanitización de datos antes de la persistencia en el CRM PostgreSQL.
 
-### 4. 📢 Social Media Orchestrator
-Orquestador omnicanal con lógica de **idempotencia**. Verifica cuotas de publicación diarias y adapta el contenido para X, Facebook y LinkedIn.
+### 3. 📰 Automated News Curator (v3.1)
+
+Motor de inteligencia competitiva actualizado.
+
+* **Extracción:** Scraping de fuentes RSS técnicas.
+* **IA Generativa:** Implementación de **Pollinations.ai (Modelo Flux)** para crear portadas de noticias hiper-realistas en formato vertical (4:5) para Instagram.
+* **Prompt Engineering:** Inyección dinámica de estilos (Cyberpunk, Isometric, 3D Render).
+
+### 4. 📢 Social Media Orchestrator (Graph API Edition)
+
+Orquestador omnicanal refactorizado para **Meta for Business**.
+
+* **Estabilidad:** Migración de nodos comunitarios a **n8n Native Instagram Node** usando credenciales de Facebook Graph.
+* **Upload Protocol:** Implementación de espera activa (`Wait Node`) para garantizar el procesamiento de medios 4K antes de la publicación.
+* **Estrategia:** "Link in Bio" automatizada para tráfico orgánico.
 
 ### 5. 🤖 Multi-Service WhatsApp Hub
+
 Agente multimodal (Texto/Voz) con **enrutamiento inteligente**. Identifica al cliente en la DB y decide si la atención debe ser orientada a Hosting, Hotel o soporte general, utilizando memoria persistente `pgvector`.
 
 ### 6. 🛠️ Dynamic CRUD Engine
+
 Capa de abstracción SQL que actúa como un **Backend as a Service (BaaS)** unificado.
-* **Novedad v3:** Soporte para persistencia híbrida (SQL para búsquedas rápidas + JSONB para esquemas flexibles).
+
+* **Persistencia Híbrida:** SQL para búsquedas indexadas + JSONB para esquemas flexibles (NoSQL dentro de SQL).
 
 ### 7. 🏨 MCP Server: Hotel Management
-Implementación avanzada del **Model Context Protocol**. Expone herramientas de base de datos a la IA, permitiendo consultas de inventario en tiempo real mediante lenguaje natural.
+
+Implementación del **Model Context Protocol**. Expone herramientas de base de datos a la IA (Claude/Gemini/GPT), permitiendo consultas de inventario y modificaciones en tiempo real mediante lenguaje natural.
 
 ### 8. 🏨 AdminHotel Dashboard (v0.7)
+
 Cliente Web SPA para la gestión hotelera integral.
+
 * **Core:** Angular 21 + Tabler UI.
-* **Módulo QA:** Nuevo sistema de **Rondines** con formularios dinámicos y "Smart Merge" de datos JSONB.
-* **Room Rack:** Semáforo visual de estados (Sucia, Disponible, Ocupada).
-* **Finance:** Auditoría de fugas y descuentos dinámicos.
+* **QA Module:** Sistema de "Rondines" con formularios dinámicos y "Smart Merge".
 
 ### 9. ⛸️ PistaHielo Operations Center (v0.6)
-PWA Administrativa para la gestión de centros de entretenimiento.
-* **Core:** Angular 21 + Reactive Signals.
-* **Dual-Stage Billing:** Motor de cobro de alta precisión con soporte para **"Midnight Crossing"** (turnos que cruzan la medianoche).
-* **Ops:** Monitoreo en tiempo real y reportes de Corte Z (Efectivo vs Tarjeta).
+
+PWA Administrativa para gestión de entretenimiento.
+
+* **Billing Engine:** Motor de cobro de alta precisión con soporte para turnos nocturnos ("Midnight Crossing").
+* **Ops:** Reportes financieros de Corte Z en tiempo real.
 
 ---
 
@@ -86,21 +102,22 @@ PWA Administrativa para la gestión de centros de entretenimiento.
 # 1. Clonar repositorio
 git clone [https://github.com/tu-usuario/n8n-enterprise-suite.git](https://github.com/tu-usuario/n8n-enterprise-suite.git)
 
-# 2. Levantar infraestructura Backend
-cd infrastructure
-docker-compose up -d
+# 2. Configurar Entorno (CloudFree Strategy)
+cp .env.example .env
+# Ajustar POSTGRES_USER, OPENAI_API_KEY, FB_PAGE_ACCESS_TOKEN
 
-# 3. Levantar Clientes Frontend (Ejemplo)
-cd apps/admin-hotel
-npm install && ng serve
+# 3. Levantar Infraestructura
+cd infrastructure
+docker-compose up -d --build
+
+# 4. Verificar Salud de Servicios
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
 ```
 
 ---
 
-## Documentación de Workflows Individuales
-
-### 📚 Documentación Técnica por Módulo
+## 📚 Documentación Técnica por Módulo
 
 | ID | Módulo / Servicio | Función Principal | Stack & Integraciones | Documentación |
 | :---| :--- | :--- | :--- | :---: |
@@ -118,27 +135,20 @@ npm install && ng serve
 
 ## 📈 Roadmap & Gestión de Proyectos
 
-Seguimiento del ciclo de vida del desarrollo.
+### ✅ Completado (Q1 2026)
 
-### ✅ Completado (Q4 2025 - Q1 2026)
-
-* [x] **Infraestructura:** Despliegue de redes Docker aisladas y Auth Gateway RS256.
-* [x] **Hotel Core:** Dashboard v0.7 con Módulo de Calidad (Rondines) y persistencia híbrida.
-* [x] **Pista Hielo:** PWA v0.6 con corrección de cálculo de tiempos (Midnight Bug) y reportes financieros.
-* [x] **Backend:** Dynamic CRUD Engine v3 con soporte nativo para JSONB.
+* [x] **Social Media Fix:** Implementación exitosa de Facebook Graph API para publicación estable en Instagram Business.
+* [x] **Visual Upgrade:** Integración de Pollinations.ai para generación de imágenes "Cost-Free".
+* [x] **Infraestructura:** Migración a stack **CloudFree** optimizado.
 
 ### 🏗️ En Progreso (Q2 2026)
 
-* [ ] **PistaHielo Membership:** Integración de directorio de alumnos VIP y control de mensualidades.
-* [ ] **Optimización RAG:** Migración a índices HNSW en pgvector para búsquedas masivas de latencia baja.
-
-### 🚀 Backlog & R&D (Futuro)
-
-* [ ] **Agentes Supervisores:** IA de control de calidad para auditar respuestas de bots.
-* [ ] **Auto-Checkout MCP:** Procesamiento de pagos automatizados mediante IA.
+* [ ] **Stories Automation:** Implementación de "Link Stickers" automatizados en Instagram Stories para tráfico directo.
+* [ ] **AI Supervisor:** Agente de control de calidad para auditar las respuestas del bot de WhatsApp.
 
 ---
+
 Desarrollado por: **Francisco Jesus Pérez Pimienta**
 
-* Ingeniero en Sistemas Computacionales | PMP | Full Stack.
-* Especialista en Automatización de Procesos y Soberanía de Datos.
+* **Senior Systems Engineer | PMP | Full Stack**
+* *Especialista en Automatización de Procesos, Bases de Datos & AI Integration.*
