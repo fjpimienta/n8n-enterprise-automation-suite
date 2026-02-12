@@ -24,11 +24,23 @@ export class ExpenseFormModalComponent {
   // Modelo del formulario
   expenseData = {
     description: '',
-    amount: null as number | null,
+    amount: 0,
     category: 'Insumos',
     payment_method: 'Efectivo',
-    expense_date: new Date().toISOString().split('T')[0] // Hoy
+    expense_date: new Date().toISOString().split('T')[0], // Formato YYYY-MM-DD
+    room_id: null as number | null,
+    expense_type: 'OPEX',
+    project_phase: 'OPERACION'
   };
+
+  projectPhases = [
+    { value: 'OPERACION', label: '🏨 Operación Normal' },
+    { value: 'FASE_0', label: '⚡ Fase 0: Infraestructura' },
+    { value: 'FASE_1', label: '🧱 Fase 1: Planta Baja' },
+    { value: 'FASE_2', label: '🚧 Fase 2: Primer Piso Ala Norte' },
+    { value: 'FASE_3', label: '🏗️ Fase 3: Primer Piso Ala Sur' },
+    { value: 'FASE_4', label: '🧱 Fase 4: Segundo Piso' }
+  ];
 
   categories = ['Insumos', 'Mantenimiento', 'Limpieza', 'Servicios', 'Nómina', 'Marketing', 'Caja Chica'];
   paymentMethods = ['Efectivo', 'Transferencia', 'Tarjeta Corp'];
@@ -71,10 +83,13 @@ export class ExpenseFormModalComponent {
   resetForm() {
     this.expenseData = {
       description: '',
-      amount: null,
+      amount: 0,
       category: 'Insumos',
       payment_method: 'Efectivo',
-      expense_date: new Date().toISOString().split('T')[0]
+      expense_date: new Date().toISOString().split('T')[0], // Formato YYYY-MM-DD
+      room_id: null as number | null,
+      expense_type: 'OPEX',
+      project_phase: 'OPERACION'
     };
   }
 }
