@@ -1,5 +1,5 @@
 <app-header (onRefresh)="refresh()" (onRefreshMain)="refreshMain()" (onGenerateReport)="generateDailyReport()"
-  [isAdmin]="isAdmin" (onLogout)="logout()">
+  (onOpenMaintenance)="showMaintenanceMonitor = true" [isAdmin]="isAdmin" (onLogout)="logout()">
 </app-header>
 
 <div class="page-body">
@@ -54,7 +54,8 @@
         <div class="row row-cards g-2 animation-fade-in">
           @for (room of group.rooms; track room.id) {
           <div class="col-12 col-sm-6 col-lg-3">
-            <app-room-card [room]="room" (onSelect)="onSelectRoom($event)"></app-room-card>
+            <app-room-card [room]="room" (onSelect)="onSelectRoom($event)"
+              (onReportIssue)="openMaintenanceReport(room)"></app-room-card>
           </div>
           }
         </div>
@@ -170,3 +171,14 @@
 <app-expense-form-modal [isOpen]="isExpenseModalOpen()" (onClose)="isExpenseModalOpen.set(false)"
   (onSave)="refreshMain()">
 </app-expense-form-modal>
+
+@if (maintenanceRoom()) {
+<app-maintenance-ticket-modal [room]="maintenanceRoom()" (onClose)="maintenanceRoom.set(null)"
+  (onSave)="maintenanceRoom.set(null); refresh()">
+</app-maintenance-ticket-modal>
+}
+
+@if (showMaintenanceMonitor) {
+<app-maintenance-monitor-modal (onClose)="showMaintenanceMonitor = false">
+</app-maintenance-monitor-modal>
+}

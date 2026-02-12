@@ -20,6 +20,8 @@ import { GuestFormModalComponent } from '@features/admin/components/guest-form-m
 import { GuestListComponent } from '@features/admin/components/guest-list/guest-list.component';
 import { RoomChecklistModalComponent } from '@features/booking/components/room-checklist-modal/room-checklist-modal.component';
 import { ExpenseFormModalComponent } from '@features/finance/components/expense-form-modal/expense-form-modal.component';
+import { MaintenanceTicketModalComponent } from '@features/dashboard/components/maintenance-ticket-modal/maintenance-ticket-modal.component';
+import { MaintenanceMonitorModalComponent } from '@features/dashboard/components/maintenance-monitor-modal/maintenance-monitor-modal.component';
 // Servicios
 import { AuthService } from '@core/services/auth.service';
 import { HotelService } from '@features/dashboard/services/hotel.service';
@@ -33,7 +35,8 @@ import { lastValueFrom } from 'rxjs';
   standalone: true,
   imports: [CommonModule, FormsModule, CheckinFormComponent, CheckoutFormComponent, HeaderComponent, RoomCardComponent, DailyReportModalComponent,
     RoomFiltersComponent, RoomDetailModalComponent, UserFormModalComponent, UserListComponent, GuestFormModalComponent, GuestListComponent,
-    SkeletonComponent, ReservationManagerComponent, RoomChecklistModalComponent, ExpenseFormModalComponent],
+    SkeletonComponent, ReservationManagerComponent, RoomChecklistModalComponent, ExpenseFormModalComponent, MaintenanceTicketModalComponent,
+    MaintenanceMonitorModalComponent],
   templateUrl: './dashboard.component.html'
 })
 export class DashboardComponent {
@@ -55,6 +58,8 @@ export class DashboardComponent {
   showReportModal = false;
   collapsedGroups = signal<Set<string>>(new Set());
   expandedGroups = signal<Set<string>>(new Set());
+  maintenanceRoom = signal<any>(null);
+  showMaintenanceMonitor = false;
 
   activeBooking = signal<any>(null);
   //dailyReport = { total: 0, paid: 0, pending: 0, transactions: [] as any[], periodLabel: 'Hoy' };
@@ -580,5 +585,9 @@ export class DashboardComponent {
 
     // 3. Cerrar
     this.viewMode.set('details');
+  }
+
+  openMaintenanceReport(room: any) {
+    this.maintenanceRoom.set(room);
   }
 }
