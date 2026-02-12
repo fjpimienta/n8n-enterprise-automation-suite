@@ -1,7 +1,7 @@
 import { Component, EventEmitter, Output, inject, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { MaintenanceService } from '@features/dashboard/services/maintenance';
+import { MaintenanceService } from '@features/dashboard/services/maintenance.service';
 
 @Component({
   selector: 'app-maintenance-ticket-modal',

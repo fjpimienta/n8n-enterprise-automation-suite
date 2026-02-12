@@ -17,7 +17,8 @@ export class MaintenanceService {
     const payload = {
       operation: 'getall',
       table_name: 'hotel_maintenance_tickets',
-      filter: filters
+      action: 'list',
+      filters: filters
     };
     return this.request(payload);
   }

@@ -1,5 +1,5 @@
 <app-header (onRefresh)="refresh()" (onRefreshMain)="refreshMain()" (onGenerateReport)="generateDailyReport()"
-  [isAdmin]="isAdmin" (onLogout)="logout()">
+  (onOpenMaintenance)="showMaintenanceMonitor = true" [isAdmin]="isAdmin" (onLogout)="logout()">
 </app-header>
 
 <div class="page-body">
@@ -176,4 +176,9 @@
 <app-maintenance-ticket-modal [room]="maintenanceRoom()" (onClose)="maintenanceRoom.set(null)"
   (onSave)="maintenanceRoom.set(null); refresh()">
 </app-maintenance-ticket-modal>
+}
+
+@if (showMaintenanceMonitor) {
+<app-maintenance-monitor-modal (onClose)="showMaintenanceMonitor = false">
+</app-maintenance-monitor-modal>
 }
