@@ -43,7 +43,6 @@ export class MaintenanceMonitorModalComponent implements OnInit {
     this.isLoading = true;
     try {
       const allTickets = await this.maintenanceService.getTickets();
-      console.log('Tickets obtenidos:', allTickets);
       // Ordenamos
       const data = allTickets.sort((a: any, b: any) => {
         const priorityVal: any = { 'CRITICAL': 3, 'NORMAL': 2, 'LOW': 1 };
