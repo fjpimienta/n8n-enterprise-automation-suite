@@ -22,7 +22,7 @@
         "path": "v3/genera-token",
         "responseMode": "responseNode",
         "options": {
-          "allowedOrigins": "https://hosting3m.com",
+          "allowedOrigins": "*",
           "responseHeaders": {
             "entries": [
               {
@@ -150,7 +150,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "errorWorkflow": "9SrVXdATmlrZemJT"
   },
-  "versionId": "75ef3e56-f806-48bf-8347-30c33515e87b",
+  "versionId": "8a9697f8-2599-4d50-b54d-b85f0c6a6343",
   "meta": {
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
   },
