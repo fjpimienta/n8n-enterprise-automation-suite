@@ -28,7 +28,11 @@ export class MaintenanceMonitorModalComponent implements OnInit {
 
   // Signal computada para el contador (se actualiza sola)
   pendingCount = computed(() => {
-    return this.tickets().filter(t => t.status !== 'RESOLVED').length;
+    return this.tickets().filter(t =>
+      t.status !== 'RESOLVED' &&      // 1. Que esté pendiente
+      t.id &&                         // 2. Que tenga ID real
+      (t.description || t.issue_type) // 3. Que tenga datos (descripción o tipo)
+    ).length;
   });
 
   ngOnInit() {
@@ -55,13 +59,19 @@ export class MaintenanceMonitorModalComponent implements OnInit {
     }
   }
 
-  // Getter corregido (Agregamos paréntesis a this.tickets())
+  // Getter corregido y BLINDADO
   get filteredTickets() {
-    const list = this.tickets(); // <--- AQUÍ ESTABA EL ERROR
-    if (this.filter === 'PENDING') {
-      return list.filter((t: any) => t.status !== 'RESOLVED');
-    }
-    return list.filter((t: any) => t.status === 'RESOLVED');
+    const list = this.tickets();
+
+    // 1. Filtramos por estado (PENDING vs RESOLVED)
+    let result = (this.filter === 'PENDING')
+      ? list.filter((t: any) => t.status !== 'RESOLVED')
+      : list.filter((t: any) => t.status === 'RESOLVED');
+
+    // 2. FILTRO DE SEGURIDAD (Nuevo) 🛡️
+    // Esto elimina las filas "fantasmas" que no tienen descripción o ID válido.
+    // Solo mostramos si tiene ID y (descripción O tipo de problema)
+    return result.filter(t => t.id && (t.description || t.issue_type));
   }
 
   async resolveTicket(ticket: any) {
