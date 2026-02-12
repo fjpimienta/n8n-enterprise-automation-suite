@@ -1,7 +1,8 @@
-import { Component, EventEmitter, Output, inject, OnInit, signal, computed } from '@angular/core';
+import { Component, EventEmitter, Output, inject, OnInit, signal, computed, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MaintenanceService } from '@features/dashboard/services/maintenance.service';
 import { FormsModule } from '@angular/forms';
+import { HotelService } from '@features/dashboard/services/hotel.service';
 
 @Component({
   selector: 'app-maintenance-monitor-modal',
@@ -12,18 +13,17 @@ import { FormsModule } from '@angular/forms';
 })
 export class MaintenanceMonitorModalComponent implements OnInit {
   private maintenanceService = inject(MaintenanceService);
+  private hotelService = inject(HotelService);
 
   @Output() onClose = new EventEmitter<void>();
+  targetRoomId = input<number | null>(null);
 
   // Signal para la lista de tickets
   tickets = signal<any[]>([]);
-
   isLoading = true;
   filter: 'PENDING' | 'RESOLVED' = 'PENDING';
-
   resolvingTicketId: number | null = null;
   solutionText: string = '';
-
   showError = false;
 
   // Signal computada para el contador (se actualiza sola)
@@ -62,16 +62,22 @@ export class MaintenanceMonitorModalComponent implements OnInit {
   // Getter corregido y BLINDADO
   get filteredTickets() {
     const list = this.tickets();
+    const specificRoom = this.targetRoomId();
 
-    // 1. Filtramos por estado (PENDING vs RESOLVED)
+    // Filtro base: Pendientes vs Resueltos
     let result = (this.filter === 'PENDING')
       ? list.filter((t: any) => t.status !== 'RESOLVED')
       : list.filter((t: any) => t.status === 'RESOLVED');
 
-    // 2. FILTRO DE SEGURIDAD (Nuevo) 🛡️
-    // Esto elimina las filas "fantasmas" que no tienen descripción o ID válido.
-    // Solo mostramos si tiene ID y (descripción O tipo de problema)
-    return result.filter(t => t.id && (t.description || t.issue_type));
+    // Filtro de Seguridad (Fantasmas)
+    result = result.filter(t => t.id && (t.description || t.issue_type));
+
+    // 👇 FILTRO ESPECÍFICO DE HABITACIÓN (La lógica nueva)
+    if (specificRoom) {
+      result = result.filter(t => t.room_id === specificRoom);
+    }
+
+    return result;
   }
 
   async resolveTicket(ticket: any) {
@@ -122,7 +128,7 @@ export class MaintenanceMonitorModalComponent implements OnInit {
     this.showError = false;
     this.isLoading = true;
     try {
-      // 1. Guardar en Base de Datos
+      // 1. Guardar Solución en Ticket
       const now = new Date().toISOString();
       await this.maintenanceService.updateTicket(this.resolvingTicketId, {
         status: 'RESOLVED',
@@ -130,11 +136,18 @@ export class MaintenanceMonitorModalComponent implements OnInit {
         resolved_at: now
       });
 
-      // 2. Actualizar UI usando Signals (Forma Reactiva Correcta)
+      // 2. ⚡ AUTOMATIZACIÓN: Buscar el ticket para obtener el room_id
+      const ticket = this.tickets().find(t => t.id === this.resolvingTicketId);
+
+      if (ticket && ticket.room_id) {
+        // Cambiar estado a 'available' pero 'dirty'
+        await this.hotelService.finishMaintenance(ticket.room_id);
+      }
+
+      // 3. Actualizar UI
       this.tickets.update(currentList =>
         currentList.map(t => {
           if (t.id === this.resolvingTicketId) {
-            // Retornamos una copia actualizada del ticket
             return {
               ...t,
               status: 'RESOLVED',
@@ -142,12 +155,12 @@ export class MaintenanceMonitorModalComponent implements OnInit {
               resolved_at: now
             };
           }
-          return t; // Retornamos el ticket sin cambios
+          return t;
         })
       );
 
       this.cancelResolution();
-      alert('✅ ¡Mantenimiento registrado! El ticket se ha movido a la pestaña "Histórico".');
+      alert('✅ Mantenimiento finalizado. La habitación se marcó como SUCIA para limpieza.');
 
     } catch (error) {
       console.error(error);
