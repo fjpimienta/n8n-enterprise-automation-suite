@@ -15,13 +15,13 @@
           ]
         }
       },
-      "id": "77ffcfdb-2393-4a59-9ce7-ac98f2facb84",
+      "id": "3e200b65-ee63-4821-97a0-e56239b4309b",
       "name": "Cron",
       "type": "n8n-nodes-base.cron",
       "typeVersion": 1,
       "position": [
-        -3760,
-        3728
+        64,
+        3952
       ]
     },
     {
@@ -31,25 +31,31 @@
             {
               "id": "67de7425-fb84-4c31-91fc-954061dc076d",
               "name": "tweet_text",
-              "value": "={{ `💡 \"${$json.data[0].title}\". Echa un vistazo al análisis completo de https://hosting3m.com/#news. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M ➡️ ${$json.data[0].url}` }}\n",
+              "value": "={{ `💡 \"${$('Get Articles').first().json.data[0].title}\". Echa un vistazo al análisis completo de https://hosting3m.com/#news. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M ➡️ ${$('Get Articles').first().json.data[0].url}` }}\n",
               "type": "string"
             },
             {
               "id": "983175be-ce4b-4fbc-ad7d-bc2e7524096a",
               "name": "fb_post_text",
-              "value": "={{ `💡 \"${$json.data[0].title}\", proveniente de https://hosting3m.com/#news. ¿Qué opinas de este avance? ¡Comenta abajo! ⬇️ Lee más: ${$json.data[0].url}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M` }}",
+              "value": "={{ `💡 \"${$('Get Articles').first().json.data[0].title}\", proveniente de https://hosting3m.com/#news. ¿Qué opinas de este avance? ¡Comenta abajo! ⬇️ Lee más: ${$('Get Articles').first().json.data[0].url}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M` }}",
               "type": "string"
             },
             {
               "id": "a9bee46a-2427-438a-a8df-3e6ba0b16ab5",
               "name": "li_post_text",
-              "value": "={{ `💡 \"${$json.data[0].title}\". Fuente: https://hosting3m.com/#news ➡️ ${$json.data[0].url}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M` }}",
+              "value": "={{ `💡 \"${$('Get Articles').first().json.data[0].title}\". Fuente: https://hosting3m.com/#news ➡️ ${$('Get Articles').first().json.data[0].url}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M` }}",
               "type": "string"
             },
             {
               "id": "e7d15066-4754-4e2e-8de3-0fa4b5e5d9cc",
               "name": "image",
-              "value": "={{ \n  (() => {\n    // 1. Obtenemos el título de la noticia desde el nodo anterior (Limit)\n    const title = $('Get Articles').item.json.title;\n    \n    // 2. Definimos un prompt base para asegurar el estilo \"Tech News\"\n    // \"Futuristic technology concept art about [Titulo], high quality, 4k, trending on artstation\"\n    const prompt = `Futuristic technology concept, editorial illustration about: ${title}, high detail, 8k, professional lighting`;\n  \n    // 3. Codificamos el prompt para URL\n    const encodedPrompt = encodeURIComponent(prompt);\n  \n    // 4. Retornamos la URL de Pollinations\n    // width=1000, height=800 (Coincide con tu nodo DownloadImage), model=flux, seed=random\n    const randomSeed = Math.floor(Math.random() * 1000);\n    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1000&height=800&model=flux&nologo=true&seed=${randomSeed}`;\n  })() \n}}{{ \n  (() => {\n    // 1. Obtenemos el título de la noticia\n    const title = $('Get Articles').item.json.title;\n    \n    // 2. DEFINIMOS UNA LISTA DE ESTILOS VARIADOS\n    // Puedes agregar o quitar los que quieras de esta lista\n    const styles = [\n      \"Futuristic technology concept art, neon blue lighting, unreal engine 5\", // El clásico\n      \"Isometric 3D render, clean white background, corporate tech style\", // Estilo limpio 3D\n      \"Minimalist flat vector art, trending on behance, colorful\", // Estilo ilustración plana\n      \"Cyberpunk city atmosphere, dark and moody, cinematic lighting\", // Estilo oscuro/hacker\n      \"Abstract data visualization, geometric shapes, network connection nodes\", // Estilo abstracto\n      \"Retro synthwave 80s style, grid background, magenta and cyan\", // Estilo Retro\n      \"Photorealistic macro photography of computer hardware, depth of field\", // Estilo realista\n      \"Digital oil painting, expressive brushstrokes, conceptual art\" // Estilo artístico\n    ];\n\n    // 3. Seleccionamos un estilo al azar de la lista\n    const randomStyle = styles[Math.floor(Math.random() * styles.length)];\n  \n    // 4. Combinamos el estilo elegido con el título\n    const prompt = `${randomStyle}, editorial illustration about: ${title}, high detail, 8k, professional quality`;\n  \n    // 5. Codificamos el prompt para URL\n    const encodedPrompt = encodeURIComponent(prompt);\n  \n    // 6. Generamos semilla aleatoria y retornamos URL\n    const randomSeed = Math.floor(Math.random() * 1000);\n    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1000&height=800&model=flux&nologo=true&seed=${randomSeed}`;\n  })() \n}}",
+              "value": "={{\n  (() => {\n    // 1. Obtenemos el prompt generado.\n    // El nodo 'Basic LLM Chain' siempre devuelve la respuesta en la propiedad 'text'\n    const aiNode = $('AI Art Director').first();\n    const artPrompt = aiNode.json.text; \n\n    // 2. Validación de seguridad:\n    // Si por alguna razón la IA falló o está vacía, usamos el título original\n    // para que el workflow no se rompa.\n    const titleOriginal = $('Get Articles').item.json.title;\n    const finalPrompt = (artPrompt && artPrompt.length > 10) ? artPrompt : `Futuristic technology concept about ${titleOriginal}`;\n\n    // 3. Codificamos para URL\n    const encodedPrompt = encodeURIComponent(finalPrompt);\n\n    // 4. Semilla aleatoria\n    const randomSeed = Math.floor(Math.random() * 10000);\n\n    // 5. Retornamos URL\n    // width=1024 y height=1024 es el estándar de oro para Flux/SDXL\n    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1024&height=1024&model=flux&nologo=true&enhance=false&seed=${randomSeed}`;\n  })()\n}}",
+              "type": "string"
+            },
+            {
+              "id": "df498114-78c1-42bb-887a-b4c677210607",
+              "name": "ig_post_text",
+              "value": "={{ `💡 ${$('Get Articles').first().json.data[0].title}\n\n📰 Fuente oficial: https://hosting3m.com/#news\n\nUn vistazo profundo al futuro de la tecnología. ¿Qué impacto crees que tendrá esto? ¡Te leemos en los comentarios! 👇\n\n🔗 Para leer el artículo completo, ve al enlace de nuestra BIO 📲\n\n.\n#TechNews #IA #Innovación #FuturoDigital #Technology #Hosting3M` }}",
               "type": "string"
             }
           ]
@@ -59,10 +65,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -2416,
-        3648
+        1760,
+        3824
       ],
-      "id": "db93229e-015e-4cef-a37f-0c4af19f3494",
+      "id": "17c2f125-86c4-4895-9fd1-459f52b4899f",
       "name": "SetX"
     },
     {
@@ -80,10 +86,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -2192,
-        3584
+        1984,
+        3760
       ],
-      "id": "51154b7c-094e-4bfc-8c08-a1afbafbf259",
+      "id": "69cbc81d-95e7-46af-a766-5d7790d3e690",
       "name": "DownloadImage",
       "onError": "continueRegularOutput"
     },
@@ -94,10 +100,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1520,
-        3456
+        2656,
+        3632
       ],
-      "id": "b6e0ace2-37e3-43a6-8db2-3aa29692e37b",
+      "id": "044d7365-f4af-42bc-92a7-4cafd94e963a",
       "name": "SaveImage"
     },
     {
@@ -128,10 +134,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -1072,
-        3264
+        3552,
+        3440
       ],
-      "id": "3442fbc7-766c-419b-9f3e-0549ff3e2471",
+      "id": "a29a7443-4e4d-4677-9699-edd25ded5bad",
       "name": "UploadImageX",
       "credentials": {
         "oAuth1Api": {
@@ -156,13 +162,13 @@
           }
         }
       },
-      "id": "bce8c020-ab09-4454-85fe-9d5687dee2f9",
+      "id": "a5f9561b-3952-453b-bbdc-b437888c439b",
       "name": "GetPageTokens",
       "type": "n8n-nodes-base.facebookGraphApi",
       "typeVersion": 1,
       "position": [
-        -1072,
-        2960
+        3104,
+        3136
       ],
       "credentials": {
         "facebookGraphApi": {
@@ -176,13 +182,13 @@
       "parameters": {
         "jsCode": "// Capturamos los datos directos de la página\nconst pageData = items[0].json;\n\n// Obtenemos el contenido del post (del nodo SetX)\nlet postContent = {};\ntry { \n    postContent = $('SetX').first().json; \n} catch (e) {\n    postContent = { fb_post_text: \"Post automático\", image: \"https://hosting3m.com/news-placeholder.jpg\" };\n}\n\n// Extraemos el ID de Instagram si existe\nconst igId = pageData.instagram_business_account ? pageData.instagram_business_account.id : null;\n\nreturn [{\n    json: {\n        status: \"READY\",\n        // Datos para Facebook\n        page_token: pageData.access_token,\n        page_id: pageData.id,\n        // Datos para Instagram\n        instagram_business_id: igId,\n        // Contenido compartido\n        message: postContent.fb_post_text,\n        image: postContent.image\n    }\n}];"
       },
-      "id": "53adf37f-c62b-4033-9538-1eac23a0319d",
+      "id": "49903d83-4ab2-4992-8b42-8885e74c8095",
       "name": "ExtractPageToken",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -848,
-        2960
+        3328,
+        3136
       ],
       "onError": "continueRegularOutput"
     },
@@ -209,13 +215,13 @@
         },
         "options": {}
       },
-      "id": "e68b9037-da8a-4e6a-8e3b-95827e43b41b",
+      "id": "ac76f7a5-8d0f-4b1d-ae90-4817d1ddfc36",
       "name": "PostToFacebookPage",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -624,
-        2880
+        4000,
+        3056
       ],
       "onError": "continueRegularOutput"
     },
@@ -232,10 +238,10 @@
       "type": "n8n-nodes-base.linkedIn",
       "typeVersion": 1,
       "position": [
-        -624,
-        3456
+        4000,
+        3632
       ],
-      "id": "d6106002-c358-4356-a96c-1f7ff41ad08e",
+      "id": "c01100a7-fd32-4723-beaf-6c1e63a67b3a",
       "name": "Post Company",
       "credentials": {
         "linkedInCommunityManagementOAuth2Api": {
@@ -257,10 +263,10 @@
       "type": "n8n-nodes-base.linkedIn",
       "typeVersion": 1,
       "position": [
-        -624,
-        3648
+        4000,
+        3824
       ],
-      "id": "36ad6071-48f3-4644-ade4-bf163d4cde0e",
+      "id": "e8beb4e6-0fc0-47ec-9ebd-a684185c5fe0",
       "name": "Post Personal",
       "credentials": {
         "linkedInCommunityManagementOAuth2Api": {
@@ -279,10 +285,10 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        -1968,
-        3648
+        2208,
+        3824
       ],
-      "id": "18e2e1e6-8f23-4be5-831e-33a647b1dec5",
+      "id": "7961afe5-ac3b-420b-b981-ebc8e70c9d17",
       "name": "HandleImageError"
     },
     {
@@ -313,10 +319,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -1744,
-        3648
+        2432,
+        3824
       ],
-      "id": "c9889aad-7307-4876-8ef3-ad44ec46c3a6",
+      "id": "f473be46-48b9-4e01-9e62-d6494dbc79f4",
       "name": "If1"
     },
     {
@@ -346,10 +352,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -1296,
-        3456
+        2880,
+        3632
       ],
-      "id": "217b7579-b5a6-43d8-b9d4-f9c2030d4f97",
+      "id": "bc2bdd4d-45d6-480f-8905-02c8f83c248c",
       "name": "If2"
     },
     {
@@ -381,10 +387,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -3088,
-        3728
+        736,
+        3952
       ],
-      "id": "06a15705-5eaf-40e8-b03f-f3a77e83c901",
+      "id": "87d4dbe2-7f01-4e28-9d4d-e818eef392db",
       "name": "Check Publish"
     },
     {
@@ -414,10 +420,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -2864,
-        3728
+        960,
+        3952
       ],
-      "id": "1dfe01dd-ac39-46d7-8cc3-8d5663b10426",
+      "id": "b75c6114-e4c2-4094-8bdf-67a979e33b7c",
       "name": "Not Exist Pub"
     },
     {
@@ -449,10 +455,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -400,
-        3248
+        4224,
+        3424
       ],
-      "id": "4d475d96-328d-452c-9cc4-1343abb822f7",
+      "id": "dd000326-f838-4c6e-b82f-e5bc4f24bf88",
       "name": "HTTP Request"
     },
     {
@@ -462,10 +468,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -848,
-        3264
+        3776,
+        3440
       ],
-      "id": "23989db6-39f3-4e86-a910-84f4278b2ad6",
+      "id": "c81a95c3-a47e-427e-b2e6-3ca8e4f38f3f",
       "name": "Code in JavaScript"
     },
     {
@@ -503,10 +509,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -2640,
-        3648
+        1184,
+        3824
       ],
-      "id": "9d5d2b3c-96b2-4959-b188-fbd3f3b99a88",
+      "id": "2a0731b2-5371-4d63-a7b5-baf29a6c619b",
       "name": "Get Articles",
       "alwaysOutputData": true
     },
@@ -534,10 +540,10 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        -3312,
-        3728
+        512,
+        3952
       ],
-      "id": "90794097-bde8-4882-bfe0-dc451f9b2b19",
+      "id": "4ee99cfe-5d7f-478d-bdae-4e6e80d84cf5",
       "name": "Genera Token"
     },
     {
@@ -563,10 +569,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -3536,
-        3728
+        288,
+        3952
       ],
-      "id": "e2dee457-f36f-4ff2-a0e6-76000104a3c7",
+      "id": "db22e5b3-e81e-4141-913a-3b100a1235ba",
       "name": "Set User"
     },
     {
@@ -578,10 +584,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -1072,
-        3840
+        3104,
+        4048
       ],
-      "id": "1a8377f0-f1c4-4c26-8592-3233f8c1bec0",
+      "id": "a9cbcd9e-890f-46e8-a7cd-6c88f1026a24",
       "name": "Stop and Error"
     },
     {
@@ -598,10 +604,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        -624,
-        3264
+        4000,
+        3440
       ],
-      "id": "c1c6ae58-bfc1-48e4-8e90-09ce1a5257f3",
+      "id": "590f6add-f658-4ad8-ada4-788c30c82772",
       "name": "Create X",
       "credentials": {
         "twitterOAuth2Api": {
@@ -612,23 +618,114 @@
     },
     {
       "parameters": {
-        "node": "={{ $json.instagram_business_id }}",
-        "imageUrl": "={{ $('ExtractPageToken').item.json.image }}",
-        "caption": "={{ $json.message }}",
-        "additionalFields": {}
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $('ExtractPageToken').item.json.instagram_business_id }}/media",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "image_url",
+              "value": "={{ $('ExtractPageToken').item.json.image }}"
+            },
+            {
+              "name": "caption",
+              "value": "={{ $('SetX').item.json.ig_post_text }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $('ExtractPageToken').item.json.page_token }}"
+            }
+          ]
+        },
+        "options": {}
       },
-      "type": "@mookielianhd/n8n-nodes-instagram.instagram",
-      "typeVersion": 1,
+      "id": "d756207c-6a10-4adb-b87f-8e4b2c659588",
+      "name": "Paso 1: Subir Foto",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
       "position": [
-        -624,
-        3072
+        3552,
+        3248
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v21.0/{{ $('ExtractPageToken').item.json.instagram_business_id }}/media_publish",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "creation_id",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $('ExtractPageToken').item.json.page_token }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "70fcb375-123c-490e-a002-7db90d794e7c",
+      "name": "Paso 2: Publicar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [
+        4000,
+        3248
+      ]
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        3776,
+        3248
       ],
-      "id": "87f76fa2-f9e6-4390-9465-af9869ab783e",
-      "name": "Publish",
+      "id": "f06b66e7-4a31-4252-8141-557adbe5c6a5",
+      "name": "Wait",
+      "webhookId": "bc2805c9-debe-4eec-965f-299cbb23ca0a"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=System: Eres un artista 3D experto en visualización de datos y tecnología futurista. Tu tarea es generar un prompt visual para una imagen de fondo de alta tecnología.\n\nPROHIBIDO:\n- NO uses palabras como \"newspaper\", \"article\", \"paper\", \"sketch\", \"drawing\", \"text\".\n- NO describas personas interactuando con pantallas.\n\nDEBES DESCRIBIR:\n- Objetos abstractos tecnológicos (ej: \"glowing fiber optics\", \"glass spheres\", \"metallic nodes\", \"digital waves\").\n- Estilo: 3D Render, Octane Render, Unreal Engine 5.\n- Iluminación: Neon, Cyberpunk, Volumetric lighting, Blue and Cyan tones.\n- Ángulo: Macro photography o Wide angle abstract.\n\nLa salida debe ser SOLO la descripción visual en INGLÉS.\n\nUser: Genera un prompt visual abstracto para esta noticia: {{ $json.data[0].title }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        1408,
+        3824
+      ],
+      "id": "afb6d978-75e3-42bf-b01b-31e46566e757",
+      "name": "AI Art Director"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1488,
+        4048
+      ],
+      "id": "b46e5dd9-2c8f-47a7-a9ef-c61a60009f64",
+      "name": "OpenAI Chat Model1",
       "credentials": {
-        "instagramApi": {
-          "id": "2Oj3a0Txy6bmygIj",
-          "name": "Instagram account"
+        "openAiApi": {
+          "id": "J2Srua9BlEesUnWy",
+          "name": "OpenAi account"
         }
       }
     }
@@ -715,7 +812,7 @@
             "index": 0
           },
           {
-            "node": "Publish",
+            "node": "Paso 1: Subir Foto",
             "type": "main",
             "index": 0
           }
@@ -846,11 +943,6 @@
         ]
       ]
     },
-    "HTTP Request": {
-      "main": [
-        []
-      ]
-    },
     "Code in JavaScript": {
       "main": [
         [
@@ -866,7 +958,7 @@
       "main": [
         [
           {
-            "node": "SetX",
+            "node": "AI Art Director",
             "type": "main",
             "index": 0
           }
@@ -906,12 +998,56 @@
         ]
       ]
     },
-    "Publish": {
+    "Paso 1: Subir Foto": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Paso 2: Publicar": {
       "main": [
         [
           {
             "node": "HTTP Request",
             "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Paso 2: Publicar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Art Director": {
+      "main": [
+        [
+          {
+            "node": "SetX",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Art Director",
+            "type": "ai_languageModel",
             "index": 0
           }
         ]
@@ -927,7 +1063,7 @@
     "timeSavedMode": "fixed",
     "timeSavedPerExecution": 5
   },
-  "versionId": "a72f617c-9f9e-4b27-a25d-0661903c193b",
+  "versionId": "d8e4c81d-2486-47c5-aaad-600b7c871aa9",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"

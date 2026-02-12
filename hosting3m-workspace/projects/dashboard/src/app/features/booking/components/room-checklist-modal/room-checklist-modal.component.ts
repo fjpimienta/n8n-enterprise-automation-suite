@@ -28,7 +28,8 @@ export class RoomChecklistModalComponent {
       cama_tendida: false,
       botes_basura: false,
       aroma_agradable: false,
-      techos_esquinas: false
+      techos_esquinas: false,
+      ruido_exterior: false
     },
     bano: {
       limpieza_wc: false,
@@ -36,18 +37,23 @@ export class RoomChecklistModalComponent {
       amenidades_jabones: false,
       agua_caliente: false,
       sin_fugas: false,
-      flujo_agua: false
+      presion_agua: false,
+      drenaje_fluido: false
     },
     equipamiento: {
       control_tv_baterias: false,
       tv_enciende: false,
       ac_funcional: false,
-      luces_funcionan: false
+      ac_silencioso: false,
+      luces_funcionan: false,
+      internet_velocidad: false
     },
     seguridad: {
       llaves_tarjeta: false,
       puerta_cierra: false,
-      caja_fuerte: false
+      caja_fuerte: false,
+      barandales_firmes: false,
+      pisos_antideslizantes: false
     },
     observaciones: ''
   };

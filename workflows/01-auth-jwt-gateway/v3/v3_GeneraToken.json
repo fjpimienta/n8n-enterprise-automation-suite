@@ -81,7 +81,13 @@
             }
           ]
         },
-        "options": {}
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1
+            }
+          }
+        }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -144,7 +150,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "errorWorkflow": "9SrVXdATmlrZemJT"
   },
-  "versionId": "a4f3c93a-36f8-4fa6-9da2-be69a7022715",
+  "versionId": "75ef3e56-f806-48bf-8347-30c33515e87b",
   "meta": {
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
   },

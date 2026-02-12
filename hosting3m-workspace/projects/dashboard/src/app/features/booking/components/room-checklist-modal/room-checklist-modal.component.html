@@ -105,18 +105,25 @@
                     <div class="col-4">
                         <label class="form-selectgroup-item w-100">
                             <input type="checkbox" class="form-selectgroup-input"
-                                [(ngModel)]="checklist.bano.flujo_agua">
-                            <span class="form-selectgroup-label d-flex align-items-center p-2 text-truncate">
-                                <span class="me-2">🚰</span> Flujo Grifos
-                            </span>
-                        </label>
-                    </div>
-                    <div class="col-4">
-                        <label class="form-selectgroup-item w-100">
-                            <input type="checkbox" class="form-selectgroup-input"
                                 [(ngModel)]="checklist.bano.sin_fugas">
                             <span class="form-selectgroup-label d-flex align-items-center p-2 text-truncate">
                                 <span class="me-2">🔧</span> Sin Fugas
+                            </span>
+                        </label>
+                    </div>
+                    <div class="col-6 col-md-4"> <label class="form-selectgroup-item w-100">
+                            <input type="checkbox" class="form-selectgroup-input"
+                                [(ngModel)]="checklist.bano.presion_agua">
+                            <span class="form-selectgroup-label d-flex align-items-center p-2">
+                                <span class="me-2">🚿</span> Buena Presión
+                            </span>
+                        </label>
+                    </div>
+                    <div class="col-6 col-md-4"> <label class="form-selectgroup-item w-100">
+                            <input type="checkbox" class="form-selectgroup-input"
+                                [(ngModel)]="checklist.bano.drenaje_fluido">
+                            <span class="form-selectgroup-label d-flex align-items-center p-2">
+                                <span class="me-2">🛁</span> Drenaje Rápido
                             </span>
                         </label>
                     </div>
@@ -147,7 +154,23 @@
                             <input type="checkbox" class="form-selectgroup-input"
                                 [(ngModel)]="checklist.equipamiento.ac_funcional">
                             <span class="form-selectgroup-label d-flex align-items-center p-2">
-                                <span class="me-2">❄️</span> Aire Acond.
+                                <span class="me-2">❄️</span> Aire Enfría
+                            </span>
+                        </label>
+                    </div>
+                    <div class="col-6 col-md-3"> <label class="form-selectgroup-item w-100">
+                            <input type="checkbox" class="form-selectgroup-input"
+                                [(ngModel)]="checklist.equipamiento.ac_silencioso">
+                            <span class="form-selectgroup-label d-flex align-items-center p-2">
+                                <span class="me-2">🔇</span> AC Silencioso
+                            </span>
+                        </label>
+                    </div>
+                    <div class="col-6 col-md-3"> <label class="form-selectgroup-item w-100">
+                            <input type="checkbox" class="form-selectgroup-input"
+                                [(ngModel)]="checklist.equipamiento.internet_velocidad">
+                            <span class="form-selectgroup-label d-flex align-items-center p-2">
+                                <span class="me-2">📶</span> WiFi Rápido
                             </span>
                         </label>
                     </div>
@@ -179,6 +202,22 @@
                                 [(ngModel)]="checklist.seguridad.puerta_cierra">
                             <span class="form-selectgroup-label d-flex align-items-center p-2">
                                 <span class="me-2">🚪</span> Chapa/Seguro
+                            </span>
+                        </label>
+                    </div>
+                    <div class="col-6"> <label class="form-selectgroup-item w-100">
+                            <input type="checkbox" class="form-selectgroup-input"
+                                [(ngModel)]="checklist.seguridad.barandales_firmes">
+                            <span class="form-selectgroup-label d-flex align-items-center p-2">
+                                <span class="me-2">🤝</span> Agarraderas OK
+                            </span>
+                        </label>
+                    </div>
+                    <div class="col-6"> <label class="form-selectgroup-item w-100">
+                            <input type="checkbox" class="form-selectgroup-input"
+                                [(ngModel)]="checklist.seguridad.pisos_antideslizantes">
+                            <span class="form-selectgroup-label d-flex align-items-center p-2">
+                                <span class="me-2">👟</span> Piso Seguro (No resbala)
                             </span>
                         </label>
                     </div>
