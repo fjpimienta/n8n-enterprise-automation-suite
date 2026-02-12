@@ -14,7 +14,8 @@ export class HeaderComponent {
   @Output() onRefreshMain = new EventEmitter<void>();
   @Output() onGenerateReport = new EventEmitter<void>();
   @Output() onLogout = new EventEmitter<void>();
-  
+  @Output() onOpenMaintenance = new EventEmitter<void>();
+
   isAdmin = input.required<boolean>();
 
   // ✅ 3. INYECTA EL SERVICIO AQUÍ
