@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { Component, EventEmitter, Input, input, Output, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -11,6 +11,8 @@ import { CommonModule } from '@angular/common';
 export class RoomCardComponent {
   // Input obligatorio tipo 'any' por ahora (idealmente sería Room interface)
   room = input.required<any>();
+  @Output() onClick = new EventEmitter<void>();
+  @Output() onReportIssue = new EventEmitter<void>();
 
   // Output al hacer click
   onSelect = output<any>();
@@ -22,4 +24,5 @@ export class RoomCardComponent {
     const today = new Date().toISOString().split('T')[0];
     return reservationDate.startsWith(today);
   }
+
 }
