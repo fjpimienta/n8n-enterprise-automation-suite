@@ -1,5 +1,5 @@
 {
-  "name": "v4/OmniChannel",
+  "name": "v3/OmniChannel",
   "nodes": [
     {
       "parameters": {
@@ -15,13 +15,13 @@
           ]
         }
       },
-      "id": "404c9c8b-38d4-48f7-954a-b5ad42290c66",
+      "id": "7e73108e-0965-4acb-b61d-96a33a8fe874",
       "name": "Cron",
       "type": "n8n-nodes-base.cron",
       "typeVersion": 1,
       "position": [
-        -3760,
-        3944
+        -112,
+        3808
       ]
     },
     {
@@ -65,10 +65,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -2416,
-        3872
+        1232,
+        3728
       ],
-      "id": "a891d9e5-0f48-4dde-bb61-8915636571c9",
+      "id": "f3874494-86ea-4ea8-9773-20d18205cfb3",
       "name": "SetX"
     },
     {
@@ -86,10 +86,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -2192,
-        3800
+        1456,
+        3664
       ],
-      "id": "3ae09358-6463-4a3a-9928-23cc0a3c6577",
+      "id": "7c16c46b-eaf2-4d14-a19c-50dfad0a5f83",
       "name": "DownloadImage",
       "onError": "continueRegularOutput"
     },
@@ -100,10 +100,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -1520,
-        3680
+        2128,
+        3536
       ],
-      "id": "262ddc44-80e5-42bd-8ca2-5b5b15d71528",
+      "id": "9382f938-e9f1-4a8b-8752-ea59d0ec308e",
       "name": "SaveImage"
     },
     {
@@ -134,10 +134,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -624,
-        3488
+        3024,
+        3344
       ],
-      "id": "30d7d65b-34c2-4eb6-a4a1-f407f24f2a1f",
+      "id": "e0c6a549-5ea3-4a6f-9931-5358da6a0d55",
       "name": "UploadImageX",
       "credentials": {
         "oAuth1Api": {
@@ -162,13 +162,13 @@
           }
         }
       },
-      "id": "48b2b365-1fa4-4c3b-9c26-cc154ee2b92e",
+      "id": "75762c89-f570-433a-8714-61476bf50b0c",
       "name": "GetPageTokens",
       "type": "n8n-nodes-base.facebookGraphApi",
       "typeVersion": 1,
       "position": [
-        -1072,
-        3176
+        2576,
+        3040
       ],
       "credentials": {
         "facebookGraphApi": {
@@ -182,13 +182,13 @@
       "parameters": {
         "jsCode": "// Capturamos los datos directos de la página\nconst pageData = items[0].json;\n\n// Obtenemos el contenido del post (del nodo SetX)\nlet postContent = {};\ntry { \n    postContent = $('SetX').first().json; \n} catch (e) {\n    postContent = { fb_post_text: \"Post automático\", image: \"https://hosting3m.com/news-placeholder.jpg\" };\n}\n\n// Extraemos el ID de Instagram si existe\nconst igId = pageData.instagram_business_account ? pageData.instagram_business_account.id : null;\n\nreturn [{\n    json: {\n        status: \"READY\",\n        // Datos para Facebook\n        page_token: pageData.access_token,\n        page_id: pageData.id,\n        // Datos para Instagram\n        instagram_business_id: igId,\n        // Contenido compartido\n        message: postContent.fb_post_text,\n        image: postContent.image\n    }\n}];"
       },
-      "id": "a534c19d-ab6a-4b00-b0cd-9bd136cd0ef2",
+      "id": "2ee2e551-73d5-42b9-b5bb-de170a46d78d",
       "name": "ExtractPageToken",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -848,
-        3176
+        2800,
+        3040
       ],
       "onError": "continueRegularOutput"
     },
@@ -215,13 +215,13 @@
         },
         "options": {}
       },
-      "id": "1be01952-0b2f-4663-99c2-600faa27133e",
+      "id": "157b4f8b-d714-4da0-92a1-55134d13fc54",
       "name": "PostToFacebookPage",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -176,
-        3104
+        3472,
+        2960
       ],
       "onError": "continueRegularOutput"
     },
@@ -238,10 +238,10 @@
       "type": "n8n-nodes-base.linkedIn",
       "typeVersion": 1,
       "position": [
-        -176,
-        3680
+        3472,
+        3536
       ],
-      "id": "30c6e8e7-8cb3-4d25-b75d-dfc654e6424c",
+      "id": "835ebcbf-67ff-4a6a-a13e-c3131fc04768",
       "name": "Post Company",
       "credentials": {
         "linkedInCommunityManagementOAuth2Api": {
@@ -263,10 +263,10 @@
       "type": "n8n-nodes-base.linkedIn",
       "typeVersion": 1,
       "position": [
-        -176,
-        3872
+        3472,
+        3728
       ],
-      "id": "ed955694-06a7-4d93-8fe6-2438110c5ed6",
+      "id": "6eecc049-5984-47ea-8ff0-f1effb9ee265",
       "name": "Post Personal",
       "credentials": {
         "linkedInCommunityManagementOAuth2Api": {
@@ -285,10 +285,10 @@
       "type": "n8n-nodes-base.merge",
       "typeVersion": 3.2,
       "position": [
-        -1968,
-        3872
+        1680,
+        3728
       ],
-      "id": "942f6d0f-b157-4baa-bb08-ff532f3bbc64",
+      "id": "c1168b3e-0930-4de5-be57-fe69159ab4cc",
       "name": "HandleImageError"
     },
     {
@@ -319,10 +319,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -1744,
-        3872
+        1904,
+        3728
       ],
-      "id": "a91a1c7a-7071-428f-9c8b-213a15c587ac",
+      "id": "d17dde60-16b9-4206-a95e-0ccd27705ee4",
       "name": "If1"
     },
     {
@@ -352,10 +352,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -1296,
-        3680
+        2352,
+        3536
       ],
-      "id": "a6e9685e-edfa-4175-8e3f-acd1025f9b93",
+      "id": "e6f5b876-bef3-4fca-b91a-cd0f984150fe",
       "name": "If2"
     },
     {
@@ -387,10 +387,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -3088,
-        3944
+        560,
+        3808
       ],
-      "id": "f65d7484-eb44-4067-81f9-0c9ddc3b7597",
+      "id": "899db2db-1fef-418a-8886-8657748291a3",
       "name": "Check Publish"
     },
     {
@@ -420,10 +420,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -2864,
-        3944
+        784,
+        3808
       ],
-      "id": "deb599cb-6940-46e9-84d4-23ac83baf90d",
+      "id": "02ed9716-5a98-4760-9988-86127c0778e7",
       "name": "Not Exist Pub"
     },
     {
@@ -455,10 +455,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        48,
-        3464
+        3696,
+        3328
       ],
-      "id": "5d7eccee-3530-4332-865b-d7057d6dc432",
+      "id": "41a66395-1cb7-491c-9d5a-18ec05dda516",
       "name": "HTTP Request"
     },
     {
@@ -468,10 +468,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -400,
-        3488
+        3248,
+        3344
       ],
-      "id": "f012f54d-273b-45c9-a020-fd2eb4abd0c9",
+      "id": "26dc657c-5cb5-4f1b-9bbe-95c3fb7cc6b2",
       "name": "Code in JavaScript"
     },
     {
@@ -509,10 +509,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        -2640,
-        3872
+        1008,
+        3728
       ],
-      "id": "2e2eadff-7aeb-4ddc-8999-b5a407bac79a",
+      "id": "a8a39a7d-aafa-4ff7-85a9-79e0d98093b3",
       "name": "Get Articles",
       "alwaysOutputData": true
     },
@@ -540,10 +540,10 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        -3312,
-        3944
+        336,
+        3808
       ],
-      "id": "107118ec-52c7-4b2b-88fe-2192f0223827",
+      "id": "4716949e-0f2a-41da-bc3a-8aa8b7cc82ec",
       "name": "Genera Token"
     },
     {
@@ -569,10 +569,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -3536,
-        3944
+        112,
+        3808
       ],
-      "id": "b887dea8-5605-43b8-a6ed-8af313b6967c",
+      "id": "b9ad6ad5-2314-4858-b2ac-dfcbfb9ed0bb",
       "name": "Set User"
     },
     {
@@ -584,10 +584,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -1072,
-        4064
+        2576,
+        3920
       ],
-      "id": "247c766f-5f8c-480e-8281-5703eed70d58",
+      "id": "5d72af70-c31b-47b3-8d5a-37eafe3cafa5",
       "name": "Stop and Error"
     },
     {
@@ -604,10 +604,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        -176,
-        3488
+        3472,
+        3344
       ],
-      "id": "f9cf7846-e7f5-41ab-af9c-a292b0cd035b",
+      "id": "2b538ea7-65bb-408a-9405-adf952cebcc1",
       "name": "Create X",
       "credentials": {
         "twitterOAuth2Api": {
@@ -615,29 +615,6 @@
           "name": "X account"
         }
       }
-    },
-    {
-      "parameters": {
-        "node": "={{ $json.instagram_business_id }}",
-        "imageUrl": "={{ $('ExtractPageToken').item.json.image }}",
-        "caption": "={{ $json.message }}",
-        "additionalFields": {}
-      },
-      "type": "@mookielianhd/n8n-nodes-instagram.instagram",
-      "typeVersion": 1,
-      "position": [
-        -3760,
-        2880
-      ],
-      "id": "58a28a4a-e576-44dd-a129-7152458d5545",
-      "name": "Publish",
-      "credentials": {
-        "instagramApi": {
-          "id": "2Oj3a0Txy6bmygIj",
-          "name": "Instagram account"
-        }
-      },
-      "disabled": true
     },
     {
       "parameters": {
@@ -662,13 +639,13 @@
         },
         "options": {}
       },
-      "id": "290cb6b0-db66-4b9a-a2d5-265970ce717b",
+      "id": "26a5c981-5958-44f4-94fa-38f6d9f95974",
       "name": "Paso 1: Subir Foto",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        -624,
-        3296
+        3024,
+        3152
       ]
     },
     {
@@ -690,13 +667,13 @@
         },
         "options": {}
       },
-      "id": "a0e0516d-cbe7-4ac1-9829-3cc0dbf51bcd",
+      "id": "76df29a3-659e-47d7-8547-d5c4160dabc0",
       "name": "Paso 2: Publicar",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        -176,
-        3296
+        3472,
+        3152
       ]
     },
     {
@@ -704,10 +681,10 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        -400,
-        3296
+        3248,
+        3152
       ],
-      "id": "ca8119f6-71df-4cb5-8402-4cbc14a04acb",
+      "id": "2b5cb6e2-f9fa-401c-ac6a-5943300cfa42",
       "name": "Wait",
       "webhookId": "bc2805c9-debe-4eec-965f-299cbb23ca0a"
     }
@@ -925,11 +902,6 @@
         ]
       ]
     },
-    "HTTP Request": {
-      "main": [
-        []
-      ]
-    },
     "Code in JavaScript": {
       "main": [
         [
@@ -985,11 +957,6 @@
         ]
       ]
     },
-    "Publish": {
-      "main": [
-        []
-      ]
-    },
     "Paso 1: Subir Foto": {
       "main": [
         [
@@ -1024,7 +991,7 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
     "callerPolicy": "workflowsFromSameOwner",
@@ -1033,24 +1000,18 @@
     "timeSavedMode": "fixed",
     "timeSavedPerExecution": 5
   },
-  "versionId": "365f9ca4-dbed-45be-a9a9-909f4eb4c5cb",
+  "versionId": "c44f2035-8e4c-4ac5-949f-92bb5139a7e1",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
   },
-  "id": "ycRrCgAS3a3DgTXe",
+  "id": "A5slxzihaenYsaGB",
   "tags": [
     {
-      "updatedAt": "2025-12-20T19:25:08.685Z",
-      "createdAt": "2025-12-20T19:25:08.685Z",
-      "id": "ljhw24TcxNVpCPyc",
-      "name": "Webhook"
-    },
-    {
-      "updatedAt": "2025-12-20T20:03:46.545Z",
-      "createdAt": "2025-12-20T20:03:46.545Z",
-      "id": "jafWIhyZ3XGpyA6j",
-      "name": "Postgres"
+      "updatedAt": "2025-12-20T20:05:36.237Z",
+      "createdAt": "2025-12-20T20:05:36.237Z",
+      "id": "P8B6SG9wkqyC8I5T",
+      "name": "Redes Sociales"
     },
     {
       "updatedAt": "2025-12-20T20:05:16.332Z",
@@ -1059,10 +1020,16 @@
       "name": "Cron"
     },
     {
-      "updatedAt": "2025-12-20T20:05:36.237Z",
-      "createdAt": "2025-12-20T20:05:36.237Z",
-      "id": "P8B6SG9wkqyC8I5T",
-      "name": "Redes Sociales"
+      "updatedAt": "2025-12-20T20:03:46.545Z",
+      "createdAt": "2025-12-20T20:03:46.545Z",
+      "id": "jafWIhyZ3XGpyA6j",
+      "name": "Postgres"
+    },
+    {
+      "updatedAt": "2025-12-20T19:25:08.685Z",
+      "createdAt": "2025-12-20T19:25:08.685Z",
+      "id": "ljhw24TcxNVpCPyc",
+      "name": "Webhook"
     }
   ]
 }
