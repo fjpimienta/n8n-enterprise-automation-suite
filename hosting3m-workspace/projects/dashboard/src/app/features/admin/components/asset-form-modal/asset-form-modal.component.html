@@ -1,0 +1,53 @@
+<div class="modal-backdrop fade show" style="z-index: 1060;"></div>
+<div class="modal modal-blur fade show d-block" tabindex="-1" style="z-index: 1065;">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">📺 Asignar Nuevo Activo</h5>
+                <button type="button" class="btn-close btn-close-white" (click)="onClose.emit()"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label required">Nombre del Activo</label>
+                    <input type="text" class="form-control" [(ngModel)]="asset.name" placeholder="Ej: Smart TV Samsung 50 pulgadas">
+                </div>
+                
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label required">Costo ($)</label>
+                        <input type="number" class="form-control" [(ngModel)]="asset.cost">
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label">No. Serie</label>
+                        <input type="text" class="form-control" [(ngModel)]="asset.serial_number" placeholder="S/N...">
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label">Fecha Compra</label>
+                        <input type="date" class="form-control" [(ngModel)]="asset.purchase_date">
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label">Vencimiento Garantía</label>
+                        <input type="date" class="form-control" [(ngModel)]="asset.warranty_expiry">
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Estado Inicial</label>
+                    <select class="form-select" [(ngModel)]="asset.status">
+                        <option value="ACTIVE">✅ Activo (Funcionando)</option>
+                        <option value="REPAIR">🔧 En Reparación</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-link link-secondary" (click)="onClose.emit()">Cancelar</button>
+                <button type="button" class="btn btn-primary ms-auto" [disabled]="isLoading" (click)="save()">
+                    <i class="ti ti-device-floppy me-2"></i> Guardar Activo
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

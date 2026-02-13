@@ -5,18 +5,18 @@
 credentials_export.txt
 documentos_legales.json
 
-# --- Datos de Base de Datos ---
+# --- Datos de Base de Datos e Infraestructura ---
 postgres/
 pgvector/
 ollama-models/
-# Ignorar cualquier carpeta de datos interna
+infrastructure/logs/*.log
 **/data/
 
 # --- Docker Local Overrides ---
 docker-compose.override.yml
 docker-compose.override.yaml
 
-# --- Backups y Temporales ---
+# --- Backups y Temporales (Raíz y subcarpetas) ---
 *.tar.gz
 *.gz
 *.tar
@@ -27,13 +27,13 @@ n8n_backup/
 local-files/
 sync_dbs.sh
 
-# --- Node.js / Microservicios ---
+# --- Node.js / Microservicios (General) ---
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# --- Python (si usas para agentes) ---
+# --- Python ---
 __pycache__/
 *.py[cod]
 
@@ -41,27 +41,23 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
-# --- Angular (Dashboard App) ---
-app/dashboard/.vscode/
-app/dashboard/node_modules/
-app/dashboard/dist/
-app/dashboard/tmp/
-app/dashboard/out-tsc/
-app/dashboard/.angular/cache/
-app/dashboard/src/environments/environment.prod.ts
-app/dashboard/src/environments/environment.development.ts
-!app/dashboard/src/environments/environment.ts
+# --- Estructura Hosting3M Workspace (Angular & UI) ---
+# Se corrige la ruta detectada en el tree: hosting3m-workspace/projects/
+hosting3m-workspace/projects/**/.vscode/
+hosting3m-workspace/projects/**/node_modules/
+hosting3m-workspace/projects/**/dist/
+hosting3m-workspace/projects/**/tmp/
+hosting3m-workspace/projects/**/out-tsc/
+hosting3m-workspace/projects/**/.angular/cache/
+hosting3m-workspace/projects/**/src/environments/environment.prod.ts
+hosting3m-workspace/projects/**/src/environments/environment.development.ts
+!hosting3m-workspace/projects/**/src/environments/environment.ts
 
-# --- Angular (Pista Hielo App) ---
-app/pista-hielo/.vscode/
-app/pista-hielo/node_modules/
-app/pista-hielo/dist/
-app/pista-hielo/tmp/
-app/pista-hielo/out-tsc/
-app/pista-hielo/.angular/cache/
-app/pista-hielo/src/environments/environment.prod.ts
-app/pista-hielo/src/environments/environment.development.ts
-!app/pista-hielo/src/environments/environment.ts
+# --- Upload-file (Microservicio) ---
+# Esta es la ruta exacta de tu árbol para los binarios subidos
+infrastructure/upload-file/app/uploads/*
+# Mantenemos la carpeta pero ignoramos el contenido
+!infrastructure/upload-file/app/uploads/.gitkeep
 
 # --- IDE Config ---
 .vscode/

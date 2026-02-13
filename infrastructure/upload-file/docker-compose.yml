@@ -1,0 +1,9 @@
+services:
+  upload-file:
+    build: .
+    container_name: upload-file
+    restart: always
+    ports:
+      - "127.0.0.1:3005:3000"
+    volumes:
+      - ./app/uploads:/app/uploads
