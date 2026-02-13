@@ -8,10 +8,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        864,
-        64
+        256,
+        -176
       ],
-      "id": "89979f12-a60e-43f6-81e1-f98259ccd1ba",
+      "id": "3fe5b789-b5a3-4da3-b940-de5fb100fedb",
       "name": "Build Query"
     },
     {
@@ -21,15 +21,20 @@
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        640,
-        64
+        32,
+        -176
       ],
-      "id": "3a046b72-3999-403e-aa8e-082c13c33783",
+      "id": "e6782894-4f2a-41e7-9ca0-b25d4c0f7500",
       "name": "When Executed by Another Workflow"
     }
   ],
   "pinData": {},
   "connections": {
+    "Build Query": {
+      "main": [
+        []
+      ]
+    },
     "When Executed by Another Workflow": {
       "main": [
         [
@@ -50,7 +55,7 @@
     "availableInMCP": false,
     "errorWorkflow": "9SrVXdATmlrZemJT"
   },
-  "versionId": "5ba305e8-e642-40c9-955c-a6832d5558a7",
+  "versionId": "340b2d2a-b3de-4d17-8f98-aef0b8e1ea0a",
   "meta": {
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
   },

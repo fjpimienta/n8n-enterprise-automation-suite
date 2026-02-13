@@ -60,6 +60,7 @@ export class DashboardComponent {
   expandedGroups = signal<Set<string>>(new Set());
   maintenanceRoom = signal<any>(null);
   showMaintenanceMonitor = false;
+  maintenanceFilterRoomId: number | null = null;
 
   activeBooking = signal<any>(null);
   //dailyReport = { total: 0, paid: 0, pending: 0, transactions: [] as any[], periodLabel: 'Hoy' };
@@ -118,6 +119,15 @@ export class DashboardComponent {
 
   /* 2. SECCIÓN: INTERACCIÓN CON HABITACIONES */
   async onSelectRoom(room: any) {
+    // CASO 1: Habitación en Mantenimiento 🛠️
+    if (room.status === 'maintenance') {
+      // Abrimos el Monitor, pero le pasamos el ID de esta habitación
+      this.maintenanceFilterRoomId = room.id;
+      this.showMaintenanceMonitor = true;
+      return; // Detenemos aquí para no abrir otros modales
+    }
+
+    // CASO 2: Resto de estados (Tu lógica actual)
     this.viewMode.set('details');
     this.hotelService.selectRoom(room);
     this.activeBooking.set(null);

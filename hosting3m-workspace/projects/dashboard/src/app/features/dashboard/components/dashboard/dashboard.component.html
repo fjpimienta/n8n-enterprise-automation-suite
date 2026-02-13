@@ -174,11 +174,11 @@
 
 @if (maintenanceRoom()) {
 <app-maintenance-ticket-modal [room]="maintenanceRoom()" (onClose)="maintenanceRoom.set(null)"
-  (onSave)="maintenanceRoom.set(null); refresh()">
-</app-maintenance-ticket-modal>
+  (onSave)="maintenanceRoom.set(null); refresh()"> </app-maintenance-ticket-modal>
 }
 
 @if (showMaintenanceMonitor) {
-<app-maintenance-monitor-modal (onClose)="showMaintenanceMonitor = false">
+<app-maintenance-monitor-modal [targetRoomId]="maintenanceFilterRoomId"
+  (onClose)="showMaintenanceMonitor = false; maintenanceFilterRoomId = null; refresh()">
 </app-maintenance-monitor-modal>
 }

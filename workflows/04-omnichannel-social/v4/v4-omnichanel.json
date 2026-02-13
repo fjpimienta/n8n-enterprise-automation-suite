@@ -6,22 +6,19 @@
         "triggerTimes": {
           "item": [
             {
-              "hour": 6,
-              "minute": 5
-            },
-            {
+              "hour": 8,
               "minute": 5
             }
           ]
         }
       },
-      "id": "7e73108e-0965-4acb-b61d-96a33a8fe874",
+      "id": "9bd33904-be2a-4c24-a88e-f127089a9d6f",
       "name": "Cron",
       "type": "n8n-nodes-base.cron",
       "typeVersion": 1,
       "position": [
-        -112,
-        3808
+        -2176,
+        7280
       ]
     },
     {
@@ -31,31 +28,25 @@
             {
               "id": "67de7425-fb84-4c31-91fc-954061dc076d",
               "name": "tweet_text",
-              "value": "={{ `💡 \"${$json.data[0].title}\". Echa un vistazo al análisis completo de https://hosting3m.com/#news. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M ➡️ ${$json.data[0].url}` }}\n",
+              "value": "={{ `💡 \"${$('Get Articles').first().json.data[0].title}\". Echa un vistazo al análisis completo de https://hosting3m.com/#news. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M ➡️ ${$('Get Articles').first().json.data[0].url}` }}\n",
               "type": "string"
             },
             {
               "id": "983175be-ce4b-4fbc-ad7d-bc2e7524096a",
               "name": "fb_post_text",
-              "value": "={{ `💡 \"${$json.data[0].title}\", proveniente de https://hosting3m.com/#news. ¿Qué opinas de este avance? ¡Comenta abajo! ⬇️ Lee más: ${$json.data[0].url}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M` }}",
+              "value": "={{ `💡 \"${$('Get Articles').first().json.data[0].title}\", proveniente de https://hosting3m.com/#news. ¿Qué opinas de este avance? ¡Comenta abajo! ⬇️ Lee más: ${$('Get Articles').first().json.data[0].url}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M` }}",
               "type": "string"
             },
             {
               "id": "a9bee46a-2427-438a-a8df-3e6ba0b16ab5",
               "name": "li_post_text",
-              "value": "={{ `💡 \"${$json.data[0].title}\". Fuente: https://hosting3m.com/#news ➡️ ${$json.data[0].url}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M` }}",
-              "type": "string"
-            },
-            {
-              "id": "e7d15066-4754-4e2e-8de3-0fa4b5e5d9cc",
-              "name": "image",
-              "value": "={{ \n  (() => {\n    // 1. Obtenemos el título de la noticia desde el nodo anterior (Limit)\n    const title = $('Get Articles').item.json.title;\n    \n    // 2. Definimos un prompt base para asegurar el estilo \"Tech News\"\n    // \"Futuristic technology concept art about [Titulo], high quality, 4k, trending on artstation\"\n    const prompt = `Futuristic technology concept, editorial illustration about: ${title}, high detail, 8k, professional lighting`;\n  \n    // 3. Codificamos el prompt para URL\n    const encodedPrompt = encodeURIComponent(prompt);\n  \n    // 4. Retornamos la URL de Pollinations\n    // width=1000, height=800 (Coincide con tu nodo DownloadImage), model=flux, seed=random\n    const randomSeed = Math.floor(Math.random() * 1000);\n    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1000&height=800&model=flux&nologo=true&seed=${randomSeed}`;\n  })() \n}}{{ \n  (() => {\n    // 1. Obtenemos el título de la noticia\n    const title = $('Get Articles').item.json.title;\n    \n    // 2. DEFINIMOS UNA LISTA DE ESTILOS VARIADOS\n    // Puedes agregar o quitar los que quieras de esta lista\n    const styles = [\n      \"Futuristic technology concept art, neon blue lighting, unreal engine 5\", // El clásico\n      \"Isometric 3D render, clean white background, corporate tech style\", // Estilo limpio 3D\n      \"Minimalist flat vector art, trending on behance, colorful\", // Estilo ilustración plana\n      \"Cyberpunk city atmosphere, dark and moody, cinematic lighting\", // Estilo oscuro/hacker\n      \"Abstract data visualization, geometric shapes, network connection nodes\", // Estilo abstracto\n      \"Retro synthwave 80s style, grid background, magenta and cyan\", // Estilo Retro\n      \"Photorealistic macro photography of computer hardware, depth of field\", // Estilo realista\n      \"Digital oil painting, expressive brushstrokes, conceptual art\" // Estilo artístico\n    ];\n\n    // 3. Seleccionamos un estilo al azar de la lista\n    const randomStyle = styles[Math.floor(Math.random() * styles.length)];\n  \n    // 4. Combinamos el estilo elegido con el título\n    const prompt = `${randomStyle}, editorial illustration about: ${title}, high detail, 8k, professional quality`;\n  \n    // 5. Codificamos el prompt para URL\n    const encodedPrompt = encodeURIComponent(prompt);\n  \n    // 6. Generamos semilla aleatoria y retornamos URL\n    const randomSeed = Math.floor(Math.random() * 1000);\n    return `https://image.pollinations.ai/prompt/${encodedPrompt}?width=1000&height=800&model=flux&nologo=true&seed=${randomSeed}`;\n  })() \n}}",
+              "value": "={{ `💡 \"${$('Get Articles').first().json.data[0].title}\". Fuente: https://hosting3m.com/#news ➡️ ${$('Get Articles').first().json.data[0].url}. #TechNews #IA #FuturoDigital #Tecnología #Innovación #Hosting3M` }}",
               "type": "string"
             },
             {
               "id": "df498114-78c1-42bb-887a-b4c677210607",
               "name": "ig_post_text",
-              "value": "={{ `💡 ${$json.data[0].title}\n\n📰 Fuente oficial: https://hosting3m.com/#news\n\nUn vistazo profundo al futuro de la tecnología. ¿Qué impacto crees que tendrá esto? ¡Te leemos en los comentarios! 👇\n\n🔗 Para leer el artículo completo, ve al enlace de nuestra BIO 📲\n\n.\n#TechNews #IA #Innovación #FuturoDigital #Technology #Hosting3M` }}",
+              "value": "={{ `💡 ${$('Get Articles').first().json.data[0].title}\n\n📰 Fuente oficial: https://hosting3m.com/#news\n\nUn vistazo profundo al futuro de la tecnología. ¿Qué impacto crees que tendrá esto? ¡Te leemos en los comentarios! 👇\n\n🔗 Para leer el artículo completo, ve al enlace de nuestra BIO 📲\n\n.\n#TechNews #IA #Innovación #FuturoDigital #Technology #Hosting3M` }}",
               "type": "string"
             }
           ]
@@ -65,45 +56,23 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        1232,
-        3728
+        -704,
+        7280
       ],
-      "id": "f3874494-86ea-4ea8-9773-20d18205cfb3",
+      "id": "92a6a1bc-ae52-4013-92df-1555045b8375",
       "name": "SetX"
     },
     {
       "parameters": {
-        "url": "={{ $json.image }}",
-        "options": {
-          "allowUnauthorizedCerts": true,
-          "redirect": {
-            "redirect": {
-              "maxRedirects": 10
-            }
-          }
-        }
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        1456,
-        3664
-      ],
-      "id": "7c16c46b-eaf2-4d14-a19c-50dfad0a5f83",
-      "name": "DownloadImage",
-      "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Nodo SaveImage - Código corregido\nconst binaryData = items[0].binary;\nconst jsonData = items[0].json;\n\nif (binaryData && (binaryData.data || binaryData.media)) {\n  return [{\n    json: { ...jsonData, image_status: \"SUCCESS\" },\n    binary: {\n      media: binaryData.data || binaryData.media\n    }\n  }];\n} else {\n  return [{\n    json: { ...jsonData, image_status: \"FAILED\" },\n  }];\n}"
+        "jsCode": "// Captura la URL del nodo anterior (Upload To Server)\nconst imageUrl = items[0].json.url;\n\n// \"Rescatamos\" el binario del nodo Convert Image (4 nodos atrás)\nconst originalBinary = $('Convert Image').first().binary.media;\n\nreturn [{\n  json: {\n    image_status: imageUrl ? \"SUCCESS\" : \"FAILED\",\n    image_url: imageUrl || null\n  },\n  binary: {\n    media: originalBinary // Aquí re-inyectamos el binario original en el flujo\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2128,
-        3536
+        192,
+        7280
       ],
-      "id": "9382f938-e9f1-4a8b-8752-ea59d0ec308e",
+      "id": "b05d6326-50cb-4818-afe2-7474def2b9bb",
       "name": "SaveImage"
     },
     {
@@ -119,7 +88,7 @@
             {
               "parameterType": "formBinaryData",
               "name": "media",
-              "inputDataFieldName": "media"
+              "inputDataFieldName": "=media"
             },
             {
               "name": "media_category",
@@ -134,10 +103,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        3024,
-        3344
+        1088,
+        7088
       ],
-      "id": "e0c6a549-5ea3-4a6f-9931-5358da6a0d55",
+      "id": "de492dc9-2229-4823-aa59-5d12186e50be",
       "name": "UploadImageX",
       "credentials": {
         "oAuth1Api": {
@@ -162,13 +131,13 @@
           }
         }
       },
-      "id": "75762c89-f570-433a-8714-61476bf50b0c",
+      "id": "6372ed34-c706-4e93-a929-93bc683cdad9",
       "name": "GetPageTokens",
       "type": "n8n-nodes-base.facebookGraphApi",
       "typeVersion": 1,
       "position": [
-        2576,
-        3040
+        640,
+        6800
       ],
       "credentials": {
         "facebookGraphApi": {
@@ -180,32 +149,32 @@
     },
     {
       "parameters": {
-        "jsCode": "// Capturamos los datos directos de la página\nconst pageData = items[0].json;\n\n// Obtenemos el contenido del post (del nodo SetX)\nlet postContent = {};\ntry { \n    postContent = $('SetX').first().json; \n} catch (e) {\n    postContent = { fb_post_text: \"Post automático\", image: \"https://hosting3m.com/news-placeholder.jpg\" };\n}\n\n// Extraemos el ID de Instagram si existe\nconst igId = pageData.instagram_business_account ? pageData.instagram_business_account.id : null;\n\nreturn [{\n    json: {\n        status: \"READY\",\n        // Datos para Facebook\n        page_token: pageData.access_token,\n        page_id: pageData.id,\n        // Datos para Instagram\n        instagram_business_id: igId,\n        // Contenido compartido\n        message: postContent.fb_post_text,\n        image: postContent.image\n    }\n}];"
+        "jsCode": "// Capturamos los datos directos de la página\nconst pageData = items[0].json;\n\n// Obtenemos el contenido del post (del nodo SetX)\nlet postContent = {};\ntry { \n    postContent = $('SetX').first().json; \n} catch (e) {\n    postContent = { fb_post_text: \"Post automático\", image: \"https://hosting3m.com/news-placeholder.jpg\" };\n}\n\n// Extraemos el ID de Instagram si existe\nconst igId = pageData.instagram_business_account ? pageData.instagram_business_account.id : null;\n\nreturn [{\n    json: {\n        status: \"READY\",\n        // Datos para Facebook\n        page_token: pageData.access_token,\n        page_id: pageData.id,\n        // Datos para Instagram\n        instagram_business_id: igId,\n        // Contenido compartido\n        message: postContent.fb_post_text,\n        image: $('SaveImage').first().json.image_url\n    }\n}];"
       },
-      "id": "2ee2e551-73d5-42b9-b5bb-de170a46d78d",
+      "id": "ddfdbe99-4928-4263-9de3-cd661cf15aaf",
       "name": "ExtractPageToken",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2800,
-        3040
+        864,
+        6800
       ],
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
         "method": "POST",
-        "url": "=https://graph.facebook.com/v19.0/{{ $json.page_id }}/feed",
+        "url": "=https://graph.facebook.com/v23.0/{{ $json.page_id }}/photos",
         "sendBody": true,
         "bodyParameters": {
           "parameters": [
             {
-              "name": "message",
-              "value": "={{ $json.message }}"
+              "name": "url",
+              "value": "={{ $json.image }}"
             },
             {
-              "name": "link",
-              "value": "={{ $json.image }}"
+              "name": "caption",
+              "value": "={{ $json.message }}"
             },
             {
               "name": "access_token",
@@ -215,13 +184,13 @@
         },
         "options": {}
       },
-      "id": "157b4f8b-d714-4da0-92a1-55134d13fc54",
+      "id": "fd9e41a7-498d-43b4-900a-9d87d35385e6",
       "name": "PostToFacebookPage",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        3472,
-        2960
+        1536,
+        6704
       ],
       "onError": "continueRegularOutput"
     },
@@ -238,10 +207,10 @@
       "type": "n8n-nodes-base.linkedIn",
       "typeVersion": 1,
       "position": [
-        3472,
-        3536
+        1536,
+        7280
       ],
-      "id": "835ebcbf-67ff-4a6a-a13e-c3131fc04768",
+      "id": "ffdc6c72-6471-4a76-b4f1-f2158dd0b692",
       "name": "Post Company",
       "credentials": {
         "linkedInCommunityManagementOAuth2Api": {
@@ -263,10 +232,10 @@
       "type": "n8n-nodes-base.linkedIn",
       "typeVersion": 1,
       "position": [
-        3472,
-        3728
+        1536,
+        7472
       ],
-      "id": "6eecc049-5984-47ea-8ff0-f1effb9ee265",
+      "id": "5a3c23be-13ae-4348-9e9d-90ee59c842ae",
       "name": "Post Personal",
       "credentials": {
         "linkedInCommunityManagementOAuth2Api": {
@@ -275,88 +244,6 @@
         }
       },
       "onError": "continueRegularOutput"
-    },
-    {
-      "parameters": {
-        "mode": "combine",
-        "combineBy": "combineByPosition",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3.2,
-      "position": [
-        1680,
-        3728
-      ],
-      "id": "c1168b3e-0930-4de5-be57-fe69159ab4cc",
-      "name": "HandleImageError"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "b49b09f8-4a28-4bed-9ced-0c91f2d4649f",
-              "leftValue": "={{ $json.error ? JSON.stringify($json.error) : \"\" }}",
-              "rightValue": "",
-              "operator": {
-                "type": "string",
-                "operation": "empty",
-                "singleValue": true
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        1904,
-        3728
-      ],
-      "id": "d17dde60-16b9-4206-a95e-0ccd27705ee4",
-      "name": "If1"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "0f0a040c-5235-4de7-aae4-a2acc5f58e80",
-              "leftValue": "={{ $json.image_status }}",
-              "rightValue": "SUCCESS",
-              "operator": {
-                "type": "string",
-                "operation": "equals"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        2352,
-        3536
-      ],
-      "id": "e6f5b876-bef3-4fca-b91a-cd0f984150fe",
-      "name": "If2"
     },
     {
       "parameters": {
@@ -387,44 +274,11 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        560,
-        3808
+        -1504,
+        7280
       ],
-      "id": "899db2db-1fef-418a-8886-8657748291a3",
+      "id": "7de1b60b-31cb-4b4b-8d0b-8bcd3d464142",
       "name": "Check Publish"
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "options": {
-            "caseSensitive": true,
-            "leftValue": "",
-            "typeValidation": "strict",
-            "version": 3
-          },
-          "conditions": [
-            {
-              "id": "41424244-43fd-46ba-b215-ed8ad4e51ac6",
-              "leftValue": "={{ $json.data.length }}",
-              "rightValue": 0,
-              "operator": {
-                "type": "number",
-                "operation": "gt"
-              }
-            }
-          ],
-          "combinator": "and"
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 2.3,
-      "position": [
-        784,
-        3808
-      ],
-      "id": "02ed9716-5a98-4760-9988-86127c0778e7",
-      "name": "Not Exist Pub"
     },
     {
       "parameters": {
@@ -449,16 +303,16 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ \n  {\n    \"operation\": \"update\",\n    \"id\": $('Get Articles').item.json.data[0].id, \n    \"fields\": {\n      \"published_at\": new Date().toISOString()\n    }\n  } \n}}",
+        "jsonBody": "={{ \n  {\n    \"operation\": \"update\",\n    \"id\": $('Get Articles').first().json.data[0].id, \n    \"fields\": {\n      \"published_at\": new Date().toISOString()\n    }\n  } \n}}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        3696,
-        3328
+        2208,
+        7088
       ],
-      "id": "41a66395-1cb7-491c-9d5a-18ec05dda516",
+      "id": "86be03bb-b188-4610-b463-726eb3be9083",
       "name": "HTTP Request"
     },
     {
@@ -468,10 +322,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3248,
-        3344
+        1312,
+        7088
       ],
-      "id": "26dc657c-5cb5-4f1b-9bbe-95c3fb7cc6b2",
+      "id": "141bc3b9-9078-4a96-a997-4cf19dc26ceb",
       "name": "Code in JavaScript"
     },
     {
@@ -509,10 +363,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        1008,
-        3728
+        -1280,
+        7280
       ],
-      "id": "a8a39a7d-aafa-4ff7-85a9-79e0d98093b3",
+      "id": "dacfeb50-6ccc-45c6-9fc2-6c6343f0b61e",
       "name": "Get Articles",
       "alwaysOutputData": true
     },
@@ -540,10 +394,10 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        336,
-        3808
+        -1728,
+        7280
       ],
-      "id": "4716949e-0f2a-41da-bc3a-8aa8b7cc82ec",
+      "id": "9309951f-257a-4484-b2aa-e01500ac8dcc",
       "name": "Genera Token"
     },
     {
@@ -559,7 +413,7 @@
             {
               "id": "dd4c5764-354c-4088-9bc4-4fb19cba4d8b",
               "name": "pass",
-              "value": "1234567890",
+              "value": "={{$env[\"N8N_PASS\"]}}",
               "type": "string"
             }
           ]
@@ -569,10 +423,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        112,
-        3808
+        -1952,
+        7280
       ],
-      "id": "b9ad6ad5-2314-4858-b2ac-dfcbfb9ed0bb",
+      "id": "f12c6abe-ebb9-4b43-88ac-8edd99db415a",
       "name": "Set User"
     },
     {
@@ -584,10 +438,10 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        2576,
-        3920
+        640,
+        7616
       ],
-      "id": "5d72af70-c31b-47b3-8d5a-37eafe3cafa5",
+      "id": "0f8e4d08-4387-479b-a190-4a94f46d963f",
       "name": "Stop and Error"
     },
     {
@@ -604,10 +458,10 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.4,
       "position": [
-        3472,
-        3344
+        1536,
+        7088
       ],
-      "id": "2b538ea7-65bb-408a-9405-adf952cebcc1",
+      "id": "dc363121-9e16-4b88-a122-28db7203edba",
       "name": "Create X",
       "credentials": {
         "twitterOAuth2Api": {
@@ -639,13 +493,13 @@
         },
         "options": {}
       },
-      "id": "26a5c981-5958-44f4-94fa-38f6d9f95974",
+      "id": "6b781f6e-1509-453c-9406-44aafec221f3",
       "name": "Paso 1: Subir Foto",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        3024,
-        3152
+        1088,
+        6896
       ]
     },
     {
@@ -667,13 +521,13 @@
         },
         "options": {}
       },
-      "id": "76df29a3-659e-47d7-8547-d5c4160dabc0",
+      "id": "e654d2a8-0be8-46c1-a78e-26d10365e5a7",
       "name": "Paso 2: Publicar",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.1,
       "position": [
-        3472,
-        3152
+        1536,
+        6896
       ]
     },
     {
@@ -681,12 +535,185 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        3248,
-        3152
+        1312,
+        6896
       ],
-      "id": "2b5cb6e2-f9fa-401c-ac6a-5943300cfa42",
+      "id": "58efa981-acb0-421c-8b7f-e15494cd074f",
       "name": "Wait",
       "webhookId": "bc2805c9-debe-4eec-965f-299cbb23ca0a"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=System: Eres un artista 3D experto en visualización de datos y tecnología futurista. Tu tarea es generar un prompt visual para una imagen de fondo de alta tecnología.\n\nPROHIBIDO:\n- NO uses palabras como \"newspaper\", \"article\", \"paper\", \"sketch\", \"drawing\", \"text\".\n- NO describas personas interactuando con pantallas.\n\nDEBES DESCRIBIR:\n- Objetos abstractos tecnológicos (ej: \"glowing fiber optics\", \"glass spheres\", \"metallic nodes\", \"digital waves\").\n- Estilo: 3D Render, Octane Render, Unreal Engine 5.\n- Iluminación: Neon, Cyberpunk, Volumetric lighting, Blue and Cyan tones.\n- Ángulo: Macro photography o Wide angle abstract.\n\nLa salida debe ser SOLO la descripción visual en INGLÉS.\n\nUser: Genera un prompt visual abstracto para esta noticia: {{ $json.data[0].title }}",
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -1056,
+        7280
+      ],
+      "id": "18d51d82-2527-4e8c-92c1-c013820702c7",
+      "name": "AI Art Director"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -984,
+        7504
+      ],
+      "id": "fcc7be89-1156-4bfc-9479-f8b3df7bff76",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "J2Srua9BlEesUnWy",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const b64 = items[0]?.json?.data?.[0]?.b64_json;\n\nif (!b64) {\n  return [{\n    json: {\n      image_status: \"FAILED\"\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    image_status: \"SUCCESS\"\n  },\n  binary: {\n    media: {\n      data: b64,\n      mimeType: \"image/png\",\n      fileName: `news-${Date.now()}.png`\n    }\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -256,
+        7280
+      ],
+      "id": "1d058729-5d1b-4a2c-b3af-2e62309285f9",
+      "name": "Convert Image"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/images/generations",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env[\"OPENAI_API_KEY\"]}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gpt-image-1\",\n  \"size\": \"1024x1024\",\n  \"prompt\": \"{{ $('AI Art Director').item.json.text }}\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -480,
+        7280
+      ],
+      "id": "70db6032-2b01-4929-9272-012c1b3b2447",
+      "name": "Generate Image OpenAI"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://upload.hosting3m.com/upload",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "media"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -32,
+        7280
+      ],
+      "id": "6649071a-60fa-4223-93f1-1d7713df63f5",
+      "name": "Upload To Server"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "0f0a040c-5235-4de7-aae4-a2acc5f58e80",
+              "leftValue": "={{ $json.image_status }}",
+              "rightValue": "SUCCESS",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        416,
+        7280
+      ],
+      "id": "772d25eb-109d-46c4-8432-2c879a98c2dc",
+      "name": "Imagen Guardada"
+    },
+    {
+      "parameters": {
+        "numberInputs": 5
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1760,
+        7040
+      ],
+      "id": "fcdf6c6a-9512-4604-8eaf-b3ef5d52bce5",
+      "name": "Merge",
+      "alwaysOutputData": false,
+      "retryOnFail": false,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const nodes = [\n  \"PostToFacebookPage\",\n  \"Create X\",\n  \"Post Company\",\n  \"Post Personal\",\n  \"Paso 2: Publicar\"\n];\n\nlet success = false;\n\nfor (const node of nodes) {\n  const item = $items(node)[0];\n  if (!item) continue;\n\n  const r = item.json;\n\n  if (r?.error) continue;\n\n  if (r?.statusCode && r.statusCode >= 200 && r.statusCode < 300) {\n    success = true;\n    break;\n  }\n\n  if (r?.id || r?.post_id || r?.data?.id) {\n    success = true;\n    break;\n  }\n}\n\nreturn [{\n  json: {\n    atLeastOneSuccess: success\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1984,
+        7088
+      ],
+      "id": "742980d9-f70d-4c8f-9181-78f6ad284895",
+      "name": "Validar Posts"
     }
   ],
   "pinData": {},
@@ -706,23 +733,7 @@
       "main": [
         [
           {
-            "node": "DownloadImage",
-            "type": "main",
-            "index": 0
-          },
-          {
-            "node": "HandleImageError",
-            "type": "main",
-            "index": 1
-          }
-        ]
-      ]
-    },
-    "DownloadImage": {
-      "main": [
-        [
-          {
-            "node": "HandleImageError",
+            "node": "Generate Image OpenAI",
             "type": "main",
             "index": 0
           }
@@ -733,7 +744,7 @@
       "main": [
         [
           {
-            "node": "If2",
+            "node": "Imagen Guardada",
             "type": "main",
             "index": 0
           }
@@ -782,7 +793,7 @@
       "main": [
         [
           {
-            "node": "HTTP Request",
+            "node": "Merge",
             "type": "main",
             "index": 0
           }
@@ -793,9 +804,9 @@
       "main": [
         [
           {
-            "node": "HTTP Request",
+            "node": "Merge",
             "type": "main",
-            "index": 0
+            "index": 3
           }
         ]
       ]
@@ -804,25 +815,157 @@
       "main": [
         [
           {
-            "node": "HTTP Request",
+            "node": "Merge",
             "type": "main",
-            "index": 0
+            "index": 4
           }
         ]
       ]
     },
-    "HandleImageError": {
+    "Check Publish": {
       "main": [
         [
           {
-            "node": "If1",
+            "node": "Get Articles",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "If1": {
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Create X",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Articles": {
+      "main": [
+        [
+          {
+            "node": "AI Art Director",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Genera Token": {
+      "main": [
+        [
+          {
+            "node": "Check Publish",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set User": {
+      "main": [
+        [
+          {
+            "node": "Genera Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create X": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Paso 1: Subir Foto": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Paso 2: Publicar": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Paso 2: Publicar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Art Director": {
+      "main": [
+        [
+          {
+            "node": "SetX",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Art Director",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert Image": {
+      "main": [
+        [
+          {
+            "node": "Upload To Server",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Image OpenAI": {
+      "main": [
+        [
+          {
+            "node": "Convert Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload To Server": {
       "main": [
         [
           {
@@ -830,17 +973,10 @@
             "type": "main",
             "index": 0
           }
-        ],
-        [
-          {
-            "node": "Stop and Error",
-            "type": "main",
-            "index": 0
-          }
         ]
       ]
     },
-    "If2": {
+    "Imagen Guardada": {
       "main": [
         [
           {
@@ -873,117 +1009,22 @@
         ]
       ]
     },
-    "Check Publish": {
+    "Merge": {
       "main": [
         [
           {
-            "node": "Not Exist Pub",
+            "node": "Validar Posts",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Not Exist Pub": {
-      "main": [
-        [
-          {
-            "node": "Get Articles",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Stop and Error",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Code in JavaScript": {
-      "main": [
-        [
-          {
-            "node": "Create X",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Get Articles": {
-      "main": [
-        [
-          {
-            "node": "SetX",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Set User": {
-      "main": [
-        [
-          {
-            "node": "Genera Token",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Genera Token": {
-      "main": [
-        [
-          {
-            "node": "Check Publish",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Create X": {
+    "Validar Posts": {
       "main": [
         [
           {
             "node": "HTTP Request",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Paso 1: Subir Foto": {
-      "main": [
-        [
-          {
-            "node": "Wait",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Paso 2: Publicar": {
-      "main": [
-        [
-          {
-            "node": "HTTP Request",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Wait": {
-      "main": [
-        [
-          {
-            "node": "Paso 2: Publicar",
             "type": "main",
             "index": 0
           }
@@ -1000,7 +1041,7 @@
     "timeSavedMode": "fixed",
     "timeSavedPerExecution": 5
   },
-  "versionId": "c44f2035-8e4c-4ac5-949f-92bb5139a7e1",
+  "versionId": "6d42ae6c-82c5-46d8-ad28-bc139a19a2b4",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"

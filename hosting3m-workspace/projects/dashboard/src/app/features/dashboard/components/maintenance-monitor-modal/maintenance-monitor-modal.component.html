@@ -4,7 +4,11 @@
         <div class="modal-content shadow-lg">
             <div class="modal-header bg-dark text-white">
                 <h5 class="modal-title">
+                    @if (targetRoomId()) {
+                    🛠️ Reparar Habitación
+                    } @else {
                     📋 Monitor de Mantenimiento
+                    }
                 </h5>
                 <button type="button" class="btn-close btn-close-white" (click)="onClose.emit()"></button>
             </div>
@@ -62,7 +66,8 @@
                                 }
 
                                 @else {
-                                <div class="bg-light p-2 rounded border animate__animated animate__fadeIn" style="min-width: 250px;">
+                                <div class="bg-light p-2 rounded border animate__animated animate__fadeIn"
+                                    style="min-width: 250px;">
                                     <label class="form-label small fw-bold mb-1 text-dark">
                                         ¿Cómo se solucionó? <span class="text-danger">*</span>
                                     </label>
@@ -79,8 +84,7 @@
                                     }
 
                                     <div class="d-flex gap-2 mt-2">
-                                        <button class="btn btn-white btn-sm w-50"
-                                            (click)="cancelResolution()">
+                                        <button class="btn btn-white btn-sm w-50" (click)="cancelResolution()">
                                             Cancelar
                                         </button>
                                         <button class="btn btn-success btn-sm w-50" (click)="confirmResolution()">
