@@ -2,10 +2,12 @@
 
 ### 🛠️ Integrated Frontend for Dynamic CRUD Engine
 
+![Angular](https://img.shields.io/badge/Angular-21-red) ![Architecture](https://img.shields.io/badge/Architecture-Feature--Based-blue) ![Library](https://img.shields.io/badge/Shared-UI%20Chat-orange) ![Status](https://img.shields.io/badge/Transformation-Eco--Hotel-green)
+
 ## 📝 Descripción
 **AdminHotel** es una aplicación web de alto rendimiento construida sobre Angular 21, diseñada como la interfaz administrativa oficial de la suite de automatización Hosting3M.
 
-Este dashboard actúa como el cliente principal del **Dynamic CRUD Engine**, permitiendo una gestión de datos en tiempo real (Reservas, Habitaciones, Check-ins, Calidad) mediante una capa de abstracción basada en n8n y PostgreSQL. Se especializa en la gestión operativa de flujos de hospitalidad mediante el uso intensivo de Angular Signals y una arquitectura de servicios desacoplados.
+Este dashboard actúa como el cliente principal del **Dynamic CRUD Engine**, permitiendo una gestión de datos en tiempo real. Actualmente, el proyecto atraviesa una **Transformación Estratégica (Eco-Hotel Phase)**, evolucionando de un simple gestor de reservas a un **ERP Hotelero Completo** que gestiona Mantenimiento, Activos Fijos y Finanzas de Inversión (CAPEX).
 
 ---
 
@@ -15,30 +17,53 @@ Este dashboard actúa como el cliente principal del **Dynamic CRUD Engine**, per
 | :--- | :--- | :--- | :--- | :--- |
 | **v0.1.0** | `Stable` | `Auth & Architecture` | Tabler + Bootstrap | Estructura base, JWT Auth, Signals. |
 | **v0.2.0** | `Stable` | `Room Rack v1` | CSS Grid / Cards | Gestión visual de 17 habitaciones. |
-| **v0.3.0** | `Stable`| `Ops & Finance`| Modals / Reports | Checkout con inventario, Reporte de Caja (D/S/M/Y) y Gestión de Usuarios. |
-| **v0.4.0** | `Stable` | `Pro UX & Patterns` | Skeletons / Services | Refactorización a Services, Skeletons de carga, Promesas (Async/Await).|
+| **v0.3.0** | `Stable`| `Ops & Finance`| Modals / Reports | Checkout con inventario, Reporte de Caja y Gestión de Usuarios. |
+| **v0.4.0** | `Stable` | `Pro UX & Patterns` | Skeletons / Services | Refactorización a Services, Skeletons de carga, Promesas. |
 | **v0.5.0** | `Stable` | `Full Operation` | Interactive UI | Refresh Engine, Reservas dinámicas, Gestión avanzada de Huéspedes. |
-| **v0.6.0** | `Stable` | `Accessibility` | Mobile Grid / CSS | Lógica de Descuentos, UX Accesible para Seniors (Fat-Finger Design). |
+| **v0.6.0** | `Stable` | `Accessibility` | Mobile Grid / CSS | Lógica de Descuentos, UX Accesible para Seniors. |
 | **v0.6.1** | `Stable` | `Quality Assurance` | **JSONB / Forms** | **Módulo de Rondines, Persistencia Híbrida, Smart Save.** |
-| **v0.7.0** | `Released` | **AI Concierge** | **MCP / Chat UI** | **Arquitectura Cliente-Servidor MCP, Agente gpt-4o-mini, Reglas de Negocio en Prompt.** |
-| **v0.8.0** | `Planned` | `Analytics` | Dashboard KPIs | Gráficos de ocupación y proyecciones financieras. |
+| **v0.7.0** | `Released` | **AI Concierge** | **Shared Lib / MCP** | **Integración de `ui-chat`, Arquitectura Standalone, Inyección de Tokens.** |
+| **v0.7.1** | `Released` | **AI Concierge** | **Shared Lib / MCP** | **Integración de `ui-chat`, Inyección de Tokens.** |
+| **v0.8.0** | `Released` | **Eco-Transformation I** | **Tickets / Assets** | **Gestión de Mantenimiento, Inventario de Activos y Finanzas CAPEX/OPEX.** |
+| **v0.9.0** | `Planned` | `Eco-Intelligence` | CRM / IoT | Segmentación de Huéspedes y Métricas de Sustentabilidad (Luz/Agua). |
 
 ---
 
-## 🆕 Novedades de la v0.7.0 (AI Revolution)
+## ♻️ Eco-Hotel Transformation (Strategic Pillars)
+
+El sistema ha implementado 3 de los 5 pilares estratégicos para la certificación y operación "Eco-Boutique".
+
+### 1. 💰 Finanzas: Estrategia de Inversión (CAPEX vs OPEX) ✅
+**Objetivo:** Separar el dinero de la operación diaria del dinero de la remodelación/construcción.
+* **Tech Stack:** Base de datos actualizada con `expense_type` y `project_phase`.
+* **UI:** Modal de Gastos (`ExpenseFormModal`) con selectores de Fases (Fase 0 a 3).
+* **Business Value:** Claridad total sobre el costo operativo vs. costo de inversión.
+
+### 2. 🛠️ Mantenimiento: Gestión de Incidencias ✅
+**Objetivo:** Convertir quejas en acciones y crear una base de conocimiento técnica.
+* **Center Command:** Nuevo **Monitor de Mantenimiento** accesible desde el Header y Room Cards.
+* **Ticket Lifecycle:** Automatización de estados (`Reportar` → `Maintenance` | `Resolver` → `Dirty`).
+* **Knowledge Base:** Bitácora de soluciones obligatoria al cerrar un ticket en `hotel_maintenance_tickets`.
+
+### 3. 📺 Activos: Inventario Físico (Asset Management) ✅
+**Objetivo:** Controlar la ubicación, depreciación y garantía de equipos valiosos.
+* **Digital Twin:** Nueva tabla `hotel_assets` vinculada a las habitaciones.
+* **Integration:** Pestaña "Inventario" integrada directamente en el `RoomDetailModal`.
+* **Sync:** Formulario de Alta (`AssetFormModal`) con validación estricta contra el backend.
+
+---
+
+## 🆕 Novedades Tecnológicas (v0.7.1 & v0.8.0)
 
 1. **Protocolo MCP (Model Context Protocol):**
-    * Implementación pionera de una arquitectura Cliente-Servidor para IA dentro de n8n.
-    * El **Servidor MCP** expone la base de datos PostgreSQL como herramientas seguras.
-    * El **Cliente IA** razona sobre cuándo usar esas herramientas.
+    * Arquitectura Cliente-Servidor para IA. El **Servidor MCP** expone la base de datos PostgreSQL como herramientas seguras para el Chatbot.
 
-2. **Asistente Virtual "San José":**
-    * Capacidad para consultar disponibilidad en tiempo real ("¿Qué habitaciones matrimoniales tienes libres y limpias?").
-    * Gestión de reservas con validación estricta de datos (No permite reservar sin teléfono o email).
-    * Acceso a la memoria histórica de mantenimiento ("¿Qué reparaciones se hicieron en la habitación 5 la semana pasada?").
+2. **Arquitectura Modular (Shared Libraries):**
+    * Migración del módulo `ai-assistant` a la librería corporativa `@hosting3m/ui-chat`.
+    * Uso de **Injection Tokens** (`CHAT_CONFIG_TOKEN`) para configuración dinámica por entorno.
 
-3. **Seguridad Cognitiva:**
-    * El agente posee credenciales de ADMIN inyectadas dinámicamente para realizar operaciones de escritura, pero está restringido por un "System Prompt" que prohíbe alucinaciones sobre transacciones fallidas.
+3. **Hybrid Persistence (SQL + JSONB):**
+    * Uso de columnas JSONB para datos flexibles en los módulos de **Calidad** (Checklists) y **Mantenimiento** (Detalles técnicos), evitando migraciones constantes de esquema.
 
 ---
 
@@ -50,46 +75,42 @@ Este dashboard actúa como el cliente principal del **Dynamic CRUD Engine**, per
   </a>
 </p>
 
-La aplicación implementa una arquitectura **Data-Access Service Pattern**, donde la lógica de negocio se centraliza en servicios inyectables...
+La aplicación implementa una arquitectura **Data-Access Service Pattern** y **Standalone Components**:
 
----
-
-## 🚦 Stack Tecnológico
+### 🛠️ Stack Tecnológico
 * **Core:** Angular v21.0.0 (Signals, Standalone Components).
-* **UI Framework:** @tabler/core + Bootstrap 5.
+* **Shared Libraries:** `@hosting3m/ui-chat` (AI Integration).
 * **Backend Interface:** Webhooks n8n (API v3) + PostgreSQL (JSONB Support).
-* **Utilidades:** DatePipe (Localizado), CurrencyPipe, jwt-decode.
+* **State Management:** Angular Signals (Sin NgRx).
 
 ---
 
-### 🏗️ Arquitectura de la Solución
-La aplicación implementa una arquitectura desacoplada donde el frontend delega la persistencia al orquestador n8n:
-1. **Capa de Seguridad:** Implementación de `auth.guard.ts` y `auth.interceptor.ts`.
-2. **Gestión de Estado:** Uso de Angular Signals.
-3. **Consumo de API:** Comunicación dinámica con el endpoint `/crud/v3/:model`.
-4. **Validación:** Middleware de verificación cruzada en DB (`crud_models`).
+## 🚀 Capacidades del Sistema (Capabilities)
+
+| Módulo | Estado | Descripción Técnica |
+| :--- | :--- | :--- |
+| **Room Rack** | 🟢 Activo | Visualización semafórica de estados (Limpio/Sucio/Mant/Ocupado). |
+| **Booking Engine** | 🟢 Activo | Motor de reservas con validación de conflictos de fechas. |
+| **Mantenimiento** | 🟢 Activo | Sistema de Tickets con trazabilidad de resolución. |
+| **Activos (Assets)**| 🟢 Activo | CRUD de inventario físico por habitación. |
+| **Finanzas** | 🟢 Activo | Corte Z y gestión diferenciada de CAPEX/OPEX. |
+| **AI Concierge** | 🟢 Activo | Asistencia operativa vía Chat (Librería Compartida). |
 
 ---
 
-## 🚀 Capacidades de AdminHotel
-- **Room Rack Inteligente:** Visualización por colores de estados.
-- **Calidad (QA):** Módulo de rondines diarios con historial de inspecciones.
-- **Gestión de Huéspedes:** Registro robusto de identidad.
-- **Validación de Inventario:** Check-out con validación de activos.
-- **Caja y Ventas:** Reporte financiero integrado.
+## 📊 Roadmap: Lo que FALTA (Eco-Hotel Phase II)
 
----
+Los siguientes puntos son críticos para completar la visión estratégica:
 
-## 📊 Roadmap: Gestión de Hotel (17 Habitaciones)
+### 4. Huéspedes: Inteligencia de Cliente (CRM) ⏳ [PENDIENTE]
+* **Objetivo:** Validar el concepto "Eco-Boutique" conociendo al cliente.
+* **Tarea Técnica:** Implementación de `tags` (Senior, Nómada, Familia) y `travel_reason` en el perfil del huésped.
+* **UX:** Visualización de "Trato Personalizado" durante el Check-in.
 
-| Módulo | Estado | Descripción | Integración n8n |
-| :--- | :--- | :--- | :--- |
-| Room Rack | ✅ Finalizado | Grid visual del estado de habitaciones. | Webhook SQL Real-time. |
-| Check-out V2 | ✅ Finalizado | Validación de pago pendiente e inventario. | Update dinámico. |
-| Reporte de Caja | ✅ Finalizado | Métricas de ventas por periodos. | Agregación MetaCRUD. |
-| **Rondines (QA)**| ✅ **Finalizado**| **Inspección de calidad diaria.** | **Insert/Update JSONB.** |
-| Booking Engine | ✅ Finalizado | Creación, consulta y eliminación de reservas. | Update schema. |
-| AI WhatsApp Agent | ⏳ Próximo (v0.8) | Reservas automáticas vía Chatbot. | WhatsApp API + AI Agent. |
+### 5. Sustentabilidad: Métricas "Eco" ⏳ [PENDIENTE]
+* **Objetivo:** "Lo que no se mide, no se mejora".
+* **Tarea Técnica:** Nueva tabla `utility_readings` para lecturas de CFE (Luz) y Agua.
+* **Analytics:** Calculadora de huella de carbono mensual y comparativos de consumo.
 
 ---
 
@@ -101,31 +122,32 @@ La aplicación implementa una arquitectura desacoplada donde el frontend delega 
 
 2. **Instalación y Servidor Local**
     ```bash
-    # Instalar dependencias
+    # Instalar dependencias del workspace
     npm install
 
-    # Iniciar servidor (con Proxy activo)
-    ng serve
+    # Construir la librería de chat (Requisito previo)
+    ng build ui-chat
+
+    # Iniciar servidor Dashboard
+    ng serve dashboard
     ```
 
 3. **Pruebas y Construcción**
     ```bash
     # Compilación para Producción (Plesk Ready)
-    ng build --configuration=production
+    ng build dashboard --configuration=production
     ```
-
----
-
-## 📦 Integración con n8n Enterprise Suite
-Este dashboard es el componente `app/dashboard` dentro del ecosistema n8n Enterprise Suite. Se comunica directamente con los siguientes servicios:
-
-* **JWT Service:** Para validación de tokens RS256.
-* **PostgreSQL + pgvector:** Almacenamiento híbrido (Relacional + JSONB).
-* **WhatsApp Bridge:** Webhook dedicado para alertas inmediatas.
 
 ---
 
 ## 📄 Licencia
 Este proyecto está bajo la licencia **n8n Sustainable Use License**. Desarrollado para optimizar la presencia digital y la inteligencia de contenidos de Hosting3m.
 
-**Desarrollado por:** Francisco Jesus Pérez Pimienta - Ingeniero en Sistemas Computacionales y Maestro en Administración de Proyectos.
+## 📦 Authors
+
+**Francisco Jesus Pérez Pimienta**
+*Senior Systems Architect & Project Lead*
+Hosting3M Automation Suite
+
+---
+*Built with the assistance of AI-powered development tools.*

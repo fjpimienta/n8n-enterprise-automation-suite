@@ -1,153 +1,98 @@
-# n8n Enterprise Automation Suite 🚀
+# Changelog Principal: n8n Enterprise Automation Suite 🚀
 
-### Arquitectura de Orquestación de IA & Microservicios (Self-Hosted)
-
-![Arquitectura n8n Enterprise](assets/AutomationSuiteHosting3M_by_Gemini.png)
-
-> **Arquitecto:** Francisco Pérez (Senior Systems Engineer | PMP | Full Stack)  
-> **Core Stack:** n8n v2.4.6, Docker, PostgreSQL (pgvector + JSONB), Node.js, OpenAI (GPT-4o), Angular 21 (Signals).  
-> **Infraestructura:** Linux VPS.
+Todos los cambios notables en esta suite de automatización serán documentados en este archivo. El sistema se adhiere estrictamente a **Semantic Versioning** para la gestión de dependencias entre microservicios, flujos de n8n y frontends.
 
 ---
 
-## 🎯 Objetivo del Proyecto
+## [0.8.0] - 2026-02-14
 
-Suite de automatización empresarial de grado industrial diseñada para alta disponibilidad y escalabilidad.
+### 🚀 Eco-Hotel Transformation & Workspace Consolidation
 
-La arquitectura trasciende el uso de simples "bots" para convertirse en un **Hub de Servicios Inteligente** que garantiza:
+Esta versión marca un hito en la madurez del proyecto, transformando el Dashboard de un gestor de reservas a un **ERP Hotelero** y unificando el frontend bajo una arquitectura de **Librerías Compartidas**.
 
-1.  **Soberanía de Datos:** Despliegue 100% Self-Hosted.
-2.  **Latencia Mínima:** Optimización de redes internas Docker.
-3.  **Seguridad Corporativa:** Gestión de permisos basada en roles (RBAC) y validación de tokens RS256.
+#### 🏗️ Arquitectura de Workspace (Frontend)
 
----
+* **Refactorización a Monorepo:** Implementación oficial de la librería `@hosting3m/ui-chat`. Se eliminó la duplicidad de código en `dashboard` y `pista-hielo`.
+* **Patrón de Inyección de Dependencias:** Desacoplamiento total de los frontends mediante `CHAT_CONFIG_TOKEN`, permitiendo que una misma librería de IA se comporte de forma distinta según el contexto (Hotel vs Pista).
+* **Standalone API:** Migración a componentes Standalone puros en toda la suite, eliminando la sobrecarga de `NgModules`.
 
-## 🏗 Arquitectura e Infraestructura (IaC)
+#### 🏨 AdminHotel: Transformación Eco-Hotel (Fase I)
 
-El ecosistema está desplegado en un entorno endurecido (**Hardened VPS**) utilizando orquestación de contenedores y redes aisladas.
+* **Gestión de CAPEX/OPEX:** Nueva lógica financiera para separar gastos operativos de inversión en remodelación ecológica.
+* **Módulo de Mantenimiento:** Sistema de tickets con máquina de estados vinculada al inventario de habitaciones.
+* **Inventario de Activos (Assets):** Control de equipos críticos, garantías y ubicación física por habitación.
 
-| Servicio | Tecnología | Función Crítica |
-| :--- | :--- | :--- |
-| **Orquestador** | n8n v2.4.6 (Enterprise) | Motor lógico central de flujos y reglas de negocio. |
-| **IA Bridge** | MCP Protocol | Interoperabilidad segura para que la IA ejecute SQL. |
-| **Capa de Datos** | PostgreSQL + pgvector | Almacenamiento híbrido (Relacional + JSONB) y vectorial. |
-| **Seguridad** | Node.js (JWT Service) | Microservicio dedicado para firma y validación de tokens RS256. |
-| **Agentes IA** | OpenAI + LangChain | Procesamiento de lenguaje natural y razonamiento autónomo. |
-| **Frontend Hotel** | Angular 21 SPA | Dashboard administrativo con gestión de estado reactivo (Signals). |
-| **Frontend Pista** | Angular 21 PWA | WebApp progresiva para operaciones de tiempo real y cobros. |
-| **Ingesta** | Node.js Scraper | Motor de extracción de datos no estructurados en tiempo real. |
-| **Contactos** | n8n v2.4.6 (Enterprise) | Orquestador de entrada de leads y CRM. |
+#### ⛸️ PistaHielo: Integración & Estabilidad
+
+* **Unificación de IA:** Integración de la nueva librería compartida.
+* **Fixes Críticos:** Resolución de errores de inyección (`NullInjectorError`) y ajustes de selectores para compatibilidad con la librería del workspace.
 
 ---
 
-## 📦 Módulos Implementados (Workflows)
+## [0.7.0] - 2026-02-09
 
-La suite se compone de 10 módulos principales que operan como microservicios interconectados:
+### 🤖 AI Revolution & MCP Protocol
 
-### 1. 🔐 Secure Token Gateway
-Sistema centralizado de **Gestión de Identidad**. Administra la validación de peticiones externas y la auto-generación de tokens para tareas cronometradas bajo un esquema "Zero Trust".
+Introducción de capacidades cognitivas avanzadas y estandarización de la comunicación IA-Base de Datos.
 
-### 2. 🛠️ Contact & CRM Bridge v2
-Orquestador de entrada de leads. Realiza validación estricta de tipos y sanitización de datos antes de la persistencia en el CRM.
+#### 🧠 Inteligencia Artificial
 
-### 3. 📰 Automated News Curator
-Motor de inteligencia competitiva. Extrae noticias técnicas, realiza un **filtrado semántico** y genera una identidad visual única mediante IA generativa.
+* **Protocolo MCP (Model Context Protocol):** Implementación de la arquitectura Cliente-Servidor para que el LLM ejecute herramientas SQL de forma segura.
+* **Agentes Especializados:** Despliegue de los asistentes "San José" (Hotel) y "Ops Agent" (Pista) con personalidades y reglas de negocio diferenciadas.
+* **RAG & Memory:** Implementación de memoria a corto plazo y búsqueda vectorial mediante `pgvector` para el Hub de WhatsApp.
 
-### 4. 📢 Social Media Orchestrator
-Orquestador omnicanal con lógica de **idempotencia**. Verifica cuotas de publicación diarias y adapta el contenido para X, Facebook y LinkedIn.
+#### 🛠️ Backend (n8n & DB)
 
-### 5. 🤖 Multi-Service WhatsApp Hub
-Agente multimodal (Texto/Voz) con **enrutamiento inteligente**. Identifica al cliente en la DB y decide si la atención debe ser orientada a Hosting, Hotel o soporte general, utilizando memoria persistente `pgvector`.
-
-### 6. 🛠️ Dynamic CRUD Engine
-Capa de abstracción SQL que actúa como un **Backend as a Service (BaaS)** unificado.
-* **Novedad v3:** Soporte para persistencia híbrida (SQL para búsquedas rápidas + JSONB para esquemas flexibles).
-
-### 7. 🏨 MCP Server: Hotel Management
-Implementación avanzada del **Model Context Protocol**. Expone herramientas de base de datos a la IA, permitiendo consultas de inventario en tiempo real mediante lenguaje natural.
-
-### 8. 🏨 AdminHotel Dashboard (v0.7 - AI Concierge)
-Cliente Web SPA para la gestión hotelera integral.
-* **Core:** Angular 21 + Tabler UI.
-* **AI Revolution:** Integración de **Asistente Virtual "San José"** vía MCP para consultas de disponibilidad y reservas en lenguaje natural.
-* **Módulo QA:** Sistema de **Rondines** con formularios dinámicos y "Smart Merge" JSONB.
-
-### 9. ⛸️ PistaHielo Operations Center (v0.7 - Ops AI)
-PWA Administrativa para la gestión de centros de entretenimiento.
-* **Core:** Angular 21 + Reactive Signals.
-* **AI Agent v3:** Asistente operativo con lógica de **"Midnight Crossing"** para turnos nocturnos y validación de usuarios.
-* **Ops:** Monitoreo en tiempo real (The Rack) y reportes financieros (Corte Z).
-
-### 10. 💬 Shared AI Chat Library
-Librería transversal de Angular (**Shared Lib**) diseñada bajo el patrón de Componente Agnóstico.
-* **Función:** Provee la interfaz de chat flotante reutilizable que conecta los frontends (Hotel/Pista) con los agentes de n8n.
-* **Tech:** Configuración dinámica vía `InjectionToken` para branding y endpoints.
+* **Dynamic CRUD Engine v3:** Soporte para persistencia híbrida. Ahora el motor procesa objetos JSONB dinámicos para formularios flexibles de calidad y mantenimiento.
+* **Security Hardening:** Rotación de llaves RS256 en el servicio de JWT y validación estricta de roles por modelo de datos.
 
 ---
 
-## 🚀 Despliegue Rápido
+## [0.6.1] - 2026-02-03
 
-```bash
-# 1. Clonar repositorio
-git clone [https://github.com/tu-usuario/n8n-enterprise-suite.git](https://github.com/tu-usuario/n8n-enterprise-suite.git)
+### 🛡️ Quality Assurance & Persistence
 
-# 2. Levantar infraestructura Backend
-cd infrastructure
-docker-compose up -d
-
-# 3. Levantar Clientes Frontend (Ejemplo)
-cd hosting3m-workspace/projects/dashboard
-npm install && ng serve
-
-```
+* **Módulo de Rondines (Hotel):** Implementación de inspecciones digitales con persistencia JSONB.
+* **Smart Merge Algorithm:** Lógica de frontend para fusionar esquemas de datos antiguos con nuevas definiciones de formularios.
+* **Fix "Midnight Bug":** Corrección en el cálculo de tiempos de renta de patines para turnos que cruzan la medianoche.
 
 ---
 
-## 📚 Documentación Técnica por Módulo
+## [0.6.0] - 2026-01-27
 
-| ID | Módulo / Servicio | Función Principal | Stack & Integraciones | Documentación |
-| --- | --- | --- | --- | --- |
-| `01` | **Auth JWT Gateway** | Middleware de seguridad. Valida tokens. | `Node.js` `JWT` | [📖 Ver Docs](https://github.com/fjpimienta/n8n-enterprise-automation-suite/tree/main/workflows/01-auth-jwt-gateway/v3/README.md) |
-| `02` | **Contact & CRM Bridge** | Sistema de captura de leads. | `Webhook` `Postgres` | [📖 Ver Docs](https://github.com/fjpimienta/n8n-enterprise-automation-suite/tree/main/workflows/02-leads-contact/v3/README.md) |
-| `03` | **RAG News Intelligence** | Curaduría de noticias con IA. | `Scraper` `OpenAI` | [📖 Ver Docs](https://github.com/fjpimienta/n8n-enterprise-automation-suite/tree/main/workflows/03-rag-news-intelligence/v3/README.md) |
-| `04` | **Omnichannel Social** | Orquestador de redes sociales. | `Twitter API` `LinkedIn` | [📖 Ver Docs](https://github.com/fjpimienta/n8n-enterprise-automation-suite/tree/main/workflows/04-omnichannel-social/v3/README.md) |
-| `05` | **AI WhatsApp Agent** | Asistente conversacional RAG. | `WhatsApp` `OpenAI` | [📖 Ver Docs](https://github.com/fjpimienta/n8n-enterprise-automation-suite/tree/main/workflows/05-ai-whatsapp-agent/v3/README.md) |
-| `06` | **Dynamic CRUD Engine** | Backend as a Service (BaaS). | `Postgre` `JSONB` | [📖 Ver Docs](https://github.com/fjpimienta/n8n-enterprise-automation-suite/tree/main/workflows/06-dynamic-crud-engine/v3/README.md) |
-| `07` | **MCP Server** | MCP Server: Hotel Management Core | `MCP` `OpenAI` | [📖 Ver Docs](https://github.com/fjpimienta/n8n-enterprise-automation-suite/tree/main/workflows/07-MCP-server-hotel/v3/README.md) |
-| `08` | **AdminHotel Dashboard** | Frontend Hotelero con IA Concierge. | `Angular 21` `MCP` | [📖 Ver Docs](https://github.com/fjpimienta/n8n-enterprise-automation-suite/tree/main/hosting3m-workspace/projects/dashboard/README.md) |
-| `09` | **PistaHielo Ops Center** | PWA Operativa con Midnight Logic. | `Angular 21` `Signals` | [📖 Ver Docs](https://github.com/fjpimienta/n8n-enterprise-automation-suite/tree/main/hosting3m-workspace/projects/pista-hielo/README.md) |
-| `10` | **Shared AI Chat Lib** | Librería agnóstica de Chat UI. | `Angular 21` `Lib` | [📖 Ver Docs](https://github.com/fjpimienta/n8n-enterprise-automation-suite/tree/main/hosting3m-workspace/projects/ui-chat/README.md) |
+### 📱 Mobile Experience & Accessibility
+
+* **Senior-First Design:** Rediseño de interfaces táctiles con botones de alta visibilidad y layouts simplificados.
+* **PWA Capabilities:** Activación de Service Workers para mejorar la persistencia en dispositivos móviles en la Pista de Hielo.
+* **Financial Audit:** Inclusión de trazabilidad de descuentos y notas de crédito en los flujos de cobro.
 
 ---
 
-## 📈 Roadmap & Gestión de Proyectos
+## [0.5.0] - 2026-01-13
 
-Seguimiento del ciclo de vida del desarrollo.
+### 🧱 Core Architecture Release
 
-### ✅ Completado (Q4 2025 - Q1 2026)
-
-* [x] **Infraestructura:** Despliegue de redes Docker aisladas y Auth Gateway RS256.
-* [x] **Hotel Core:** Dashboard v0.7 con Integración MCP, IA Concierge y Módulo de Calidad.
-* [x] **Pista Hielo:** PWA v0.7 con Asistente Operativo, Midnight Logic y Reportes Financieros.
-* [x] **Frontend Ecosystem:** Implementación de Monorepo y librería compartida `ui-chat`.
-* [x] **Backend:** Dynamic CRUD Engine v3 con soporte nativo para JSONB.
-
-### 🏗️ En Progreso (Q2 2026)
-
-* [ ] **PistaHielo Membership:** Integración de directorio de alumnos VIP y control de mensualidades.
-* [ ] **Hotel Analytics:** Dashboard de KPIs con proyecciones de ocupación (v0.8).
-* [ ] **Optimización RAG:** Migración a índices HNSW en pgvector.
-
-### 🚀 Backlog & R&D (Futuro)
-
-* [ ] **Agentes Supervisores:** IA de control de calidad para auditar respuestas de bots.
-* [ ] **Auto-Checkout MCP:** Procesamiento de pagos automatizados mediante IA.
+* **Auth Gateway v2:** Lanzamiento del microservicio centralizado de seguridad basado en Node.js.
+* **Omnichannel Social:** Orquestador de publicaciones para X, LinkedIn y Facebook con lógica de idempotencia.
+* **News Curator:** Primer motor de ingesta de noticias con filtrado semántico y generación de imágenes IA.
 
 ---
 
-Desarrollado por: **Francisco Jesus Pérez Pimienta**
+## [0.1.0] - 2025-12-20
 
-* Ingeniero en Sistemas Computacionales | PMP | Full Stack.
-* Especialista en Automatización de Procesos y Soberanía de Datos.
+### 🎉 Initial Infrastructure
 
-```
+* Despliegue de la arquitectura de contenedores Docker.
+* Configuración inicial de PostgreSQL con extensiones vectoriales.
+* MVP de flujos de contacto y automatización básica de leads.
+
+---
+
+## 📦 Authors
+
+**Francisco Jesus Pérez Pimienta**
+*Senior Systems Architect & Project Lead*
+
+---
+
+*Built with the assistance of AI-powered development tools.*

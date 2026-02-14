@@ -2,16 +2,15 @@
 
 ## 📝 Descripción
 **Project:** PistaHielo Dashboard (Módulo de la Suite Hosting3M)
-**Version:** v0.7.0 (Stable Production)
-**Stack:** Angular 21 (Signals, Computed) | n8n v2.6.4 (Orquestador) | PostgreSQL (pgvector)
+**Version:** v0.7.0 (Shared Lib Integration)
+**Stack:** Angular 21 (Signals) | n8n v2.6.4 (Orquestador) | PostgreSQL (pgvector)
 **Patrón Arquitectónico:** Layout Shell Pattern + Reactive Signal Engine.
 **Author:** Francisco Jesus Pérez Pimienta
 
-**Pista de Hielo** es una aplicación web progresiva (PWA) de alto rendimiento, diseñada como la interfaz administrativa oficial de la suite de automatización Hosting3M. Integra operaciones de tiempo real con control financiero estricto.
+**Pista de Hielo Operations Center** es una aplicación web progresiva (PWA) de alto rendimiento, diseñada como la interfaz administrativa oficial para la gestión de rentas por tiempo y membresías. Integra operaciones de tiempo real con control financiero estricto.
 
 ## 1. Diseño de Alto Nivel: Flujo de Navegación y Datos
 La arquitectura implementa un **"Main Layout Shell"** que mantiene el contexto mientras el Agente de IA asiste en tareas de consulta y escritura.
-
 
 ```mermaid
 graph TD
@@ -19,7 +18,7 @@ graph TD
     
     subgraph "Frontend (Angular 21)"
     SHELL -->|Router| OPS["Operations (Live Rack)"]
-    SHELL -->|Signal| AI_CHAT["AI Assistant (MCP Client)"]
+    SHELL -->|Shared Lib| AI_CHAT["AI Chat Component"]
     end
 
     subgraph "Backend Logic (n8n v3)"
@@ -27,14 +26,15 @@ graph TD
     AGENT -->|Tool Call| MCP["MCP Server (Pista Tools)"]
     MCP -->|SQL| DB[("PostgreSQL")]
     end
+
 ```
 
 ### Principios Clave:
 
-1. **Layout Shell Architecture:** Un componente padre (MainLayout) gestiona la estructura visual, la responsividad móvil (hamburguesa) y la sesión, desacoplando la navegación de la lógica de negocio.
-2. **Reactive Pricing Engine:** Uso de computed() signals para recalcular costos en tiempo real, integrando la Regla Zamboni (-15 min) solicitada vía UI o IA.
-3. **Global Icon Strategy:** Para evitar errores de ejecución y reducir el boilerplate, los iconos (Lucide) se inyectan globalmente en `app.config.ts`, asegurando disponibilidad en todos los componentes dinámicos.
-4. **MCP (Model Context Protocol):** El backend expone herramientas de base de datos (Ver Pista Activa, Reporte Ventas) que el Agente de IA utiliza para responder con datos reales.
+1. **Layout Shell Architecture:** Un componente padre (MainLayout) gestiona la estructura visual, la responsividad móvil y la sesión, desacoplando la navegación de la lógica de negocio.
+2. **Reactive Pricing Engine:** Uso de computed() signals para recalcular costos en tiempo real, integrando la "Regla Zamboni" (-15 min) solicitada vía UI o IA.
+3. **Global Icon Strategy:** Inyección global de iconos Lucide en app.config.ts para reducir boilerplate en plantillas.
+4. **Shared Ecosystem:** Consumo de librerías corporativas (@hosting3m/ui-chat) configuradas mediante Inyección de Dependencias.
 
 ---
 
@@ -58,9 +58,16 @@ Aquí vive el negocio. Cada carpeta es un módulo autocontenido.
 |  | CheckoutModal | **Cálculo de "Medianoche"** (soporte para turnos que cruzan de día) y regla Zamboni. |  |
 | ShiftReport | Dashboard financiero. Filtros de fecha ISO compatibles con n8n. |  |  |
 |  | ClientList | Directorio de alumnos y gestión de membresías. |  |
+| Admin	| ClientList	| Directorio de alumnos y gestión de membresías.|   |
 
 📂 src/app/shared (Reusability)
 * **Sidebar:** Componente inteligente con estado colapsable (Mini-Sidebar) y gestión de temas (Dark/Light).
+
+📂 External Libraries (Workspace) [NUEVO]
+Funcionalidades importadas desde projects/ externos.
+    * @hosting3m/ui-chat:
+        * Integración: Componente Standalone <lib-ai-chat>.
+        * Configuración: Inyección de CHAT_CONFIG_TOKEN en app.config.ts apuntando al Webhook de Soporte Pista.
 
 ---
 
@@ -90,20 +97,15 @@ Aprovechando la migración que realizamos hoy, la base de datos es el ancla de l
 
 ---
 
-## 5. 📈 Roadmap de Implementación
+## 5. Key Patterns
 
 ```
-Fase 1: Core Operativo (Completado)
-    * Despliegue de los componentes de Angular: IceLiveMonitor y EntryForm.
-    * Activación de los Workflows de n8n para Check-in/Check-out.
+A. Configuration Injection (DI)
+Para integrar el Chat sin acoplarlo, usamos el patrón de Tokens:
+    1. Pista Hielo provee su propia URL y Colores en app.config.ts.
+    2. La librería consume esa configuración agnósticamente.
 
-Fase 2: Estabilización y Finanzas (Completado - v0.6.0)
-    * Solución de bugs críticos de tiempo (Midnight Crossing).
-    * Reportes financieros precisos con filtros de fecha corregidos en backend.
-    * UX Refinada: Sidebar colapsable y Dark Mode nativo.
-
-Fase 3: IA & Analytics (Futuro)
-    * Dashboard de analítica sobre rentabilidad por hora.
-    * Agente de IA para consultas de disponibilidad vía WhatsApp.
+B. Midnight Crossing Calculation
+    Lógica especializada en CheckoutModal para manejar turnos que cruzan la medianoche.
 
 Document generated regarding the v0.7.0 codebase state.

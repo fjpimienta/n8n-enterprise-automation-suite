@@ -1,4 +1,4 @@
 import { InjectionToken } from '@angular/core';
-import { ChatConfig } from '../interfaces/chat-config'; // Importa la que ya existe
+import { ChatConfig } from '../interfaces/chat-config';
 
-export const CHAT_CONFIG = new InjectionToken<ChatConfig>('CHAT_CONFIG');
+export const CHAT_CONFIG_TOKEN = new InjectionToken<ChatConfig>('CHAT_CONFIG_TOKEN');

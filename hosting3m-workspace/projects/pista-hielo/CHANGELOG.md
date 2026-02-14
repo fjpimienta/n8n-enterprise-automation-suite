@@ -1,67 +1,74 @@
 # Changelog
 Todos los cambios notables en el módulo **PistaHielo Operations Center** (Módulo 09 de la Suite Hosting3M) serán documentados en este archivo.
 
-El formato se basa en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), y este proyecto adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+El formato se basa en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), y este proyecto adhiere a [Semantic Versioning](https://spec.org/spec/v2.0.0.html).
 
-## [v0.7.0] - 2026-02-09
-### Added
-- **AI Agent Integration (v3):** Despliegue del Asistente Virtual Operativo con personalidad de Pista de Hielo (eliminado rastro de Hotel).
+## [0.7.1] - 2026-02-14
+### ♻️ Refactorización (Architecture)
+- **Shared Library Migration:** Integración oficial de la librería corporativa `@hosting3m/ui-chat`. Se eliminó la dependencia de componentes de chat locales para utilizar el estándar del workspace.
+- **Dependency Injection Pattern:** Implementación de `CHAT_CONFIG_TOKEN` en `app.config.ts`. Ahora la configuración del asistente (colores, logo de la pista y webhook de n8n) se inyecta dinámicamente, desacoplando la lógica de la UI.
+- **Standalone Provisioning:** Refactorización de `app.config.ts` para proveer `AiService` de forma explícita, cumpliendo con las mejores prácticas de Angular 21 para librerías stateless.
+
+### 🐛 Fixed
+- **NullInjectorError:** Corrección del error de proveedor faltante para `AiService` tras la migración a la arquitectura de librería compartida.
+- **Selector Mismatch:** Actualización de etiquetas en el template de `MainLayout` para coincidir con el nuevo selector de librería `lib-ai-chat`.
+
+## [0.7.0] - 2026-02-09
+### 🚀 Added
+- **AI Agent Integration (v3):** Despliegue del Asistente Virtual Operativo con personalidad de Pista de Hielo (especializado en rentas y tiempos).
 - **MCP Server Pista:** Implementación de herramientas de servidor para que la IA consulte el Rack en vivo, reporte ventas y verifique disponibilidad de patines.
 - **JOIN Logic en IA:** Las consultas de "Pista Activa" ahora devuelven nombres de clientes reales en lugar de solo IDs.
-- **MÉTACRUD Validation:** El asistente valida campos obligatorios (`full_name`, `phone`, `email`, `doc_id`) antes de registrar nuevos ingresos.
+- **METACRUD Validation:** El asistente valida campos obligatorios (`full_name`, `phone`, `email`, `doc_id`) antes de registrar nuevos ingresos.
 
-### Fixed
+### 🔧 Fixed
 - **Time Calculation Precision:** Se migró el cálculo de minutos en el MCP de `start_time` (string) a `created_at` (timestamp) para evitar errores de redondeo.
 - **Zamboni AI Rule:** El asistente ahora reconoce comandos de "Zamboni" y ajusta el cálculo de tiempo para el cobro final.
 
-### Changed
+### 🔄 Changed
 - **System Instructions:** Refactorización total del prompt del sistema para enfocarse en rentas por hora, clases e instructores.
 
 ---
 
-## [v0.6.0] - 2026-02-03
-### Fixed
-- **Checkout "Midnight Bug":** Corrección crítica en la lógica de cálculo de tiempo. Ahora detecta correctamente si un turno cruzó la medianoche (ej: entrada 23:00, salida 00:30) evitando el error de "0 minutos".
-- **n8n Reporting:** Parche en el nodo Javascript "Build Query" en n8n. Se corrigió una variable (`val` vs `value`) que impedía filtrar reportes por fecha exacta.
-- **Icon Crash:** Solución definitiva al error `Icon not provided`. Se migró a una estrategia de `Global Providers` en `app.config.ts`.
-- **Layout Overflow:** Eliminación del scroll horizontal no deseado en el sidebar.
+## [0.6.0] - 2026-02-03
+### 🔧 Fixed
+- **Checkout "Midnight Bug":** Corrección crítica en la lógica de cálculo de tiempo para turnos que cruzan la medianoche.
+- **n8n Reporting:** Corrección de variable en el nodo "Build Query" que impedía el filtrado de reportes financieros.
+- **Icon Crash:** Migración a una estrategia de `Global Providers` en `app.config.ts` para evitar errores de carga de iconos.
+- **Layout Overflow:** Eliminación de scroll horizontal en el sidebar.
 
-### Changed
-- **Checkout Engine:** Refactorización completa a **Reactive Signals**. El modal ahora recalcula la hora actual automáticamente al abrirse, sin depender del ciclo de vida `ngOnInit`.
-- **UI/UX:** Implementación de **Sidebar Colapsable** (Mini Mode) con animaciones CSS y ocultamiento inteligente de textos.
-- **Dark Mode:** Mejoras de legibilidad en inputs y dropdowns bajo el tema oscuro.
-
----
-
-## [v0.5.0] - 2026-01-27
-### Added
-- **MainLayout Shell:** Implementación de una arquitectura de "Cascarón" (`MainLayoutComponent`) que contiene el menú lateral y el header.
-- **Mobile Experience:** Nuevo Header exclusivo para móviles con botón "Hamburguesa" y lógica de menú Off-Canvas.
-- **Navigation UX:** Implementación de "Click-to-Close" en el menú móvil para mejorar la fluidez al navegar entre módulos.
-- **Client Directory (WIP):** Creación inicial de `ClientListComponent` y `ClientService` para la gestión futura de alumnos.
-
-### Changed
-- **Routing:** Reestructuración total de `app.routes.ts`. Ahora `Operations` y `Admin` son rutas hijas del `MainLayout`.
-- **Docs:** Actualización mayor de `README.md` y `ARCHITECTURE.md` reflejando el estado Beta Operativo.
-
-### Fixed
-- **SSR Crash:** Solución crítica al error `Injector has already been destroyed` mediante la inyección de `PLATFORM_ID` y `isPlatformBrowser` en los intervalos de polling (`setInterval`).
-- **UI Bugs:** Corrección de estilos en el botón de cierre del menú móvil (alineación Flexbox).
+### 🔄 Changed
+- **Checkout Engine:** Refactorización completa a **Angular Signals**. Recálculo automático de tiempo sin depender de ciclos de vida manuales.
+- **UI/UX:** Implementación de **Sidebar Colapsable** (Mini Mode) con animaciones.
+- **Dark Mode:** Mejoras de legibilidad en inputs y dropdowns.
 
 ---
 
-## [v0.4.0] - 2026-01-26
-### Added
-- **Shift Report (Corte Z):** Nuevo componente `ShiftReportComponent` para visualizar el balance financiero del día.
-- **Cash Register Service:** Lógica para sumarizar totales en tiempo real (Efectivo vs. Tarjeta).
-- **Print Support:** Botón nativo para imprimir el reporte de corte.
+## [0.5.0] - 2026-01-27
+### 🚀 Added
+- **MainLayout Shell:** Implementación de arquitectura de "Cascarón" con `MainLayoutComponent`.
+- **Mobile Experience:** Header exclusivo para móviles con menú Off-Canvas.
+- **Navigation UX:** Lógica "Click-to-Close" en menú móvil.
+- **Client Directory (WIP):** Inicio del módulo de gestión de alumnos.
 
-### Fixed
-- **Timezone Bug:** Corrección del error donde el reporte mostraba $0.00. Se implementó el envío de fechas en formato ISO local (`sv-SE`) para forzar la comparación correcta (`::date`) en PostgreSQL/n8n.
-- **Build Budget:** Ajuste en `angular.json` aumentando los límites de advertencia (2MB) y error (4MB) para soportar librerías UI.
+### 🔄 Changed
+- **Routing:** Reestructuración de rutas hijas bajo el `MainLayout`.
+- **Docs:** Actualización de `README.md` y `ARCHITECTURE.md` al estado Beta Operativo.
 
-### Changed
-- **Model:** Actualización de la interfaz `PhTransaction` incluyendo campos opcionales `amount`, `end_time` y `payment_method`.
+### 🔧 Fixed
+- **SSR Crash:** Solución al error de destrucción del inyector mediante validación de `isPlatformBrowser`.
+- **UI Bugs:** Ajuste de alineación flexbox en botones móviles.
+
+---
+
+## [0.4.0] - 2026-01-26
+### 🚀 Added
+- **Shift Report (Corte Z):** Nuevo componente financiero para cierre de caja diario.
+- **Cash Register Service:** Sumarización en tiempo real (Efectivo vs. Tarjeta).
+- **Print Support:** Funcionalidad de impresión para reportes de corte.
+
+### 🔧 Fixed
+- **Timezone Bug:** Implementación de envío de fechas en formato ISO local para asegurar consistencia en PostgreSQL.
+- **Build Budget:** Incremento de límites de presupuesto en `angular.json` para assets de UI.
 
 ---
 
