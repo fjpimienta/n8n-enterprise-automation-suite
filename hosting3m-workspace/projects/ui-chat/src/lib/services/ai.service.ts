@@ -1,8 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { map, catchError, of, finalize } from 'rxjs';
-import { CHAT_CONFIG } from 'ui-chat';
-// 👇 IMPORTA LA INTERFAZ DESDE SU ARCHIVO ORIGINAL
+import { CHAT_CONFIG_TOKEN } from '../tokens/chat.token'; // Asegúrate de la ruta
 import { ChatConfig } from '../interfaces/chat-config';
 
 export interface ChatMessage {
@@ -11,29 +10,27 @@ export interface ChatMessage {
   timestamp: Date;
 }
 
-@Injectable({ providedIn: 'root' })
+// ⚠️ NOTA: Quitamos providedIn: 'root' para forzar su provisión vía configuración
+@Injectable()
 export class AiService {
   private http = inject(HttpClient);
-  private config = inject(CHAT_CONFIG);
+  private config = inject(CHAT_CONFIG_TOKEN); // Inyección segura del token
 
-  // 🚫 BORRA la definición de "export interface ChatConfig" que tenías aquí
-
-  private apiUrl_ai = this.config.apiUrl_ai;
   private sessionId = 'web-' + crypto.randomUUID();
 
+  // Signals
   messages = signal<ChatMessage[]>([
-    { text: '👋 Hola, soy tu Asistente de Operaciones. ¿En qué puedo ayudarte hoy?', sender: 'bot', timestamp: new Date() }
+    { text: `👋 Hola, soy tu ${this.config.title || 'Asistente'}. ¿En qué puedo ayudarte?`, sender: 'bot', timestamp: new Date() }
   ]);
-
   isLoading = signal<boolean>(false);
 
   sendMessage(query: string) {
-    if (!query.trim() || !this.apiUrl_ai) return;
+    if (!query.trim() || !this.config.apiUrl_ai) return;
 
     this.updateChat(query, 'user');
     this.isLoading.set(true);
 
-    this.http.post<{ output: string }>(this.apiUrl_ai, {
+    this.http.post<{ output: string }>(this.config.apiUrl_ai, {
       chatInput: query,
       sessionId: this.sessionId
     }).pipe(

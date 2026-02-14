@@ -4,7 +4,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 
 import { routes } from './app.routes';
 import { authInterceptor } from './core/auth/auth.interceptor';
-import { CHAT_CONFIG } from 'ui-chat';
+import { AiService, CHAT_CONFIG_TOKEN } from 'ui-chat';
 import { environment } from '@env/environment';
 
 export const appConfig: ApplicationConfig = {
@@ -12,8 +12,9 @@ export const appConfig: ApplicationConfig = {
     provideZonelessChangeDetection(),
     provideRouter(routes),
     provideHttpClient(withInterceptors([authInterceptor])),
+    AiService,
     {
-      provide: CHAT_CONFIG,
+      provide: CHAT_CONFIG_TOKEN,
       useValue: {
         apiUrl_ai: environment.apiUrl_ai,
         logoUrl: 'assets/images/logo_hotel_san_jose.png',

@@ -3,7 +3,7 @@
 ### CloudFree Architecture: Orquestación de IA & Microservicios (Self-Hosted)
 
 > **Arquitecto:** Francisco Pérez (Senior Systems Engineer | PMP | Full Stack)
-> **Core Stack:** n8n v2.4.6, Docker, PostgreSQL (pgvector + JSONB), Node.js, OpenAI (GPT-4o) & Flux (Image Gen), Angular 21.
+> **Core Stack:** n8n v2.4.6, Docker, PostgreSQL (pgvector + JSONB), Node.js, OpenAI (GPT-4o) & Flux (Image Gen), Angular 21 (Signals).
 > **Infraestructura:** CloudFree VPS (Hardened Linux).
 
 ---
@@ -15,7 +15,7 @@ Suite de automatización empresarial de **grado industrial** diseñada bajo la f
 Esta arquitectura transforma la automatización convencional en un **Hub de Servicios Inteligente** que garantiza:
 
 1. **Soberanía Total de Datos:** Despliegue 100% Self-Hosted (Sin Vendor Lock-in).
-2. **Cost-Efficiency:** Uso de modelos de IA optimizados (Turbo/Flux) y almacenamiento vectorial propio.
+2. **Cost-Efficiency:** Uso de modelos de IA optimizados y generación de medios sin coste de API (Pollinations/Flux).
 3. **Alta Disponibilidad:** Orquestación mediante Docker con redes internas de latencia cero.
 4. **Seguridad Corporativa:** Gestión de identidad RBAC y validación de tokens RS256.
 
@@ -28,13 +28,11 @@ El ecosistema opera en un entorno de alta densidad, maximizando los recursos del
 | Servicio | Tecnología | Función Crítica |
 | --- | --- | --- |
 | **Orquestador** | n8n v2.4.6 (Enterprise) | Motor lógico central. Manejo de concurrencia y reintentos (Retry Logic). |
-| **Media Gen** | Pollinations AI (Flux/Turbo) | **Nuevo:** Generación de assets visuales ilimitados sin coste de API. |
+| **Media Gen** | Pollinations AI (Flux) | Generación de assets visuales ilimitados mediante IA generativa. |
 | **Capa de Datos** | PostgreSQL + pgvector | Almacenamiento híbrido: Relacional (Negocio) + Vectorial (Memoria IA). |
-| **Social API** | Facebook Graph v23.0 | **Nuevo:** Integración nativa para publicación estable en Instagram/Facebook. |
 | **Seguridad** | Node.js (JWT Service) | Microservicio dedicado para firma y validación de tokens RS256. |
 | **Agentes IA** | OpenAI + LangChain | Razonamiento autónomo y RAG (Retrieval-Augmented Generation). |
-| **Frontend Hotel** | Angular 21 SPA | Dashboard administrativo con gestión de estado reactivo (Signals). |
-| **Frontend Pista** | Angular 21 PWA | WebApp progresiva para operaciones de tiempo real y cobros. |
+| **Frontends** | Angular 21 (Signals) | Aplicaciones Standalone optimizadas para SPA (Dashboard) y PWA (Pista). |
 
 ---
 
@@ -80,40 +78,26 @@ Capa de abstracción SQL que actúa como un **Backend as a Service (BaaS)** unif
 
 Implementación del **Model Context Protocol**. Expone herramientas de base de datos a la IA (Claude/Gemini/GPT), permitiendo consultas de inventario y modificaciones en tiempo real mediante lenguaje natural.
 
-### 8. 🏨 AdminHotel Dashboard (v0.7)
+### 🏨 08. AdminHotel Dashboard (v0.8.0 - Eco-Hotel Transformation)
 
-Cliente Web SPA para la gestión hotelera integral.
+ERP integral para la gestión hotelera.
 
-* **Core:** Angular 21 + Tabler UI.
-* **QA Module:** Sistema de "Rondines" con formularios dinámicos y "Smart Merge".
+* **Eco-Strategy:** Gestión diferenciada de **CAPEX vs OPEX** para remodelaciones.
+* **Mantenimiento Pro:** Sistema de tickets con máquina de estados automática.
+* **Inventario Digital:** Control de activos físicos y garantías por habitación.
 
-### 9. ⛸️ PistaHielo Operations Center (v0.6)
+### ⛸️ 09. PistaHielo Operations Center (v0.7.1 - Ops AI)
 
-PWA Administrativa para gestión de entretenimiento.
+PWA Administrativa para gestión de centros de entretenimiento.
 
-* **Billing Engine:** Motor de cobro de alta precisión con soporte para turnos nocturnos ("Midnight Crossing").
-* **Ops:** Reportes financieros de Corte Z en tiempo real.
+* **Billing Engine:** Motor de cobro con soporte para **"Midnight Crossing"**.
+* **Live Monitor:** El "Rack" de patines activos con sincronización en tiempo real.
 
----
+### 💬 10. Shared AI Chat Library (v1.0.0)
 
-## 🚀 Despliegue Rápido
+Librería transversal de Angular (**Shared Lib**) diseñada bajo el patrón de Componente Agnóstico.
 
-```bash
-# 1. Clonar repositorio
-git clone [https://github.com/tu-usuario/n8n-enterprise-suite.git](https://github.com/tu-usuario/n8n-enterprise-suite.git)
-
-# 2. Configurar Entorno (CloudFree Strategy)
-cp .env.example .env
-# Ajustar POSTGRES_USER, OPENAI_API_KEY, FB_PAGE_ACCESS_TOKEN
-
-# 3. Levantar Infraestructura
-cd infrastructure
-docker-compose up -d --build
-
-# 4. Verificar Salud de Servicios
-docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-
-```
+* **DRY Architecture:** Elimina la redundancia de código conectando cualquier frontend con los agentes de n8n mediante **Injection Tokens**.
 
 ---
 
@@ -131,24 +115,28 @@ docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 | `08`|**AdminHotel Dashboard**|Frontend administrativo para gestión de reservas y habitaciones.|`Angular 21` `Tabler` `Vitest`|[📖 Ver Docs](hosting3m-workspace/projects/dashboard/README.md)|
 | `09`|**PistaHielo Ops Center**|PWA para gestión de rentas por tiempo y cortes de caja.|`Angular 21` `Signals` `PWA`|[📖 Ver Docs](hosting3m-workspace/projects/pista-hielo/README.md)|
 | `10`|**Shared AI Chat Lib**|Librería agnóstica de chat IA reutilizable con configuración dinámica.|`Angular 21` `InjectionToken`|[📖 Ver Docs](hosting3m-workspace/projects/ui-chat/README.md)|
+
 ---
 
 ## 📈 Roadmap & Gestión de Proyectos
 
 ### ✅ Completado (Q1 2026)
 
-* [x] **Social Media Fix:** Implementación exitosa de Facebook Graph API para publicación estable en Instagram Business.
-* [x] **Visual Upgrade:** Integración de Pollinations.ai para generación de imágenes "Cost-Free".
-* [x] **Infraestructura:** Migración a stack **CloudFree** optimizado.
+* [x] **Eco-Hotel Phase I:** Módulos de Mantenimiento, Activos y Finanzas CAPEX (Dashboard v0.8.0).
+* [x] **Modularidad Frontend:** Migración a Workspace con Librería Compartida `ui-chat`.
+* [x] **CloudFree Media:** Integración de Pollinations.ai para generación de imágenes ilimitadas.
 
 ### 🏗️ En Progreso (Q2 2026)
 
-* [ ] **Stories Automation:** Implementación de "Link Stickers" automatizados en Instagram Stories para tráfico directo.
-* [ ] **AI Supervisor:** Agente de control de calidad para auditar las respuestas del bot de WhatsApp.
+* [ ] **Huéspedes CRM:** Inteligencia de cliente y etiquetas de segmentación eco-boutique.
+* [ ] **Sustentabilidad:** Módulo de métricas de consumo de luz y agua (Eco-Metrics).
 
 ---
 
-Desarrollado por: **Francisco Jesus Pérez Pimienta**
+## 📦 Authors
 
-* **Senior Systems Engineer | PMP | Full Stack**
-* *Especialista en Automatización de Procesos, Bases de Datos & AI Integration.*
+**Francisco Jesus Pérez Pimienta** *Senior Systems Architect & Project Lead* Hosting3M Automation Suite
+
+---
+
+*Built with the assistance of AI-powered development tools.*

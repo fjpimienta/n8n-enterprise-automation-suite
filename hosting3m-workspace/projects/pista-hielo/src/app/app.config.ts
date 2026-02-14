@@ -1,7 +1,7 @@
-import { CHAT_CONFIG } from 'ui-chat';
 import { ApplicationConfig, importProvidersFrom } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { routes } from './app.routes';
+import { CHAT_CONFIG_TOKEN, AiService } from 'ui-chat';
 // 1. IMPORTANTE: Agregar 'withInterceptors' aquí
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 
@@ -26,8 +26,9 @@ export const appConfig: ApplicationConfig = {
       withFetch(),
       withInterceptors([authInterceptor])
     ),
+    AiService,
     {
-      provide: CHAT_CONFIG,
+      provide: CHAT_CONFIG_TOKEN,
       useValue: {
         apiUrl_ai: environment.apiUrl_ai,
         title: 'Asistente Pista Hielo',
