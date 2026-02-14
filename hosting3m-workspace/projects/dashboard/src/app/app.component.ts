@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { AuthService } from '@core/services/auth.service';
-import { AiChatComponent } from '@features/ai-assistant/components/ai-chat/ai-chat.component';
+import { AiChatComponent } from 'ui-chat';
 
 @Component({
   selector: 'app-root',
