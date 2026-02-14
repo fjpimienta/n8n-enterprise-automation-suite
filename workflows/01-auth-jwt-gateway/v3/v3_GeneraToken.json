@@ -77,7 +77,7 @@
             },
             {
               "name": "pass",
-              "value": "={{ $json.body.pass || \"1234567890\" }}"
+              "value": "={{ $json.body.pass || $env[\"N8N_PASS\"] }}"
             }
           ]
         },
@@ -150,7 +150,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "errorWorkflow": "9SrVXdATmlrZemJT"
   },
-  "versionId": "8a9697f8-2599-4d50-b54d-b85f0c6a6343",
+  "versionId": "3ce04278-269c-4182-9e64-af76787ca760",
   "meta": {
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
   },
