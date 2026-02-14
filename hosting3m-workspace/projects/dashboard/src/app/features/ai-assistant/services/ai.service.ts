@@ -19,7 +19,7 @@ export class AiService {
 
   // Estado reactivo del chat
   messages = signal<ChatMessage[]>([
-    { text: '👋 Hola, soy tu Asistente de Operaciones. ¿En qué puedo ayudarte hoy?', sender: 'bot', timestamp: new Date() }
+    { text: '👋 Hola, soy tu Asistente de Operaciones del Hotel San Jose. ¿En qué puedo ayudarte hoy?', sender: 'bot', timestamp: new Date() }
   ]);
 
   isLoading = signal<boolean>(false);

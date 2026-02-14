@@ -1,22 +1,27 @@
-# Changelog - UI Chat Library
-Todos los cambios notables en la librería **ui-chat** serán documentados en este archivo.
+# Changelog
 
-## [0.3.0] - 2026-02-09
-### 🚀 Lanzamiento Inicial (MVP)
-- **Core Chat Widget:** Implementación del componente flotante de chat con diseño responsivo.
-    - Soporte para mensajes de usuario (derecha) y asistente (izquierda).
-    - Animación de entrada y salida del widget.
-    - Indicador visual de carga ("Typing indicator").
-- **Integration Layer:**
-    - Servicio HTTP optimizado para comunicarse con webhooks de n8n.
-    - Manejo automático de `sessionId` para persistencia de contexto en conversaciones largas.
-- **Configuración:**
-    - Implementación de `CHAT_CONFIG` token para inyectar la URL del backend dinámicamente desde la aplicación consumidora.
+All notable changes to the `ui-chat` library will be documented in this file.
 
-### 🐛 Fixes
-- **Auto-scroll:** Solucionado el problema donde el chat no bajaba automáticamente al recibir una respuesta larga del bot.
-- **Mobile View:** Ajuste de z-index para evitar que el chat quede detrás de elementos de navegación en móviles.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
----
+## [1.0.0] - 2026-02-14
+### 🚀 Initial Release
+First stable release of the shared communication module for Hosting3M Ecosystem.
+Designed to act as a bridge between Angular Frontends and n8n AI Agents.
 
-*Este changelog es mantenido automáticamente por el equipo de arquitectura.*
+### ✨ Features
+- **Standalone Components:** Full support for Angular Standalone APIs.
+- **AI Integration:** Native support for n8n Webhook communication via HTTP.
+- **Smart UI:**
+    - Chat bubbles with distinct styles for User vs. AI.
+    - Markdown rendering support within responses.
+    - Auto-scroll logic.
+- **Session Management:** Built-in `sessionId` handling (UUID v4).
+
+### 🏗 Architecture
+- **Dependency Injection:** Implemented `CHAT_CONFIG_TOKEN` for environment agility.
+- **Service Layer:** `AiService` decoupled from root injector to allow per-app configuration.
+
+### 📦 Integration
+- Exposed `AiChatComponent` and `AiService` for direct consumption by `dashboard` and `pista-hielo`.
