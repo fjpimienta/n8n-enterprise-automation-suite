@@ -255,7 +255,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={\n    \"operation\": \"getAll\"\n}",
+        "jsonBody": "={\n  \"operation\": \"getall\",\n  \"fields\": {\n    \"published_at\": { \"_gt\": \"2000-01-01\" }\n  },\n  \"sort_by\": \"published_at\",\n  \"limit\": 6\n}",
         "options": {
           "response": {
             "response": {
@@ -339,7 +339,7 @@
             {
               "id": "dd4c5764-354c-4088-9bc4-4fb19cba4d8b",
               "name": "pass",
-              "value": "1234567890",
+              "value": "={{$env[\"N8N_PASS\"]}}",
               "type": "string"
             }
           ]
@@ -377,7 +377,7 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        6128,
+        6112,
         976
       ],
       "id": "c00c506f-542f-49e3-91fc-43fb957965f0",
@@ -541,7 +541,7 @@
     "errorWorkflow": "9SrVXdATmlrZemJT",
     "timeSavedPerExecution": 1
   },
-  "versionId": "37f1a0c3-abb4-46c4-8a77-eeef104eaaee",
+  "versionId": "349d822d-afc5-437f-b207-c1063018cf9e",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"

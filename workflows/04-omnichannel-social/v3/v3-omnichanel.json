@@ -559,7 +559,7 @@
             {
               "id": "dd4c5764-354c-4088-9bc4-4fb19cba4d8b",
               "name": "pass",
-              "value": "1234567890",
+              "value": "={{$env[\"N8N_PASS\"]}}",
               "type": "string"
             }
           ]

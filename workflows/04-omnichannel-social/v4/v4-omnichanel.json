@@ -1,12 +1,12 @@
 {
-  "name": "v3/OmniChannel",
+  "name": "v4/OmniChannel",
   "nodes": [
     {
       "parameters": {
         "triggerTimes": {
           "item": [
             {
-              "hour": 8,
+              "hour": 7,
               "minute": 5
             }
           ]
@@ -18,7 +18,7 @@
       "typeVersion": 1,
       "position": [
         -2176,
-        7280
+        7504
       ]
     },
     {
@@ -57,7 +57,7 @@
       "typeVersion": 3.4,
       "position": [
         -704,
-        7280
+        7504
       ],
       "id": "92a6a1bc-ae52-4013-92df-1555045b8375",
       "name": "SetX"
@@ -70,7 +70,7 @@
       "typeVersion": 2,
       "position": [
         192,
-        7280
+        7504
       ],
       "id": "b05d6326-50cb-4818-afe2-7474def2b9bb",
       "name": "SaveImage"
@@ -104,7 +104,7 @@
       "typeVersion": 4.3,
       "position": [
         1088,
-        7088
+        7312
       ],
       "id": "de492dc9-2229-4823-aa59-5d12186e50be",
       "name": "UploadImageX",
@@ -137,7 +137,7 @@
       "typeVersion": 1,
       "position": [
         640,
-        6800
+        7024
       ],
       "credentials": {
         "facebookGraphApi": {
@@ -157,7 +157,7 @@
       "typeVersion": 2,
       "position": [
         864,
-        6800
+        7024
       ],
       "onError": "continueRegularOutput"
     },
@@ -190,7 +190,7 @@
       "typeVersion": 4.3,
       "position": [
         1536,
-        6704
+        6928
       ],
       "onError": "continueRegularOutput"
     },
@@ -208,7 +208,7 @@
       "typeVersion": 1,
       "position": [
         1536,
-        7280
+        7504
       ],
       "id": "ffdc6c72-6471-4a76-b4f1-f2158dd0b692",
       "name": "Post Company",
@@ -233,7 +233,7 @@
       "typeVersion": 1,
       "position": [
         1536,
-        7472
+        7696
       ],
       "id": "5a3c23be-13ae-4348-9e9d-90ee59c842ae",
       "name": "Post Personal",
@@ -275,7 +275,7 @@
       "typeVersion": 4.3,
       "position": [
         -1504,
-        7280
+        7504
       ],
       "id": "7de1b60b-31cb-4b4b-8d0b-8bcd3d464142",
       "name": "Check Publish"
@@ -303,14 +303,14 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ \n  {\n    \"operation\": \"update\",\n    \"id\": $('Get Articles').first().json.data[0].id, \n    \"fields\": {\n      \"published_at\": new Date().toISOString()\n    }\n  } \n}}",
+        "jsonBody": "={{ \n  {\n    \"operation\": \"update\",\n    \"id\": $('Get Articles').first().json.data[0].id, \n    \"fields\": {\n      \"published_at\": new Date().toISOString(),\n      \"image\": $('SaveImage').first().json.image_url\n    }\n  } \n}}",
         "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
         2208,
-        7088
+        7312
       ],
       "id": "86be03bb-b188-4610-b463-726eb3be9083",
       "name": "HTTP Request"
@@ -323,7 +323,7 @@
       "typeVersion": 2,
       "position": [
         1312,
-        7088
+        7312
       ],
       "id": "141bc3b9-9078-4a96-a997-4cf19dc26ceb",
       "name": "Code in JavaScript"
@@ -364,7 +364,7 @@
       "typeVersion": 4.3,
       "position": [
         -1280,
-        7280
+        7504
       ],
       "id": "dacfeb50-6ccc-45c6-9fc2-6c6343f0b61e",
       "name": "Get Articles",
@@ -395,7 +395,7 @@
       "typeVersion": 1.3,
       "position": [
         -1728,
-        7280
+        7504
       ],
       "id": "9309951f-257a-4484-b2aa-e01500ac8dcc",
       "name": "Genera Token"
@@ -424,7 +424,7 @@
       "typeVersion": 3.4,
       "position": [
         -1952,
-        7280
+        7504
       ],
       "id": "f12c6abe-ebb9-4b43-88ac-8edd99db415a",
       "name": "Set User"
@@ -439,7 +439,7 @@
       "typeVersion": 3.4,
       "position": [
         640,
-        7616
+        7840
       ],
       "id": "0f8e4d08-4387-479b-a190-4a94f46d963f",
       "name": "Stop and Error"
@@ -459,7 +459,7 @@
       "typeVersion": 4.4,
       "position": [
         1536,
-        7088
+        7312
       ],
       "id": "dc363121-9e16-4b88-a122-28db7203edba",
       "name": "Create X",
@@ -499,7 +499,7 @@
       "typeVersion": 4.1,
       "position": [
         1088,
-        6896
+        7120
       ]
     },
     {
@@ -527,7 +527,7 @@
       "typeVersion": 4.1,
       "position": [
         1536,
-        6896
+        7120
       ]
     },
     {
@@ -536,7 +536,7 @@
       "typeVersion": 1.1,
       "position": [
         1312,
-        6896
+        7120
       ],
       "id": "58efa981-acb0-421c-8b7f-e15494cd074f",
       "name": "Wait",
@@ -552,7 +552,7 @@
       "typeVersion": 1.9,
       "position": [
         -1056,
-        7280
+        7504
       ],
       "id": "18d51d82-2527-4e8c-92c1-c013820702c7",
       "name": "AI Art Director"
@@ -571,8 +571,8 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
       "position": [
-        -984,
-        7504
+        -992,
+        7728
       ],
       "id": "fcc7be89-1156-4bfc-9479-f8b3df7bff76",
       "name": "OpenAI Chat Model1",
@@ -591,41 +591,10 @@
       "typeVersion": 2,
       "position": [
         -256,
-        7280
+        7504
       ],
       "id": "1d058729-5d1b-4a2c-b3af-2e62309285f9",
       "name": "Convert Image"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.openai.com/v1/images/generations",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Authorization",
-              "value": "=Bearer {{$env[\"OPENAI_API_KEY\"]}}"
-            },
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"model\": \"gpt-image-1\",\n  \"size\": \"1024x1024\",\n  \"prompt\": \"{{ $('AI Art Director').item.json.text }}\"\n}\n",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.4,
-      "position": [
-        -480,
-        7280
-      ],
-      "id": "70db6032-2b01-4929-9272-012c1b3b2447",
-      "name": "Generate Image OpenAI"
     },
     {
       "parameters": {
@@ -648,7 +617,7 @@
       "typeVersion": 4.4,
       "position": [
         -32,
-        7280
+        7504
       ],
       "id": "6649071a-60fa-4223-93f1-1d7713df63f5",
       "name": "Upload To Server"
@@ -681,7 +650,7 @@
       "typeVersion": 2.3,
       "position": [
         416,
-        7280
+        7504
       ],
       "id": "772d25eb-109d-46c4-8432-2c879a98c2dc",
       "name": "Imagen Guardada"
@@ -694,7 +663,7 @@
       "typeVersion": 3.2,
       "position": [
         1760,
-        7040
+        7264
       ],
       "id": "fcdf6c6a-9512-4604-8eaf-b3ef5d52bce5",
       "name": "Merge",
@@ -710,10 +679,41 @@
       "typeVersion": 2,
       "position": [
         1984,
-        7088
+        7312
       ],
       "id": "742980d9-f70d-4c8f-9181-78f6ad284895",
       "name": "Validar Posts"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/images/generations",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env[\"OPENAI_API_KEY\"]}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ \n{\n  \"model\": \"dall-e-3\",\n  \"n\": 1,\n  \"size\": \"1024x1024\",\n  \"response_format\": \"b64_json\",\n  \"prompt\": $('AI Art Director').item.json.text.replace(/[\\n\\r]/g, \" \").substring(0, 4000)\n}\n}}",
+        "options": {}
+      },
+      "id": "24f1dd5c-c31c-461e-a217-cd942ac8999c",
+      "name": "Generate Image OpenAI1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -480,
+        7504
+      ]
     }
   ],
   "pinData": {},
@@ -733,7 +733,7 @@
       "main": [
         [
           {
-            "node": "Generate Image OpenAI",
+            "node": "Generate Image OpenAI1",
             "type": "main",
             "index": 0
           }
@@ -954,17 +954,6 @@
         ]
       ]
     },
-    "Generate Image OpenAI": {
-      "main": [
-        [
-          {
-            "node": "Convert Image",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Upload To Server": {
       "main": [
         [
@@ -1030,6 +1019,17 @@
           }
         ]
       ]
+    },
+    "Generate Image OpenAI1": {
+      "main": [
+        [
+          {
+            "node": "Convert Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -1041,7 +1041,7 @@
     "timeSavedMode": "fixed",
     "timeSavedPerExecution": 5
   },
-  "versionId": "6d42ae6c-82c5-46d8-ad28-bc139a19a2b4",
+  "versionId": "e6b335e8-2ba4-4a5e-b73e-a4c959312aba",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
