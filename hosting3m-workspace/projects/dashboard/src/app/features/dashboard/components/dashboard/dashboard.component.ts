@@ -1,7 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { HttpClient } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
 import { Guest, User } from '@core/models/hotel.types';
 // Componentes Hijos
@@ -40,7 +39,6 @@ import { lastValueFrom } from 'rxjs';
   templateUrl: './dashboard.component.html'
 })
 export class DashboardComponent {
-  private http = inject(HttpClient);
   private router = inject(Router);
   private authService = inject(AuthService);
   public hotelService = inject(HotelService);

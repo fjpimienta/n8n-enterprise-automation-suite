@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { MaintenanceMonitorModal } from './maintenance-monitor-modal';
+import { MaintenanceMonitorModalComponent } from './maintenance-monitor-modal.component';
 
-describe('MaintenanceMonitorModal', () => {
-  let component: MaintenanceMonitorModal;
-  let fixture: ComponentFixture<MaintenanceMonitorModal>;
+describe('MaintenanceMonitorModalComponent', () => {
+  let component: MaintenanceMonitorModalComponent;
+  let fixture: ComponentFixture<MaintenanceMonitorModalComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [MaintenanceMonitorModal]
+      imports: [MaintenanceMonitorModalComponent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(MaintenanceMonitorModal);
+    fixture = TestBed.createComponent(MaintenanceMonitorModalComponent);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });
