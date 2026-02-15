@@ -85,7 +85,7 @@ export class IceMonitorComponent implements OnInit, OnDestroy {
     const enriched = transactions.map(t => {
       // A. Calcular Tiempo Transcurrido
       // Asumimos t.start_time viene como 'HH:mm:ss' y es del día de hoy
-      const [hours, mins] = t.start_time ? t.start_time.split(':').map(Number) : [0, 0];
+      const [hours, mins] = (t.start_time as string) ? (t.start_time as string).split(':').map(Number) : [0, 0];
       const startTimeDate = new Date();
       startTimeDate.setHours(hours, mins, 0);
 
@@ -94,7 +94,7 @@ export class IceMonitorComponent implements OnInit, OnDestroy {
       const elapsed = Math.max(0, Math.floor(diffMs / 60000)); // En minutos
 
       // B. Calcular Costos (Usando reglas del servicio)
-      const costInfo = this.iceService.calculateSessionCost(t.metadata, elapsed);
+      const costInfo = this.iceService.calculateSessionCost(t.metadata || {}, elapsed);
 
       // C. Resolver Nombre (Usando Cache)
       const realName = this.iceService.getClientName(t.client_id);
