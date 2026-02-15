@@ -1,16 +1,18 @@
+import { provideRouter } from '@angular/router';
 import { ClientListComponent } from './client-list.component';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 
-describe('ClientList', () => {
+describe('ClientListComponent', () => {
   let component: ClientListComponent;
   let fixture: ComponentFixture<ClientListComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ClientListComponent]
+      imports: [ClientListComponent],
+      providers: [provideRouter([])]
     })
-    .compileComponents();
+      .compileComponents();
 
     fixture = TestBed.createComponent(ClientListComponent);
     component = fixture.componentInstance;

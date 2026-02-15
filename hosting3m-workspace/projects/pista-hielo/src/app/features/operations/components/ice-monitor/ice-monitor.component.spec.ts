@@ -1,18 +1,21 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { IceMonitor } from './ice-monitor.component';
+import { IceMonitorComponent } from './ice-monitor.component';
+import { LucideAngularModule, RefreshCw } from 'lucide-angular';
 
-describe('IceMonitor', () => {
-  let component: IceMonitor;
-  let fixture: ComponentFixture<IceMonitor>;
+describe('IceMonitorComponent', () => {
+  let component: IceMonitorComponent;
+  let fixture: ComponentFixture<IceMonitorComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [IceMonitor]
+      imports: [IceMonitorComponent,
+        // 👇 Cargar el icono específico que pide el error
+        LucideAngularModule.pick({ RefreshCw })]
     })
-    .compileComponents();
+      .compileComponents();
 
-    fixture = TestBed.createComponent(IceMonitor);
+    fixture = TestBed.createComponent(IceMonitorComponent);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });
