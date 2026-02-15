@@ -1,0 +1,65 @@
+# --- SINCRONIZADO CON GITIGNORE ---
+node_modules/
+dist/
+tmp/
+out-tsc/
+bazel-out/
+coverage/
+.angular/cache
+.sass-cache/
+connect.lock
+typings/
+__screenshots__/
+
+# --- SISTEMA E IDE ---
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+.DS_Store
+Thumbs.db
+
+# --- CRÍTICO: HISTORIAL LOCAL VS CODE ---
+# Si la IA lee esto, consumirá tokens infinitos leyendo versiones viejas
+.history/
+
+# --- ARCHIVOS DE CONFIGURACIÓN VS CODE ---
+# Generalmente la IA no necesita leer tus settings personales para programar
+.vscode/
+
+# --- BLOQUEO DE DATOS PESADOS (Monorepo & Docker) ---
+# Evitamos que lea bases de datos, logs y volúmenes montados
+infrastructure/data/
+infrastructure/n8n_data/binaryData/
+infrastructure/n8n_data/logs/
+infrastructure/postgres/initdb/
+infrastructure/logs/
+data/postgres_db/
+data/n8n_data/
+logs/
+*.log
+npm-debug.log*
+yarn-error.log
+
+# --- ARCHIVOS DE BLOQUEO DE PAQUETES ---
+# Consumen muchos tokens y Claude infiere las versiones desde package.json
+package-lock.json
+yarn.lock
+
+# --- ASSETS BINARIOS ---
+# Imágenes y binarios que no aportan lógica
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.ico
+*.svg
+assets/images/
+public/assets/
+
+# --- REGLAS ESPECÍFICAS DE ANGULAR ---
+# Ignoramos la carpeta de compilación si se genera dentro del workspace
+hosting3m-workspace/dist/

@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { ExpenseFormModal } from './expense-form-modal.component';
+import { ExpenseFormModalComponent } from './expense-form-modal.component';
 
-describe('ExpenseFormModal', () => {
-  let component: ExpenseFormModal;
-  let fixture: ComponentFixture<ExpenseFormModal>;
+describe('ExpenseFormModalComponent', () => {
+  let component: ExpenseFormModalComponent;
+  let fixture: ComponentFixture<ExpenseFormModalComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ExpenseFormModal]
+      imports: [ExpenseFormModalComponent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(ExpenseFormModal);
+    fixture = TestBed.createComponent(ExpenseFormModalComponent);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });
