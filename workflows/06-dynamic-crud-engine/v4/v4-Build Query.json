@@ -1,5 +1,5 @@
 {
-  "name": "v3/Build Query",
+  "name": "v4/Build Query",
   "nodes": [
     {
       "parameters": {
@@ -8,10 +8,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        256,
-        -176
+        816,
+        48
       ],
-      "id": "3fe5b789-b5a3-4da3-b940-de5fb100fedb",
+      "id": "362c1910-58aa-43ca-98ef-68517723e131",
       "name": "Build Query"
     },
     {
@@ -21,20 +21,15 @@
       "type": "n8n-nodes-base.executeWorkflowTrigger",
       "typeVersion": 1.1,
       "position": [
-        32,
-        -176
+        592,
+        48
       ],
-      "id": "e6782894-4f2a-41e7-9ca0-b25d4c0f7500",
+      "id": "cb49bd71-a369-4808-ada4-9f2ec254f527",
       "name": "When Executed by Another Workflow"
     }
   ],
   "pinData": {},
   "connections": {
-    "Build Query": {
-      "main": [
-        []
-      ]
-    },
     "When Executed by Another Workflow": {
       "main": [
         [
@@ -55,10 +50,10 @@
     "availableInMCP": false,
     "errorWorkflow": "9SrVXdATmlrZemJT"
   },
-  "versionId": "157878c2-2122-4e34-bafd-f4343c98b8d9",
+  "versionId": "30708842-deec-4cd6-8528-545f89ccd2e6",
   "meta": {
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
   },
-  "id": "8a8OzpBuLa1C9wqk",
+  "id": "PRM7zAek1zKcR9hq",
   "tags": []
 }

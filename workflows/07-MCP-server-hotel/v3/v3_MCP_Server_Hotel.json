@@ -35,12 +35,12 @@
           "name": "Postgres account"
         }
       },
-      "notes": "Busca habitaciones que estén disponibles y limpias para venta."
+      "notes": "SOLO PARA DETALLES. Úsala únicamente si el usuario pide un número de habitación específico (ej: \"¿La 10 está libre?\") o para reservar una habitación concreta."
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT type, COUNT(*) as cantidad, price_night\nFROM hotel_rooms\nWHERE status = 'available' AND (cleaning_status = 'clean' OR cleaning_status = 'inspected')\nGROUP BY type, price_night;",
+        "query": "SELECT type, COUNT(*) as cantidad, price_night\nFROM hotel_rooms\nWHERE status = 'available' AND (cleaning_status = 'clean' OR cleaning_status = 'inspected')\nGROUP BY type, price_night\nLIMIT 20;\n",
         "options": {}
       },
       "type": "n8n-nodes-base.postgresTool",
@@ -57,7 +57,7 @@
           "name": "Postgres account"
         }
       },
-      "notes": "Busca habitaciones que estén disponibles y limpias para venta."
+      "notes": "HERRAMIENTA PRINCIPAL. Úsala para consultas generales como \"¿qué tienes disponible?\" o precios. Devuelve el conteo resumido por tipo y precio."
     },
     {
       "parameters": {
@@ -198,7 +198,7 @@
     "binaryMode": "separate",
     "timeSavedPerExecution": 3
   },
-  "versionId": "e7ef135e-4adf-47a3-9524-4375a1fc6bc2",
+  "versionId": "7fc4f0e5-3bf9-4551-8aea-fdf5144d2d92",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
@@ -206,16 +206,10 @@
   "id": "BYQpkACq5Yfc29mk",
   "tags": [
     {
-      "updatedAt": "2026-02-03T21:36:07.374Z",
-      "createdAt": "2026-02-03T21:36:07.374Z",
-      "id": "FCGak9sJuRjjJGfo",
-      "name": "v3"
-    },
-    {
-      "updatedAt": "2025-12-31T16:55:06.301Z",
-      "createdAt": "2025-12-31T16:55:06.301Z",
-      "id": "ts9FABk8F02a5xrA",
-      "name": "Agent IA"
+      "updatedAt": "2025-12-23T12:12:28.399Z",
+      "createdAt": "2025-12-23T12:12:28.399Z",
+      "id": "RWBzILPfFXEtEcLf",
+      "name": "AI Agent"
     },
     {
       "updatedAt": "2025-12-23T12:12:58.230Z",
@@ -224,10 +218,16 @@
       "name": "Chat"
     },
     {
-      "updatedAt": "2025-12-23T12:12:28.399Z",
-      "createdAt": "2025-12-23T12:12:28.399Z",
-      "id": "RWBzILPfFXEtEcLf",
-      "name": "AI Agent"
+      "updatedAt": "2025-12-31T16:55:06.301Z",
+      "createdAt": "2025-12-31T16:55:06.301Z",
+      "id": "ts9FABk8F02a5xrA",
+      "name": "Agent IA"
+    },
+    {
+      "updatedAt": "2026-02-03T21:36:07.374Z",
+      "createdAt": "2026-02-03T21:36:07.374Z",
+      "id": "FCGak9sJuRjjJGfo",
+      "name": "v3"
     }
   ]
 }

@@ -1,0 +1,961 @@
+{
+  "name": "v4/CRUD",
+  "nodes": [
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": "={{ $json.status ?? 200 }}"
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1600,
+        32
+      ],
+      "id": "028acbca-df2c-4189-a35a-945805a508b1",
+      "name": "Respond to Webhook",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "crud/v4/:model",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "https://hosting3m.com"
+        }
+      },
+      "id": "b37c9dca-4c33-4ed8-ab97-1e604a2947fb",
+      "name": "WebhookCRUD",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -3232,
+        48
+      ],
+      "webhookId": "ba815555-f67d-4e9b-b43e-1120ad7698c4"
+    },
+    {
+      "parameters": {
+        "jsCode": "// El modelo se captura de la URL path: /crud/:model\nconst modelName = $node[\"WebhookCRUD\"].json.params.model;\nconst requestBody = $node[\"WebhookCRUD\"].json.body;\n// Capturamos los headers aquí para pasarlos adelante\nconst headers = $node[\"WebhookCRUD\"].json.headers;\n\nif (!modelName) {\n  throw new Error('Parámetro faltante en URL: se requiere el nombre del modelo');\n}\n\nreturn [{\n    json: {\n        model_name: modelName,\n        headers: headers, // <-- Agregamos esto\n        ...requestBody \n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3008,
+        48
+      ],
+      "id": "1ce6a871-bb69-4173-bb5e-06d958bf980a",
+      "name": "Get Model Name"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "select * from crud_models where model_name='{{ $('Get Model Name').item.json.model_name }}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -2112,
+        -48
+      ],
+      "id": "cbf3553d-0d6a-44b7-b1ca-7587692f6104",
+      "name": "Get Model Config",
+      "retryOnFail": false,
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "27ec18a9-6d19-4c5b-b388-9b0a32264843",
+              "name": "model_config",
+              "value": "={{ $json }}",
+              "type": "object"
+            },
+            {
+              "id": "b852315d-2a90-4979-a0f7-a3649edecad5",
+              "name": "body",
+              "value": "={{ $('WebhookCRUD').item.json.body }}",
+              "type": "object"
+            },
+            {
+              "id": "f468dffb-69ae-4df4-8acd-e6b11f93a073",
+              "name": "operation",
+              "value": "={{ $('WebhookCRUD').item.json.body.operation }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        32,
+        -48
+      ],
+      "id": "e87d0cb6-efc9-4d5b-bca2-cc36054a2d26",
+      "name": "Prepare Subworkflow Input"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "9480a411-c509-4994-b9dd-c57519b1c1e2",
+              "name": "data",
+              "value": "={{ $json.error ? [] : $input.all().map(item => item.json) }}",
+              "type": "array"
+            },
+            {
+              "id": "ca19a287-6b7a-4732-8f2d-4ea53e5ee8fa",
+              "name": "operation",
+              "value": "={{ $item(0, 0).$node[\"Get Model Name\"].json.operation }}",
+              "type": "string"
+            },
+            {
+              "id": "0ee83d12-cbad-49a3-b23e-48870cf02936",
+              "name": "error",
+              "value": "={{ $json.error ? true : false }}",
+              "type": "boolean"
+            },
+            {
+              "id": "5fb468ab-a3f8-4c7a-b341-6a0aafc48e36",
+              "name": "message",
+              "value": "={{ $json.error ? $json.message + ' - ' + $json.error.description : 'Ejecución satisfactoria' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        704,
+        -48
+      ],
+      "id": "b41384e0-a9ee-49ef-a8d7-3889a62ea440",
+      "name": "Prepare Normalize"
+    },
+    {
+      "parameters": {
+        "jsCode": "const modelConfig = $node[\"Get Model Config\"].json;\nconst webhookBody = $node[\"WebhookCRUD\"].json.body || {};\nconst operation = (webhookBody.operation || \"\").toLowerCase();\nconst bodyFields = webhookBody.fields || {};\n\n// SOLO validamos campos requeridos si es INSERT o UPDATE\nif ([\"insert\", \"update\"].includes(operation)) {\n    if (modelConfig.schema_json) {\n        const schema = modelConfig.schema_json;\n        Object.keys(schema).forEach(field => {\n            if (schema[field].required === true) {\n                if (bodyFields[field] === undefined || bodyFields[field] === null) {\n                    // throw new Error(`Campo requerido faltante: ${field}`);\n                    return {\n                      json: {\n                        error: true,\n                        status: 400,\n                        message: `Campo requerido faltante: ${field}`,\n                        code: \"SCHEMA_VALIDATION\"\n                      }\n                    };\n                }\n            }\n        });\n    }\n}\n\nreturn { json: { ...modelConfig, validated: true } };"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -640,
+        -144
+      ],
+      "id": "ca384b19-3f9d-45de-b053-ec7332e2f717",
+      "name": "Schema Validate"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT \n    c.column_name, \n    c.data_type,\n    kcu.table_name AS foreign_table,\n    kcu.column_name AS foreign_column\nFROM information_schema.columns c\nLEFT JOIN information_schema.key_column_usage kcu \n    ON c.table_name = kcu.table_name \n    AND c.column_name = kcu.column_name \n    AND kcu.position_in_unique_constraint IS NOT NULL\nWHERE c.table_name = '{{$node[\"Get Model Name\"].json.model_name}}';",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1664,
+        48
+      ],
+      "id": "4cb692d3-3deb-48d1-9f61-94a412b76692",
+      "name": "Get",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list",
+          "cachedResultName": "GPT-4O"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "=Eres un arquitecto de bases de datos. Tu salida debe ser estrictamente un objeto JSON que represente la configuración de un modelo CRUD.\n\nBasado en estas columnas de la tabla '{{ $node[\"Get Model Name\"].json.model_name }}': \n{{ $json.data.map(c => c.column_name + \" (\" + c.data_type + \")\" + (c.foreign_table ? \" [FK -> \" + c.foreign_table + \".\" + c.foreign_column + \"]\" : \"\")).join(\", \") }}\n\nGenera un JSON con esta estructura:\n{\n  \"table_name\": \"{{ $node[\"Get Model Name\"].json.model_name }}\",\n  \"primary_key\": \"identifica_la_pk_o_id\",\n  \"allowed_fields\": [\"lista_de_todas_las_columnas\"],\n  \"schema_json\": { \n     \"campo\": {\"type\": \"string|number|boolean\", \"required\": false} \n  },\n  \"joins\": [\n     { \"table\": \"nombre_tabla_destino\", \"own_col\": \"mi_columna_fk\", \"foreign_col\": \"columna_destino_pk\" }\n  ],\n  \"allowed_ops\": [\"SELECT\", \"INSERT\", \"UPDATE\", \"DELETE\", \"GETALL\", \"GETONE\"],\n  \"allowed_roles_select\": \"ADMIN,EDITOR,CUSTOMER\",\n  \"allowed_roles_insert\": \"ADMIN,EDITOR\",\n  \"allowed_roles_update\": \"ADMIN,EDITOR\",\n  \"allowed_roles_delete\": \"ADMIN\",\n  \"hooks\": {\"pre\": [], \"post\": []}\n}\n\nINSTRUCCIONES CLAVE:\n1. Para la primary_key: identifica la columna que sea PRIMARY KEY en la base de datos. Si no hay una columna llamada 'id', observa las columnas proporcionadas y elige la que actúe como identificador único (ej. 'email' o 'code'). No inventes nombres de columnas que no estén en la lista recibida.\n\n2. Para los joins: Analiza la lista de columnas proporcionada arriba. Si alguna columna tiene la etiqueta \"[FK -> tabla.columna]\", significa que es una llave foránea. Agrega un objeto al array \"joins\" usando esos datos.\n   - \"table\": la tabla a la que apunta la FK.\n   - \"own_col\": la columna de esta tabla (ej. id_company).\n   - \"foreign_col\": la columna de la otra tabla (ej. id_company).\n   Si no hay columnas marcadas como FK, devuelve \"joins\": []."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "textFormat": {
+            "textOptions": {
+              "type": "json_schema"
+            }
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        -1216,
+        48
+      ],
+      "id": "8a1d7ac3-6905-402b-8934-8051513db280",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "J2Srua9BlEesUnWy",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        -1440,
+        48
+      ],
+      "id": "5d953ac7-5c3a-4bcc-9df8-f82355000341",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Acceder al contenido de la IA (Viene del nodo anterior)\nconst aiOutput = $json.output?.[0]?.content?.[0]?.text?.message;\n\nif (!aiOutput) {\n  throw new Error(\"No se encontró contenido en la respuesta de la IA.\");\n}\n\ntry {\n  // 2. Parsear el JSON generado por la IA\n  const cleanJson = JSON.parse(aiOutput);\n  \n  // 3. Obtener las columnas reales (Usamos $(...).all() para obtener los datos del nodo Get)\n  // El nodo 'Aggregate' unifica todo, pero 'Get' tiene la lista original de columnas.\n  const getOutput = $(\"Get\").all();\n  const realColumns = getOutput.map(item => item.json.column_name);\n  \n  if (realColumns.length === 0) {\n    throw new Error(\"No se pudieron recuperar las columnas del nodo 'Get'.\");\n  }\n\n  let finalPK = cleanJson.primary_key;\n\n  // 4. VALIDACIÓN DE LA PRIMARY KEY\n  if (!realColumns.includes(finalPK)) {\n    // Si la IA inventó algo, buscamos una real\n    const backupPK = realColumns.find(c => c.toLowerCase() === 'id' || c.toLowerCase().endsWith('_id')) \n                     || (cleanJson.table_name === 'users' && realColumns.includes('email') ? 'email' : null)\n                     || realColumns[0];\n    \n    finalPK = backupPK;\n  }\n\n  // 5. Retornar el objeto limpio para el INSERT\n  return [{\n    json: {\n      ...cleanJson,\n      primary_key: finalPK,\n      allowed_fields: realColumns, // Forzamos las columnas reales detectadas\n      schema_json: typeof cleanJson.schema_json === 'string' ? JSON.parse(cleanJson.schema_json) : cleanJson.schema_json,\n      hooks: cleanJson.hooks || { pre: [], post: [] }\n    }\n  }];\n\n} catch (e) {\n  throw new Error(\"Error al procesar configuración de IA: \" + e.message);\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -864,
+        48
+      ],
+      "id": "c47b6f0b-f667-474e-baaf-ee0900d47a70",
+      "name": "Parse IA"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO crud_models (\n  model_name, \n  table_name, \n  primary_key, \n  allowed_fields, \n  schema_json, \n  allowed_ops,\n  allowed_roles_select,\n  allowed_roles_insert,\n  allowed_roles_update,\n  allowed_roles_delete,\n  joins\n)\nVALUES (\n  '{{ $json.table_name }}', \n  '{{ $json.table_name }}', \n  '{{ $json.primary_key }}', \n  '{{ JSON.stringify($json.allowed_fields) }}'::jsonb, \n  '{{ JSON.stringify($json.schema_json) }}'::jsonb, \n  '{{ \"{\" + $json.allowed_ops.join(\",\") + \"}\" }}'::text[],\n  'ADMIN,EDITOR,CUSTOMER',\n  'ADMIN,EDITOR',\n  'ADMIN,EDITOR',\n  'ADMIN',\n  '{{ JSON.stringify($json.joins) }}'::jsonb\n)\nRETURNING *;",
+        "options": {
+          "largeNumbersOutput": "text"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -640,
+        48
+      ],
+      "id": "fba0c6d3-7794-4e03-9093-01cf046adc11",
+      "name": "Execute a SQL query",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a9c55b43-582c-4672-ab7d-1fecf1862d43",
+              "leftValue": "={{ $json.execution_info.has_post_hooks }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1152,
+        -48
+      ],
+      "id": "17ceec5f-4903-4427-b499-2070f671d36a",
+      "name": "Check Post-Hooks"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO crud_logs (model_name, operation, user_role, status_code, payload, response_summary)\nVALUES (\n  '{{ $node[\"Get Model Name\"].json.model_name }}',\n  '{{ $node[\"Get Model Name\"].json.operation }}',\n  '{{ $node[\"Security Validation\"].json.user_role || \"unknown\" }}',\n  {{ $json.error ? 400 : 200 }},\n  '{{ JSON.stringify($node[\"WebhookCRUD\"].json.body) }}'::jsonb,\n  '{{ JSON.stringify({ count: $json.data?.length || 0, success: !$json.error }) }}'::jsonb\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1376,
+        -128
+      ],
+      "id": "87637bee-ebb0-498b-8278-408729e102bd",
+      "name": "Insert Logs",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4e51710f-891e-44f5-979c-7aaad6c76256",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1376,
+        176
+      ],
+      "id": "55f7c9aa-3d90-41c8-b5d2-0561c96bcc7e",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "jsCode": "let role = null;\nconst modelName = $(\"Get Model Name\").first().json.model_name;\n\n// Intentamos obtener el token de forma segura\ntry {\n  const verifyTokenNode = $(\"Verify Token\").first();\n  if (verifyTokenNode && verifyTokenNode.json.status === \"success\") {\n    role = verifyTokenNode.json.data?.user?.role;\n  }\n} catch (error) {\n  // Si entra aquí es porque 'Verify Token' no se ejecutó (camino público)\n  // No hacemos nada, dejamos que role siga siendo null para validarlo abajo\n}\n\n// Lógica de asignación\nif (!role && modelName === 'companys') {\n  role = 'CUSTOMER'; \n}\n\nif (!role) {\n  return [{\n    json: {\n      error: true,\n      status: 401,\n      message: \"Acceso denegado: Se requiere autenticación o modelo no público.\",\n      code: \"NO_ROLE\"\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    user: {\n      role: role.toUpperCase()\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -416,
+        -48
+      ],
+      "id": "be6371e3-3f2c-4bf6-abde-f8d5569a81c8",
+      "name": "Extract Auth Context"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Obtener datos de entrada\nconst authContext = $json;\n\n// 2. Acceder al Webhook original de forma segura (usando .first() para saltar ramas)\nconst webhookData = $('WebhookCRUD').first().json;\nconst body = webhookData.body || {};\n\n// Capturamos 'action' o 'operation' (Angular mandó 'action': 'list')\nconst operationRaw = (body.action || body.operation || \"\").toLowerCase();\n\n// VALIDACIÓN DE OPERACIÓN FALTANTE\nif (!operationRaw) {\n  return [{\n    json: {\n      error: true,\n      status: 400,\n      message: \"No se especificó ninguna acción u operación (list, insert, etc.)\",\n      code: \"MISSING_OPERATION\"\n    }\n  }];\n}\n\nconst userRole = authContext.user?.role;\nif (!userRole) {\n  return [{\n    json: {\n      error: true,\n      status: 401,\n      message: \"Acceso Denegado: Rol de usuario no definido.\",\n      code: \"AUTH_ERROR\"\n    }\n  }];\n}\n\n// 3. Mapeo de operaciones\nconst opMapping = { \n    'list': 'select',\n    'getall': 'select',\n    'getone': 'select',\n    'insert': 'insert',\n    'update': 'update',\n    'delete': 'delete'\n};\n\nconst opToValidate = opMapping[operationRaw] || 'select';\n\n// 4. Obtener la configuración del modelo (viene de Schema Validate o Execute SQL)\nconst modelConfig = $('Schema Validate').first().json;\n\n// 5. Verificación de permisos de Operación\nconst allowedOps = Array.isArray(modelConfig.allowed_ops) ? modelConfig.allowed_ops : [];\nconst isOpAllowed = allowedOps.map(op => op.toLowerCase()).includes(opToValidate);\n\nif (!isOpAllowed) {\n  return [{\n    json: {\n      error: true,\n      status: 403,\n      message: `Operación ${operationRaw.toUpperCase()} no permitida para este modelo.`,\n      code: \"OPERATION_NOT_ALLOWED\"\n    }\n  }];\n}\n\n// 6. Verificación de Rol contra la DB\nconst roleKey = `allowed_roles_${opToValidate}`;\n\nconst allowedRolesStr = modelConfig[roleKey] || \"\"; // Si no existe la columna, queda vacío\nif (!allowedRolesStr) {\n    return [{\n        json: {\n            error: true,\n            status: 500,\n            message: `Configuración de seguridad faltante: No se encontró la columna ${roleKey} en la tabla crud_models.`,\n            code: \"CONFIG_ERROR\"\n        }\n    }];\n}\n\nconst allowedRolesList = allowedRolesStr.split(',').map(r => r.trim().toUpperCase());\nif (!allowedRolesList.includes(userRole.toUpperCase())) {\n  return [{\n    json: {\n      error: true,\n      status: 403,\n      message: `Prohibido: El rol '${userRole}' no tiene permiso para '${operationRaw.toUpperCase()}'`,\n      code: \"SECURITY_VALIDATION\"\n    }\n  }];\n}\n\n// TODO OK: Retornar configuración con bandera de éxito\nreturn [{\n  json: {\n    ...modelConfig,\n    user_role: userRole,\n    operation: opToValidate,\n    error: false\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -192,
+        -48
+      ],
+      "id": "c2448815-b5a0-4178-b1bd-f2d2fa8bfc60",
+      "name": "Security Validation",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"mensaje\": \"Acceso denegado\"}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -2112,
+        176
+      ],
+      "id": "060b2dfd-7fd1-4371-bae2-fb6946216cc6",
+      "name": "Respond Denegate"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "51275301-bea2-454d-b495-3f942bbdb9e6",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "success",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -2336,
+        128
+      ],
+      "id": "17edffd1-ab41-49a4-8728-f06e85136d1c",
+      "name": "IsValid"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "daf1f3be-cb12-43e4-a9f8-473f81ce4c81",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1888,
+        -48
+      ],
+      "id": "346c69d7-d97b-4d18-8b7e-8d9f8174e551",
+      "name": "ModelExist"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "RSz6L3aXj3NfumwG",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/RSz6L3aXj3NfumwG",
+          "cachedResultName": "v3/SW ValidaToken"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        -2560,
+        128
+      ],
+      "id": "15dd953a-16aa-4336-a7da-cf38840903f9",
+      "name": "Verify Token"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "PRM7zAek1zKcR9hq",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/PRM7zAek1zKcR9hq",
+          "cachedResultName": "v4/Build Query"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        928,
+        -48
+      ],
+      "id": "c9c63619-3c9e-47a9-b702-c0439e6166b0",
+      "name": "Call 'v3/Build Query'1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "486f8b85-8a54-43a3-9906-d6b30920337b",
+              "leftValue": "={{ $json.model_name }}",
+              "rightValue": "companys",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "09616ea5-1d1c-4e89-a59b-5e711a3b20b8",
+              "leftValue": "={{ $json.operation }}",
+              "rightValue": "getall",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -2784,
+        48
+      ],
+      "id": "71ba0826-b1c8-4e7e-9a82-07f9b2c7f0e1",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "{{$json.query}}",
+        "options": {
+          "queryReplacement": "={{$json.values}}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        480,
+        -48
+      ],
+      "id": "fc9950dc-4b8f-4a58-9465-9f6e0be09714",
+      "name": "Execute SQL",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "PRM7zAek1zKcR9hq",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/PRM7zAek1zKcR9hq",
+          "cachedResultName": "v4/Build Query"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        256,
+        -48
+      ],
+      "id": "2a841700-7b81-4247-96c3-e8f776201f42",
+      "name": "Call 'v4/Build Query'"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "WebhookCRUD": {
+      "main": [
+        [
+          {
+            "node": "Get Model Name",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Model Name": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Model Config": {
+      "main": [
+        [
+          {
+            "node": "ModelExist",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Subworkflow Input": {
+      "main": [
+        [
+          {
+            "node": "Call 'v4/Build Query'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Normalize": {
+      "main": [
+        [
+          {
+            "node": "Call 'v3/Build Query'1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schema Validate": {
+      "main": [
+        [
+          {
+            "node": "Extract Auth Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Parse IA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse IA": {
+      "main": [
+        [
+          {
+            "node": "Execute a SQL query",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute a SQL query": {
+      "main": [
+        [
+          {
+            "node": "Extract Auth Context",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Post-Hooks": {
+      "main": [
+        [
+          {
+            "node": "Insert Logs",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Logs": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Auth Context": {
+      "main": [
+        [
+          {
+            "node": "Security Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Security Validation": {
+      "main": [
+        [
+          {
+            "node": "Prepare Subworkflow Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IsValid": {
+      "main": [
+        [
+          {
+            "node": "Get Model Config",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Denegate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ModelExist": {
+      "main": [
+        [
+          {
+            "node": "Schema Validate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Token": {
+      "main": [
+        [
+          {
+            "node": "IsValid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'v3/Build Query'1": {
+      "main": [
+        [
+          {
+            "node": "Check Post-Hooks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Get Model Config",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Verify Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute SQL": {
+      "main": [
+        [
+          {
+            "node": "Prepare Normalize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call 'v4/Build Query'": {
+      "main": [
+        [
+          {
+            "node": "Execute SQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "9SrVXdATmlrZemJT",
+    "timeSavedMode": "fixed",
+    "timeSavedPerExecution": 1
+  },
+  "versionId": "ec4d1ae8-36e6-4465-a436-886b8bfca222",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
+  },
+  "id": "emMetC8yPU1RVsIG",
+  "tags": [
+    {
+      "updatedAt": "2025-12-31T16:55:06.301Z",
+      "createdAt": "2025-12-31T16:55:06.301Z",
+      "id": "ts9FABk8F02a5xrA",
+      "name": "Agent IA"
+    },
+    {
+      "updatedAt": "2025-12-20T20:03:46.545Z",
+      "createdAt": "2025-12-20T20:03:46.545Z",
+      "id": "jafWIhyZ3XGpyA6j",
+      "name": "Postgres"
+    },
+    {
+      "updatedAt": "2025-12-20T20:03:23.298Z",
+      "createdAt": "2025-12-20T20:03:23.298Z",
+      "id": "UUN2qPnY76eYwC1y",
+      "name": "CRUD"
+    },
+    {
+      "updatedAt": "2025-12-20T19:25:08.685Z",
+      "createdAt": "2025-12-20T19:25:08.685Z",
+      "id": "ljhw24TcxNVpCPyc",
+      "name": "Webhook"
+    }
+  ]
+}
