@@ -1,5 +1,5 @@
 {
-  "name": "v3/Normalize",
+  "name": "v4/Normalize",
   "nodes": [
     {
       "parameters": {
@@ -11,7 +11,7 @@
         -432,
         -112
       ],
-      "id": "88eb8491-d521-4240-a930-eba828ed848f",
+      "id": "3f0644d3-6fd3-4c70-b054-42258fb257af",
       "name": "When Executed by Another Workflow"
     },
     {
@@ -24,7 +24,7 @@
         -256,
         -112
       ],
-      "id": "c9fa45e4-10d5-46a9-aee3-3890d6ec8ce0",
+      "id": "53b92463-21cd-4b3b-9858-750469ff778c",
       "name": "Normalize"
     }
   ],
@@ -50,10 +50,10 @@
     "availableInMCP": false,
     "errorWorkflow": "9SrVXdATmlrZemJT"
   },
-  "versionId": "f13035cd-6015-45e1-a267-a59fa3eba0b5",
+  "versionId": "dac8ee72-f612-43b5-a3c0-1f09bdb74bb7",
   "meta": {
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
   },
-  "id": "xehywaCPbjt5XfUd",
+  "id": "gtlS2zl4PuxYS8F1",
   "tags": []
 }
