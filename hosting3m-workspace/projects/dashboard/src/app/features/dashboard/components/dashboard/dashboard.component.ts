@@ -2,7 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { Guest, User } from '@core/models/hotel.types';
+import { Booking, Guest, Room, User } from '@core/models/hotel.types';
 // Componentes Hijos
 import { HeaderComponent } from '@features/dashboard/components/header/header.component';
 import { CheckinFormComponent } from '@features/booking/components/checkin-form/checkin-form.component';
@@ -28,6 +28,7 @@ import { ReportService } from '@features/finance/services/report.service';
 import { BookingService } from '@features/booking/services/booking.service';
 import { AdminService } from '@features/admin/services/admin.service';
 import { lastValueFrom } from 'rxjs';
+import { ApiResponse } from '@core/interfaces/api-response.interface';
 
 @Component({
   selector: 'app-dashboard',
@@ -56,11 +57,11 @@ export class DashboardComponent {
   showReportModal = false;
   collapsedGroups = signal<Set<string>>(new Set());
   expandedGroups = signal<Set<string>>(new Set());
-  maintenanceRoom = signal<any>(null);
+  maintenanceRoom = signal<Room | null>(null);
   showMaintenanceMonitor = false;
   maintenanceFilterRoomId: number | null = null;
 
-  activeBooking = signal<any>(null);
+  activeBooking = signal<Booking | any>(null);
   //dailyReport = { total: 0, paid: 0, pending: 0, transactions: [] as any[], periodLabel: 'Hoy' };
 
   tempUser: User = this.getEmptyUser();
@@ -116,61 +117,25 @@ export class DashboardComponent {
   }
 
   /* 2. SECCIÓN: INTERACCIÓN CON HABITACIONES */
-  async onSelectRoom(room: any) {
-    // CASO 1: Habitación en Mantenimiento 🛠️
+  async onSelectRoom(room: Room) {
     if (room.status === 'maintenance') {
-      // Abrimos el Monitor, pero le pasamos el ID de esta habitación
       this.maintenanceFilterRoomId = room.id;
       this.showMaintenanceMonitor = true;
-      return; // Detenemos aquí para no abrir otros modales
+      return;
     }
 
-    // CASO 2: Resto de estados (Tu lógica actual)
     this.viewMode.set('details');
     this.hotelService.selectRoom(room);
     this.activeBooking.set(null);
 
-    // 1. Si el estado es ocupado, buscamos OBLIGATORIAMENTE la estancia de hoy
-    if (room.status === 'occupied') {
-      const booking = await this.bookingService.getActiveBooking(room.id);
-      if (booking && booking.id) {
-        this.activeBooking.set(booking);
-      }
-    } else {
-      const allReservations = this.adminService.reservations();
-      // Buscamos si hay reserva para HOY
-      const todayStr = new Date().toLocaleDateString('sv-SE');
-      /*const res = allReservations.find(r =>
-        Number(r.room_id) === Number(room.id) &&
-        r.status === 'confirmed' &&
-        r.check_in.split(/[ T]/)[0] === todayStr
-      );*/
-      const res = allReservations.find(r => {
-        if (!r.check_in) return false; // Si no tiene fecha, no es el que buscamos
-
-        const reservationDate = r.check_in.split(/[ T]/)[0];
-        return Number(r.room_id) === Number(room.id) &&
-          r.status === 'confirmed' &&
-          reservationDate === todayStr;
-      });
-
-      if (res) {
-        // OPCIONAL: Si 'res' solo trae guest_id, podrías buscar el nombre del huésped aquí
-        // para que el formulario lo muestre de inmediato.
-        const guest = this.adminService.guests()?.find(g => g.id === res.guest_id);
-        this.activeBooking.set({
-          ...res,
-          guest_name: guest?.full_name,
-          guest_doc_id: guest?.doc_id,
-          guest_phone: guest?.phone,
-          guest_email: guest?.email
-        });
-      }
+    const booking = await this.bookingService.findActiveOrTodayReservation(room);
+    if (booking) {
+      this.activeBooking.set(booking);
     }
   }
 
   /* 3. SECCIÓN: CHECK-IN Y CHECK-OUT */
-  async handleCheckinSave(formData: any) {
+  async handleCheckinSave(formData: any) { // TODO: Define CheckinFormData interface
     const room = this.hotelService.selectedRoom();
     if (!room) return;
 
@@ -236,7 +201,7 @@ export class DashboardComponent {
   }
 
   /* Marca una reserva como pagada */
-  async markAsPaid(booking: any) {
+  async markAsPaid(booking: Booking | any) {
     if (!booking || !confirm(`¿Confirmar pago de $${booking.total_amount}?`)) return;
     try {
       await this.bookingService.registerPayment(booking.id);
@@ -311,7 +276,7 @@ export class DashboardComponent {
   }
 
   /* Abre el modal para editar un usuario existente */
-  editUser(user: any) {
+  editUser(user: User) {
     this.hotelService.selectUser(user);
     this.tempUser = { ...user, password: '' };
     this.isUserModalOpen.set(true);
@@ -346,7 +311,7 @@ export class DashboardComponent {
   }
 
   /* Abre el modal para editar un huésped existente */
-  editGuest(guest: any) {
+  editGuest(guest: Guest) {
     this.hotelService.selectGuest(guest);
     this.tempGuest = { ...guest };
     this.isGuestModalOpen.set(true);
@@ -366,74 +331,20 @@ export class DashboardComponent {
   }
 
   async handleSaveGuest() {
-    // 1. Obtener datos del formulario
-    const formData = this.tempGuest;
-    const currentName = this.tempGuest.full_name;
-    const selected = this.hotelService.selectedGuest();
-
-    // --- CORRECCIÓN AQUÍ ---
-    // Agregamos ': any' para que TypeScript sepa que esta variable tendrá propiedades dinámicas como .data
-    const duplicates: any = await lastValueFrom(this.adminService.checkPossibleDuplicate(currentName));
-
-    // Ahora TypeScript ya no marcará error en .data
-    if (duplicates.data && duplicates.data.length > 0) {
-      const confirm = window.confirm(
-        `⚠️ Encontramos ${duplicates.data.length} persona(s) con el nombre "${currentName}".\n\n` +
-        `¿Estás SEGURO que es una persona diferente?\n` +
-        `(Acepta para crear uno NUEVO, Cancela para revisar los existentes)`
+    try {
+      await this.adminService.saveGuestWithValidation(
+        this.tempGuest,
+        this.hotelService.selectedGuest()
       );
 
-      if (!confirm) return;
+      alert('✅ Huésped guardado correctamente');
+      this.isGuestModalOpen.set(false);
+      this.adminService.loadGuests(this.authService.currentUser()?.id_company);
+    } catch (error: any) {
+      if (error.message === 'OPERACION_CANCELADA_POR_DUPLICADO') return;
+      console.error('Error al guardar huésped:', error);
+      alert('❌ Error: ' + error.message);
     }
-
-    const operation = selected ? 'update' : 'insert';
-
-    // 2. Lógica para DOC_ID
-    // Si el usuario lo dejó vacío, generamos uno interno único.
-    let finalDocId = formData.doc_id;
-    if (!finalDocId || finalDocId.trim() === '') {
-      // Si ya existía un ID interno (empieza con INT-), lo conservamos para no cambiarlo.
-      if (selected && selected.doc_id && selected.doc_id.startsWith('INT-')) {
-        finalDocId = selected.doc_id;
-      } else {
-        // Si es nuevo o antes tenía INE real y lo borraron
-        finalDocId = this.generateInternalId();
-      }
-    }
-
-    // 3. Lógica para EMAIL
-    // Si no hay correo, tienes dos opciones: 
-    // A) Mandar null (Mejor práctica DB)
-    // B) Mandar email único generado (Para evitar error unique)
-    let finalEmail = formData.email;
-    if (!finalEmail || finalEmail.trim() === '') {
-      // OPCIÓN A: Usar NULL (Requieres quitar 'required': true en el JSON Schema de crud_models si lo tienes)
-      // finalEmail = null; 
-
-      // OPCIÓN B: Email único ficticio (Tu enfoque actual mejorado)
-      if (selected && selected.email && selected.email.includes('no-email-')) {
-        finalEmail = selected.email; // Mantenemos el ficticio anterior
-      } else {
-        finalEmail = this.generateDummyEmail();
-      }
-    }
-
-    // Actualizamos el objeto temporal antes de enviarlo
-    const guestPayload = {
-      ...this.tempGuest,
-      doc_id: finalDocId,
-      email: finalEmail
-    };
-
-    // Enviamos el payload limpio
-    this.adminService.saveGuest(guestPayload, operation).subscribe({
-      next: () => {
-        alert('✅ Huésped guardado correctamente');
-        this.isGuestModalOpen.set(false);
-        this.adminService.loadGuests(this.authService.currentUser()?.id_company);
-      },
-      error: (err) => alert('❌ Error: ' + err.message)
-    });
   }
 
   /* 7. SECCIÓN: MANTENIMIENTO DE HABITACIONES */
@@ -571,7 +482,7 @@ export class DashboardComponent {
     return this.expandedGroups().has(groupKey);
   }
 
-  handleChecklistSave(apiResponse: any) {
+  handleChecklistSave(apiResponse: ApiResponse<any>) {
     // 1. CORRECCIÓN: Validamos que apiResponse no sea null/undefined antes de leer .error
     if (!apiResponse || apiResponse.error) {
       const msg = apiResponse?.message || 'Error desconocido del servidor';
@@ -595,7 +506,7 @@ export class DashboardComponent {
     this.viewMode.set('details');
   }
 
-  openMaintenanceReport(room: any) {
+  openMaintenanceReport(room: Room) {
     this.maintenanceRoom.set(room);
   }
 }
