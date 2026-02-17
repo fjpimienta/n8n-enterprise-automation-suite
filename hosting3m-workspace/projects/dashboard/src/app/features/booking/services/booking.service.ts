@@ -272,6 +272,37 @@ export class BookingService {
     return null;
   }
 
+  /** Busca una reserva activa o una confirmada para hoy */
+  public async findActiveOrTodayReservation(room: Room): Promise<any | null> {
+    if (room.status === 'occupied') {
+      return await this.getActiveBooking(room.id);
+    }
+
+    const todayStr = new Date().toLocaleDateString('sv-SE');
+    const allReservations = this.adminService.reservations();
+
+    const reservation = allReservations.find(r => {
+      if (!r.check_in) return false;
+      const reservationDate = r.check_in.split(/[ T]/)[0];
+      return Number(r.room_id) === Number(room.id) &&
+        r.status === 'confirmed' &&
+        reservationDate === todayStr;
+    });
+
+    if (reservation) {
+      const guest = this.adminService.guests()?.find(g => g.id === reservation.guest_id);
+      return {
+        ...reservation,
+        guest_name: guest?.full_name,
+        guest_doc_id: guest?.doc_id,
+        guest_phone: guest?.phone,
+        guest_email: guest?.email
+      };
+    }
+
+    return null;
+  }
+
   /** Procesa el check-in: puede ser walk-in o reserva previa */
   public async processCheckin(formData: any, room: Room, existingBookingId?: number): Promise<void> {
     const crudUrl = this.apiUrl_crud;

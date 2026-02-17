@@ -1,5 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { lastValueFrom } from 'rxjs';
 import { ApiResponse } from '@core/interfaces/api-response.interface';
 import { Company, Guest, Room, User } from '@core/models/hotel.types';
 import { environment } from '@env/environment';
@@ -207,7 +208,71 @@ export class AdminService {
     return `no-email-${Date.now()}@hosting3m.com`;
   }
 
-  /* Guardar o actualizar huésped */
+  /**
+   * Guarda o actualiza un huésped realizando validaciones de duplicados y normalización de datos.
+   * @param guest Datos del huésped.
+   * @param selectedGuest Huésped seleccionado previamente (si es edición).
+   */
+  public async saveGuestWithValidation(guest: Partial<Guest>, selectedGuest?: Guest | null): Promise<ApiResponse<Guest>> {
+    const currentName = guest.full_name || '';
+    const operation = selectedGuest ? 'update' : 'insert';
+
+    // 1. Validación de Duplicados (Solo para nuevos registros)
+    if (!selectedGuest) {
+      const duplicates = await lastValueFrom(this.checkPossibleDuplicate(currentName));
+      if (duplicates.data && duplicates.data.length > 0) {
+        const confirm = window.confirm(
+          `⚠️ Encontramos ${duplicates.data.length} persona(s) con el nombre "${currentName}".\n\n` +
+          `¿Estás SEGURO que es una persona diferente?\n` +
+          `(Acepta para crear uno NUEVO, Cancela para revisar los existentes)`
+        );
+        if (!confirm) {
+          throw new Error('OPERACION_CANCELADA_POR_DUPLICADO');
+        }
+      }
+    }
+
+    // 2. Normalización de DOC_ID
+    let finalDocId = guest.doc_id;
+    if (!finalDocId || finalDocId.trim() === '') {
+      if (selectedGuest && selectedGuest.doc_id && selectedGuest.doc_id.startsWith('INT-')) {
+        finalDocId = selectedGuest.doc_id;
+      } else {
+        finalDocId = this.generateInternalId();
+      }
+    }
+
+    // 3. Normalización de EMAIL
+    let finalEmail = guest.email;
+    if (!finalEmail || finalEmail.trim() === '') {
+      if (selectedGuest && selectedGuest.email && selectedGuest.email.includes('no-email-')) {
+        finalEmail = selectedGuest.email;
+      } else {
+        finalEmail = this.generateDummyEmail();
+      }
+    }
+
+    const guestPayload = {
+      ...guest,
+      doc_id: finalDocId,
+      email: finalEmail
+    };
+
+    const payload = {
+      entity: 'hotel_guests',
+      table_name: 'hotel_guests',
+      operation: operation,
+      fields: guestPayload
+    };
+
+    return await lastValueFrom(
+      this.http.post<ApiResponse<Guest>>(`${this.apiUrl_crud}/hotel_guests`, payload, {
+        headers: this.getAuthHeaders()
+      })
+    );
+  }
+
+  /* Guardar o actualizar huésped (Legacy) */
   public saveGuest(guest: Partial<Guest>, operation: 'insert' | 'update', email?: string) {
     let finalDocId = guest.doc_id;
     if (!finalDocId || finalDocId.trim() === '') {
