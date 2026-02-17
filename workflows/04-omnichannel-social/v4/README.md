@@ -2,43 +2,39 @@
 
 ## Diagrama de Flujo
 ```mermaid
-flowchart TD
-    A[Cron] --> B[SetX]
-    B --> C[SaveImage]
-    C --> D[UploadImageX]
-    D --> E[GetPageTokens]
-    E --> F[ExtractPageToken]
-    F --> G[PostToFacebookPage]
-    F --> H[Post Company]
-    F --> I[Post Personal]
-    G --> J[Check Publish]
-    H --> J
-    I --> J
-    J --> K[Validar Posts]
-    K --> L[Create X]
-    L --> M[HTTP Request]
-    M --> N[Get Articles]
-    N --> O[Genera Token]
-    O --> P[Set User]
-    P --> Q[Stop and Error]
-    Q --> R[Imagen Guardada]
-    R --> S[Merge]
-    S --> T[Validar Posts]
-    T --> U[Generate Image OpenAI1]
-    U --> V[Convert Image]
-    V --> W[Upload To Server]
-    W --> X[Imagen Guardada]
-    X --> Y[Create X]
-    Y --> Z[PostToFacebookPage]
-    Z --> AA[Create X]
-    AA --> AB[Post Company]
-    AB --> AC[Post Personal]
-    AC --> AD[Paso 1: Subir Foto]
-    AD --> AE[Paso 2: Publicar]
-    AE --> AF[Wait]
-    AF --> AG[AI Art Director]
-    AG --> AH[OpenAI Chat Model1]
-    AH --> AI[Generate Image OpenAI1]
+graph TD
+    subgraph Trigger & Setup
+        A[Cron] --> B[Set User]
+        B --> C[SaveImage]
+        C --> D[UploadImageX]
+    end
+    subgraph "Social Distribution (Parallel)"
+        E[GetPageTokens] --> F[ExtractPageToken]
+        F -->|Post| G[Post to Facebook]
+        F -->|Post| H[Post Company]
+        F -->|Post| I[Post Personal]
+    end
+    subgraph "AI Content Engine"
+        J[Check Publish] --> K[Validar Posts]
+        K --> L[Create X]
+        L --> M[HTTP Request]
+        M --> N[Get Articles]
+        N --> O[Genera Token]
+        O --> P[Generate Image OpenAI1]
+        P --> Q[Convert Image]
+        Q --> R[Upload To Server]
+    end
+    subgraph "Final Execution"
+        R --> S[Imagen Guardada]
+        S --> T[Post Generated Content]
+        T --> U[Create X]
+        U --> V[Post Company]
+        U --> W[Post Personal]
+        W --> X[Paso 1: Subir Foto]
+        X --> Y[Paso 2: Publicar]
+        Y --> Z[Wait]
+        Z --> AA[End]
+    end
 ```
 
 ## Dependencias
@@ -49,24 +45,12 @@ flowchart TD
   - OpenAi account
 
 - **Nodos Externos:**
-  - Twitter API
   - Facebook Graph API
   - OpenAI API
 
 ## Diccionario de Datos
-### Webhook Principal
-- **Estructura JSON Esperada:**
-```json
-{
-  "operation": "getAll",
-  "fields": {
-    "created_at": {
-      "_gte": "2023-01-01T00:00:00Z",
-      "_lte": "2023-12-31T23:59:59Z"
-    }
-  }
-}
-```
+### Cron
+- **Schedule:** 7:05 AM
 
 ### Notas
 - Asegúrate de que las credenciales estén configuradas correctamente en n8n.
