@@ -18,7 +18,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT * FROM hotel_rooms WHERE status = 'available' AND (cleaning_status = 'clean' OR cleaning_status = 'inspected');",
+        "query": "SELECT * FROM hotel_rooms WHERE status = 'available' AND (cleaning_status = 'clean' OR cleaning_status = 'inspected') LIMIT 20;",
         "options": {}
       },
       "type": "n8n-nodes-base.postgresTool",
