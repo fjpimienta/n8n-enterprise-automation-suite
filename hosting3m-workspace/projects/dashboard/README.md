@@ -2,12 +2,11 @@
 
 ### 🛠️ Integrated Frontend for Dynamic CRUD Engine
 
-![Angular](https://img.shields.io/badge/Angular-21-red) ![Architecture](https://img.shields.io/badge/Architecture-Feature--Based-blue) ![Library](https://img.shields.io/badge/Shared-UI%20Chat-orange) ![Status](https://img.shields.io/badge/Transformation-Eco--Hotel-green)
-
 ## 📝 Descripción
+
 **AdminHotel** es una aplicación web de alto rendimiento construida sobre Angular 21, diseñada como la interfaz administrativa oficial de la suite de automatización Hosting3M.
 
-Este dashboard actúa como el cliente principal del **Dynamic CRUD Engine**, permitiendo una gestión de datos en tiempo real. Actualmente, el proyecto atraviesa una **Transformación Estratégica (Eco-Hotel Phase)**, evolucionando de un simple gestor de reservas a un **ERP Hotelero Completo** que gestiona Mantenimiento, Activos Fijos y Finanzas de Inversión (CAPEX).
+Este dashboard actúa como el cliente principal del **Dynamic CRUD Engine**. En su versión actual (**v0.9.0**), ha evolucionado de una estructura monolítica a una **Arquitectura Distribuida**, optimizando la carga inicial y la experiencia de usuario móvil para gestionar operaciones críticas como Mantenimiento, Finanzas e Inventario Global.
 
 ---
 
@@ -20,68 +19,72 @@ Este dashboard actúa como el cliente principal del **Dynamic CRUD Engine**, per
 | **v0.3.0** | `Stable`| `Ops & Finance`| Modals / Reports | Checkout con inventario, Reporte de Caja y Gestión de Usuarios. |
 | **v0.4.0** | `Stable` | `Pro UX & Patterns` | Skeletons / Services | Refactorización a Services, Skeletons de carga, Promesas. |
 | **v0.5.0** | `Stable` | `Full Operation` | Interactive UI | Refresh Engine, Reservas dinámicas, Gestión avanzada de Huéspedes. |
-| **v0.6.0** | `Stable` | `Accessibility` | Mobile Grid / CSS | Lógica de Descuentos, UX Accesible para Seniors. |
-| **v0.6.1** | `Stable` | `Quality Assurance` | **JSONB / Forms** | **Módulo de Rondines, Persistencia Híbrida, Smart Save.** |
-| **v0.7.0** | `Released` | **AI Concierge** | **Shared Lib / MCP** | **Integración de `ui-chat`, Arquitectura Standalone, Inyección de Tokens.** |
-| **v0.7.1** | `Released` | **AI Concierge** | **Shared Lib / MCP** | **Integración de `ui-chat`, Inyección de Tokens.** |
-| **v0.8.0** | `Released` | **Eco-Transformation I** | **Tickets / Assets** | **Gestión de Mantenimiento, Inventario de Activos y Finanzas CAPEX/OPEX.** |
-| **v0.9.0** | `Planned` | `Eco-Intelligence` | CRM / IoT | Segmentación de Huéspedes y Métricas de Sustentabilidad (Luz/Agua). |
+ **v0.6.0** | `Stable` | `Accessibility` | Mobile Grid / CSS | Lógica de Descuentos, UX Accesible para Seniors. |
+| **v0.6.1** | `Stable` | `Quality Assurance` | **JSONB / Forms** | **Módulo de Rondines, Persistencia Híbrida.** |
+| **v0.7.0** | `Stable` | **AI Concierge** | **Shared Lib** | **Integración de `ui-chat`, Inyección de Tokens.** |
+| **v0.8.0** | `Stable` | **Eco-Transformation I** | **Tickets / Assets** | **Gestión de Mantenimiento, Activos y Finanzas CAPEX.** |
+| **v0.9.0** | `Released` | **Performance & Scale** | **Routing / Signals** | **Arquitectura Distribuida, Carga Asíncrona, Inventario Centralizado.** |
 
 ---
 
-## ♻️ Eco-Hotel Transformation (Strategic Pillars)
+## 🚀 Key Features (v0.9.0 Update)
 
-El sistema ha implementado 3 de los 5 pilares estratégicos para la certificación y operación "Eco-Boutique".
+### 1. 🏗️ Arquitectura de Navegación Distribuida
 
-### 1. 💰 Finanzas: Estrategia de Inversión (CAPEX vs OPEX) ✅
-**Objetivo:** Separar el dinero de la operación diaria del dinero de la remodelación/construcción.
-* **Tech Stack:** Base de datos actualizada con `expense_type` y `project_phase`.
-* **UI:** Modal de Gastos (`ExpenseFormModal`) con selectores de Fases (Fase 0 a 3).
-* **Business Value:** Claridad total sobre el costo operativo vs. costo de inversión.
+Se migró de un diseño "Todo en Modales" a un sistema de **Rutas Hijas (Child Routes)**, mejorando la separación de responsabilidades y permitiendo enlaces directos (Deep Linking).
 
-### 2. 🛠️ Mantenimiento: Gestión de Incidencias ✅
-**Objetivo:** Convertir quejas en acciones y crear una base de conocimiento técnica.
-* **Center Command:** Nuevo **Monitor de Mantenimiento** accesible desde el Header y Room Cards.
-* **Ticket Lifecycle:** Automatización de estados (`Reportar` → `Maintenance` | `Resolver` → `Dirty`).
-* **Knowledge Base:** Bitácora de soluciones obligatoria al cerrar un ticket en `hotel_maintenance_tickets`.
+* **Rutas:** `/dashboard/mantenimiento`, `/dashboard/finanzas`, `/dashboard/inventario`.
+* **Impacto:** Reducción drástica del DOM inicial y mejor gestión de memoria.
 
-### 3. 📺 Activos: Inventario Físico (Asset Management) ✅
-**Objetivo:** Controlar la ubicación, depreciación y garantía de equipos valiosos.
-* **Digital Twin:** Nueva tabla `hotel_assets` vinculada a las habitaciones.
-* **Integration:** Pestaña "Inventario" integrada directamente en el `RoomDetailModal`.
-* **Sync:** Formulario de Alta (`AssetFormModal`) con validación estricta contra el backend.
+### 2. ⚡ Optimización de Rendimiento (Performance First)
+
+Estrategia agresiva para mejorar el *Time to Interactive (TTI)* y la percepción de velocidad.
+
+* **Carga Asíncrona (Deferred Loading):** Priorización del `Room Rack` en el hilo principal. Datos secundarios (Reservas, CRM) se cargan en *background*.
+* **Skeletons Inteligentes:** Reducción de nodos DOM (de 8 a 4) y adaptación visual al *Dark Mode* para evitar parpadeos ("flashbang").
+
+### 3. 📦 Sistema de Inventario Centralizado
+
+Unificación de la lógica logística en un módulo robusto.
+
+* **Polimorfismo:** `AssetFormModal` ahora opera en contexto **Global** (Bodega) o **Local** (Habitación).
+* **Trazabilidad:** Filtros avanzados por estado (`GOOD`, `DAMAGED`, `MISSING`) y ubicación física.
+
+### 4. 🧠 Lógica de Negocio Reactiva (Smart Services)
+
+Desacoplamiento total de la lógica compleja de la vista.
+
+* **ReportService:** Centraliza cálculos financieros y balances usando `Signals` computadas.
+* **AssetService:** Gestiona el ciclo de vida completo de los activos.
+* **Beneficio:** Componentes visuales "tontos" (Presentational) que solo renderizan datos, facilitando el testeo y mantenimiento.
 
 ---
 
-## 🆕 Novedades Tecnológicas (v0.7.1 & v0.8.0)
+## 🎨 UX & Theming
 
-1. **Protocolo MCP (Model Context Protocol):**
-    * Arquitectura Cliente-Servidor para IA. El **Servidor MCP** expone la base de datos PostgreSQL como herramientas seguras para el Chatbot.
-
-2. **Arquitectura Modular (Shared Libraries):**
-    * Migración del módulo `ai-assistant` a la librería corporativa `@hosting3m/ui-chat`.
-    * Uso de **Injection Tokens** (`CHAT_CONFIG_TOKEN`) para configuración dinámica por entorno.
-
-3. **Hybrid Persistence (SQL + JSONB):**
-    * Uso de columnas JSONB para datos flexibles en los módulos de **Calidad** (Checklists) y **Mantenimiento** (Detalles técnicos), evitando migraciones constantes de esquema.
+* **Dark Mode Nativo:** Implementación de variables CSS (`var(--tblr-body-bg)`) para cambio de tema instantáneo sin recarga.
+* **Mobile First:** Sidebar con auto-cierre inteligente y eliminación de headers redundantes para ganar espacio vertical.
 
 ---
 
 ## 🏗️ Arquitectura Técnica
+
 > 🚀 **Deep Dive:** Consulta el diagrama completo de flujo y decisiones de diseño en:
+
 <p align="center">
-  <a href="./ARCHITECTURE.md">
-    <img src="https://img.shields.io/badge/🏛️_Leer_Guía_de_Arquitectura-206bc4?style=for-the-badge&logo=readthedocs&logoColor=white" alt="Architecture Guide">
-  </a>
+<a href="./ARCHITECTURE.md">
+<img src="[https://img.shields.io/badge/](https://img.shields.io/badge/)🏛️_Leer_Guía_de_Arquitectura-206bc4?style=for-the-badge&logo=readthedocs&logoColor=white" alt="Architecture Guide">
+</a>
 </p>
 
-La aplicación implementa una arquitectura **Data-Access Service Pattern** y **Standalone Components**:
+La aplicación implementa una arquitectura **Distributed Data-Access Pattern**:
 
 ### 🛠️ Stack Tecnológico
-* **Core:** Angular v21.0.0 (Signals, Standalone Components).
-* **Shared Libraries:** `@hosting3m/ui-chat` (AI Integration).
-* **Backend Interface:** Webhooks n8n (API v3) + PostgreSQL (JSONB Support).
-* **State Management:** Angular Signals (Sin NgRx).
+
+* **Core:** Angular v21.0.0 (Signals, Router, Standalone Components).
+* **State Management:** Angular Signals + Computed Properties.
+* **Backend Interface:** n8n Webhooks (API v3) + PostgreSQL.
+* **UI Library:** Tabler.io (Customized via CSS Variables).
 
 ---
 
@@ -98,49 +101,51 @@ La aplicación implementa una arquitectura **Data-Access Service Pattern** y **S
 
 ---
 
-## 📊 Roadmap: Lo que FALTA (Eco-Hotel Phase II)
+## 📊 Roadmap: Siguientes Pasos (Eco-Hotel Phase II)
 
-Los siguientes puntos son críticos para completar la visión estratégica:
+### 4. Huéspedes: Inteligencia de Cliente (CRM) ⏳ [EN PROGRESO]
 
-### 4. Huéspedes: Inteligencia de Cliente (CRM) ⏳ [PENDIENTE]
 * **Objetivo:** Validar el concepto "Eco-Boutique" conociendo al cliente.
-* **Tarea Técnica:** Implementación de `tags` (Senior, Nómada, Familia) y `travel_reason` en el perfil del huésped.
-* **UX:** Visualización de "Trato Personalizado" durante el Check-in.
+* **Tarea Técnica:** Implementación de `tags` (Senior, Nómada, Familia) y `travel_reason`.
 
-### 5. Sustentabilidad: Métricas "Eco" ⏳ [PENDIENTE]
-* **Objetivo:** "Lo que no se mide, no se mejora".
-* **Tarea Técnica:** Nueva tabla `utility_readings` para lecturas de CFE (Luz) y Agua.
-* **Analytics:** Calculadora de huella de carbono mensual y comparativos de consumo.
+### 5. PWA Offline Mode ⏳ [PLANEADO]
+
+* **Objetivo:** Operación continua sin internet.
+* **Tecnología:** Service Workers para caché de rutas críticas (`/dashboard`, `/inventario`).
 
 ---
 
 ## 🛠️ Comandos de Desarrollo
 
 1. **Requisitos**
-    * Node.js (v20+)
-    * Angular CLI v21.0.5
+* Node.js (v20+)
+* Angular CLI v21.0.5
+
 
 2. **Instalación y Servidor Local**
-    ```bash
-    # Instalar dependencias del workspace
-    npm install
+```bash
+# Instalar dependencias del workspace
+npm install
 
-    # Construir la librería de chat (Requisito previo)
-    ng build ui-chat
+# Iniciar servidor Dashboard
+ng serve dashboard
 
-    # Iniciar servidor Dashboard
-    ng serve dashboard
-    ```
+```
+
 
 3. **Pruebas y Construcción**
-    ```bash
-    # Compilación para Producción (Plesk Ready)
-    ng build dashboard --configuration=production
-    ```
+```bash
+# Compilación para Producción (Optimized)
+ng build dashboard --configuration=production
+
+```
+
+
 
 ---
 
 ## 📄 Licencia
+
 Este proyecto está bajo la licencia **n8n Sustainable Use License**. Desarrollado para optimizar la presencia digital y la inteligencia de contenidos de Hosting3m.
 
 ## 📦 Authors
@@ -150,4 +155,5 @@ Este proyecto está bajo la licencia **n8n Sustainable Use License**. Desarrolla
 Hosting3M Automation Suite
 
 ---
+
 *Built with the assistance of AI-powered development tools.*
