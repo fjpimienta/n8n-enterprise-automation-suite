@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AdminService } from '@features/admin/services/admin.service';
 import { HotelService } from '@features/dashboard/services/hotel.service';
@@ -11,7 +11,7 @@ import { ReservationFormComponent } from '../reservation-form/reservation-form.c
   imports: [CommonModule, ReservationFormComponent],
   templateUrl: './reservation-manager.component.html'
 })
-export class ReservationManagerComponent {
+export class ReservationManagerComponent implements OnInit {
   public adminService = inject(AdminService);
   public hotelService = inject(HotelService);
   private bookingService = inject(BookingService);
@@ -29,6 +29,8 @@ export class ReservationManagerComponent {
 
     return all
       .filter(res => {
+        if (!res.check_out) return false;
+
         const checkoutDate = new Date(res.check_out);
         const matchesDate = res.status === 'confirmed' && checkoutDate >= today;
 
@@ -46,6 +48,13 @@ export class ReservationManagerComponent {
   });
 
   totalPages = computed(() => Math.ceil(this.filteredReservations().length / this.itemsPerPage));
+
+  ngOnInit() {
+    this.adminService.loadReservations();
+    if (this.bookingService.rooms().length === 0) {
+      this.bookingService.loadRooms();
+    }
+  }
 
   getRoomNumber(id: number): string {
     const found = this.bookingService.rooms().find((r: any) => r.id === id);
@@ -66,12 +75,13 @@ export class ReservationManagerComponent {
       this.hotelService.selectRoom(room);
     }
     this.selectedReservation.set(res);
-
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   onReservationSaved() {
     this.selectedReservation.set(null);
+    this.hotelService.selectRoom(null as any);
+    this.adminService.loadReservations();
   }
 
   focusNewReservation() {
