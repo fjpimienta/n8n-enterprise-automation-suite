@@ -1,134 +1,126 @@
 # 🏛️ Architecture Overview: AdminHotel Dashboard
 
 ## 📝 Descripción
+
 **Project:** AdminHotel Dashboard (Hosting3M Automation Suite)
-**Version:** v0.8.0 (Eco-Hotel Transformation)
-**Stack:** Angular 21 (Signals) | n8n (API Gateway) | PostgreSQL (Persistence)
+**Version:** v0.9.0 (Eco-Hotel Optimization & Performance)
+**Stack:** Angular 21 (Signals & Router) | n8n (API Gateway) | PostgreSQL (Persistence)
 **Author:** Francisco Jesus Pérez Pimienta
 
-**AdminHotel Dashboard** es una aplicación web de alto rendimiento construida sobre Angular 21, diseñada como la interfaz administrativa oficial de la suite de automatización Hosting3M.
+**AdminHotel Dashboard** es una aplicación web de alto rendimiento construida sobre Angular 21. En su versión **v0.9.0**, ha evolucionado de una interfaz basada en modales a una **Arquitectura Distribuida de Rutas Hijas**, optimizada para tiempos de carga interactivos (TTI) y usabilidad móvil.
 
 ## 1. High-Level Design (The "Big Picture")
-El sistema sigue una arquitectura **Data-Access Service Pattern** altamente desacoplada. El frontend no contiene lógica SQL ni reglas de negocio complejas del lado del servidor; actúa como un cliente inteligente que consume un **Dynamic CRUD Engine**.
+
+El sistema mantiene el patrón **Data-Access Service**, pero ahora implementa una estrategia de **Carga Diferida (Deferred Loading)** y **Enrutamiento Jerárquico**.
 
 ```mermaid
-graph LR
-    User["Chat Interface (Shared Lib)"] -->|"Natural Language"| Agent["AI Agent (Client)"]
-    Agent -->|"MCP Protocol"| Server["MCP Server (n8n)"]
-    Server -->|"SQL Queries"| PG[("PostgreSQL")]
-
-    subgraph "Brain (Cognitive)"
-    Agent
+graph TD
+    User -->|"Route: /dashboard"| Layout["Dashboard Layout"]
+    Layout -->|"Critical Path"| Rooms["Room Rack (Grid)"]
+    Layout -->|"Lazy/Child Route"| Maint["Maintenance View"]
+    Layout -->|"Lazy/Child Route"| Fin["Finance View"]
+    Layout -->|"Lazy/Child Route"| Inv["Inventory View"]
+    
+    subgraph "Business Logic Layer (Services)"
+       Rooms & Maint & Fin & Inv -->|Signals| Services["Injectable Services"]
+       Services -->|Computed| KPIs["Reactive KPIs"]
     end
-
-    subgraph "Skills (Tools)"
-    Server
-    end
-
+    
+    Services -->|HTTP| API["n8n Dynamic CRUD"]
 ```
 
-### Principios Clave:
+### Principios Clave v0.9:
 
-1. **Smart Services / Dumb Components:** Los componentes (`.ts`) solo gestionan el estado de la vista (`viewMode`). La lógica de negocio y las llamadas a la API residen estrictamente en los servicios.
-2. **Meta-Driven Backend:** La API no está "hardcodeada". n8n consulta la tabla `crud_models` para saber qué campos son requeridos y qué validaciones aplicar.
-3. **Reactivity First:** Uso intensivo de Angular Signals para el manejo de estado.
-4. **DRY & Modularity:** La funcionalidad transversal (como el Chat IA) se consume desde librerías compartidas.
+1. **Distributed Routing Strategy:** Desacoplamiento de módulos. Funcionalidades complejas (Finanzas, Mantenimiento) tienen sus propias URLs y ciclos de vida, liberando al componente padre.
+2. **Smart Services / Presentational Components:** La lógica financiera y de inventario se movió estrictamente a `ReportService` y `AssetService`. Los componentes son meros consumidores de `Signals`.
+3. **Perceived Performance First:** El hilo principal prioriza el `Room Rack`. Datos secundarios (Reservas, Usuarios) se cargan asíncronamente en segundo plano.
+4. **Native Theming:** Uso de Variables CSS (`var(--tblr-body-bg)`) para un *Dark Mode* instantáneo sin recarga.
 
 ---
 
-## 2. Frontend Structure (Modular Architecture)
+## 2. Frontend Structure (Distributed Architecture)
 
-La aplicación sigue una estructura híbrida basada en Features y Librerías Compartidas.
+La aplicación ha migrado de "Componentes en Modals" a "Vistas Enrutadas".
 
-### 📂 src/app/core (The Singleton Layer)
+### 📂 src/app/features (Routed Domains)
 
-Contiene elementos transversales: `AuthInterceptor`, `AuthGuard` y modelos globales.
-
-### 📂 src/app/features (Domain Logic)
-
-Aquí vive el negocio específico del Hotel.
-
-| Feature | Responsabilidad | Componentes Clave | Servicios |
+| Feature | Ruta (URL) | Responsabilidad | Servicios Core |
 | --- | --- | --- | --- |
-| **Booking** | Ciclo de vida de la reserva. | `ReservationManager`, `CheckinForm`. | `BookingService`. |
-| **Dashboard** | Vista operativa principal. | `RoomCard` (Estado visual). | `HotelService`. |
-| **Maintenance** | Gestión de incidencias (Tickets). | `MaintenanceMonitor`, `TicketModal`. | `MaintenanceService`. |
-| **Assets** | Inventario físico y garantías. | `AssetFormModal`, `AssetList`. | `AssetService`. |
-| **Finance** | Finanzas CAPEX/OPEX. | `DailyReportModal`, `ExpenseForm`. | `ReportService`. |
-| **Quality** | Control de Calidad (Rondines). | `RoomChecklistModal`. | `HotelService`. |
+| **Room Rack** | `/dashboard` | Vista operativa principal (Grid). Carga prioritaria. | `HotelService`. |
+| **Maintenance** | `/dashboard/mantenimiento` | Monitor de tickets a pantalla completa (Kanban/List). | `MaintenanceService`. |
+| **Finance** | `/dashboard/finanzas` | Reportes financieros, balances y Corte de Caja. | `ReportService` (Logic Heavy). |
+| **Inventory** | `/dashboard/inventario` | Gestión logística global y auditoría de activos. | `AssetService`. |
+| **Administration** | `/dashboard/huespedes` | Gestión de CRM y Staff. | `GuestService`, `UserService`. |
 
-### 📂 External Libraries (Workspace)
+### 📂 src/app/core (Performance Layer)
 
-* **@hosting3m/ui-chat:** Interfaz de usuario y lógica de conexión con el Agente IA (Standalone).
-
----
-
-## 3. The Data Layer: Dynamic CRUD Engine
-
-El backend es un motor transaccional basado en operaciones (`insert`, `update`, `delete`, `getall`) enviadas a `/crud/v3/:model`.
-
-### La Tabla `crud_models` (The Brain)
-
-Define la "Constitución" del sistema (validación de campos, tipos de datos y permisos RBAC) antes de que n8n ejecute cualquier query.
+* **Skeletons:** Optimizados (4 nodos, 0.1s fade-in) y adaptables al tema oscuro para evitar *layout shifts*.
 
 ---
 
-## 4. Database Schema & Relationships (Eco-Hotel Extensions)
+## 3. The Business Logic Layer (Reactive Services)
 
-Se han añadido entidades críticas para la gestión de activos y mantenimiento.
+En la v0.9.0, los servicios dejaron de ser simples fetchers de datos para contener la **Inteligencia de Negocio**.
 
-### Entidades Principales (`public` schema)
+### 🧠 ReportService (The Financial Brain)
 
-* **companys (Tenant):** Tabla raíz para multi-tenancy.
-* **hotel_rooms:** Inventario físico (Status & Cleaning).
-* **hotel_guests:** Identidad única (`doc_id`, `email`).
-* **hotel_bookings:** Nexo transaccional.
-
-### Entidades Eco-Hotel (NUEVO v0.8)
-
-* **hotel_maintenance_tickets:** Trazabilidad de fallos.
-* *Logica:* Vincula `room_id` y `priority`. Controla el ciclo de vida de la incidencia.
+* **Responsabilidad:** Centraliza el cálculo de balances.
+* **Mecanismo:** Utiliza `computed()` signals para recalcular dinámicamente:
+* `totalIncome`, `totalExpenses`, `netBalance`.
+* Filtrado por rangos de fecha (Día/Semana/Mes) sin re-consultar la API innecesariamente.
 
 
-* **hotel_assets:** Inventario Fijo (Digital Twin).
-* *Datos:* `serial_number`, `purchase_date`, `warranty_expiration`. Permite auditoría de activos por habitación.
 
+### 🧠 AssetService (The Logistics Brain)
 
-* **hotel_expenses (Update):** Finanzas Estratégicas.
-* *Nueva Columna:* `project_phase` (0=Planning, 1=Obra Negra, etc.) para separar CAPEX de OPEX.
-
-
+* **Responsabilidad:** CRUD universal de activos.
+* **Capacidad:** Maneja tanto el inventario global (Bodega) como la asignación local (Habitación) mediante la misma lógica.
 
 ---
 
-## 5. Key Workflows & Patterns
+## 4. Key Workflows & Patterns (v0.9 Updates)
 
-### A. Pattern: Reservation Manager (Orchestrator)
+### A. Pattern: Async Critical Path (Performance)
 
-Separación de responsabilidades entre Manager (Lógica) y Form (Presentación).
+Para desbloquear el TTI (Time to Interactive) rápidamente:
 
-### B. Pattern: Ticket-Driven State Machine [NUEVO]
+1. **Hilo Principal:** Ejecuta `loadRooms()` inmediatamente.
+2. **Hilo Secundario (Deferred):** Usa `setTimeout` para posponer la carga de `Reservations`, `Users` y `Guests`, permitiendo que la UI responda antes de tener todos los datos.
 
-El estado de la habitación reacciona automáticamente a los tickets de mantenimiento:
+### B. Pattern: Polymorphic Components
 
-1. **Report Ticket:** Si se crea un ticket "Crítico", la habitación pasa a status `MAINTENANCE`.
-2. **Resolve Ticket:** Al cerrar el ticket, la habitación pasa automáticamente a `DIRTY` (requiere limpieza post-mantenimiento) antes de estar `AVAILABLE`.
+El componente `AssetFormModal` ahora es consciente del contexto:
 
-### C. Pattern: Configuration Injection (DI)
+* **Contexto Global:** Permite crear activos en bodega.
+* **Contexto Local:** Permite asignar/mover activos desde el detalle de una habitación específica.
 
-Uso de `CHAT_CONFIG_TOKEN` para inyectar la configuración del entorno en la librería de chat compartida.
+### C. Pattern: Computed Signal Reactivity
 
-### D. Pattern: Hybrid Persistence (Smart Merge)
+La UI no recalcula totales. La UI se suscribe a una Señal Computada en el servicio.
 
-Uso de JSONB en `hotel_room_inspections` para checklists dinámicos que pueden evolucionar sin migraciones SQL.
+* *Antes:* `calculateTotal()` en el HTML (malo para performance).
+* *Ahora:* `readonly total = computed(() => ...)` en el Servicio.
+
+### D. Pattern: CSS Variable Theming
+
+Eliminación de estilos *hardcoded*. El tema visual se controla mediante variables CSS en el `:root`, permitiendo transiciones suaves entre Light/Dark mode y facilitando el mantenimiento futuro.
+
+---
+
+## 5. Database Schema & Relationships
+
+Se mantiene la estructura de datos sólida de la v0.8, pero su consumo es más eficiente.
+
+* **hotel_maintenance_tickets:** Ahora visualizados en un dashboard dedicado (`/mantenimiento`) en lugar de un modal flotante.
+* **hotel_assets:** Gestionados via `AssetService` con capacidades de filtrado por estado (`GOOD`, `DAMAGED`, `MISSING`).
 
 ---
 
 ## 6. Future Scalability
 
-* **WhatsApp AI Agent:** Preparado para inserciones automáticas con rol `bot`.
-* **Eco-Intelligence (IoT):** Futura integración de `utility_readings` para medidores de luz y agua.
+* **PWA Offline Mode:** Gracias a la arquitectura de rutas y carga asíncrona, el siguiente paso lógico es implementar Service Workers para caché de rutas.
+* **Lazy Loading Modules:** Las rutas hijas están preparadas para ser cargadas mediante `loadComponent` (Lazy Loading real) en futuras versiones para reducir el bundle inicial.
 
 ---
 
-*Document generated regarding the v0.8.0 codebase state.*
+*Document updated regarding the v0.9.0 codebase state (Performance & Routing Refactor).*
