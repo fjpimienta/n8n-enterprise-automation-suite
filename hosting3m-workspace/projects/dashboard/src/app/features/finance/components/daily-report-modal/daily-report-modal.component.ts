@@ -1,5 +1,7 @@
-import { Component, Input, input, output, signal } from '@angular/core';
+import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { BookingService } from '@features/booking/services/booking.service';
+import { ReportService } from '@features/finance/services/report.service';
 
 @Component({
   selector: 'app-daily-report-modal',
@@ -8,36 +10,57 @@ import { CommonModule } from '@angular/common';
   templateUrl: './daily-report-modal.component.html',
   styleUrl: './daily-report-modal.component.css',
 })
-export class DailyReportModalComponent {
-  @Input() isLoading: boolean = false;
+export class DailyReportModalComponent implements OnInit {
+  private reportService = inject(ReportService);
+  private bookingService = inject(BookingService);
 
-  // Inputs requeridos actualizados
-  isOpen = input.required<boolean>();
-  currentFilter = input.required<'day' | 'week' | 'month' | 'year'>();
-  roomsList = input.required<any[]>();
+  // Estados
+  isLoading = signal(true);
 
-  // 🔥 AQUÍ ESTABA EL DETALLE: Actualizamos la estructura de datos
-  reportData = input.required<{
-    total_sales: number;     // Ventas totales
-    paid_in: number;         // Cobrado real
-    pending: number;         // Por cobrar
-    total_expenses: number;  // Gastos (Nuevo)
-    balance: number;         // Utilidad (Nuevo)
-    transactions: any[];     // Lista Ventas
-    expenseTransactions: any[]; // Lista Gastos (Nuevo)
-    periodLabel: string;
-  }>();
+  private rawBookings = signal<any[]>([]);
+  private rawExpenses = signal<any[]>([]);
 
+  currentFilter = signal<'day' | 'week' | 'month' | 'year'>('day');
   activeTab = signal<'ingresos' | 'gastos'>('ingresos');
 
-  // Outputs
-  onClose = output<void>();
-  onFilterChange = output<'day' | 'week' | 'month' | 'year'>();
+  ngOnInit() {
+    this.loadData();
+  }
 
-  // Helpers
+  async loadData() {
+    this.isLoading.set(true);
+    try {
+      const [bookings, expenses] = await Promise.all([
+        this.reportService.getRawBookingsForReport(),
+        this.reportService.getRawExpensesForReport()
+      ]);
+
+      this.rawBookings.set(bookings);
+      this.rawExpenses.set(expenses);
+
+    } catch (error) {
+      console.error('Error cargando datos financieros:', error);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  reportData = computed(() => {
+    return this.reportService.calculateDailyReport(
+      this.rawBookings(),
+      this.rawExpenses(),
+      this.currentFilter()
+    );
+  });
+
+  // Helpers UI
+  setFilter(f: 'day' | 'week' | 'month' | 'year') {
+    this.currentFilter.set(f);
+  }
+
   getRoomNumber(id: number): string {
-    const found = this.roomsList()?.find((r: any) => r.id === id);
-    return found ? found.room_number : 'Unknown';
+    const found = this.bookingService.rooms().find((r: any) => r.id === id);
+    return found ? found.room_number : 'N/A';
   }
 
   getNights(checkIn: string, checkOut: string): number {

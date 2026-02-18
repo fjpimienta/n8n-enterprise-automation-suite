@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, inject, input, OnInit, Output, ChangeDetectorRef } from '@angular/core'; // 👈 1. IMPORTAR
-import { AssetService } from '@features/admin/services/asset.service';
+import { Component, EventEmitter, inject, input, OnInit, Output, ChangeDetectorRef, signal } from '@angular/core';
 import { AssetFormModalComponent } from '@features/admin/components/asset-form-modal/asset-form-modal.component';
+import { AssetService } from '@features/admin/services/asset.service';
 
 @Component({
   selector: 'app-room-detail-modal',
@@ -12,13 +12,17 @@ import { AssetFormModalComponent } from '@features/admin/components/asset-form-m
 })
 export class RoomDetailModalComponent implements OnInit {
   private assetService = inject(AssetService);
-  private cdr = inject(ChangeDetectorRef); // 👈 2. INYECTAR EL DETECTOR DE CAMBIOS
+  private cdr = inject(ChangeDetectorRef);
 
   room = input.required<any>();
   activeBooking = input<any>();
 
   activeTab: string = 'assets';
   roomAssets: any[] = [];
+
+  // Datos para el modal hijo (Nuevo Inventario)
+  currentAsset = signal<any>({});
+  showAssetForm = false; // Controla si existe el componente en el DOM
 
   @Output() onClose = new EventEmitter<void>();
   @Output() onCheckin = new EventEmitter<void>();
@@ -30,43 +34,39 @@ export class RoomDetailModalComponent implements OnInit {
   @Output() onMarkAsClean = new EventEmitter<void>();
   @Output() onOpenChecklist = new EventEmitter<void>();
 
-  // Control del modal hijo
-  showAssetForm = false;
-
   ngOnInit() {
     this.loadAssets();
   }
 
   async loadAssets() {
-    // 1. Verificación de seguridad
     const currentRoom = this.room();
-    if (!currentRoom || !currentRoom.id) {
-      return;
-    }
+    if (!currentRoom || !currentRoom.id) return;
 
     try {
-      // 2. Petición al servicio
       const respuesta = await this.assetService.getAssetsByRoom(currentRoom.id);
-
-      // 3. 🛡️ FILTRO DE SEGURIDAD (Aquí está la corrección)
-      // Solo aceptamos objetos que existan y tengan un ID válido (mayor a 0)
       this.roomAssets = (respuesta || []).filter((item: any) => item && item.id);
-
-      // 4. Forzar actualización visual
       this.cdr.detectChanges();
-
     } catch (error) {
       this.roomAssets = [];
     }
   }
 
   openAssetForm() {
+    // 1. Inicializamos el activo con la habitación actual ya seleccionada
+    this.currentAsset.set({
+      name: '',
+      status: 'GOOD',
+      category: 'MOBILIARIO',
+      current_room_id: this.room().id // <--- CLAVE: Pre-asignamos la habitación
+    });
+
+    // 2. Mostramos el modal
     this.showAssetForm = true;
   }
 
   handleAssetSaved() {
     this.showAssetForm = false;
-    this.loadAssets();
+    this.loadAssets(); // Recargar la lista para ver el nuevo activo
   }
 
   isExpired(dateStr: string | undefined): boolean {

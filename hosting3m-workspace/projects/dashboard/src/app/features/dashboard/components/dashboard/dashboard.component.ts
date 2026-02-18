@@ -4,11 +4,9 @@ import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { Booking, Guest, Room, User } from '@core/models/hotel.types';
 // Componentes Hijos
-import { HeaderComponent } from '@features/dashboard/components/header/header.component';
 import { CheckinFormComponent } from '@features/booking/components/checkin-form/checkin-form.component';
 import { CheckoutFormComponent } from '@features/booking/components/checkout-form/checkout-form.component';
 import { RoomCardComponent } from '@features/dashboard/components/room-card/room-card.component';
-import { DailyReportModalComponent } from '@features/finance/components/daily-report-modal/daily-report-modal.component';
 import { RoomFiltersComponent } from '@features/dashboard/components/room-filters/room-filters.component';
 import { RoomDetailModalComponent } from '@features/booking/components/room-detail-modal/room-detail-modal.component';
 import { UserFormModalComponent } from '@features/admin/components/user-form-modal/user-form-modal.component';
@@ -33,7 +31,7 @@ import { ApiResponse } from '@core/interfaces/api-response.interface';
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, CheckinFormComponent, CheckoutFormComponent, HeaderComponent, RoomCardComponent, DailyReportModalComponent,
+  imports: [CommonModule, FormsModule, CheckinFormComponent, CheckoutFormComponent, RoomCardComponent,
     RoomFiltersComponent, RoomDetailModalComponent, UserFormModalComponent, UserListComponent, GuestFormModalComponent, GuestListComponent,
     SkeletonComponent, ReservationManagerComponent, RoomChecklistModalComponent, ExpenseFormModalComponent, MaintenanceTicketModalComponent,
     MaintenanceMonitorModalComponent],
@@ -82,14 +80,19 @@ export class DashboardComponent {
     this.refresh();
   }
 
-  /* 1. SECCIÓN: REFRESCO DE DATOS */
+  /* 1. SECCIÓN: REFRESCO DE DATOS OPTIMIZADO */
   refresh() {
+    // Prioridad 1: Habitaciones (Esto quita el Skeleton rápido)
     this.bookingService.loadRooms();
-    this.adminService.loadReservations();
-    this.adminService.loadGuests(this.authService.currentUser()?.id_company);
-    if (this.isAdmin) {
-      this.adminService.loadUsers(this.authService.currentUser()?.id_company);
-    }
+
+    // Prioridad 2: El resto se carga en segundo plano sin detener la UI
+    setTimeout(() => {
+      this.adminService.loadReservations();
+      this.adminService.loadGuests(this.authService.currentUser()?.id_company);
+      if (this.isAdmin) {
+        this.adminService.loadUsers(this.authService.currentUser()?.id_company);
+      }
+    }, 1); // Pequeño delay para dejar que el hilo principal pinte las habitaciones
   }
 
   /* 1. SECCIÓN: REFRESCO DE DATOS */

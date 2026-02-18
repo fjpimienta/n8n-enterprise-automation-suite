@@ -226,7 +226,8 @@
             </div>
 
             @if (showAssetForm) {
-            <app-asset-form-modal [roomId]="room().id" (onClose)="showAssetForm = false" (onSave)="handleAssetSaved()">
+            <app-asset-form-modal [isOpen]="true" [(assetData)]="currentAsset" (onClose)="showAssetForm = false"
+                (onSave)="handleAssetSaved()">
             </app-asset-form-modal>
             }
         </div>

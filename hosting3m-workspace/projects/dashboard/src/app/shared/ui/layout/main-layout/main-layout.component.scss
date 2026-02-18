@@ -1,0 +1,91 @@
+.layout-wrapper {
+    display: flex;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    
+    /* CAMBIO CLAVE: Usar variable en lugar de #f8fafc */
+    background-color: var(--tblr-body-bg); 
+    color: var(--tblr-body-color);
+    
+    position: relative;
+    transition: background-color 0.3s ease; /* Transición suave */
+}
+
+.sidebar-container {
+    width: 260px;
+    height: 100%;
+    z-index: 50;
+    flex-shrink: 0;
+    transition: transform 0.3s ease-in-out;
+    
+    /* El sidebar suele mantenerse oscuro por marca, pero usamos variable por si acaso */
+    background-color: var(--tblr-sidebar-bg, #0f172a); 
+
+    @media (max-width: 991px) {
+        position: absolute;
+        left: 0;
+        top: 0;
+        transform: translateX(-100%);
+
+        &.open {
+            transform: translateX(0);
+            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.5);
+        }
+    }
+}
+
+.mobile-backdrop {
+    display: none;
+    @media (max-width: 991px) {
+        &.show {
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 40;
+            backdrop-filter: blur(2px);
+        }
+    }
+}
+
+.main-content {
+    flex: 1;
+    overflow-y: auto;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.mobile-header {
+    display: none;
+    padding: 1rem;
+    border-bottom: 1px solid var(--tblr-border-color); /* Borde variable */
+    align-items: center;
+    gap: 1rem;
+    
+    /* CAMBIO CLAVE: Fondo y texto variables */
+    background: var(--tblr-header-bg); 
+    color: var(--tblr-body-color);
+
+    @media (max-width: 991px) {
+        display: flex;
+    }
+
+    button {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: inherit; /* Heredar color del texto (blanco/negro según tema) */
+    }
+}
+
+.content-container {
+    padding: 1.5rem;
+    flex: 1;
+}

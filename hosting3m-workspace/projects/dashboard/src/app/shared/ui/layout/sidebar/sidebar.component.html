@@ -1,0 +1,42 @@
+<div class="sidebar-content">
+
+    <div class="sidebar-header">
+        <div class="logo-area">
+            <h2>Hotel San José</h2>
+        </div>
+        <button class="toggle-btn" (click)="toggleMenu.emit()">
+            <i class="icon ti ti-menu-2"></i>
+        </button>
+    </div>
+
+    <div class="nav-scroll-area">
+        @for (section of menu; track section.title) {
+        <div class="nav-section">
+            <span class="section-title">{{ section.title }}</span>
+            @for (item of section.items; track item.label) {
+            <a [routerLink]="item.route" routerLinkActive="active" (click)="handleLinkClick()"
+                [routerLinkActiveOptions]="{exact: item.route === '/dashboard'}" class="nav-item">
+                <i class="icon ti ti-{{item.icon}}"></i>
+                <span class="label">{{ item.label }}</span>
+            </a>
+            }
+        </div>
+        }
+    </div>
+
+    <div class="sidebar-footer">
+        <button class="theme-btn" (click)="themeService.toggleTheme()">
+            @if (themeService.currentTheme() === 'dark') {
+            <i class="icon ti ti-sun"></i>
+            <span>Modo Claro</span>
+            } @else {
+            <i class="icon ti ti-moon"></i>
+            <span>Modo Oscuro</span>
+            }
+        </button>
+        <button class="logout-btn" (click)="onLogout()">
+            <i class="icon ti ti-logout"></i>
+            <span>Cerrar Sesión</span>
+        </button>
+    </div>
+</div>

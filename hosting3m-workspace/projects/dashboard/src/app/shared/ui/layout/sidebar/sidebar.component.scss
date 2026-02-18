@@ -1,0 +1,159 @@
+:host {
+  display: block;
+  height: 100%;
+  width: 260px;
+  background-color: #0f172a;
+  /* Slate 900 */
+  color: #94a3b8;
+  /* Slate 400 */
+  border-right: 1px solid #1e293b;
+  font-family: 'Inter', sans-serif;
+}
+
+.sidebar-content {
+  display: flex;
+  flex-direction: column;
+  /* Clave para empujar el footer */
+  height: 100%;
+  padding: 1.5rem;
+}
+
+.sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+
+  h2 {
+    color: #f8fafc;
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin: 0;
+  }
+
+  .toggle-btn {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    padding: 4px;
+
+    &:hover {
+      color: white;
+    }
+  }
+}
+
+/* Área central que crece */
+.nav-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  /* Ocultar scrollbar */
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.nav-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  .section-title {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #475569;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+  }
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  color: inherit;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+
+  i {
+    font-size: 1.25rem;
+  }
+
+  &:hover {
+    background-color: #1e293b;
+    color: #f1f5f9;
+  }
+
+  &.active {
+    background-color: #0ea5e9;
+    /* Sky 500 */
+    color: #ffffff;
+    box-shadow: 0 4px 6px -1px rgba(14, 165, 233, 0.2);
+  }
+}
+
+/* Footer pegado al fondo */
+.sidebar-footer {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid #1e293b;
+  display: flex;
+  /* Flex para apilar botones */
+  flex-direction: column;
+  gap: 0.75rem;
+  /* Espacio entre botones */
+
+  /* Estilo común para botones del footer */
+  button {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+  }
+
+  /* Estilo específico Botón Tema */
+  .theme-btn {
+    background-color: transparent;
+    color: #94a3b8;
+    border: 1px solid #334155;
+
+    &:hover {
+      background-color: #1e293b;
+      color: #f8fafc;
+      border-color: #475569;
+    }
+  }
+
+  /* Estilo específico Botón Logout */
+  .logout-btn {
+    background-color: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.2);
+
+    &:hover {
+      background-color: #ef4444;
+      color: white;
+    }
+  }
+}
