@@ -4,6 +4,32 @@ Todos los cambios notables en esta suite de automatización serán documentados 
 
 ---
 
+## [0.9.0] - 2026-02-18
+
+### 🚀 CloudFree Infrastructure & Distributed Performance
+
+Esta versión consolida la soberanía de datos con el lanzamiento de la infraestructura **Self-Hosted v4** y optimiza radicalmente la experiencia de usuario mediante una **Arquitectura Distribuida**.
+
+#### ☁️ Infraestructura "CloudFree" (Backend & n8n)
+
+* **Sovereign Media Service:** Despliegue de un nuevo microservicio (`upload-service`) en Node.js/Docker para el alojamiento persistente de imágenes, eliminando la dependencia de enlaces temporales externos.
+* **Social Orchestrator v4:** Refactorización total del motor de publicación.
+* **GenAI Upgrade:** Migración a **OpenAI DALL-E 3** para generación visual de alta fidelidad.
+* **Native Graph API:** Implementación de nodos nativos de Instagram/Facebook con manejo de tokens de larga duración.
+* **Persistencia Binaria:** Nueva lógica de "Reach Back" en n8n para asegurar la integridad de archivos en flujos complejos.
+
+
+* **Security Hardening:** Eliminación de credenciales estáticas ("Hardcoded Secrets") en favor de inyección estricta de variables de entorno (`$env`) en todos los workflows críticos.
+
+#### 🏨 AdminHotel Dashboard: Performance & Routing
+
+* **Arquitectura Distribuida:** Transición de un diseño monolítico de Modales a un sistema de **Rutas Hijas (Child Routes)** (`/dashboard/finanzas`, `/dashboard/inventario`), mejorando la separación de responsabilidades.
+* **Optimización de TTI (Time-to-Interactive):** Implementación de **Carga Asíncrona Diferida**. El hilo principal prioriza el `Room Rack`, mientras que datos secundarios (CRM, Reservas) se cargan en segundo plano.
+* **Centralized Inventory:** Nuevo módulo polimórfico gestionado por `AssetService` que permite administrar activos tanto a nivel Global (Bodega) como Local (Habitación).
+* **Smart Services Pattern:** Migración de lógica de negocio compleja (Cálculos Financieros, Balances) desde los componentes hacia **Servicios Reactivos** basados en `Angular Signals`.
+
+---
+
 ## [0.8.0] - 2026-02-14
 
 ### 🚀 Eco-Hotel Transformation & Workspace Consolidation

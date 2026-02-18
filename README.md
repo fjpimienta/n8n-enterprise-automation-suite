@@ -1,23 +1,23 @@
 # n8n Enterprise Automation Suite 🚀
 
-### CloudFree Architecture: Orquestación de IA & Microservicios (Self-Hosted)
+### Self-Hosted Architecture: Orquestación de IA & Microservicios Soberanos
 
 > **Arquitecto:** Francisco Pérez (Senior Systems Engineer | PMP | Full Stack)
-> **Core Stack:** n8n v2.4.6, Docker, PostgreSQL (pgvector + JSONB), Node.js, OpenAI (GPT-4o) & Flux (Image Gen), Angular 21 (Signals).
-> **Infraestructura:** CloudFree VPS (Hardened Linux).
+> **Core Stack:** n8n v2.4.6, Docker, PostgreSQL (pgvector + JSONB), Node.js (Upload Service), OpenAI (GPT-4o & DALL-E 3), Angular 21 (Signals).
+> **Infraestructura:** CloudFree VPS (Hardened Linux) + Private Media CDN.
 
 ---
 
 ## 🎯 Objetivo del Proyecto
 
-Suite de automatización empresarial de **grado industrial** diseñada bajo la filosofía **"CloudFree"**: máxima potencia computacional con cero dependencia de licencias SaaS costosas.
+Suite de automatización empresarial de **grado industrial** diseñada bajo la filosofía de **"Soberanía de Datos"**: máxima potencia computacional con control total sobre los activos.
 
 Esta arquitectura transforma la automatización convencional en un **Hub de Servicios Inteligente** que garantiza:
 
-1. **Soberanía Total de Datos:** Despliegue 100% Self-Hosted (Sin Vendor Lock-in).
-2. **Cost-Efficiency:** Uso de modelos de IA optimizados y generación de medios sin coste de API (Pollinations/Flux).
-3. **Alta Disponibilidad:** Orquestación mediante Docker con redes internas de latencia cero.
-4. **Seguridad Corporativa:** Gestión de identidad RBAC y validación de tokens RS256.
+1. **Soberanía Total:** Despliegue 100% Self-Hosted, incluyendo el almacenamiento de medios (`upload-service`).
+2. **Calidad Enterprise:** Uso de modelos comerciales robustos (DALL-E 3) para generación visual sin fallos.
+3. **Alta Disponibilidad:** Orquestación mediante Docker con redes internas y persistencia binaria avanzada.
+4. **Seguridad Corporativa:** Gestión de identidad RBAC, validación de tokens RS256 y manejo de secretos vía Variables de Entorno (`$env`).
 
 ---
 
@@ -28,15 +28,15 @@ El ecosistema opera en un entorno de alta densidad, maximizando los recursos del
 | Servicio | Tecnología | Función Crítica |
 | --- | --- | --- |
 | **Orquestador** | n8n v2.4.6 (Enterprise) | Motor lógico central. Manejo de concurrencia y reintentos (Retry Logic). |
-| **Media Gen** | Pollinations AI (Flux) | Generación de assets visuales ilimitados mediante IA generativa. |
+| **Media Server** | Node.js / Express | **Nuevo:** Microservicio de almacenamiento persistente y entrega de contenidos (CDN Privado). |
 | **Capa de Datos** | PostgreSQL + pgvector | Almacenamiento híbrido: Relacional (Negocio) + Vectorial (Memoria IA). |
+| **Media Gen** | OpenAI DALL-E 3 | Generación de assets visuales de alta fidelidad y prompt engineering dinámico. |
 | **Seguridad** | Node.js (JWT Service) | Microservicio dedicado para firma y validación de tokens RS256. |
-| **Agentes IA** | OpenAI + LangChain | Razonamiento autónomo y RAG (Retrieval-Augmented Generation). |
-| **Frontends** | Angular 21 (Signals) | Aplicaciones Standalone optimizadas para SPA (Dashboard) y PWA (Pista). |
+| **Frontends** | Angular 21 (Signals) | Aplicaciones Distribuidas optimizadas para SPA (Dashboard) y PWA (Pista). |
 
 ---
 
-## 📦 Módulos Implementados (Workflows v3)
+## 📦 Módulos Implementados (Workflows v4 & v0.9)
 
 La suite se compone de módulos interconectados que operan como una malla de servicios:
 
@@ -48,21 +48,20 @@ Sistema centralizado de **Gestión de Identidad**. Administra la validación de 
 
 Orquestador de entrada de leads. Realiza validación estricta de tipos (`Strong Typing`) y sanitización de datos antes de la persistencia en el CRM PostgreSQL.
 
-### 3. 📰 Automated News Curator (v3.1)
+### 3. 📰 Automated News Curator (v4.0)
 
-Motor de inteligencia competitiva actualizado.
+Motor de inteligencia competitiva actualizado a **Sovereign Media**.
 
-* **Extracción:** Scraping de fuentes RSS técnicas.
-* **IA Generativa:** Implementación de **Pollinations.ai (Modelo Flux)** para crear portadas de noticias hiper-realistas en formato vertical (4:5) para Instagram.
-* **Prompt Engineering:** Inyección dinámica de estilos (Cyberpunk, Isometric, 3D Render).
+* **GenAI Premium:** Migración a **DALL-E 3** para generación de imágenes hiper-realistas.
+* **Persistencia:** Las imágenes ya no dependen de enlaces temporales externos; se alojan en `upload.hosting3m.com`.
 
-### 4. 📢 Social Media Orchestrator (Graph API Edition)
+### 4. 📢 Social Media Orchestrator (v4.0)
 
-Orquestador omnicanal refactorizado para **Meta for Business**.
+Orquestador omnicanal con arquitectura **Self-Hosted**.
 
-* **Estabilidad:** Migración de nodos comunitarios a **n8n Native Instagram Node** usando credenciales de Facebook Graph.
-* **Upload Protocol:** Implementación de espera activa (`Wait Node`) para garantizar el procesamiento de medios 4K antes de la publicación.
-* **Estrategia:** "Link in Bio" automatizada para tráfico orgánico.
+* **Private CDN:** Integración con el microservicio `upload-service` para alojar medios propios.
+* **Reach Back Logic:** Persistencia binaria avanzada en n8n para asegurar que el archivo original llegue intacto a X (Twitter) y LinkedIn.
+* **Hardening:** Credenciales inyectadas vía variables de entorno (`$env["FB_TOKEN"]`).
 
 ### 5. 🤖 Multi-Service WhatsApp Hub
 
@@ -76,15 +75,15 @@ Capa de abstracción SQL que actúa como un **Backend as a Service (BaaS)** unif
 
 ### 7. 🏨 MCP Server: Hotel Management
 
-Implementación del **Model Context Protocol**. Expone herramientas de base de datos a la IA (Claude/Gemini/GPT), permitiendo consultas de inventario y modificaciones en tiempo real mediante lenguaje natural.
+Implementación del **Model Context Protocol**. Expone herramientas de base de datos a la IA, permitiendo consultas de inventario y modificaciones en tiempo real mediante lenguaje natural.
 
-### 🏨 08. AdminHotel Dashboard (v0.8.0 - Eco-Hotel Transformation)
+### 🏨 08. AdminHotel Dashboard (v0.9.0 - Performance Release)
 
-ERP integral para la gestión hotelera.
+ERP integral evolucionado a una **Arquitectura Distribuida**.
 
-* **Eco-Strategy:** Gestión diferenciada de **CAPEX vs OPEX** para remodelaciones.
-* **Mantenimiento Pro:** Sistema de tickets con máquina de estados automática.
-* **Inventario Digital:** Control de activos físicos y garantías por habitación.
+* **Routing Distribuido:** Módulos separados por rutas hijas (`/dashboard/finanzas`, `/dashboard/inventario`).
+* **Performance:** Carga asíncrona de datos secundarios y esqueletos optimizados (0.1s TTI).
+* **Inventario Centralizado:** Módulo polimórfico para gestión de activos en bodega y habitaciones.
 
 ### ⛸️ 09. PistaHielo Operations Center (v0.7.1 - Ops AI)
 
@@ -122,9 +121,9 @@ Librería transversal de Angular (**Shared Lib**) diseñada bajo el patrón de C
 
 ### ✅ Completado (Q1 2026)
 
-* [x] **Eco-Hotel Phase I:** Módulos de Mantenimiento, Activos y Finanzas CAPEX (Dashboard v0.8.0).
-* [x] **Modularidad Frontend:** Migración a Workspace con Librería Compartida `ui-chat`.
-* [x] **CloudFree Media:** Integración de Pollinations.ai para generación de imágenes ilimitadas.
+* [x] **Sovereign Media:** Implementación de `upload-service` propio y migración a DALL-E 3.
+* [x] **Dashboard Performance:** Refactorización a Arquitectura de Rutas Distribuidas y Carga Asíncrona (v0.9.0).
+* [x] **Security Hardening:** Gestión de credenciales mediante Variables de Entorno (`$env`).
 
 ### 🏗️ En Progreso (Q2 2026)
 
@@ -135,7 +134,9 @@ Librería transversal de Angular (**Shared Lib**) diseñada bajo el patrón de C
 
 ## 📦 Authors
 
-**Francisco Jesus Pérez Pimienta** *Senior Systems Architect & Project Lead* Hosting3M Automation Suite
+**Francisco Jesus Pérez Pimienta**
+*Senior Systems Architect & Project Lead*
+Hosting3M Automation Suite
 
 ---
 
