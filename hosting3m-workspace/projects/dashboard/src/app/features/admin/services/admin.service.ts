@@ -137,7 +137,7 @@ export class AdminService {
       entity: 'users',
       table_name: 'users',
       operation: operation,
-      email: email, 
+      email: email,
       fields: user
     };
 
@@ -270,6 +270,16 @@ export class AdminService {
         headers: this.getAuthHeaders()
       })
     );
+  }
+
+  /* Crea un nuevo huésped envolviendo saveGuest en una Promesa */
+  public async createGuest(guest: Partial<Guest>) {
+    return await lastValueFrom(this.saveGuest(guest, 'insert'));
+  }
+
+  /* Actualiza un huésped existente */
+  public async updateGuest(guest: Partial<Guest>) {
+    return await lastValueFrom(this.saveGuest(guest, 'update', guest.email));
   }
 
   /* Guardar o actualizar huésped (Legacy) */

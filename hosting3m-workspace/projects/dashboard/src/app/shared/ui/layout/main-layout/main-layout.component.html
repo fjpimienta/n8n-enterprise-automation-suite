@@ -1,0 +1,21 @@
+<div class="layout-wrapper">
+
+    <div class="mobile-backdrop" [class.show]="isSidebarOpen()" (click)="isSidebarOpen.set(false)">
+    </div>
+
+    <aside class="sidebar-container" [class.open]="isSidebarOpen()">
+        <app-sidebar (linkClicked)="isSidebarOpen.set(false)"></app-sidebar>
+    </aside>
+
+    <main class="main-content">
+        <header class="mobile-header">
+            <button (click)="toggleSidebar()">
+                <i class="ti ti-menu-2"></i> </button>
+            <h1 style="margin: 0; font-size: 1.1rem; font-weight: 700;">Hotel San José</h1>
+        </header>
+
+        <div class="content-container">
+            <router-outlet></router-outlet>
+        </div>
+    </main>
+</div>

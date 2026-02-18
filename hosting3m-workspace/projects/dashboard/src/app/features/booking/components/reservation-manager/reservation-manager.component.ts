@@ -1,4 +1,4 @@
-import { Component, inject, signal, input, Output, EventEmitter, computed } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AdminService } from '@features/admin/services/admin.service';
 import { HotelService } from '@features/dashboard/services/hotel.service';
@@ -16,16 +16,11 @@ export class ReservationManagerComponent {
   public hotelService = inject(HotelService);
   private bookingService = inject(BookingService);
 
-  @Output() onClose = new EventEmitter<void>();
-  @Output() onSaved = new EventEmitter<void>();
-
   selectedReservation = signal<any | null>(null);
 
-  // Paginación local
   currentPage = signal(1);
-  itemsPerPage = 5;
+  itemsPerPage = 8;
 
-  // Lógica de filtrado y paginación movida aquí
   filteredReservations = computed(() => {
     const all = this.adminService.reservations();
     const selectedRoom = this.hotelService.selectedRoom();
@@ -66,28 +61,22 @@ export class ReservationManagerComponent {
   }
 
   editReservation(res: any) {
-    // Buscamos la habitación asociada para que el formulario sepa cuál es
     const room = this.bookingService.rooms().find(r => r.id === res.room_id);
     if (room) {
       this.hotelService.selectRoom(room);
     }
     this.selectedReservation.set(res);
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   onReservationSaved() {
     this.selectedReservation.set(null);
-    this.onSaved.emit();
   }
 
-  // Dentro de tu ReservationManagerComponent
   focusNewReservation() {
-    // 1. Reseteamos la reserva seleccionada para que el formulario se ponga en modo "Nuevo"
     this.selectedReservation.set(null);
-
-    // 2. Opcional: Si quieres que el cursor se mueva automáticamente al campo de fecha
-    const entryDateInput = document.querySelector('input[type="date"]') as HTMLElement;
-    if (entryDateInput) {
-      entryDateInput.focus();
-    }
+    this.hotelService.selectRoom(null as any);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 }
