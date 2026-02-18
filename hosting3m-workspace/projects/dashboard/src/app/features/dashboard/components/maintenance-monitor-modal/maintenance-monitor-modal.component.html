@@ -1,122 +1,136 @@
-<div class="modal-backdrop fade show"></div>
-<div class="modal modal-blur fade show d-block" tabindex="-1">
-    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content shadow-lg">
-            <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title">
-                    @if (targetRoomId()) {
-                    🛠️ Reparar Habitación
-                    } @else {
-                    📋 Monitor de Mantenimiento
-                    }
-                </h5>
-                <button type="button" class="btn-close btn-close-white" (click)="onClose.emit()"></button>
+<div class="page-header d-print-none mb-4 animate__animated animate__fadeIn">
+    <div class="container-xl">
+        <div class="row g-2 align-items-center">
+            <div class="col">
+                <div class="page-pretitle">
+                    Departamento de Ingeniería
+                </div>
+                <h2 class="page-title">
+                    Monitor de Mantenimiento
+                </h2>
+            </div>
+            <div class="col-auto ms-auto d-print-none">
+                <div class="btn-list">
+                    <button class="btn btn-primary d-none d-sm-inline-block" (click)="loadTickets()">
+                        <i class="ti ti-refresh me-2"></i> Actualizar Lista
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-body animate__animated animate__fadeIn">
+    <div class="container-xl">
+        <div class="card shadow-sm">
+
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs">
+                    <li class="nav-item">
+                        <a class="nav-link cursor-pointer fw-bold" [class.active]="filter === 'PENDING'"
+                            [class.text-danger]="filter === 'PENDING'" (click)="filter = 'PENDING'">
+                            🚨 Pendientes ({{ pendingCount() }})
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link cursor-pointer" [class.active]="filter === 'RESOLVED'"
+                            (click)="filter = 'RESOLVED'">
+                            ✅ Historial Resuelto
+                        </a>
+                    </li>
+                </ul>
             </div>
 
-            <div class="modal-body p-0">
-                <div class="card-header">
-                    <ul class="nav nav-tabs card-header-tabs">
-                        <li class="nav-item">
-                            <a class="nav-link cursor-pointer" [class.active]="filter === 'PENDING'"
-                                (click)="filter = 'PENDING'">
-                                🚨 Pendientes ({{ pendingCount() }})
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link cursor-pointer" [class.active]="filter === 'RESOLVED'"
-                                (click)="filter = 'RESOLVED'">
-                                ✅ Histórico
-                            </a>
-                        </li>
-                    </ul>
-                </div>
+            <div class="list-group list-group-flush">
+                @for (t of filteredTickets; track t.id) {
+                <div class="list-group-item p-3 item-row">
+                    <div class="row align-items-center">
 
-                <div class="list-group list-group-flush">
-                    @for (t of filteredTickets; track t.id) {
-                    <div class="list-group-item p-3">
-                        <div class="row align-items-center">
-                            <div class="col-auto">
-                                <span class="avatar bg-blue-lt fw-bold">
-                                    {{ t.room_data?.room_number || t.room_id }}
+                        <div class="col-auto">
+                            <span class="avatar avatar-md fw-bold shadow-sm"
+                                [class.bg-danger-lt]="t.priority === 'CRITICAL'"
+                                [class.bg-blue-lt]="t.priority !== 'CRITICAL'">
+                                {{ t.room_data?.room_number || t.room_id }}
+                            </span>
+                        </div>
+
+                        <div class="col">
+                            <div class="d-flex align-items-center mb-1 gap-2">
+                                <span class="badge" [class.bg-danger]="t.priority === 'CRITICAL'"
+                                    [class.bg-warning]="t.priority === 'NORMAL'" [class.bg-info]="t.priority === 'LOW'">
+                                    {{ t.priority === 'CRITICAL' ? '🔥 CRÍTICA' : t.priority }}
+                                </span>
+                                <span class="fw-bold text-dark fs-3">{{ t.issue_type }}</span>
+                                <span class="text-muted small ms-auto d-none d-md-block">
+                                    Reportado: {{ t.created_at | date:'dd/MM HH:mm' }}
                                 </span>
                             </div>
+                            <div class="text-secondary mt-1 text-wrap" style="max-width: 800px;">
+                                <i class="ti ti-message-circle-2 me-1"></i>
+                                {{ t.description }}
+                            </div>
+                            <div class="text-muted small mt-2 d-md-none">
+                                {{ t.created_at | date:'dd/MM HH:mm' }}
+                            </div>
+                        </div>
 
-                            <div class="col text-truncate">
-                                <div class="d-flex align-items-center mb-1">
-                                    <span class="badge me-2" [class.bg-danger]="t.priority === 'CRITICAL'"
-                                        [class.bg-warning]="t.priority === 'NORMAL'"
-                                        [class.bg-info]="t.priority === 'LOW'">
-                                        {{ t.priority }}
-                                    </span>
-                                    <span class="fw-bold text-dark">{{ t.issue_type }}</span>
-                                    <span class="ms-auto text-muted small">{{ t.created_at | date:'dd/MM HH:mm'
-                                        }}</span>
+                        <div class="col-12 col-md-auto mt-3 mt-md-0" style="min-width: 280px;">
+                            @if (t.status !== 'RESOLVED') {
+
+                            @if (resolvingTicketId !== t.id) {
+                            <button class="btn btn-outline-success w-100" (click)="startResolution(t)">
+                                <i class="ti ti-checkbox me-2"></i> Marcar como Resuelto
+                            </button>
+                            } @else {
+                            <div class="bg-light p-3 rounded border border-success animate__animated animate__fadeIn">
+                                <label class="form-label small fw-bold mb-2 text-dark">
+                                    ¿Qué reparación se realizó? <span class="text-danger">*</span>
+                                </label>
+
+                                <textarea class="form-control form-control-sm mb-2" rows="3"
+                                    [class.is-invalid]="showError" [(ngModel)]="solutionText"
+                                    placeholder="Ej: Se cambió el foco..."></textarea>
+
+                                @if (showError) {
+                                <div class="text-danger small mb-2 fw-bold animate__animated animate__headShake">
+                                    ⚠️ Detalle requerido
                                 </div>
-                                <div class="text-muted text-wrap">
-                                    {{ t.description }}
+                                }
+
+                                <div class="d-flex gap-2">
+                                    <button class="btn btn-ghost-secondary btn-sm w-50" (click)="cancelResolution()">
+                                        Cancelar
+                                    </button>
+                                    <button class="btn btn-success btn-sm w-50" (click)="confirmResolution()">
+                                        Guardar
+                                    </button>
                                 </div>
                             </div>
+                            }
 
-                            <div class="col-auto"> @if (t.status !== 'RESOLVED') {
-
-                                @if (resolvingTicketId !== t.id) {
-                                <button class="btn btn-success btn-sm w-100" (click)="startResolution(t)">
-                                    <i class="ti ti-checkbox me-2"></i> Resolver
-                                </button>
-                                }
-
-                                @else {
-                                <div class="bg-light p-2 rounded border animate__animated animate__fadeIn"
-                                    style="min-width: 250px;">
-                                    <label class="form-label small fw-bold mb-1 text-dark">
-                                        ¿Cómo se solucionó? <span class="text-danger">*</span>
-                                    </label>
-
-                                    <textarea class="form-control form-control-sm mb-1" rows="4"
-                                        [class.is-invalid]="showError" [(ngModel)]="solutionText"
-                                        placeholder="Ej: Se cambió el empaque..."></textarea>
-
-                                    @if (showError) {
-                                    <div
-                                        class="text-danger extra-small mb-2 fw-bold animate__animated animate__headShake">
-                                        ⚠️ Este campo es obligatorio
-                                    </div>
-                                    }
-
-                                    <div class="d-flex gap-2 mt-2">
-                                        <button class="btn btn-white btn-sm w-50" (click)="cancelResolution()">
-                                            Cancelar
-                                        </button>
-                                        <button class="btn btn-success btn-sm w-50" (click)="confirmResolution()">
-                                            <i class="ti ti-device-floppy me-1"></i> Guardar
-                                        </button>
-                                    </div>
+                            } @else {
+                            <div class="p-2 rounded bg-success-lt border border-success">
+                                <div class="d-flex align-items-center fw-bold text-success">
+                                    <i class="ti ti-check me-2"></i> Solucionado
+                                    <span class="ms-auto small">{{ t.resolved_at | date:'dd/MM' }}</span>
                                 </div>
-                                }
-
-                                } @else {
-                                <div class="text-success small border-start border-success ps-2">
-                                    <div class="d-flex align-items-center fw-bold">
-                                        <i class="ti ti-check me-1"></i> Resuelto
-                                        <span class="ms-auto text-muted ms-2">{{ t.resolved_at | date:'dd/MM' }}</span>
-                                    </div>
-                                    <div class="text-muted mt-1 fst-italic" style="font-size: 0.85em;">
-                                        "{{ t.solution_details || 'Sin detalles registrados' }}"
-                                    </div>
+                                <div class="text-dark mt-1 small fst-italic">
+                                    "{{ t.solution_details || 'Sin detalles' }}"
                                 </div>
-                                }
                             </div>
-
-
+                            }
                         </div>
                     </div>
-                    } @empty {
-                    <div class="text-center p-5 text-muted">
-                        <i class="ti ti-confetti display-4 mb-2 d-block"></i>
-                        <p>¡Todo funciona perfecto! No hay tickets.</p>
-                    </div>
-                    }
                 </div>
+                } @empty {
+                <div class="empty p-5">
+                    <div class="empty-img"><i class="ti ti-tool display-4 text-muted"></i></div>
+                    <p class="empty-title">Sin mantenimientos pendientes</p>
+                    <p class="empty-subtitle text-muted">
+                        Todas las habitaciones están operando correctamente.
+                    </p>
+                </div>
+                }
             </div>
         </div>
     </div>

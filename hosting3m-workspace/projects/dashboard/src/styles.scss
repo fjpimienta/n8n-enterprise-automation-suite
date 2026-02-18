@@ -1,4 +1,41 @@
-/* --- 1. FILTROS EN CUADRÍCULA (GRID) --- */
+/* =========================================
+   1. SISTEMA DE TEMAS (Pegar al inicio)
+   ========================================= */
+
+/* COLORES MODO CLARO (Default) */
+:root {
+    --tblr-body-bg: #f8fafc;        /* Fondo gris claro */
+    --tblr-body-color: #1e293b;     /* Texto oscuro */
+    --tblr-card-bg: #ffffff;        /* Tarjetas blancas */
+    --tblr-border-color: #e2e8f0;   /* Bordes suaves */
+    --tblr-sidebar-bg: #0f172a;     /* Sidebar siempre oscuro (Brand) */
+    --tblr-header-bg: #ffffff;      /* Header móvil blanco */
+}
+
+/* COLORES MODO OSCURO (Se activan con data-bs-theme="dark") */
+[data-bs-theme="dark"] {
+    --tblr-body-bg: #0f172a;        /* Fondo azul profundo */
+    --tblr-body-color: #f8fafc;     /* Texto claro */
+    --tblr-card-bg: #1e293b;        /* Tarjetas gris azulado */
+    --tblr-border-color: #334155;   /* Bordes oscuros */
+    --tblr-header-bg: #1e293b;      /* Header móvil oscuro */
+}
+
+/* Aplicación Global */
+body {
+    background-color: var(--tblr-body-bg);
+    color: var(--tblr-body-color);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Forzar estilos oscuros en inputs cuando esté en Dark Mode */
+[data-bs-theme="dark"] .form-control, 
+[data-bs-theme="dark"] .form-select {
+    background-color: #1e293b;
+    border-color: #334155;
+    color: #ffffff;
+}
+
 /* Ya no usamos flex + scroll, usamos Grid para mostrar todo */
 .filter-scroll-container {
     display: grid;

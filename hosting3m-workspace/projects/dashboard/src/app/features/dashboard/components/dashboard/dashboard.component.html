@@ -1,11 +1,8 @@
-<app-header (onRefresh)="refresh()" (onRefreshMain)="refreshMain()" (onGenerateReport)="generateDailyReport()"
-  (onOpenMaintenance)="showMaintenanceMonitor = true" [isAdmin]="isAdmin" (onLogout)="logout()">
-</app-header>
-
 <div class="page-body">
   <div class="container-xl">
 
     @if (viewMode() === 'details' || viewMode() === 'checkin' || viewMode() === 'checkout_validation') {
+
     <app-room-filters [currentFilter]="bookingService.filter()" [isAdmin]="isAdmin"
       (onFilterChange)="bookingService.filter.set($event)" (onManageGuests)="openGuestManagement()"
       (onManageUsers)="openUserManagement()" (onReservations)="openReservations()">
@@ -35,18 +32,14 @@
       }
 
       @for (group of bookingService.groupedRooms(); track group.key) {
-
       <div class="room-group-container mb-4">
 
         <div class="d-flex align-items-center mb-3 pb-2 border-bottom cursor-pointer user-select-none"
           (click)="toggleGroup(group.key)">
-
           <i class="ti ti-chevron-down me-2 transition-transform" [class.rotate-n90]="!isExpanded(group.key)"></i>
-
           <h3 class="m-0 text-secondary fw-bold text-uppercase ls-1">
             {{ group.label }}
           </h3>
-
           <span class="ms-2 badge bg-blue-lt">{{ group.rooms.length }}</span>
         </div>
 
@@ -95,16 +88,13 @@
               <td><app-skeleton appearance="line" style="width: 50px;"></app-skeleton></td>
               <td><app-skeleton appearance="line" style="width: 80px;"></app-skeleton></td>
               <td class="w-1"><app-skeleton appearance="circle"></app-skeleton></td>
-            </tr>
-            }
+            </tr>}
           </tbody>
         </table>
       </div>
     </div>
     } @else {
-    <app-guest-list [guests]="adminService.guests()" (onBack)="viewMode.set('details')" (onAdd)="openNewGuestModal()"
-      (onEdit)="editGuest($event)">
-    </app-guest-list>
+    <app-guest-list></app-guest-list>
     }
     }
 
@@ -120,16 +110,13 @@
               <td><app-skeleton appearance="line" style="width: 50px;"></app-skeleton></td>
               <td><app-skeleton appearance="line" style="width: 80px;"></app-skeleton></td>
               <td class="w-1"><app-skeleton appearance="circle"></app-skeleton></td>
-            </tr>
-            }
+            </tr>}
           </tbody>
         </table>
       </div>
     </div>
     } @else {
-    <app-user-list [users]="adminService.users()" (onBack)="viewMode.set('details')" (onAdd)="openNewUserModal()"
-      (onEdit)="editUser($event)">
-    </app-user-list>
+    <app-user-list> </app-user-list>
     }
     }
   </div>
@@ -151,9 +138,6 @@
   [(guestData)]="tempGuest" (onClose)="isGuestModalOpen.set(false)" (onSave)="handleSaveGuest()">
 </app-guest-form-modal>
 
-<app-daily-report-modal [isOpen]="showReportModal" [isLoading]="reportService.loadingReports()"
-  [reportData]="dailyReport" [currentFilter]="reportFilter()" [roomsList]="bookingService.rooms()"
-  (onClose)="showReportModal = false" (onFilterChange)="handleReportFilterChange($event)"> </app-daily-report-modal>
 @if (viewMode() === 'checklist') {
 <app-room-checklist-modal [room]="hotelService.selectedRoom()" (onClose)="viewMode.set('details')"
   (onSave)="handleChecklistSave($event)">

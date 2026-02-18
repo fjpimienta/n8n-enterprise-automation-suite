@@ -1,0 +1,157 @@
+<div class="page-header d-print-none mb-4 animate__animated animate__fadeIn">
+    <div class="container-xl">
+        <div class="row g-2 align-items-center">
+            <div class="col">
+                <div class="page-pretitle">Logística</div>
+                <h2 class="page-title">Inventario Centralizado</h2>
+            </div>
+            <div class="col-auto ms-auto">
+                <button class="btn btn-primary" (click)="openModal()">
+                    <i class="ti ti-plus me-2"></i> Nuevo Activo
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="page-body animate__animated animate__fadeIn">
+    <div class="container-xl">
+
+        <div class="row row-cards mb-4">
+            <div class="col-sm-6 col-lg-4">
+                <div class="card card-sm border-0 shadow-sm bg-primary-lt">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-auto">
+                                <span class="bg-primary text-white avatar"><i class="ti ti-box"></i></span>
+                            </div>
+                            <div class="col">
+                                <div class="font-weight-medium">{{ totalAssets() }} Activos</div>
+                                <div class="text-muted">Total Registrados</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-4">
+                <div class="card card-sm border-0 shadow-sm bg-green-lt">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-auto">
+                                <span class="bg-green text-white avatar"><i class="ti ti-currency-dollar"></i></span>
+                            </div>
+                            <div class="col">
+                                <div class="font-weight-medium">${{ totalValue() | number:'1.2-2' }}</div>
+                                <div class="text-muted">Valor Estimado</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-4">
+                <div class="card card-sm border-0 shadow-sm bg-red-lt">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-auto">
+                                <span class="bg-red text-white avatar"><i class="ti ti-alert-triangle"></i></span>
+                            </div>
+                            <div class="col">
+                                <div class="font-weight-medium">{{ damagedAssets() }} Alertas</div>
+                                <div class="text-muted">Dañados o Perdidos</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0">
+            <div class="card-body border-bottom py-3">
+                <div class="d-flex">
+                    <div class="text-muted">
+                        Mostrar
+                        <div class="mx-2 d-inline-block">
+                            <select class="form-select form-select-sm" [(ngModel)]="filterStatus">
+                                <option value="ALL">Todos</option>
+                                <option value="GOOD">Buenos</option>
+                                <option value="DAMAGED">Dañados</option>
+                                <option value="MISSING">Perdidos</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="ms-auto text-muted">
+                        Buscar:
+                        <div class="ms-2 d-inline-block">
+                            <input type="text" class="form-control form-control-sm" [(ngModel)]="searchTerm"
+                                placeholder="Nombre o Serie...">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table card-table table-vcenter text-nowrap datatable">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Categoría</th>
+                            <th>Ubicación</th>
+                            <th>Estado</th>
+                            <th>Valor</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (item of filteredAssets(); track item.id) {
+                        <tr>
+                            <td>
+                                <div class="d-flex py-1 align-items-center">
+                                    <span class="avatar me-2" [class.bg-blue-lt]="item.category === 'ELECTRONICA'"
+                                        [class.bg-orange-lt]="item.category === 'MOBILIARIO'"
+                                        [class.bg-purple-lt]="item.category === 'BLANCOS'">
+                                        {{ (item.name || '?').charAt(0) }}
+                                    </span>
+                                    <div class="flex-fill">
+                                        <div class="font-weight-medium">{{ item.name }}</div>
+                                        <div class="text-muted text-truncate text-small">S/N: {{ item.serial_number ||
+                                            '---' }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td><span class="badge bg-azure-lt">{{ item.category }}</span></td>
+                            <td>
+                                <i class="ti ti-map-pin me-1 text-muted"></i>
+                                {{ getRoomNumber(item.current_room_id) }}
+                            </td>
+                            <td>
+                                <span class="badge" [class.bg-success-lt]="item.status === 'GOOD'"
+                                    [class.bg-warning-lt]="item.status === 'DAMAGED'"
+                                    [class.bg-danger-lt]="item.status === 'MISSING'"
+                                    [class.bg-secondary-lt]="item.status === 'DISCARDED'">
+                                    {{ item.status }}
+                                </span>
+                            </td>
+                            <td>${{ item.cost | number:'1.2-2' }}</td>
+                            <td class="text-end">
+                                <button class="btn btn-sm btn-ghost-primary" (click)="openModal(item)">
+                                    <i class="ti ti-pencil"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        } @empty {
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                @if(isLoading()) { Cargando inventario... } @else { No se encontraron activos. }
+                            </td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<app-asset-form-modal [isOpen]="isModalOpen()" [isEditing]="isEditing()" [(assetData)]="currentAsset"
+    (onClose)="isModalOpen.set(false)" (onSave)="saveAsset()">
+</app-asset-form-modal>
