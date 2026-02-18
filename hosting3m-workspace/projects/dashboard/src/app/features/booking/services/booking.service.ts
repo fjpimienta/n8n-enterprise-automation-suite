@@ -506,50 +506,41 @@ export class BookingService {
     }
   }
 
-  /** 2. CREAR RESERVA FUTURA */
+  /** 2. CREAR RESERVA FUTURA (CON BLINDAJE ANTI-DUPLICADOS) */
   public async createFutureReservation(formData: any, roomId: number): Promise<boolean> {
     this.isProcessing.set(true);
-    let guestIdToUse: number | null = null; // Variable para decidir qué ID usar
+    let guestIdToUse: number | null = null;
+
     try {
-      // 1. BUSCAR DUPLICADOS
+      // --- PASO 0: DOBLE VERIFICACIÓN DE SEGURIDAD ---
+      // Esto evita que el segundo clic pase si el primero ya ocupó el cuarto.
+      const isFree = await this.isRoomFree(roomId, formData.check_in, formData.check_out);
+
+      if (!isFree) {
+        alert('⚠️ ¡ALERTA! La habitación ya fue ocupada o reservada mientras confirmabas.\n\nEl sistema evitó crear un duplicado.');
+        this.isProcessing.set(false);
+        return false; // Retornamos false para detener todo
+      }
+      // ------------------------------------------------
+
+      // 1. BUSCAR DUPLICADOS DE HUÉSPED
       const duplicates: any = await lastValueFrom(
         this.adminService.checkPossibleDuplicate(formData.full_name)
       );
 
-      // Filtramos basura de n8n
       const realDuplicates = (duplicates.data || []).filter((d: any) => d.id && d.id > 0);
 
-      // 2. TOMA DE DECISIÓN (SI ENCONTRAMOS ALGUIEN)
       if (realDuplicates.length > 0) {
-        // Tomamos el primero de la lista (o el más reciente)
         const existingGuest = realDuplicates[0];
-
         const useExisting = window.confirm(
-          `🔍 ENCONTRADO: El huésped "${existingGuest.full_name}" ya existe en el sistema.\n` +
-          `(ID: ${existingGuest.id} - Email: ${existingGuest.email || 'Sin email'})\n\n` +
-          `¿Deseas ASIGNAR esta reserva al huésped existente?\n\n` +
-          `• Aceptar: SÍ, es la misma persona (Usar ID ${existingGuest.id}).\n` +
-          `• Cancelar: NO, es otra persona con el mismo nombre (Crear Nuevo).`
+          `🔍 El huésped "${existingGuest.full_name}" ya existe.\n¿Usar sus datos existentes?`
         );
-
-        if (useExisting) {
-          // CAMINO A: REUTILIZAR
-          guestIdToUse = existingGuest.id;
-        }
-        // Si da Cancelar, guestIdToUse sigue siendo null, así que el código bajará a crear uno nuevo.
+        if (useExisting) guestIdToUse = existingGuest.id;
       }
 
-      // 3. SI NO REUTILIZAMOS, CREAMOS UNO NUEVO (CAMINO B)
       if (!guestIdToUse) {
-        // Generar datos ficticios si hacen falta
-        let finalDocId = formData.doc_id;
-        if (!finalDocId || finalDocId.trim() === '') {
-          finalDocId = this.adminService.generateInternalId();
-        }
-        let finalEmail = formData.email;
-        if (!finalEmail || finalEmail.trim() === '') {
-          finalEmail = this.adminService.generateDummyEmail();
-        }
+        let finalDocId = formData.doc_id || this.adminService.generateInternalId();
+        let finalEmail = formData.email || this.adminService.generateDummyEmail();
 
         const guestRes: any = await lastValueFrom(
           this.http.post(`${this.apiUrl_crud}/hotel_guests`, {
@@ -564,22 +555,18 @@ export class BookingService {
             }
           }, { headers: this.adminService.getAuthHeaders() })
         );
-
         guestIdToUse = guestRes?.data?.[0]?.id || guestRes?.id;
       }
 
-      // Validación de seguridad
-      if (!guestIdToUse) {
-        throw new Error("No se pudo obtener un ID de huésped válido (ni existente ni nuevo).");
-      }
+      if (!guestIdToUse) throw new Error("No se pudo obtener un ID de huésped válido.");
 
-      // 4. CREAR LA RESERVA (Usando el guestIdToUse, sea viejo o nuevo)
+      // 4. CREAR LA RESERVA
       await lastValueFrom(
         this.http.post(`${this.apiUrl_crud}/hotel_bookings`, {
           operation: 'insert',
           fields: {
             room_id: roomId,
-            guest_id: guestIdToUse, // <--- Aquí usamos el ID decidido arriba
+            guest_id: guestIdToUse,
             check_in: formData.check_in,
             check_out: formData.check_out,
             total_amount: formData.total_amount || 0,
@@ -595,6 +582,7 @@ export class BookingService {
 
     } catch (error) {
       console.error(error);
+      if (error instanceof Error) alert('Error: ' + error.message);
       throw error;
     } finally {
       this.isProcessing.set(false);
@@ -636,5 +624,44 @@ export class BookingService {
         fields: { payment_status: 'paid' }
       }, { headers: this.adminService.getAuthHeaders() })
     );
+  }
+
+  /**
+   * Verifica si una habitación específica está libre en un rango de fechas.
+   * Retorna TRUE si está libre, FALSE si está ocupada/reservada.
+   */
+  private async isRoomFree(roomId: number, checkIn: string, checkOut: string): Promise<boolean> {
+    const payload = {
+      operation: 'getall',
+      table_name: 'hotel_bookings',
+      // Filtramos solo por esta habitación
+      fields: { room_id: roomId }
+    };
+
+    const res: any = await lastValueFrom(
+      this.http.post<ApiResponse<any>>(`${this.apiUrl_crud}/hotel_bookings`, payload, {
+        headers: this.adminService.getAuthHeaders()
+      })
+    );
+
+    const bookings = res.data || [];
+
+    // Normalizamos fechas a milisegundos para comparar números
+    const newStart = new Date(checkIn).setHours(0, 0, 0, 0);
+    const newEnd = new Date(checkOut).setHours(0, 0, 0, 0);
+
+    // Buscamos si hay alguna colisión
+    const hasConflict = bookings.some((b: any) => {
+      // Ignorar canceladas o check-out
+      if (b.status === 'cancelled' || b.status === 'checked_out') return false;
+
+      const bStart = new Date(b.check_in).setHours(0, 0, 0, 0);
+      const bEnd = new Date(b.check_out).setHours(0, 0, 0, 0);
+
+      // Lógica de colisión exacta: (InicioA < FinB) y (FinA > InicioB)
+      return (newStart < bEnd && newEnd > bStart);
+    });
+
+    return !hasConflict; // Si hay conflicto, NO está libre
   }
 }

@@ -51,8 +51,8 @@
                       Nombre' }}</div>
                     <div class="text-muted small">{{ res.hotel_guests_data?.phone || res.guest_phone }}</div>
                   </td>
-                  <td>{{ res.check_in | date:'dd MMM' }}</td>
-                  <td>{{ res.check_out | date:'dd MMM' }}</td>
+                  <td>{{ res.check_in | date:'dd MMM':'UTC' }}</td>
+                  <td>{{ res.check_out | date:'dd MMM':'UTC' }}</td>
                   <td>
                     <span class="badge" [class.bg-success-lt]="res.status === 'confirmed'"
                       [class.bg-warning-lt]="res.status === 'pending'">
