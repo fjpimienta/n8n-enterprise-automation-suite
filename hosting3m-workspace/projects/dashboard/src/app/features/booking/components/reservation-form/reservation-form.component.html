@@ -36,19 +36,26 @@
         <hr class="my-3 opacity-50">
 
         @if (availableRooms.length > 0) {
-        <div class="section-title mb-2 text-uppercase text-muted fw-bold x-small" style="font-size: 0.7rem;">
-            2. Seleccione Habitación
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <div class="section-title text-uppercase text-muted fw-bold x-small" style="font-size: 0.7rem;">
+                2. Seleccione Habitación
+            </div>
+            @if (isMultiBooking && selectedRooms.length > 0) {
+            <span class="badge bg-primary-lt">{{ selectedRooms.length }} seleccionadas</span>
+            }
         </div>
+
         <div class="list-group list-group-flush border rounded-3 mb-3" style="max-height: 180px; overflow-y: auto;">
             @for (r of availableRooms; track r.id) {
             <label class="list-group-item list-group-item-action d-flex align-items-center py-2 px-3 cursor-pointer"
-                [class.bg-blue-lt]="selectedRoomForRes?.id === r.id">
-                <input class="form-check-input me-3" type="radio" name="roomSelection"
-                    [checked]="selectedRoomForRes?.id === r.id" (change)="selectedRoomForRes = r">
+                [class.bg-blue-lt]="isRoomSelected(r)" (click)="$event.preventDefault(); toggleRoom(r)">
+                <input class="form-check-input me-3" [type]="isMultiBooking ? 'checkbox' : 'radio'" name="roomSelection"
+                    [checked]="isRoomSelected(r)" style="pointer-events: none;">
                 <div class="flex-fill">
-                    <div class="fw-bold mb-0 text-dark small text-truncate">Hab. {{ r.room_number }}</div>
+                    <div class="fw-bold mb-0 small text-truncate">Hab. {{ r.room_number }}</div>
                     <div class="text-muted" style="font-size: 0.7rem;">{{ r.type | titlecase }}</div>
                 </div>
+
                 <div class="text-end">
                     <span class="badge bg-green-lt">${{ r.price_night }}</span>
                 </div>
@@ -92,6 +99,18 @@
                 <textarea class="form-control" [(ngModel)]="guest.notes" rows="2"
                     placeholder="Ej: : 'Llega tarde', 'Persona mayor', 'Alergias', etc."></textarea>
             </div>
+
+            @if (!reservationToEdit()) {
+            <div class="form-check form-switch mb-3 bg-white p-2 rounded border">
+                <input class="form-check-input ms-0 me-2" type="checkbox" role="switch" id="multiBookingSwitch"
+                    [(ngModel)]="isMultiBooking">
+                <label class="form-check-label small fw-bold text-muted cursor-pointer" for="multiBookingSwitch">
+                    Múltiples Habitaciones
+                    <div class="fw-normal" style="font-size: 0.65rem;">Mantener huésped y fechas al guardar</div>
+                </label>
+            </div>
+            }
+
             <div class="mb-2">
                 <button class="btn btn-success w-100 shadow-sm d-flex flex-column align-items-center py-2"
                     [disabled]="isSaving() || !guest.name" (click)="confirmReservation()">
@@ -99,10 +118,16 @@
                     <span class="spinner-border spinner-border-sm mb-1"></span>
                     <span class="small">Guardando...</span>
                     } @else {
-                    <span class="fw-bold">Confirmar Reserva</span>
-                    <span style="font-size: 0.7rem;" class="opacity-75">Total: ${{ totalReserva() | number:'1.2-2'
-                        }}</span>
+                    <span class="fw-bold">{{ reservationToEdit() ? 'Actualizar Reserva' : 'Confirmar Reserva' }}</span>
+                    <span style="font-size: 0.7rem;" class="opacity-75">Total: ${{ totalReserva() |
+                        number:'1.2-2'}}</span>
                     }
+                </button>
+            </div>
+
+            <div class="mb-2 animate__animated animate__fadeIn">
+                <button class="btn btn-outline-secondary w-100 shadow-sm" (click)="cancelEdit()">
+                    <i class="ti ti-x me-1"></i> Cancelar Edición
                 </button>
             </div>
         </div>

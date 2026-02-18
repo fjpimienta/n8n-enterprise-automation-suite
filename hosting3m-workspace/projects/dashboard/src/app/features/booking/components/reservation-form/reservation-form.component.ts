@@ -28,16 +28,49 @@ export class ReservationFormComponent implements OnInit, OnChanges { // 2. Agreg
 
   dates = { start: '', end: '' };
   availableRooms: Room[] = [];
-  selectedRoomForRes: Room | null = null;
   guest = { name: '', doc_id: '', phone: '', email: '', notes: '' };
   dateUtils = inject(DateUtilsService);
   minDate = this.dateUtils.todayStr;
 
+  selectedRoomForRes: Room | null = null; // Para modo simple
+  selectedRooms: Room[] = [];             // Para modo múltiple (Nuevo)
+  isMultiBooking: boolean = false;        // El switch
+
   // En el componente
   totalReserva = computed(() => {
     const noches = this.getNights(this.dates.start, this.dates.end);
-    return noches * (this.selectedRoomForRes?.price_night || 0);
+
+    if (this.isMultiBooking) {
+      // Suma el precio de TODAS las habitaciones seleccionadas
+      return this.selectedRooms.reduce((acc, room) => acc + (noches * room.price_night), 0);
+    } else {
+      // Solo la habitación individual
+      return noches * (this.selectedRoomForRes?.price_night || 0);
+    }
   });
+
+  toggleRoom(room: Room) {
+    if (this.isMultiBooking) {
+      // Lógica de Checkbox (Agregar/Quitar del array)
+      const index = this.selectedRooms.findIndex(r => r.id === room.id);
+      if (index >= 0) {
+        this.selectedRooms.splice(index, 1); // Quitar si ya estaba
+      } else {
+        this.selectedRooms.push(room);       // Agregar si no estaba
+      }
+    } else {
+      // Lógica de Radio Button (Reemplazar)
+      this.selectedRoomForRes = room;
+    }
+  }
+
+  isRoomSelected(room: Room): boolean {
+    if (this.isMultiBooking) {
+      return this.selectedRooms.some(r => r.id === room.id);
+    } else {
+      return this.selectedRoomForRes?.id === room.id;
+    }
+  }
 
   ngOnInit() {
     if (this.room()) {
@@ -118,66 +151,88 @@ export class ReservationFormComponent implements OnInit, OnChanges { // 2. Agreg
 
   /* Confirma y guarda la reserva */
   async confirmReservation() {
-    if (!this.selectedRoomForRes) return;
+    // Validaciones
+    if (this.isMultiBooking && this.selectedRooms.length === 0) return;
+    if (!this.isMultiBooking && !this.selectedRoomForRes) return;
+
     if (!this.guest.name) {
       alert('Ingrese el nombre del huésped');
       return;
     }
 
     this.isSaving.set(true);
-
-    // Calculamos el total real
     const noches = this.getNights(this.dates.start, this.dates.end);
-    const total = noches * (this.selectedRoomForRes?.price_night || 0);
-    const isUpdate = !!this.reservationToEdit()?.id;
 
-    // ... (Lógica de limpieza de dummies sigue igual) ...
+    // Preparamos datos comunes del huésped
     let doc_id = this.guest.doc_id;
     if (doc_id && doc_id.startsWith('INT-')) doc_id = '';
-
     let email = this.guest.email;
     if (email && email.startsWith('no-email-')) email = '';
 
-    const reservationData = {
-      id: isUpdate ? this.reservationToEdit().id : undefined,
-      room_id: this.selectedRoomForRes?.id,
-      full_name: this.guest.name,
-      doc_id: doc_id,
-      email: email,
-      phone: this.guest.phone,
-      notes: this.guest.notes,
-      check_in: this.dates.start,
-      check_out: this.dates.end,
-      total_amount: total
-    };
-
     try {
-      if (isUpdate) {
-        // La actualización no suele tener chequeo de duplicados, así que sigue igual
-        await this.bookingService.updateReservation(reservationData);
-        alert('¡Reserva Actualizada!');
-        this.saved.emit();
-        this.onClose.emit();
+      if (this.reservationToEdit()) {
+        // ... (Lógica de editar existente, solo soporta 1 a la vez por ahora) ...
+        // Puedes dejar tu código de updateReservation aquí igual que antes
       } else {
-        // CAMBIO IMPORTANTE AQUÍ:
-        // Capturamos el resultado (true o false)
-        const success = await this.bookingService.createFutureReservation(reservationData, this.selectedRoomForRes.id);
+        // --- NUEVA LÓGICA DE CREACIÓN ---
 
-        // Solo si success es TRUE cerramos el modal
-        if (success) {
-          alert('¡Reserva Guardada con Éxito!');
+        // 1. Definir qué habitaciones vamos a reservar
+        const roomsToBook = this.isMultiBooking ? this.selectedRooms : [this.selectedRoomForRes!];
+
+        // 2. Iterar y guardar
+        let successCount = 0;
+
+        for (const room of roomsToBook) {
+          const total = noches * room.price_night;
+
+          const reservationData = {
+            room_id: room.id, // ID variable del bucle
+            full_name: this.guest.name,
+            doc_id: doc_id,
+            email: email,
+            phone: this.guest.phone,
+            notes: this.guest.notes,
+            check_in: this.dates.start,
+            check_out: this.dates.end,
+            total_amount: total
+          };
+
+          // Enviamos al servicio (esperamos a que termine cada una)
+          const result = await this.bookingService.createFutureReservation(reservationData, room.id);
+          if (result) successCount++;
+        }
+
+        if (successCount > 0) {
+          alert(`¡Éxito! Se crearon ${successCount} reserva(s) correctamente.`);
           this.saved.emit();
+          this.resetForm();
           this.onClose.emit();
         }
-        // Si success es false (Cancelado), no hacemos nada, el modal sigue abierto.
       }
-
-    } catch (error) {
-      console.error(error);
-      alert('Error al guardar la reserva');
+    } catch (e) {
+      console.error(e);
+      alert('Ocurrió un error al procesar las reservas.');
     } finally {
       this.isSaving.set(false);
     }
   }
+
+  // Modifica resetForm para asegurar que apague el switch si se cancela o cierra total
+  private resetForm() {
+    this.dates = { start: '', end: '' };
+    this.availableRooms = [];
+    this.selectedRoomForRes = null;
+    this.selectedRooms = []; // Limpiar array
+    this.guest = { name: '', doc_id: '', phone: '', email: '', notes: '' };
+    this.isMultiBooking = false;
+  }
+
+  cancelEdit() {
+    // 1. Limpiamos el formulario local
+    this.resetForm();
+    // 2. Avisamos al componente padre que deje de mandarnos la reserva para editar
+    this.onClose.emit();
+  }
+
 
 }

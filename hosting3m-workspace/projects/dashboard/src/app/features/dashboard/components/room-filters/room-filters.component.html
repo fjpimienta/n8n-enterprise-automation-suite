@@ -38,23 +38,4 @@
         }
     </div>
 
-    @if (isAdmin()) {
-    <div class="hr-text">Administración</div>
-
-    <div class="admin-buttons-grid">
-
-        <button (click)="onReservations.emit()" class="admin-btn">
-            <span>📅</span> Reservas
-        </button>
-
-        <button (click)="onManageGuests.emit()" class="admin-btn">
-            <span>👥</span> Huéspedes
-        </button>
-
-        <button (click)="onManageUsers.emit()" class="admin-btn">
-            <span>🛡️</span> Personal
-        </button>
-
-    </div>
-    }
 </div>
