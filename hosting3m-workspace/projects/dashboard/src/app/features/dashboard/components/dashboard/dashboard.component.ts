@@ -77,46 +77,26 @@ export class DashboardComponent {
   };
 
   ngOnInit() {
+    this.hotelService.selectRoom(null as any);
     this.refresh();
   }
 
-  /* 1. SECCIÓN: REFRESCO DE DATOS OPTIMIZADO */
   refresh() {
-    // Prioridad 1: Habitaciones (Esto quita el Skeleton rápido)
-    this.bookingService.loadRooms();
-
-    // Prioridad 2: El resto se carga en segundo plano sin detener la UI
-    setTimeout(() => {
-      this.adminService.loadReservations();
-      this.adminService.loadGuests(this.authService.currentUser()?.id_company);
-      if (this.isAdmin) {
-        this.adminService.loadUsers(this.authService.currentUser()?.id_company);
-      }
-    }, 1); // Pequeño delay para dejar que el hilo principal pinte las habitaciones
-  }
-
-  /* 1. SECCIÓN: REFRESCO DE DATOS */
-  refreshMain() {
-    // 1. EL CAMBIO CLAVE: Resetear la vista a las habitaciones
-    this.viewMode.set('details');
-
-    // 2. Limpiar cualquier selección previa (si había un modal o cuarto abierto)
-    this.hotelService.clearSelection();
-    this.activeBooking.set(null);
-
-    // 3. Resetear filtros para ver "lo principal" (opcional)
-    // Esto asegura que veas todas las habitaciones disponibles al volver
-    this.bookingService.filter.set('all');
-
-    // 4. Recargar los datos de los servicios
     this.bookingService.loadRooms();
     this.adminService.loadReservations();
-    this.adminService.loadGuests(this.authService.currentUser()?.id_company);
+  }
 
-    if (this.isAdmin) {
-      this.adminService.loadUsers(this.authService.currentUser()?.id_company);
-    }
+  /* 1. SECCIÓN: REFRESCO Y RETORNO AL INICIO */
+  refreshMain() {
+    this.viewMode.set('details');
+    this.hotelService.clearSelection();
+    this.activeBooking.set(null);
+    this.bookingService.filter.set('all');
 
+    this.showMaintenanceMonitor = false;
+    this.maintenanceFilterRoomId = null;
+
+    this.refresh();
   }
 
   /* 2. SECCIÓN: INTERACCIÓN CON HABITACIONES */
@@ -265,10 +245,10 @@ export class DashboardComponent {
   }
 
   /* Abre la vista de gestión de usuarios */
+  /* Abre la vista de gestión de usuarios */
   openUserManagement() {
     this.viewMode.set('user_mgmt');
     this.hotelService.clearSelection();
-    this.adminService.loadUsers(this.authService.currentUser()?.id_company);
   }
 
   /* Abre el modal para crear un nuevo usuario */
@@ -304,6 +284,10 @@ export class DashboardComponent {
   openGuestManagement() {
     this.hotelService.clearSelection();
     this.viewMode.set('guest_mgmt');
+
+    // 👇 NUEVAS LÍNEAS: Apagar el monitor al ir a Huéspedes
+    this.showMaintenanceMonitor = false;
+    this.maintenanceFilterRoomId = null;
   }
 
   /* Abre el modal para crear un nuevo huésped */
@@ -356,28 +340,21 @@ export class DashboardComponent {
   openReservations() {
     this.hotelService.clearSelection();
     this.viewMode.set('reservation');
+
+    // 👇 NUEVAS LÍNEAS: Apagar el monitor al ir a Reservas Generales
+    this.showMaintenanceMonitor = false;
+    this.maintenanceFilterRoomId = null;
   }
 
   async reportMaintenance() {
     const room = this.hotelService.selectedRoom();
     if (!room) return;
 
-    // 1. Confirmación visual (Ahora con texto claro)
-    if (confirm(`¿Desea reportar la Habitación ${room.room_number} a Mantenimiento?`)) {
-      try {
-        // 2. Operación de Base de Datos (Tu método async/await)
-        await this.hotelService.updateRoomMaintenance(room.id);
+    // 1. Cerramos el modal actual de detalles de la habitación
+    this.hotelService.clearSelection();
 
-        // 3. Éxito visual y refresco
-        this.completeActionSuccess('Reporte enviado y habitación en mantenimiento ✅');
-        this.hotelService.clearSelection();
-        this.refresh();
-
-      } catch (error) {
-        console.error('Error:', error);
-        alert('Error al actualizar el estado en la base de datos ❌');
-      }
-    }
+    // 2. Abrimos el modal oficial de creación de Tickets 
+    this.openMaintenanceReport(room);
   }
 
   /* Finaliza el mantenimiento de una habitación */
@@ -395,6 +372,16 @@ export class DashboardComponent {
         alert('Error al actualizar el estado ❌');
       }
     }
+  }
+
+  /* Maneja la respuesta directa desde el Monitor de Mantenimiento */
+  handleMonitorResolved() {
+    // 1. Cerramos el monitor
+    this.showMaintenanceMonitor = false;
+    this.maintenanceFilterRoomId = null;
+
+    // 2. Lanzamos la alerta y recargamos la vista automáticamente
+    this.completeActionSuccess('🔧 Falla reparada. Habitación disponible y limpia.');
   }
 
   /* 8. SECCIÓN: AUTENTICACIÓN Y NAVEGACIÓN */

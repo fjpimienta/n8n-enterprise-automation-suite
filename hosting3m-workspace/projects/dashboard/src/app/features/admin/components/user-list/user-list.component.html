@@ -1,64 +1,74 @@
-<div class="d-flex mb-4 align-items-center bg-white p-2 rounded-3 shadow-sm border">
-    <div class="flex-shrink-0">
-        <button class="btn btn-sm btn-ghost-secondary d-flex align-items-center me-3" style="pointer-events: none;">
-            <i class="ti ti-users fs-2"></i>
-        </button>
-    </div>
-    <div class="flex-fill px-1">
-        <h2 class="mb-0 fw-bold tracking-tight text-dark">Personal del Hotel</h2>
-        <small class="text-muted d-none d-md-block">Gestiona accesos y roles de empleados</small>
-    </div>
-    <div class="flex-shrink-0">
-        <button class="btn btn-primary btn-sm shadow-sm px-3" (click)="openModal()">
-            <i class="ti ti-plus me-1"></i> Nuevo Empleado
-        </button>
-    </div>
-</div>
+<div class="container-fluid p-3 p-md-4 animate__animated animate__fadeIn">
 
-<div class="d-flex flex-wrap gap-3 animate__animated animate__fadeIn">
-    @for (user of users(); track user.email) {
-    <div class="flex-fill" style="min-width: 320px; max-width: 100%;">
-        <div class="card shadow-sm border-0 h-100 hover-shadow-lg transition-all">
-            <div class="card-body d-flex align-items-center p-3 text-dark bg-white rounded">
-
-                <span class="avatar avatar-md me-3 bg-indigo-lt text-uppercase fw-bold rounded shadow-sm">
-                    {{ (user.names || '?').charAt(0) }}{{ (user.lastname || '').charAt(0) }}
-                </span>
-
-                <div class="flex-fill overflow-hidden">
-                    <div class="fw-bold text-truncate text-dark">{{ user.names }} {{ user.lastname }}</div>
-
-                    <div class="d-flex align-items-center mt-1">
-                        <span class="badge badge-sm me-2" [class.bg-purple-lt]="user.role === 'ADMIN'"
-                            [class.bg-teal-lt]="user.role !== 'ADMIN'">
-                            {{ user.role === 'ADMIN' ? 'Administrador' : 'Recepcionista' }}
-                        </span>
-                    </div>
-
-                    <div class="text-muted small mt-1 text-truncate">
-                        <i class="ti ti-mail me-1"></i> {{ user.email }}
-                    </div>
-                </div>
-
-                <button class="btn btn-icon btn-ghost-primary ms-2" (click)="openModal(user)" title="Editar">
-                    <i class="ti ti-pencil"></i>
-                </button>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <div class="d-none d-md-block">
+                <span class="bg-indigo-lt p-2 rounded-3"><i class="ti ti-id-badge fs-2"></i></span>
             </div>
-
-            <div class="card-progress-bottom" [style.background-color]="user.role === 'ADMIN' ? '#6f42c1' : '#20c997'">
+            <div>
+                <h2 class="page-title mb-0">Personal del Hotel</h2>
+                <div class="text-muted small mt-1">Gestiona accesos y roles de empleados</div>
             </div>
         </div>
+        <div>
+            <button class="btn btn-primary shadow-sm" (click)="openModal()">
+                <i class="ti ti-plus me-2"></i>
+                <span class="d-none d-sm-inline">Nuevo Empleado</span>
+                <span class="d-inline d-sm-none">Nuevo</span>
+            </button>
+        </div>
     </div>
-    } @empty {
-    <div class="w-100 p-5 text-center border rounded-3 bg-white">
-        <div class="display-4 text-muted mb-3 opacity-50"><i class="ti ti-id-badge-off"></i></div>
-        <p class="h3">No hay personal registrado</p>
-        <p class="text-muted">Agrega usuarios para que puedan acceder al sistema.</p>
-        <button class="btn btn-primary mt-2" (click)="openModal()">
-            Registrar Primer Empleado
-        </button>
+
+    <div class="row row-cards">
+        @for (user of users(); track user.email) {
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="card shadow-sm border-0 h-100 hover-shadow-lg transition-all">
+                <div class="card-body d-flex align-items-center p-3">
+
+                    <span class="avatar avatar-md me-3 bg-indigo-lt text-uppercase fw-bold rounded shadow-sm">
+                        {{ (user.names || '?').charAt(0) }}{{ (user.lastname || '').charAt(0) }}
+                    </span>
+
+                    <div class="flex-fill overflow-hidden">
+                        <div class="font-weight-medium fs-4 text-truncate mb-1">{{ user.names }} {{ user.lastname }}
+                        </div>
+
+                        <div class="mb-1">
+                            <span class="badge" [class.bg-purple-lt]="user.role === 'ADMIN'"
+                                [class.bg-teal-lt]="user.role !== 'ADMIN'">
+                                {{ user.role === 'ADMIN' ? 'Administrador' : 'Recepcionista' }}
+                            </span>
+                        </div>
+
+                        <div class="text-muted fs-5 mt-1 text-truncate">
+                            <i class="ti ti-mail me-2"></i> {{ user.email }}
+                        </div>
+                    </div>
+
+                    <div class="ms-3">
+                        <button class="btn btn-icon btn-ghost-secondary" (click)="openModal(user)" title="Editar">
+                            <i class="ti ti-edit fs-4"></i>
+                        </button>
+                    </div>
+
+                </div>
+                <div class="card-progress-bottom"
+                    [style.background-color]="user.role === 'ADMIN' ? '#6f42c1' : '#20c997'"></div>
+            </div>
+        </div>
+        } @empty {
+        <div class="col-12 text-center py-5">
+            <div class="empty-state">
+                <div class="empty-img"><i class="ti ti-id-badge-off fs-1 text-muted"></i></div>
+                <p class="empty-title fs-3">No hay personal registrado</p>
+                <p class="empty-subtitle text-muted">Agrega usuarios para que puedan acceder al sistema.</p>
+                <button class="btn btn-primary mt-3" (click)="openModal()">
+                    <i class="ti ti-plus me-2"></i> Registrar Empleado
+                </button>
+            </div>
+        </div>
+        }
     </div>
-    }
 </div>
 
 <app-user-form-modal [isOpen]="isModalOpen()" [selectedUser]="selectedUser()" [(userData)]="currentUserData"

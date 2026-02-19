@@ -3,28 +3,34 @@
 <div class="modal modal-blur fade show d-block" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content shadow-lg border-0">
-            <div class="modal-header bg-dark text-white">
-                <h5 class="modal-title">{{ isEditing() ? 'Editar Activo' : 'Nuevo Activo' }}</h5>
-                <button type="button" class="btn-close btn-close-white" (click)="onClose.emit()"></button>
-            </div>
-            <div class="modal-body p-4 bg-light text-dark">
 
-                <div class="row mb-3">
-                    <div class="col-8">
-                        <label class="form-label fw-bold small">Nombre del Artículo</label>
-                        <input type="text" class="form-control shadow-sm" [(ngModel)]="assetData().name"
+            <div class="modal-header">
+                <h5 class="modal-title fs-3 fw-bold">
+                    <i class="ti" [class.ti-edit]="isEditing()" [class.ti-plus]="!isEditing()"></i>
+                    {{ isEditing() ? 'Editar Activo' : 'Nuevo Activo' }}
+                </h5>
+                <button type="button" class="btn-close" (click)="onClose.emit()"></button>
+            </div>
+
+            <div class="modal-body p-4">
+
+                <div class="row g-3 mb-3">
+                    <div class="col-12 col-md-8">
+                        <label class="form-label required">Nombre del Artículo</label>
+                        <input type="text" class="form-control" [(ngModel)]="assetData().name"
                             placeholder="Ej. TV Samsung 50'">
                     </div>
-                    <div class="col-4">
-                        <label class="form-label fw-bold small">N° Serie / Código</label>
-                        <input type="text" class="form-control shadow-sm" [(ngModel)]="assetData().serial_number">
+                    <div class="col-12 col-md-4">
+                        <label class="form-label">N° Serie / Código</label>
+                        <input type="text" class="form-control" [(ngModel)]="assetData().serial_number"
+                            placeholder="Opcional">
                     </div>
                 </div>
 
-                <div class="row mb-3">
-                    <div class="col-6">
-                        <label class="form-label fw-bold small">Categoría</label>
-                        <select class="form-select shadow-sm" [(ngModel)]="assetData().category">
+                <div class="row g-3 mb-3">
+                    <div class="col-12 col-md-6">
+                        <label class="form-label required">Categoría</label>
+                        <select class="form-select" [(ngModel)]="assetData().category">
                             <option value="ELECTRONICA">Electrónica</option>
                             <option value="MOBILIARIO">Mobiliario</option>
                             <option value="BLANCOS">Blancos</option>
@@ -32,9 +38,9 @@
                             <option value="OTRO">Otro</option>
                         </select>
                     </div>
-                    <div class="col-6">
-                        <label class="form-label fw-bold small">Estado Actual</label>
-                        <select class="form-select shadow-sm" [(ngModel)]="assetData().status">
+                    <div class="col-12 col-md-6">
+                        <label class="form-label required">Estado Actual</label>
+                        <select class="form-select" [(ngModel)]="assetData().status">
                             <option value="GOOD">✅ Bueno</option>
                             <option value="DAMAGED">⚠️ Dañado / Reparación</option>
                             <option value="MISSING">❌ Perdido / Robado</option>
@@ -44,36 +50,44 @@
                 </div>
 
                 <div class="mb-3">
-                    <label class="form-label fw-bold small">Ubicación Asignada</label>
-                    <select class="form-select shadow-sm" [(ngModel)]="assetData().current_room_id">
-                        <option [ngValue]="null">-- Sin asignar (Bodega) --</option>
-                        @for (room of bookingService.rooms(); track room.id) {
-                        <option [value]="room.id">Habitación {{ room.room_number }}</option>
-                        }
-                    </select>
+                    <label class="form-label">Ubicación Asignada</label>
+                    <div class="input-icon">
+                        <span class="input-icon-addon"><i class="ti ti-map-pin"></i></span>
+                        <select class="form-select ps-5" [(ngModel)]="assetData().current_room_id">
+                            <option [ngValue]="null">-- Sin asignar (Bodega) --</option>
+                            @for (room of bookingService.rooms(); track room.id) {
+                            <option [value]="room.id">Habitación {{ room.room_number }}</option>
+                            }
+                        </select>
+                    </div>
                 </div>
 
-                <div class="row mb-3">
-                    <div class="col-6">
-                        <label class="form-label fw-bold small">Costo Compra</label>
-                        <div class="input-group shadow-sm">
-                            <span class="input-group-text">$</span>
-                            <input type="number" class="form-control" [(ngModel)]="assetData().cost">
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
+                        <label class="form-label">Costo Compra</label>
+                        <div class="input-icon">
+                            <span class="input-icon-addon"><i class="ti ti-currency-dollar"></i></span>
+                            <input type="number" class="form-control" [(ngModel)]="assetData().cost" placeholder="0.00">
                         </div>
                     </div>
-                    <div class="col-6">
-                        <label class="form-label fw-bold small">Fecha Compra</label>
-                        <input type="date" class="form-control shadow-sm" [(ngModel)]="assetData().purchase_date">
+                    <div class="col-12 col-md-6">
+                        <label class="form-label">Fecha Compra</label>
+                        <div class="input-icon">
+                            <span class="input-icon-addon"><i class="ti ti-calendar"></i></span>
+                            <input type="date" class="form-control" [(ngModel)]="assetData().purchase_date">
+                        </div>
                     </div>
                 </div>
 
             </div>
-            <div class="modal-footer bg-white">
-                <button class="btn btn-outline-secondary px-4 shadow-sm" (click)="onClose.emit()">Cancelar</button>
-                <button class="btn btn-primary px-4 shadow-sm" (click)="onSave.emit()" [disabled]="!assetData().name">
-                    Guardar Activo
+
+            <div class="modal-footer">
+                <button class="btn btn-link link-secondary me-auto" (click)="onClose.emit()">Cancelar</button>
+                <button class="btn btn-primary" (click)="onSave.emit()" [disabled]="!assetData().name">
+                    <i class="ti ti-device-floppy me-2"></i> Guardar Activo
                 </button>
             </div>
+
         </div>
     </div>
 </div>
