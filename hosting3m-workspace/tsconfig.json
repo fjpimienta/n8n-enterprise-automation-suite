@@ -22,6 +22,12 @@
       "ui-chat/*": [
         "projects/ui-chat/src/lib/*"
       ],
+      "ui-pdf-export": [
+        "projects/ui-pdf-export/src/public-api.ts"
+      ],
+      "ui-pdf-export/*": [
+        "projects/ui-pdf-export/src/lib/*"
+      ],
       /* --- Dashboard (Hotel) --- */
       "@dashboard-core/*": [
         "projects/dashboard/src/app/core/*"

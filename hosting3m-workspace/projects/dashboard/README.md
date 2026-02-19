@@ -6,7 +6,7 @@
 
 **AdminHotel** es una aplicación web de alto rendimiento construida sobre Angular 21, diseñada como la interfaz administrativa oficial de la suite de automatización Hosting3M.
 
-Este dashboard actúa como el cliente principal del **Dynamic CRUD Engine**. En su versión actual (**v0.9.0**), ha evolucionado de una estructura monolítica a una **Arquitectura Distribuida**, optimizando la carga inicial y la experiencia de usuario móvil para gestionar operaciones críticas como Mantenimiento, Finanzas e Inventario Global.
+En su versión actual (**v0.10.0**), el sistema integra capacidades avanzadas de **Exportación de Documentos Digitales**, consolidando una arquitectura distribuida que gestiona de forma eficiente Mantenimiento, Finanzas, Inventario y ahora la formalización de Reservas mediante PDF.
 
 ---
 
@@ -19,53 +19,55 @@ Este dashboard actúa como el cliente principal del **Dynamic CRUD Engine**. En 
 | **v0.3.0** | `Stable`| `Ops & Finance`| Modals / Reports | Checkout con inventario, Reporte de Caja y Gestión de Usuarios. |
 | **v0.4.0** | `Stable` | `Pro UX & Patterns` | Skeletons / Services | Refactorización a Services, Skeletons de carga, Promesas. |
 | **v0.5.0** | `Stable` | `Full Operation` | Interactive UI | Refresh Engine, Reservas dinámicas, Gestión avanzada de Huéspedes. |
- **v0.6.0** | `Stable` | `Accessibility` | Mobile Grid / CSS | Lógica de Descuentos, UX Accesible para Seniors. |
+| **v0.6.0** | `Stable` | `Accessibility` | Mobile Grid / CSS | Lógica de Descuentos, UX Accesible para Seniors. |
 | **v0.6.1** | `Stable` | `Quality Assurance` | **JSONB / Forms** | **Módulo de Rondines, Persistencia Híbrida.** |
 | **v0.7.0** | `Stable` | **AI Concierge** | **Shared Lib** | **Integración de `ui-chat`, Inyección de Tokens.** |
 | **v0.8.0** | `Stable` | **Eco-Transformation I** | **Tickets / Assets** | **Gestión de Mantenimiento, Activos y Finanzas CAPEX.** |
-| **v0.9.0** | `Released` | **Performance & Scale** | **Routing / Signals** | **Arquitectura Distribuida, Carga Asíncrona, Inventario Centralizado.** |
+| **v0.9.0** | `Stable` | **Performance & Scale** | **Routing / Signals** | **Arquitectura Distribuida, Carga Asíncrona, Inventario Centralizado.** |
+| **v0.10.0** | `Released` | **Digital Doc Export** | **ui-pdf-export** | **Exportación de cotizaciones PDF, motor financiero de impuestos y selección múltiple.** |
 
 ---
 
-## 🚀 Key Features (v0.9.0 Update)
+## 🚀 Key Features (v0.10.0 Update)
 
-### 1. 🏗️ Arquitectura de Navegación Distribuida
+### 1. 📄 Generación de Documentos Digitales (PDF)
 
-Se migró de un diseño "Todo en Modales" a un sistema de **Rutas Hijas (Child Routes)**, mejorando la separación de responsabilidades y permitiendo enlaces directos (Deep Linking).
+Integración de la librería corporativa `@hosting3m/ui-pdf-export` para la formalización de procesos comerciales.
+
+* **Cotizaciones Proactivas:** Generación instantánea de presupuestos de hospedaje para clientes corporativos (ej. PCP Construcciones).
+* **Motor Financiero:** Cálculo automático y desglosado de impuestos locales: Base Imponible, IVA (16%) e ISH (2%).
+* **Selección Múltiple e Inteligente:** Nueva interfaz con checkboxes que permite agrupar múltiples estancias en un solo documento consolidado.
+* **Agrupación Automática:** Lógica de negocio que colapsa habitaciones idénticas en una sola partida del reporte para mayor claridad visual.
+
+### 2. 🏗️ Arquitectura de Navegación Distribuida (v0.9.0)
+
+Migración a un sistema de **Rutas Hijas (Child Routes)**, permitiendo enlaces directos (Deep Linking) a módulos específicos.
 
 * **Rutas:** `/dashboard/mantenimiento`, `/dashboard/finanzas`, `/dashboard/inventario`.
 * **Impacto:** Reducción drástica del DOM inicial y mejor gestión de memoria.
 
-### 2. ⚡ Optimización de Rendimiento (Performance First)
+### 3. ⚡ Optimización de Rendimiento
 
-Estrategia agresiva para mejorar el *Time to Interactive (TTI)* y la percepción de velocidad.
+Estrategia para mejorar el *Time to Interactive (TTI)* y la percepción de velocidad.
 
-* **Carga Asíncrona (Deferred Loading):** Priorización del `Room Rack` en el hilo principal. Datos secundarios (Reservas, CRM) se cargan en *background*.
-* **Skeletons Inteligentes:** Reducción de nodos DOM (de 8 a 4) y adaptación visual al *Dark Mode* para evitar parpadeos ("flashbang").
-
-### 3. 📦 Sistema de Inventario Centralizado
-
-Unificación de la lógica logística en un módulo robusto.
-
-* **Polimorfismo:** `AssetFormModal` ahora opera en contexto **Global** (Bodega) o **Local** (Habitación).
-* **Trazabilidad:** Filtros avanzados por estado (`GOOD`, `DAMAGED`, `MISSING`) y ubicación física.
+* **Carga Asíncrona (Deferred Loading):** Priorización del `Room Rack`. Los datos de reservas y CRM se cargan en segundo plano.
+* **Skeletons Inteligentes:** Reducción de nodos DOM y adaptación visual al *Dark Mode*.
 
 ### 4. 🧠 Lógica de Negocio Reactiva (Smart Services)
 
-Desacoplamiento total de la lógica compleja de la vista.
-
+* **PdfExportService:** Motor agnóstico para la creación de reportes profesionales.
 * **ReportService:** Centraliza cálculos financieros y balances usando `Signals` computadas.
-* **AssetService:** Gestiona el ciclo de vida completo de los activos.
-* **Beneficio:** Componentes visuales "tontos" (Presentational) que solo renderizan datos, facilitando el testeo y mantenimiento.
+* **AssetService:** Gestiona el ciclo de vida completo de los activos físicos del hotel.
 
 ---
 
 ## 🎨 UX & Theming
 
-* **Dark Mode Nativo:** Implementación de variables CSS (`var(--tblr-body-bg)`) para cambio de tema instantáneo sin recarga.
-* **Mobile First:** Sidebar con auto-cierre inteligente y eliminación de headers redundantes para ganar espacio vertical.
+* **Dark Mode Nativo:** Variables CSS para cambio de tema instantáneo.
+* **Mobile First:** Sidebar con auto-cierre y selección de filas optimizada para uso táctil.
 
 ---
+
 
 ## 🏗️ Arquitectura Técnica
 
@@ -82,21 +84,21 @@ La aplicación implementa una arquitectura **Distributed Data-Access Pattern**:
 ### 🛠️ Stack Tecnológico
 
 * **Core:** Angular v21.0.0 (Signals, Router, Standalone Components).
+* **Librerías Internas:** `ui-chat` (IA) y `ui-pdf-export` (Documentos).
 * **State Management:** Angular Signals + Computed Properties.
-* **Backend Interface:** n8n Webhooks (API v3) + PostgreSQL.
-* **UI Library:** Tabler.io (Customized via CSS Variables).
+* **PDF Engine:** jsPDF + AutoTable.
 
 ---
 
 ## 🚀 Capacidades del Sistema (Capabilities)
 
 | Módulo | Estado | Descripción Técnica |
-| :--- | :--- | :--- |
+| --- | --- | --- |
 | **Room Rack** | 🟢 Activo | Visualización semafórica de estados (Limpio/Sucio/Mant/Ocupado). |
-| **Booking Engine** | 🟢 Activo | Motor de reservas con validación de conflictos de fechas. |
+| **Booking Engine** | 🟢 Activo | Motor de reservas con validación de conflictos y **Exportación PDF**. |
 | **Mantenimiento** | 🟢 Activo | Sistema de Tickets con trazabilidad de resolución. |
-| **Activos (Assets)**| 🟢 Activo | CRUD de inventario físico por habitación. |
-| **Finanzas** | 🟢 Activo | Corte Z y gestión diferenciada de CAPEX/OPEX. |
+| **Activos (Assets)** | 🟢 Activo | CRUD de inventario físico por habitación. |
+| **Finanzas** | 🟢 Activo | Corte Z, gestión de CAPEX/OPEX y desglose fiscal automático. |
 | **AI Concierge** | 🟢 Activo | Asistencia operativa vía Chat (Librería Compartida). |
 
 ---
@@ -105,48 +107,47 @@ La aplicación implementa una arquitectura **Distributed Data-Access Pattern**:
 
 ### 4. Huéspedes: Inteligencia de Cliente (CRM) ⏳ [EN PROGRESO]
 
-* **Objetivo:** Validar el concepto "Eco-Boutique" conociendo al cliente.
-* **Tarea Técnica:** Implementación de `tags` (Senior, Nómada, Familia) y `travel_reason`.
+* **Objetivo:** Implementación de `tags` (Senior, Nómada, Familia) y `travel_reason`.
 
 ### 5. PWA Offline Mode ⏳ [PLANEADO]
 
-* **Objetivo:** Operación continua sin internet.
-* **Tecnología:** Service Workers para caché de rutas críticas (`/dashboard`, `/inventario`).
+* **Tecnología:** Service Workers para caché de rutas críticas como `/inventario`.
 
 ---
 
 ## 🛠️ Comandos de Desarrollo
 
-1. **Requisitos**
-* Node.js (v20+)
-* Angular CLI v21.0.5
+1. **Instalación**
 
-
-2. **Instalación y Servidor Local**
 ```bash
-# Instalar dependencias del workspace
 npm install
 
+```
+
+2. **Compilación de Librerías (Requerido para el Build)**
+
+```bash
+ng build ui-pdf-export
+ng build ui-chat
+
+```
+
+3. **Servidor Local y Producción**
+
+```bash
 # Iniciar servidor Dashboard
 ng serve dashboard
 
-```
-
-
-3. **Pruebas y Construcción**
-```bash
-# Compilación para Producción (Optimized)
+# Compilación para Producción
 ng build dashboard --configuration=production
 
 ```
-
-
 
 ---
 
 ## 📄 Licencia
 
-Este proyecto está bajo la licencia **n8n Sustainable Use License**. Desarrollado para optimizar la presencia digital y la inteligencia de contenidos de Hosting3m.
+Este proyecto está bajo la licencia **n8n Sustainable Use License**.
 
 ## 📦 Authors
 

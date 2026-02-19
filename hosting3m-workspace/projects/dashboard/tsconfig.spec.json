@@ -16,6 +16,12 @@
       "ui-chat/*": [
         "../ui-chat/src/lib/*"
       ],
+      "ui-pdf-export": [
+        "../ui-pdf-export/src/public-api.ts"
+      ],
+      "ui-pdf-export/*": [
+        "../ui-pdf-export/src/lib/*"
+      ],
       "@core/*": [
         "src/app/core/*"
       ],

@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { InventoryManager } from './inventory-manager';
+import { InventoryManagerComponent } from './inventory-manager.component';
 
-describe('InventoryManager', () => {
-  let component: InventoryManager;
-  let fixture: ComponentFixture<InventoryManager>;
+describe('InventoryManagerComponent', () => {
+  let component: InventoryManagerComponent;
+  let fixture: ComponentFixture<InventoryManagerComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [InventoryManager]
+      imports: [InventoryManagerComponent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(InventoryManager);
+    fixture = TestBed.createComponent(InventoryManagerComponent);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });
