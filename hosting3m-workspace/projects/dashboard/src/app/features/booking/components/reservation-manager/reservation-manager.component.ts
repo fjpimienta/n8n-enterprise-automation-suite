@@ -59,6 +59,11 @@ export class ReservationManagerComponent implements OnInit {
     }
   }
 
+  ngOnDestroy() {
+    this.clearFilters();
+  }
+
+
   getRoomNumber(id: number): string {
     const found = this.bookingService.rooms().find((r: any) => r.id === id);
     return found ? found.room_number : 'N/A';
@@ -197,5 +202,11 @@ export class ReservationManagerComponent implements OnInit {
     });
 
     return Object.values(groups);
+  }
+
+  // --- NUEVO MÉTODO PARA LIMPIAR EL FILTRO ---
+  clearFilters() {
+    this.selectedReservation.set(null);
+    this.hotelService.selectRoom(null as any);
   }
 }
