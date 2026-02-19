@@ -5,6 +5,12 @@
     "types": [],
     "baseUrl": ".",
     "paths": {
+      "ui-pdf-export": [
+        "../ui-pdf-export/src/public-api.ts"
+      ],
+      "ui-pdf-export/*": [
+        "../ui-pdf-export/src/lib/*"
+      ],
       "ui-chat": [
         "../ui-chat/src/public-api.ts"
       ],
@@ -35,7 +41,8 @@
     }
   },
   "include": [
-    "src/**/*.ts"
+    "src/**/*.ts",
+    "../../projects/ui-pdf-export/src/**/*.ts"
   ],
   "exclude": [
     "src/**/*.spec.ts"

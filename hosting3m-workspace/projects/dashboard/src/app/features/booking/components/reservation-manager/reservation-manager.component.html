@@ -5,6 +5,14 @@
       <h2 class="page-title mb-0">Gestión de Reservas</h2>
       <div class="text-muted small mt-1">Administra el calendario y las estancias</div>
     </div>
+
+    <div>
+      <button class="btn btn-outline-danger shadow-sm" (click)="printSelected()" [disabled]="selectedIds().size === 0">
+        <i class="ti ti-file-type-pdf me-2"></i>
+        Imprimir Cotización
+        @if(selectedIds().size > 0) { ({{ selectedIds().size }}) }
+      </button>
+    </div>
   </div>
 
   <div class="row">
@@ -32,6 +40,10 @@
             <table class="table table-vcenter table-mobile-md card-table">
               <thead>
                 <tr>
+                  <th class="w-1">
+                    <input class="form-check-input m-0 align-middle" type="checkbox" [checked]="isAllSelected()"
+                      (change)="toggleAll($event)">
+                  </th>
                   <th>Habitación</th>
                   <th>Huésped</th>
                   <th>Entrada</th>
@@ -43,6 +55,12 @@
               <tbody>
                 @for (res of paginatedReservations(); track res.id) {
                 <tr [class.bg-blue-lt]="selectedReservation()?.id === res.id">
+
+                  <td>
+                    <input class="form-check-input m-0 align-middle" type="checkbox"
+                      [checked]="selectedIds().has(res.id)" (change)="toggleSelection(res.id, $event)">
+                  </td>
+
                   <td>
                     <span class="badge bg-blue-lt">Hab. {{ getRoomNumber(res.room_id) }}</span>
                   </td>
@@ -67,7 +85,7 @@
                 </tr>
                 } @empty {
                 <tr>
-                  <td colspan="6" class="text-center py-5">
+                  <td colspan="7" class="text-center py-5">
                     <div class="empty-state">
                       <div class="empty-img"><i class="ti ti-calendar-off fs-1 text-muted"></i></div>
                       <p class="empty-title">Sin reservas activas</p>

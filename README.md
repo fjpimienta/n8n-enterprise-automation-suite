@@ -10,33 +10,29 @@
 
 ## 🎯 Objetivo del Proyecto
 
-Suite de automatización empresarial de **grado industrial** diseñada bajo la filosofía de **"Soberanía de Datos"**: máxima potencia computacional con control total sobre los activos.
+Suite de automatización empresarial de **grado industrial** diseñada bajo la filosofía de **"Soberanía de Datos"**. Esta arquitectura transforma la automatización convencional en un **Hub de Servicios Inteligente** que ahora integra la formalización legal y comercial mediante documentos digitales.
 
-Esta arquitectura transforma la automatización convencional en un **Hub de Servicios Inteligente** que garantiza:
-
-1. **Soberanía Total:** Despliegue 100% Self-Hosted, incluyendo el almacenamiento de medios (`upload-service`).
-2. **Calidad Enterprise:** Uso de modelos comerciales robustos (DALL-E 3) para generación visual sin fallos.
-3. **Alta Disponibilidad:** Orquestación mediante Docker con redes internas y persistencia binaria avanzada.
-4. **Seguridad Corporativa:** Gestión de identidad RBAC, validación de tokens RS256 y manejo de secretos vía Variables de Entorno (`$env`).
+1. **Soberanía Total:** Despliegue 100% Self-Hosted.
+2. **Calidad Enterprise:** Uso de modelos comerciales robustos.
+3. **Formalización Digital:** Generación de documentos PDF profesionales (`ui-pdf-export`) directamente desde el cliente.
+4. **Seguridad Corporativa:** Gestión de identidad RBAC y validación RS256.
 
 ---
 
 ## 🏗 Arquitectura e Infraestructura (IaC)
-
 El ecosistema opera en un entorno de alta densidad, maximizando los recursos del VPS mediante una arquitectura de microservicios:
 
 | Servicio | Tecnología | Función Crítica |
 | --- | --- | --- |
-| **Orquestador** | n8n v2.4.6 (Enterprise) | Motor lógico central. Manejo de concurrencia y reintentos (Retry Logic). |
-| **Media Server** | Node.js / Express | **Nuevo:** Microservicio de almacenamiento persistente y entrega de contenidos (CDN Privado). |
-| **Capa de Datos** | PostgreSQL + pgvector | Almacenamiento híbrido: Relacional (Negocio) + Vectorial (Memoria IA). |
-| **Media Gen** | OpenAI DALL-E 3 | Generación de assets visuales de alta fidelidad y prompt engineering dinámico. |
-| **Seguridad** | Node.js (JWT Service) | Microservicio dedicado para firma y validación de tokens RS256. |
-| **Frontends** | Angular 21 (Signals) | Aplicaciones Distribuidas optimizadas para SPA (Dashboard) y PWA (Pista). |
+| **Orquestador** | n8n v2.4.6 (Enterprise) | Motor lógico central. |
+| **Media Server** | Node.js / Express | CDN Privado para almacenamiento persistente. |
+| **Capa de Datos** | PostgreSQL + pgvector | Almacenamiento Relacional + Vectorial. |
+| **Doc Engine** | jsPDF / AutoTable | Generación de reportes y cotizaciones vectoriales. |
+| **Frontends** | Angular 21 (Signals) | Aplicaciones Distribuidas (Dashboard / Pista). |
 
 ---
 
-## 📦 Módulos Implementados (Workflows v4 & v0.9)
+## 📦 Módulos Implementados (Workflows v4 & v0.10)
 
 La suite se compone de módulos interconectados que operan como una malla de servicios:
 
@@ -81,9 +77,9 @@ Implementación del **Model Context Protocol**. Expone herramientas de base de d
 
 ERP integral evolucionado a una **Arquitectura Distribuida**.
 
-* **Routing Distribuido:** Módulos separados por rutas hijas (`/dashboard/finanzas`, `/dashboard/inventario`).
-* **Performance:** Carga asíncrona de datos secundarios y esqueletos optimizados (0.1s TTI).
-* **Inventario Centralizado:** Módulo polimórfico para gestión de activos en bodega y habitaciones.
+* **Digital Billing:** Generación de cotizaciones PDF con desglose automático de impuestos (IVA/ISH).
+* **Selección Inteligente:** Interfaz de selección múltiple para facturación agrupada.
+* **Inventario Centralizado:** Módulo polimórfico para activos en bodega y habitaciones.
 
 ### ⛸️ 09. PistaHielo Operations Center (v0.7.1 - Ops AI)
 
@@ -93,10 +89,17 @@ PWA Administrativa para gestión de centros de entretenimiento.
 * **Live Monitor:** El "Rack" de patines activos con sincronización en tiempo real.
 
 ### 💬 10. Shared AI Chat Library (v1.0.0)
-
 Librería transversal de Angular (**Shared Lib**) diseñada bajo el patrón de Componente Agnóstico.
 
-* **DRY Architecture:** Elimina la redundancia de código conectando cualquier frontend con los agentes de n8n mediante **Injection Tokens**.
+### 📄 11. UI PDF Export Library (v1.0.0)
+
+Nueva librería compartida para la estandarización de documentos salientes. 
+
+* 
+**Agnostic Design:** Capaz de procesar cualquier entidad comercial bajo una interfaz común. 
+
+
+* **Tax Engine:** Motor de cálculo automático para regímenes fiscales hoteleros.
 
 ---
 
@@ -114,6 +117,7 @@ Librería transversal de Angular (**Shared Lib**) diseñada bajo el patrón de C
 | `08`|**AdminHotel Dashboard**|Frontend administrativo para gestión de reservas y habitaciones.|`Angular 21` `Tabler` `Vitest`|[📖 Ver Docs](hosting3m-workspace/projects/dashboard/README.md)|
 | `09`|**PistaHielo Ops Center**|PWA para gestión de rentas por tiempo y cortes de caja.|`Angular 21` `Signals` `PWA`|[📖 Ver Docs](hosting3m-workspace/projects/pista-hielo/README.md)|
 | `10`|**Shared AI Chat Lib**|Librería agnóstica de chat IA reutilizable con configuración dinámica.|`Angular 21` `InjectionToken`|[📖 Ver Docs](hosting3m-workspace/projects/ui-chat/README.md)|
+| `11` | **UI PDF Export Lib** | Librería de exportación de documentos PDF. | `jsPDF` `TypeScript` | [📖 Docs](hosting3m-workspace/projects/ui-pdf-export/README.md) |
 
 ---
 
@@ -121,14 +125,16 @@ Librería transversal de Angular (**Shared Lib**) diseñada bajo el patrón de C
 
 ### ✅ Completado (Q1 2026)
 
-* [x] **Sovereign Media:** Implementación de `upload-service` propio y migración a DALL-E 3.
-* [x] **Dashboard Performance:** Refactorización a Arquitectura de Rutas Distribuidas y Carga Asíncrona (v0.9.0).
-* [x] **Security Hardening:** Gestión de credenciales mediante Variables de Entorno (`$env`).
+* [x] **Digital Formalization:** Lanzamiento de `ui-pdf-export` e integración en el flujo de reservas.
+* [x] **Sovereign Media:** Implementación de `upload-service` propio y DALL-E 3.
+* [x] **Monorepo Scaling:** Optimización de `tsconfig` para soporte de múltiples librerías compartidas. 
+
+
 
 ### 🏗️ En Progreso (Q2 2026)
 
-* [ ] **Huéspedes CRM:** Inteligencia de cliente y etiquetas de segmentación eco-boutique.
-* [ ] **Sustentabilidad:** Módulo de métricas de consumo de luz y agua (Eco-Metrics).
+* [ ] **Huéspedes CRM:** Segmentación eco-boutique y analítica de comportamiento.
+* [ ] **Eco-Metrics:** Módulo de sustentabilidad para medición de huella hídrica y eléctrica.
 
 ---
 

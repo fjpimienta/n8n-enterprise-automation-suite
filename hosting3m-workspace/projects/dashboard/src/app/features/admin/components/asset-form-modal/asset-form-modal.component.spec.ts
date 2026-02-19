@@ -14,6 +14,8 @@ describe('AssetFormModal', () => {
 
     fixture = TestBed.createComponent(AssetFormModalComponent);
     component = fixture.componentInstance;
+    fixture.componentRef.setInput('isOpen', false);
+    fixture.detectChanges();
     await fixture.whenStable();
   });
 
