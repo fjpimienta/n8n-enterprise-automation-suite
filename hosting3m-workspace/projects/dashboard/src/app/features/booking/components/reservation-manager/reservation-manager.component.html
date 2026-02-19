@@ -9,7 +9,8 @@
     <div>
       <button class="btn btn-outline-danger shadow-sm" (click)="printSelected()" [disabled]="selectedIds().size === 0">
         <i class="ti ti-file-type-pdf me-2"></i>
-        Imprimir Cotización
+        <span class="d-none d-sm-inline">Imprimir Cotización</span>
+        <span class="d-inline d-sm-none">Imprimir</span>
         @if(selectedIds().size > 0) { ({{ selectedIds().size }}) }
       </button>
     </div>
@@ -19,25 +20,31 @@
     <div class="col-12 col-xl-4 mb-4">
       <div class="sticky-top" style="top: 20px; z-index: 1;">
         <app-reservation-form [reservations]="adminService.reservations()" [room]="hotelService.selectedRoom()"
-          [reservationToEdit]="selectedReservation()" (onClose)="selectedReservation.set(null)"
-          (saved)="onReservationSaved()">
+          [reservationToEdit]="selectedReservation()" (onClose)="clearFilters()" (saved)="onReservationSaved()">
         </app-reservation-form>
       </div>
     </div>
 
     <div class="col-12 col-xl-8">
       <div class="card shadow-sm border-0">
-        <div class="card-header bg-white">
-          <h3 class="card-title">
+        <div class="card-header py-2 d-flex justify-content-between align-items-center">
+          <h3 class="card-title m-0">
             {{ hotelService.selectedRoom()
             ? 'Reservas: Habitación ' + hotelService.selectedRoom()?.room_number
             : 'Panorama Global de Reservas' }}
           </h3>
+
+          @if (hotelService.selectedRoom()) {
+          <button class="btn btn-sm btn-outline-secondary" (click)="clearFilters()">
+            <i class="ti ti-arrow-back-up me-1"></i> Ver todas
+          </button>
+          }
         </div>
 
         <div class="card-body p-0">
-          <div class="table-responsive">
-            <table class="table table-vcenter table-mobile-md card-table">
+
+          <div class="table-responsive d-none d-md-block">
+            <table class="table table-vcenter card-table mb-0">
               <thead>
                 <tr>
                   <th class="w-1">
@@ -55,12 +62,10 @@
               <tbody>
                 @for (res of paginatedReservations(); track res.id) {
                 <tr [class.bg-blue-lt]="selectedReservation()?.id === res.id">
-
                   <td>
                     <input class="form-check-input m-0 align-middle" type="checkbox"
                       [checked]="selectedIds().has(res.id)" (change)="toggleSelection(res.id, $event)">
                   </td>
-
                   <td>
                     <span class="badge bg-blue-lt">Hab. {{ getRoomNumber(res.room_id) }}</span>
                   </td>
@@ -89,11 +94,8 @@
                     <div class="empty-state">
                       <div class="empty-img"><i class="ti ti-calendar-off fs-1 text-muted"></i></div>
                       <p class="empty-title">Sin reservas activas</p>
-                      <p class="empty-subtitle text-muted">
-                        No hay reservas que coincidan con los filtros actuales.
-                      </p>
-                      <button class="btn btn-primary" (click)="focusNewReservation()">
-                        <i class="ti ti-plus me-2"></i> Crear Nueva Reserva
+                      <button class="btn btn-primary mt-2" (click)="focusNewReservation()">
+                        <i class="ti ti-plus me-2"></i> Crear Reserva
                       </button>
                     </div>
                   </td>
@@ -102,6 +104,67 @@
               </tbody>
             </table>
           </div>
+
+          <div class="d-md-none">
+
+            @if (paginatedReservations().length > 0) {
+            <div class="d-flex align-items-center gap-3 p-3 border-bottom">
+              <input class="form-check-input m-0" type="checkbox" style="width: 1.25em; height: 1.25em;"
+                [checked]="isAllSelected()" (change)="toggleAll($event)">
+              <span class="fw-medium fs-4 text-body">Seleccionar página actual</span>
+            </div>
+            }
+
+            @for (res of paginatedReservations(); track res.id) {
+            <div class="p-3 border-bottom" [class.bg-blue-lt]="selectedReservation()?.id === res.id">
+
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="d-flex align-items-center gap-3">
+                  <input class="form-check-input m-0" style="width: 1.25em; height: 1.25em;" type="checkbox"
+                    [checked]="selectedIds().has(res.id)" (change)="toggleSelection(res.id, $event)">
+                  <span class="badge bg-blue-lt fs-5 px-2 py-1">Hab. {{ getRoomNumber(res.room_id) }}</span>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                  <span class="badge fs-6" [class.bg-success-lt]="res.status === 'confirmed'"
+                    [class.bg-warning-lt]="res.status === 'pending'">
+                    {{ res.status }}
+                  </span>
+                  <button class="btn btn-icon btn-sm btn-ghost-secondary" (click)="editReservation(res)">
+                    <i class="ti ti-edit fs-4"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="ms-5 ps-1">
+                <div class="font-weight-medium fs-4 mb-1">
+                  {{ res.hotel_guests_data?.full_name || res.guest_name || 'Sin Nombre' }}
+                </div>
+                <div class="d-flex align-items-center text-muted fs-5 mb-1">
+                  <i class="ti ti-calendar-event me-2"></i>
+                  {{ res.check_in | date:'dd MMM':'UTC' }} <i class="ti ti-arrow-right mx-1"></i> {{ res.check_out |
+                  date:'dd MMM':'UTC' }}
+                </div>
+                @if (res.hotel_guests_data?.phone || res.guest_phone) {
+                <div class="d-flex align-items-center text-muted fs-5">
+                  <i class="ti ti-phone me-2"></i> {{ res.hotel_guests_data?.phone || res.guest_phone }}
+                </div>
+                }
+              </div>
+
+            </div>
+            } @empty {
+            <div class="text-center py-5">
+              <div class="empty-state">
+                <div class="empty-img"><i class="ti ti-calendar-off fs-1 text-muted"></i></div>
+                <p class="empty-title fs-3">Sin reservas activas</p>
+                <button class="btn btn-primary mt-2" (click)="focusNewReservation()">
+                  <i class="ti ti-plus me-2"></i> Crear Reserva
+                </button>
+              </div>
+            </div>
+            }
+          </div>
+
         </div>
 
         @if (totalPages() > 1) {
@@ -110,14 +173,10 @@
             páginas</p>
           <ul class="pagination m-0">
             <li class="page-item" [class.disabled]="currentPage() === 1">
-              <button class="page-link" (click)="prevPage()">
-                <i class="ti ti-chevron-left"></i>
-              </button>
+              <button class="page-link" (click)="prevPage()"><i class="ti ti-chevron-left"></i></button>
             </li>
             <li class="page-item" [class.disabled]="currentPage() === totalPages()">
-              <button class="page-link" (click)="nextPage()">
-                <i class="ti ti-chevron-right"></i>
-              </button>
+              <button class="page-link" (click)="nextPage()"><i class="ti ti-chevron-right"></i></button>
             </li>
           </ul>
         </div>

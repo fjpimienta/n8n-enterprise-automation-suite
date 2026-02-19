@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, computed, input } from '@angular/core';
+import { Component, inject, OnInit, signal, computed, input, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MaintenanceService } from '@features/dashboard/services/maintenance.service';
 import { FormsModule } from '@angular/forms';
@@ -31,6 +31,25 @@ export class MaintenanceMonitorModalComponent implements OnInit {
       (t.description || t.issue_type)
     ).length;
   });
+
+  // 1. Declaramos el evento para gritarle al Dashboard
+  onResolved = output<void>();
+  // 2. Busca tu función que se ejecuta al darle "Resolver" al ticket
+  async resolveTicket(ticket: any) {
+    try {
+      // ... (Tu código actual que actualiza el ticket a RESOLVED en n8n) ...
+
+      // 3. Forzamos que la habitación pase directamente a LIMPIA y DISPONIBLE
+      await this.hotelService.finishMaintenance(ticket.room_id);
+
+      // 4. Le avisamos al Dashboard que ya terminamos
+      this.onResolved.emit();
+
+    } catch (error) {
+      console.error(error);
+      alert('Error al resolver el ticket');
+    }
+  }
 
   ngOnInit() {
     this.loadTickets();
@@ -81,6 +100,8 @@ export class MaintenanceMonitorModalComponent implements OnInit {
     this.showError = false;
   }
 
+  // (AQUÍ BORRASTE LA FUNCIÓN resolveTicket QUE HABÍAMOS PEGADO ANTES)
+
   async confirmResolution() {
     if (!this.resolvingTicketId) return;
     if (!this.solutionText.trim()) {
@@ -93,17 +114,20 @@ export class MaintenanceMonitorModalComponent implements OnInit {
     try {
       const now = new Date().toISOString();
 
+      // 1. Guarda en BD el ticket resuelto
       await this.maintenanceService.updateTicket(this.resolvingTicketId, {
         status: 'RESOLVED',
         solution_details: this.solutionText,
         resolved_at: now
       });
 
+      // 2. Pasa la habitación a LIMPIA y DISPONIBLE
       const ticket = this.tickets().find(t => t.id === this.resolvingTicketId);
       if (ticket && ticket.room_id) {
         await this.hotelService.finishMaintenance(ticket.room_id);
       }
 
+      // 3. Actualiza la lista interna temporalmente
       this.tickets.update(currentList =>
         currentList.map(t => {
           if (t.id === this.resolvingTicketId) {
@@ -119,6 +143,9 @@ export class MaintenanceMonitorModalComponent implements OnInit {
       );
 
       this.cancelResolution();
+
+      // 🚀 4. ¡AQUÍ ESTÁ LA SOLUCIÓN! Le gritamos al Dashboard que ya terminamos
+      this.onResolved.emit();
 
     } catch (error) {
       console.error(error);

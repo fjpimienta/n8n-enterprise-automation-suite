@@ -74,7 +74,7 @@ export class HotelService {
         id: roomId,
         fields: {
           status: 'available',
-          cleaning_status: 'dirty' // Pasa a limpieza antes de estar disponible
+          cleaning_status: 'clean'
         }
       }, { headers: this.adminService.getAuthHeaders() })
     );

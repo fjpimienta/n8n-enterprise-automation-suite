@@ -163,6 +163,6 @@
 
 @if (showMaintenanceMonitor) {
 <app-maintenance-monitor-modal [targetRoomId]="maintenanceFilterRoomId"
-  (onClose)="showMaintenanceMonitor = false; maintenanceFilterRoomId = null; refresh()">
-</app-maintenance-monitor-modal>
+  (onClose)="showMaintenanceMonitor = false; maintenanceFilterRoomId = null; refresh()"
+  (onResolved)="handleMonitorResolved()"> </app-maintenance-monitor-modal>
 }
