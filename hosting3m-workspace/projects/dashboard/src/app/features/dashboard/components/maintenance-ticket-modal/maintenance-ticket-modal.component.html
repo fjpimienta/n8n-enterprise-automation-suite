@@ -6,54 +6,76 @@
                 <h5 class="modal-title fw-bold text-warning">
                     🛠️ Reportar Daño - Hab. {{ room().room_number }}
                 </h5>
-                <button type="button" class="btn-close" (click)="onClose.emit()"></button>
+                <button type="button" class="btn-close" (click)="closeModal()"></button>
             </div>
 
-            <div class="modal-body">
-                <div class="mb-3">
-                    <label class="form-label required">Tipo de Problema</label>
-                    <select class="form-select" [(ngModel)]="ticket.issue_type">
-                        <option value="PLOMERIA">🚰 Plomería (Fugas, Agua)</option>
-                        <option value="ELECTRICO">⚡ Eléctrico (Luz, Contactos)</option>
-                        <option value="AIRE_ACONDICIONADO">❄️ Aire Acondicionado</option>
-                        <option value="ALBAÑILERIA">🧱 Albañilería / Pintura</option>
-                        <option value="MOBILIARIO">🪑 Mobiliario / Camas</option>
-                        <option value="TECNOLOGIA">📡 Internet / TV</option>
-                    </select>
-                </div>
+            <form [formGroup]="ticketForm" (ngSubmit)="saveTicket()">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label required">Tipo de Problema</label>
+                        <select class="form-select" formControlName="issue_type"
+                            [class.is-invalid]="issueTypeControl.invalid && issueTypeControl.touched">
+                            <option value="PLOMERIA">🚰 Plomería (Fugas, Agua)</option>
+                            <option value="ELECTRICO">⚡ Eléctrico (Luz, Contactos)</option>
+                            <option value="AIRE_ACONDICIONADO">❄️ Aire Acondicionado</option>
+                            <option value="ALBAÑILERIA">🧱 Albañilería / Pintura</option>
+                            <option value="MOBILIARIO">🪑 Mobiliario / Camas</option>
+                            <option value="TECNOLOGIA">📡 Internet / TV</option>
+                        </select>
+                        @if (issueTypeControl.invalid && issueTypeControl.touched) {
+                            <div class="invalid-feedback d-block">
+                                Por favor seleccione un tipo de problema
+                            </div>
+                        }
+                    </div>
 
-                <div class="mb-3">
-                    <label class="form-label required">Prioridad</label>
-                    <div class="btn-group w-100" role="group">
-                        <input type="radio" class="btn-check" name="priority" id="p_low" value="LOW"
-                            [(ngModel)]="ticket.priority">
-                        <label class="btn btn-outline-secondary" for="p_low">Baja</label>
+                    <div class="mb-3">
+                        <label class="form-label required">Prioridad</label>
+                        <div class="btn-group w-100" role="group">
+                            <input type="radio" class="btn-check" name="priority" id="p_low" value="LOW"
+                                formControlName="priority">
+                            <label class="btn btn-outline-secondary" for="p_low">Baja</label>
 
-                        <input type="radio" class="btn-check" name="priority" id="p_normal" value="NORMAL"
-                            [(ngModel)]="ticket.priority">
-                        <label class="btn btn-outline-primary" for="p_normal">Normal</label>
+                            <input type="radio" class="btn-check" name="priority" id="p_normal" value="NORMAL"
+                                formControlName="priority">
+                            <label class="btn btn-outline-primary" for="p_normal">Normal</label>
 
-                        <input type="radio" class="btn-check" name="priority" id="p_critical" value="CRITICAL"
-                            [(ngModel)]="ticket.priority">
-                        <label class="btn btn-outline-danger" for="p_critical">🔥 Crítica</label>
+                            <input type="radio" class="btn-check" name="priority" id="p_critical" value="CRITICAL"
+                                formControlName="priority">
+                            <label class="btn btn-outline-danger" for="p_critical">🔥 Crítica</label>
+                        </div>
+                        @if (priorityControl.invalid && priorityControl.touched) {
+                            <div class="invalid-feedback d-block">
+                                Por favor seleccione una prioridad
+                            </div>
+                        }
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label required">Descripción del Daño</label>
+                        <textarea class="form-control" rows="4" formControlName="description"
+                            [class.is-invalid]="descriptionControl.invalid && descriptionControl.touched"
+                            placeholder="Describa el problema... Ej: El aire hace ruido y gotea agua."></textarea>
+                        @if (descriptionControl.invalid && descriptionControl.touched) {
+                            <div class="invalid-feedback d-block">
+                                @if (descriptionControl.hasError('required')) {
+                                    La descripción es requerida
+                                } @else if (descriptionControl.hasError('minlength')) {
+                                    La descripción debe tener al menos 10 caracteres
+                                }
+                            </div>
+                        }
                     </div>
                 </div>
 
-                <div class="mb-3">
-                    <label class="form-label required">Descripción del Daño</label>
-                    <textarea class="form-control" rows="4" [(ngModel)]="ticket.description"
-                        placeholder="Describa el problema... Ej: El aire hace ruido y gotea agua."></textarea>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-link link-secondary" (click)="closeModal()">Cancelar</button>
+                    <button type="submit" class="btn btn-warning ms-auto" [disabled]="isLoading || ticketForm.invalid">
+                        <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
+                        Crear Ticket
+                    </button>
                 </div>
-            </div>
-
-            <div class="modal-footer">
-                <button class="btn btn-link link-secondary" (click)="onClose.emit()">Cancelar</button>
-                <button class="btn btn-warning ms-auto" [disabled]="isLoading || !ticket.description"
-                    (click)="saveTicket()">
-                    <span *ngIf="isLoading" class="spinner-border spinner-border-sm me-2"></span>
-                    Crear Ticket
-                </button>
-            </div>
+            </form>
         </div>
     </div>
 </div>

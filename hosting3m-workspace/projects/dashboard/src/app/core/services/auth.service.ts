@@ -4,12 +4,18 @@ import { catchError, tap, throwError } from 'rxjs';
 import { jwtDecode } from 'jwt-decode';
 import { environment } from '@env/environment';
 
-interface UserPayload {
+const TOKEN_KEY = 'authToken';
+
+export interface UserPayload {
   id: number;
   email: string;
   role: string;
   id_company: number;
   name: string;
+}
+
+interface JwtPayload extends UserPayload {
+  exp?: number;
 }
 
 @Injectable({
@@ -19,16 +25,47 @@ export class AuthService {
   private http = inject(HttpClient);
   private apiUrl_token = environment.apiUrl_token;
 
-  // CORRECCIÓN 1: Usar la misma llave 'authToken' para inicializar
-  isAuthenticated = signal<boolean>(!!localStorage.getItem('authToken'));
+  private readonly _currentUser = signal<UserPayload | null>(this.loadUserFromStorage());
+  private readonly _isAuthenticated = signal<boolean>(this.hasValidToken());
 
-  currentUser = signal<UserPayload | null>(this.getUserFromStorage());
+  readonly currentUser = this._currentUser.asReadonly();
+  readonly isAuthenticated = this._isAuthenticated.asReadonly();
 
-  private getUserFromStorage(): UserPayload | null {
-    const token = localStorage.getItem('authToken');
+  /**
+   * Única fuente de lectura del token. Usado por el interceptor.
+   */
+  getStoredToken(): string | null {
+    const token = localStorage.getItem(TOKEN_KEY);
     if (!token) return null;
+    if (this.isTokenExpired(token)) {
+      this.logout();
+      return null;
+    }
+    return token;
+  }
+
+  private hasValidToken(): boolean {
+    const token = localStorage.getItem(TOKEN_KEY);
+    return !!token && !this.isTokenExpired(token);
+  }
+
+  private isTokenExpired(token: string): boolean {
     try {
-      return jwtDecode<UserPayload>(token);
+      const decoded = jwtDecode<JwtPayload>(token);
+      if (!decoded.exp) return false;
+      const now = Math.floor(Date.now() / 1000);
+      return decoded.exp < now;
+    } catch {
+      return true;
+    }
+  }
+
+  private loadUserFromStorage(): UserPayload | null {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token || this.isTokenExpired(token)) return null;
+    try {
+      const { exp, ...user } = jwtDecode<JwtPayload>(token);
+      return user;
     } catch {
       return null;
     }
@@ -39,16 +76,11 @@ export class AuthService {
       tap(response => {
         if (response.status === 'success' && response.data?.token) {
           const token = response.data.token;
-          
-          // Guardamos en LocalStorage
-          localStorage.setItem('authToken', token);
-          
-          // Decodificamos usuario
-          const decoded = jwtDecode<UserPayload>(token);
-          this.currentUser.set(decoded);
-
-          // CORRECCIÓN 2: ¡Avisar a la app que ya estamos logueados!
-          this.isAuthenticated.set(true); 
+          localStorage.setItem(TOKEN_KEY, token);
+          const decoded = jwtDecode<JwtPayload>(token);
+          const { exp, ...user } = decoded;
+          this._currentUser.set(user);
+          this._isAuthenticated.set(true);
         }
       }),
       catchError(err => {
@@ -60,16 +92,20 @@ export class AuthService {
     );
   }
 
-  logout() {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('role'); // Si usas esto
-    
-    // CORRECCIÓN 3: Limpiar estado reactivo
-    this.currentUser.set(null);
-    this.isAuthenticated.set(false); 
+  logout(): void {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem('role');
+    this._currentUser.set(null);
+    this._isAuthenticated.set(false);
+  }
+
+  /** Comparación case-insensitive para evitar inconsistencia admin vs ADMIN */
+  hasRole(role: string): boolean {
+    const userRole = this._currentUser()?.role;
+    return userRole ? userRole.toUpperCase() === role.toUpperCase() : false;
   }
 
   isAdmin(): boolean {
-    return this.currentUser()?.role === 'admin';
+    return this.hasRole('admin');
   }
 }

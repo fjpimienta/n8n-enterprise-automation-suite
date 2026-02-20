@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Company, Guest, Room, User } from '@core/models/hotel.types';
 import { environment } from '@env/environment';
-import { lastValueFrom, map, Observable } from 'rxjs';
+import { lastValueFrom, map, Observable, shareReplay } from 'rxjs';
 import { BookingService } from '@features/booking/services/booking.service';
 import { AdminService } from '@features/admin/services/admin.service';
 
@@ -80,37 +80,45 @@ export class HotelService {
     );
   }
 
+  /** Caché en vuelo por (roomId, date) para evitar peticiones duplicadas */
+  private checklistCache = new Map<string, Observable<any | null>>();
+
   /**
-   * ✅ CORREGIDO: Usamos POST con el formato que tu n8n espera (CRUD V3)
+   * Obtiene el checklist de hoy para una habitación. Usa caché para evitar peticiones duplicadas.
    */
   getTodayChecklist(roomId: number): Observable<any | null> {
     const today = new Date().toISOString().split('T')[0];
+    const key = `${roomId}-${today}`;
 
-    // Estructura idéntica a la que usas para 'hotel_bookings'
-    const payload = {
-      entity: "hotel_room_inspections",
-      table_name: "hotel_room_inspections",
-      operation: "getall", // Usamos getall + filtros para buscar
-      action: "list",
-      filters: {
-        room_id: roomId,
-        inspection_date: today
-      }
-    };
+    if (!this.checklistCache.has(key)) {
+      const payload = {
+        entity: "hotel_room_inspections",
+        table_name: "hotel_room_inspections",
+        operation: "getall",
+        action: "list",
+        filters: { room_id: roomId, inspection_date: today }
+      };
 
-    // Apuntamos al webhook base pasando el modelo en la URL si es necesario, 
-    // o simplemente al endpoint principal.
-    // Basado en tu URL: .../crud/v3/:model
-    return this.http.post<any>(`${this.apiUrl_crud}/hotel_room_inspections`, payload).pipe(
-      map((response: any) => {
-        const data = response.data || response;
+      const req$ = this.http.post<any>(`${this.apiUrl_crud}/hotel_room_inspections`, payload).pipe(
+        map((response: any) => {
+          const data = response.data || response;
+          return Array.isArray(data) && data.length > 0 ? data[0] : null;
+        }),
+        shareReplay({ bufferSize: 1, refCount: true })
+      );
+      this.checklistCache.set(key, req$);
+    }
+    return this.checklistCache.get(key)!;
+  }
 
-        if (Array.isArray(data) && data.length > 0) {
-          return data[0];
-        }
-        return null;
-      })
-    );
+  /** Invalida caché de checklist tras save/update para que el próximo getTodayChecklist traiga datos frescos */
+  invalidateChecklistCache(roomId?: number): void {
+    if (roomId) {
+      const today = new Date().toISOString().split('T')[0];
+      this.checklistCache.delete(`${roomId}-${today}`);
+    } else {
+      this.checklistCache.clear();
+    }
   }
 
   /**

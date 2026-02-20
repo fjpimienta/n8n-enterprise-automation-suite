@@ -23,6 +23,13 @@ export class DailyReportModalComponent implements OnInit {
   currentFilter = signal<'day' | 'week' | 'month' | 'year'>('day');
   activeTab = signal<'ingresos' | 'gastos'>('ingresos');
 
+  /** Map O(1) para lookup room_id → room_number; evita O(n²) en tabla de ingresos */
+  roomNumberMap = computed(() => {
+    const map = new Map<number, string>();
+    this.bookingService.rooms().forEach(r => map.set(r.id, r.room_number));
+    return map;
+  });
+
   ngOnInit() {
     this.loadData();
   }
@@ -59,8 +66,7 @@ export class DailyReportModalComponent implements OnInit {
   }
 
   getRoomNumber(id: number): string {
-    const found = this.bookingService.rooms().find((r: any) => r.id === id);
-    return found ? found.room_number : 'N/A';
+    return this.roomNumberMap().get(id) ?? 'N/A';
   }
 
   getNights(checkIn: string, checkOut: string): number {

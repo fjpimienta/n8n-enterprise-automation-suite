@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
-import { PlaceholderComponent } from './shared/ui/placeholder/placeholder.component';
-import { authGuard } from './core/auth/auth.guard';
+import { UnauthorizedComponent } from './shared/ui/unauthorized/unauthorized.component';
+import { authGuard, roleGuard } from './core/auth/auth.guard';
 import { LoginComponent } from '@features/admin/components/login/login.component';
 import { DashboardComponent } from '@features/dashboard/components/dashboard/dashboard.component';
 import { MainLayoutComponent } from './shared/ui/layout/main-layout/main-layout.component';
@@ -19,15 +19,27 @@ export const routes: Routes = [
     canActivate: [authGuard],
     children: [
       { path: '', component: DashboardComponent },
-      // El resto usa el Placeholder
       { path: 'mantenimiento', component: MaintenanceMonitorModalComponent },
       { path: 'reservas', component: ReservationManagerComponent },
       { path: 'huespedes', component: GuestListComponent },
-      { path: 'personal', component: UserListComponent },
-      { path: 'inventario', component: InventoryManagerComponent },
-      { path: 'finanzas', component: DailyReportModalComponent }
+      {
+        path: 'personal',
+        component: UserListComponent,
+        canActivate: [roleGuard(['ADMIN'])]
+      },
+      {
+        path: 'inventario',
+        component: InventoryManagerComponent,
+        canActivate: [roleGuard(['ADMIN'])]
+      },
+      {
+        path: 'finanzas',
+        component: DailyReportModalComponent,
+        canActivate: [roleGuard(['ADMIN'])]
+      }
     ]
   },
-  { path: '', redirectTo: 'dashboard', pathMatch: 'full' }, // Redirige raíz a dashboard
+  { path: 'unauthorized', component: UnauthorizedComponent },
+  { path: '', redirectTo: 'dashboard', pathMatch: 'full' },
   { path: '**', redirectTo: 'login' }
 ];
