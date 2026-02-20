@@ -11,7 +11,7 @@
             </div>
             <div class="col-auto ms-auto d-print-none">
                 <div class="btn-list">
-                    <button class="btn btn-primary d-none d-sm-inline-block" (click)="loadTickets()">
+                    <button class="btn btn-primary d-none d-sm-inline-block" (click)="loadTickets(true)">
                         <i class="ti ti-refresh me-2"></i> Actualizar Lista
                     </button>
                 </div>
@@ -27,14 +27,14 @@
             <div class="card-header">
                 <ul class="nav nav-tabs card-header-tabs">
                     <li class="nav-item">
-                        <a class="nav-link cursor-pointer fw-bold" [class.active]="filter === 'PENDING'"
-                            [class.text-danger]="filter === 'PENDING'" (click)="filter = 'PENDING'">
+                        <a class="nav-link cursor-pointer fw-bold" [class.active]="filter() === 'PENDING'"
+                            [class.text-danger]="filter() === 'PENDING'" (click)="filter.set('PENDING')">
                             🚨 Pendientes ({{ pendingCount() }})
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link cursor-pointer" [class.active]="filter === 'RESOLVED'"
-                            (click)="filter = 'RESOLVED'">
+                        <a class="nav-link cursor-pointer" [class.active]="filter() === 'RESOLVED'"
+                            (click)="filter.set('RESOLVED')">
                             ✅ Historial Resuelto
                         </a>
                     </li>
@@ -42,7 +42,7 @@
             </div>
 
             <div class="list-group list-group-flush">
-                @for (t of filteredTickets; track t.id) {
+                @for (t of filteredTickets(); track t.id) {
                 <div class="list-group-item p-3 item-row">
                     <div class="row align-items-center">
 
