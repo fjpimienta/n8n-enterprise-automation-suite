@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -35,7 +35,8 @@ import { ApiResponse } from '@core/interfaces/api-response.interface';
     RoomFiltersComponent, RoomDetailModalComponent, UserFormModalComponent, UserListComponent, GuestFormModalComponent, GuestListComponent,
     SkeletonComponent, ReservationManagerComponent, RoomChecklistModalComponent, ExpenseFormModalComponent, MaintenanceTicketModalComponent,
     MaintenanceMonitorModalComponent],
-  templateUrl: './dashboard.component.html'
+  templateUrl: './dashboard.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DashboardComponent {
   private router = inject(Router);
@@ -75,6 +76,9 @@ export class DashboardComponent {
     expenseTransactions: [] as any[],
     periodLabel: 'Hoy'
   };
+
+  /** Computed para evitar evaluación en cada CD */
+  readonly isAdmin = computed(() => this.authService.hasRole('ADMIN'));
 
   ngOnInit() {
     this.hotelService.selectRoom(null as any);
@@ -240,9 +244,6 @@ export class DashboardComponent {
   }
 
   /* 5. SECCIÓN: GESTIÓN DE USUARIOS */
-  public get isAdmin(): boolean {
-    return this.authService.currentUser()?.role === 'ADMIN';
-  }
 
   /* Abre la vista de gestión de usuarios */
   /* Abre la vista de gestión de usuarios */
