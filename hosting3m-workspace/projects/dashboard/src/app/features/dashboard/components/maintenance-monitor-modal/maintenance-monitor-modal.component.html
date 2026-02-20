@@ -42,7 +42,7 @@
             </div>
 
             <div class="list-group list-group-flush">
-                @for (t of filteredTickets(); track t.id) {
+                @for (t of filteredTickets(); track trackByTicketId($index, t)) {
                 <div class="list-group-item p-3 item-row">
                     <div class="row align-items-center">
 
