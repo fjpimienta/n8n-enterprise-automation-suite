@@ -1,7 +1,8 @@
-import { Component, EventEmitter, Output, inject, input } from '@angular/core';
+import { Component, EventEmitter, Output, inject, input, DestroyRef, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HotelService } from '@features/dashboard/services/hotel.service';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Component({
   selector: 'app-room-checklist-modal',
@@ -9,19 +10,17 @@ import { HotelService } from '@features/dashboard/services/hotel.service';
   imports: [CommonModule, FormsModule],
   templateUrl: './room-checklist-modal.component.html'
 })
-export class RoomChecklistModalComponent {
-
+export class RoomChecklistModalComponent implements OnInit {
   private hotelService = inject(HotelService);
+  private destroyRef = inject(DestroyRef);
 
   room = input.required<any>();
   @Output() onClose = new EventEmitter<void>();
   @Output() onSave = new EventEmitter<any>();
 
-  isLoading = true; // Para bloquear mientras carga
+  isLoading = true;
   existingInspectionId: number | null = null;
 
-
-  // Modelo de datos del Checklist
   checklist = {
     general: {
       limpieza_pisos: false,
@@ -60,17 +59,13 @@ export class RoomChecklistModalComponent {
 
   ngOnInit() {
     this.isLoading = true;
-
-    // Buscamos si ya existe rondín hoy
-    this.hotelService.getTodayChecklist(this.room().id).subscribe({
+    this.hotelService.getTodayChecklist(this.room().id).pipe(
+      takeUntilDestroyed(this.destroyRef)
+    ).subscribe({
       next: (data) => {
         if (data && data.checklist_data) {
-          // 1. Guardamos el ID para poder hacer UPDATE luego
           this.existingInspectionId = data.id;
-
           const dbData = data.checklist_data;
-
-          // 2. FUSIÓN SEGURA (Aquí estaba tu error):
           this.checklist = {
             general: { ...this.checklist.general, ...(dbData.general || {}) },
             bano: { ...this.checklist.bano, ...(dbData.bano || {}) },
@@ -78,7 +73,6 @@ export class RoomChecklistModalComponent {
             seguridad: { ...this.checklist.seguridad, ...(dbData.seguridad || {}) },
             observaciones: data.observaciones || dbData.observaciones || ''
           };
-
         } else {
           this.existingInspectionId = null;
         }
@@ -93,53 +87,43 @@ export class RoomChecklistModalComponent {
 
   saveChecklist() {
     this.isLoading = true;
-
-    // LÓGICA DE DECISIÓN: ¿Crear o Actualizar?
-    if (this.existingInspectionId) {
-      // --- UPDATE ---
-      this.hotelService.updateChecklist(
-        this.existingInspectionId,
-        this.checklist,
-        this.checklist.observaciones
-      ).subscribe({
-        next: (res) => this.handleSuccess(res, 'actualizado'),
-        error: (err) => this.handleError(err)
-      });
-    } else {
-      // --- INSERT ---
-      this.hotelService.saveChecklist(
-        this.room().id,
-        this.checklist,
-        this.checklist.observaciones
-      ).subscribe({
-        next: (res) => this.handleSuccess(res, 'registrado'),
-        error: (err) => this.handleError(err)
-      });
-    }
+    const obs = this.existingInspectionId
+      ? this.hotelService.updateChecklist(
+          this.existingInspectionId,
+          this.checklist,
+          this.checklist.observaciones
+        )
+      : this.hotelService.saveChecklist(
+          this.room().id,
+          this.checklist,
+          this.checklist.observaciones
+        );
+    obs.pipe(takeUntilDestroyed(this.destroyRef)).subscribe({
+      next: (res) => this.handleSuccess(res, this.existingInspectionId ? 'actualizado' : 'registrado'),
+      error: (err) => this.handleError(err)
+    });
   }
 
-  // Helper para éxito
   private handleSuccess(res: any, accion: string) {
     this.isLoading = false;
-    // Enviamos un mensaje interno para que el dashboard sepa qué decir
+    this.hotelService.invalidateChecklistCache(this.room().id);
     this.onSave.emit({ ...res, messageInternal: `Rondín ${accion} correctamente` });
   }
 
-  // Helper para error
   private handleError(err: any) {
     console.error('Error al guardar:', err);
     this.isLoading = false;
     alert('❌ Ocurrió un error al guardar la inspección.');
   }
 
-  // Función auxiliar para marcar todo OK (opcional)
   markAll(status: boolean) {
     const keys = ['general', 'bano', 'equipamiento', 'seguridad'];
     keys.forEach(group => {
-      // @ts-ignore
-      for (const item in this.checklist[group]) {
-        // @ts-ignore
-        this.checklist[group][item] = status;
+      const section = this.checklist[group as keyof typeof this.checklist];
+      if (section && typeof section === 'object') {
+        for (const item in section as Record<string, boolean>) {
+          (section as Record<string, boolean>)[item] = status;
+        }
       }
     });
   }

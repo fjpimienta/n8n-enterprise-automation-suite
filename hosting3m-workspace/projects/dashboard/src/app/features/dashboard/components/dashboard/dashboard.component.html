@@ -3,9 +3,15 @@
 
     @if (viewMode() === 'details' || viewMode() === 'checkin' || viewMode() === 'checkout_validation') {
 
-    <app-room-filters [currentFilter]="bookingService.filter()" [isAdmin]="isAdmin"
-      (onFilterChange)="bookingService.filter.set($event)" (onManageGuests)="openGuestManagement()"
-      (onManageUsers)="openUserManagement()" (onReservations)="openReservations()">
+    <app-room-filters
+      [currentFilter]="bookingService.filter()"
+      [searchQuery]="bookingService.searchQuery()"
+      [isAdmin]="isAdmin()"
+      (onFilterChange)="bookingService.filter.set($event)"
+      (onSearchChange)="bookingService.searchQuery.set($event)"
+      (onManageGuests)="openGuestManagement()"
+      (onManageUsers)="openUserManagement()"
+      (onReservations)="openReservations()">
     </app-room-filters>
 
     <div class="row row-cards g-2">

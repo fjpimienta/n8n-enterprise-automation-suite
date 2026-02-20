@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, computed, input, output } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy, signal, computed, input, output, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MaintenanceService } from '@features/dashboard/services/maintenance.service';
 import { FormsModule } from '@angular/forms';
@@ -10,18 +10,20 @@ import { HotelService } from '@features/dashboard/services/hotel.service';
   imports: [CommonModule, FormsModule],
   templateUrl: './maintenance-monitor-modal.component.html',
   styleUrl: './maintenance-monitor-modal.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class MaintenanceMonitorModalComponent implements OnInit {
+export class MaintenanceMonitorModalComponent implements OnInit, OnDestroy {
   private maintenanceService = inject(MaintenanceService);
   private hotelService = inject(HotelService);
+  private cdr = inject(ChangeDetectorRef);
 
   targetRoomId = input<number | null>(null);
 
   tickets = signal<any[]>([]);
-  isLoading = true;
-  filter: 'PENDING' | 'RESOLVED' = 'PENDING';
+  isLoading = signal(false);
+  filter = signal<'PENDING' | 'RESOLVED'>('PENDING');
   resolvingTicketId: number | null = null;
-  solutionText: string = '';
+  solutionText = '';
   showError = false;
 
   pendingCount = computed(() => {
@@ -32,22 +34,43 @@ export class MaintenanceMonitorModalComponent implements OnInit {
     ).length;
   });
 
-  // 1. Declaramos el evento para gritarle al Dashboard
+  filteredTickets = computed(() => {
+    const list = this.tickets();
+    const specificRoom = this.targetRoomId();
+    const currentFilter = this.filter();
+    let result = currentFilter === 'PENDING'
+      ? list.filter((t: any) => t.status !== 'RESOLVED')
+      : list.filter((t: any) => t.status === 'RESOLVED');
+    result = result.filter(t => t.id && (t.description || t.issue_type));
+    if (specificRoom) {
+      result = result.filter(t => t.room_id === specificRoom);
+    }
+    return result;
+  });
+
+  /**
+   * Función trackBy para optimizar el rendimiento de las iteraciones
+   * Evita re-renderizar elementos que no han cambiado
+   */
+  trackByTicketId(index: number, ticket: any): number {
+    return ticket.id || index;
+  }
+
   onResolved = output<void>();
-  // 2. Busca tu función que se ejecuta al darle "Resolver" al ticket
+
   async resolveTicket(ticket: any) {
+    this.isLoading.set(true);
+    this.cdr.markForCheck();
     try {
-      // ... (Tu código actual que actualiza el ticket a RESOLVED en n8n) ...
-
-      // 3. Forzamos que la habitación pase directamente a LIMPIA y DISPONIBLE
       await this.hotelService.finishMaintenance(ticket.room_id);
-
-      // 4. Le avisamos al Dashboard que ya terminamos
       this.onResolved.emit();
-
+      this.cdr.markForCheck();
     } catch (error) {
-      console.error(error);
+      console.error('Error al resolver ticket:', error);
       alert('Error al resolver el ticket');
+    } finally {
+      this.isLoading.set(false);
+      this.cdr.markForCheck();
     }
   }
 
@@ -55,38 +78,19 @@ export class MaintenanceMonitorModalComponent implements OnInit {
     this.loadTickets();
   }
 
-  async loadTickets() {
-    this.isLoading = true;
+  async loadTickets(forceRefresh = false) {
+    this.isLoading.set(true);
+    this.cdr.markForCheck();
     try {
-      const allTickets = await this.maintenanceService.getTickets();
-      const data = allTickets.sort((a: any, b: any) => {
-        const priorityVal: any = { 'CRITICAL': 3, 'NORMAL': 2, 'LOW': 1 };
-        return (priorityVal[b.priority] || 0) - (priorityVal[a.priority] || 0);
-      });
-
+      const data = await this.maintenanceService.loadTickets(forceRefresh);
       this.tickets.set(data);
+      this.cdr.markForCheck();
     } catch (error) {
       console.error('Error cargando tickets:', error);
     } finally {
-      this.isLoading = false;
+      this.isLoading.set(false);
+      this.cdr.markForCheck();
     }
-  }
-
-  get filteredTickets() {
-    const list = this.tickets();
-    const specificRoom = this.targetRoomId();
-
-    let result = (this.filter === 'PENDING')
-      ? list.filter((t: any) => t.status !== 'RESOLVED')
-      : list.filter((t: any) => t.status === 'RESOLVED');
-
-    result = result.filter(t => t.id && (t.description || t.issue_type));
-
-    if (specificRoom) {
-      result = result.filter(t => t.room_id === specificRoom);
-    }
-
-    return result;
   }
 
   startResolution(ticket: any) {
@@ -95,46 +99,45 @@ export class MaintenanceMonitorModalComponent implements OnInit {
   }
 
   cancelResolution() {
-    this.resolvingTicketId = null;
-    this.solutionText = '';
-    this.showError = false;
+    this.resetForm();
   }
-
-  // (AQUÍ BORRASTE LA FUNCIÓN resolveTicket QUE HABÍAMOS PEGADO ANTES)
 
   async confirmResolution() {
     if (!this.resolvingTicketId) return;
-    if (!this.solutionText.trim()) {
+    
+    // Validación robusta: verificar que la solución no esté vacía después de trim
+    const trimmedSolution = this.solutionText.trim();
+    if (!trimmedSolution || trimmedSolution.length < 5) {
       this.showError = true;
+      this.cdr.markForCheck();
       return;
     }
 
     this.showError = false;
-    this.isLoading = true;
+    this.isLoading.set(true);
+    this.cdr.markForCheck();
+
     try {
       const now = new Date().toISOString();
 
-      // 1. Guarda en BD el ticket resuelto
       await this.maintenanceService.updateTicket(this.resolvingTicketId, {
         status: 'RESOLVED',
-        solution_details: this.solutionText,
+        solution_details: trimmedSolution, // Usar valor con trim
         resolved_at: now
       });
 
-      // 2. Pasa la habitación a LIMPIA y DISPONIBLE
       const ticket = this.tickets().find(t => t.id === this.resolvingTicketId);
       if (ticket && ticket.room_id) {
         await this.hotelService.finishMaintenance(ticket.room_id);
       }
 
-      // 3. Actualiza la lista interna temporalmente
       this.tickets.update(currentList =>
         currentList.map(t => {
           if (t.id === this.resolvingTicketId) {
             return {
               ...t,
               status: 'RESOLVED',
-              solution_details: this.solutionText,
+              solution_details: trimmedSolution,
               resolved_at: now
             };
           }
@@ -142,16 +145,36 @@ export class MaintenanceMonitorModalComponent implements OnInit {
         })
       );
 
-      this.cancelResolution();
-
-      // 🚀 4. ¡AQUÍ ESTÁ LA SOLUCIÓN! Le gritamos al Dashboard que ya terminamos
+      this.resetForm();
       this.onResolved.emit();
-
+      this.cdr.markForCheck();
     } catch (error) {
-      console.error(error);
+      console.error('Error al resolver ticket:', error);
       alert('Error al resolver el ticket. Intente nuevamente.');
     } finally {
-      this.isLoading = false;
+      this.isLoading.set(false);
+      this.cdr.markForCheck();
     }
+  }
+
+  /**
+   * Resetea el formulario de resolución a su estado inicial
+   */
+  private resetForm(): void {
+    this.resolvingTicketId = null;
+    this.solutionText = '';
+    this.showError = false;
+    this.cdr.markForCheck();
+  }
+
+  /**
+   * Limpieza de recursos al destruir el componente
+   */
+  ngOnDestroy(): void {
+    this.resetForm();
+    // Los signals se limpian automáticamente, pero reseteamos estado manual
+    this.tickets.set([]);
+    this.isLoading.set(false);
+    this.filter.set('PENDING');
   }
 }

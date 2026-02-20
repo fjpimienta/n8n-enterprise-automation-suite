@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, computed, inject, input, output } from '@angular/core';
-import { Room } from '@core/models/hotel.types';
-import { BookingService } from '@features/booking/services/booking.service';
+import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+
+/** Tipo de unión literal para el filtro de habitaciones; alineado con BookingService.filter */
+export type RoomFilterStatus = 'all' | 'available' | 'occupied' | 'dirty' | 'maintenance' | 'reserved';
 
 @Component({
   selector: 'app-room-filters',
@@ -9,21 +10,20 @@ import { BookingService } from '@features/booking/services/booking.service';
   imports: [CommonModule],
   templateUrl: './room-filters.component.html',
   styleUrl: './room-filters.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class RoomFiltersComponent {
-  currentFilter = input.required<string>();
-  rooms = input<Room[]>([]);
+  currentFilter = input.required<RoomFilterStatus>();
+  searchQuery = input<string>('');
   isAdmin = input.required<boolean>();
 
-  onFilterChange = output<any>();
+  onFilterChange = output<RoomFilterStatus>();
+  onSearchChange = output<string>();
   onManageUsers = output<void>();
   onManageGuests = output<void>();
   onReservations = output<void>();
 
-  public bookingService = inject(BookingService);
-
-  filterOptions = [
-    // { label: 'Todas', value: 'all', activeClass: 'btn-primary' },
+  filterOptions: { label: string; value: RoomFilterStatus; activeClass?: string }[] = [
     { label: '🟢 Disponible', value: 'available', activeClass: 'btn-success' },
     { label: '🔒 Ocupada', value: 'occupied', activeClass: 'btn-danger' },
     { label: '🗑️ Limpieza', value: 'dirty', activeClass: 'btn-warning' },
@@ -31,16 +31,16 @@ export class RoomFiltersComponent {
     { label: '📅 Reservada', value: 'reserved', activeClass: 'btn-info' }
   ];
 
-  setFilter(filter: string) {
+  setFilter(filter: RoomFilterStatus) {
     this.onFilterChange.emit(filter);
   }
 
   onSearch(event: Event) {
-    const input = event.target as HTMLInputElement;
-    this.bookingService.searchQuery.set(input.value);
+    const inputEl = event.target as HTMLInputElement;
+    this.onSearchChange.emit(inputEl.value);
   }
 
   clearSearch() {
-    this.bookingService.searchQuery.set('');
+    this.onSearchChange.emit('');
   }
 }
