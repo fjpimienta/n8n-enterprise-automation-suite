@@ -73,6 +73,19 @@
         "build": {
           "builder": "@angular/build:application",
           "options": {
+            "outputPath": "dist/dashboard",
+            "index": "projects/dashboard/src/index.html",
+            "polyfills": [
+              "zone.js"
+            ],
+            "allowedCommonJsDependencies": [
+              "jspdf",
+              "html2canvas",
+              "canvg",
+              "core-js",
+              "raf",
+              "rgbcolor"
+            ],
             "browser": "projects/dashboard/src/main.ts",
             "tsConfig": "projects/dashboard/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
@@ -94,8 +107,8 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "500kB",
-                  "maximumError": "1MB"
+                  "maximumWarning": "1.5mb",
+                  "maximumError": "2mb"
                 },
                 {
                   "type": "anyComponentStyle",

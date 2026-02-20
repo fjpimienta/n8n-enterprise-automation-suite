@@ -4,7 +4,7 @@ import { ReservationFormComponent } from '../reservation-form/reservation-form.c
 import { AdminService } from '@features/admin/services/admin.service';
 import { HotelService } from '@features/dashboard/services/hotel.service';
 import { BookingService } from '@features/booking/services/booking.service';
-import { PdfExportConfig, PdfExportService } from 'ui-pdf-export/public-api';
+import { PdfExportConfig, PdfExportService } from 'ui-pdf-export';
 
 @Component({
   selector: 'app-reservation-manager',
