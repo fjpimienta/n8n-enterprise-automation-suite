@@ -161,8 +161,8 @@ export class ReservationManagerComponent implements OnInit {
       // Opcionales (puedes omitirlos si quieres, pero pon el objeto completo si los declaras)
       footerTitle: 'Forma de Pago',
       footerText: [
-        'Transferencia a nombre de: Diana Perez Pimienta',
-        'HSBC | CLABE: 4213 1693 1443 4398'
+        'Transferencia a nombre de: Diana Perez Pimienta | RFC: PEED8001019A1',
+        'Banco HSBC | CLABE: 012180015615151108 | No. Cuenta: 1561515110',
       ]
     };
 
