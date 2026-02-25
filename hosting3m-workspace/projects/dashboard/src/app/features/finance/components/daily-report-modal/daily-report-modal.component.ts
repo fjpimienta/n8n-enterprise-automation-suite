@@ -23,14 +23,53 @@ export class DailyReportModalComponent implements OnInit {
   currentFilter = signal<'day' | 'week' | 'month' | 'year'>('day');
   activeTab = signal<'ingresos' | 'gastos'>('ingresos');
 
-  /** Map O(1) para lookup room_id → room_number; evita O(n²) en tabla de ingresos */
+  /** Map O(1) para lookup room_id → room_number */
   roomNumberMap = computed(() => {
     const map = new Map<number, string>();
-    this.bookingService.rooms().forEach(r => map.set(r.id, r.room_number));
+    this.bookingService.rooms().forEach(r => map.set(Number(r.id), r.room_number));
     return map;
   });
 
+  roomStatusMap = computed(() => {
+    const map = new Map<number, { text: string, badge: string }>();
+    this.bookingService.rooms().forEach(r => {
+      if (r.status === 'maintenance') {
+        map.set(Number(r.id), { text: 'MANTENIMIENTO', badge: 'bg-blue-lt' });
+      } else if (r.status === 'occupied') {
+        map.set(Number(r.id), { text: 'OCUPADA', badge: 'bg-red-lt' });
+      } else if (r.cleaning_status === 'dirty') {
+        map.set(Number(r.id), { text: 'SUCIA', badge: 'bg-orange-lt' });
+      } else {
+        map.set(Number(r.id), { text: 'DISPONIBLE', badge: 'bg-green-lt' });
+      }
+    });
+    return map;
+  });
+
+  // 👇 FORZAMOS Number(id) PARA EVITAR EL "N/A"
+  getRoomStatus(id: any) {
+    return this.roomStatusMap().get(Number(id)) ?? { text: 'N/A', badge: 'bg-secondary-lt' };
+  }
+
+  getRoomNumber(id: any): string {
+    return this.roomNumberMap().get(Number(id)) ?? 'N/A';
+  }
+
+  // 👇 FILTRAMOS LAS CANCELADAS ANTES DE QUE ENTREN A LAS MATEMÁTICAS
+  reportData = computed(() => {
+    const validBookings = this.rawBookings().filter(b => b.status !== 'cancelled');
+
+    return this.reportService.calculateDailyReport(
+      validBookings,
+      this.rawExpenses(),
+      this.currentFilter()
+    );
+  });
+
   ngOnInit() {
+    if (this.bookingService.rooms().length === 0) {
+      this.bookingService.loadRooms();
+    }
     this.loadData();
   }
 
@@ -52,21 +91,9 @@ export class DailyReportModalComponent implements OnInit {
     }
   }
 
-  reportData = computed(() => {
-    return this.reportService.calculateDailyReport(
-      this.rawBookings(),
-      this.rawExpenses(),
-      this.currentFilter()
-    );
-  });
-
   // Helpers UI
   setFilter(f: 'day' | 'week' | 'month' | 'year') {
     this.currentFilter.set(f);
-  }
-
-  getRoomNumber(id: number): string {
-    return this.roomNumberMap().get(id) ?? 'N/A';
   }
 
   getNights(checkIn: string, checkOut: string): number {
