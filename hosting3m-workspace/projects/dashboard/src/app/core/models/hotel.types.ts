@@ -1,6 +1,6 @@
 export type RoomStatus = 'available' | 'occupied' | 'maintenance' | 'dirty';
 export type CleaningStatus = 'clean' | 'dirty' | 'inspected';
-export type RoomType = 'KING' | 'MATRIMONIAL' | 'DOBLE' | 'TRIPLE' | 'OTHER';
+export type RoomType = 'KING' | 'SENCILLA' | 'DOBLE' | 'TRIPLE' | 'OTHER';
 
 export interface Room {
   id: number;
