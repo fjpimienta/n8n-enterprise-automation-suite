@@ -185,7 +185,7 @@ export class PdfExportService {
         doc.setFont("helvetica", "italic");
         doc.setFontSize(8);
         doc.setTextColor(this.grayMuted[0], this.grayMuted[1], this.grayMuted[2]);
-        doc.text("Gracias por elegir un turismo sustentable con Eco Hotel San José.", pageWidth / 2, pageHeight - 10, { align: 'center' });
+        doc.text("Gracias por elegir el Hotel San José, Catazajá, Chiapas, México.", pageWidth / 2, pageHeight - 10, { align: 'center' });
 
         // --- 7. GUARDAR ---
         const cleanName = config.fileName.replace(/[^a-zA-Z0-9-_]/g, '_');
