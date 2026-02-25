@@ -43,11 +43,17 @@ export class ReportService {
     };
 
     // Sumar Ventas
-    filteredBookings.forEach(b => {
-      const amount = parseFloat(b.total_amount || 0);
-      stats.total_sales += amount;
-      if (b.payment_status === 'paid') stats.paid_in += amount;
-      else stats.pending += amount;
+    filteredBookings.forEach((b: any) => {
+      const amount = Number(b.total_amount) || 0;
+
+      // 1. Sumar a INGRESOS COBRADOS solo si ya lo pagaron
+      if (b.payment_status === 'paid') {
+        stats.paid_in += amount;
+      }
+      // 2. Sumar a PENDIENTE DE COBRO si es reserva a futuro o no han pagado
+      else {
+        stats.pending += amount;
+      }
     });
 
     // Sumar Gastos
