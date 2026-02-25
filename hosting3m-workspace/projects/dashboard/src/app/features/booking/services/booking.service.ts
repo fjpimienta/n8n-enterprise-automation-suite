@@ -30,7 +30,7 @@ export class BookingService {
     reserved: 'reservada'
   };
   private readonly roomTypeConfig = [
-    { key: 'MATRIMONIAL', label: '💑 Matrimonial', order: 1 },
+    { key: 'SENCILLA', label: '💑 Sencilla', order: 1 },
     { key: 'KING', label: '👑 King Size', order: 2 },
     { key: 'DOBLE', label: '👯 Doble', order: 3 },
     { key: 'TRIPLE', label: '👨‍👩‍👧 Triple', order: 4 },
@@ -91,7 +91,7 @@ export class BookingService {
 
       // Mapeo de sinónimos comunes (opcional, por si la BD está sucia)
       if (typeKey.includes('KING')) typeKey = 'KING';
-      else if (typeKey.includes('MATRIMONIAL')) typeKey = 'MATRIMONIAL';
+      else if (typeKey.includes('SENCILLA')) typeKey = 'SENCILLA';
       else if (typeKey.includes('DOBLE')) typeKey = 'DOBLE';
       else if (typeKey.includes('TRIPLE')) typeKey = 'TRIPLE';
 
