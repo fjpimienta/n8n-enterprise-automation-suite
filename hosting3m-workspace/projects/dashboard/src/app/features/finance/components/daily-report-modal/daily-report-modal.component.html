@@ -120,13 +120,24 @@
               @for (t of reportData().transactions; track t.id) {
               <tr>
                 <td>{{ t.check_in | date:'dd/MM HH:mm' }}</td>
-                <td class="fw-bold">Hab. {{ getRoomNumber(t.room_id) }}</td>
+                <td>
+                  <div class="fw-bold">Hab. {{ getRoomNumber(t.room_id) }}</div>
+                  <div class="mt-1">
+                    <span class="badge" [ngClass]="getRoomStatus(t.room_id).badge" style="font-size: 0.65rem;">
+                      {{ getRoomStatus(t.room_id).text }}
+                    </span>
+                  </div>
+                </td>
                 <td class="text-muted">{{ getNights(t.check_in, t.check_out) }} noches</td>
                 <td>
-                  <span class="badge" [class.bg-success-lt]="t.status === 'confirmed'"
-                    [class.bg-warning-lt]="t.status !== 'confirmed'">
-                    {{ t.status === 'confirmed' ? 'PAGADO' : 'PENDIENTE' }}
+                  @if (t.status === 'cancelled') {
+                  <span class="badge bg-danger-lt">CANCELADO</span>
+                  } @else {
+                  <span class="badge" [class.bg-success-lt]="t.payment_status === 'paid'"
+                    [class.bg-warning-lt]="t.payment_status !== 'paid'">
+                    {{ t.payment_status === 'paid' ? 'PAGADO' : 'PENDIENTE' }}
                   </span>
+                  }
                 </td>
                 <td class="text-end fw-bold font-monospace">${{ t.total_amount | number:'1.2-2' }}</td>
               </tr>
