@@ -29,4 +29,8 @@ export interface PdfExportConfig {
     // Pie de página
     footerTitle?: string;
     footerText?: string[];
+
+    showTaxes?: boolean;
+    showTotals?: boolean;
+    showValidity?: boolean;
 }

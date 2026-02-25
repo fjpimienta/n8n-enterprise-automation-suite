@@ -8,8 +8,8 @@
         </h2>
       </div>
       <div class="col-auto ms-auto d-print-none">
-        <button class="btn btn-outline-primary" (click)="printReport()">
-          <i class="ti ti-printer me-2"></i> Imprimir Reporte
+        <button class="btn btn-outline-danger shadow-sm" (click)="printReport()" [disabled]="isLoading()">
+          <i class="ti ti-file-type-pdf me-2"></i> Descargar PDF
         </button>
       </div>
     </div>

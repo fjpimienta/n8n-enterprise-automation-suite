@@ -48,7 +48,9 @@ export class PdfExportService {
         doc.setTextColor(this.textColor[0], this.textColor[1], this.textColor[2]);
         doc.text(`Fecha de emisión: ${today}`, pageWidth - margin, 22, { align: 'right' });
         doc.setFont("helvetica", "italic");
-        doc.text("Cotización válida por 15 días", pageWidth - margin, 27, { align: 'right' });
+        if (config.showValidity !== false) {
+            doc.text('Cotización válida por 15 días', pageWidth - margin, 32, { align: 'right' });
+        }
 
         // Línea divisoria elegante
         doc.setDrawColor(this.ecoGreen[0], this.ecoGreen[1], this.ecoGreen[2]);
@@ -135,13 +137,15 @@ export class PdfExportService {
         doc.text("Subtotal Base:", labelX, finalY, { align: 'right' });
         doc.text(this.formatCurrency(baseAmount, currency), valueX, finalY, { align: 'right' });
 
-        finalY += 6;
-        doc.text(`IVA (${(taxRate * 100).toFixed(0)}%):`, labelX, finalY, { align: 'right' });
-        doc.text(this.formatCurrency(ivaAmount, currency), valueX, finalY, { align: 'right' });
+        if (config.showTaxes !== false && config.showTotals !== false) {
+            finalY += 6;
+            doc.text(`IVA (${(taxRate * 100).toFixed(0)}%):`, labelX, finalY, { align: 'right' });
+            doc.text(this.formatCurrency(ivaAmount, currency), valueX, finalY, { align: 'right' });
 
-        finalY += 6;
-        doc.text(`ISH (${(ishRate * 100).toFixed(0)}%):`, labelX, finalY, { align: 'right' });
-        doc.text(this.formatCurrency(ishAmount, currency), valueX, finalY, { align: 'right' });
+            finalY += 6;
+            doc.text(`ISH (${(ishRate * 100).toFixed(0)}%):`, labelX, finalY, { align: 'right' });
+            doc.text(this.formatCurrency(ishAmount, currency), valueX, finalY, { align: 'right' });
+        }
 
         // Total Final con Acento
         finalY += 10;
