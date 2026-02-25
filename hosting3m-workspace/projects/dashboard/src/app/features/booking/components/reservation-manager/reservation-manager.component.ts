@@ -162,7 +162,7 @@ export class ReservationManagerComponent implements OnInit {
       footerTitle: 'Forma de Pago',
       footerText: [
         'Transferencia a nombre de: Diana Perez Pimienta | RFC: PEED8001019A1',
-        'Banco HSBC | CLABE: 012180015615151108 | No. Cuenta: 1561515110',
+        'Banco BBVA | CLABE: 012180015615151108 | No. Cuenta: 1561515110',
       ]
     };
 
