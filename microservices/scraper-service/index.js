@@ -14,55 +14,45 @@ app.use(bodyParser.json());
 /**
  * Función de seguridad para prevenir SSRF (Server-Side Request Forgery)
  */
-function isSafeUrl(urlInput) {
+function isSafeUrl(inputUrl) {
     try {
-        const parsed = new URL(urlInput);
+        const parsedUrl = new URL(inputUrl);
 
-        // 1. Solo permitir protocolos web estándar
-        if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+        // A. Validar que el protocolo sea estrictamente HTTP o HTTPS
+        if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+            return false;
+        }
 
-        const hostname = parsed.hostname;
-        const lowerHost = hostname.toLowerCase();
+        // B. Bloquear hostnames y direcciones IP privadas/locales
+        const hostname = parsedUrl.hostname;
+        const forbiddenHosts = ['localhost', '127.0.0.1', '169.254.169.254', '::1', '0.0.0.0'];
 
-        // 2. Bloquear nombres de host prohibidos y de metadatos de la nube
-        const forbiddenHosts = [
-            'localhost',
-            '127.0.0.1',
-            '::1',
-            '0.0.0.0',
-            'metadata.google.internal',
-            '169.254.169.254',
-            'instance-data'
-        ];
-        if (forbiddenHosts.includes(lowerHost)) return false;
+        // Bloqueo básico de rangos de red privada (10.x.x.x, 192.168.x.x, 172.16.x.x)
+        const isPrivateIp = /^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)/.test(hostname);
 
-        // 3. Validación profunda de IP usando ipaddr.js
-        if (ipaddr.isValid(hostname)) {
-            const addr = ipaddr.parse(hostname);
-            const range = addr.range();
-
-            // Lista estricta de rangos PROHIBIDOS (RFC1918 y otros)
-            const forbiddenRanges = [
-                'unspecified',
-                'loopback',
-                'linkLocal',
-                'multicast',
-                'private',
-                'reserved',
-                'uniqueLocal',
-                'carrierGradeNat'
-            ];
-
-            if (forbiddenRanges.includes(range)) return false;
+        if (forbiddenHosts.includes(hostname) || isPrivateIp) {
+            return false;
         }
 
         return true;
     } catch (e) {
+        // Si new URL() falla, la URL está mal formada
         return false;
     }
 }
 
-// ... [Tus funciones scrapeGeneric y scrapeLinkedIn se mantienen igual] ...
+// NAVEGACIÓN
+try {
+    if (!isSafeUrl(finalUrl)) {
+        throw new Error("URL rechazada por políticas de seguridad (SSRF prevention).");
+    }
+
+    // USAR finalUrl AQUÍ (Variable que viene del objeto URL validado)
+    await page.goto(finalUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
+
+} catch (e) {
+    console.log(`[WARN] Goto: ${e.message}`);
+}
 
 app.post('/scrape', async (req, res) => {
     let browser = null;
