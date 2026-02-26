@@ -3,15 +3,10 @@
 
     @if (viewMode() === 'details' || viewMode() === 'checkin' || viewMode() === 'checkout_validation') {
 
-    <app-room-filters
-      [currentFilter]="bookingService.filter()"
-      [searchQuery]="bookingService.searchQuery()"
-      [isAdmin]="isAdmin()"
-      (onFilterChange)="bookingService.filter.set($event)"
-      (onSearchChange)="bookingService.searchQuery.set($event)"
-      (onManageGuests)="openGuestManagement()"
-      (onManageUsers)="openUserManagement()"
-      (onReservations)="openReservations()">
+    <app-room-filters [currentFilter]="bookingService.filter()" [searchQuery]="bookingService.searchQuery()"
+      [isAdmin]="isAdmin()" (onFilterChange)="bookingService.filter.set($event)"
+      (onSearchChange)="bookingService.searchQuery.set($event)" (onManageGuests)="openGuestManagement()"
+      (onManageUsers)="openUserManagement()" (onReservations)="openReservations()">
     </app-room-filters>
 
     <div class="row row-cards g-2">
@@ -133,7 +128,8 @@
   (onClose)="hotelService.clearSelection()" (onCheckin)="viewMode.set('checkin')" (onMarkAsClean)="markRoomAsClean()"
   (onReservations)="viewMode.set('reservation')" (onCheckout)="startCheckoutProcess()" (onPay)="markAsPaid($event)"
   (onMaintenance)="reportMaintenance()" (onFinishMaintenance)="handleFinishMaintenance()"
-  (onOpenChecklist)="viewMode.set('checklist')"> </app-room-detail-modal>
+  (onOpenChecklist)="viewMode.set('checklist')" (onCancelRes)="handleCancelReservation($event)">
+</app-room-detail-modal>
 }
 
 <app-user-form-modal [isOpen]="isUserModalOpen()" [selectedUser]="hotelService.selectedUser()" [(userData)]="tempUser"

@@ -286,7 +286,6 @@ export class DashboardComponent {
     this.hotelService.clearSelection();
     this.viewMode.set('guest_mgmt');
 
-    // 👇 NUEVAS LÍNEAS: Apagar el monitor al ir a Huéspedes
     this.showMaintenanceMonitor = false;
     this.maintenanceFilterRoomId = null;
   }
@@ -342,7 +341,6 @@ export class DashboardComponent {
     this.hotelService.clearSelection();
     this.viewMode.set('reservation');
 
-    // 👇 NUEVAS LÍNEAS: Apagar el monitor al ir a Reservas Generales
     this.showMaintenanceMonitor = false;
     this.maintenanceFilterRoomId = null;
   }
@@ -499,5 +497,23 @@ export class DashboardComponent {
 
   openMaintenanceReport(room: Room) {
     this.maintenanceRoom.set(room);
+  }
+
+  /* Función para cancelar una reserva desde el modal del rack */
+  async handleCancelReservation(booking: any) {
+    if (!booking || !booking.id) return;
+
+    // Validación estricta por seguridad
+    const guestName = booking.hotel_guests_data?.full_name || booking.guest_name || 'este huésped';
+    const confirm = window.confirm(`¿Estás seguro de cancelar la reserva de ${guestName}?\n\nEsta acción liberará la habitación y no se puede deshacer.`);
+
+    if (!confirm) return;
+
+    try {
+      await this.bookingService.cancelReservation(booking.id);
+      this.completeActionSuccess('🚫 Reserva cancelada exitosamente.');
+    } catch (error) {
+      alert('❌ Ocurrió un error al intentar cancelar la reserva.');
+    }
   }
 }

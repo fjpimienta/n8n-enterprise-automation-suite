@@ -87,6 +87,16 @@
                         </div>
                         <i class="ti ti-calendar-check"></i>
                     </button>
+
+                    <button
+                        class="btn btn-outline-danger btn-lg d-flex align-items-center justify-content-between px-4 mt-2"
+                        (click)="onCancelRes.emit(activeBooking())">
+                        <div class="text-start">
+                            <div class="fw-bold">Cancelar Reserva</div>
+                            <div class="small opacity-75">Anular llegada programada</div>
+                        </div>
+                        <i class="ti ti-calendar-cancel fs-2"></i>
+                    </button>
                     }
                     @else {
                     <button

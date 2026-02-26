@@ -13,24 +13,39 @@ export class ReportService {
   public loadingReports = signal<boolean>(false);
   public adminService = inject(AdminService);
 
+  /** Convierte fecha UTC de BD a YYYY-MM-DD exacto en hora local de México */
+  private toLocalDate(dateStr: string): string {
+    if (!dateStr) return '';
+    // Forzamos que JS entienda que es UTC agregando la 'Z' si no la trae
+    const cleanStr = dateStr.trim().replace(' ', 'T');
+    const dateObj = new Date(cleanStr.includes('Z') || cleanStr.includes('+') ? cleanStr : cleanStr + 'Z');
+
+    // Extraemos la fecha ya convertida al reloj local de la computadora
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
+  }
+
   /** * Calcula el reporte unificado (Ventas - Gastos = Balance) 
    * Acepta 'bookings' Y 'expenses'
    */
-  calculateDailyReport(bookings: any[], expenses: any[], filter: 'day' | 'week' | 'month' | 'year') {
+  // 1. Agrega customStart y customEnd a los parámetros, y 'custom' al tipo de filtro
+  calculateDailyReport(bookings: any[], expenses: any[], filter: 'day' | 'week' | 'month' | 'year' | 'custom', customStart?: string, customEnd?: string) {
     const now = new Date();
-    const todayStr = this.getLocalDateString(now);
+    const mxNow = now.toLocaleString("en-US", { timeZone: "America/Mexico_City" });
+    const nowObj = new Date(mxNow);
+    const todayStr = `${nowObj.getFullYear()}-${String(nowObj.getMonth() + 1).padStart(2, '0')}-${String(nowObj.getDate()).padStart(2, '0')}`;
 
-    // 1. Filtramos las VENTAS según el rango seleccionado
     const filteredBookings = bookings.filter((b: any) =>
-      this.isDateInPeriod(b.created_at, filter, now, todayStr)
+      this.isDateInPeriod(b.check_in, filter, nowObj, todayStr, customStart, customEnd)
     );
 
-    // 2. Filtramos los GASTOS según el rango seleccionado
     const filteredExpenses = expenses.filter((e: any) =>
-      e.status === 'APPROVED' && this.isDateInPeriod(e.expense_date, filter, now, todayStr)
+      e.status === 'APPROVED' && this.isDateInPeriod(e.expense_date, filter, nowObj, todayStr, customStart, customEnd)
     );
 
-    // 3. Estructura de datos COMPLETA (Ventas + Gastos)
     const stats = {
       total_sales: 0,
       paid_in: 0,
@@ -44,14 +59,14 @@ export class ReportService {
 
     // Sumar Ventas
     filteredBookings.forEach((b: any) => {
+      // Limpiamos la variable para evitar errores de espacios
+      b.payment_status = String(b.payment_status || '').trim().toLowerCase();
+
       const amount = Number(b.total_amount) || 0;
 
-      // 1. Sumar a INGRESOS COBRADOS solo si ya lo pagaron
       if (b.payment_status === 'paid') {
         stats.paid_in += amount;
-      }
-      // 2. Sumar a PENDIENTE DE COBRO si es reserva a futuro o no han pagado
-      else {
+      } else {
         stats.pending += amount;
       }
     });
@@ -61,33 +76,34 @@ export class ReportService {
       stats.total_expenses += parseFloat(e.amount || 0);
     });
 
-    // Calcular Balance (Lo que realmente queda en caja)
     stats.balance = stats.paid_in - stats.total_expenses;
-
     return stats;
   }
 
   /* Lógica centralizada de fechas (Aquí está la magia de los filtros) */
-  private isDateInPeriod(dateStr: string, filter: string, now: Date, todayStr: string): boolean {
+  private isDateInPeriod(dateStr: string, filter: string, nowObj: Date, todayStr: string, customStart?: string, customEnd?: string): boolean {
     if (!dateStr) return false;
-    // Truco: Agregar 'T00:00:00' si viene solo fecha para evitar lios de zona horaria
-    const dateObj = new Date(dateStr.includes('T') ? dateStr : dateStr + 'T12:00:00');
-    const dateLocalStr = this.getLocalDateString(dateObj);
+    const dateLocalStr = this.toLocalDate(dateStr);
+
+    const cleanStr = dateStr.trim().replace(' ', 'T');
+    const utcDate = new Date(cleanStr.includes('Z') || cleanStr.includes('+') ? cleanStr : cleanStr + 'Z');
+    const dateObj = new Date(utcDate.toLocaleString("en-US", { timeZone: "America/Mexico_City" }));
 
     switch (filter) {
       case 'day': return dateLocalStr === todayStr;
-
       case 'week':
-        const startOfWeek = new Date(now);
-        startOfWeek.setDate(now.getDate() - now.getDay()); // Ir al Domingo
+        const startOfWeek = new Date(nowObj);
+        startOfWeek.setDate(nowObj.getDate() - nowObj.getDay());
         startOfWeek.setHours(0, 0, 0, 0);
         return dateObj >= startOfWeek;
-
       case 'month':
-        return dateObj.getMonth() === now.getMonth() && dateObj.getFullYear() === now.getFullYear();
-
+        return dateObj.getMonth() === nowObj.getMonth() && dateObj.getFullYear() === nowObj.getFullYear();
       case 'year':
-        return dateObj.getFullYear() === now.getFullYear();
+        return dateObj.getFullYear() === nowObj.getFullYear();
+
+      case 'custom':
+        if (!customStart || !customEnd) return false; // Si falta una fecha, no mostramos nada
+        return dateLocalStr >= customStart && dateLocalStr <= customEnd;
 
       default: return dateLocalStr === todayStr;
     }
@@ -120,7 +136,7 @@ export class ReportService {
       const res: any = await lastValueFrom(
         this.http.post(`${this.apiUrl_crud}/${table}`, {
           operation: 'getall',
-          table_name: table, // 👈 ESTO FALTABA para que el backend responda
+          table_name: table,
           fields: { id_company: 1 }
         }, { headers: this.adminService.getAuthHeaders() })
       );
