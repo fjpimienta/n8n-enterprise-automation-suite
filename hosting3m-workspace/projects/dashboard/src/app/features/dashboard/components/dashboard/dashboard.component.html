@@ -17,17 +17,26 @@
       </div>
       }
       } @else {
-      @if (bookingService.groupedRooms().length === 0) {
-      <div class="col-12">
-        <div class="card card-stacked py-5 border-0 shadow-none bg-transparent">
-          <div class="card-body text-center">
-            <div class="display-1 text-muted-lt mb-3"><i class="ti ti-ghost"></i></div>
-            <p class="h2">No hay habitaciones</p>
-            <p class="text-muted">
-              Actualmente no hay habitaciones en estado:
-              <span class="badge bg-primary-lt">{{ bookingService.translatedFilter() | uppercase }}</span>
-            </p>
-          </div>
+      @if (bookingService.groupedRooms().length === 0 && bookingService.searchQuery().length === 0) {
+      <div class="empty animate__animated animate__fadeIn mt-5 shadow-sm border rounded-3 bg-surface p-5">
+
+        <div class="empty-icon fs-1">
+          <i [class]="emptyStateConfig().icon + ' ' + emptyStateConfig().color" style="font-size: 6rem;"></i>
+        </div>
+
+        <p class="empty-title fw-bold text-uppercase mt-4" style="font-size: 1.1rem; letter-spacing: 0.5px;">
+          {{ emptyStateConfig().title }}
+        </p>
+
+        <p class="empty-subtitle text-muted fs-3 px-md-5">
+          {{ emptyStateConfig().description }}
+        </p>
+
+        <div class="empty-action mt-4">
+          <button class="btn btn-outline-secondary"
+            (click)="bookingService.filter.set('all'); bookingService.searchQuery.set('')">
+            <i class="ti ti-eye me-1"></i> Ver todas las habitaciones
+          </button>
         </div>
       </div>
       }

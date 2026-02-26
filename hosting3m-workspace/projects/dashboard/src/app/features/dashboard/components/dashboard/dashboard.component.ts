@@ -61,7 +61,6 @@ export class DashboardComponent {
   maintenanceFilterRoomId: number | null = null;
 
   activeBooking = signal<Booking | any>(null);
-  //dailyReport = { total: 0, paid: 0, pending: 0, transactions: [] as any[], periodLabel: 'Hoy' };
 
   tempUser: User = this.getEmptyUser();
   tempGuest: Guest = this.getEmptyGuest();
@@ -79,6 +78,51 @@ export class DashboardComponent {
 
   /** Computed para evitar evaluación en cada CD */
   readonly isAdmin = computed(() => this.authService.hasRole('ADMIN'));
+  /**  Esta función decide qué icono, color y texto mostrar cuando la lista está vacía.  */
+  emptyStateConfig = computed(() => {
+    const filter = this.bookingService.filter();
+
+    const configs: Record<string, { icon: string; title: string; description: string; color: string }> = {
+      'available': {
+        icon: 'ti ti-hotel',
+        title: 'No hay habitaciones disponibles',
+        description: 'Todas las habitaciones están ocupadas, en limpieza o reportadas.',
+        color: 'text-success'
+      },
+      'occupied': {
+        icon: 'ti ti-door-open',
+        title: 'El hotel está vacío',
+        description: 'No hay huéspedes registrados en este momento.',
+        color: 'text-danger'
+      },
+      'dirty': {
+        icon: 'ti ti-vacuum-cleaner',
+        title: '¡Todo está impecable!',
+        description: 'No hay habitaciones pendientes de limpieza. ¡Buen trabajo!',
+        color: 'text-warning'
+      },
+      'maintenance': {
+        icon: 'ti ti-mood-crazy-happy',
+        title: '¡Cero reportes operativos!',
+        description: 'Todas las habitaciones funcionan perfectamente. ¡Excelente mantenimiento!',
+        color: 'text-secondary'
+      },
+      'reserved': {
+        icon: 'ti ti-luggage',
+        title: 'Sin llegadas para hoy',
+        description: 'No se esperan más huéspedes por reserva este día.',
+        color: 'text-info'
+      },
+      'all': {
+        icon: 'ti ti-ghost',
+        title: 'Vaya, esto está vacío',
+        description: 'No se encontraron habitaciones con este criterio.',
+        color: 'text-muted'
+      }
+    };
+
+    return configs[filter] || configs['all'];
+  });
 
   ngOnInit() {
     this.hotelService.selectRoom(null as any);

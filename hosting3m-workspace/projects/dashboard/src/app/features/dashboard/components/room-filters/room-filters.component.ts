@@ -28,7 +28,7 @@ export class RoomFiltersComponent {
     { label: '🔒 Ocupada', value: 'occupied', activeClass: 'btn-danger' },
     { label: '🗑️ Limpieza', value: 'dirty', activeClass: 'btn-warning' },
     { label: '🔧 Mantenimiento', value: 'maintenance', activeClass: 'btn-secondary' },
-    { label: '📅 Reservada', value: 'reserved', activeClass: 'btn-info' }
+    { label: '📅 Llegadas Hoy', value: 'reserved', activeClass: 'btn-info' }
   ];
 
   setFilter(filter: RoomFilterStatus) {
