@@ -152,7 +152,7 @@ export class HotelService {
     const payload = {
       entity: "hotel_room_inspections",
       table_name: "hotel_room_inspections",
-      operation: "update", // 👈 La clave es cambiar a 'update'
+      operation: "update",
       action: "update",
 
       fields: {

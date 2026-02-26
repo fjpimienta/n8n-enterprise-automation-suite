@@ -34,8 +34,31 @@
 
           <button type="button" class="btn px-3" [class.btn-primary]="currentFilter() === 'year'"
             [class.btn-outline-secondary]="currentFilter() !== 'year'" (click)="setFilter('year')">Año</button>
+
+          <button type="button" class="btn px-3" [class.btn-primary]="currentFilter() === 'custom'"
+            [class.btn-outline-secondary]="currentFilter() !== 'custom'"
+            (click)="setFilter('custom')">Personalizado</button>
         </div>
       </div>
+
+      @if (currentFilter() === 'custom') {
+      <div class="d-flex justify-content-center justify-content-md-start mb-4 animate__animated animate__fadeIn">
+        <div class="d-flex flex-wrap gap-3 p-3 bg-surface border rounded-3 shadow-sm align-items-end">
+          <div>
+            <label class="form-label small text-muted mb-1 fw-bold text-uppercase" style="font-size: 0.7rem;">Fecha
+              Inicio</label>
+            <input type="date" class="form-control" [ngModel]="customStartDate()"
+              (ngModelChange)="customStartDate.set($event)">
+          </div>
+          <div>
+            <label class="form-label small text-muted mb-1 fw-bold text-uppercase" style="font-size: 0.7rem;">Fecha
+              Fin</label>
+            <input type="date" class="form-control" [min]="customStartDate()" [ngModel]="customEndDate()"
+              (ngModelChange)="customEndDate.set($event)">
+          </div>
+        </div>
+      </div>
+      }
 
       <div class="col-sm-6 col-lg-3">
         <div class="card card-sm border-0 shadow-sm p-3 bg-success-lt">

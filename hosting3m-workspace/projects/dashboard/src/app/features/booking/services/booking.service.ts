@@ -664,4 +664,25 @@ export class BookingService {
 
     return !hasConflict; // Si hay conflicto, NO está libre
   }
+
+  /** Cancelar reserva (Borrado lógico) */
+  public async cancelReservation(bookingId: number): Promise<void> {
+    this.isProcessing.set(true);
+    try {
+      await lastValueFrom(
+        this.http.post(`${this.apiUrl_crud}/hotel_bookings`, {
+          operation: 'update',
+          id: bookingId,
+          fields: {
+            status: 'cancelled'
+          }
+        }, { headers: this.adminService.getAuthHeaders() })
+      );
+    } catch (error) {
+      console.error("Error al cancelar reserva:", error);
+      throw error;
+    } finally {
+      this.isProcessing.set(false);
+    }
+  }
 }
