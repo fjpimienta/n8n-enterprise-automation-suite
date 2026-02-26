@@ -10,7 +10,6 @@ describe('IceMonitorComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [IceMonitorComponent,
-        // 👇 Cargar el icono específico que pide el error
         LucideAngularModule.pick({ RefreshCw })]
     })
       .compileComponents();

@@ -1,21 +1,21 @@
 import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { BookingService } from '@features/booking/services/booking.service';
 import { ReportService } from '@features/finance/services/report.service';
-// 👇 NUEVAS IMPORTACIONES
 import { PdfExportConfig, PdfExportService } from 'ui-pdf-export';
 
 @Component({
   selector: 'app-daily-report-modal',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './daily-report-modal.component.html',
   styleUrl: './daily-report-modal.component.css',
 })
 export class DailyReportModalComponent implements OnInit {
   private reportService = inject(ReportService);
   private bookingService = inject(BookingService);
-  private pdfService = inject(PdfExportService); // 👈 INYECTAMOS LA LIBRERÍA
+  private pdfService = inject(PdfExportService);
 
   // Estados
   isLoading = signal(true);
@@ -23,7 +23,9 @@ export class DailyReportModalComponent implements OnInit {
   private rawBookings = signal<any[]>([]);
   private rawExpenses = signal<any[]>([]);
 
-  currentFilter = signal<'day' | 'week' | 'month' | 'year'>('day');
+  currentFilter = signal<'day' | 'week' | 'month' | 'year' | 'custom'>('day');
+  customStartDate = signal<string>('');
+  customEndDate = signal<string>('');
   activeTab = signal<'ingresos' | 'gastos'>('ingresos');
 
   /** Map O(1) para lookup room_id → room_number */
@@ -62,9 +64,19 @@ export class DailyReportModalComponent implements OnInit {
     return this.reportService.calculateDailyReport(
       validBookings,
       this.rawExpenses(),
-      this.currentFilter()
+      this.currentFilter(),
+      this.customStartDate(),
+      this.customEndDate()
     );
   });
+
+  setFilter(f: 'day' | 'week' | 'month' | 'year' | 'custom') {
+    this.currentFilter.set(f);
+    if (f !== 'custom') {
+      this.customStartDate.set('');
+      this.customEndDate.set('');
+    }
+  }
 
   ngOnInit() {
     if (this.bookingService.rooms().length === 0) {
@@ -89,10 +101,6 @@ export class DailyReportModalComponent implements OnInit {
     }
   }
 
-  setFilter(f: 'day' | 'week' | 'month' | 'year') {
-    this.currentFilter.set(f);
-  }
-
   getNights(checkIn: string, checkOut: string): number {
     if (!checkIn || !checkOut) return 1;
     const start = new Date(checkIn);
@@ -101,13 +109,17 @@ export class DailyReportModalComponent implements OnInit {
     return diffDays === 0 ? 1 : diffDays;
   }
 
-  // 👇 NUEVO HELPER PARA ETIQUETAS DEL PDF
   private getPeriodLabel(): string {
     const labels: Record<string, string> = { 'day': 'Día Actual', 'week': 'Semana Actual', 'month': 'Mes Actual', 'year': 'Año Actual' };
+    if (this.currentFilter() === 'custom') {
+      const start = this.customStartDate() ? new Date(this.customStartDate()).toLocaleDateString() : '?';
+      const end = this.customEndDate() ? new Date(this.customEndDate()).toLocaleDateString() : '?';
+      return `${start} AL ${end}`;
+    }
+
     return labels[this.currentFilter()] || 'Periodo';
   }
 
-  // 👇 FUNCIÓN REESCRITA PARA USAR LA LIBRERÍA PDF
   printReport() {
     const stats = this.reportData();
     const currentTab = this.activeTab();

@@ -209,4 +209,17 @@ export class ReservationManagerComponent implements OnInit {
     this.selectedReservation.set(null);
     this.hotelService.selectRoom(null as any);
   }
+
+  async cancelReservation(reservation: any) {
+    const confirm = window.confirm(`¿Cancelar la reserva de ${reservation.hotel_guests_data?.full_name || 'este huésped'}?`);
+    if (!confirm) return;
+
+    try {
+      await this.bookingService.cancelReservation(reservation.id);
+      alert('✅ Reserva cancelada.');
+      this.adminService.loadReservations();
+    } catch (error) {
+      alert('❌ Error al cancelar.');
+    }
+  }
 }

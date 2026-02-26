@@ -7,7 +7,6 @@
     "types": [
       "vitest/globals"
     ],
-    /* 👇 AGREGAMOS ESTO: Definimos la base local y los atajos que tu código busca */
     "baseUrl": ".",
     "paths": {
       "ui-chat": [

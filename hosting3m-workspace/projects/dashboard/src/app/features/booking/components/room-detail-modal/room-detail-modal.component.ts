@@ -33,6 +33,7 @@ export class RoomDetailModalComponent implements OnInit {
   @Output() onFinishMaintenance = new EventEmitter<void>();
   @Output() onMarkAsClean = new EventEmitter<void>();
   @Output() onOpenChecklist = new EventEmitter<void>();
+  @Output() onCancelRes = new EventEmitter<any>();
 
   ngOnInit() {
     this.loadAssets();
