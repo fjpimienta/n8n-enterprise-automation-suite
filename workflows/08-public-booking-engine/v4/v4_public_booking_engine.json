@@ -260,8 +260,8 @@
       "webhookId": "9ac3f95c-7ebf-4d2a-9765-e78b533ae3f7",
       "credentials": {
         "smtp": {
-          "id": "GR5kg3dzrkw00Slf",
-          "name": "contacto@hosting3m.com"
+          "id": "7hZ9JouQ2VczURBE",
+          "name": "reservas@hosting3m.com"
         }
       },
       "onError": "continueRegularOutput"
@@ -478,7 +478,7 @@
     "callerPolicy": "workflowsFromSameOwner",
     "timeSavedPerExecution": 2
   },
-  "versionId": "78e27f01-0e28-49fe-91b8-00e2eb74eed6",
+  "versionId": "a229061e-56c3-420b-bd63-af69ae05b073",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
