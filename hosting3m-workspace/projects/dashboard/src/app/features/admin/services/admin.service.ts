@@ -74,9 +74,7 @@ export class AdminService {
       table_name: 'hotel_bookings',
       operation: 'getall',
       action: 'list',
-      filters: {
-        status: 'confirmed'
-      }
+      filters: {}
     };
 
     this.http.post<ApiResponse<any>>(`${this.apiUrl_crud}/hotel_bookings`, payload, {

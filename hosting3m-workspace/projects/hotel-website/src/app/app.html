@@ -1,0 +1,534 @@
+<nav class="fixed w-full z-50 transition-all duration-300 glass-effect border-b border-gray-200"
+  [class.shadow-md]="isScrolled()">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex justify-between h-20 items-center">
+      <div class="flex-shrink-0 flex items-center gap-2">
+        <div class="avatar avatar-xl mx-auto w-18 h-18 rounded bg-transparent">
+          <img src="images/logo_hotel_san_jose.png" alt="Logo Hotel San Jose"
+            style="width: 80%; height: 80%; object-fit: contain;">
+        </div>
+        <span class="font-serif font-bold text-2xl tracking-tight text-eco-900">Hotel San José</span>
+      </div>
+      <div class="hidden md:flex space-x-8 items-center">
+        <a href="#esencia" class="text-gray-600 hover:text-eco-500 font-medium transition-colors">Nuestra Esencia</a>
+        <a href="#amenidades" class="text-gray-600 hover:text-eco-500 font-medium transition-colors">Amenidades</a>
+        <a href="#habitaciones" class="text-gray-600 hover:text-eco-500 font-medium transition-colors">Habitaciones</a>
+        <a href="#contacto"
+          class="bg-eco-500 text-white px-5 py-2 rounded-full hover:bg-eco-700 transition-colors shadow-md">Reserva
+          Directa</a>
+      </div>
+      <div class="md:hidden flex items-center">
+        <button (click)="toggleMenu()" class="text-gray-600 hover:text-eco-500 focus:outline-none">
+          <i data-lucide="menu" class="w-6 h-6"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div [class.hidden]="!isMenuOpen()"
+    class="md:hidden bg-white border-t border-gray-100 shadow-lg absolute w-full left-0">
+    <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+      <a href="#esencia" (click)="toggleMenu()"
+        class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-eco-500 hover:bg-eco-50">Nuestra
+        Esencia</a>
+      <a href="#amenidades" (click)="toggleMenu()"
+        class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-eco-500 hover:bg-eco-50">Amenidades</a>
+      <a href="#habitaciones" (click)="toggleMenu()"
+        class="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-eco-500 hover:bg-eco-50">Habitaciones</a>
+      <a href="#contacto" (click)="toggleMenu()"
+        class="block px-3 py-2 mt-4 text-center rounded-md text-base font-medium bg-eco-500 text-white hover:bg-eco-700">Reserva
+        Directa</a>
+    </div>
+  </div>
+</nav>
+
+<header class="h-screen bg-hero flex items-center justify-center relative overflow-hidden">
+  <div class="text-center px-4 max-w-4xl mx-auto mt-16 relative z-10">
+    <span
+      class="text-tierra-500 font-semibold tracking-wider uppercase text-sm mb-4 block flex justify-center items-center gap-2">
+      <i data-lucide="map-pin" class="w-4 h-4"></i> A unos metros de la Laguna de Catazajá
+    </span>
+    <h1 class="text-4xl md:text-6xl font-serif text-white font-bold mb-6 leading-tight">
+      El Descanso Absoluto en Armonía con la Naturaleza
+    </h1>
+    <p class="text-lg md:text-xl text-gray-200 mb-10 font-light max-w-2xl mx-auto">
+      Tu refugio en Chiapas. Descubre nuestras instalaciones diseñadas para brindarte el máximo confort, tranquilidad
+      y un servicio impecable.
+    </p>
+    <div class="flex flex-col sm:flex-row gap-4 justify-center">
+      <a href="#contacto"
+        class="bg-tierra-500 text-white px-8 py-3 rounded-full hover:bg-tierra-900 transition-all font-medium shadow-lg shadow-tierra-500/30">Ver
+        Disponibilidad</a>
+    </div>
+  </div>
+  <div class="absolute bottom-10 left-1/2 transform -translate-x-1/2 animate-bounce">
+    <i data-lucide="chevron-down" class="text-white w-8 h-8 opacity-70"></i>
+  </div>
+</header>
+
+<section id="esencia" class="py-20 bg-eco-900 text-white relative">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+    <div class="order-2 lg:order-1 relative">
+      <img src="images/IMG20260226143327.jpg" alt="Mural del Hotel San José"
+        class="rounded-2xl shadow-2xl border-4 border-eco-700/50 object-cover w-full">
+      <div class="absolute -bottom-5 -right-5 bg-tierra-500 text-white p-4 rounded-xl shadow-lg hidden sm:block">
+        <i data-lucide="camera" class="w-6 h-6 mb-1 mx-auto"></i>
+        <span class="text-xs font-bold uppercase block text-center">Arte Local</span>
+      </div>
+    </div>
+    <div class="order-1 lg:order-2">
+      <span class="text-tierra-500 font-semibold tracking-wider uppercase text-sm mb-2 block">Identidad
+        Catazajense</span>
+      <h2 class="text-3xl font-serif font-bold mb-6">El Arte de San José en Nuestras Paredes</h2>
+      <p class="text-gray-300 mb-6 leading-relaxed">Nuestras instalaciones rinden homenaje a la inmensa riqueza natural
+        y espiritual de la región. El mural central ilustra a la majestuosa fauna de la laguna, destacando al manatí,
+        símbolo indiscutible de Catazajá.</p>
+      <div class="md:w-5/12 bg-tierra-500 p-8 text-white flex flex-col justify-between mb-8 rounded-lg">
+        <h3 class="text-2xl font-serif font-bold mb-2">Contacto Directo</h3>
+        <div class="space-y-4 mt-4">
+          <div class="flex items-center gap-3"><i data-lucide="map-pin" class="w-5 h-5 text-tierra-100"></i><span
+              class="text-sm">Playas de Catazajá, Chiapas</span></div>
+          <div class="flex items-center gap-3"><i data-lucide="phone" class="w-5 h-5 text-tierra-100"></i><span
+              class="text-sm">+52 (999) 000 0000</span></div>
+        </div>
+      </div>
+      <a href="#amenidades"
+        class="inline-flex items-center gap-2 text-tierra-500 hover:text-white transition-colors font-medium">Conoce
+        nuestras instalaciones <i data-lucide="arrow-right" class="w-4 h-4"></i></a>
+    </div>
+  </div>
+</section>
+
+<section id="amenidades" class="py-20 bg-white">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center mb-16">
+      <h2 class="text-3xl font-serif font-bold text-eco-900 mb-4">Lo que Ofrecemos</h2>
+      <p class="text-gray-600 max-w-2xl mx-auto">En Hotel San José, Catazajá nos enfocamos en lo esencial para
+        garantizar tu descanso.</p>
+    </div>
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-8 md:gap-12 max-w-5xl mx-auto">
+      <div class="flex flex-col items-center text-center">
+        <div class="bg-eco-50 p-4 rounded-2xl mb-4 text-eco-500"><i data-lucide="concierge-bell" class="w-8 h-8"></i>
+        </div>
+        <h4 class="font-bold text-gray-900 mb-1">Recepción</h4>
+      </div>
+      <div class="flex flex-col items-center text-center">
+        <div class="bg-eco-50 p-4 rounded-2xl mb-4 text-eco-500"><i data-lucide="snowflake" class="w-8 h-8"></i></div>
+        <h4 class="font-bold text-gray-900 mb-1">Climatización</h4>
+      </div>
+      <div class="flex flex-col items-center text-center">
+        <div class="bg-eco-50 p-4 rounded-2xl mb-4 text-eco-500"><i data-lucide="droplets" class="w-8 h-8"></i></div>
+        <h4 class="font-bold text-gray-900 mb-1">Agua a tu Medida</h4>
+      </div>
+      <div class="flex flex-col items-center text-center">
+        <div class="bg-eco-50 p-4 rounded-2xl mb-4 text-eco-500"><i data-lucide="sparkles" class="w-8 h-8"></i></div>
+        <h4 class="font-bold text-gray-900 mb-1">Limpieza Diaria</h4>
+      </div>
+      <div class="flex flex-col items-center text-center">
+        <div class="bg-eco-50 p-4 rounded-2xl mb-4 text-eco-500"><i data-lucide="waves" class="w-8 h-8"></i></div>
+        <h4 class="font-bold text-gray-900 mb-1">Laguna de Catazajá</h4>
+      </div>
+      <div class="flex flex-col items-center text-center">
+        <div class="bg-eco-50 p-4 rounded-2xl mb-4 text-eco-500"><i data-lucide="door-open" class="w-8 h-8"></i></div>
+        <h4 class="font-bold text-gray-900 mb-1">17 Habitaciones</h4>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="habitaciones" class="py-20 bg-eco-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center mb-16">
+      <h2 class="text-3xl font-serif font-bold text-eco-900 mb-4">Nuestras Tarifas</h2>
+      <p class="text-gray-600 max-w-2xl mx-auto">Selecciona el espacio ideal para tu descanso.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div
+        class="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 flex flex-col">
+        <div class="bg-eco-900 p-6 text-center relative">
+          <div
+            class="absolute top-2 right-2 bg-white/20 px-2 py-1 rounded text-[10px] font-bold text-white tracking-widest uppercase">
+            6 Disp.</div>
+          <i data-lucide="user" class="w-12 h-12 text-tierra-500 mx-auto mb-2"></i>
+          <h3 class="text-xl font-bold text-white font-serif">Sencilla</h3>
+        </div>
+        <div class="p-6 flex flex-col flex-grow">
+          <p class="text-gray-500 text-sm mb-6 flex-grow">Una cama matrimonial. Espacio perfecto para un descanso
+            individual o en pareja, con todos los servicios base incluidos.</p>
+          <div class="pt-4 border-t border-gray-100">
+            <div class="flex justify-between items-end">
+              <span class="text-xs text-gray-400 font-medium uppercase tracking-wider mb-1">Tarifa Base</span>
+              <div class="text-right">
+                <span class="block font-bold text-2xl text-eco-700">$500 <span class="text-sm">MXN</span></span>
+                <span class="text-[10px] text-gray-400">+ IVA si requiere factura</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 flex flex-col relative">
+        <div
+          class="absolute top-0 left-0 bg-tierra-500 text-white text-[10px] font-bold px-3 py-1 rounded-br-lg z-10 uppercase tracking-wider">
+          Premium</div>
+        <div class="bg-eco-900 p-6 text-center relative">
+          <div
+            class="absolute top-2 right-2 bg-white/20 px-2 py-1 rounded text-[10px] font-bold text-white tracking-widest uppercase">
+            4 Disp.</div>
+          <i data-lucide="crown" class="w-12 h-12 text-tierra-500 mx-auto mb-2"></i>
+          <h3 class="text-xl font-bold text-white font-serif">King Size</h3>
+        </div>
+        <div class="p-6 flex flex-col flex-grow">
+          <p class="text-gray-500 text-sm mb-6 flex-grow">Amplitud garantizada con una cama King Size. Ideal para
+            quienes buscan el máximo confort y espacio para relajarse.</p>
+          <div class="pt-4 border-t border-gray-100">
+            <div class="flex justify-between items-end">
+              <span class="text-xs text-gray-400 font-medium uppercase tracking-wider mb-1">Tarifa Base</span>
+              <div class="text-right">
+                <span class="block font-bold text-2xl text-eco-700">$600 <span class="text-sm">MXN</span></span>
+                <span class="text-[10px] text-gray-400">+ IVA si requiere factura</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 flex flex-col">
+        <div class="bg-eco-900 p-6 text-center relative">
+          <div
+            class="absolute top-2 right-2 bg-white/20 px-2 py-1 rounded text-[10px] font-bold text-white tracking-widest uppercase">
+            6 Disp.</div>
+          <i data-lucide="users" class="w-12 h-12 text-tierra-500 mx-auto mb-2"></i>
+          <h3 class="text-xl font-bold text-white font-serif">Doble</h3>
+        </div>
+        <div class="p-6 flex flex-col flex-grow">
+          <p class="text-gray-500 text-sm mb-6 flex-grow">Equipada con dos camas matrimoniales. La opción estratégica
+            para viajes familiares o de negocios en equipo.</p>
+          <div class="pt-4 border-t border-gray-100">
+            <div class="flex justify-between items-end">
+              <span class="text-xs text-gray-400 font-medium uppercase tracking-wider mb-1">Tarifa Base</span>
+              <div class="text-right">
+                <span class="block font-bold text-2xl text-eco-700">$700 <span class="text-sm">MXN</span></span>
+                <span class="text-[10px] text-gray-400">+ IVA si requiere factura</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 border border-gray-100 flex flex-col">
+        <div class="bg-eco-900 p-6 text-center relative">
+          <div
+            class="absolute top-2 right-2 bg-white/20 px-2 py-1 rounded text-[10px] font-bold text-white tracking-widest uppercase">
+            1 Exclusiva</div>
+          <i data-lucide="bed-double" class="w-12 h-12 text-tierra-500 mx-auto mb-2"></i>
+          <h3 class="text-xl font-bold text-white font-serif">Triple</h3>
+        </div>
+        <div class="p-6 flex flex-col flex-grow">
+          <p class="text-gray-500 text-sm mb-6 flex-grow">Nuestra habitación de mayor capacidad. Especialmente
+            configurada para grupos que requieren optimizar espacio y presupuesto.</p>
+          <div class="pt-4 border-t border-gray-100">
+            <div class="flex justify-between items-end">
+              <span class="text-xs text-gray-400 font-medium uppercase tracking-wider mb-1">Tarifa Base</span>
+              <div class="text-right">
+                <span class="block font-bold text-2xl text-eco-700">$900 <span class="text-sm">MXN</span></span>
+                <span class="text-[10px] text-gray-400">+ IVA si requiere factura</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="contacto" class="py-20 bg-eco-900 relative overflow-hidden">
+  <div class="absolute top-0 right-0 -mr-20 -mt-20 opacity-10 pointer-events-none">
+    <i data-lucide="leaf" class="w-96 h-96 text-white"></i>
+  </div>
+  <div class="absolute bottom-0 left-0 -ml-20 -mb-20 opacity-5 pointer-events-none transform rotate-180">
+    <i data-lucide="leaf" class="w-96 h-96 text-white"></i>
+  </div>
+
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+
+    <div class="text-center mb-12">
+      <span
+        class="text-tierra-500 font-semibold tracking-wider uppercase text-sm mb-3 flex justify-center items-center gap-2">
+        <i data-lucide="calendar-check" class="w-5 h-5"></i> Disponibilidad en Tiempo Real
+      </span>
+      <h2 class="text-4xl md:text-5xl font-serif font-bold text-white mb-4">
+        Asegura tu Descanso
+      </h2>
+      <p class="text-gray-300 max-w-2xl mx-auto text-lg font-light">
+        Selecciona tus fechas y reserva directamente con nosotros para obtener la mejor tarifa garantizada, sin
+        intermediarios ni comisiones ocultas.
+      </p>
+    </div>
+
+    <div class="bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[500px]">
+
+      <div
+        class="md:w-5/12 bg-tierra-500 p-10 text-white flex flex-col justify-center items-center text-center relative">
+        <div class="text-center mb-4 w-full">
+          <div class="avatar avatar-xl mx-auto w-24 h-24 rounded bg-transparent">
+            <img src="images/logo_hotel_san_jose.png" alt="Logo Hotel San Jose"
+              style="width: 100%; height: 100%; object-fit: contain;">
+          </div>
+          <h2 class="h2 text-3xl font-serif font-bold text-center mt-3 mb-1">Hotel San José</h2>
+          <div class="text-muted text-tierra-100 text-sm uppercase tracking-widest mt-2">Catazajá, Chiapas</div>
+        </div>
+
+        <div class="w-full pt-6 border-t border-tierra-100/30">
+          <h3 class="font-serif font-bold mb-2 text-lg">Proceso de Reserva</h3>
+
+          <div class="flex flex-col items-center gap-2 mt-4">
+            <div class="flex items-center gap-2 text-sm transition-opacity duration-300"
+              [class.opacity-50]="bookingStep() !== 1">
+              <i data-lucide="calendar" class="w-4 h-4"></i> 1. Fechas
+            </div>
+            <div class="w-px h-4 bg-tierra-100/50"></div>
+            <div class="flex items-center gap-2 text-sm transition-opacity duration-300"
+              [class.opacity-50]="bookingStep() !== 2">
+              <i data-lucide="bed" class="w-4 h-4"></i> 2. Habitación
+            </div>
+            <div class="w-px h-4 bg-tierra-100/50"></div>
+            <div class="flex items-center gap-2 text-sm transition-opacity duration-300"
+              [class.opacity-50]="bookingStep() !== 3">
+              <i data-lucide="user" class="w-4 h-4"></i> 3. Tus Datos
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="md:w-7/12 p-8 flex flex-col justify-center">
+
+        @if (bookingStep() === 1) {
+        <div class="animate-fade-in">
+          <h3 class="text-xl font-bold text-eco-900 mb-2">¿Cuándo nos visitas?</h3>
+          <p class="text-gray-500 text-sm mb-6">Selecciona tus fechas para verificar disponibilidad en tiempo real.</p>
+
+          <form (ngSubmit)="searchAvailability()" #step1Form="ngForm" class="space-y-5">
+            <div class="grid grid-cols-2 gap-5">
+              <div>
+                <label for="checkin" class="block text-sm font-medium text-gray-700 mb-1">Llegada</label>
+                <input type="date" id="checkin" name="checkin" [(ngModel)]="dates.checkin" [min]="minDate" required
+                  class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-eco-500 focus:border-eco-500 outline-none transition-all">
+              </div>
+              <div>
+                <label for="checkout" class="block text-sm font-medium text-gray-700 mb-1">Salida</label>
+                <input type="date" id="checkout" name="checkout" [(ngModel)]="dates.checkout"
+                  [min]="dates.checkin || minDate" required
+                  class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-eco-500 focus:border-eco-500 outline-none transition-all">
+              </div>
+            </div>
+
+            <button type="submit" [disabled]="isSearching() || step1Form.invalid"
+              class="w-full bg-eco-900 text-white font-medium py-3 px-4 rounded-xl hover:bg-eco-700 transition-colors flex justify-center items-center gap-2 mt-4 disabled:opacity-70">
+              @if(isSearching()) {
+              <span>Buscando...</span>
+              } @else {
+              <span>Buscar Disponibilidad</span>
+              <i data-lucide="search" class="w-4 h-4"></i>
+              }
+            </button>
+          </form>
+        </div>
+        }
+
+        @if (bookingStep() === 2) {
+        <div class="animate-fade-in">
+          <button (click)="goBack(1)"
+            class="text-gray-400 hover:text-eco-500 text-sm flex items-center gap-1 mb-4 transition-colors">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Cambiar fechas
+          </button>
+
+          <h3 class="text-xl font-bold text-eco-900 mb-1">Opciones Disponibles</h3>
+          <p
+            class="text-eco-500 text-xs font-medium bg-eco-50 inline-block px-2 py-1 rounded mb-4 border border-eco-100">
+            Del {{ dates.checkin }} al {{ dates.checkout }}
+          </p>
+
+          <div class="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+            @for (room of availableRoomTypes(); track room.id) {
+            <div (click)="selectRoom(room)"
+              class="border border-gray-200 rounded-xl p-4 flex justify-between items-center cursor-pointer hover:border-tierra-500 hover:shadow-md transition-all group bg-white">
+              <div class="flex items-center gap-4">
+                <div
+                  class="bg-eco-50 p-3 rounded-lg text-eco-500 group-hover:bg-tierra-50 group-hover:text-tierra-500 transition-colors">
+                  <i [attr.data-lucide]="room.icon" class="w-6 h-6"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-gray-900">{{ room.name }}</h4>
+                  <p class="text-xs text-gray-500">{{ room.desc }}</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <span class="block font-bold text-lg text-eco-700">${{ room.price }}</span>
+                <span class="text-[10px] text-gray-400">/noche</span>
+              </div>
+            </div>
+            }
+          </div>
+        </div>
+        }
+
+        @if (bookingStep() === 3) {
+        <div class="animate-fade-in">
+          <button (click)="goBack(2)"
+            class="text-gray-400 hover:text-eco-500 text-sm flex items-center gap-1 mb-4 transition-colors">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Cambiar habitación
+          </button>
+
+          <div class="bg-eco-50 p-3 rounded-xl border border-eco-100 mb-5 flex justify-between items-center">
+            <div>
+              <span class="text-xs text-gray-500 uppercase tracking-wider block font-medium">Selección</span>
+              <span class="font-bold text-eco-900">{{ selectedRoomType()?.name }}</span>
+            </div>
+            <div class="text-right">
+              <span class="font-bold text-tierra-500">${{ selectedRoomType()?.price }}</span>
+              <span class="text-xs text-gray-500">/noche</span>
+            </div>
+          </div>
+
+          <form (ngSubmit)="submitForm()" #step3Form="ngForm" class="space-y-4">
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5">
+                <i data-lucide="user" class="w-4 h-4 text-eco-500"></i> Nombre Completo
+              </label>
+              <input type="text" name="nombre" [(ngModel)]="guest.name" required placeholder="Ej. Juan Pérez Pimienta"
+                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-eco-500 outline-none transition-all">
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5">
+                  <i data-lucide="phone" class="w-4 h-4 text-eco-500"></i> WhatsApp
+                </label>
+                <input type="tel" name="telefono" [(ngModel)]="guest.phone" required placeholder="10 dígitos con Lada"
+                  class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-eco-500 outline-none transition-all">
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5">
+                  <i data-lucide="mail" class="w-4 h-4 text-eco-500"></i> Correo Electrónico (Para recibir datos de
+                  pago)
+                </label>
+                <input type="email" name="email" [(ngModel)]="guest.email" required placeholder="ejemplo@correo.com"
+                  class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-eco-500 outline-none transition-all">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5">
+                <i data-lucide="users" class="w-4 h-4 text-eco-500"></i> Número de Huéspedes
+              </label>
+              <select name="guests" [(ngModel)]="guest.guests" required
+                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-eco-500 outline-none bg-white transition-all">
+                <option value="1">1 Persona</option>
+                <option value="2">2 Personas</option>
+                <option value="3">3 Personas</option>
+                <option value="4+">4+ Personas</option>
+              </select>
+            </div>
+
+            <button type="submit" [disabled]="isSubmitting() || step3Form.invalid"
+              class="w-full bg-tierra-500 text-white font-medium py-3 px-4 rounded-xl hover:bg-tierra-900 transition-colors flex justify-center items-center gap-2 mt-2 disabled:opacity-50">
+              <span>{{ isSubmitting() ? 'Procesando...' : 'Confirmar Pre-Reserva' }}</span>
+            </button>
+
+            @if (formStatus() === 'success') {
+            <div
+              class="text-center p-5 rounded-xl mt-4 bg-green-50 text-green-900 border border-green-200 shadow-inner animate-fade-in">
+              <div class="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                <i data-lucide="check" class="w-6 h-6 text-green-600"></i>
+              </div>
+              <h4 class="font-serif font-bold text-xl mb-2">¡Pre-reserva Exitosa!</h4>
+              <p class="text-sm mb-4 text-green-800">
+                Hemos bloqueado temporalmente tu habitación. Para confirmar definitivamente tu estancia, por favor
+                realiza tu pago a la siguiente cuenta:
+              </p>
+
+              <div
+                class="bg-white p-4 rounded-lg text-sm text-gray-700 border border-green-200 text-left mb-4 shadow-sm relative z-20">
+                <p class="font-bold text-eco-900 mb-2 border-b border-gray-100 pb-1">
+                  <i data-lucide="building-bank" class="w-4 h-4 inline align-text-bottom mr-1"></i> Datos Bancarios
+                  (Pago Directo)
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <div><span class="text-gray-500 text-xs uppercase block">Banco</span> <strong>BBVA</strong></div>
+                  <div><span class="text-gray-500 text-xs uppercase block">Titular</span> <strong>Diana Perez
+                      Pimienta</strong></div>
+                  <div><span class="text-gray-500 text-xs uppercase block">Cuenta</span> <strong>1561515110</strong>
+                  </div>
+                  <div class="md:col-span-2"><span class="text-gray-500 text-xs uppercase block">CLABE</span>
+                    <strong>012180015615151108</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-green-100/50 p-3 rounded text-xs text-green-900 font-medium border border-green-200/50">
+                <i data-lucide="mail" class="w-4 h-4 inline align-text-bottom mr-1 text-green-600"></i>
+                Te hemos enviado estas instrucciones a <strong>{{ guest.email }}</strong>. Responde a ese correo con tu
+                comprobante adjunto.
+              </div>
+            </div>
+            }
+
+            @if (formStatus() === 'invalid_email') {
+            <div
+              class="text-center p-3 rounded-lg text-sm font-medium mt-3 bg-yellow-50 text-yellow-800 border border-yellow-200 animate-shake">
+              <i data-lucide="alert-triangle" class="w-4 h-4 inline align-text-bottom mr-1"></i>
+              El formato del correo parece ser incorrecto. Revísalo e intenta de nuevo.
+            </div>
+            }
+
+            @if (formStatus() === 'sold_out') {
+            <div
+              class="text-center p-3 rounded-lg text-sm font-medium mt-3 bg-red-50 text-red-800 border border-red-200">
+              <i data-lucide="x-circle" class="w-4 h-4 inline align-text-bottom mr-1"></i>
+              Lo sentimos, alguien acaba de reservar la última habitación de este tipo en tus fechas. Por favor
+              selecciona otra opción.
+            </div>
+            }
+
+            @if (formStatus() === 'email_bounce') {
+            <div
+              class="text-center p-3 rounded-lg text-sm font-medium mt-3 bg-red-50 text-red-800 border border-red-200 animate-shake">
+              <i data-lucide="mail-warning" class="w-4 h-4 inline align-text-bottom mr-1"></i>
+              No pudimos entregar el mensaje a <strong>{{ guest.email }}</strong>. El correo parece no existir o está
+              inactivo. Por favor, proporciona un correo válido para continuar.
+            </div>
+            }
+
+            @if (formStatus() === 'error') {
+            <div
+              class="text-center p-3 rounded-lg text-sm font-medium mt-3 bg-red-50 text-red-700 border border-red-200">
+              <i data-lucide="wifi-off" class="w-4 h-4 inline align-text-bottom mr-1"></i> Error de conexión con el
+              servidor. Intenta nuevamente.
+            </div>
+            }
+          </form>
+        </div>
+        }
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="bg-gray-900 text-gray-400 py-12 border-t border-gray-800">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+    <div class="flex items-center gap-2">
+      <i data-lucide="leaf" class="text-eco-500 w-6 h-6"></i>
+      <span class="font-serif font-bold text-xl text-white">Hotel San José, Catazajá</span>
+    </div>
+    <p class="text-sm text-center md:text-left">© 2026 Hotel Boutique San José Catazajá.</p>
+  </div>
+</footer>
+
+<lib-ai-chat></lib-ai-chat>

@@ -91,6 +91,12 @@
     },
     {
       "path": "./projects/pista-hielo/tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/hotel-website/tsconfig.app.json"
+    },
+    {
+      "path": "./projects/hotel-website/tsconfig.spec.json"
     }
   ]
 }
