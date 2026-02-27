@@ -1,0 +1,488 @@
+{
+  "name": "v4/Public Booking Engine (B2C)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "public/availability",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "26308cab-8e24-4ae9-ab5b-e5603e23ff09",
+      "name": "Webhook Availability",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -624,
+        -48
+      ],
+      "webhookId": "1ce1fe4e-0c12-44cc-9e08-02d7c41b8182"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT type, COUNT(id) as available_count, MAX(price_night) as price FROM hotel_rooms WHERE id NOT IN (SELECT room_id FROM hotel_bookings WHERE status IN ('confirmed', 'checked_in') AND check_in::date < $2::date AND check_out::date > $1::date) AND status != 'maintenance' GROUP BY type;",
+        "options": {
+          "queryReplacement": "={{ $json.body.checkin }}, {{ $json.body.checkout }}"
+        }
+      },
+      "id": "835a46b7-8352-47b1-9ccc-6b3882a05063",
+      "name": "Check Availability SQL",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -400,
+        -48
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"success\",\n  \"data\": {{ JSON.stringify($input.all().map(item => item.json)) }}\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "e12059c6-1706-48d9-accc-11d7c111b3bf",
+      "name": "Respond Availability",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -176,
+        -48
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "public/lead",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "8f340caf-6cf6-40b5-bb57-64ca9c181517",
+      "name": "Webhook Capture Lead",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -624,
+        464
+      ],
+      "webhookId": "c1838c16-a10c-459c-b211-476a3ce6daea"
+    },
+    {
+      "parameters": {
+        "jsCode": "const email = $input.first().json.body.email || '';\n// Regex estricto para validar formato de correo\nconst isValid = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$/.test(email);\n\nreturn [{ json: { ...$input.first().json, is_email_valid: isValid } }];"
+      },
+      "id": "2b9ed32b-0f9f-40c2-8d71-fa9be72b7162",
+      "name": "Validate Email Format",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.is_email_valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a213c1f0-c7cf-46fa-8bb6-5f3591bd8e6c",
+      "name": "Is Email Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -176,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"error\",\n  \"message\": \"El formato del correo electrónico es inválido.\"\n}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "40c77234-1081-4fa2-b8f2-903aa059555f",
+      "name": "Respond Bad Request",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        48,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id FROM hotel_rooms WHERE type ILIKE $3 || '%' AND id NOT IN (SELECT room_id FROM hotel_bookings WHERE status IN ('confirmed', 'checked_in') AND check_in::date < $2::date AND check_out::date > $1::date) AND status != 'maintenance' LIMIT 1;",
+        "options": {
+          "queryReplacement": "={{ $json.body.checkin }}, {{ $json.body.checkout }}, {{ $json.body.room_type }}"
+        }
+      },
+      "id": "d3935097-b4d9-4d6a-a88a-a5136d4b3194",
+      "name": "Get Specific Room SQL",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        48,
+        368
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "check-room",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ef3977fa-1b3a-4621-adfd-0ce3fefec338",
+      "name": "Is Room Free?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        272,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"error\",\n  \"message\": \"No hay disponibilidad para el tipo de habitación seleccionado en estas fechas.\"\n}",
+        "options": {
+          "responseCode": 409
+        }
+      },
+      "id": "9683f31b-91ac-4375-a103-1682fe95743e",
+      "name": "Respond Sold Out",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        496,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH new_guest AS ( INSERT INTO hotel_guests (full_name, phone, email, id_company) VALUES ($1, $2, $3, 1) ON CONFLICT (email) DO UPDATE SET phone = EXCLUDED.phone RETURNING id ) INSERT INTO hotel_bookings (room_id, guest_id, check_in, check_out, status, payment_status, id_company, notes) VALUES ($4, (SELECT id FROM new_guest), $5, $6, 'pending', 'pending', 1, 'Web Lead: ' || $7) RETURNING *;",
+        "options": {
+          "queryReplacement": "={{ $('Webhook Capture Lead').item.json.body.name }}, {{ $('Webhook Capture Lead').item.json.body.phone }}, {{ $('Webhook Capture Lead').item.json.body.email }}, {{ $json.id }}, {{ $('Webhook Capture Lead').item.json.body.checkin }}, {{ $('Webhook Capture Lead').item.json.body.checkout }}, {{ $('Webhook Capture Lead').item.json.body.guests }} huéspedes"
+        }
+      },
+      "id": "cb2a9d30-cf6f-415f-8375-e2199d5011ac",
+      "name": "Upsert Guest & Book",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        496,
+        272
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "reservas@hosting3m.com",
+        "toEmail": "={{ $('Webhook Capture Lead').first().json.body.email }}",
+        "subject": "🏨 Pre-reserva recibida - Hotel San José Catazajá",
+        "html": "=<div style=\"font-family: sans-serif; color: #333;\">\n  <h2>¡Hola {{ $('Webhook Capture Lead').first().json.body.name }}!</h2>\n  <p>Hemos recibido tu solicitud de reserva en el <strong>Hotel San José</strong> del <strong>{{ $('Webhook Capture Lead').first().json.body.checkin }}</strong> al <strong>{{ $('Webhook Capture Lead').first().json.body.checkout }}</strong>.</p>\n  <div style=\"background-color: #f2f6f4; padding: 15px; border-radius: 8px; border: 1px solid #e1ede5;\">\n    <h3 style=\"color: #4a7c59; margin-top: 0;\">Para confirmar tu reserva:</h3>\n    <p>Realiza tu depósito o transferencia a los siguientes datos:</p>\n    <ul>\n      <li><strong>Banco:</strong> BBVA</li>\n      <li><strong>Titular:</strong> Diana Perez Pimienta</li>\n      <li><strong>CLABE:</strong> 012180015615151108</li>\n      <li><strong>Cuenta:</strong> 1561515110</li>\n    </ul>\n  </div>\n  <p>Una vez realizado el pago, responde a este correo con tu comprobante adjunto para asegurar tu habitación.</p>\n  <p>¡Te esperamos!</p>\n</div>",
+        "options": {}
+      },
+      "id": "8171d7a8-570c-4ae6-a181-4f6d49e6d650",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        720,
+        272
+      ],
+      "webhookId": "9ac3f95c-7ebf-4d2a-9765-e78b533ae3f7",
+      "credentials": {
+        "smtp": {
+          "id": "GR5kg3dzrkw00Slf",
+          "name": "contacto@hosting3m.com"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "check-error",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": "",
+              "operator": {
+                "type": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c5f5ee3a-950b-4613-bc9c-0b8851840abf",
+      "name": "Did Email Fail?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        944,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"error\",\n  \"message\": \"El servidor de correo rechazó la dirección. Es probable que no exista.\"\n}",
+        "options": {
+          "responseCode": 422
+        }
+      },
+      "id": "7b46776b-78ea-4634-ad3f-18a22c84faaf",
+      "name": "Respond Email Bounce",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1168,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\n  \"status\": \"success\",\n  \"message\": \"Lead capturado y correo enviado exitosamente.\",\n  \"booking_id\": {{ $('Upsert Guest & Book').first().json.id }}\n}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "1ca705b2-6583-4fb2-a3ef-abb0d12b68b0",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1168,
+        368
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook Availability": {
+      "main": [
+        [
+          {
+            "node": "Check Availability SQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Availability SQL": {
+      "main": [
+        [
+          {
+            "node": "Respond Availability",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Capture Lead": {
+      "main": [
+        [
+          {
+            "node": "Validate Email Format",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Email Format": {
+      "main": [
+        [
+          {
+            "node": "Is Email Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Email Valid?": {
+      "main": [
+        [
+          {
+            "node": "Get Specific Room SQL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Bad Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Specific Room SQL": {
+      "main": [
+        [
+          {
+            "node": "Is Room Free?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Room Free?": {
+      "main": [
+        [
+          {
+            "node": "Upsert Guest & Book",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Sold Out",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Guest & Book": {
+      "main": [
+        [
+          {
+            "node": "Send Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email": {
+      "main": [
+        [
+          {
+            "node": "Did Email Fail?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Did Email Fail?": {
+      "main": [
+        [
+          {
+            "node": "Respond Email Bounce",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "9SrVXdATmlrZemJT",
+    "callerPolicy": "workflowsFromSameOwner",
+    "timeSavedPerExecution": 2
+  },
+  "versionId": "78e27f01-0e28-49fe-91b8-00e2eb74eed6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
+  },
+  "id": "zTVZqQbvOS-WsyXdOQdET",
+  "tags": []
+}

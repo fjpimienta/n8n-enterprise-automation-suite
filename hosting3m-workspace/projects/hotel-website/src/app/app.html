@@ -56,7 +56,7 @@
       y un servicio impecable.
     </p>
     <div class="flex flex-col sm:flex-row gap-4 justify-center">
-      <a href="#habitaciones"
+      <a href="#contacto"
         class="bg-tierra-500 text-white px-8 py-3 rounded-full hover:bg-tierra-900 transition-all font-medium shadow-lg shadow-tierra-500/30">Ver
         Disponibilidad</a>
     </div>
@@ -247,13 +247,33 @@
 </section>
 
 <section id="contacto" class="py-20 bg-eco-900 relative overflow-hidden">
-  <div class="absolute top-0 right-0 -mr-20 -mt-20 opacity-10">
+  <div class="absolute top-0 right-0 -mr-20 -mt-20 opacity-10 pointer-events-none">
+    <i data-lucide="leaf" class="w-96 h-96 text-white"></i>
+  </div>
+  <div class="absolute bottom-0 left-0 -ml-20 -mb-20 opacity-5 pointer-events-none transform rotate-180">
     <i data-lucide="leaf" class="w-96 h-96 text-white"></i>
   </div>
 
-  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-    <div class="bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row">
-      <div class="md:w-5/12 bg-tierra-500 p-10 text-white flex flex-col justify-center items-center text-center">
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+
+    <div class="text-center mb-12">
+      <span
+        class="text-tierra-500 font-semibold tracking-wider uppercase text-sm mb-3 flex justify-center items-center gap-2">
+        <i data-lucide="calendar-check" class="w-5 h-5"></i> Disponibilidad en Tiempo Real
+      </span>
+      <h2 class="text-4xl md:text-5xl font-serif font-bold text-white mb-4">
+        Asegura tu Descanso
+      </h2>
+      <p class="text-gray-300 max-w-2xl mx-auto text-lg font-light">
+        Selecciona tus fechas y reserva directamente con nosotros para obtener la mejor tarifa garantizada, sin
+        intermediarios ni comisiones ocultas.
+      </p>
+    </div>
+
+    <div class="bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row min-h-[500px]">
+
+      <div
+        class="md:w-5/12 bg-tierra-500 p-10 text-white flex flex-col justify-center items-center text-center relative">
         <div class="text-center mb-4 w-full">
           <div class="avatar avatar-xl mx-auto w-24 h-24 rounded bg-transparent">
             <img src="images/logo_hotel_san_jose.png" alt="Logo Hotel San Jose"
@@ -262,76 +282,240 @@
           <h2 class="h2 text-3xl font-serif font-bold text-center mt-3 mb-1">Hotel San José</h2>
           <div class="text-muted text-tierra-100 text-sm uppercase tracking-widest mt-2">Catazajá, Chiapas</div>
         </div>
+
         <div class="w-full pt-6 border-t border-tierra-100/30">
-          <h3 class="font-serif font-bold mb-2 text-lg">Reserva tu Estancia</h3>
-          <p class="text-tierra-100 text-sm">Déjanos tus datos y nuestro sistema confirmará disponibilidad al instante.
-          </p>
+          <h3 class="font-serif font-bold mb-2 text-lg">Proceso de Reserva</h3>
+
+          <div class="flex flex-col items-center gap-2 mt-4">
+            <div class="flex items-center gap-2 text-sm transition-opacity duration-300"
+              [class.opacity-50]="bookingStep() !== 1">
+              <i data-lucide="calendar" class="w-4 h-4"></i> 1. Fechas
+            </div>
+            <div class="w-px h-4 bg-tierra-100/50"></div>
+            <div class="flex items-center gap-2 text-sm transition-opacity duration-300"
+              [class.opacity-50]="bookingStep() !== 2">
+              <i data-lucide="bed" class="w-4 h-4"></i> 2. Habitación
+            </div>
+            <div class="w-px h-4 bg-tierra-100/50"></div>
+            <div class="flex items-center gap-2 text-sm transition-opacity duration-300"
+              [class.opacity-50]="bookingStep() !== 3">
+              <i data-lucide="user" class="w-4 h-4"></i> 3. Tus Datos
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="md:w-7/12 p-10">
-        <form (ngSubmit)="submitForm()" #reservaForm="ngForm" class="space-y-5">
-          <div class="grid grid-cols-2 gap-5">
-            <div>
-              <label for="nombre" class="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
-              <input type="text" id="nombre" name="nombre" [(ngModel)]="lead.name" required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-eco-500 focus:border-eco-500 outline-none transition-all">
+      <div class="md:w-7/12 p-8 flex flex-col justify-center">
+
+        @if (bookingStep() === 1) {
+        <div class="animate-fade-in">
+          <h3 class="text-xl font-bold text-eco-900 mb-2">¿Cuándo nos visitas?</h3>
+          <p class="text-gray-500 text-sm mb-6">Selecciona tus fechas para verificar disponibilidad en tiempo real.</p>
+
+          <form (ngSubmit)="searchAvailability()" #step1Form="ngForm" class="space-y-5">
+            <div class="grid grid-cols-2 gap-5">
+              <div>
+                <label for="checkin" class="block text-sm font-medium text-gray-700 mb-1">Llegada</label>
+                <input type="date" id="checkin" name="checkin" [(ngModel)]="dates.checkin" [min]="minDate" required
+                  class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-eco-500 focus:border-eco-500 outline-none transition-all">
+              </div>
+              <div>
+                <label for="checkout" class="block text-sm font-medium text-gray-700 mb-1">Salida</label>
+                <input type="date" id="checkout" name="checkout" [(ngModel)]="dates.checkout"
+                  [min]="dates.checkin || minDate" required
+                  class="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-eco-500 focus:border-eco-500 outline-none transition-all">
+              </div>
             </div>
+
+            <button type="submit" [disabled]="isSearching() || step1Form.invalid"
+              class="w-full bg-eco-900 text-white font-medium py-3 px-4 rounded-xl hover:bg-eco-700 transition-colors flex justify-center items-center gap-2 mt-4 disabled:opacity-70">
+              @if(isSearching()) {
+              <span>Buscando...</span>
+              } @else {
+              <span>Buscar Disponibilidad</span>
+              <i data-lucide="search" class="w-4 h-4"></i>
+              }
+            </button>
+          </form>
+        </div>
+        }
+
+        @if (bookingStep() === 2) {
+        <div class="animate-fade-in">
+          <button (click)="goBack(1)"
+            class="text-gray-400 hover:text-eco-500 text-sm flex items-center gap-1 mb-4 transition-colors">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Cambiar fechas
+          </button>
+
+          <h3 class="text-xl font-bold text-eco-900 mb-1">Opciones Disponibles</h3>
+          <p
+            class="text-eco-500 text-xs font-medium bg-eco-50 inline-block px-2 py-1 rounded mb-4 border border-eco-100">
+            Del {{ dates.checkin }} al {{ dates.checkout }}
+          </p>
+
+          <div class="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+            @for (room of availableRoomTypes(); track room.id) {
+            <div (click)="selectRoom(room)"
+              class="border border-gray-200 rounded-xl p-4 flex justify-between items-center cursor-pointer hover:border-tierra-500 hover:shadow-md transition-all group bg-white">
+              <div class="flex items-center gap-4">
+                <div
+                  class="bg-eco-50 p-3 rounded-lg text-eco-500 group-hover:bg-tierra-50 group-hover:text-tierra-500 transition-colors">
+                  <i [attr.data-lucide]="room.icon" class="w-6 h-6"></i>
+                </div>
+                <div>
+                  <h4 class="font-bold text-gray-900">{{ room.name }}</h4>
+                  <p class="text-xs text-gray-500">{{ room.desc }}</p>
+                </div>
+              </div>
+              <div class="text-right">
+                <span class="block font-bold text-lg text-eco-700">${{ room.price }}</span>
+                <span class="text-[10px] text-gray-400">/noche</span>
+              </div>
+            </div>
+            }
+          </div>
+        </div>
+        }
+
+        @if (bookingStep() === 3) {
+        <div class="animate-fade-in">
+          <button (click)="goBack(2)"
+            class="text-gray-400 hover:text-eco-500 text-sm flex items-center gap-1 mb-4 transition-colors">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> Cambiar habitación
+          </button>
+
+          <div class="bg-eco-50 p-3 rounded-xl border border-eco-100 mb-5 flex justify-between items-center">
             <div>
-              <label for="telefono" class="block text-sm font-medium text-gray-700 mb-1">WhatsApp</label>
-              <input type="tel" id="telefono" name="telefono" [(ngModel)]="lead.phone" required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-eco-500 focus:border-eco-500 outline-none transition-all">
+              <span class="text-xs text-gray-500 uppercase tracking-wider block font-medium">Selección</span>
+              <span class="font-bold text-eco-900">{{ selectedRoomType()?.name }}</span>
+            </div>
+            <div class="text-right">
+              <span class="font-bold text-tierra-500">${{ selectedRoomType()?.price }}</span>
+              <span class="text-xs text-gray-500">/noche</span>
             </div>
           </div>
 
-          <div class="grid grid-cols-2 gap-5">
+          <form (ngSubmit)="submitForm()" #step3Form="ngForm" class="space-y-4">
+
             <div>
-              <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
-              <input type="email" id="email" name="email" [(ngModel)]="lead.email" required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-eco-500 focus:border-eco-500 outline-none transition-all">
+              <label class="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5">
+                <i data-lucide="user" class="w-4 h-4 text-eco-500"></i> Nombre Completo
+              </label>
+              <input type="text" name="nombre" [(ngModel)]="guest.name" required placeholder="Ej. Juan Pérez Pimienta"
+                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-eco-500 outline-none transition-all">
             </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5">
+                  <i data-lucide="phone" class="w-4 h-4 text-eco-500"></i> WhatsApp
+                </label>
+                <input type="tel" name="telefono" [(ngModel)]="guest.phone" required placeholder="10 dígitos con Lada"
+                  class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-eco-500 outline-none transition-all">
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5">
+                  <i data-lucide="mail" class="w-4 h-4 text-eco-500"></i> Correo Electrónico (Para recibir datos de
+                  pago)
+                </label>
+                <input type="email" name="email" [(ngModel)]="guest.email" required placeholder="ejemplo@correo.com"
+                  class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-eco-500 outline-none transition-all">
+              </div>
+            </div>
+
             <div>
-              <label for="guests" class="block text-sm font-medium text-gray-700 mb-1">Huéspedes</label>
-              <select id="guests" name="guests" [(ngModel)]="lead.guests" required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-eco-500 focus:border-eco-500 outline-none transition-all bg-white">
+              <label class="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5">
+                <i data-lucide="users" class="w-4 h-4 text-eco-500"></i> Número de Huéspedes
+              </label>
+              <select name="guests" [(ngModel)]="guest.guests" required
+                class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-eco-500 outline-none bg-white transition-all">
                 <option value="1">1 Persona</option>
                 <option value="2">2 Personas</option>
                 <option value="3">3 Personas</option>
                 <option value="4+">4+ Personas</option>
               </select>
             </div>
-          </div>
 
-          <div class="grid grid-cols-2 gap-5">
-            <div>
-              <label for="checkin" class="block text-sm font-medium text-gray-700 mb-1">Check-in</label>
-              <input type="date" id="checkin" name="checkin" [(ngModel)]="lead.checkin" required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-eco-500 focus:border-eco-500 outline-none transition-all">
+            <button type="submit" [disabled]="isSubmitting() || step3Form.invalid"
+              class="w-full bg-tierra-500 text-white font-medium py-3 px-4 rounded-xl hover:bg-tierra-900 transition-colors flex justify-center items-center gap-2 mt-2 disabled:opacity-50">
+              <span>{{ isSubmitting() ? 'Procesando...' : 'Confirmar Pre-Reserva' }}</span>
+            </button>
+
+            @if (formStatus() === 'success') {
+            <div
+              class="text-center p-5 rounded-xl mt-4 bg-green-50 text-green-900 border border-green-200 shadow-inner animate-fade-in">
+              <div class="bg-green-100 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+                <i data-lucide="check" class="w-6 h-6 text-green-600"></i>
+              </div>
+              <h4 class="font-serif font-bold text-xl mb-2">¡Pre-reserva Exitosa!</h4>
+              <p class="text-sm mb-4 text-green-800">
+                Hemos bloqueado temporalmente tu habitación. Para confirmar definitivamente tu estancia, por favor
+                realiza tu pago a la siguiente cuenta:
+              </p>
+
+              <div
+                class="bg-white p-4 rounded-lg text-sm text-gray-700 border border-green-200 text-left mb-4 shadow-sm relative z-20">
+                <p class="font-bold text-eco-900 mb-2 border-b border-gray-100 pb-1">
+                  <i data-lucide="building-bank" class="w-4 h-4 inline align-text-bottom mr-1"></i> Datos Bancarios
+                  (Pago Directo)
+                </p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <div><span class="text-gray-500 text-xs uppercase block">Banco</span> <strong>BBVA</strong></div>
+                  <div><span class="text-gray-500 text-xs uppercase block">Titular</span> <strong>Diana Perez
+                      Pimienta</strong></div>
+                  <div><span class="text-gray-500 text-xs uppercase block">Cuenta</span> <strong>1561515110</strong>
+                  </div>
+                  <div class="md:col-span-2"><span class="text-gray-500 text-xs uppercase block">CLABE</span>
+                    <strong>012180015615151108</strong>
+                  </div>
+                </div>
+              </div>
+
+              <div class="bg-green-100/50 p-3 rounded text-xs text-green-900 font-medium border border-green-200/50">
+                <i data-lucide="mail" class="w-4 h-4 inline align-text-bottom mr-1 text-green-600"></i>
+                Te hemos enviado estas instrucciones a <strong>{{ guest.email }}</strong>. Responde a ese correo con tu
+                comprobante adjunto.
+              </div>
             </div>
-            <div>
-              <label for="checkout" class="block text-sm font-medium text-gray-700 mb-1">Check-out</label>
-              <input type="date" id="checkout" name="checkout" [(ngModel)]="lead.checkout" required
-                class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-eco-500 focus:border-eco-500 outline-none transition-all">
+            }
+
+            @if (formStatus() === 'invalid_email') {
+            <div
+              class="text-center p-3 rounded-lg text-sm font-medium mt-3 bg-yellow-50 text-yellow-800 border border-yellow-200 animate-shake">
+              <i data-lucide="alert-triangle" class="w-4 h-4 inline align-text-bottom mr-1"></i>
+              El formato del correo parece ser incorrecto. Revísalo e intenta de nuevo.
             </div>
-          </div>
+            }
 
-          <button type="submit" [disabled]="isSubmitting() || reservaForm.invalid"
-            class="w-full bg-eco-900 text-white font-medium py-3 px-4 rounded-lg hover:bg-eco-700 transition-colors flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-            <span>{{ isSubmitting() ? 'Procesando...' : 'Solicitar Reserva' }}</span>
-          </button>
+            @if (formStatus() === 'sold_out') {
+            <div
+              class="text-center p-3 rounded-lg text-sm font-medium mt-3 bg-red-50 text-red-800 border border-red-200">
+              <i data-lucide="x-circle" class="w-4 h-4 inline align-text-bottom mr-1"></i>
+              Lo sentimos, alguien acaba de reservar la última habitación de este tipo en tus fechas. Por favor
+              selecciona otra opción.
+            </div>
+            }
 
-          @if (formStatus() === 'success') {
-          <div
-            class="text-center p-3 rounded-lg text-sm font-medium mt-3 bg-green-50 text-green-700 border border-green-200">
-            ¡Datos enviados correctamente! Validaremos la disponibilidad.
-          </div>
-          }
-          @if (formStatus() === 'error') {
-          <div class="text-center p-3 rounded-lg text-sm font-medium mt-3 bg-red-50 text-red-700 border border-red-200">
-            Ocurrió un error de conexión con el servidor. Intenta nuevamente.
-          </div>
-          }
-        </form>
+            @if (formStatus() === 'email_bounce') {
+            <div
+              class="text-center p-3 rounded-lg text-sm font-medium mt-3 bg-red-50 text-red-800 border border-red-200 animate-shake">
+              <i data-lucide="mail-warning" class="w-4 h-4 inline align-text-bottom mr-1"></i>
+              No pudimos entregar el mensaje a <strong>{{ guest.email }}</strong>. El correo parece no existir o está
+              inactivo. Por favor, proporciona un correo válido para continuar.
+            </div>
+            }
+
+            @if (formStatus() === 'error') {
+            <div
+              class="text-center p-3 rounded-lg text-sm font-medium mt-3 bg-red-50 text-red-700 border border-red-200">
+              <i data-lucide="wifi-off" class="w-4 h-4 inline align-text-bottom mr-1"></i> Error de conexión con el
+              servidor. Intenta nuevamente.
+            </div>
+            }
+          </form>
+        </div>
+        }
       </div>
     </div>
   </div>

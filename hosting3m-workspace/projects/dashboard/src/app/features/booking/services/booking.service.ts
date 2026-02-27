@@ -685,4 +685,25 @@ export class BookingService {
       this.isProcessing.set(false);
     }
   }
+
+  /** Confirmar reserva pendiente (Web Lead) */
+  public async confirmPendingReservation(bookingId: number): Promise<void> {
+    this.isProcessing.set(true);
+    try {
+      await lastValueFrom(
+        this.http.post(`${this.apiUrl_crud}/hotel_bookings`, {
+          operation: 'update',
+          id: bookingId,
+          fields: {
+            status: 'confirmed' // Pasa de pending a confirmed
+          }
+        }, { headers: this.adminService.getAuthHeaders() })
+      );
+    } catch (error) {
+      console.error("Error al confirmar reserva:", error);
+      throw error;
+    } finally {
+      this.isProcessing.set(false);
+    }
+  }
 }
