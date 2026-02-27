@@ -35,7 +35,8 @@ export class ReservationManagerComponent implements OnInit {
         if (!res.check_out) return false;
 
         const checkoutDate = new Date(res.check_out);
-        const matchesDate = res.status === 'confirmed' && checkoutDate >= today;
+        // ACEPTAMOS 'confirmed' y 'pending'
+        const matchesDate = ['confirmed', 'pending'].includes(res.status?.toLowerCase()) && checkoutDate >= today;
 
         if (selectedRoom) {
           return matchesDate && Number(res.room_id) === Number(selectedRoom.id);
@@ -222,4 +223,34 @@ export class ReservationManagerComponent implements OnInit {
       alert('❌ Error al cancelar.');
     }
   }
+
+  async confirmReservation(reservation: any) {
+    const guestName = reservation.hotel_guests_data?.full_name || reservation.guest_name || 'este huésped';
+
+    // Alerta de Negocio PMP: Validación estricta antes del cambio de estado
+    const confirm = window.confirm(
+      `🔔 ATENCIÓN: Aprobación de Reserva Web\n\n` +
+      `Huésped: ${guestName}\n` +
+      `Estancia: ${new Date(reservation.check_in).toLocaleDateString()} al ${new Date(reservation.check_out).toLocaleDateString()}\n\n` +
+      `⚠️ IMPORTANTE: ¿Ya validaste la recepción del anticipo o pago total?\n\n` +
+      `Al presionar 'Aceptar', la habitación quedará OFICIALMENTE CONFIRMADA y bloqueada en el inventario. No confirmes si el pago sigue pendiente.`
+    );
+
+    if (!confirm) return;
+
+    try {
+      await this.bookingService.confirmPendingReservation(reservation.id);
+
+      // Opcional: Si confirmas, asumimos que pagó el anticipo. 
+      // Podrías descomentar esta línea si quieres que al confirmar también pase el status a pagado:
+      // await this.bookingService.registerPayment(reservation.id);
+
+      alert('✅ Reserva web confirmada exitosamente en el calendario.');
+      this.adminService.loadReservations(); // Recarga la tabla
+      this.bookingService.loadRooms(); // Recarga el semáforo del rack
+    } catch (error) {
+      alert('❌ Error al confirmar la reserva.');
+    }
+  }
+
 }
