@@ -6,6 +6,9 @@ require('dotenv').config();
 const rateLimit = require('express-rate-limit');
 
 const app = express();
+
+app.set('trust proxy', 1);
+
 app.use(express.json());
 app.use(cors({
   origin: 'https://hosting3m.com',
@@ -15,18 +18,18 @@ app.use(cors({
 
 // Limiter para la ruta de login (protege contra fuerza bruta)
 const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 10, // Máximo 10 intentos por IP
+  windowMs: 5 * 60 * 1000,
+  max: 30,
   message: { error: 'Demasiados intentos de login. Intente más tarde.' },
-  standardHeaders: true, // Envía headers con info de rate limit
+  standardHeaders: true,
   legacyHeaders: false,
 });
 
 // Limiter para la ruta de verificación de tokens (más permisivo, protege contra abuso/DoS)
 const verifyLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutos
-  max: 100,                 // Máximo 100 verificaciones por IP (ajusta si necesitas más)
-  message: { error: 'Demasiadas solicitudes de verificación. Intente más tarde.' },
+  windowMs: 1 * 60 * 1000,
+  max: 3000,
+  message: { error: 'Demasiadas solicitudes de verificación. Alerta de DoS.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -55,7 +58,7 @@ const pool = new Pool({
 app.post('/generate-token', loginLimiter, async (req, res) => {
   const { user, pass, internal_secret } = req.body;
 
-  // LOGS DE DEBUG (Añade estas líneas)
+  // LOGS DE DEBUG
   console.log(`Intento de login para: ${user}`);
   console.log(`¿Llegó contraseña?: ${pass ? 'SÍ (longitud: ' + pass.length + ')' : 'NO'}`);
   console.log(`Internal Secret recibido: ${internal_secret}`);
