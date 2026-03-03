@@ -4,6 +4,30 @@ Todos los cambios notables en esta suite de automatización serán documentados 
 
 ---
 
+## [1.1.0] - 2026-03-02
+
+### 🌍 Lanzamiento: Hotel Eco-Website (Public Frontend)
+Integración oficial de la Landing Page pública orientada al cliente al ecosistema Monorepo, diseñada para la conversión y atención automatizada.
+
+* **Angular SPA & Tailwind Nativo:** Migración de HTML estático a un proyecto Angular nativo (`projects/hotel-website`). Implementación de Tailwind v3 con compilación JIT, optimizando Core Web Vitals mediante *tree-shaking*.
+* **Lead Capture Reactivo:** Conexión directa y segura del formulario de reservas con Webhooks de n8n mediante `HttpClient`, reemplazando el `fetch` tradicional para un inicio de flujo de ventas robusto.
+* **Shared AI Concierge:** Inyección de la librería corporativa `@hosting3m/ui-chat` para habilitar el asistente de Inteligencia Artificial directamente en la landing page sin duplicidad de código.
+* **Diseño Biófilo (Eco-Boutique):** Implementación de tokens de diseño personalizados, tipografía dual y efectos de *Glassmorphism* alineados con la identidad de la marca.
+* **Optimización y Seguridad:** Reducción del tamaño del bundle, SEO dinámico y configuración de políticas CORS estrictas para la comunicación con el orquestador backend.
+
+---
+
+## [0.10.0] - 2026-02-19
+
+### 📄 Documentación Digital & Exportación
+Integración de capacidades avanzadas de exportación de documentos en el Dashboard Administrativo.
+
+* **Librería UI PDF Export:** Creación de `projects/ui-pdf-export` para la generación Client-Side de reportes vectoriales (jsPDF + AutoTable).
+* **Motor Financiero Fiscal:** Cálculo automatizado de Base Imponible, IVA (16%) e ISH (2%) en las cotizaciones de hospedaje corporativo.
+* **Batch Booking UI:** Checkboxes y selección múltiple inteligente para agrupar habitaciones idénticas en un solo folio PDF.
+
+---
+
 ## [0.9.0] - 2026-02-18
 
 ### 🚀 CloudFree Infrastructure & Distributed Performance

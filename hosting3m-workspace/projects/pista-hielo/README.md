@@ -113,6 +113,8 @@ Este proyecto está bajo la licencia **n8n Sustainable Use License**. Desarrolla
 *Senior Systems Architect & Project Lead*
 Hosting3M Automation Suite
 
+```
 ---
-
 *Built with the assistance of AI-powered development tools.*
+
+```

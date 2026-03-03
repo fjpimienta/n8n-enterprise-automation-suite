@@ -178,6 +178,14 @@ Implementación de los módulos estratégicos para la gestión de activos y mant
 
 * Despliegue de infraestructura base, PostgreSQL + pgvector y Core Workflows iniciales.
 
----
+## 📦 Authors
 
-*Este changelog es mantenido automáticamente por el equipo de arquitectura.*
+**Francisco Jesus Pérez Pimienta**
+*Senior Systems Architect & Project Lead*
+Hosting3M Automation Suite
+
+```
+---
+*Built with the assistance of AI-powered development tools.*
+
+```

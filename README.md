@@ -2,7 +2,7 @@
 
 ### Self-Hosted Architecture: Orquestación de IA & Microservicios Soberanos
 
-> **Arquitecto:** Francisco Pérez (Senior Systems Engineer | PMP | Full Stack)
+> **Arquitecto:** Francisco Jesus Pérez Pimienta (Senior Systems Engineer | PMP | Full Stack)
 > **Core Stack:** n8n v2.4.6, Docker, PostgreSQL (pgvector + JSONB), Node.js (Upload Service), OpenAI (GPT-4o & DALL-E 3), Angular 21 (Signals).
 > **Infraestructura:** CloudFree VPS (Hardened Linux) + Private Media CDN.
 
@@ -10,75 +10,60 @@
 
 ## 🎯 Objetivo del Proyecto
 
-Suite de automatización empresarial de **grado industrial** diseñada bajo la filosofía de **"Soberanía de Datos"**. Esta arquitectura transforma la automatización convencional en un **Hub de Servicios Inteligente** que ahora integra la formalización legal y comercial mediante documentos digitales.
+Suite de automatización empresarial de **grado industrial** diseñada bajo la filosofía de **"Soberanía de Datos"**. Esta arquitectura transforma la automatización convencional en un **Hub de Servicios Inteligente** que ahora integra la formalización legal, comercial, y la captación directa de clientes.
 
 1. **Soberanía Total:** Despliegue 100% Self-Hosted.
 2. **Calidad Enterprise:** Uso de modelos comerciales robustos.
 3. **Formalización Digital:** Generación de documentos PDF profesionales (`ui-pdf-export`) directamente desde el cliente.
 4. **Seguridad Corporativa:** Gestión de identidad RBAC y validación RS256.
+5. **Captura Pública (Lead Gen):** Integración nativa de interfaces orientadas a la conversión directa con orquestación backend en tiempo real.
 
 ---
 
 ## 🏗 Arquitectura e Infraestructura (IaC)
+
 El ecosistema opera en un entorno de alta densidad, maximizando los recursos del VPS mediante una arquitectura de microservicios:
 
 | Servicio | Tecnología | Función Crítica |
 | --- | --- | --- |
-| **Orquestador** | n8n v2.4.6 (Enterprise) | Motor lógico central. |
+| **Orquestador** | n8n v2.4.6 (Enterprise) | Motor lógico central y procesamiento de Webhooks. |
 | **Media Server** | Node.js / Express | CDN Privado para almacenamiento persistente. |
-| **Capa de Datos** | PostgreSQL + pgvector | Almacenamiento Relacional + Vectorial. |
+| **Capa de Datos** | PostgreSQL + pgvector | Almacenamiento Relacional + Vectorial (RAG). |
 | **Doc Engine** | jsPDF / AutoTable | Generación de reportes y cotizaciones vectoriales. |
-| **Frontends** | Angular 21 (Signals) | Aplicaciones Distribuidas (Dashboard / Pista). |
+| **Frontends** | Angular 21 (Signals) | SPA Distribuidas en Monorepo (Dashboard / Pista / Website). |
 
 ---
 
-## 📦 Módulos Implementados (Workflows v4 & v0.10)
+## 📦 Módulos Implementados (Workflows v4 & v1.1.0)
 
 La suite se compone de módulos interconectados que operan como una malla de servicios:
 
 ### 1. 🔐 Secure Token Gateway
-
 Sistema centralizado de **Gestión de Identidad**. Administra la validación de peticiones externas y la auto-generación de tokens para tareas cronometradas bajo un esquema "Zero Trust".
 
 ### 2. 🛠️ Contact & CRM Bridge v2
-
 Orquestador de entrada de leads. Realiza validación estricta de tipos (`Strong Typing`) y sanitización de datos antes de la persistencia en el CRM PostgreSQL.
 
 ### 3. 📰 Automated News Curator (v4.0)
-
 Motor de inteligencia competitiva actualizado a **Sovereign Media**.
-
-* **GenAI Premium:** Migración a **DALL-E 3** para generación de imágenes hiper-realistas.
-* **Persistencia:** Las imágenes ya no dependen de enlaces temporales externos; se alojan en `upload.hosting3m.com`.
+* **GenAI Premium:** Migración a **DALL-E 3** para generación de imágenes hiper-realistas alojadas en `upload.hosting3m.com`.
 
 ### 4. 📢 Social Media Orchestrator (v4.0)
-
 Orquestador omnicanal con arquitectura **Self-Hosted**.
-
-* **Private CDN:** Integración con el microservicio `upload-service` para alojar medios propios.
-* **Reach Back Logic:** Persistencia binaria avanzada en n8n para asegurar que el archivo original llegue intacto a X (Twitter) y LinkedIn.
-* **Hardening:** Credenciales inyectadas vía variables de entorno (`$env["FB_TOKEN"]`).
+* **Reach Back Logic:** Persistencia binaria avanzada en n8n para asegurar la integridad de archivos hacia X y LinkedIn.
 
 ### 5. 🤖 Multi-Service WhatsApp Hub
-
-Agente multimodal (Texto/Voz) con **enrutamiento inteligente**. Identifica al cliente en la DB y decide si la atención debe ser orientada a Hosting, Hotel o soporte general, utilizando memoria persistente `pgvector`.
+Agente multimodal con **enrutamiento inteligente** y memoria persistente `pgvector`.
 
 ### 6. 🛠️ Dynamic CRUD Engine
-
-Capa de abstracción SQL que actúa como un **Backend as a Service (BaaS)** unificado.
-
-* **Persistencia Híbrida:** SQL para búsquedas indexadas + JSONB para esquemas flexibles (NoSQL dentro de SQL).
+Capa de abstracción SQL que actúa como un **Backend as a Service (BaaS)** con persistencia híbrida (SQL + JSONB).
 
 ### 7. 🏨 MCP Server: Hotel Management
+Implementación del **Model Context Protocol** para consultas de inventario mediante IA en lenguaje natural.
 
-Implementación del **Model Context Protocol**. Expone herramientas de base de datos a la IA, permitiendo consultas de inventario y modificaciones en tiempo real mediante lenguaje natural.
-
-### 🏨 08. AdminHotel Dashboard (v0.9.0 - Performance Release)
-
+### 🏨 08. AdminHotel Dashboard (v0.10.0 - Digital Billing)
 ERP integral evolucionado a una **Arquitectura Distribuida**.
-
-* **Digital Billing:** Generación de cotizaciones PDF con desglose automático de impuestos (IVA/ISH).
-* **Selección Inteligente:** Interfaz de selección múltiple para facturación agrupada.
+* **Digital Billing:** Generación de cotizaciones PDF con desglose de impuestos (IVA/ISH).
 * **Inventario Centralizado:** Módulo polimórfico para activos en bodega y habitaciones.
 
 ### ⛸️ 09. PistaHielo Operations Center (v0.7.1 - Ops AI)
@@ -87,9 +72,8 @@ PWA Administrativa para gestión de centros de entretenimiento.
 
 * **Billing Engine:** Motor de cobro con soporte para **"Midnight Crossing"**.
 * **Live Monitor:** El "Rack" de patines activos con sincronización en tiempo real.
-
 ### 💬 10. Shared AI Chat Library (v1.0.0)
-Librería transversal de Angular (**Shared Lib**) diseñada bajo el patrón de Componente Agnóstico.
+Librería agnóstica de chat IA inyectada transversalmente en el ecosistema (`CHAT_CONFIG_TOKEN`).
 
 ### 📄 11. UI PDF Export Library (v1.0.0)
 
@@ -100,6 +84,13 @@ Nueva librería compartida para la estandarización de documentos salientes.
 
 
 * **Tax Engine:** Motor de cálculo automático para regímenes fiscales hoteleros.
+
+
+### 🌍 12. Hotel Eco-Website (v1.0.0 - Public Frontend)
+La interfaz pública de alta conversión del ecosistema Hosting3M (*Customer-Facing*).
+* **Diseño Eco-Boutique:** Arquitectura Tailwind CSS v3 nativa con tokens biofílicos y Glassmorphism optimizado para Core Web Vitals (JIT & Tree-shaking).
+* **Reactive Lead Capture:** Integración directa de formularios con los webhooks de n8n mediante `HttpClient` para desencadenar notificaciones y embudos en tiempo real.
+* **AI Concierge:** Inyección nativa de la librería `@hosting3m/ui-chat` para pre-calificar visitantes 24/7.
 
 ---
 
@@ -118,23 +109,22 @@ Nueva librería compartida para la estandarización de documentos salientes.
 | `09`|**PistaHielo Ops Center**|PWA para gestión de rentas por tiempo y cortes de caja.|`Angular 21` `Signals` `PWA`|[📖 Ver Docs](hosting3m-workspace/projects/pista-hielo/README.md)|
 | `10`|**Shared AI Chat Lib**|Librería agnóstica de chat IA reutilizable con configuración dinámica.|`Angular 21` `InjectionToken`|[📖 Ver Docs](hosting3m-workspace/projects/ui-chat/README.md)|
 | `11` | **UI PDF Export Lib** | Librería de exportación de documentos PDF. | `jsPDF` `TypeScript` | [📖 Docs](hosting3m-workspace/projects/ui-pdf-export/README.md) |
+| `12` | **Hotel Eco-Website** | Landing page de alta conversión y captura de prospectos. | `Angular`, `Tailwind` | [📖 Docs](hosting3m-workspace/projects/hotel-website/README.md) |
 
 ---
 
-## 📈 Roadmap & Gestión de Proyectos
+## 📈 Roadmap & Gestión de Proyectos (SDLC)
 
 ### ✅ Completado (Q1 2026)
-
 * [x] **Digital Formalization:** Lanzamiento de `ui-pdf-export` e integración en el flujo de reservas.
 * [x] **Sovereign Media:** Implementación de `upload-service` propio y DALL-E 3.
-* [x] **Monorepo Scaling:** Optimización de `tsconfig` para soporte de múltiples librerías compartidas. 
+* [x] **Public Interface:** Despliegue de `hotel-website` en el monorepo con conexión a webhooks.
+* [x] **Monorepo Scaling:** Optimización de `tsconfig` para soporte de múltiples librerías.
 
-
-
-### 🏗️ En Progreso (Q2 2026)
-
+### 🏗️ En Progreso / Backlog (Q2 2026)
 * [ ] **Huéspedes CRM:** Segmentación eco-boutique y analítica de comportamiento.
 * [ ] **Eco-Metrics:** Módulo de sustentabilidad para medición de huella hídrica y eléctrica.
+* [ ] **Conversion & Sales:** A/B Testing en la landing page y conexión con pasarelas de pago directo (Stripe/PayPal).
 
 ---
 
@@ -144,6 +134,8 @@ Nueva librería compartida para la estandarización de documentos salientes.
 *Senior Systems Architect & Project Lead*
 Hosting3M Automation Suite
 
+```
 ---
-
 *Built with the assistance of AI-powered development tools.*
+
+```
