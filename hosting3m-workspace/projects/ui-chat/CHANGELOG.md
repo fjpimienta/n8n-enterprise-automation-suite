@@ -25,3 +25,15 @@ Designed to act as a bridge between Angular Frontends and n8n AI Agents.
 
 ### 📦 Integration
 - Exposed `AiChatComponent` and `AiService` for direct consumption by `dashboard` and `pista-hielo`.
+
+## 📦 Authors
+
+**Francisco Jesus Pérez Pimienta**
+*Senior Systems Architect & Project Lead*
+Hosting3M Automation Suite
+
+```
+---
+*Built with the assistance of AI-powered development tools.*
+
+```

@@ -29,3 +29,15 @@ Designed to provide a standardized, domain-agnostic engine for exporting documen
 ### 📦 Integration
 - Exposed `PdfExportService` for direct consumption by `dashboard` and future apps (e.g., `pista-hielo`).
 - Validated integration with `ReservationManager` for Guest Quote generation.
+
+## 📦 Authors
+
+**Francisco Jesus Pérez Pimienta**
+*Senior Systems Architect & Project Lead*
+Hosting3M Automation Suite
+
+```
+---
+*Built with the assistance of AI-powered development tools.*
+
+```

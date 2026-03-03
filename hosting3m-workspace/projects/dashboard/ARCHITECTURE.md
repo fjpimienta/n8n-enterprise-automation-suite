@@ -121,6 +121,14 @@ Se mantiene la estructura de datos sólida de la v0.8, pero su consumo es más e
 * **PWA Offline Mode:** Gracias a la arquitectura de rutas y carga asíncrona, el siguiente paso lógico es implementar Service Workers para caché de rutas.
 * **Lazy Loading Modules:** Las rutas hijas están preparadas para ser cargadas mediante `loadComponent` (Lazy Loading real) en futuras versiones para reducir el bundle inicial.
 
----
+## 📦 Authors
 
-*Document updated regarding the v0.9.0 codebase state (Performance & Routing Refactor).*
+**Francisco Jesus Pérez Pimienta**
+*Senior Systems Architect & Project Lead*
+Hosting3M Automation Suite
+
+```
+---
+*Built with the assistance of AI-powered development tools.*
+
+```

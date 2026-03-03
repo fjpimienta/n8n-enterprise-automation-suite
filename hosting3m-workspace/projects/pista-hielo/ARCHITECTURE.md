@@ -109,3 +109,15 @@ B. Midnight Crossing Calculation
     Lógica especializada en CheckoutModal para manejar turnos que cruzan la medianoche.
 
 Document generated regarding the v0.7.0 codebase state.
+
+## 📦 Authors
+
+**Francisco Jesus Pérez Pimienta**
+*Senior Systems Architect & Project Lead*
+Hosting3M Automation Suite
+
+```
+---
+*Built with the assistance of AI-powered development tools.*
+
+```
