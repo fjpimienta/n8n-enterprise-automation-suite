@@ -90,6 +90,14 @@ El flujo de datos es unidireccional y sincrónico:
 
 5. **Output (Browser):** Se dispara la descarga del archivo con el nombre sanitizado (ej. `Cotizacion_Cliente_X.pdf`).
 
----
+## 📦 Authors
 
-*Document generated regarding the v1.0.0 codebase state.*
+**Francisco Jesus Pérez Pimienta**
+*Senior Systems Architect & Project Lead*
+Hosting3M Automation Suite
+
+```
+---
+*Built with the assistance of AI-powered development tools.*
+
+```

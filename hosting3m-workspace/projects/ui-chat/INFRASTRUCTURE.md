@@ -69,6 +69,14 @@ projects/ui-chat/src/lib/
 * *Éxito:* Se reemplaza el loader con la respuesta de texto del agente.
 * *Error:* Se muestra un toast de error y se permite reintentar.
 
----
+## 📦 Authors
 
-*Document generated regarding the v0.7 codebase state.*
+**Francisco Jesus Pérez Pimienta**
+*Senior Systems Architect & Project Lead*
+Hosting3M Automation Suite
+
+```
+---
+*Built with the assistance of AI-powered development tools.*
+
+```

@@ -105,3 +105,15 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), 
 
 ### Security
 - **Initial Setup:** Configuración de CORS y validación de tokens RS256.
+
+## 📦 Authors
+
+**Francisco Jesus Pérez Pimienta**
+*Senior Systems Architect & Project Lead*
+Hosting3M Automation Suite
+
+```
+---
+*Built with the assistance of AI-powered development tools.*
+
+```
