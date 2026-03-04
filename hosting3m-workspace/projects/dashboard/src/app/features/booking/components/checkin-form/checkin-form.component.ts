@@ -36,6 +36,7 @@ export class CheckinFormComponent implements OnInit, OnChanges {
     total_amount: new FormControl(0, [Validators.required, Validators.min(0)]), // El cobro final
     vip_status: new FormControl(false),
     requires_invoice: new FormControl(false),
+    is_invoiced: new FormControl(false),
     notes: new FormControl('') // La validación se agrega dinámicamente
   });
 
@@ -50,8 +51,6 @@ export class CheckinFormComponent implements OnInit, OnChanges {
       this.calculateDiscount(val || 0);
     });
 
-    // Eliminamos la llamada directa aquí, porque quizás room() aun es null
-    // this.calculateStandardPrice(); 
   }
 
   ngOnChanges(changes: SimpleChanges) {
@@ -63,7 +62,6 @@ export class CheckinFormComponent implements OnInit, OnChanges {
     // 2. AGREGADO: Si cambia la habitación (o llega por primera vez)
     // Esto garantiza que tenemos datos para calcular el precio
     if (changes['room'] && this.room()) {
-      // Pequeño timeout para asegurar que el formulario ya tenga fechas inicializadas
       setTimeout(() => {
         this.calculateStandardPrice();
       });
@@ -123,14 +121,12 @@ export class CheckinFormComponent implements OnInit, OnChanges {
     const dateString = tomorrow.toISOString().split('T')[0];
 
     this.checkinForm.patchValue({ check_out: dateString });
-    // Esto disparará calculateStandardPrice por la suscripción
   }
 
   private fillWithReservationData(res: any) {
     if (!res) return;
     const guest = res.hotel_guests_data || res.guest || {};
 
-    // Lógica para limpiar datos dummy
     let docId = guest.doc_id || res.guest_doc_id || '';
     if (docId.startsWith('INT-')) docId = '';
 
@@ -148,7 +144,8 @@ export class CheckinFormComponent implements OnInit, OnChanges {
       check_out: res.check_out ? res.check_out.split('T')[0] : '',
       total_amount: res.total_amount || 0,
       vip_status: guest.vip_status || false,
-      requires_invoice: guest.requires_invoice || false,
+      requires_invoice: res.is_invoiced || false,
+      is_invoiced: res.is_invoiced || false,
       notes: res.notes || ''
     });
 

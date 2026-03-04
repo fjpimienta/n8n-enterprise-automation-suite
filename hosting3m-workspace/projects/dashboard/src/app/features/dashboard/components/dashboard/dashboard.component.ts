@@ -265,18 +265,21 @@ export class DashboardComponent {
     this.generateDailyReport();    // 2. Recalcula los datos con el nuevo filtro
   }
 
-  /* La función de generación actualizada */
+  /* La función de generación actualizada (Alineada al Server-Side Filtering) */
   async generateDailyReport() {
     this.reportService.loadingReports.set(true);
     this.showReportModal = true;
     try {
-      // Pedimos TODO (Ventas y Gastos)
+      // 1. Calculamos las fechas que el Dashboard quiere ver
+      const dates = this.reportService.getPeriodDates(this.reportFilter());
+
+      // 2. Pedimos los datos filtrados por RED (Pasando los nuevos argumentos)
       const [allBookings, allExpenses] = await Promise.all([
-        this.reportService.getRawBookingsForReport(),
-        this.reportService.getRawExpensesForReport()
+        this.reportService.getRawBookingsForReport(dates.start, dates.end),
+        this.reportService.getRawExpensesForReport(dates.start, dates.end)
       ]);
 
-      // Calculamos el reporte pasando 'this.reportFilter()'
+      // 3. Calculamos el reporte final
       const stats = this.reportService.calculateDailyReport(allBookings, allExpenses, this.reportFilter());
 
       this.dailyReport = stats; // Asignamos el resultado completo
@@ -289,28 +292,23 @@ export class DashboardComponent {
 
   /* 5. SECCIÓN: GESTIÓN DE USUARIOS */
 
-  /* Abre la vista de gestión de usuarios */
-  /* Abre la vista de gestión de usuarios */
   openUserManagement() {
     this.viewMode.set('user_mgmt');
     this.hotelService.clearSelection();
   }
 
-  /* Abre el modal para crear un nuevo usuario */
   openNewUserModal() {
     this.hotelService.selectUser(null);
     this.tempUser = this.getEmptyUser();
     this.isUserModalOpen.set(true);
   }
 
-  /* Abre el modal para editar un usuario existente */
   editUser(user: User) {
     this.hotelService.selectUser(user);
     this.tempUser = { ...user, password: '' };
     this.isUserModalOpen.set(true);
   }
 
-  /* Guarda los cambios de un usuario (nuevo o editado) */
   async handleSaveUser() {
     const selected = this.hotelService.selectedUser();
     const operation = selected ? 'update' : 'insert';
@@ -334,14 +332,12 @@ export class DashboardComponent {
     this.maintenanceFilterRoomId = null;
   }
 
-  /* Abre el modal para crear un nuevo huésped */
   openNewGuestModal() {
     this.hotelService.selectGuest(null);
     this.tempGuest = this.getEmptyGuest();
     this.isGuestModalOpen.set(true);
   }
 
-  /* Abre el modal para editar un huésped existente */
   editGuest(guest: Guest) {
     this.hotelService.selectGuest(guest);
     this.tempGuest = { ...guest };
@@ -349,7 +345,6 @@ export class DashboardComponent {
   }
 
   /* Guarda los cambios de un huésped (nuevo o editado) */
-  /* Genera un ID interno único si no hay documento */
   private generateInternalId(): string {
     // Retorna algo como: INT-1706289452123 (INT + Timestamp en milisegundos)
     return `INT-${Date.now()}`;

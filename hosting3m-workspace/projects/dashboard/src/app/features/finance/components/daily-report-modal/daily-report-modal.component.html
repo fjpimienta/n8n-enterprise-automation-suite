@@ -80,18 +80,32 @@
             <label class="form-label small text-muted mb-1 fw-bold text-uppercase" style="font-size: 0.7rem;">Fecha
               Inicio</label>
             <input type="date" class="form-control" [ngModel]="customStartDate()"
-              (ngModelChange)="customStartDate.set($event)">
+              (ngModelChange)="customStartDate.set($event); onCustomDateChange()">
           </div>
           <div>
             <label class="form-label small text-muted mb-1 fw-bold text-uppercase" style="font-size: 0.7rem;">Fecha
               Fin</label>
             <input type="date" class="form-control" [min]="customStartDate()" [ngModel]="customEndDate()"
-              (ngModelChange)="customEndDate.set($event)">
+              (ngModelChange)="customEndDate.set($event); onCustomDateChange()">
           </div>
         </div>
       </div>
       }
 
+      @if (isLoading()) {
+      <div class="col-12 animate__animated animate__fadeIn">
+        <div class="empty shadow-sm border rounded-3 bg-surface p-5 mt-2">
+          <div class="empty-icon fs-1">
+            <div class="spinner-border text-primary" style="width: 3rem; height: 3rem; border-width: 0.3em;"
+              role="status"></div>
+          </div>
+          <p class="empty-title fw-bold mt-4" style="font-size: 1.1rem;">Sincronizando libros contables...</p>
+          <p class="empty-subtitle text-muted fs-3 px-md-5">
+            Consultando la base de datos encriptada. Por favor espera.
+          </p>
+        </div>
+      </div>
+      } @else {
       <div class="col-sm-6 col-lg-3">
         <div class="card card-sm border-0 shadow-sm p-3 bg-success-lt">
           <div class="d-flex align-items-center">
@@ -139,6 +153,7 @@
           </div>
         </div>
       </div>
+      }
     </div>
 
     <div class="card shadow-sm border-0">
