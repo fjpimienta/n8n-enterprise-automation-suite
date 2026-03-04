@@ -32,19 +32,38 @@ export class ReportService {
    * Acepta 'bookings' Y 'expenses'
    */
   // 1. Agrega customStart y customEnd a los parámetros, y 'custom' al tipo de filtro
-  calculateDailyReport(bookings: any[], expenses: any[], filter: 'day' | 'week' | 'month' | 'year' | 'custom', customStart?: string, customEnd?: string) {
+  calculateDailyReport(
+    bookings: any[],
+    expenses: any[],
+    filter: 'day' | 'week' | 'month' | 'year' | 'custom',
+    customStart?: string,
+    customEnd?: string,
+    incomeBillingFilter: string = 'Todos',
+    expensePaymentFilter: string = 'Todos'
+  ) {
     const now = new Date();
     const mxNow = now.toLocaleString("en-US", { timeZone: "America/Mexico_City" });
     const nowObj = new Date(mxNow);
     const todayStr = `${nowObj.getFullYear()}-${String(nowObj.getMonth() + 1).padStart(2, '0')}-${String(nowObj.getDate()).padStart(2, '0')}`;
 
-    const filteredBookings = bookings.filter((b: any) =>
-      this.isDateInPeriod(b.check_in, filter, nowObj, todayStr, customStart, customEnd)
-    );
+    const filteredBookings = bookings.filter((b: any) => {
+      const dateMatch = this.isDateInPeriod(b.check_in, filter, nowObj, todayStr, customStart, customEnd);
+      if (!dateMatch) return false;
 
-    const filteredExpenses = expenses.filter((e: any) =>
-      e.status === 'APPROVED' && this.isDateInPeriod(e.expense_date, filter, nowObj, todayStr, customStart, customEnd)
-    );
+      // Lógica del filtro de facturación
+      if (incomeBillingFilter === 'Facturado') return b.is_invoiced === true;
+      if (incomeBillingFilter === 'No Facturado') return !b.is_invoiced;
+      return true;
+    });
+
+    const filteredExpenses = expenses.filter((e: any) => {
+      const dateMatch = e.status === 'APPROVED' && this.isDateInPeriod(e.expense_date, filter, nowObj, todayStr, customStart, customEnd);
+      if (!dateMatch) return false;
+
+      // Lógica del filtro de método de pago
+      if (expensePaymentFilter !== 'Todos') return e.payment_method === expensePaymentFilter;
+      return true;
+    });
 
     const stats = {
       total_sales: 0,
