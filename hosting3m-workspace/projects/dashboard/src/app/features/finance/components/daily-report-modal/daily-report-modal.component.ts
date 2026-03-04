@@ -74,14 +74,6 @@ export class DailyReportModalComponent implements OnInit {
     );
   });
 
-  setFilter(f: 'day' | 'week' | 'month' | 'year' | 'custom') {
-    this.currentFilter.set(f);
-    if (f !== 'custom') {
-      this.customStartDate.set('');
-      this.customEndDate.set('');
-    }
-  }
-
   ngOnInit() {
     if (this.bookingService.rooms().length === 0) {
       this.bookingService.loadRooms();
@@ -91,17 +83,40 @@ export class DailyReportModalComponent implements OnInit {
 
   async loadData() {
     this.isLoading.set(true);
+    const startTime = performance.now();
     try {
+      // 1. Calculamos las fechas que el usuario quiere ver
+      const dates = this.reportService.getPeriodDates(this.currentFilter(), this.customStartDate(), this.customEndDate());
+
+      // 2. Las enviamos por la red
       const [bookings, expenses] = await Promise.all([
-        this.reportService.getRawBookingsForReport(),
-        this.reportService.getRawExpensesForReport()
+        this.reportService.getRawBookingsForReport(dates.start, dates.end),
+        this.reportService.getRawExpensesForReport(dates.start, dates.end)
       ]);
+
       this.rawBookings.set(bookings);
       this.rawExpenses.set(expenses);
     } catch (error) {
       console.error('Error cargando datos financieros:', error);
     } finally {
+      const endTime = performance.now();
+      console.log(`📊 [Auditoría de Red] Datos de ${this.currentFilter()} descargados en ${((endTime - startTime) / 1000).toFixed(2)} segundos.`);
       this.isLoading.set(false);
+    }
+  }
+
+  setFilter(f: 'day' | 'week' | 'month' | 'year' | 'custom') {
+    this.currentFilter.set(f);
+    if (f !== 'custom') {
+      this.customStartDate.set('');
+      this.customEndDate.set('');
+      this.loadData();
+    }
+  }
+
+  onCustomDateChange() {
+    if (this.customStartDate() && this.customEndDate()) {
+      this.loadData();
     }
   }
 

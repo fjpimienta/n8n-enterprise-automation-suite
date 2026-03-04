@@ -28,6 +28,7 @@ export interface Booking {
   check_in: string;
   check_out: string;
   status: 'confirmed' | 'cancelled' | 'pending';
+  is_invoiced: boolean;
 }
 
 export interface Company {
