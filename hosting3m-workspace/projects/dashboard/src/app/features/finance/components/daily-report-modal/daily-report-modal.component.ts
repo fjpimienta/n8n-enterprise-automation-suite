@@ -27,6 +27,8 @@ export class DailyReportModalComponent implements OnInit {
   customStartDate = signal<string>('');
   customEndDate = signal<string>('');
   activeTab = signal<'ingresos' | 'gastos'>('ingresos');
+  incomeBillingFilter = signal<'Todos' | 'Facturado' | 'No Facturado'>('Todos');
+  expensePaymentFilter = signal<'Todos' | 'Efectivo' | 'Transferencia' | 'Tarjeta Corp'>('Todos');
 
   /** Map O(1) para lookup room_id → room_number */
   roomNumberMap = computed(() => {
@@ -66,7 +68,9 @@ export class DailyReportModalComponent implements OnInit {
       this.rawExpenses(),
       this.currentFilter(),
       this.customStartDate(),
-      this.customEndDate()
+      this.customEndDate(),
+      this.incomeBillingFilter(),
+      this.expensePaymentFilter()
     );
   });
 
@@ -122,57 +126,50 @@ export class DailyReportModalComponent implements OnInit {
 
   printReport() {
     const stats = this.reportData();
-    const currentTab = this.activeTab();
     const period = this.getPeriodLabel();
+    const activeIncomeFilter = this.incomeBillingFilter();
+    const activeExpenseFilter = this.expensePaymentFilter();
 
     let reportItems: any[] = [];
-    let reportTitle = '';
 
-    // MAPEO CONDICIONAL: Dependiendo de la pestaña activa, mapeamos ingresos o gastos
-    if (currentTab === 'ingresos') {
-      reportTitle = `REPORTE DE INGRESOS - ${period.toUpperCase()}`;
-
-      if (stats.transactions.length === 0) {
-        alert('No hay ingresos en este periodo para imprimir.');
-        return;
-      }
-
-      stats.transactions.forEach((t: any) => {
-        reportItems.push({
-          concept: `Habitación ${this.getRoomNumber(t.room_id)}`,
-          description: `Ingreso: ${new Date(t.check_in).toLocaleDateString()} | Noches: ${this.getNights(t.check_in, t.check_out)} | Estado: ${t.payment_status === 'paid' ? 'PAGADO' : 'PENDIENTE'}`,
-          quantity: 1,
-          unitPrice: Number(t.total_amount) || 0,
-          total: Number(t.total_amount) || 0
-        });
+    // 1. Agregamos los INGRESOS (Montos positivos)
+    stats.transactions.forEach((t: any) => {
+      reportItems.push({
+        concept: `[INGRESO] Hab. ${this.getRoomNumber(t.room_id)}`,
+        description: `Ingreso: ${new Date(t.check_in).toLocaleDateString()} | Estado: ${t.payment_status === 'paid' ? 'PAGADO' : 'PENDIENTE'}`,
+        quantity: 1,
+        unitPrice: Number(t.total_amount) || 0,
+        total: Number(t.total_amount) || 0
       });
-    } else {
-      reportTitle = `REPORTE DE GASTOS - ${period.toUpperCase()}`;
+    });
 
-      if (stats.expenseTransactions.length === 0) {
-        alert('No hay gastos en este periodo para imprimir.');
-        return;
-      }
-
-      stats.expenseTransactions.forEach((ex: any) => {
-        reportItems.push({
-          concept: ex.category || 'Gasto Operativo',
-          description: `${ex.description} | Registró: ${ex.registered_by_name}`,
-          quantity: 1,
-          unitPrice: Number(ex.amount) || 0,
-          total: Number(ex.amount) || 0
-        });
+    // 2. Agregamos los GASTOS (Montos negativos)
+    stats.expenseTransactions.forEach((ex: any) => {
+      reportItems.push({
+        concept: `[GASTO] ${ex.category || 'Operativo'}`,
+        description: `${ex.description} | Método: ${ex.payment_method} | Resp: ${ex.registered_by_name}`,
+        quantity: 1,
+        unitPrice: -(Number(ex.amount) || 0), // Negativo para que reste en la tabla
+        total: -(Number(ex.amount) || 0)      // Negativo para que reste en la tabla
       });
+    });
+
+    if (reportItems.length === 0) {
+      alert('No hay ingresos ni gastos en este periodo con los filtros actuales.');
+      return;
     }
 
-    // CONFIGURACIÓN DEL PDF
+    // Subtítulo dinámico informando los filtros activos
+    const subtitle = `Filtros Aplicados -> Ingresos: ${activeIncomeFilter} | Gastos: ${activeExpenseFilter}`;
+
+    // CONFIGURACIÓN DEL PDF UNIFICADO
     const pdfConfig: PdfExportConfig = {
-      fileName: `Corte_${currentTab}_${period.replace(' ', '_')}`,
-      title: reportTitle,
+      fileName: `Corte_Caja_Global_${period.replace(/ /g, '_')}`,
+      title: `CORTE DE CAJA UNIFICADO - ${period.toUpperCase()}`,
       companyName: 'Hotel San José',
       companyAddress: 'Av. Juarez s/n, Centro, Catazajá, Chiapas',
       clientName: 'Reporte Financiero Interno',
-      clientSubtitle: 'Departamento de Contabilidad',
+      clientSubtitle: subtitle,
       items: reportItems,
 
       showTaxes: false,
@@ -181,10 +178,11 @@ export class DailyReportModalComponent implements OnInit {
 
       footerTitle: 'Resumen Global del Periodo',
       footerText: [
-        `Ingresos Cobrados: $${stats.paid_in.toFixed(2)}`,
-        `Pendiente de Cobro: $${stats.pending.toFixed(2)}`,
-        `Gastos Totales: $${stats.total_expenses.toFixed(2)}`,
-        `UTILIDAD NETA: $${stats.balance.toFixed(2)}`
+        `Ingresos Totales Cobrados: $${stats.paid_in.toFixed(2)}`,
+        `Ingresos Pendientes (No cobrados): $${stats.pending.toFixed(2)}`,
+        `Gastos Operativos Totales: $${stats.total_expenses.toFixed(2)}`,
+        `==================================`,
+        `UTILIDAD NETA DEL PERIODO: $${stats.balance.toFixed(2)}`
       ]
     };
 

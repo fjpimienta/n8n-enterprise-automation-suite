@@ -41,6 +41,38 @@
         </div>
       </div>
 
+      <div
+        class="d-flex justify-content-center justify-content-md-start mb-4 animate__animated animate__fadeIn d-print-none">
+        <div class="d-flex flex-wrap gap-3 p-3 bg-surface border rounded-3 shadow-sm align-items-end">
+
+          <div>
+            <label class="form-label small text-muted mb-1 fw-bold text-uppercase" style="font-size: 0.7rem;">
+              <i class="ti ti-arrow-down-right text-success me-1"></i> Filtro Ingresos
+            </label>
+            <select class="form-select" [ngModel]="incomeBillingFilter()"
+              (ngModelChange)="incomeBillingFilter.set($event)">
+              <option value="Todos">Todos los Ingresos</option>
+              <option value="Facturado">Solo Facturados</option>
+              <option value="No Facturado">Solo No Facturados</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="form-label small text-muted mb-1 fw-bold text-uppercase" style="font-size: 0.7rem;">
+              <i class="ti ti-arrow-up-right text-danger me-1"></i> Filtro Gastos
+            </label>
+            <select class="form-select" [ngModel]="expensePaymentFilter()"
+              (ngModelChange)="expensePaymentFilter.set($event)">
+              <option value="Todos">Todos los Gastos</option>
+              <option value="Efectivo">Efectivo</option>
+              <option value="Transferencia">Transferencia</option>
+              <option value="Tarjeta Corp">Tarjeta Corp</option>
+            </select>
+          </div>
+
+        </div>
+      </div>
+
       @if (currentFilter() === 'custom') {
       <div class="d-flex justify-content-center justify-content-md-start mb-4 animate__animated animate__fadeIn">
         <div class="d-flex flex-wrap gap-3 p-3 bg-surface border rounded-3 shadow-sm align-items-end">
