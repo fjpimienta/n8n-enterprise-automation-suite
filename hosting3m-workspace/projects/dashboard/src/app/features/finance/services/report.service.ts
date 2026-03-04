@@ -31,7 +31,6 @@ export class ReportService {
   /** * Calcula el reporte unificado (Ventas - Gastos = Balance) 
    * Acepta 'bookings' Y 'expenses'
    */
-  // 1. Agrega customStart y customEnd a los parámetros, y 'custom' al tipo de filtro
   calculateDailyReport(
     bookings: any[],
     expenses: any[],
@@ -60,7 +59,6 @@ export class ReportService {
       const dateMatch = e.status === 'APPROVED' && this.isDateInPeriod(e.expense_date, filter, nowObj, todayStr, customStart, customEnd);
       if (!dateMatch) return false;
 
-      // Lógica del filtro de método de pago
       if (expensePaymentFilter !== 'Todos') return e.payment_method === expensePaymentFilter;
       return true;
     });
@@ -76,9 +74,7 @@ export class ReportService {
       periodLabel: this.getPeriodLabel(filter)
     };
 
-    // Sumar Ventas
     filteredBookings.forEach((b: any) => {
-      // Limpiamos la variable para evitar errores de espacios
       b.payment_status = String(b.payment_status || '').trim().toLowerCase();
 
       const amount = Number(b.total_amount) || 0;
@@ -90,7 +86,6 @@ export class ReportService {
       }
     });
 
-    // Sumar Gastos
     filteredExpenses.forEach(e => {
       stats.total_expenses += parseFloat(e.amount || 0);
     });
@@ -121,7 +116,7 @@ export class ReportService {
         return dateObj.getFullYear() === nowObj.getFullYear();
 
       case 'custom':
-        if (!customStart || !customEnd) return false; // Si falta una fecha, no mostramos nada
+        if (!customStart || !customEnd) return false;
         return dateLocalStr >= customStart && dateLocalStr <= customEnd;
 
       default: return dateLocalStr === todayStr;
@@ -139,25 +134,62 @@ export class ReportService {
     return labels[filter] || 'Periodo';
   }
 
-  /* Obtiene Ventas */
-  async getRawBookingsForReport(): Promise<any[]> {
-    return this.fetchData('hotel_bookings');
+  // 1. NUEVO MÉTODO: Calcula las fechas exactas de inicio y fin del periodo
+  public getPeriodDates(filter: string, customStart?: string, customEnd?: string): { start: string, end: string } {
+    const now = new Date();
+    const mxNow = new Date(now.toLocaleString("en-US", { timeZone: "America/Mexico_City" }));
+    const todayStr = `${mxNow.getFullYear()}-${String(mxNow.getMonth() + 1).padStart(2, '0')}-${String(mxNow.getDate()).padStart(2, '0')}`;
+
+    let start = todayStr; let end = todayStr;
+
+    switch (filter) {
+      case 'week':
+        const startOfWeek = new Date(mxNow);
+        startOfWeek.setDate(mxNow.getDate() - mxNow.getDay());
+        start = `${startOfWeek.getFullYear()}-${String(startOfWeek.getMonth() + 1).padStart(2, '0')}-${String(startOfWeek.getDate()).padStart(2, '0')}`;
+        break;
+      case 'month':
+        start = `${mxNow.getFullYear()}-${String(mxNow.getMonth() + 1).padStart(2, '0')}-01`;
+        const lastDay = new Date(mxNow.getFullYear(), mxNow.getMonth() + 1, 0);
+        end = `${lastDay.getFullYear()}-${String(lastDay.getMonth() + 1).padStart(2, '0')}-${String(lastDay.getDate()).padStart(2, '0')}`;
+        break;
+      case 'year':
+        start = `${mxNow.getFullYear()}-01-01`;
+        end = `${mxNow.getFullYear()}-12-31`;
+        break;
+      case 'custom':
+        start = customStart || todayStr;
+        end = customEnd || todayStr;
+        break;
+    }
+    return { start, end };
   }
 
-  /* Obtiene Gastos (CORREGIDO: Agregamos table_name) */
-  async getRawExpensesForReport(): Promise<any[]> {
-    return this.fetchData('hotel_expenses');
+  // 2. MODIFICAMOS LAS PETICIONES PARA EXIGIR FECHAS
+  async getRawBookingsForReport(start: string, end: string): Promise<any[]> {
+    return this.fetchData('hotel_bookings', 'check_in', start, end);
   }
 
-  /* Helper genérico blindado */
-  private async fetchData(table: string): Promise<any[]> {
+  async getRawExpensesForReport(start: string, end: string): Promise<any[]> {
+    return this.fetchData('hotel_expenses', 'expense_date', start, end);
+  }
+
+  // 3. INYECTAMOS EL RANGO EN EL PAYLOAD PARA n8n
+  private async fetchData(table: string, dateColumn: string, startDate: string, endDate: string): Promise<any[]> {
     try {
+      const payload = {
+        operation: 'getall',
+        table_name: table,
+        fields: { id_company: 1 },
+        date_range: {
+          column: dateColumn,
+          start: startDate,
+          end: endDate
+        }
+      };
+
       const res: any = await lastValueFrom(
-        this.http.post(`${this.apiUrl_crud}/${table}`, {
-          operation: 'getall',
-          table_name: table,
-          fields: { id_company: 1 }
-        }, { headers: this.adminService.getAuthHeaders() })
+        this.http.post(`${this.apiUrl_crud}/${table}`, payload, { headers: this.adminService.getAuthHeaders() })
       );
       return Array.isArray(res?.data) ? res.data : [];
     } catch (e) {
@@ -165,4 +197,6 @@ export class ReportService {
       return [];
     }
   }
+
+
 }

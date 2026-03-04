@@ -322,7 +322,8 @@ export class BookingService {
               status: 'checked_in', // Importante para diferenciar de una reserva futura
               check_in: new Date().toISOString(), // Hora real de entrada
               // Opcional: Si quieres actualizar notas o pagar algo al llegar
-              payment_status: formData.payment_status || 'pending'
+              payment_status: formData.payment_status || 'pending',
+              is_invoiced: formData.is_invoiced || false
             }
           }, { headers: this.adminService.getAuthHeaders() })
         );
@@ -365,11 +366,12 @@ export class BookingService {
             fields: {
               room_id: room.id,
               guest_id: guestId,
-              check_in: new Date().toISOString(), // Ahora mismo
+              check_in: new Date().toISOString(),
               check_out: formData.check_out,
               total_amount: formData.total_amount || 0,
-              status: 'checked_in', // Nace directamente en check-in
+              status: 'checked_in',
               payment_status: 'pending',
+              is_invoiced: formData.is_invoiced || false,
               id_company: 1
             }
           }, { headers: this.adminService.getAuthHeaders() })
@@ -383,8 +385,8 @@ export class BookingService {
           operation: 'update',
           id: room.id,
           fields: {
-            status: 'occupied',       // La habitación pasa a Ocupada
-            cleaning_status: 'clean'  // Asumimos que entra limpia
+            status: 'occupied',
+            cleaning_status: 'clean'
           }
         }, { headers: this.adminService.getAuthHeaders() })
       );
@@ -519,7 +521,7 @@ export class BookingService {
       if (!isFree) {
         alert('⚠️ ¡ALERTA! La habitación ya fue ocupada o reservada mientras confirmabas.\n\nEl sistema evitó crear un duplicado.');
         this.isProcessing.set(false);
-        return false; // Retornamos false para detener todo
+        return false;
       }
       // ------------------------------------------------
 
@@ -602,7 +604,7 @@ export class BookingService {
             check_in: formData.check_in,
             check_out: formData.check_out,
             total_amount: Number(formData.total_amount),
-            notes: formData.notes, // Incluimos las notas por si cambiaron
+            notes: formData.notes,
             id_company: 1
           }
         }, { headers: this.adminService.getAuthHeaders() })
@@ -695,7 +697,7 @@ export class BookingService {
           operation: 'update',
           id: bookingId,
           fields: {
-            status: 'confirmed' // Pasa de pending a confirmed
+            status: 'confirmed'
           }
         }, { headers: this.adminService.getAuthHeaders() })
       );
