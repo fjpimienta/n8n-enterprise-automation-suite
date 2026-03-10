@@ -97,14 +97,25 @@
             <div class="mb-2">
                 <label class="form-label">Notas Adicionales</label>
                 <textarea class="form-control" [(ngModel)]="guest.notes" rows="2"
-                    placeholder="Ej: : 'Llega tarde', 'Persona mayor', 'Alergias', etc."></textarea>
+                    placeholder="Ej: : 'Llega tarde', 'Persona mayor', etc."></textarea>
+            </div>
+
+            <div class="mb-3 p-2 bg-white rounded border border-primary-subtle shadow-sm">
+                <label class="form-label small fw-bold text-primary mb-1">Total a Cobrar</label>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light">$</span>
+                    <input type="number" class="form-control fw-bold font-monospace text-end" [(ngModel)]="customTotal">
+                </div>
+                <div class="form-text" style="font-size: 0.65rem;">
+                    Puede modificar este monto para aplicar descuentos o convenios.
+                </div>
             </div>
 
             @if (!reservationToEdit()) {
             <div class="form-check form-switch mb-3 bg-white p-2 rounded border">
                 <input class="form-check-input ms-0 me-2" type="checkbox" role="switch" id="multiBookingSwitch"
-                    [(ngModel)]="isMultiBooking">
-                <label class="form-check-label small fw-bold text-muted cursor-pointer" for="multiBookingSwitch">
+                    [(ngModel)]="isMultiBooking" (change)="recalculateTotal()"> <label
+                    class="form-check-label small fw-bold text-muted cursor-pointer" for="multiBookingSwitch">
                     Múltiples Habitaciones
                     <div class="fw-normal" style="font-size: 0.65rem;">Mantener huésped y fechas al guardar</div>
                 </label>
@@ -119,8 +130,7 @@
                     <span class="small">Guardando...</span>
                     } @else {
                     <span class="fw-bold">{{ reservationToEdit() ? 'Actualizar Reserva' : 'Confirmar Reserva' }}</span>
-                    <span style="font-size: 0.7rem;" class="opacity-75">Total: ${{ totalReserva() |
-                        number:'1.2-2'}}</span>
+                    <span style="font-size: 0.7rem;" class="opacity-75">Total: ${{ customTotal | number:'1.2-2'}}</span>
                     }
                 </button>
             </div>

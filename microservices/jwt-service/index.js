@@ -18,8 +18,8 @@ app.use(cors({
 
 // Limiter para la ruta de login (protege contra fuerza bruta)
 const loginLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000,
-  max: 30,
+  windowMs: 15 * 60 * 1000, // 15 minutos
+  max: 20,
   message: { error: 'Demasiados intentos de login. Intente más tarde.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -45,13 +45,16 @@ console.log("User:", process.env.n8n_user);
 console.log("database:", process.env.n8n_hosting3m_db);
 console.log(`port: ${process.env.port_db}`);
 
-// Configuración de la DB (usa tus variables de entorno)
+// Optimización del Pool de Conexiones para mitigar bloqueos en ráfagas
 const pool = new Pool({
   user: process.env.n8n_user,
   host: process.env.n8n_host,
   database: process.env.n8n_hosting3m_db,
   password: process.env.n8n_pass,
   port: process.env.port_db,
+  max: 20, // Límite máximo de conexiones simultáneas
+  idleTimeoutMillis: 30000, // Cierra conexiones inactivas después de 30s
+  connectionTimeoutMillis: 2000, // Timeout de conexión rápida (2 segundos)
 });
 
 // ENDPOINT DE GENERACIÓN

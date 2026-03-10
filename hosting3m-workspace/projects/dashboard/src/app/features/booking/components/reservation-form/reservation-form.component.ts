@@ -36,32 +36,29 @@ export class ReservationFormComponent implements OnInit, OnChanges { // 2. Agreg
   selectedRooms: Room[] = [];             // Para modo múltiple (Nuevo)
   isMultiBooking: boolean = false;        // El switch
 
-  // En el componente
-  totalReserva = computed(() => {
-    const noches = this.getNights(this.dates.start, this.dates.end);
+  customTotal: number = 0;
 
+  recalculateTotal() {
+    // Si estamos editando una reserva existente, NO sobrescribimos su precio con el cálculo base
+    if (this.reservationToEdit()) return;
+
+    const noches = this.getNights(this.dates.start, this.dates.end);
     if (this.isMultiBooking) {
-      // Suma el precio de TODAS las habitaciones seleccionadas
-      return this.selectedRooms.reduce((acc, room) => acc + (noches * room.price_night), 0);
+      this.customTotal = this.selectedRooms.reduce((acc, room) => acc + (noches * room.price_night), 0);
     } else {
-      // Solo la habitación individual
-      return noches * (this.selectedRoomForRes?.price_night || 0);
+      this.customTotal = noches * (this.selectedRoomForRes?.price_night || 0);
     }
-  });
+  }
 
   toggleRoom(room: Room) {
     if (this.isMultiBooking) {
-      // Lógica de Checkbox (Agregar/Quitar del array)
       const index = this.selectedRooms.findIndex(r => r.id === room.id);
-      if (index >= 0) {
-        this.selectedRooms.splice(index, 1); // Quitar si ya estaba
-      } else {
-        this.selectedRooms.push(room);       // Agregar si no estaba
-      }
+      if (index >= 0) this.selectedRooms.splice(index, 1); 
+      else this.selectedRooms.push(room);       
     } else {
-      // Lógica de Radio Button (Reemplazar)
       this.selectedRoomForRes = room;
     }
+    this.recalculateTotal();
   }
 
   isRoomSelected(room: Room): boolean {
@@ -96,6 +93,8 @@ export class ReservationFormComponent implements OnInit, OnChanges { // 2. Agreg
       this.guest.email = email;
       this.guest.phone = res.hotel_guests_data?.phone || res.guest_phone || '';
       this.guest.notes = res.hotel_guests_data?.notes || res.guest_notes || '';
+
+      this.customTotal = res.total_amount || 0;
 
       // Ejecutamos la búsqueda para mostrar la habitación actual como seleccionada
       this.searchRooms();
@@ -138,6 +137,7 @@ export class ReservationFormComponent implements OnInit, OnChanges { // 2. Agreg
           this.selectedRoomForRes = null;
         } else {
           this.selectedRoomForRes = this.room();
+          this.recalculateTotal();
         }
       }
 
@@ -179,7 +179,10 @@ export class ReservationFormComponent implements OnInit, OnChanges { // 2. Agreg
         // 1. Definir qué habitaciones vamos a reservar
         const roomsToBook = this.isMultiBooking ? this.selectedRooms : [this.selectedRoomForRes!];
 
-        // 2. Iterar y guardar
+        // 2. Dividir el total (por si seleccionan varias habitaciones y modifican el precio)
+        const totalPerRoom = this.customTotal / roomsToBook.length;
+
+        // 3. Iterar y guardar
         let successCount = 0;
 
         for (const room of roomsToBook) {
@@ -194,7 +197,7 @@ export class ReservationFormComponent implements OnInit, OnChanges { // 2. Agreg
             notes: this.guest.notes,
             check_in: this.dates.start,
             check_out: this.dates.end,
-            total_amount: total
+            total_amount: totalPerRoom
           };
 
           // Enviamos al servicio (esperamos a que termine cada una)
@@ -222,9 +225,10 @@ export class ReservationFormComponent implements OnInit, OnChanges { // 2. Agreg
     this.dates = { start: '', end: '' };
     this.availableRooms = [];
     this.selectedRoomForRes = null;
-    this.selectedRooms = []; // Limpiar array
+    this.selectedRooms = [];
     this.guest = { name: '', doc_id: '', phone: '', email: '', notes: '' };
     this.isMultiBooking = false;
+    this.customTotal = 0;
   }
 
   cancelEdit() {
