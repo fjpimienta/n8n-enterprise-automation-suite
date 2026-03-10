@@ -53,8 +53,8 @@ export class ReservationFormComponent implements OnInit, OnChanges { // 2. Agreg
   toggleRoom(room: Room) {
     if (this.isMultiBooking) {
       const index = this.selectedRooms.findIndex(r => r.id === room.id);
-      if (index >= 0) this.selectedRooms.splice(index, 1); 
-      else this.selectedRooms.push(room);       
+      if (index >= 0) this.selectedRooms.splice(index, 1);
+      else this.selectedRooms.push(room);
     } else {
       this.selectedRoomForRes = room;
     }
@@ -171,8 +171,22 @@ export class ReservationFormComponent implements OnInit, OnChanges { // 2. Agreg
 
     try {
       if (this.reservationToEdit()) {
-        // ... (Lógica de editar existente, solo soporta 1 a la vez por ahora) ...
-        // Puedes dejar tu código de updateReservation aquí igual que antes
+        // Extensión de Estancia / Modificación
+        const updateData = {
+          id: this.reservationToEdit().id,
+          room_id: this.reservationToEdit().room_id,
+          check_in: this.dates.start,
+          check_out: this.dates.end, // Nueva fecha extendida
+          total_amount: this.customTotal, // Nuevo monto manual
+          notes: this.guest.notes
+        };
+
+        await this.bookingService.updateReservation(updateData);
+        alert('✅ Estancia actualizada y extendida correctamente.');
+
+        this.saved.emit();
+        this.resetForm();
+        this.onClose.emit();
       } else {
         // --- NUEVA LÓGICA DE CREACIÓN ---
 
