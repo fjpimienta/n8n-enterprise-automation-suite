@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReservationFormComponent } from '../reservation-form/reservation-form.component';
 import { AdminService } from '@features/admin/services/admin.service';
@@ -12,7 +12,7 @@ import { PdfExportConfig, PdfExportService } from 'ui-pdf-export';
   imports: [CommonModule, ReservationFormComponent],
   templateUrl: './reservation-manager.component.html'
 })
-export class ReservationManagerComponent implements OnInit {
+export class ReservationManagerComponent implements OnInit, OnDestroy {
   public adminService = inject(AdminService);
   public hotelService = inject(HotelService);
   private bookingService = inject(BookingService);
@@ -21,29 +21,44 @@ export class ReservationManagerComponent implements OnInit {
   selectedIds = signal<Set<number>>(new Set());
   selectedReservation = signal<any | null>(null);
 
+  // Estados de interfaz
+  isLoading = signal(true);
+  private initCacheCleared = false;
+  private fallbackTimeout: any;
+
   currentPage = signal(1);
   itemsPerPage = 8;
 
   filteredReservations = computed(() => {
     const all = this.adminService.reservations();
     const selectedRoom = this.hotelService.selectedRoom();
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${year}-${month}-${day}`;
 
     return all
       .filter(res => {
         if (!res.check_out) return false;
 
-        const checkoutDate = new Date(res.check_out);
-        // ACEPTAMOS 'confirmed' y 'pending'
-        const matchesDate = ['confirmed', 'pending'].includes(res.status?.toLowerCase()) && checkoutDate >= today;
+        const checkoutDateStr = String(res.check_out).split(/[ T]/)[0];
+        const status = String(res.status || '').toLowerCase().trim();
+
+        const matchesDate = (status === 'checked_in') ||
+          (['confirmed', 'pending'].includes(status) && checkoutDateStr >= todayStr);
 
         if (selectedRoom) {
           return matchesDate && Number(res.room_id) === Number(selectedRoom.id);
         }
         return matchesDate;
       })
-      .sort((a, b) => new Date(a.check_in).getTime() - new Date(b.check_in).getTime());
+      .sort((a, b) => {
+        const dateA = new Date(String(a.check_in).replace(' ', 'T')).getTime();
+        const dateB = new Date(String(b.check_in).replace(' ', 'T')).getTime();
+        return (dateA || 0) - (dateB || 0);
+      });
   });
 
   paginatedReservations = computed(() => {
@@ -53,17 +68,44 @@ export class ReservationManagerComponent implements OnInit {
 
   totalPages = computed(() => Math.ceil(this.filteredReservations().length / this.itemsPerPage));
 
+  constructor() {
+    // 🧠 DETECCIÓN INTELIGENTE DE CARGA
+    effect(() => {
+      const resLength = this.adminService.reservations().length;
+
+      // 1. Detectamos el momento en que loadReservations() limpia el arreglo para refrescar
+      if (resLength === 0) {
+        this.initCacheCleared = true;
+      }
+
+      // 2. Si ya se limpió y acaba de llegar la nueva data de n8n, apagamos el spinner de inmediato.
+      if (this.initCacheCleared && resLength > 0) {
+        this.isLoading.set(false);
+        if (this.fallbackTimeout) clearTimeout(this.fallbackTimeout);
+      }
+    }, { allowSignalWrites: true });
+  }
+
   ngOnInit() {
+    this.isLoading.set(true);
+    this.initCacheCleared = false;
+
     this.adminService.loadReservations();
     if (this.bookingService.rooms().length === 0) {
       this.bookingService.loadRooms();
     }
+
+    // 3. Fallback de Seguridad: Si la base de datos realmente está en 0 y nunca llega info,
+    // quitamos el spinner a los 2.5 segundos para mostrar el estado vacío permanentemente.
+    this.fallbackTimeout = setTimeout(() => {
+      this.isLoading.set(false);
+    }, 2500);
   }
 
   ngOnDestroy() {
     this.clearFilters();
+    if (this.fallbackTimeout) clearTimeout(this.fallbackTimeout);
   }
-
 
   getRoomNumber(id: number): string {
     const found = this.bookingService.rooms().find((r: any) => r.id === id);
@@ -99,7 +141,6 @@ export class ReservationManagerComponent implements OnInit {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // 1. Marcar/Desmarcar una sola fila
   toggleSelection(id: number, event: any) {
     const current = new Set(this.selectedIds());
     if (event.target.checked) current.add(id);
@@ -107,7 +148,6 @@ export class ReservationManagerComponent implements OnInit {
     this.selectedIds.set(current);
   }
 
-  // 2. Marcar/Desmarcar TODAS las visibles
   toggleAll(event: any) {
     const current = new Set(this.selectedIds());
     const visibleItems = this.paginatedReservations();
@@ -120,7 +160,6 @@ export class ReservationManagerComponent implements OnInit {
     this.selectedIds.set(current);
   }
 
-  // 3. Verificar si todo está seleccionado (para el checkbox maestro)
   isAllSelected(): boolean {
     const visibleItems = this.paginatedReservations();
     if (visibleItems.length === 0) return false;
@@ -134,32 +173,18 @@ export class ReservationManagerComponent implements OnInit {
       return;
     }
 
-    // 1. Filtrar reservas
     const rawReservations = this.adminService.reservations().filter(r => ids.has(r.id));
-
-    // 2. Mapear (Usando el helper que ya tienes o agregaremos abajo)
     const reportItems = this.mapToPdfItems(rawReservations);
-
-    // 3. Obtener nombre cliente
     const clientName = rawReservations[0]?.hotel_guests_data?.full_name || 'Cliente Mostrador';
 
-    // 4. CONFIGURACIÓN COMPLETA (Esto corrige el error de Type '{}')
     const pdfConfig: PdfExportConfig = {
       fileName: `Cotizacion_${clientName}`,
       title: 'PRESUPUESTO DE HOSPEDAJE',
-
-      // Datos de TU Hotel (Emisor)
       companyName: 'Hotel San José',
       companyAddress: 'Av. Juarez s/n, Centro, Catazajá, Chiapas',
-
-      // Datos del Cliente
       clientName: clientName,
       clientSubtitle: 'Estancia Solicitada',
-
-      // Los ítems procesados
       items: reportItems,
-
-      // Opcionales (puedes omitirlos si quieres, pero pon el objeto completo si los declaras)
       footerTitle: 'Forma de Pago',
       footerText: [
         'Transferencia a nombre de: Diana Perez Pimienta | RFC: PEED8001019A1',
@@ -167,20 +192,16 @@ export class ReservationManagerComponent implements OnInit {
       ]
     };
 
-    // 5. Generar
     this.pdfService.generate(pdfConfig);
   }
 
-  // --- HELPER DE MAPEO NECESARIO ---
-  // (Asegúrate de tener este método en tu clase también)
-  private mapToPdfItems(reservations: any[]): any[] { // Usa 'any[]' temporalmente si PdfExportItem no se importa bien, o impórtalo.
+  private mapToPdfItems(reservations: any[]): any[] {
     const groups: any = {};
 
     reservations.forEach(res => {
       const room = this.bookingService.rooms().find(r => r.id === res.room_id);
       const type = room?.type || 'Estándar';
 
-      // Calculo de noches
       const s = new Date(res.check_in).getTime();
       const e = new Date(res.check_out).getTime();
       let nights = Math.ceil((e - s) / (1000 * 3600 * 24));
@@ -205,7 +226,6 @@ export class ReservationManagerComponent implements OnInit {
     return Object.values(groups);
   }
 
-  // --- NUEVO MÉTODO PARA LIMPIAR EL FILTRO ---
   clearFilters() {
     this.selectedReservation.set(null);
     this.hotelService.selectRoom(null as any);
@@ -227,7 +247,6 @@ export class ReservationManagerComponent implements OnInit {
   async confirmReservation(reservation: any) {
     const guestName = reservation.hotel_guests_data?.full_name || reservation.guest_name || 'este huésped';
 
-    // Alerta de Negocio PMP: Validación estricta antes del cambio de estado
     const confirm = window.confirm(
       `🔔 ATENCIÓN: Aprobación de Reserva Web\n\n` +
       `Huésped: ${guestName}\n` +
@@ -240,17 +259,11 @@ export class ReservationManagerComponent implements OnInit {
 
     try {
       await this.bookingService.confirmPendingReservation(reservation.id);
-
-      // Opcional: Si confirmas, asumimos que pagó el anticipo. 
-      // Podrías descomentar esta línea si quieres que al confirmar también pase el status a pagado:
-      // await this.bookingService.registerPayment(reservation.id);
-
       alert('✅ Reserva web confirmada exitosamente en el calendario.');
-      this.adminService.loadReservations(); // Recarga la tabla
-      this.bookingService.loadRooms(); // Recarga el semáforo del rack
+      this.adminService.loadReservations();
+      this.bookingService.loadRooms();
     } catch (error) {
       alert('❌ Error al confirmar la reserva.');
     }
   }
-
 }
