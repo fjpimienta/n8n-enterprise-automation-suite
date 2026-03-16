@@ -20,7 +20,6 @@
   <div class="container-xl">
 
     <div class="row row-cards mb-4">
-
       <div class="d-flex justify-content-center justify-content-md-start mb-3 d-print-none">
         <div class="btn-group shadow-sm" role="group">
           <button type="button" class="btn px-3" [class.btn-primary]="currentFilter() === 'day'"
@@ -42,7 +41,6 @@
       </div>
 
       <div class="row g-3 mb-4 animate__animated animate__fadeIn d-print-none">
-
         <div class="col-12 col-md-6">
           <div class="p-3 bg-surface border rounded-3 shadow-sm h-100">
             <div class="text-success fw-bold text-uppercase mb-2" style="font-size: 0.75rem;">
@@ -52,7 +50,7 @@
               <div class="col-12 col-sm-4">
                 <label class="form-label small text-muted mb-1" style="font-size: 0.7rem;">Habitación</label>
                 <select class="form-select form-select-sm" [ngModel]="incomeRoomFilter()"
-                  (ngModelChange)="incomeRoomFilter.set($event)">
+                  (ngModelChange)="onIncomeRoomFilterChange($event)">
                   <option value="Todos">Todas</option>
                   @for(room of bookingService.rooms(); track room.id) {
                   <option [value]="room.id">Hab. {{room.room_number}}</option>
@@ -62,7 +60,7 @@
               <div class="col-12 col-sm-4">
                 <label class="form-label small text-muted mb-1" style="font-size: 0.7rem;">Estado</label>
                 <select class="form-select form-select-sm" [ngModel]="incomeStatusFilter()"
-                  (ngModelChange)="incomeStatusFilter.set($event)">
+                  (ngModelChange)="onIncomeStatusFilterChange($event)">
                   <option value="Todos">Todos</option>
                   <option value="Pagado">Pagados</option>
                   <option value="Pendiente">Pendientes</option>
@@ -72,7 +70,7 @@
               <div class="col-12 col-sm-4">
                 <label class="form-label small text-muted mb-1" style="font-size: 0.7rem;">Facturación</label>
                 <select class="form-select form-select-sm" [ngModel]="incomeBillingFilter()"
-                  (ngModelChange)="incomeBillingFilter.set($event)">
+                  (ngModelChange)="onIncomeBillingFilterChange($event)">
                   <option value="Todos">Todos</option>
                   <option value="Facturado">Facturados</option>
                   <option value="No Facturado">No Facturados</option>
@@ -91,7 +89,7 @@
               <div class="col-12 col-sm-4">
                 <label class="form-label small text-muted mb-1" style="font-size: 0.7rem;">Categoría</label>
                 <select class="form-select form-select-sm" [ngModel]="expenseCategoryFilter()"
-                  (ngModelChange)="expenseCategoryFilter.set($event)">
+                  (ngModelChange)="onExpenseCategoryFilterChange($event)">
                   @for(cat of expenseCategories(); track cat) {
                   <option [value]="cat">{{cat}}</option>
                   }
@@ -100,7 +98,7 @@
               <div class="col-12 col-sm-4">
                 <label class="form-label small text-muted mb-1" style="font-size: 0.7rem;">Método Pago</label>
                 <select class="form-select form-select-sm" [ngModel]="expensePaymentFilter()"
-                  (ngModelChange)="expensePaymentFilter.set($event)">
+                  (ngModelChange)="onExpensePaymentFilterChange($event)">
                   <option value="Todos">Todos</option>
                   <option value="Efectivo">Efectivo</option>
                   <option value="Transferencia">Transf.</option>
@@ -116,6 +114,7 @@
           </div>
         </div>
       </div>
+
       @if (currentFilter() === 'custom') {
       <div class="d-flex justify-content-center justify-content-md-start mb-4 animate__animated animate__fadeIn">
         <div class="d-flex flex-wrap gap-3 p-3 bg-surface border rounded-3 shadow-sm align-items-end">
@@ -143,9 +142,6 @@
               role="status"></div>
           </div>
           <p class="empty-title fw-bold mt-4" style="font-size: 1.1rem;">Sincronizando libros contables...</p>
-          <p class="empty-subtitle text-muted fs-3 px-md-5">
-            Consultando la base de datos encriptada. Por favor espera.
-          </p>
         </div>
       </div>
       } @else {
@@ -160,7 +156,6 @@
           </div>
         </div>
       </div>
-
       <div class="col-sm-6 col-lg-3">
         <div class="card card-sm border-0 shadow-sm p-3 bg-danger-lt">
           <div class="d-flex align-items-center">
@@ -172,7 +167,6 @@
           </div>
         </div>
       </div>
-
       <div class="col-sm-6 col-lg-3">
         <div class="card card-sm border-0 shadow-sm p-3 bg-primary-lt">
           <div class="d-flex align-items-center">
@@ -184,7 +178,6 @@
           </div>
         </div>
       </div>
-
       <div class="col-sm-6 col-lg-3">
         <div class="card card-sm border-0 shadow-sm p-3 bg-warning-lt">
           <div class="d-flex align-items-center">
@@ -200,8 +193,8 @@
     </div>
 
     <div class="card shadow-sm border-0">
-      <div class="card-header">
-        <ul class="nav nav-tabs card-header-tabs">
+      <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <ul class="nav nav-tabs card-header-tabs mb-0">
           <li class="nav-item">
             <button class="nav-link fw-bold" [class.active]="activeTab() === 'ingresos'"
               (click)="activeTab.set('ingresos')">
@@ -215,9 +208,34 @@
             </button>
           </li>
         </ul>
+
+        <div class="d-flex align-items-center gap-2 bg-transparent px-3 py-1 rounded border opacity-75">
+          <i class="ti ti-layers-linked text-muted"></i>
+          <span class="small fw-bold text-muted text-uppercase" style="font-size: 0.7rem;">Agrupar por:</span>
+
+          @if (activeTab() === 'ingresos') {
+          <select class="form-select form-select-sm border-0 bg-transparent fw-bold"
+            style="width: auto; color-scheme: light dark;" [ngModel]="incomeGroup()"
+            (ngModelChange)="incomeGroup.set($event)">
+            <option value="none">➖ Sin Agrupar</option>
+            <option value="room" [disabled]="incomeRoomFilter() !== 'Todos'">🛏️ Habitación</option>
+            <option value="status" [disabled]="incomeStatusFilter() !== 'Todos'">🚦 Estado</option>
+            <option value="billing" [disabled]="incomeBillingFilter() !== 'Todos'">🧾 Facturación</option>
+          </select>
+          } @else {
+          <select class="form-select form-select-sm border-0 bg-transparent fw-bold"
+            style="width: auto; color-scheme: light dark;" [ngModel]="expenseGroup()"
+            (ngModelChange)="expenseGroup.set($event)">
+            <option value="none">➖ Sin Agrupar</option>
+            <option value="category" [disabled]="expenseCategoryFilter() !== 'Todas'">📁 Categoría</option>
+            <option value="payment" [disabled]="expensePaymentFilter() !== 'Todos'">💳 Método de Pago</option>
+          </select>
+          }
+        </div>
       </div>
 
       <div class="card-body p-0">
+
         <div *ngIf="activeTab() === 'ingresos'" class="table-responsive animate__animated animate__fadeIn">
           <table class="table table-vcenter table-mobile-md card-table">
             <thead>
@@ -230,34 +248,49 @@
               </tr>
             </thead>
             <tbody>
+              @if (incomeGroup() === 'none') {
               @for (t of reportData().transactions; track t.id) {
               <tr>
                 <td>{{ t.check_in | date:'dd/MM HH:mm' }}</td>
                 <td>
                   <div class="fw-bold">Hab. {{ getRoomNumber(t.room_id) }}</div>
-                  <div class="mt-1">
-                    <span class="badge" [ngClass]="getRoomStatus(t.room_id).badge" style="font-size: 0.65rem;">
-                      {{ getRoomStatus(t.room_id).text }}
-                    </span>
-                  </div>
+                  <div class="mt-1"><span class="badge" [ngClass]="getRoomStatus(t.room_id).badge"
+                      style="font-size: 0.65rem;">{{ getRoomStatus(t.room_id).text }}</span></div>
                 </td>
                 <td class="text-muted">{{ getNights(t.check_in, t.check_out) }} noches</td>
                 <td>
-                  @if (t.status === 'cancelled') {
-                  <span class="badge bg-danger-lt">CANCELADO</span>
-                  } @else {
-                  <span class="badge" [class.bg-success-lt]="t.payment_status === 'paid'"
-                    [class.bg-warning-lt]="t.payment_status !== 'paid'">
-                    {{ t.payment_status === 'paid' ? 'PAGADO' : 'PENDIENTE' }}
-                  </span>
-                  }
+                  @if (t.status === 'cancelled') { <span class="badge bg-danger-lt">CANCELADO</span> }
+                  @else { <span class="badge" [class.bg-success-lt]="t.payment_status === 'paid'"
+                    [class.bg-warning-lt]="t.payment_status !== 'paid'">{{ t.payment_status === 'paid' ? 'PAGADO' :
+                    'PENDIENTE' }}</span> }
                 </td>
                 <td class="text-end fw-bold font-monospace">${{ t.total_amount | number:'1.2-2' }}</td>
               </tr>
-              } @empty {
-              <tr>
-                <td colspan="5" class="text-center p-4">No hay ingresos que coincidan con estos filtros.</td>
+              } @empty { <tr>
+                <td colspan="5" class="text-center p-4">No hay ingresos.</td>
+              </tr> }
+              } @else {
+              @for (group of groupedIncome(); track group.key) {
+              <tr class="table-active">
+                <td colspan="4" class="fw-bold text-uppercase text-primary"><i class="ti ti-folder me-2"></i> {{
+                  group.label }}</td>
+                <td class="text-end fw-bold text-success fs-3">${{ group.total | number:'1.2-2' }}</td>
               </tr>
+              @for (t of group.items; track t.id) {
+              <tr>
+                <td class="ps-4">{{ t.check_in | date:'dd/MM HH:mm' }}</td>
+                <td>Hab. {{ getRoomNumber(t.room_id) }}</td>
+                <td class="text-muted">{{ getNights(t.check_in, t.check_out) }} noches</td>
+                <td>
+                  @if (t.status === 'cancelled') { <span class="badge bg-danger-lt">CANCELADO</span> }
+                  @else { <span class="badge" [class.bg-success-lt]="t.payment_status === 'paid'"
+                    [class.bg-warning-lt]="t.payment_status !== 'paid'">{{ t.payment_status === 'paid' ? 'PAGADO' :
+                    'PENDIENTE' }}</span> }
+                </td>
+                <td class="text-end font-monospace text-muted">${{ t.total_amount | number:'1.2-2' }}</td>
+              </tr>
+              }
+              }
               }
             </tbody>
           </table>
@@ -275,6 +308,7 @@
               </tr>
             </thead>
             <tbody>
+              @if (expenseGroup() === 'none') {
               @for (ex of reportData().expenseTransactions; track ex.id) {
               <tr>
                 <td>{{ ex.expense_date | date:'dd/MM HH:mm' }}</td>
@@ -286,10 +320,29 @@
                 <td>{{ ex.registered_by_name }}</td>
                 <td class="text-end fw-bold text-danger font-monospace">-${{ ex.amount | number:'1.2-2' }}</td>
               </tr>
-              } @empty {
-              <tr>
-                <td colspan="5" class="text-center p-4">No hay gastos que coincidan con estos filtros.</td>
+              } @empty { <tr>
+                <td colspan="5" class="text-center p-4">No hay gastos.</td>
+              </tr> }
+              } @else {
+              @for (group of groupedExpenses(); track group.key) {
+              <tr class="table-active">
+                <td colspan="4" class="fw-bold text-uppercase text-danger"><i class="ti ti-folder me-2"></i> {{
+                  group.label }}</td>
+                <td class="text-end fw-bold text-danger fs-3">-${{ group.total | number:'1.2-2' }}</td>
               </tr>
+              @for (ex of group.items; track ex.id) {
+              <tr>
+                <td class="ps-4">{{ ex.expense_date | date:'dd/MM HH:mm' }}</td>
+                <td>
+                  <div class="fw-bold">{{ ex.description }}</div>
+                  <div class="small text-muted">{{ ex.payment_method }}</div>
+                </td>
+                <td><span class="badge bg-secondary-lt">{{ ex.category }}</span></td>
+                <td>{{ ex.registered_by_name }}</td>
+                <td class="text-end font-monospace text-muted">-${{ ex.amount | number:'1.2-2' }}</td>
+              </tr>
+              }
+              }
               }
             </tbody>
           </table>
