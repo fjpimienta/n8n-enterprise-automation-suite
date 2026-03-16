@@ -27,6 +27,7 @@ export class DailyReportModalComponent implements OnInit {
   customEndDate = signal<string>('');
   activeTab = signal<'ingresos' | 'gastos'>('ingresos');
 
+  // FILTROS AVANZADOS
   incomeBillingFilter = signal<'Todos' | 'Facturado' | 'No Facturado'>('Todos');
   incomeRoomFilter = signal<string>('Todos');
   incomeStatusFilter = signal<string>('Todos');
@@ -34,6 +35,32 @@ export class DailyReportModalComponent implements OnInit {
   expensePaymentFilter = signal<'Todos' | 'Efectivo' | 'Transferencia' | 'Tarjeta Corp'>('Todos');
   expenseConceptFilter = signal<string>('');
   expenseCategoryFilter = signal<string>('Todas');
+
+  // NUEVOS ESTADOS DE AGRUPACIÓN (BI)
+  incomeGroup = signal<'none' | 'room' | 'status' | 'billing'>('none');
+  expenseGroup = signal<'none' | 'category' | 'payment'>('none');
+
+  // --- INTERCEPTORES DE FILTROS PARA BLOQUEO INTELIGENTE (Corregidos TS2345) ---
+  onIncomeRoomFilterChange(val: string) {
+    this.incomeRoomFilter.set(val);
+    if (val !== 'Todos' && this.incomeGroup() === 'room') this.incomeGroup.set('none');
+  }
+  onIncomeStatusFilterChange(val: string) {
+    this.incomeStatusFilter.set(val);
+    if (val !== 'Todos' && this.incomeGroup() === 'status') this.incomeGroup.set('none');
+  }
+  onIncomeBillingFilterChange(val: 'Todos' | 'Facturado' | 'No Facturado' | any) {
+    this.incomeBillingFilter.set(val);
+    if (val !== 'Todos' && this.incomeGroup() === 'billing') this.incomeGroup.set('none');
+  }
+  onExpenseCategoryFilterChange(val: string) {
+    this.expenseCategoryFilter.set(val);
+    if (val !== 'Todas' && this.expenseGroup() === 'category') this.expenseGroup.set('none');
+  }
+  onExpensePaymentFilterChange(val: 'Todos' | 'Efectivo' | 'Transferencia' | 'Tarjeta Corp' | any) {
+    this.expensePaymentFilter.set(val);
+    if (val !== 'Todos' && this.expenseGroup() === 'payment') this.expenseGroup.set('none');
+  }
 
   roomNumberMap = computed(() => {
     const map = new Map<number, string>();
@@ -71,7 +98,6 @@ export class DailyReportModalComponent implements OnInit {
   }
 
   reportData = computed(() => {
-    // 🚨 ATENCIÓN: Ya no filtramos las canceladas aquí para que el usuario pueda verlas si aplica el filtro de "Cancelado".
     return this.reportService.calculateDailyReport(
       this.rawBookings(),
       this.rawExpenses(),
@@ -87,16 +113,79 @@ export class DailyReportModalComponent implements OnInit {
     );
   });
 
+  // MOTOR DE AGRUPACIÓN DE INGRESOS (Corregido TS18004 Scope)
+  groupedIncome = computed(() => {
+    const groupType = this.incomeGroup();
+    const transactions = this.reportData().transactions;
+    if (groupType === 'none') return [];
+
+    // Guardamos un objeto completo en el Map para no perder el 'label'
+    const groupsMap = new Map<string, { label: string, items: any[] }>();
+
+    transactions.forEach(t => {
+      let key = 'Otros', label = 'Otros';
+
+      if (groupType === 'room') {
+        key = String(t.room_id);
+        label = `Habitación ${this.getRoomNumber(t.room_id)}`;
+      } else if (groupType === 'status') {
+        key = t.status === 'cancelled' ? 'Cancelado' : (t.payment_status === 'paid' ? 'Pagado' : 'Pendiente');
+        label = `Estado: ${key}`;
+      } else if (groupType === 'billing') {
+        key = t.is_invoiced ? 'Facturado' : 'No Facturado';
+        label = `Facturación: ${key}`;
+      }
+
+      if (!groupsMap.has(key)) groupsMap.set(key, { label, items: [] });
+      groupsMap.get(key)!.items.push(t);
+    });
+
+    return Array.from(groupsMap.entries()).map(([key, group]) => ({
+      key,
+      label: group.label,
+      items: group.items,
+      total: group.items.reduce((sum, i) => sum + (Number(i.total_amount) || 0), 0)
+    })).sort((a, b) => a.label.localeCompare(b.label));
+  });
+
+  // 🧠 MOTOR DE AGRUPACIÓN DE GASTOS (Corregido TS18004 Scope)
+  groupedExpenses = computed(() => {
+    const groupType = this.expenseGroup();
+    const transactions = this.reportData().expenseTransactions;
+    if (groupType === 'none') return [];
+
+    const groupsMap = new Map<string, { label: string, items: any[] }>();
+
+    transactions.forEach(ex => {
+      let key = 'Otros', label = 'Otros';
+
+      if (groupType === 'category') {
+        key = ex.category || 'Operativo';
+        label = `Categoría: ${key}`;
+      } else if (groupType === 'payment') {
+        key = ex.payment_method || 'N/A';
+        label = `Método de Pago: ${key}`;
+      }
+
+      if (!groupsMap.has(key)) groupsMap.set(key, { label, items: [] });
+      groupsMap.get(key)!.items.push(ex);
+    });
+
+    return Array.from(groupsMap.entries()).map(([key, group]) => ({
+      key,
+      label: group.label,
+      items: group.items,
+      total: group.items.reduce((sum, i) => sum + (Number(i.amount) || 0), 0)
+    })).sort((a, b) => b.total - a.total);
+  });
+
   ngOnInit() {
-    if (this.bookingService.rooms().length === 0) {
-      this.bookingService.loadRooms();
-    }
+    if (this.bookingService.rooms().length === 0) this.bookingService.loadRooms();
     this.loadData();
   }
 
   async loadData() {
     this.isLoading.set(true);
-    const startTime = performance.now();
     try {
       const dates = this.reportService.getPeriodDates(this.currentFilter(), this.customStartDate(), this.customEndDate());
       const [bookings, expenses] = await Promise.all([
@@ -122,9 +211,7 @@ export class DailyReportModalComponent implements OnInit {
   }
 
   onCustomDateChange() {
-    if (this.customStartDate() && this.customEndDate()) {
-      this.loadData();
-    }
+    if (this.customStartDate() && this.customEndDate()) this.loadData();
   }
 
   getNights(checkIn: string, checkOut: string): number {
@@ -148,65 +235,75 @@ export class DailyReportModalComponent implements OnInit {
   printReport() {
     const stats = this.reportData();
     const period = this.getPeriodLabel();
-
-    // Subtítulo dinámico para PDF
-    const roomStr = this.incomeRoomFilter() === 'Todos' ? 'Todas' : this.getRoomNumber(this.incomeRoomFilter());
-    const activeIncomeFilter = `Hab: ${roomStr} | Est: ${this.incomeStatusFilter()} | Fact: ${this.incomeBillingFilter()}`;
-    const activeExpenseFilter = `Cat: ${this.expenseCategoryFilter()} | Pago: ${this.expensePaymentFilter()}`;
-
     let reportItems: any[] = [];
 
-    stats.transactions.forEach((t: any) => {
-      let state = t.payment_status === 'paid' ? 'PAGADO' : 'PENDIENTE';
-      if (t.status === 'cancelled') state = 'CANCELADO';
-
-      reportItems.push({
-        concept: `[INGRESO] Hab. ${this.getRoomNumber(t.room_id)}`,
-        description: `Ingreso: ${new Date(t.check_in).toLocaleDateString()} | Estado: ${state}`,
-        quantity: 1,
-        unitPrice: Number(t.total_amount) || 0,
-        total: Number(t.total_amount) || 0
+    // --- INGRESOS (Planos o Agrupados) ---
+    if (this.incomeGroup() === 'none') {
+      stats.transactions.forEach((t: any) => {
+        let state = t.payment_status === 'paid' ? 'PAGADO' : 'PENDIENTE';
+        if (t.status === 'cancelled') state = 'CANCELADO';
+        reportItems.push({
+          concept: `[INGRESO] Hab. ${this.getRoomNumber(t.room_id)}`,
+          description: `Ingreso: ${new Date(t.check_in).toLocaleDateString()} | Estado: ${state}`,
+          quantity: 1, unitPrice: Number(t.total_amount) || 0, total: Number(t.total_amount) || 0
+        });
       });
-    });
-
-    stats.expenseTransactions.forEach((ex: any) => {
-      reportItems.push({
-        concept: `[GASTO] ${ex.category || 'Operativo'}`,
-        description: `${ex.description} | Método: ${ex.payment_method} | Resp: ${ex.registered_by_name}`,
-        quantity: 1,
-        unitPrice: -(Number(ex.amount) || 0),
-        total: -(Number(ex.amount) || 0)
+    } else {
+      this.groupedIncome().forEach(g => {
+        reportItems.push({ concept: `📁 [GRUPO] ${g.label.toUpperCase()}`, description: `--- SUBTOTAL DEL GRUPO ---`, quantity: '', unitPrice: '', total: g.total });
+        g.items.forEach((t: any) => {
+          let state = t.payment_status === 'paid' ? 'PAGADO' : 'PENDIENTE';
+          if (t.status === 'cancelled') state = 'CANCELADO';
+          reportItems.push({
+            concept: `   ↳ Hab. ${this.getRoomNumber(t.room_id)}`,
+            description: `Ingreso: ${new Date(t.check_in).toLocaleDateString()} | Estado: ${state}`,
+            quantity: 1, unitPrice: Number(t.total_amount) || 0, total: Number(t.total_amount) || 0
+          });
+        });
       });
-    });
-
-    if (reportItems.length === 0) {
-      alert('No hay ingresos ni gastos en este periodo con los filtros actuales.');
-      return;
     }
 
-    const subtitle = `Filtros -> Ingresos: [${activeIncomeFilter}] | Gastos: [${activeExpenseFilter}]`;
+    // --- GASTOS (Planos o Agrupados) ---
+    if (this.expenseGroup() === 'none') {
+      stats.expenseTransactions.forEach((ex: any) => {
+        reportItems.push({
+          concept: `[GASTO] ${ex.category || 'Operativo'}`,
+          description: `${ex.description} | Método: ${ex.payment_method} | Resp: ${ex.registered_by_name}`,
+          quantity: 1, unitPrice: -(Number(ex.amount) || 0), total: -(Number(ex.amount) || 0)
+        });
+      });
+    } else {
+      this.groupedExpenses().forEach(g => {
+        reportItems.push({ concept: `📁 [GRUPO] ${g.label.toUpperCase()}`, description: `--- SUBTOTAL DEL GRUPO ---`, quantity: '', unitPrice: '', total: -(g.total) });
+        g.items.forEach((ex: any) => {
+          reportItems.push({
+            concept: `   ↳ ${ex.category || 'Operativo'}`,
+            description: `${ex.description} | Método: ${ex.payment_method}`,
+            quantity: 1, unitPrice: -(Number(ex.amount) || 0), total: -(Number(ex.amount) || 0)
+          });
+        });
+      });
+    }
+
+    if (reportItems.length === 0) return alert('No hay información en este periodo con los filtros actuales.');
 
     const pdfConfig: PdfExportConfig = {
-      fileName: `Corte_Caja_Global_${period.replace(/ /g, '_')}`,
+      fileName: `Corte_Caja_${period.replace(/ /g, '_')}`,
       title: `CORTE DE CAJA UNIFICADO - ${period.toUpperCase()}`,
       companyName: 'Hotel San José',
       companyAddress: 'Av. Juarez s/n, Centro, Catazajá, Chiapas',
-      clientName: 'Reporte Financiero Interno',
-      clientSubtitle: subtitle,
-      items: reportItems,
-      showTaxes: false,
-      showTotals: false,
-      showValidity: false,
-      footerTitle: 'Resumen Global del Periodo',
+      clientName: 'Reporte Financiero',
+      clientSubtitle: `Filtros: Hab:${this.incomeRoomFilter()} / Est:${this.incomeStatusFilter()} / Cat:${this.expenseCategoryFilter()} / Pago:${this.expensePaymentFilter()}`,
+      items: reportItems, showTaxes: false, showTotals: false, showValidity: false,
+      footerTitle: 'Resumen Global',
       footerText: [
-        `Ingresos Totales Cobrados: $${stats.paid_in.toFixed(2)}`,
-        `Ingresos Pendientes (No cobrados): $${stats.pending.toFixed(2)}`,
-        `Gastos Operativos Totales: $${stats.total_expenses.toFixed(2)}`,
+        `Ingresos Cobrados: $${stats.paid_in.toFixed(2)}`,
+        `Ingresos Pendientes: $${stats.pending.toFixed(2)}`,
+        `Gastos Totales: $${stats.total_expenses.toFixed(2)}`,
         `==================================`,
-        `UTILIDAD NETA DEL PERIODO: $${stats.balance.toFixed(2)}`
+        `UTILIDAD NETA: $${stats.balance.toFixed(2)}`
       ]
     };
-
     this.pdfService.generate(pdfConfig);
   }
 }
