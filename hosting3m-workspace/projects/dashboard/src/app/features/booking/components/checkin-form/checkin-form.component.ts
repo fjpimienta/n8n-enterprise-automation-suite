@@ -52,6 +52,11 @@ export class CheckinFormComponent implements OnInit {
       this.cdr.detectChanges();
     });
 
+    this.checkinForm.get('is_invoiced')?.valueChanges.subscribe(() => {
+      this.calculateStandardPrice();
+      this.cdr.detectChanges();
+    });
+
     let passedRes = this.reservation();
     const currentRoom = this.room();
 
@@ -86,7 +91,6 @@ export class CheckinFormComponent implements OnInit {
   }
 
   // --- LÓGICA CORE ---
-
   calculateStandardPrice() {
     const roomData = this.room();
     const checkOutDate = this.checkinForm.get('check_out')?.value;
@@ -105,7 +109,11 @@ export class CheckinFormComponent implements OnInit {
       const diffTime = end.getTime() - start.getTime();
       this.daysCount = Math.max(1, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
 
-      this.standardPrice = this.daysCount * (roomData.price_night || 0);
+      const basePrice = this.daysCount * (roomData.price_night || 0);
+      const wantsInvoice = this.checkinForm.get('is_invoiced')?.value;
+
+      // Si quiere factura, sumamos 16% IVA + 2% ISH (Multiplicar por 1.18)
+      this.standardPrice = wantsInvoice ? (basePrice * 1.18) : basePrice;
 
       const currentTotal = this.checkinForm.get('total_amount')?.value;
       if (!res || currentTotal === 0 || currentTotal === null) {
