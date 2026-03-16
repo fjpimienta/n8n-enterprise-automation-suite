@@ -216,7 +216,7 @@
           @if (activeTab() === 'ingresos') {
           <select class="form-select form-select-sm border-0 bg-transparent fw-bold"
             style="width: auto; color-scheme: light dark;" [ngModel]="incomeGroup()"
-            (ngModelChange)="incomeGroup.set($event)">
+            (ngModelChange)="onIncomeGroupChange($event)">
             <option value="none">➖ Sin Agrupar</option>
             <option value="room" [disabled]="incomeRoomFilter() !== 'Todos'">🛏️ Habitación</option>
             <option value="status" [disabled]="incomeStatusFilter() !== 'Todos'">🚦 Estado</option>
@@ -225,7 +225,7 @@
           } @else {
           <select class="form-select form-select-sm border-0 bg-transparent fw-bold"
             style="width: auto; color-scheme: light dark;" [ngModel]="expenseGroup()"
-            (ngModelChange)="expenseGroup.set($event)">
+            (ngModelChange)="onExpenseGroupChange($event)">
             <option value="none">➖ Sin Agrupar</option>
             <option value="category" [disabled]="expenseCategoryFilter() !== 'Todas'">📁 Categoría</option>
             <option value="payment" [disabled]="expensePaymentFilter() !== 'Todos'">💳 Método de Pago</option>
@@ -266,19 +266,32 @@
                 </td>
                 <td class="text-end fw-bold font-monospace">${{ t.total_amount | number:'1.2-2' }}</td>
               </tr>
-              } @empty { <tr>
+              } @empty {
+              <tr>
                 <td colspan="5" class="text-center p-4">No hay ingresos.</td>
-              </tr> }
+              </tr>
+              }
               } @else {
               @for (group of groupedIncome(); track group.key) {
-              <tr class="table-active">
-                <td colspan="4" class="fw-bold text-uppercase text-primary"><i class="ti ti-folder me-2"></i> {{
-                  group.label }}</td>
-                <td class="text-end fw-bold text-success fs-3">${{ group.total | number:'1.2-2' }}</td>
+              <tr class="table-active" style="cursor: pointer;" (click)="toggleIncomeGroup(group.key)">
+                <td colspan="4" class="fw-bold text-uppercase text-primary">
+                  <i class="ti me-1" [class.ti-folder-open]="expandedIncomeGroups().has(group.key)"
+                    [class.ti-folder]="!expandedIncomeGroups().has(group.key)"></i>
+                  {{ group.label }}
+                  <span class="text-muted small ms-2 text-lowercase">({{ group.items.length }} registros)</span>
+                </td>
+                <td class="text-end fw-bold text-success fs-3">
+                  ${{ group.total | number:'1.2-2' }}
+                  <i class="ti ms-2 text-muted" [class.ti-chevron-down]="expandedIncomeGroups().has(group.key)"
+                    [class.ti-chevron-right]="!expandedIncomeGroups().has(group.key)"></i>
+                </td>
               </tr>
+
+              @if (expandedIncomeGroups().has(group.key)) {
               @for (t of group.items; track t.id) {
               <tr>
-                <td class="ps-4">{{ t.check_in | date:'dd/MM HH:mm' }}</td>
+                <td class="ps-5 text-muted"><i class="ti ti-corner-down-right me-2"></i> {{ t.check_in | date:'dd/MM
+                  HH:mm' }}</td>
                 <td>Hab. {{ getRoomNumber(t.room_id) }}</td>
                 <td class="text-muted">{{ getNights(t.check_in, t.check_out) }} noches</td>
                 <td>
@@ -289,6 +302,7 @@
                 </td>
                 <td class="text-end font-monospace text-muted">${{ t.total_amount | number:'1.2-2' }}</td>
               </tr>
+              }
               }
               }
               }
@@ -320,19 +334,32 @@
                 <td>{{ ex.registered_by_name }}</td>
                 <td class="text-end fw-bold text-danger font-monospace">-${{ ex.amount | number:'1.2-2' }}</td>
               </tr>
-              } @empty { <tr>
+              } @empty {
+              <tr>
                 <td colspan="5" class="text-center p-4">No hay gastos.</td>
-              </tr> }
+              </tr>
+              }
               } @else {
               @for (group of groupedExpenses(); track group.key) {
-              <tr class="table-active">
-                <td colspan="4" class="fw-bold text-uppercase text-danger"><i class="ti ti-folder me-2"></i> {{
-                  group.label }}</td>
-                <td class="text-end fw-bold text-danger fs-3">-${{ group.total | number:'1.2-2' }}</td>
+              <tr class="table-active" style="cursor: pointer;" (click)="toggleExpenseGroup(group.key)">
+                <td colspan="4" class="fw-bold text-uppercase text-danger">
+                  <i class="ti me-1" [class.ti-folder-open]="expandedExpenseGroups().has(group.key)"
+                    [class.ti-folder]="!expandedExpenseGroups().has(group.key)"></i>
+                  {{ group.label }}
+                  <span class="text-muted small ms-2 text-lowercase">({{ group.items.length }} registros)</span>
+                </td>
+                <td class="text-end fw-bold text-danger fs-3">
+                  -${{ group.total | number:'1.2-2' }}
+                  <i class="ti ms-2 text-muted" [class.ti-chevron-down]="expandedExpenseGroups().has(group.key)"
+                    [class.ti-chevron-right]="!expandedExpenseGroups().has(group.key)"></i>
+                </td>
               </tr>
+
+              @if (expandedExpenseGroups().has(group.key)) {
               @for (ex of group.items; track ex.id) {
               <tr>
-                <td class="ps-4">{{ ex.expense_date | date:'dd/MM HH:mm' }}</td>
+                <td class="ps-5 text-muted"><i class="ti ti-corner-down-right me-2"></i> {{ ex.expense_date |
+                  date:'dd/MM HH:mm' }}</td>
                 <td>
                   <div class="fw-bold">{{ ex.description }}</div>
                   <div class="small text-muted">{{ ex.payment_method }}</div>
@@ -341,6 +368,7 @@
                 <td>{{ ex.registered_by_name }}</td>
                 <td class="text-end font-monospace text-muted">-${{ ex.amount | number:'1.2-2' }}</td>
               </tr>
+              }
               }
               }
               }

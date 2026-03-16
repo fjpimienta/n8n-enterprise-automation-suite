@@ -36,30 +36,60 @@ export class DailyReportModalComponent implements OnInit {
   expenseConceptFilter = signal<string>('');
   expenseCategoryFilter = signal<string>('Todas');
 
-  // NUEVOS ESTADOS DE AGRUPACIÓN (BI)
+  // ESTADOS DE AGRUPACIÓN
   incomeGroup = signal<'none' | 'room' | 'status' | 'billing'>('none');
   expenseGroup = signal<'none' | 'category' | 'payment'>('none');
 
-  // --- INTERCEPTORES DE FILTROS PARA BLOQUEO INTELIGENTE (Corregidos TS2345) ---
+  // 🧠 MEMORIA DE GRUPOS EXPANDIDOS (Acordeones)
+  expandedIncomeGroups = signal<Set<string>>(new Set());
+  expandedExpenseGroups = signal<Set<string>>(new Set());
+
+  // --- INTERCEPTORES DE FILTROS ---
   onIncomeRoomFilterChange(val: string) {
     this.incomeRoomFilter.set(val);
-    if (val !== 'Todos' && this.incomeGroup() === 'room') this.incomeGroup.set('none');
+    if (val !== 'Todos' && this.incomeGroup() === 'room') this.onIncomeGroupChange('none');
   }
   onIncomeStatusFilterChange(val: string) {
     this.incomeStatusFilter.set(val);
-    if (val !== 'Todos' && this.incomeGroup() === 'status') this.incomeGroup.set('none');
+    if (val !== 'Todos' && this.incomeGroup() === 'status') this.onIncomeGroupChange('none');
   }
   onIncomeBillingFilterChange(val: 'Todos' | 'Facturado' | 'No Facturado' | any) {
     this.incomeBillingFilter.set(val);
-    if (val !== 'Todos' && this.incomeGroup() === 'billing') this.incomeGroup.set('none');
+    if (val !== 'Todos' && this.incomeGroup() === 'billing') this.onIncomeGroupChange('none');
   }
   onExpenseCategoryFilterChange(val: string) {
     this.expenseCategoryFilter.set(val);
-    if (val !== 'Todas' && this.expenseGroup() === 'category') this.expenseGroup.set('none');
+    if (val !== 'Todas' && this.expenseGroup() === 'category') this.onExpenseGroupChange('none');
   }
   onExpensePaymentFilterChange(val: 'Todos' | 'Efectivo' | 'Transferencia' | 'Tarjeta Corp' | any) {
     this.expensePaymentFilter.set(val);
-    if (val !== 'Todos' && this.expenseGroup() === 'payment') this.expenseGroup.set('none');
+    if (val !== 'Todos' && this.expenseGroup() === 'payment') this.onExpenseGroupChange('none');
+  }
+
+  // --- INTERCEPTORES DE AGRUPACIÓN (Limpian los acordeones al cambiar) ---
+  onIncomeGroupChange(val: any) {
+    this.incomeGroup.set(val);
+    this.expandedIncomeGroups.set(new Set()); // Inicia todo colapsado
+  }
+
+  onExpenseGroupChange(val: any) {
+    this.expenseGroup.set(val);
+    this.expandedExpenseGroups.set(new Set()); // Inicia todo colapsado
+  }
+
+  // --- TOGGLES PARA EL HTML ---
+  toggleIncomeGroup(key: string) {
+    const current = new Set(this.expandedIncomeGroups());
+    if (current.has(key)) current.delete(key);
+    else current.add(key);
+    this.expandedIncomeGroups.set(current);
+  }
+
+  toggleExpenseGroup(key: string) {
+    const current = new Set(this.expandedExpenseGroups());
+    if (current.has(key)) current.delete(key);
+    else current.add(key);
+    this.expandedExpenseGroups.set(current);
   }
 
   roomNumberMap = computed(() => {
@@ -113,13 +143,11 @@ export class DailyReportModalComponent implements OnInit {
     );
   });
 
-  // MOTOR DE AGRUPACIÓN DE INGRESOS (Corregido TS18004 Scope)
   groupedIncome = computed(() => {
     const groupType = this.incomeGroup();
     const transactions = this.reportData().transactions;
     if (groupType === 'none') return [];
 
-    // Guardamos un objeto completo en el Map para no perder el 'label'
     const groupsMap = new Map<string, { label: string, items: any[] }>();
 
     transactions.forEach(t => {
@@ -148,7 +176,6 @@ export class DailyReportModalComponent implements OnInit {
     })).sort((a, b) => a.label.localeCompare(b.label));
   });
 
-  // 🧠 MOTOR DE AGRUPACIÓN DE GASTOS (Corregido TS18004 Scope)
   groupedExpenses = computed(() => {
     const groupType = this.expenseGroup();
     const transactions = this.reportData().expenseTransactions;
@@ -237,7 +264,6 @@ export class DailyReportModalComponent implements OnInit {
     const period = this.getPeriodLabel();
     let reportItems: any[] = [];
 
-    // --- INGRESOS (Planos o Agrupados) ---
     if (this.incomeGroup() === 'none') {
       stats.transactions.forEach((t: any) => {
         let state = t.payment_status === 'paid' ? 'PAGADO' : 'PENDIENTE';
@@ -263,7 +289,6 @@ export class DailyReportModalComponent implements OnInit {
       });
     }
 
-    // --- GASTOS (Planos o Agrupados) ---
     if (this.expenseGroup() === 'none') {
       stats.expenseTransactions.forEach((ex: any) => {
         reportItems.push({
