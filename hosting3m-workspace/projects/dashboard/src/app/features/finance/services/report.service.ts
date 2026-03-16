@@ -13,14 +13,11 @@ export class ReportService {
   public loadingReports = signal<boolean>(false);
   public adminService = inject(AdminService);
 
-  /** Convierte fecha UTC de BD a YYYY-MM-DD exacto en hora local de México */
   private toLocalDate(dateStr: string): string {
     if (!dateStr) return '';
-    // Forzamos que JS entienda que es UTC agregando la 'Z' si no la trae
     const cleanStr = dateStr.trim().replace(' ', 'T');
     const dateObj = new Date(cleanStr.includes('Z') || cleanStr.includes('+') ? cleanStr : cleanStr + 'Z');
 
-    // Extraemos la fecha ya convertida al reloj local de la computadora
     const year = dateObj.getFullYear();
     const month = String(dateObj.getMonth() + 1).padStart(2, '0');
     const day = String(dateObj.getDate()).padStart(2, '0');
@@ -28,9 +25,7 @@ export class ReportService {
     return `${year}-${month}-${day}`;
   }
 
-  /** * Calcula el reporte unificado (Ventas - Gastos = Balance) 
-   * Acepta 'bookings' Y 'expenses'
-   */
+  /** * Calcula el reporte unificado con Filtros Avanzados */
   calculateDailyReport(
     bookings: any[],
     expenses: any[],
@@ -38,7 +33,11 @@ export class ReportService {
     customStart?: string,
     customEnd?: string,
     incomeBillingFilter: string = 'Todos',
-    expensePaymentFilter: string = 'Todos'
+    expensePaymentFilter: string = 'Todos',
+    incomeRoomFilter: string = 'Todos',
+    incomeStatusFilter: string = 'Todos',
+    expenseConceptFilter: string = '', 
+    expenseCategoryFilter: string = 'Todas'
   ) {
     const now = new Date();
     const mxNow = now.toLocaleString("en-US", { timeZone: "America/Mexico_City" });
@@ -49,9 +48,18 @@ export class ReportService {
       const dateMatch = this.isDateInPeriod(b.check_in, filter, nowObj, todayStr, customStart, customEnd);
       if (!dateMatch) return false;
 
-      // Lógica del filtro de facturación
-      if (incomeBillingFilter === 'Facturado') return b.is_invoiced === true;
-      if (incomeBillingFilter === 'No Facturado') return !b.is_invoiced;
+      if (incomeBillingFilter === 'Facturado' && !b.is_invoiced) return false;
+      if (incomeBillingFilter === 'No Facturado' && b.is_invoiced) return false;
+
+      if (incomeRoomFilter !== 'Todos' && String(b.room_id) !== incomeRoomFilter) return false;
+
+      const isCancelled = b.status === 'cancelled';
+      const isPaid = String(b.payment_status || '').trim().toLowerCase() === 'paid';
+
+      if (incomeStatusFilter === 'Pagado' && (!isPaid || isCancelled)) return false;
+      if (incomeStatusFilter === 'Pendiente' && (isPaid || isCancelled)) return false;
+      if (incomeStatusFilter === 'Cancelado' && !isCancelled) return false;
+
       return true;
     });
 
@@ -59,7 +67,15 @@ export class ReportService {
       const dateMatch = e.status === 'APPROVED' && this.isDateInPeriod(e.expense_date, filter, nowObj, todayStr, customStart, customEnd);
       if (!dateMatch) return false;
 
-      if (expensePaymentFilter !== 'Todos') return e.payment_method === expensePaymentFilter;
+      if (expensePaymentFilter !== 'Todos' && e.payment_method !== expensePaymentFilter) return false;
+      if (expenseCategoryFilter !== 'Todas' && e.category !== expenseCategoryFilter) return false;
+
+      if (expenseConceptFilter.trim() !== '') {
+        const query = expenseConceptFilter.toLowerCase().trim();
+        const desc = String(e.description || '').toLowerCase();
+        if (!desc.includes(query)) return false;
+      }
+
       return true;
     });
 
@@ -75,8 +91,9 @@ export class ReportService {
     };
 
     filteredBookings.forEach((b: any) => {
-      b.payment_status = String(b.payment_status || '').trim().toLowerCase();
+      if (b.status === 'cancelled') return; // 🛑 No sumar cancelaciones a los totales
 
+      b.payment_status = String(b.payment_status || '').trim().toLowerCase();
       const amount = Number(b.total_amount) || 0;
 
       if (b.payment_status === 'paid') {
@@ -94,7 +111,6 @@ export class ReportService {
     return stats;
   }
 
-  /* Lógica centralizada de fechas (Aquí está la magia de los filtros) */
   private isDateInPeriod(dateStr: string, filter: string, nowObj: Date, todayStr: string, customStart?: string, customEnd?: string): boolean {
     if (!dateStr) return false;
     const dateLocalStr = this.toLocalDate(dateStr);
@@ -114,19 +130,11 @@ export class ReportService {
         return dateObj.getMonth() === nowObj.getMonth() && dateObj.getFullYear() === nowObj.getFullYear();
       case 'year':
         return dateObj.getFullYear() === nowObj.getFullYear();
-
       case 'custom':
         if (!customStart || !customEnd) return false;
         return dateLocalStr >= customStart && dateLocalStr <= customEnd;
-
       default: return dateLocalStr === todayStr;
     }
-  }
-
-  private getLocalDateString(date: Date): string {
-    const offset = date.getTimezoneOffset();
-    const localDate = new Date(date.getTime() - (offset * 60 * 1000));
-    return localDate.toISOString().split('T')[0];
   }
 
   private getPeriodLabel(filter: string): string {
@@ -134,7 +142,6 @@ export class ReportService {
     return labels[filter] || 'Periodo';
   }
 
-  // 1. NUEVO MÉTODO: Calcula las fechas exactas de inicio y fin del periodo
   public getPeriodDates(filter: string, customStart?: string, customEnd?: string): { start: string, end: string } {
     const now = new Date();
     const mxNow = new Date(now.toLocaleString("en-US", { timeZone: "America/Mexico_City" }));
@@ -165,7 +172,6 @@ export class ReportService {
     return { start, end };
   }
 
-  // 2. MODIFICAMOS LAS PETICIONES PARA EXIGIR FECHAS
   async getRawBookingsForReport(start: string, end: string): Promise<any[]> {
     return this.fetchData('hotel_bookings', 'check_in', start, end);
   }
@@ -174,20 +180,14 @@ export class ReportService {
     return this.fetchData('hotel_expenses', 'expense_date', start, end);
   }
 
-  // 3. INYECTAMOS EL RANGO EN EL PAYLOAD PARA n8n
   private async fetchData(table: string, dateColumn: string, startDate: string, endDate: string): Promise<any[]> {
     try {
       const payload = {
         operation: 'getall',
         table_name: table,
         fields: { id_company: 1 },
-        date_range: {
-          column: dateColumn,
-          start: startDate,
-          end: endDate
-        }
+        date_range: { column: dateColumn, start: startDate, end: endDate }
       };
-
       const res: any = await lastValueFrom(
         this.http.post(`${this.apiUrl_crud}/${table}`, payload, { headers: this.adminService.getAuthHeaders() })
       );
@@ -197,6 +197,4 @@ export class ReportService {
       return [];
     }
   }
-
-
 }

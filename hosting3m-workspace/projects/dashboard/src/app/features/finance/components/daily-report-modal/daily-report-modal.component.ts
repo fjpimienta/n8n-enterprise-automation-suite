@@ -13,11 +13,10 @@ import { PdfExportConfig, PdfExportService } from 'ui-pdf-export';
   styleUrl: './daily-report-modal.component.css',
 })
 export class DailyReportModalComponent implements OnInit {
-  private reportService = inject(ReportService);
-  private bookingService = inject(BookingService);
+  public reportService = inject(ReportService);
+  public bookingService = inject(BookingService);
   private pdfService = inject(PdfExportService);
 
-  // Estados
   isLoading = signal(true);
 
   private rawBookings = signal<any[]>([]);
@@ -27,10 +26,15 @@ export class DailyReportModalComponent implements OnInit {
   customStartDate = signal<string>('');
   customEndDate = signal<string>('');
   activeTab = signal<'ingresos' | 'gastos'>('ingresos');
-  incomeBillingFilter = signal<'Todos' | 'Facturado' | 'No Facturado'>('Todos');
-  expensePaymentFilter = signal<'Todos' | 'Efectivo' | 'Transferencia' | 'Tarjeta Corp'>('Todos');
 
-  /** Map O(1) para lookup room_id → room_number */
+  incomeBillingFilter = signal<'Todos' | 'Facturado' | 'No Facturado'>('Todos');
+  incomeRoomFilter = signal<string>('Todos');
+  incomeStatusFilter = signal<string>('Todos');
+
+  expensePaymentFilter = signal<'Todos' | 'Efectivo' | 'Transferencia' | 'Tarjeta Corp'>('Todos');
+  expenseConceptFilter = signal<string>('');
+  expenseCategoryFilter = signal<string>('Todas');
+
   roomNumberMap = computed(() => {
     const map = new Map<number, string>();
     this.bookingService.rooms().forEach(r => map.set(Number(r.id), r.room_number));
@@ -53,6 +57,11 @@ export class DailyReportModalComponent implements OnInit {
     return map;
   });
 
+  expenseCategories = computed(() => {
+    const cats = new Set(this.rawExpenses().map(e => e.category || 'Operativo'));
+    return ['Todas', ...Array.from(cats)];
+  });
+
   getRoomStatus(id: any) {
     return this.roomStatusMap().get(Number(id)) ?? { text: 'N/A', badge: 'bg-secondary-lt' };
   }
@@ -62,15 +71,19 @@ export class DailyReportModalComponent implements OnInit {
   }
 
   reportData = computed(() => {
-    const validBookings = this.rawBookings().filter(b => b.status !== 'cancelled');
+    // 🚨 ATENCIÓN: Ya no filtramos las canceladas aquí para que el usuario pueda verlas si aplica el filtro de "Cancelado".
     return this.reportService.calculateDailyReport(
-      validBookings,
+      this.rawBookings(),
       this.rawExpenses(),
       this.currentFilter(),
       this.customStartDate(),
       this.customEndDate(),
       this.incomeBillingFilter(),
-      this.expensePaymentFilter()
+      this.expensePaymentFilter(),
+      this.incomeRoomFilter(),
+      this.incomeStatusFilter(),
+      this.expenseConceptFilter(),
+      this.expenseCategoryFilter()
     );
   });
 
@@ -85,22 +98,16 @@ export class DailyReportModalComponent implements OnInit {
     this.isLoading.set(true);
     const startTime = performance.now();
     try {
-      // 1. Calculamos las fechas que el usuario quiere ver
       const dates = this.reportService.getPeriodDates(this.currentFilter(), this.customStartDate(), this.customEndDate());
-
-      // 2. Las enviamos por la red
       const [bookings, expenses] = await Promise.all([
         this.reportService.getRawBookingsForReport(dates.start, dates.end),
         this.reportService.getRawExpensesForReport(dates.start, dates.end)
       ]);
-
       this.rawBookings.set(bookings);
       this.rawExpenses.set(expenses);
     } catch (error) {
       console.error('Error cargando datos financieros:', error);
     } finally {
-      const endTime = performance.now();
-      console.log(`📊 [Auditoría de Red] Datos de ${this.currentFilter()} descargados en ${((endTime - startTime) / 1000).toFixed(2)} segundos.`);
       this.isLoading.set(false);
     }
   }
@@ -135,37 +142,40 @@ export class DailyReportModalComponent implements OnInit {
       const end = this.customEndDate() ? new Date(this.customEndDate()).toLocaleDateString() : '?';
       return `${start} AL ${end}`;
     }
-
     return labels[this.currentFilter()] || 'Periodo';
   }
 
   printReport() {
     const stats = this.reportData();
     const period = this.getPeriodLabel();
-    const activeIncomeFilter = this.incomeBillingFilter();
-    const activeExpenseFilter = this.expensePaymentFilter();
+
+    // Subtítulo dinámico para PDF
+    const roomStr = this.incomeRoomFilter() === 'Todos' ? 'Todas' : this.getRoomNumber(this.incomeRoomFilter());
+    const activeIncomeFilter = `Hab: ${roomStr} | Est: ${this.incomeStatusFilter()} | Fact: ${this.incomeBillingFilter()}`;
+    const activeExpenseFilter = `Cat: ${this.expenseCategoryFilter()} | Pago: ${this.expensePaymentFilter()}`;
 
     let reportItems: any[] = [];
 
-    // 1. Agregamos los INGRESOS (Montos positivos)
     stats.transactions.forEach((t: any) => {
+      let state = t.payment_status === 'paid' ? 'PAGADO' : 'PENDIENTE';
+      if (t.status === 'cancelled') state = 'CANCELADO';
+
       reportItems.push({
         concept: `[INGRESO] Hab. ${this.getRoomNumber(t.room_id)}`,
-        description: `Ingreso: ${new Date(t.check_in).toLocaleDateString()} | Estado: ${t.payment_status === 'paid' ? 'PAGADO' : 'PENDIENTE'}`,
+        description: `Ingreso: ${new Date(t.check_in).toLocaleDateString()} | Estado: ${state}`,
         quantity: 1,
         unitPrice: Number(t.total_amount) || 0,
         total: Number(t.total_amount) || 0
       });
     });
 
-    // 2. Agregamos los GASTOS (Montos negativos)
     stats.expenseTransactions.forEach((ex: any) => {
       reportItems.push({
         concept: `[GASTO] ${ex.category || 'Operativo'}`,
         description: `${ex.description} | Método: ${ex.payment_method} | Resp: ${ex.registered_by_name}`,
         quantity: 1,
-        unitPrice: -(Number(ex.amount) || 0), // Negativo para que reste en la tabla
-        total: -(Number(ex.amount) || 0)      // Negativo para que reste en la tabla
+        unitPrice: -(Number(ex.amount) || 0),
+        total: -(Number(ex.amount) || 0)
       });
     });
 
@@ -174,10 +184,8 @@ export class DailyReportModalComponent implements OnInit {
       return;
     }
 
-    // Subtítulo dinámico informando los filtros activos
-    const subtitle = `Filtros Aplicados -> Ingresos: ${activeIncomeFilter} | Gastos: ${activeExpenseFilter}`;
+    const subtitle = `Filtros -> Ingresos: [${activeIncomeFilter}] | Gastos: [${activeExpenseFilter}]`;
 
-    // CONFIGURACIÓN DEL PDF UNIFICADO
     const pdfConfig: PdfExportConfig = {
       fileName: `Corte_Caja_Global_${period.replace(/ /g, '_')}`,
       title: `CORTE DE CAJA UNIFICADO - ${period.toUpperCase()}`,
@@ -186,11 +194,9 @@ export class DailyReportModalComponent implements OnInit {
       clientName: 'Reporte Financiero Interno',
       clientSubtitle: subtitle,
       items: reportItems,
-
       showTaxes: false,
       showTotals: false,
       showValidity: false,
-
       footerTitle: 'Resumen Global del Periodo',
       footerText: [
         `Ingresos Totales Cobrados: $${stats.paid_in.toFixed(2)}`,
@@ -201,7 +207,6 @@ export class DailyReportModalComponent implements OnInit {
       ]
     };
 
-    // GENERACIÓN
     this.pdfService.generate(pdfConfig);
   }
 }

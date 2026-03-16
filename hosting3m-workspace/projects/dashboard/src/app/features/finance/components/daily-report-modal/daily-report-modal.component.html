@@ -41,38 +41,81 @@
         </div>
       </div>
 
-      <div
-        class="d-flex justify-content-center justify-content-md-start mb-4 animate__animated animate__fadeIn d-print-none">
-        <div class="d-flex flex-wrap gap-3 p-3 bg-surface border rounded-3 shadow-sm align-items-end">
+      <div class="row g-3 mb-4 animate__animated animate__fadeIn d-print-none">
 
-          <div>
-            <label class="form-label small text-muted mb-1 fw-bold text-uppercase" style="font-size: 0.7rem;">
-              <i class="ti ti-arrow-down-right text-success me-1"></i> Filtro Ingresos
-            </label>
-            <select class="form-select" [ngModel]="incomeBillingFilter()"
-              (ngModelChange)="incomeBillingFilter.set($event)">
-              <option value="Todos">Todos los Ingresos</option>
-              <option value="Facturado">Solo Facturados</option>
-              <option value="No Facturado">Solo No Facturados</option>
-            </select>
+        <div class="col-12 col-md-6">
+          <div class="p-3 bg-surface border rounded-3 shadow-sm h-100">
+            <div class="text-success fw-bold text-uppercase mb-2" style="font-size: 0.75rem;">
+              <i class="ti ti-arrow-down-right me-1"></i> Filtros de Ingresos
+            </div>
+            <div class="row g-2">
+              <div class="col-12 col-sm-4">
+                <label class="form-label small text-muted mb-1" style="font-size: 0.7rem;">Habitación</label>
+                <select class="form-select form-select-sm" [ngModel]="incomeRoomFilter()"
+                  (ngModelChange)="incomeRoomFilter.set($event)">
+                  <option value="Todos">Todas</option>
+                  @for(room of bookingService.rooms(); track room.id) {
+                  <option [value]="room.id">Hab. {{room.room_number}}</option>
+                  }
+                </select>
+              </div>
+              <div class="col-12 col-sm-4">
+                <label class="form-label small text-muted mb-1" style="font-size: 0.7rem;">Estado</label>
+                <select class="form-select form-select-sm" [ngModel]="incomeStatusFilter()"
+                  (ngModelChange)="incomeStatusFilter.set($event)">
+                  <option value="Todos">Todos</option>
+                  <option value="Pagado">Pagados</option>
+                  <option value="Pendiente">Pendientes</option>
+                  <option value="Cancelado">Cancelados</option>
+                </select>
+              </div>
+              <div class="col-12 col-sm-4">
+                <label class="form-label small text-muted mb-1" style="font-size: 0.7rem;">Facturación</label>
+                <select class="form-select form-select-sm" [ngModel]="incomeBillingFilter()"
+                  (ngModelChange)="incomeBillingFilter.set($event)">
+                  <option value="Todos">Todos</option>
+                  <option value="Facturado">Facturados</option>
+                  <option value="No Facturado">No Facturados</option>
+                </select>
+              </div>
+            </div>
           </div>
+        </div>
 
-          <div>
-            <label class="form-label small text-muted mb-1 fw-bold text-uppercase" style="font-size: 0.7rem;">
-              <i class="ti ti-arrow-up-right text-danger me-1"></i> Filtro Gastos
-            </label>
-            <select class="form-select" [ngModel]="expensePaymentFilter()"
-              (ngModelChange)="expensePaymentFilter.set($event)">
-              <option value="Todos">Todos los Gastos</option>
-              <option value="Efectivo">Efectivo</option>
-              <option value="Transferencia">Transferencia</option>
-              <option value="Tarjeta Corp">Tarjeta Corp</option>
-            </select>
+        <div class="col-12 col-md-6">
+          <div class="p-3 bg-surface border rounded-3 shadow-sm h-100">
+            <div class="text-danger fw-bold text-uppercase mb-2" style="font-size: 0.75rem;">
+              <i class="ti ti-arrow-up-right me-1"></i> Filtros de Gastos
+            </div>
+            <div class="row g-2">
+              <div class="col-12 col-sm-4">
+                <label class="form-label small text-muted mb-1" style="font-size: 0.7rem;">Categoría</label>
+                <select class="form-select form-select-sm" [ngModel]="expenseCategoryFilter()"
+                  (ngModelChange)="expenseCategoryFilter.set($event)">
+                  @for(cat of expenseCategories(); track cat) {
+                  <option [value]="cat">{{cat}}</option>
+                  }
+                </select>
+              </div>
+              <div class="col-12 col-sm-4">
+                <label class="form-label small text-muted mb-1" style="font-size: 0.7rem;">Método Pago</label>
+                <select class="form-select form-select-sm" [ngModel]="expensePaymentFilter()"
+                  (ngModelChange)="expensePaymentFilter.set($event)">
+                  <option value="Todos">Todos</option>
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Transferencia">Transf.</option>
+                  <option value="Tarjeta Corp">Tarjeta</option>
+                </select>
+              </div>
+              <div class="col-12 col-sm-4">
+                <label class="form-label small text-muted mb-1" style="font-size: 0.7rem;">Concepto</label>
+                <input type="text" class="form-control form-control-sm" placeholder="Buscar texto..."
+                  [ngModel]="expenseConceptFilter()" (ngModelChange)="expenseConceptFilter.set($event)">
+              </div>
+            </div>
           </div>
-
         </div>
       </div>
-
       @if (currentFilter() === 'custom') {
       <div class="d-flex justify-content-center justify-content-md-start mb-4 animate__animated animate__fadeIn">
         <div class="d-flex flex-wrap gap-3 p-3 bg-surface border rounded-3 shadow-sm align-items-end">
@@ -213,7 +256,7 @@
               </tr>
               } @empty {
               <tr>
-                <td colspan="5" class="text-center p-4">No hay ingresos en este periodo.</td>
+                <td colspan="5" class="text-center p-4">No hay ingresos que coincidan con estos filtros.</td>
               </tr>
               }
             </tbody>
@@ -245,7 +288,7 @@
               </tr>
               } @empty {
               <tr>
-                <td colspan="5" class="text-center p-4">¡Excelente! No hay gastos registrados.</td>
+                <td colspan="5" class="text-center p-4">No hay gastos que coincidan con estos filtros.</td>
               </tr>
               }
             </tbody>
