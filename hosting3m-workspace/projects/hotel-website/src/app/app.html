@@ -45,20 +45,21 @@
 <header class="h-screen bg-hero flex items-center justify-center relative overflow-hidden">
   <div class="text-center px-4 max-w-4xl mx-auto mt-16 relative z-10">
     <span
-      class="text-tierra-500 font-semibold tracking-wider uppercase text-sm mb-4 block flex justify-center items-center gap-2">
-      <i data-lucide="map-pin" class="w-4 h-4"></i> A unos metros de la Laguna de Catazajá
+      class="bg-tierra-500/90 text-white px-4 py-1.5 rounded-full font-semibold tracking-wider uppercase text-xs mb-6 inline-flex justify-center items-center gap-2 shadow-sm">
+      <i data-lucide="map-pin" class="w-4 h-4"></i> A unos pasos de la Laguna de Catazajá
     </span>
-    <h1 class="text-4xl md:text-6xl font-serif text-white font-bold mb-6 leading-tight">
-      El Descanso Absoluto en Armonía con la Naturaleza
+    <h1 class="text-4xl md:text-6xl font-serif text-white font-bold mb-6 leading-tight drop-shadow-lg">
+      Tu Descanso Seguro y Confortable en Chiapas
     </h1>
-    <p class="text-lg md:text-xl text-gray-200 mb-10 font-light max-w-2xl mx-auto">
-      Tu refugio en Chiapas. Descubre nuestras instalaciones diseñadas para brindarte el máximo confort, tranquilidad
-      y un servicio impecable.
+    <p class="text-lg md:text-xl text-gray-100 mb-10 font-medium max-w-2xl mx-auto drop-shadow-md">
+      Instalaciones impecables, aire acondicionado y la tranquilidad que necesitas para recargar energía tras un día de
+      trabajo o turismo.
     </p>
     <div class="flex flex-col sm:flex-row gap-4 justify-center">
       <a href="#contacto"
-        class="bg-tierra-500 text-white px-8 py-3 rounded-full hover:bg-tierra-900 transition-all font-medium shadow-lg shadow-tierra-500/30">Ver
-        Disponibilidad</a>
+        class="bg-eco-500 text-white px-8 py-4 rounded-full hover:bg-eco-600 transition-all font-bold text-lg shadow-xl hover:scale-105 transform">
+        Consultar Disponibilidad
+      </a>
     </div>
   </div>
   <div class="absolute bottom-10 left-1/2 transform -translate-x-1/2 animate-bounce">
@@ -77,12 +78,12 @@
       </div>
     </div>
     <div class="order-1 lg:order-2">
-      <span class="text-tierra-500 font-semibold tracking-wider uppercase text-sm mb-2 block">Identidad
-        Catazajense</span>
-      <h2 class="text-3xl font-serif font-bold mb-6">El Arte de San José en Nuestras Paredes</h2>
-      <p class="text-gray-300 mb-6 leading-relaxed">Nuestras instalaciones rinden homenaje a la inmensa riqueza natural
-        y espiritual de la región. El mural central ilustra a la majestuosa fauna de la laguna, destacando al manatí,
-        símbolo indiscutible de Catazajá.</p>
+      <span class="text-tierra-500 font-semibold tracking-wider uppercase text-sm mb-2 block">Ubicación
+        Estratégica</span>
+      <h2 class="text-3xl font-serif font-bold mb-6">Comodidad y Cultura en un Solo Lugar</h2>
+      <p class="text-gray-600 mb-6 leading-relaxed">No solo te ofrecemos una cama, te ofrecemos un espacio seguro.
+        Nuestras instalaciones están diseñadas para garantizar una noche de sueño reparador, rodeados de arte local que
+        rinde homenaje a la majestuosa fauna de nuestra laguna.</p>
       <div class="md:w-5/12 bg-tierra-500 p-8 text-white flex flex-col justify-between mb-8 rounded-lg">
         <h3 class="text-2xl font-serif font-bold mb-2">Contacto Directo</h3>
         <div class="space-y-4 mt-4">
@@ -135,6 +136,57 @@
     </div>
   </div>
 </section>
+
+@if (dbReviews().length > 0) {
+<section class="py-16 bg-tierra-50 border-y border-tierra-100 animate-fade-in">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+    <div class="text-center mb-10 flex flex-col items-center">
+      <h2 class="text-2xl font-serif font-bold text-gray-900 mb-1">Lo que dicen nuestros huéspedes</h2>
+      <div class="flex items-center justify-center gap-4 mt-2">
+        <span class="flex items-center gap-1 text-xs text-gray-500 font-medium uppercase tracking-wider">
+          <i data-lucide="check-circle" class="w-4 h-4 text-green-600"></i> Reseñas verificadas
+        </span>
+        <button (click)="openReviewModal()"
+          class="text-xs font-bold text-tierra-500 hover:text-tierra-700 underline transition-colors">
+          Escribir una reseña
+        </button>
+      </div>
+    </div>
+
+    @if (dbReviews().length > 0) {
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      @for (review of dbReviews(); track review.id) {
+      <div
+        class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col hover:shadow-md transition-shadow">
+        <div class="flex gap-1 text-yellow-500 mb-3">
+          @for (star of [1,2,3,4,5]; track star) {
+          <i data-lucide="star" class="w-5 h-5"
+            [ngClass]="star <= review.rating ? 'fill-current' : 'text-gray-200'"></i>
+          }
+        </div>
+        <p class="text-gray-600 italic mb-4 text-sm flex-grow">"{{ review.review_text }}"</p>
+        <div class="mt-auto pt-4 border-t border-gray-50">
+          <p class="font-bold text-sm text-gray-900">- {{ review.guest_name }}</p>
+        </div>
+      </div>
+      }
+    </div>
+    } @else {
+    <div class="text-center p-8 bg-white rounded-2xl border border-gray-200 border-dashed shadow-sm">
+      <div class="bg-gray-50 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-3">
+        <i data-lucide="message-square" class="w-6 h-6 text-gray-400"></i>
+      </div>
+      <p class="text-gray-500 mb-3">Aún no hay reseñas publicadas para mostrar.</p>
+      <button (click)="openReviewModal()" class="text-eco-600 font-medium hover:text-eco-800 transition-colors">
+        ¡Sé el primero en calificar tu estancia!
+      </button>
+    </div>
+    }
+
+  </div>
+</section>
+}
 
 <section id="habitaciones" class="py-20 bg-eco-50">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -425,7 +477,7 @@
               <label class="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5">
                 <i data-lucide="user" class="w-4 h-4 text-eco-500"></i> Nombre Completo
               </label>
-              <input type="text" name="nombre" [(ngModel)]="guest.name" required placeholder="Ej. Juan Pérez Pimienta"
+              <input type="text" name="nombre" [(ngModel)]="guest.name" required placeholder="Ej. Juan Pérez"
                 class="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-eco-500 outline-none transition-all">
             </div>
 
@@ -556,5 +608,54 @@
     <p class="text-sm text-center md:text-left">© 2026 Hotel Boutique San José Catazajá.</p>
   </div>
 </footer>
+
+@if (showReviewModal()) {
+<div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+
+    <div class="bg-eco-900 p-4 flex justify-between items-center text-white">
+      <h3 class="font-serif font-bold text-lg">Califica tu estancia</h3>
+      <button (click)="closeReviewModal()" class="text-white/70 hover:text-white transition-colors">
+        <i data-lucide="x" class="w-6 h-6"></i>
+      </button>
+    </div>
+
+    <form (ngSubmit)="submitReview()" #reviewFormCtrl="ngForm" class="p-6 space-y-5">
+
+      <div class="text-center">
+        <label class="block text-sm font-medium text-gray-700 mb-2">¿Cómo calificarías tu experiencia?</label>
+        <div class="flex justify-center gap-2 text-yellow-500 cursor-pointer">
+          @for (star of [1,2,3,4,5]; track star) {
+          <i data-lucide="star" class="w-8 h-8 transition-transform hover:scale-110"
+            [ngClass]="star <= reviewForm.rating ? 'fill-current' : 'text-gray-200'" (click)="setRating(star)">
+          </i>
+          }
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Tu Nombre (o Familia)</label>
+        <input type="text" name="guest_name" [(ngModel)]="reviewForm.guest_name" required
+          placeholder="Ej. Familia Pérez"
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-eco-500 outline-none transition-all">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Cuéntanos sobre tu descanso</label>
+        <textarea name="review_text" [(ngModel)]="reviewForm.review_text" required rows="3"
+          placeholder="El clima funcionó perfecto, la cama muy cómoda..."
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-eco-500 outline-none transition-all resize-none"></textarea>
+      </div>
+
+      <button type="submit" [disabled]="isSubmittingReview() || reviewFormCtrl.invalid"
+        class="w-full bg-tierra-500 text-white font-medium py-3 px-4 rounded-xl hover:bg-tierra-900 transition-colors flex justify-center items-center gap-2 mt-2 disabled:opacity-50">
+        <span>{{ isSubmittingReview() ? 'Enviando...' : 'Enviar Reseña' }}</span>
+      </button>
+      <p class="text-[10px] text-center text-gray-400 mt-2">Tu reseña será revisada por nuestro equipo antes de
+        publicarse para evitar spam.</p>
+    </form>
+  </div>
+</div>
+}
 
 <lib-ai-chat></lib-ai-chat>
