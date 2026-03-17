@@ -236,7 +236,8 @@
             "assets": [
               {
                 "glob": "**/*",
-                "input": "projects/hotel-website/public"
+                "input": "projects/hotel-website/public",
+                "output": "/"
               }
             ],
             "styles": [
