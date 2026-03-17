@@ -13,30 +13,47 @@ import { environment } from '../environments/environment';
 })
 export class App implements OnInit {
   private http = inject(HttpClient);
-
-  // Extraemos las URLs correctas de tu environment
   private apiUrl_public = environment.apiUrl_public;
 
-  // Estados de la Interfaz UI
   isMenuOpen = signal(false);
   isScrolled = signal(false);
 
-  // --- WIZARD DE RESERVAS B2C ---
   bookingStep = signal<1 | 2 | 3>(1);
   isSearching = signal(false);
   isSubmitting = signal(false);
 
   formStatus = signal<'idle' | 'success' | 'invalid_email' | 'sold_out' | 'email_bounce' | 'error'>('idle');
 
-  // 👇 CORRECCIÓN: Regresamos a objetos planos compatibles con [(ngModel)]
   dates = { checkin: '', checkout: '' };
-  guest = { name: '', email: '', phone: '', guests: '2' };
+  guest = { name: '', email: '', phone: '', guests: 2 }; // Cambiado a número para matemáticas
 
-  // Catálogo simulado (Mock - Conexión visual Paso 2)
   availableRoomTypes = signal<any[]>([]);
   selectedRoomType = signal<any | null>(null);
 
   minDate = new Date().toISOString().split('T')[0];
+
+  // GETTERS REACTIVOS PARA EL CÁLCULO DE PERSONAS EXTRA Y TARIFAS
+  get guestOptions(): number[] {
+    const room = this.selectedRoomType();
+    if (!room) return [1, 2];
+    // Genera un arreglo dinámico desde 1 hasta el máximo permitido por la habitación
+    return Array.from({ length: room.maxGuests }, (_, i) => i + 1);
+  }
+
+  get extraGuestsCount(): number {
+    const room = this.selectedRoomType();
+    if (!room) return 0;
+    const selectedGuests = Number(this.guest.guests) || 1;
+    // Si selecciona más de la base, calculamos cuántos extra son
+    return Math.max(0, selectedGuests - room.baseGuests);
+  }
+
+  get currentTotalPerNight(): number {
+    const room = this.selectedRoomType();
+    if (!room) return 0;
+    // Precio Base + ($100 por cada persona extra)
+    return room.price + (this.extraGuestsCount * 100);
+  }
 
   ngOnInit() {
     setTimeout(() => {
@@ -54,46 +71,45 @@ export class App implements OnInit {
     this.isMenuOpen.update(val => !val);
   }
 
-  // --- LÓGICA DEL MOTOR DE RESERVAS ---
-
   searchAvailability() {
-    // Leemos directamente del objeto plano
     if (!this.dates.checkin || !this.dates.checkout) return;
     this.isSearching.set(true);
 
-    const payload = {
-      checkin: this.dates.checkin,
-      checkout: this.dates.checkout
-    };
+    const payload = { checkin: this.dates.checkin, checkout: this.dates.checkout };
 
-    // Conexión real a n8n /public/availability
     this.http.post(`${this.apiUrl_public}/availability`, payload).subscribe({
       next: (res: any) => {
         if (res.status === 'success' && res.data) {
 
           const mappedRooms = res.data.map((room: any) => {
             const typeKey = room.type.toLowerCase();
-            let icon = 'bed';
-            let desc = 'Habitación confortable';
-            let name = room.type;
+            let icon = 'bed', desc = '', name = room.type;
+            let baseGuests = 2, maxGuests = 2; // Defaults
 
+            // 🚨 REGLAS DE NEGOCIO: Capacidad y Límites
             if (typeKey.includes('sencilla')) {
               icon = 'user'; desc = '1 Cama Matrimonial'; name = 'Sencilla';
+              baseGuests = 2; maxGuests = 3; // Max 3 (1 extra)
             } else if (typeKey.includes('king')) {
               icon = 'crown'; desc = '1 Cama King Size'; name = 'King Size';
+              baseGuests = 3; maxGuests = 4; // Max 4 (1 extra)
             } else if (typeKey.includes('doble')) {
               icon = 'users'; desc = '2 Camas Matrimoniales'; name = 'Doble';
+              baseGuests = 4; maxGuests = 6; // Max 6 (2 extras)
             } else if (typeKey.includes('triple')) {
               icon = 'bed-double'; desc = 'Máxima Capacidad'; name = 'Triple';
+              baseGuests = 6; maxGuests = 8; // Max 8 (2 extras)
             }
 
             return {
-              id: room.type, // ID Exacto para n8n ("Kingsize", "sencilla")
+              id: room.type,
               name: name,
               desc: desc,
               price: parseFloat(room.price),
               icon: icon,
-              availableCount: parseInt(room.available_count, 10)
+              availableCount: parseInt(room.available_count, 10),
+              baseGuests: baseGuests,
+              maxGuests: maxGuests
             };
           });
 
@@ -108,7 +124,7 @@ export class App implements OnInit {
         }
       },
       error: (err) => {
-        console.error('Error buscando disponibilidad en n8n:', err);
+        console.error('Error buscando disponibilidad:', err);
         this.isSearching.set(false);
         alert('Ocurrió un error al buscar disponibilidad. Por favor, intenta nuevamente.');
       }
@@ -117,6 +133,8 @@ export class App implements OnInit {
 
   selectRoom(roomType: any) {
     this.selectedRoomType.set(roomType);
+    // Pre-seleccionar la capacidad base para no cobrar extras por accidente
+    this.guest.guests = roomType.baseGuests;
     this.bookingStep.set(3);
   }
 
@@ -129,7 +147,6 @@ export class App implements OnInit {
     this.isSubmitting.set(true);
     this.formStatus.set('idle');
 
-    // 👇 CORRECCIÓN: Leemos directamente del objeto plano
     const payload = {
       name: this.guest.name,
       phone: this.guest.phone,
@@ -137,7 +154,8 @@ export class App implements OnInit {
       checkin: this.dates.checkin,
       checkout: this.dates.checkout,
       room_type: this.selectedRoomType()?.id,
-      guests: this.guest.guests,
+      guests: Number(this.guest.guests),
+      total_price_per_night: this.currentTotalPerNight, // Mandamos el precio calculado a n8n
       origen: "Web Frontend Angular (Public)"
     };
 
@@ -149,29 +167,22 @@ export class App implements OnInit {
       },
       error: (err) => {
         this.isSubmitting.set(false);
-        if (err.status === 400) {
-          this.formStatus.set('invalid_email');
-        } else if (err.status === 409) {
-          this.formStatus.set('sold_out');
-        } else if (err.status === 422) {
-          // 👇 NUEVO: El servidor de correo de n8n rechazó la entrega
-          this.formStatus.set('email_bounce');
-        } else {
+        if (err.status === 400) this.formStatus.set('invalid_email');
+        else if (err.status === 409) this.formStatus.set('sold_out');
+        else if (err.status === 422) this.formStatus.set('email_bounce');
+        else {
           this.formStatus.set('error');
-          console.error('Error de conexión crítica con n8n:', err);
+          console.error('Error de conexión con n8n:', err);
         }
       }
     });
   }
 
   resetWizard() {
-    // La reactividad se dispara por los Signals .set()
     this.bookingStep.set(1);
     this.selectedRoomType.set(null);
     this.formStatus.set('idle');
-
-    // 👇 CORRECCIÓN: Limpieza de objetos planos normal
     this.dates = { checkin: '', checkout: '' };
-    this.guest = { name: '', email: '', phone: '', guests: '2' };
+    this.guest = { name: '', email: '', phone: '', guests: 2 };
   }
 }
