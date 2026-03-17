@@ -13,7 +13,8 @@ import { environment } from '../environments/environment';
 })
 export class App implements OnInit {
   private http = inject(HttpClient);
-  private apiUrl_public = environment.apiUrl_public;
+  private apiUrl_public = environment.apiUrl_public;  
+  private apiUrl_crud = environment.apiUrl_crud; // Agregado para el MetaCRUD
 
   isMenuOpen = signal(false);
   isScrolled = signal(false);
@@ -25,18 +26,87 @@ export class App implements OnInit {
   formStatus = signal<'idle' | 'success' | 'invalid_email' | 'sold_out' | 'email_bounce' | 'error'>('idle');
 
   dates = { checkin: '', checkout: '' };
-  guest = { name: '', email: '', phone: '', guests: 2 }; // Cambiado a número para matemáticas
+  guest = { name: '', email: '', phone: '', guests: 2 };
 
   availableRoomTypes = signal<any[]>([]);
   selectedRoomType = signal<any | null>(null);
 
+  // --- RESEÑAS DINÁMICAS (n8n DB) ---
+  dbReviews = signal<any[]>([]);
+  // --- ESTADO PARA EL MODAL DE RESEÑAS ---
+  showReviewModal = signal(false);
+  isSubmittingReview = signal(false);
+  reviewForm = { guest_name: '', rating: 5, review_text: '' };
+
+  // --- MÉTODOS DEL MODAL ---
+  openReviewModal() { 
+    this.showReviewModal.set(true); 
+  }
+  
+  closeReviewModal() { 
+    this.showReviewModal.set(false); 
+    this.reviewForm = { guest_name: '', rating: 5, review_text: '' }; // Limpiar form
+  }
+
+  setRating(stars: number) { 
+    this.reviewForm.rating = stars; 
+  }
+
+ // --- CARGA DE RESEÑAS DESDE n8n MetaCRUD ---
+  loadDbReviews() {
+    // Ajuste arquitectónico: Pasamos el modelo como Query Parameter
+    const url = `${this.apiUrl_crud}?model=hotel_reviews`;
+
+    this.http.get(url).subscribe({
+      next: (res: any) => {
+        console.log('✅ MetaCRUD Respondió (GET):', res);
+        
+        const data = res.data || res;
+        if (Array.isArray(data) && data.length > 0) {
+          this.dbReviews.set(data.slice(0, 3));
+          setTimeout(() => {
+            // @ts-ignore
+            if (window.lucide) window.lucide.createIcons();
+          }, 50);
+        } else {
+          console.warn('⚠️ N8n respondió bien, pero el arreglo de reseñas viene vacío. ¿Se ejecutaron los INSERTS en PostgreSQL?');
+        }
+      },
+      error: (err) => {
+        console.error('❌ Error crítico descargando reseñas desde n8n:', err);
+      }
+    });
+  }
+
+  submitReview() {
+    if (!this.reviewForm.guest_name || !this.reviewForm.review_text) return;
+    
+    this.isSubmittingReview.set(true);
+    const payload = { ...this.reviewForm, is_approved: false };
+
+    // Ajuste arquitectónico: Pasamos el modelo como Query Parameter
+    const url = `${this.apiUrl_crud}?model=hotel_reviews`;
+
+    this.http.post(url, payload).subscribe({
+      next: (res: any) => {
+        console.log('✅ MetaCRUD Respondió (POST):', res);
+        this.isSubmittingReview.set(false);
+        this.closeReviewModal();
+        alert('¡Gracias por tu reseña! Ha sido enviada a moderación y pronto aparecerá en la página.');
+      },
+      error: (err) => {
+        console.error('❌ Error enviando reseña hacia n8n:', err);
+        this.isSubmittingReview.set(false);
+        alert('Hubo un error al enviar tu reseña. Por favor, intenta de nuevo.');
+      }
+    });
+  }
+
   minDate = new Date().toISOString().split('T')[0];
 
-  // GETTERS REACTIVOS PARA EL CÁLCULO DE PERSONAS EXTRA Y TARIFAS
   get guestOptions(): number[] {
     const room = this.selectedRoomType();
     if (!room) return [1, 2];
-    // Genera un arreglo dinámico desde 1 hasta el máximo permitido por la habitación
     return Array.from({ length: room.maxGuests }, (_, i) => i + 1);
   }
 
@@ -44,14 +114,12 @@ export class App implements OnInit {
     const room = this.selectedRoomType();
     if (!room) return 0;
     const selectedGuests = Number(this.guest.guests) || 1;
-    // Si selecciona más de la base, calculamos cuántos extra son
     return Math.max(0, selectedGuests - room.baseGuests);
   }
 
   get currentTotalPerNight(): number {
     const room = this.selectedRoomType();
     if (!room) return 0;
-    // Precio Base + ($100 por cada persona extra)
     return room.price + (this.extraGuestsCount * 100);
   }
 
@@ -60,6 +128,9 @@ export class App implements OnInit {
       // @ts-ignore
       if (window.lucide) window.lucide.createIcons();
     }, 100);
+
+    // Cargar las reseñas al iniciar la aplicación
+    this.loadDbReviews();
   }
 
   @HostListener('window:scroll', [])
@@ -84,21 +155,20 @@ export class App implements OnInit {
           const mappedRooms = res.data.map((room: any) => {
             const typeKey = room.type.toLowerCase();
             let icon = 'bed', desc = '', name = room.type;
-            let baseGuests = 2, maxGuests = 2; // Defaults
+            let baseGuests = 2, maxGuests = 2;
 
-            // 🚨 REGLAS DE NEGOCIO: Capacidad y Límites
             if (typeKey.includes('sencilla')) {
               icon = 'user'; desc = '1 Cama Matrimonial'; name = 'Sencilla';
-              baseGuests = 2; maxGuests = 3; // Max 3 (1 extra)
+              baseGuests = 2; maxGuests = 3;
             } else if (typeKey.includes('king')) {
               icon = 'crown'; desc = '1 Cama King Size'; name = 'King Size';
-              baseGuests = 3; maxGuests = 4; // Max 4 (1 extra)
+              baseGuests = 3; maxGuests = 4;
             } else if (typeKey.includes('doble')) {
               icon = 'users'; desc = '2 Camas Matrimoniales'; name = 'Doble';
-              baseGuests = 4; maxGuests = 6; // Max 6 (2 extras)
+              baseGuests = 4; maxGuests = 6;
             } else if (typeKey.includes('triple')) {
               icon = 'bed-double'; desc = 'Máxima Capacidad'; name = 'Triple';
-              baseGuests = 6; maxGuests = 8; // Max 8 (2 extras)
+              baseGuests = 6; maxGuests = 8;
             }
 
             return {
@@ -133,7 +203,6 @@ export class App implements OnInit {
 
   selectRoom(roomType: any) {
     this.selectedRoomType.set(roomType);
-    // Pre-seleccionar la capacidad base para no cobrar extras por accidente
     this.guest.guests = roomType.baseGuests;
     this.bookingStep.set(3);
   }
@@ -155,7 +224,7 @@ export class App implements OnInit {
       checkout: this.dates.checkout,
       room_type: this.selectedRoomType()?.id,
       guests: Number(this.guest.guests),
-      total_price_per_night: this.currentTotalPerNight, // Mandamos el precio calculado a n8n
+      total_price_per_night: this.currentTotalPerNight,
       origen: "Web Frontend Angular (Public)"
     };
 
