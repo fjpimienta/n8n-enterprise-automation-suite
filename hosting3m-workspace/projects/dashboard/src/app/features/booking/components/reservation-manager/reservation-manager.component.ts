@@ -33,32 +33,25 @@ export class ReservationManagerComponent implements OnInit, OnDestroy {
     const all = this.adminService.reservations();
     const selectedRoom = this.hotelService.selectedRoom();
 
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    const todayStr = `${year}-${month}-${day}`;
+    const currentRes = all.filter((r: any) => {
+      // 1. Filtrar por habitación si hay una seleccionada en el dashboard
+      if (selectedRoom && r.room_id !== selectedRoom.id) return false;
 
-    return all
-      .filter(res => {
-        if (!res.check_out) return false;
+      // 2. 🛠️ REGLA DE NEGOCIO: Mostrar ÚNICAMENTE reservas futuras 
+      // (Confirmadas o Pendientes por aprobar de la web)
+      if (r.status !== 'confirmed' && r.status !== 'pending') {
+        return false;
+      }
 
-        const checkoutDateStr = String(res.check_out).split(/[ T]/)[0];
-        const status = String(res.status || '').toLowerCase().trim();
+      return true;
+    });
 
-        const matchesDate = (status === 'checked_in') ||
-          (['confirmed', 'pending'].includes(status) && checkoutDateStr >= todayStr);
+    // 3. Ordenar cronológicamente (las más próximas a llegar primero)
+    const sorted = currentRes.sort((a: any, b: any) => {
+      return new Date(a.check_in).getTime() - new Date(b.check_in).getTime();
+    });
 
-        if (selectedRoom) {
-          return matchesDate && Number(res.room_id) === Number(selectedRoom.id);
-        }
-        return matchesDate;
-      })
-      .sort((a, b) => {
-        const dateA = new Date(String(a.check_in).replace(' ', 'T')).getTime();
-        const dateB = new Date(String(b.check_in).replace(' ', 'T')).getTime();
-        return (dateA || 0) - (dateB || 0);
-      });
+    return sorted;
   });
 
   paginatedReservations = computed(() => {
