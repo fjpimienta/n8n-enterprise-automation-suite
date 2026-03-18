@@ -100,7 +100,7 @@ export class MaintenanceTicketModalComponent implements OnDestroy {
     // Validación adicional con trim para asegurar que no sea solo espacios
     const descriptionValue = this.descriptionControl.value?.trim();
     if (!descriptionValue || descriptionValue.length < 10) {
-      this.descriptionControl.setErrors({ 
+      this.descriptionControl.setErrors({
         required: true,
         minlength: { requiredLength: 10, actualLength: descriptionValue?.length || 0 }
       });
@@ -122,16 +122,23 @@ export class MaintenanceTicketModalComponent implements OnDestroy {
         inspection_id: this.inspectionId() || null
       };
 
-      // 1. Crear el Ticket
+      // 1. Crear el Ticket en la base de datos
       await this.maintenanceService.createTicket(newTicket);
 
-      // 2. ⚡ AUTOMATIZACIÓN: Cambiar estado del cuarto a MANTENIMIENTO
-      await this.hotelService.updateRoomMaintenance(this.room().id);
+      // 2. ⚡ AUTOMATIZACIÓN INTELIGENTE (Mantenimiento Diferido)
+      if (this.room().status === 'occupied') {
+        // Si está ocupada, NO cambiamos el estado para no romper el flujo de Check-out
+        alert('✅ Ticket creado.\n\nComo la habitación está ocupada, pasará a Mantenimiento automáticamente en cuanto el huésped haga Check-out.');
+      } else {
+        // Si está disponible o sucia (vacía), la bloqueamos de inmediato
+        await this.hotelService.updateRoomMaintenance(this.room().id);
+        alert('✅ Ticket creado y habitación puesta en Mantenimiento.');
+      }
 
       this.onSave.emit(newTicket);
       this.resetForm();
       this.onClose.emit();
-      alert('✅ Ticket creado y habitación puesta en Mantenimiento');
+
     } catch (error) {
       console.error('Error al crear ticket:', error);
       alert('Error al procesar la solicitud. Por favor, intente nuevamente.');

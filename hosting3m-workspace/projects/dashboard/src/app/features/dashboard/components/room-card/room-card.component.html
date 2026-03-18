@@ -35,6 +35,12 @@
                 <i class="ti ti-clock me-1"></i> LLEGADA HOY
             </span>
             }
+            @if (room().hasPendingTicket && room().status !== 'maintenance') {
+            <span
+                class="badge bg-red text-white w-100 justify-content-center shadow-sm animate__animated animate__pulse animate__infinite">
+                <i class="ti ti-tool me-1"></i> FALLA REPORTADA
+            </span>
+            }
         </div>
 
         @if (room().displayDate) {

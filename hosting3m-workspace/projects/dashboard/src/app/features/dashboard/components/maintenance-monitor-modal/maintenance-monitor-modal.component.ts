@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MaintenanceService } from '@features/dashboard/services/maintenance.service';
 import { FormsModule } from '@angular/forms';
 import { HotelService } from '@features/dashboard/services/hotel.service';
+import { BookingService } from '@features/booking/services/booking.service';
 
 @Component({
   selector: 'app-maintenance-monitor-modal',
@@ -16,6 +17,7 @@ export class MaintenanceMonitorModalComponent implements OnInit, OnDestroy {
   private maintenanceService = inject(MaintenanceService);
   private hotelService = inject(HotelService);
   private cdr = inject(ChangeDetectorRef);
+  public bookingService = inject(BookingService);
 
   targetRoomId = input<number | null>(null);
 
@@ -104,7 +106,7 @@ export class MaintenanceMonitorModalComponent implements OnInit, OnDestroy {
 
   async confirmResolution() {
     if (!this.resolvingTicketId) return;
-    
+
     // Validación robusta: verificar que la solución no esté vacía después de trim
     const trimmedSolution = this.solutionText.trim();
     if (!trimmedSolution || trimmedSolution.length < 5) {
@@ -176,5 +178,10 @@ export class MaintenanceMonitorModalComponent implements OnInit, OnDestroy {
     this.tickets.set([]);
     this.isLoading.set(false);
     this.filter.set('PENDING');
+  }
+
+  getRoomName(roomId: number): string {
+    const room = this.bookingService.rooms().find(r => r.id === roomId);
+    return room ? room.room_number : `ID: ${roomId}`;
   }
 }
