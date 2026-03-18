@@ -13,7 +13,7 @@ import { environment } from '../environments/environment';
 })
 export class App implements OnInit {
   private http = inject(HttpClient);
-  private apiUrl_public = environment.apiUrl_public;  
+  private apiUrl_public = environment.apiUrl_public;
   private apiUrl_crud = environment.apiUrl_crud; // Agregado para el MetaCRUD
 
   isMenuOpen = signal(false);
@@ -39,28 +39,31 @@ export class App implements OnInit {
   reviewForm = { guest_name: '', rating: 5, review_text: '' };
 
   // --- MÉTODOS DEL MODAL ---
-  openReviewModal() { 
-    this.showReviewModal.set(true); 
+  openReviewModal() {
+    this.showReviewModal.set(true);
   }
-  
-  closeReviewModal() { 
-    this.showReviewModal.set(false); 
+
+  closeReviewModal() {
+    this.showReviewModal.set(false);
     this.reviewForm = { guest_name: '', rating: 5, review_text: '' }; // Limpiar form
   }
 
-  setRating(stars: number) { 
-    this.reviewForm.rating = stars; 
+  setRating(stars: number) {
+    this.reviewForm.rating = stars;
   }
 
- // --- CARGA DE RESEÑAS DESDE n8n MetaCRUD ---
+  // --- CARGA DE RESEÑAS DESDE n8n MetaCRUD ---
   loadDbReviews() {
-    // Ajuste arquitectónico: Pasamos el modelo como Query Parameter
+    // Pasamos el modelo como Query Parameter
     const url = `${this.apiUrl_crud}?model=hotel_reviews`;
 
-    this.http.get(url).subscribe({
+    // AGREGADO: Payload vacío u operación explícita para satisfacer la firma de http.post()
+    const payload = { operation: 'getall' };
+
+    this.http.post(url, payload).subscribe({
       next: (res: any) => {
-        console.log('✅ MetaCRUD Respondió (GET):', res);
-        
+        console.log('✅ MetaCRUD Respondió (POST):', res);
+
         const data = res.data || res;
         if (Array.isArray(data) && data.length > 0) {
           this.dbReviews.set(data.slice(0, 3));
@@ -69,7 +72,7 @@ export class App implements OnInit {
             if (window.lucide) window.lucide.createIcons();
           }, 50);
         } else {
-          console.warn('⚠️ N8n respondió bien, pero el arreglo de reseñas viene vacío. ¿Se ejecutaron los INSERTS en PostgreSQL?');
+          console.warn('⚠️ N8n respondió bien, pero el arreglo de reseñas viene vacío.');
         }
       },
       error: (err) => {
@@ -80,7 +83,7 @@ export class App implements OnInit {
 
   submitReview() {
     if (!this.reviewForm.guest_name || !this.reviewForm.review_text) return;
-    
+
     this.isSubmittingReview.set(true);
     const payload = { ...this.reviewForm, is_approved: false };
 
