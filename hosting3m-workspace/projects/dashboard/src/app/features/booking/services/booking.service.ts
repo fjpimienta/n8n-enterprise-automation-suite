@@ -411,22 +411,27 @@ export class BookingService {
       }, { headers: this.adminService.getAuthHeaders() })
     );
 
-    // 2. 📡 RADAR DE TICKETS: ¿Hay fallas pendientes reportadas en este cuarto?
+    // 2. 📡 RADAR DE TICKETS BLINDADO (Defensa en Profundidad)
     let hasPendingTickets = false;
     try {
       const ticketsRes: any = await lastValueFrom(
         this.http.post(`${crudUrl}/hotel_maintenance_tickets`, {
           operation: 'getall',
-          fields: { room_id: room.id, status: 'PENDING' }
+          filters: { room_id: room.id, status: 'PENDING' } // Usamos 'filters' como manda tu arquitectura
         }, { headers: this.adminService.getAuthHeaders() })
       );
-      hasPendingTickets = ticketsRes.data && ticketsRes.data.length > 0;
+
+      // Normalizamos la respuesta por si n8n manda el array directo o dentro de "data"
+      const pendingTickets = Array.isArray(ticketsRes?.data) ? ticketsRes.data : (Array.isArray(ticketsRes) ? ticketsRes : []);
+
+      // 🛑 DOBLE CANDADO: Obligamos a Angular a verificar que el ticket coincida con el ID del cuarto
+      hasPendingTickets = pendingTickets.some((t: any) => Number(t.room_id) === Number(room.id) && t.status === 'PENDING');
+
     } catch (error) {
       console.warn('No se pudieron verificar los tickets de mantenimiento (Fallback a disponible)', error);
     }
 
     // 3. ⚡ TRANSICIÓN DE ESTADO INTELIGENTE
-    // Si hay un ticket esperando, la pasamos a mantenimiento. Si no, a disponible.
     const nextStatus = hasPendingTickets ? 'maintenance' : 'available';
 
     await lastValueFrom(
