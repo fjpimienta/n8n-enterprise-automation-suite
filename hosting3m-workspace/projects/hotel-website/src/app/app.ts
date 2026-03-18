@@ -55,7 +55,7 @@ export class App implements OnInit {
   // --- CARGA DE RESEÑAS DESDE n8n MetaCRUD ---
   loadDbReviews() {
     // Pasamos el modelo como Query Parameter
-    const url = `${this.apiUrl_crud}?model=hotel_reviews`;
+    const url = `${this.apiUrl_crud}/hotel_reviews`;
 
     // AGREGADO: Payload vacío u operación explícita para satisfacer la firma de http.post()
     const payload = { operation: 'getall' };
