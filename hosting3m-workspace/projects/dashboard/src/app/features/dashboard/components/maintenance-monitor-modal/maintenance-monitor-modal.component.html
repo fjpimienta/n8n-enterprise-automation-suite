@@ -50,7 +50,7 @@
                             <span class="avatar avatar-md fw-bold shadow-sm"
                                 [class.bg-danger-lt]="t.priority === 'CRITICAL'"
                                 [class.bg-blue-lt]="t.priority !== 'CRITICAL'">
-                                {{ t.room_data?.room_number || t.room_id }}
+                                {{ getRoomName(t.room_id) }}
                             </span>
                         </div>
 
