@@ -60,7 +60,7 @@ export class BookingService {
       case 'dirty':
         return rooms.filter(r => r.cleaning_status === 'dirty');
       case 'maintenance':
-        return rooms.filter(r => r.status === 'maintenance');
+        return rooms.filter((r: any) => r.status === 'maintenance' || r.hasPendingTicket);
       default:
         return rooms;
     }
@@ -162,7 +162,8 @@ export class BookingService {
         displayDate: room.status === 'occupied' ? currentCheckOut : nextCheckIn,
         isCheckoutDate: room.status === 'occupied' && currentCheckOut === todayStr,
         hasIncomingReservation: nextCheckIn !== null,
-        hasIncomingToday
+        hasIncomingToday,
+        hasPendingTicket: (room as any).hasPendingTicket
       };
     });
   });
@@ -184,9 +185,30 @@ export class BookingService {
       headers: this.adminService.getAuthHeaders()
     })
       .subscribe({
-        next: (res) => {
+        next: async (res) => { // Agregamos async aquí
           if (res && !res.error && res.data) {
-            const data = Array.isArray(res.data) ? res.data : [];
+            let data = Array.isArray(res.data) ? res.data : [];
+
+            // 📡 RADAR DE TICKETS MASIVO: Buscamos todos los tickets pendientes
+            try {
+              const ticketsRes: any = await lastValueFrom(
+                this.http.post(`${this.apiUrl_crud}/hotel_maintenance_tickets`, {
+                  operation: 'getall',
+                  fields: { status: 'PENDING' }
+                }, { headers: this.adminService.getAuthHeaders() })
+              );
+
+              const pendingTickets = Array.isArray(ticketsRes.data) ? ticketsRes.data : [];
+
+              // Le inyectamos la bandera "hasPendingTicket" a cada habitación
+              data = data.map(room => {
+                const roomHasTicket = pendingTickets.some((t: any) => t.room_id === room.id);
+                return { ...room, hasPendingTicket: roomHasTicket };
+              });
+            } catch (error) {
+              console.warn('No se pudo cargar el radar de tickets globales', error);
+            }
+
             const sortedRooms = [...data].sort((a, b) =>
               String(a.room_number).localeCompare(String(b.room_number), undefined, { numeric: true })
             );
@@ -373,6 +395,7 @@ export class BookingService {
   public async processCheckout(room: Room, bookingId: number, inventoryReport: string, checks: any): Promise<void> {
     const crudUrl = this.apiUrl_crud;
 
+    // 1. Cerrar la reserva del huésped (Check-out normal)
     await lastValueFrom(
       this.http.post(`${crudUrl}/hotel_bookings`, {
         operation: 'update',
@@ -388,13 +411,31 @@ export class BookingService {
       }, { headers: this.adminService.getAuthHeaders() })
     );
 
+    // 2. 📡 RADAR DE TICKETS: ¿Hay fallas pendientes reportadas en este cuarto?
+    let hasPendingTickets = false;
+    try {
+      const ticketsRes: any = await lastValueFrom(
+        this.http.post(`${crudUrl}/hotel_maintenance_tickets`, {
+          operation: 'getall',
+          fields: { room_id: room.id, status: 'PENDING' }
+        }, { headers: this.adminService.getAuthHeaders() })
+      );
+      hasPendingTickets = ticketsRes.data && ticketsRes.data.length > 0;
+    } catch (error) {
+      console.warn('No se pudieron verificar los tickets de mantenimiento (Fallback a disponible)', error);
+    }
+
+    // 3. ⚡ TRANSICIÓN DE ESTADO INTELIGENTE
+    // Si hay un ticket esperando, la pasamos a mantenimiento. Si no, a disponible.
+    const nextStatus = hasPendingTickets ? 'maintenance' : 'available';
+
     await lastValueFrom(
       this.http.post(`${crudUrl}/hotel_rooms`, {
         operation: 'update',
         id: room.id,
         fields: {
-          status: 'available',
-          cleaning_status: 'dirty'
+          status: nextStatus,
+          cleaning_status: 'dirty' // Siempre queda sucia al salir un huésped
         }
       }, { headers: this.adminService.getAuthHeaders() })
     );
