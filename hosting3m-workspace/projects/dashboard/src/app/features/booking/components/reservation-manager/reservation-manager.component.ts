@@ -193,27 +193,52 @@ export class ReservationManagerComponent implements OnInit, OnDestroy {
 
     reservations.forEach(res => {
       const room = this.bookingService.rooms().find(r => r.id === res.room_id);
-      const type = room?.type || 'Estándar';
+      const type = room?.type ? room.type.toLowerCase() : 'estándar';
+      const formattedType = type.charAt(0).toUpperCase() + type.slice(1);
 
-      const s = new Date(res.check_in).getTime();
-      const e = new Date(res.check_out).getTime();
+      const roomNumber = room?.room_number || 'S/N';
+
+      // 1. Parseo y formateo de fechas
+      const checkInDate = new Date(res.check_in);
+      const checkOutDate = new Date(res.check_out);
+
+      const dateOptions: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short', year: 'numeric' };
+      const strIn = checkInDate.toLocaleDateString('es-MX', dateOptions);
+      const strOut = checkOutDate.toLocaleDateString('es-MX', dateOptions);
+      const dateRangeStr = `Del ${strIn} al ${strOut}`;
+
+      const s = checkInDate.getTime();
+      const e = checkOutDate.getTime();
       let nights = Math.ceil((e - s) / (1000 * 3600 * 24));
       if (nights < 1) nights = 1;
 
-      const price = room?.price_night || 0;
-      const key = `${type}-${price}-${nights}`;
+      const grossTotalPerRoom = Number(res.total_amount) || 0;
+      const netTotalPerRoom = grossTotalPerRoom;
+      const netDailyRate = netTotalPerRoom / nights;
+
+      // 2. Llave de agrupación ESTRICTA (incluye los timestamps 's' y 'e')
+      const key = `${type}-${netDailyRate.toFixed(4)}-${nights}-${s}-${e}`;
 
       if (!groups[key]) {
         groups[key] = {
-          concept: `Habitación ${type}`,
-          description: `${nights} Noche(s)`,
-          quantity: 0,
-          unitPrice: price * nights,
-          total: 0
+          concept: `Habitación ${formattedType}`,
+          roomNumbers: [roomNumber],
+          dateRange: dateRangeStr, // Almacenado temporalmente para reconstrucción
+          description: `Hab: ${roomNumber}\n${dateRangeStr}`, // Salto de línea para la fecha
+          dailyRate: netDailyRate,
+          nights: nights,
+          quantity: 1,
+          unitPrice: netTotalPerRoom,
+          total: netTotalPerRoom
         };
+      } else {
+        groups[key].quantity += 1;
+        groups[key].total += netTotalPerRoom;
+
+        groups[key].roomNumbers.push(roomNumber);
+        // 3. Reconstrucción dinámica del string
+        groups[key].description = `Hab: ${groups[key].roomNumbers.join(', ')}\n${groups[key].dateRange}`;
       }
-      groups[key].quantity += 1;
-      groups[key].total += (price * nights);
     });
 
     return Object.values(groups);

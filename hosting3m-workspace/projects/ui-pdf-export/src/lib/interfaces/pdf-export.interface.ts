@@ -1,9 +1,11 @@
 export interface PdfExportItem {
-    concept: string;       // Ej: "Habitación 101"
-    description?: string;  // Ej: "Noches del 21 al 28"
-    quantity: number;      // Ej: 7
-    unitPrice: number;     // Ej: 500.00
-    total: number;         // Ej: 3500.00
+    concept: string;       // Ej: "Habitación Doble"
+    description?: string;  // (Opcional para notas extra, ya no usamos los paréntesis anidados)
+    quantity: number;      // Cantidad de habitaciones
+    unitPrice: number;     // Subtotal neto base de 1 habitación (Legacy para cálculos)
+    total: number;         // Importe Total (unitPrice * quantity)
+    dailyRate?: number;    // Precio neto por noche
+    nights?: number;       // Cantidad de noches
 }
 
 export interface PdfExportConfig {
