@@ -180,7 +180,7 @@ export class ReservationManagerComponent implements OnInit, OnDestroy {
       items: reportItems,
       footerTitle: 'Forma de Pago',
       footerText: [
-        'Transferencia a nombre de: Diana Perez Pimienta | RFC: PEED8001019A1',
+        'Transferencia a nombre de: Diana Perez Pimienta | RFC: PEPD690214I76',
         'Banco BBVA | CLABE: 012180015615151108 | No. Cuenta: 1561515110',
       ]
     };
@@ -192,15 +192,21 @@ export class ReservationManagerComponent implements OnInit, OnDestroy {
     const groups: any = {};
 
     reservations.forEach(res => {
-      const room = this.bookingService.rooms().find(r => r.id === res.room_id);
+      const room = this.bookingService.rooms().find((r: any) => r.id === res.room_id);
       const type = room?.type ? room.type.toLowerCase() : 'estándar';
       const formattedType = type.charAt(0).toUpperCase() + type.slice(1);
 
       const roomNumber = room?.room_number || 'S/N';
 
-      // 1. Parseo y formateo de fechas
-      const checkInDate = new Date(res.check_in);
-      const checkOutDate = new Date(res.check_out);
+      // 1. 🛠️ FIX DE ZONA HORARIA: Parseo estricto
+      // Separamos la fecha (YYYY-MM-DD) e ignoramos la hora y la zona horaria (+00) de la DB
+      const inDateStr = String(res.check_in).split(/[ T+]/)[0];
+      const outDateStr = String(res.check_out).split(/[ T+]/)[0];
+
+      // Añadimos T12:00:00 para forzar el horario al mediodía local.
+      // Esto evita categóricamente que la zona horaria del navegador atrase o adelante el día.
+      const checkInDate = new Date(`${inDateStr}T12:00:00`);
+      const checkOutDate = new Date(`${outDateStr}T12:00:00`);
 
       const dateOptions: Intl.DateTimeFormatOptions = { day: '2-digit', month: 'short', year: 'numeric' };
       const strIn = checkInDate.toLocaleDateString('es-MX', dateOptions);
@@ -209,7 +215,9 @@ export class ReservationManagerComponent implements OnInit, OnDestroy {
 
       const s = checkInDate.getTime();
       const e = checkOutDate.getTime();
-      let nights = Math.ceil((e - s) / (1000 * 3600 * 24));
+
+      // Cambiamos a Math.round para mayor precisión en la matemática de fechas
+      let nights = Math.round((e - s) / (1000 * 3600 * 24));
       if (nights < 1) nights = 1;
 
       const grossTotalPerRoom = Number(res.total_amount) || 0;
