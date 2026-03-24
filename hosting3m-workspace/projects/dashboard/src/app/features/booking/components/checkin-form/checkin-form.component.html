@@ -60,7 +60,7 @@
             <div class="hr-text">Detalles de Estancia & Finanzas</div>
 
             <div class="row">
-              <div class="col-md-3">
+              <div class="col-md-4">
                 <div class="mb-3">
                   <label class="form-label required">Check-out (Salida)</label>
                   <input type="date" class="form-control" formControlName="check_out">
@@ -70,7 +70,7 @@
                 </div>
               </div>
 
-              <div class="col-md-3">
+              <div class="col-md-4">
                 <div class="mb-3">
                   <label class="form-label">Precio Sugerido</label>
                   <div class="input-group">
@@ -81,7 +81,7 @@
                 </div>
               </div>
 
-              <div class="col-md-3">
+              <div class="col-md-4">
                 <div class="mb-3">
                   <label class="form-label required">Total a Cobrar</label>
                   <div class="input-group">
@@ -91,17 +91,6 @@
                   <small class="text-danger fw-bold" *ngIf="discountAmount > 0">
                     ▼ Desc: ${{ discountAmount | number:'1.2-2' }}
                   </small>
-                </div>
-              </div>
-
-              <div class="col-md-3">
-                <div class="mb-3">
-                  <label class="form-label text-success fw-bold">💰 Abono Inicial</label>
-                  <div class="input-group">
-                    <span class="input-group-text bg-success-lt text-success border-success">$</span>
-                    <input type="number" class="form-control fw-bold border-success text-success"
-                      formControlName="amount_paid">
-                  </div>
                 </div>
               </div>
             </div>
