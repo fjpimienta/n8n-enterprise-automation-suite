@@ -166,26 +166,127 @@ export class ReservationManagerComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const rawReservations = this.adminService.reservations().filter(r => ids.has(r.id));
+    const rawReservations = this.adminService.reservations().filter((r: any) => ids.has(r.id));
     const reportItems = this.mapToPdfItems(rawReservations);
-    const clientName = rawReservations[0]?.hotel_guests_data?.full_name || 'Cliente Mostrador';
+    const clientName = rawReservations[0]?.hotel_guests_data?.full_name || rawReservations[0]?.guest_name || 'Cliente Mostrador';
 
-    const pdfConfig: PdfExportConfig = {
-      fileName: `Cotizacion_${clientName}`,
-      title: 'PRESUPUESTO DE HOSPEDAJE',
+    // 💡 LÓGICA DE ESTADO (Soft-Booking vs Hard-Booking)
+    // Si alguna de las reservas seleccionadas está 'pending', es una Cotización.
+    const isPending = rawReservations.some((r: any) => r.status === 'pending');
+    const requiresInvoice = rawReservations.some((r: any) => r.is_invoiced === true);
+
+    const foliosStr = Array.from(ids).join(', ');
+
+    // Construimos el Título Dinámico
+    let documentTitle = isPending ? 'PRESUPUESTO DE HOSPEDAJE' : 'COMPROBANTE DE RESERVA';
+    if (requiresInvoice) {
+      documentTitle += ' (INCLUYE IMPUESTOS)';
+    }
+
+    // Construimos el prefijo del archivo
+    const filePrefix = isPending ? 'Cotizacion' : 'Reserva';
+
+    const pdfConfig: any = {
+      fileName: `${filePrefix}_${clientName.replace(/\s+/g, '_')}_Folio_${foliosStr}`,
+      title: documentTitle,
       companyName: 'Hotel San José',
       companyAddress: 'Av. Juarez s/n, Centro, Catazajá, Chiapas',
       clientName: clientName,
-      clientSubtitle: 'Estancia Solicitada',
+      clientSubtitle: `Folio(s) de Reserva: ${foliosStr}`,
       items: reportItems,
+
+      // Control Fiscal de la librería ui-pdf-export
+      taxRate: requiresInvoice ? 0.16 : 0,
+      ishRate: requiresInvoice ? 0.02 : 0,
+      showTaxes: requiresInvoice,
+
       footerTitle: 'Forma de Pago',
       footerText: [
-        'Transferencia a nombre de: Diana Perez Pimienta | RFC: PEPD690214I76',
+        'Transferencia a nombre de: Diana Perez Pimienta | RFC: PEPD690214176',
         'Banco BBVA | CLABE: 012180015615151108 | No. Cuenta: 1561515110',
       ]
     };
 
     this.pdfService.generate(pdfConfig);
+  }
+
+  async bulkPayment() {
+    const ids = this.selectedIds();
+    if (ids.size === 0) return;
+
+    const selectedRes = this.adminService.reservations().filter((r: any) => ids.has(r.id));
+    const clientName = selectedRes[0]?.hotel_guests_data?.full_name || selectedRes[0]?.guest_name || 'Grupo';
+
+    // 1. Calcular deuda total del grupo seleccionado
+    let totalDeuda = 0;
+    let totalPagado = 0;
+    selectedRes.forEach(r => {
+      totalDeuda += (Number(r.total_amount) || 0);
+      totalPagado += (Number(r.amount_paid) || 0);
+    });
+
+    const saldoRestante = totalDeuda - totalPagado;
+
+    if (saldoRestante <= 0) {
+      alert('Las habitaciones seleccionadas ya están liquidadas.');
+      return;
+    }
+
+    // 2. Solicitar monto a abonar al grupo
+    const input = window.prompt(
+      `💰 ABONO GRUPAL / CONFIRMACIÓN MULTIPLE\n\n` +
+      `Huésped/Grupo: ${clientName}\n` +
+      `Habitaciones seleccionadas: ${selectedRes.length}\n` +
+      `Total de la Estancia: $${totalDeuda.toFixed(2)}\n` +
+      `Saldo Restante: $${saldoRestante.toFixed(2)}\n\n` +
+      `Ingrese el monto total que abonará el grupo en este momento:`,
+      saldoRestante.toString()
+    );
+
+    if (input === null) return;
+
+    const amountToPay = parseFloat(input);
+    if (isNaN(amountToPay) || amountToPay <= 0) {
+      alert('❌ Monto inválido. Debe ser mayor a $0.');
+      return;
+    }
+
+    if (amountToPay > saldoRestante) {
+      const confirmOverpay = window.confirm(`El abono ($${amountToPay}) supera el saldo ($${saldoRestante}). ¿Desea registrarlo de todos modos?`);
+      if (!confirmOverpay) return;
+    }
+
+    this.isLoading.set(true);
+    let remainingAbono = amountToPay;
+
+    try {
+      // 3. 🧠 Distribución Financiera en Cascada (Waterfall)
+      for (const res of selectedRes) {
+        const currentTotal = Number(res.total_amount) || 0;
+        const currentPaid = Number(res.amount_paid) || 0;
+        const debt = currentTotal - currentPaid;
+
+        let paymentForThisRoom = 0;
+        if (remainingAbono > 0 && debt > 0) {
+          paymentForThisRoom = Math.min(remainingAbono, debt);
+          remainingAbono -= paymentForThisRoom;
+        }
+
+        // 4. Procesar pago en el servicio (forceConfirm = true para activar todo el grupo)
+        await this.bookingService.registerPayment(res, paymentForThisRoom, true);
+      }
+
+      alert('✅ Pago distribuido y habitaciones confirmadas exitosamente.');
+      this.selectedIds.set(new Set()); // Limpiamos selección
+      this.adminService.loadReservations();
+      this.hotelService.clearSelection();
+
+    } catch (e) {
+      console.error(e);
+      alert('❌ Ocurrió un error al procesar el pago grupal.');
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 
   private mapToPdfItems(reservations: any[]): any[] {
@@ -195,16 +296,10 @@ export class ReservationManagerComponent implements OnInit, OnDestroy {
       const room = this.bookingService.rooms().find((r: any) => r.id === res.room_id);
       const type = room?.type ? room.type.toLowerCase() : 'estándar';
       const formattedType = type.charAt(0).toUpperCase() + type.slice(1);
-
       const roomNumber = room?.room_number || 'S/N';
 
-      // 1. 🛠️ FIX DE ZONA HORARIA: Parseo estricto
-      // Separamos la fecha (YYYY-MM-DD) e ignoramos la hora y la zona horaria (+00) de la DB
       const inDateStr = String(res.check_in).split(/[ T+]/)[0];
       const outDateStr = String(res.check_out).split(/[ T+]/)[0];
-
-      // Añadimos T12:00:00 para forzar el horario al mediodía local.
-      // Esto evita categóricamente que la zona horaria del navegador atrase o adelante el día.
       const checkInDate = new Date(`${inDateStr}T12:00:00`);
       const checkOutDate = new Date(`${outDateStr}T12:00:00`);
 
@@ -216,35 +311,37 @@ export class ReservationManagerComponent implements OnInit, OnDestroy {
       const s = checkInDate.getTime();
       const e = checkOutDate.getTime();
 
-      // Cambiamos a Math.round para mayor precisión en la matemática de fechas
       let nights = Math.round((e - s) / (1000 * 3600 * 24));
       if (nights < 1) nights = 1;
 
-      const grossTotalPerRoom = Number(res.total_amount) || 0;
-      const netTotalPerRoom = grossTotalPerRoom;
-      const netDailyRate = netTotalPerRoom / nights;
+      // 🧠 EXTRACCIÓN INVERSA PARA LA LIBRERÍA DE PDF
+      const finalTotalStored = Number(res.total_amount) || 0;
+      const requiresInvoice = res.is_invoiced === true;
 
-      // 2. Llave de agrupación ESTRICTA (incluye los timestamps 's' y 'e')
-      const key = `${type}-${netDailyRate.toFixed(4)}-${nights}-${s}-${e}`;
+      // Si la reserva exige factura, la BD ya tiene el total inflado (+18%). 
+      // Debemos darle a la librería el subtotal base para que su "auto-calculadora" cuadre.
+      const baseTotalPerRoom = requiresInvoice ? (finalTotalStored / 1.18) : finalTotalStored;
+      const baseDailyRate = baseTotalPerRoom / nights;
+
+      // Llave estricta
+      const key = `${type}-${baseDailyRate.toFixed(4)}-${nights}-${s}-${e}-${requiresInvoice}`;
 
       if (!groups[key]) {
         groups[key] = {
           concept: `Habitación ${formattedType}`,
           roomNumbers: [roomNumber],
-          dateRange: dateRangeStr, // Almacenado temporalmente para reconstrucción
-          description: `Hab: ${roomNumber}\n${dateRangeStr}`, // Salto de línea para la fecha
-          dailyRate: netDailyRate,
+          dateRange: dateRangeStr,
+          description: `Hab: ${roomNumber}\n${dateRangeStr}`,
+          dailyRate: baseDailyRate, // Enviamos NETO puro
           nights: nights,
           quantity: 1,
-          unitPrice: netTotalPerRoom,
-          total: netTotalPerRoom
+          unitPrice: baseTotalPerRoom, // Enviamos NETO puro
+          total: baseTotalPerRoom      // Enviamos NETO puro
         };
       } else {
         groups[key].quantity += 1;
-        groups[key].total += netTotalPerRoom;
-
+        groups[key].total += baseTotalPerRoom;
         groups[key].roomNumbers.push(roomNumber);
-        // 3. Reconstrucción dinámica del string
         groups[key].description = `Hab: ${groups[key].roomNumbers.join(', ')}\n${groups[key].dateRange}`;
       }
     });

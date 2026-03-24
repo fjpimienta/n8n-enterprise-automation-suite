@@ -585,9 +585,11 @@ export class BookingService {
             check_in: formData.check_in,
             check_out: formData.check_out,
             total_amount: formData.total_amount || 0,
-            status: 'confirmed',
-            payment_status: 'pending',
-            notes: 'Reserva Futura',
+            status: formData.status || 'confirmed', // 🛠️ DINÁMICO: 'pending' o 'confirmed'
+            payment_status: formData.payment_status || 'pending',
+            amount_paid: formData.amount_paid || 0,
+            notes: formData.notes || (formData.status === 'pending' ? 'Cotización (Bloqueo Temporal)' : 'Reserva Futura'),
+            is_invoiced: formData.is_invoiced || false,
             id_company: 1
           }
         }, { headers: this.adminService.getAuthHeaders() })
@@ -617,6 +619,7 @@ export class BookingService {
             check_out: formData.check_out,
             total_amount: Number(formData.total_amount),
             notes: formData.notes,
+            is_invoiced: formData.is_invoiced || false,
             id_company: 1
           }
         }, { headers: this.adminService.getAuthHeaders() })
@@ -630,18 +633,26 @@ export class BookingService {
   }
 
   /** Registrar pago parcial o total de una reserva */
-  public async registerPayment(booking: any, amountToAdd: number): Promise<void> {
+  // 🛠️ Se agrega forceConfirm para pagos grupales
+  public async registerPayment(booking: any, amountToAdd: number, forceConfirm: boolean = false): Promise<void> {
     this.isProcessing.set(true);
     try {
       const currentPaid = Number(booking.amount_paid) || 0;
       const totalAmount = Number(booking.total_amount) || 0;
       const newPaid = currentPaid + amountToAdd;
 
-      let newStatus = booking.payment_status;
+      let newPaymentStatus = booking.payment_status;
       if (newPaid >= totalAmount) {
-        newStatus = 'paid';
+        newPaymentStatus = 'paid';
       } else if (newPaid > 0) {
-        newStatus = 'partial';
+        newPaymentStatus = 'partial';
+      }
+
+      // 🧠 LÓGICA DE EVOLUCIÓN: De Cotización a Reserva Oficial
+      let newBookingStatus = booking.status;
+      // 🛠️ Ahora evoluciona si hay pago OR si es un pago grupal forzado
+      if (booking.status === 'pending' && (newPaid > 0 || forceConfirm)) { 
+        newBookingStatus = 'confirmed';
       }
 
       await lastValueFrom(
@@ -649,7 +660,8 @@ export class BookingService {
           operation: 'update',
           id: booking.id,
           fields: {
-            payment_status: newStatus,
+            status: newBookingStatus, 
+            payment_status: newPaymentStatus,
             amount_paid: newPaid
           }
         }, { headers: this.adminService.getAuthHeaders() })

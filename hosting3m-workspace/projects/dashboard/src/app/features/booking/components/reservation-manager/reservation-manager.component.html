@@ -6,12 +6,19 @@
       <div class="text-muted small mt-1">Administra el calendario y las estancias</div>
     </div>
 
-    <div>
+    <div class="d-flex gap-2">
+      <button class="btn btn-success shadow-sm" (click)="bulkPayment()" [disabled]="selectedIds().size === 0"
+        title="Abonar a reservas seleccionadas">
+        <i class="ti ti-cash me-2"></i>
+        <span class="d-none d-sm-inline">Abono Grupal</span>
+        <span class="d-inline d-sm-none">Abono</span>
+        @if(selectedIds().size > 0) { ({{ selectedIds().size }}) }
+      </button>
+
       <button class="btn btn-outline-danger shadow-sm" (click)="printSelected()" [disabled]="selectedIds().size === 0">
         <i class="ti ti-file-type-pdf me-2"></i>
-        <span class="d-none d-sm-inline">Imprimir Cotización</span>
-        <span class="d-inline d-sm-none">Imprimir</span>
-        @if(selectedIds().size > 0) { ({{ selectedIds().size }}) }
+        <span class="d-none d-sm-inline">Imprimir PDF</span>
+        <span class="d-inline d-sm-none">PDF</span>
       </button>
     </div>
   </div>
