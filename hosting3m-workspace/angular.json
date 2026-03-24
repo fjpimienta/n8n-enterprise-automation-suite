@@ -76,7 +76,6 @@
             "outputPath": "dist/dashboard",
             "index": "projects/dashboard/src/index.html",
             "polyfills": [
-              "zone.js"
             ],
             "allowedCommonJsDependencies": [
               "jspdf",

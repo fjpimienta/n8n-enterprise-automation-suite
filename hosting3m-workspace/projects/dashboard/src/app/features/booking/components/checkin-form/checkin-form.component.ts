@@ -33,7 +33,8 @@ export class CheckinFormComponent implements OnInit, OnChanges {
     state: new FormControl(''),
     country: new FormControl('México'),
     check_out: new FormControl('', [Validators.required]),
-    total_amount: new FormControl(0, [Validators.required, Validators.min(0)]), // El cobro final
+    total_amount: new FormControl(0, [Validators.required, Validators.min(0)]),
+    amount_paid: new FormControl(0, [Validators.min(0)]),
     vip_status: new FormControl(false),
     requires_invoice: new FormControl(false),
     is_invoiced: new FormControl(false),
@@ -143,6 +144,7 @@ export class CheckinFormComponent implements OnInit, OnChanges {
       country: guest.country || 'México',
       check_out: res.check_out ? res.check_out.split('T')[0] : '',
       total_amount: res.total_amount || 0,
+      amount_paid: res.amount_paid || 0,
       vip_status: guest.vip_status || false,
       requires_invoice: res.is_invoiced || false,
       is_invoiced: res.is_invoiced || false,
@@ -153,9 +155,12 @@ export class CheckinFormComponent implements OnInit, OnChanges {
     // Usamos setTimeout para asegurar que el DOM y valores iniciales estén listos
     setTimeout(() => {
       this.calculateStandardPrice();
-      // Sobreescribimos el total con el que venía en la reserva (porque calculateStandardPrice lo resetea)
-      if (res.total_amount) {
+      if (res.total_amount !== undefined) {
         this.checkinForm.patchValue({ total_amount: res.total_amount });
+      }
+      // 🛠️ NUEVO: Retenemos el abono tras el recálculo
+      if (res.amount_paid !== undefined) {
+        this.checkinForm.patchValue({ amount_paid: res.amount_paid });
       }
     });
   }

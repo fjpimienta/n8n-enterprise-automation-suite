@@ -70,6 +70,38 @@ export class RoomDetailModalComponent implements OnInit {
     this.loadAssets(); // Recargar la lista para ver el nuevo activo
   }
 
+  handlePaymentClick(booking: any) {
+    const total = Number(booking.total_amount) || 0;
+    const paid = Number(booking.amount_paid) || 0;
+    const remaining = total - paid;
+
+    const input = window.prompt(
+      `💰 REGISTRO DE ABONO\n\n` +
+      `Huésped: ${booking.hotel_guests_data?.full_name || 'N/A'}\n` +
+      `Total de la Estancia: $${total.toFixed(2)}\n` +
+      `Monto Pagado a la fecha: $${paid.toFixed(2)}\n` +
+      `Saldo Restante: $${remaining.toFixed(2)}\n\n` +
+      `Ingrese el monto que el huésped está abonando en este momento:`,
+      remaining.toString() // Sugiere liquidar el total restante por defecto
+    );
+
+    if (input === null) return; // El usuario canceló la ventana
+
+    const amountToPay = parseFloat(input);
+    if (isNaN(amountToPay) || amountToPay <= 0) {
+      alert('❌ Por favor, ingrese un monto válido mayor a $0.');
+      return;
+    }
+
+    if (amountToPay > remaining) {
+      const confirmOverpay = window.confirm(`El abono ($${amountToPay}) es mayor al saldo restante ($${remaining}). ¿Desea registrarlo como saldo a favor / propina?`);
+      if (!confirmOverpay) return;
+    }
+
+    // Emitimos el objeto modificado hacia el Dashboard
+    this.onPay.emit({ booking, amount: amountToPay });
+  }
+
   isExpired(dateStr: string | undefined): boolean {
     if (!dateStr) return false;
     const today = new Date();

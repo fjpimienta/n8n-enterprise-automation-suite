@@ -143,10 +143,12 @@
                     @else if (room().status === 'occupied') {
                     @if (activeBooking()?.payment_status !== 'paid') {
                     <button class="btn btn-success btn-lg d-flex align-items-center justify-content-between px-4 mb-2"
-                        (click)="onPay.emit(activeBooking())">
+                        (click)="handlePaymentClick(activeBooking())">
                         <div class="text-start">
-                            <div class="fw-bold">💰 Registrar Pago</div>
-                            <div class="small opacity-75">Monto: ${{ activeBooking()?.total_amount | number:'1.2-2' }}
+                            <div class="fw-bold">💰 Registrar Abono</div>
+                            <div class="small opacity-75">
+                                Saldo Restante: ${{ (activeBooking()?.total_amount - (activeBooking()?.amount_paid ||
+                                0)) | number:'1.2-2' }}
                             </div>
                         </div>
                     </button>
