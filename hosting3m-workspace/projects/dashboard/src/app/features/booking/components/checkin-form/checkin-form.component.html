@@ -60,7 +60,7 @@
             <div class="hr-text">Detalles de Estancia & Finanzas</div>
 
             <div class="row">
-              <div class="col-md-3">
+              <div class="col-md-4">
                 <div class="mb-3">
                   <label class="form-label required">Check-out (Salida)</label>
                   <input type="date" class="form-control" formControlName="check_out">
@@ -70,7 +70,7 @@
                 </div>
               </div>
 
-              <div class="col-md-3">
+              <div class="col-md-4">
                 <div class="mb-3">
                   <label class="form-label">Precio Sugerido</label>
                   <div class="input-group">
@@ -81,7 +81,7 @@
                 </div>
               </div>
 
-              <div class="col-md-3">
+              <div class="col-md-4">
                 <div class="mb-3">
                   <label class="form-label required">Total a Cobrar</label>
                   <div class="input-group">
@@ -93,13 +93,28 @@
                   </small>
                 </div>
               </div>
+            </div>
 
-              <div class="col-md-3">
-                <div class="mb-3">
-                  <label class="form-label text-success fw-bold">💰 Abono Inicial</label>
+            <div class="row bg-light rounded px-2 py-3 mx-0 mb-3 border">
+              <div class="col-md-6">
+                <div class="mb-0">
+                  <label class="form-label required">¿Modalidad de Pago Inicial?</label>
+                  <select class="form-select fw-bold" formControlName="initial_payment_type" [ngClass]="{'text-success': checkinForm.get('initial_payment_type')?.value === 'full',
+                                'text-warning': checkinForm.get('initial_payment_type')?.value === 'partial',
+                                'text-danger': checkinForm.get('initial_payment_type')?.value === 'pending'}">
+                    <option value="pending" class="text-danger">Paga al Finalizar (Pendiente)</option>
+                    <option value="full" class="text-success">Liquida Ahora (Cobrado Total)</option>
+                    <option value="partial" class="text-warning">Deja un Anticipo (Pago Parcial)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="col-md-6" *ngIf="checkinForm.get('initial_payment_type')?.value === 'partial'">
+                <div class="mb-0 animate__animated animate__fadeIn">
+                  <label class="form-label text-warning fw-bold">💰 Monto del Anticipo</label>
                   <div class="input-group">
-                    <span class="input-group-text bg-success-lt text-success border-success">$</span>
-                    <input type="number" class="form-control fw-bold border-success text-success"
+                    <span class="input-group-text bg-warning-lt text-warning border-warning">$</span>
+                    <input type="number" class="form-control fw-bold border-warning text-warning"
                       formControlName="amount_paid">
                   </div>
                 </div>
