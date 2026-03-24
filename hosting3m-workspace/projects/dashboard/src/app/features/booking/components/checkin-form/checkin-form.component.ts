@@ -35,7 +35,8 @@ export class CheckinFormComponent implements OnInit {
     country: new FormControl('México'),
     check_out: new FormControl('', [Validators.required]),
     total_amount: new FormControl(0, [Validators.required, Validators.min(0)]),
-    amount_paid: new FormControl(0, [Validators.min(0)]),
+    initial_payment_type: new FormControl('pending'),
+    amount_paid: new FormControl<number | null>(0, [Validators.min(0)]),
     vip_status: new FormControl(false),
     requires_invoice: new FormControl(false),
     is_invoiced: new FormControl(false),
@@ -50,7 +51,26 @@ export class CheckinFormComponent implements OnInit {
 
     this.checkinForm.get('total_amount')?.valueChanges.subscribe((val) => {
       this.calculateDiscount(val || 0);
+      // Si está en modo "Cobrado Total", actualizamos el abono automáticamente
+      if (this.checkinForm.get('initial_payment_type')?.value === 'full') {
+        this.checkinForm.patchValue({ amount_paid: val || 0 }, { emitEvent: false });
+      }
       this.cdr.detectChanges();
+    });
+
+    // 🧠 MÁQUINA DE ESTADOS DE UI: Reacciona al cambio de modalidad de pago
+    this.checkinForm.get('initial_payment_type')?.valueChanges.subscribe(mode => {
+      const total = this.checkinForm.get('total_amount')?.value || 0;
+      if (mode === 'full') {
+        this.checkinForm.patchValue({ amount_paid: total }, { emitEvent: false });
+      } else if (mode === 'pending') {
+        this.checkinForm.patchValue({ amount_paid: 0 }, { emitEvent: false });
+      } else if (mode === 'partial') {
+        const currentPaid = this.checkinForm.get('amount_paid')?.value;
+        if (currentPaid === total || currentPaid === 0) {
+          this.checkinForm.patchValue({ amount_paid: null }, { emitEvent: false }); // Limpiamos para que escriba
+        }
+      }
     });
 
     this.checkinForm.get('is_invoiced')?.valueChanges.subscribe(() => {
@@ -88,10 +108,9 @@ export class CheckinFormComponent implements OnInit {
       this.calculateStandardPrice();
     }
 
-    this.cdr.detectChanges(); // Forzar renderizado instantáneo
+    this.cdr.detectChanges();
   }
 
-  // --- LÓGICA CORE ---
   calculateStandardPrice() {
     const roomData = this.room();
     const checkOutDate = this.checkinForm.get('check_out')?.value;
@@ -113,7 +132,6 @@ export class CheckinFormComponent implements OnInit {
       const basePrice = this.daysCount * (roomData.price_night || 0);
       const wantsInvoice = this.checkinForm.get('is_invoiced')?.value;
 
-      // Si quiere factura, sumamos 16% IVA + 2% ISH (Multiplicar por 1.18)
       this.standardPrice = wantsInvoice ? (basePrice * 1.18) : basePrice;
 
       const currentTotal = this.checkinForm.get('total_amount')?.value;
@@ -152,6 +170,8 @@ export class CheckinFormComponent implements OnInit {
       state: '',
       country: 'México',
       total_amount: 0,
+      initial_payment_type: 'pending',
+      amount_paid: 0,
       vip_status: false,
       requires_invoice: false,
       is_invoiced: false,
@@ -175,6 +195,14 @@ export class CheckinFormComponent implements OnInit {
       checkOutStr = String(res.check_out).split(/[ T]/)[0];
     }
 
+    // Calcular estado inicial basado en abonos previos
+    const total = res.total_amount || 0;
+    const paid = res.amount_paid || 0;
+    let paymentType = 'pending';
+
+    if (paid >= total && total > 0) paymentType = 'full';
+    else if (paid > 0) paymentType = 'partial';
+
     this.checkinForm.patchValue({
       full_name: guestData.full_name || res.guest_name || '',
       phone: guestData.phone || res.guest_phone || '',
@@ -183,9 +211,10 @@ export class CheckinFormComponent implements OnInit {
       city: guestData.city || '',
       state: guestData.state || '',
       country: guestData.country || 'México',
-      check_out: res.check_out ? res.check_out.split('T')[0] : '',
-      total_amount: res.total_amount || 0,
-      amount_paid: res.amount_paid || 0, // 🛠️ NUEVO
+      check_out: checkOutStr,
+      total_amount: total,
+      initial_payment_type: paymentType,
+      amount_paid: paid,
       vip_status: guestData.vip_status || false,
       requires_invoice: res.is_invoiced || false,
       is_invoiced: res.is_invoiced || false,
@@ -197,21 +226,11 @@ export class CheckinFormComponent implements OnInit {
       if (res.total_amount !== undefined) {
         this.checkinForm.patchValue({ total_amount: res.total_amount });
       }
-      if (res.amount_paid !== undefined) {
-         this.checkinForm.patchValue({ amount_paid: res.amount_paid });
-      }
     });
-
-    this.calculateStandardPrice();
-
-    if (res.total_amount) {
-      this.checkinForm.patchValue({ total_amount: res.total_amount }, { emitEvent: false });
-      this.calculateDiscount(res.total_amount);
-    }
   }
 
   confirmCheckin() {
-    const formVal = this.checkinForm.value;
+    const formVal = this.checkinForm.getRawValue(); // Obtenemos valores incluso si están bloqueados
 
     if (!formVal.doc_id || formVal.doc_id.trim() === '') {
       this.checkinForm.patchValue({ doc_id: this.adminService.generateInternalId() });
@@ -221,12 +240,33 @@ export class CheckinFormComponent implements OnInit {
       this.checkinForm.patchValue({ email: this.adminService.generateDummyEmail() });
     }
 
+    const finalVal = this.checkinForm.getRawValue();
+
+    // 🛑 BLINDAJE MATEMÁTICO ANTES DE ENVIAR
+    if (finalVal.initial_payment_type === 'partial') {
+      const paid = Number(finalVal.amount_paid) || 0;
+      const total = Number(finalVal.total_amount) || 0;
+
+      if (paid <= 0) {
+        alert('❌ El anticipo debe ser mayor a $0.');
+        return;
+      }
+      if (paid >= total) {
+        alert('❌ El anticipo no puede ser igual o mayor al total. Si desea liquidar la cuenta completa, seleccione la opción "Liquida Ahora".');
+        return;
+      }
+    }
+
     if (this.checkinForm.valid) {
+      // Inyectamos el cálculo matemático forzado para que nunca viaje un 0 accidental
       const payload = {
-        ...this.checkinForm.value,
+        ...finalVal,
+        amount_paid: finalVal.initial_payment_type === 'full' ? finalVal.total_amount :
+          finalVal.initial_payment_type === 'pending' ? 0 : finalVal.amount_paid,
         guest_id: this.activeRes?.guest_id || null,
         discount_amount: this.discountAmount
       };
+
       this.saved.emit(payload);
     } else {
       this.checkinForm.markAllAsTouched();
