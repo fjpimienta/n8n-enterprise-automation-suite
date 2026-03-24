@@ -306,11 +306,24 @@ export class BookingService {
     return null;
   }
 
+  /** Procesa el check-in: puede ser walk-in o reserva previa */
   public async processCheckin(formData: any, room: Room, existingBookingId?: number): Promise<void> {
     const crudUrl = this.apiUrl_crud;
     this.isProcessing.set(true);
 
     try {
+      // 🧠 LÓGICA DE ESTADO FINANCIERO INICIAL
+      const totalAmount = Number(formData.total_amount) || 0;
+      const amountPaid = Number(formData.amount_paid) || 0;
+      let paymentStatus = 'pending';
+
+      if (amountPaid >= totalAmount && totalAmount > 0) {
+        paymentStatus = 'paid';
+      } else if (amountPaid > 0) {
+        paymentStatus = 'partial';
+      }
+
+      // --- ESCENARIO A: TRANSICIÓN DE RESERVA ---
       if (existingBookingId) {
         await lastValueFrom(
           this.http.post(`${crudUrl}/hotel_bookings`, {
@@ -319,14 +332,17 @@ export class BookingService {
             fields: {
               status: 'checked_in',
               check_in: new Date().toISOString(),
-              check_out: formData.check_out,
-              total_amount: formData.total_amount || 0,
-              payment_status: formData.payment_status || 'pending',
+              total_amount: totalAmount,
+              amount_paid: amountPaid,
+              payment_status: paymentStatus,
               is_invoiced: formData.is_invoiced || false
             }
           }, { headers: this.adminService.getAuthHeaders() })
         );
-      } else {
+
+      }
+      // --- ESCENARIO B: WALK-IN ---
+      else {
         let guestId = formData.guest_id;
 
         if (!guestId) {
@@ -361,9 +377,10 @@ export class BookingService {
               guest_id: guestId,
               check_in: new Date().toISOString(),
               check_out: formData.check_out,
-              total_amount: formData.total_amount || 0,
+              total_amount: totalAmount,
+              amount_paid: amountPaid,
               status: 'checked_in',
-              payment_status: 'pending',
+              payment_status: paymentStatus,
               is_invoiced: formData.is_invoiced || false,
               id_company: 1
             }
@@ -371,6 +388,7 @@ export class BookingService {
         );
       }
 
+      // --- PASO COMÚN FINAL: OCUPAR LA HABITACIÓN ---
       await lastValueFrom(
         this.http.post(`${crudUrl}/hotel_rooms`, {
           operation: 'update',
@@ -391,6 +409,8 @@ export class BookingService {
       this.isProcessing.set(false);
     }
   }
+
+
 
   public async processCheckout(room: Room, bookingId: number, inventoryReport: string, checks: any): Promise<void> {
     const crudUrl = this.apiUrl_crud;
@@ -609,14 +629,37 @@ export class BookingService {
     }
   }
 
-  public async registerPayment(bookingId: number): Promise<void> {
-    await lastValueFrom(
-      this.http.post(`${this.apiUrl_crud}/hotel_bookings`, {
-        operation: 'update',
-        id: bookingId,
-        fields: { payment_status: 'paid' }
-      }, { headers: this.adminService.getAuthHeaders() })
-    );
+  /** Registrar pago parcial o total de una reserva */
+  public async registerPayment(booking: any, amountToAdd: number): Promise<void> {
+    this.isProcessing.set(true);
+    try {
+      const currentPaid = Number(booking.amount_paid) || 0;
+      const totalAmount = Number(booking.total_amount) || 0;
+      const newPaid = currentPaid + amountToAdd;
+
+      let newStatus = booking.payment_status;
+      if (newPaid >= totalAmount) {
+        newStatus = 'paid';
+      } else if (newPaid > 0) {
+        newStatus = 'partial';
+      }
+
+      await lastValueFrom(
+        this.http.post(`${this.apiUrl_crud}/hotel_bookings`, {
+          operation: 'update',
+          id: booking.id,
+          fields: {
+            payment_status: newStatus,
+            amount_paid: newPaid
+          }
+        }, { headers: this.adminService.getAuthHeaders() })
+      );
+    } catch (error) {
+      console.error("Error al registrar abono:", error);
+      throw error;
+    } finally {
+      this.isProcessing.set(false);
+    }
   }
 
   private async isRoomFree(roomId: number, checkIn: string, checkOut: string): Promise<boolean> {
