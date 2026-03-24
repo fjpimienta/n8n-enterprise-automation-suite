@@ -35,6 +35,7 @@ export class CheckinFormComponent implements OnInit {
     country: new FormControl('México'),
     check_out: new FormControl('', [Validators.required]),
     total_amount: new FormControl(0, [Validators.required, Validators.min(0)]),
+    amount_paid: new FormControl(0, [Validators.min(0)]),
     vip_status: new FormControl(false),
     requires_invoice: new FormControl(false),
     is_invoiced: new FormControl(false),
@@ -182,12 +183,24 @@ export class CheckinFormComponent implements OnInit {
       city: guestData.city || '',
       state: guestData.state || '',
       country: guestData.country || 'México',
-      check_out: checkOutStr,
+      check_out: res.check_out ? res.check_out.split('T')[0] : '',
+      total_amount: res.total_amount || 0,
+      amount_paid: res.amount_paid || 0, // 🛠️ NUEVO
       vip_status: guestData.vip_status || false,
-      requires_invoice: guestData.requires_invoice || res.requires_invoice || false,
+      requires_invoice: res.is_invoiced || false,
       is_invoiced: res.is_invoiced || false,
       notes: res.notes || ''
-    }, { emitEvent: false });
+    });
+
+    setTimeout(() => {
+      this.calculateStandardPrice();
+      if (res.total_amount !== undefined) {
+        this.checkinForm.patchValue({ total_amount: res.total_amount });
+      }
+      if (res.amount_paid !== undefined) {
+         this.checkinForm.patchValue({ amount_paid: res.amount_paid });
+      }
+    });
 
     this.calculateStandardPrice();
 

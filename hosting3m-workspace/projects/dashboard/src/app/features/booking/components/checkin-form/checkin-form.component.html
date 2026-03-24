@@ -60,7 +60,7 @@
             <div class="hr-text">Detalles de Estancia & Finanzas</div>
 
             <div class="row">
-              <div class="col-md-4">
+              <div class="col-md-3">
                 <div class="mb-3">
                   <label class="form-label required">Check-out (Salida)</label>
                   <input type="date" class="form-control" formControlName="check_out">
@@ -70,28 +70,38 @@
                 </div>
               </div>
 
-              <div class="col-md-4">
+              <div class="col-md-3">
                 <div class="mb-3">
-                  <label class="form-label">Precio de Lista (Sugerido)</label>
+                  <label class="form-label">Precio Sugerido</label>
                   <div class="input-group">
                     <span class="input-group-text border-end-0">$</span>
-
                     <input type="text" class="form-control" [value]="standardPrice | number:'1.2-2'" readonly
                       tabindex="-1">
                   </div>
                 </div>
               </div>
 
-              <div class="col-md-4">
+              <div class="col-md-3">
                 <div class="mb-3">
-                  <label class="form-label requiredEs">Total a Cobrar</label>
+                  <label class="form-label required">Total a Cobrar</label>
                   <div class="input-group">
                     <span class="input-group-text">$</span>
                     <input type="number" class="form-control fw-bold" formControlName="total_amount">
                   </div>
                   <small class="text-danger fw-bold" *ngIf="discountAmount > 0">
-                    ▼ Descuento aplicado: ${{ discountAmount | number:'1.2-2' }}
+                    ▼ Desc: ${{ discountAmount | number:'1.2-2' }}
                   </small>
+                </div>
+              </div>
+
+              <div class="col-md-3">
+                <div class="mb-3">
+                  <label class="form-label text-success fw-bold">💰 Abono Inicial</label>
+                  <div class="input-group">
+                    <span class="input-group-text bg-success-lt text-success border-success">$</span>
+                    <input type="number" class="form-control fw-bold border-success text-success"
+                      formControlName="amount_paid">
+                  </div>
                 </div>
               </div>
             </div>
