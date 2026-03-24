@@ -100,6 +100,14 @@
                     placeholder="Ej: : 'Llega tarde', 'Persona mayor', etc."></textarea>
             </div>
 
+            <div class="form-check form-switch mb-3 bg-light p-2 rounded border">
+                <input class="form-check-input ms-0 me-2" type="checkbox" role="switch" id="invoiceResSwitch"
+                    [(ngModel)]="requiresInvoice" (change)="recalculateTotal()" [disabled]="!!reservationToEdit()">
+                <label class="form-check-label small fw-bold text-success cursor-pointer" for="invoiceResSwitch">
+                    <i class="ti ti-receipt-tax me-1"></i> Requiere Factura (+18% Impuestos)
+                </label>
+            </div>
+
             <div class="mb-3 p-2 bg-white rounded border border-primary-subtle shadow-sm">
                 <label class="form-label small fw-bold text-primary mb-1">Total a Cobrar</label>
                 <div class="input-group input-group-sm">
@@ -123,16 +131,50 @@
             }
 
             <div class="mb-2">
-                <button class="btn btn-success w-100 shadow-sm d-flex flex-column align-items-center py-2"
-                    [disabled]="isSaving() || !guest.name" (click)="confirmReservation()">
+                @if (reservationToEdit()) {
+                <button class="btn btn-primary w-100 shadow-sm d-flex flex-column align-items-center py-2"
+                    [disabled]="isSaving() || !guest.name" (click)="confirmReservation('confirmed')">
                     @if(isSaving()) {
                     <span class="spinner-border spinner-border-sm mb-1"></span>
                     <span class="small">Guardando...</span>
                     } @else {
-                    <span class="fw-bold">{{ reservationToEdit() ? 'Actualizar Reserva' : 'Confirmar Reserva' }}</span>
+                    <span class="fw-bold">Actualizar Reserva</span>
                     <span style="font-size: 0.7rem;" class="opacity-75">Total: ${{ customTotal | number:'1.2-2'}}</span>
                     }
                 </button>
+                } @else {
+                <div class="row g-2">
+                    <div class="col-6">
+                        <button
+                            class="btn btn-outline-warning w-100 shadow-sm d-flex flex-column align-items-center py-2 h-100"
+                            [disabled]="isSaving() || !guest.name" (click)="confirmReservation('pending')"
+                            title="Bloqueo temporal en el calendario">
+                            @if(isSaving()) {
+                            <span class="spinner-border spinner-border-sm mb-1"></span>
+                            } @else {
+                            <i class="ti ti-file-invoice fs-3 mb-1"></i>
+                            <span class="fw-bold text-wrap text-center"
+                                style="font-size: 0.8rem; line-height: 1.1;">Guardar Cotización</span>
+                            <span style="font-size: 0.65rem;" class="opacity-75 mt-1">(Requiere Pago)</span>
+                            }
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button class="btn btn-success w-100 shadow-sm d-flex flex-column align-items-center py-2 h-100"
+                            [disabled]="isSaving() || !guest.name" (click)="confirmReservation('confirmed')"
+                            title="Reserva oficial pagada">
+                            @if(isSaving()) {
+                            <span class="spinner-border spinner-border-sm mb-1"></span>
+                            } @else {
+                            <i class="ti ti-credit-card fs-3 mb-1"></i>
+                            <span class="fw-bold text-wrap text-center"
+                                style="font-size: 0.8rem; line-height: 1.1;">Reserva Pagada</span>
+                            <span style="font-size: 0.65rem;" class="opacity-75 mt-1">(Cobro Inmediato)</span>
+                            }
+                        </button>
+                    </div>
+                </div>
+                }
             </div>
 
             <div class="mb-2 animate__animated animate__fadeIn">

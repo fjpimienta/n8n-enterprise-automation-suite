@@ -37,17 +37,21 @@ export class ReservationFormComponent implements OnInit, OnChanges { // 2. Agreg
   isMultiBooking: boolean = false;        // El switch
 
   customTotal: number = 0;
+  requiresInvoice: boolean = false;       // Nuevo control para requerir factura
 
   recalculateTotal() {
-    // Si estamos editando una reserva existente, NO sobrescribimos su precio con el cálculo base
     if (this.reservationToEdit()) return;
 
     const noches = this.getNights(this.dates.start, this.dates.end);
+    let baseTotal = 0;
     if (this.isMultiBooking) {
-      this.customTotal = this.selectedRooms.reduce((acc, room) => acc + (noches * room.price_night), 0);
+      baseTotal = this.selectedRooms.reduce((acc, room) => acc + (noches * room.price_night), 0);
     } else {
-      this.customTotal = noches * (this.selectedRoomForRes?.price_night || 0);
+      baseTotal = noches * (this.selectedRoomForRes?.price_night || 0);
     }
+
+    // 🛠️ CÁLCULO DINÁMICO FISCAL (16% IVA + 2% ISH)
+    this.customTotal = this.requiresInvoice ? (baseTotal * 1.18) : baseTotal;
   }
 
   toggleRoom(room: Room) {
@@ -94,6 +98,7 @@ export class ReservationFormComponent implements OnInit, OnChanges { // 2. Agreg
       this.guest.phone = res.hotel_guests_data?.phone || res.guest_phone || '';
       this.guest.notes = res.hotel_guests_data?.notes || res.guest_notes || '';
 
+      this.requiresInvoice = res.is_invoiced === true;
       this.customTotal = res.total_amount || 0;
 
       // Ejecutamos la búsqueda para mostrar la habitación actual como seleccionada
@@ -150,7 +155,8 @@ export class ReservationFormComponent implements OnInit, OnChanges { // 2. Agreg
   }
 
   /* Confirma y guarda la reserva */
-  async confirmReservation() {
+  /* Confirma y guarda la reserva o cotización */
+  async confirmReservation(intendedStatus: 'pending' | 'confirmed' = 'confirmed') {
     // Validaciones
     if (this.isMultiBooking && this.selectedRooms.length === 0) return;
     if (!this.isMultiBooking && !this.selectedRoomForRes) return;
@@ -176,34 +182,27 @@ export class ReservationFormComponent implements OnInit, OnChanges { // 2. Agreg
           id: this.reservationToEdit().id,
           room_id: this.reservationToEdit().room_id,
           check_in: this.dates.start,
-          check_out: this.dates.end, // Nueva fecha extendida
-          total_amount: this.customTotal, // Nuevo monto manual
-          notes: this.guest.notes
+          check_out: this.dates.end,
+          total_amount: this.customTotal,
+          notes: this.guest.notes,
+          is_invoiced: this.requiresInvoice
         };
 
         await this.bookingService.updateReservation(updateData);
-        alert('✅ Estancia actualizada y extendida correctamente.');
+        alert('✅ Estancia actualizada correctamente.');
 
         this.saved.emit();
         this.resetForm();
         this.onClose.emit();
       } else {
         // --- NUEVA LÓGICA DE CREACIÓN ---
-
-        // 1. Definir qué habitaciones vamos a reservar
         const roomsToBook = this.isMultiBooking ? this.selectedRooms : [this.selectedRoomForRes!];
-
-        // 2. Dividir el total (por si seleccionan varias habitaciones y modifican el precio)
         const totalPerRoom = this.customTotal / roomsToBook.length;
-
-        // 3. Iterar y guardar
         let successCount = 0;
 
         for (const room of roomsToBook) {
-          const total = noches * room.price_night;
-
           const reservationData = {
-            room_id: room.id, // ID variable del bucle
+            room_id: room.id,
             full_name: this.guest.name,
             doc_id: doc_id,
             email: email,
@@ -211,16 +210,21 @@ export class ReservationFormComponent implements OnInit, OnChanges { // 2. Agreg
             notes: this.guest.notes,
             check_in: this.dates.start,
             check_out: this.dates.end,
-            total_amount: totalPerRoom
+            total_amount: totalPerRoom,
+            is_invoiced: this.requiresInvoice,
+            // 🧠 ESTADOS DINÁMICOS BASADOS EN EL BOTÓN CLICKEADO
+            status: intendedStatus,
+            payment_status: intendedStatus === 'confirmed' ? 'paid' : 'pending',
+            amount_paid: intendedStatus === 'confirmed' ? totalPerRoom : 0
           };
 
-          // Enviamos al servicio (esperamos a que termine cada una)
           const result = await this.bookingService.createFutureReservation(reservationData, room.id);
           if (result) successCount++;
         }
 
         if (successCount > 0) {
-          alert(`¡Éxito! Se crearon ${successCount} reserva(s) correctamente.`);
+          const label = intendedStatus === 'pending' ? 'Cotización(es) bloqueada(s)' : 'Reserva(s) confirmada(s)';
+          alert(`¡Éxito! ${successCount} ${label} correctamente.`);
           this.saved.emit();
           this.resetForm();
           this.onClose.emit();
@@ -243,6 +247,7 @@ export class ReservationFormComponent implements OnInit, OnChanges { // 2. Agreg
     this.guest = { name: '', doc_id: '', phone: '', email: '', notes: '' };
     this.isMultiBooking = false;
     this.customTotal = 0;
+    this.requiresInvoice = false;
   }
 
   cancelEdit() {
