@@ -95,9 +95,11 @@
               </div>
             </div>
 
-            <div class="row bg-light rounded px-2 py-3 mx-0 mb-3 border">
+            <div class="hr-text mt-4 mb-3">Acuerdo de Pago</div>
+
+            <div class="row mb-3">
               <div class="col-md-6">
-                <div class="mb-0">
+                <div class="mb-3 mb-md-0">
                   <label class="form-label required">¿Modalidad de Pago Inicial?</label>
                   <select class="form-select fw-bold" formControlName="initial_payment_type" [ngClass]="{'text-success': checkinForm.get('initial_payment_type')?.value === 'full',
                                 'text-warning': checkinForm.get('initial_payment_type')?.value === 'partial',
