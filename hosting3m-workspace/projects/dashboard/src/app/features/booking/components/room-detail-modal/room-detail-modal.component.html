@@ -43,7 +43,7 @@
                         <div class="text-muted small">
                             {{ room().status === 'occupied' ? 'Check-out' : 'Entrada' }}:
                             {{ (room().status === 'occupied' ? activeBooking().check_out : activeBooking().check_in) |
-                            date:'dd/MM/yyyy' }}
+                            date:'dd/MM/yyyy':'UTC' }}
                         </div>
                         <div class="mt-2">
                             <span class="badge" [class.bg-success]="activeBooking().payment_status === 'paid'"
@@ -212,7 +212,7 @@
                                         </td>
                                         <td>
                                             <span [class.text-danger]="isExpired(asset.warranty_expiry)">
-                                                {{ asset.warranty_expiry | date:'dd/MM/yy' }}
+                                                {{ asset.warranty_expiry | date:'dd/MM/yy':'UTC' }}
                                             </span>
                                         </td>
                                     </tr>
