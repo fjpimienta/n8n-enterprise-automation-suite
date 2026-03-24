@@ -231,21 +231,39 @@ export class DashboardComponent {
     this.viewMode.set('details');
   }
 
-  /* Marca una reserva como pagada */
-  async markAsPaid(booking: Booking | any) {
-    if (!booking || !confirm(`¿Confirmar pago de $${booking.total_amount}?`)) return;
+  /* Registra un abono o liquida una reserva */
+  async markAsPaid(eventPayload: { booking: Booking | any, amount: number }) {
+    if (!eventPayload || !eventPayload.booking || !eventPayload.amount) return;
+
     try {
-      await this.bookingService.registerPayment(booking.id);
-      const current = this.activeBooking(); // Leemos el valor actual
-      if (current && current.id === booking.id) {
-        // Usamos update para cambiar solo esa propiedad de forma reactiva
-        this.activeBooking.update(val => ({ ...val, payment_status: 'paid' }));
+      await this.bookingService.registerPayment(eventPayload.booking, eventPayload.amount);
+
+      const currentPaid = Number(eventPayload.booking.amount_paid) || 0;
+      const newPaid = currentPaid + eventPayload.amount;
+      const totalAmount = Number(eventPayload.booking.total_amount) || 0;
+      const newStatus = newPaid >= totalAmount ? 'paid' : 'partial';
+
+      const currentActive = this.activeBooking();
+      if (currentActive && currentActive.id === eventPayload.booking.id) {
+        this.activeBooking.update(val => ({
+          ...val,
+          payment_status: newStatus,
+          amount_paid: newPaid
+        }));
       }
-      alert('✅ Pago registrado');
+
+      alert(`✅ Abono de $${eventPayload.amount} registrado exitosamente.`);
+
       if (this.showReportModal) this.generateDailyReport();
       this.bookingService.loadRooms();
+
+      if (newStatus === 'paid') {
+        this.hotelService.clearSelection();
+        this.viewMode.set('details');
+      }
+
     } catch (error) {
-      alert('Error al registrar pago');
+      alert('❌ Error al registrar el abono.');
     }
   }
 
