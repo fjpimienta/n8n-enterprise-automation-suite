@@ -612,15 +612,15 @@ export class BookingService {
       await lastValueFrom(
         this.http.post(`${this.apiUrl_crud}/hotel_bookings`, {
           operation: 'update',
+          id: formData.id, // 🛠️ ¡AQUÍ ESTABA EL BUG! El ID debe ir en la raíz para el WHERE de SQL
           fields: {
-            id: formData.id,
             room_id: formData.room_id,
             check_in: formData.check_in,
             check_out: formData.check_out,
             total_amount: Number(formData.total_amount),
             notes: formData.notes,
-            is_invoiced: formData.is_invoiced || false,
-            id_company: 1
+            is_invoiced: formData.is_invoiced || false
+            // Eliminamos id_company y el id duplicado de aquí adentro para evitar choques
           }
         }, { headers: this.adminService.getAuthHeaders() })
       );
@@ -651,7 +651,7 @@ export class BookingService {
       // 🧠 LÓGICA DE EVOLUCIÓN: De Cotización a Reserva Oficial
       let newBookingStatus = booking.status;
       // 🛠️ Ahora evoluciona si hay pago OR si es un pago grupal forzado
-      if (booking.status === 'pending' && (newPaid > 0 || forceConfirm)) { 
+      if (booking.status === 'pending' && (newPaid > 0 || forceConfirm)) {
         newBookingStatus = 'confirmed';
       }
 
@@ -660,7 +660,7 @@ export class BookingService {
           operation: 'update',
           id: booking.id,
           fields: {
-            status: newBookingStatus, 
+            status: newBookingStatus,
             payment_status: newPaymentStatus,
             amount_paid: newPaid
           }
