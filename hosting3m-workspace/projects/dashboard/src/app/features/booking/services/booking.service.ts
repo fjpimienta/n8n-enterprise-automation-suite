@@ -411,27 +411,41 @@ export class BookingService {
     }
   }
 
-  public async processCheckout(room: Room, bookingId: number, inventoryReport: string, checks: any): Promise<void> {
+  public async processCheckout(room: Room, bookingId: any, inventoryReport: string, checks: any): Promise<void> {
     const crudUrl = this.apiUrl_crud;
 
-    // 1. Cerrar la reserva del huésped (Check-out normal)
+    // 🛠️ 1. SANITIZACIÓN DE ID: Por si el frontend envía el objeto completo por error
+    const validId = typeof bookingId === 'object' ? bookingId.id : bookingId;
+
+    if (!validId) {
+      throw new Error("❌ No se detectó un ID de reserva válido para hacer el Check-out.");
+    }
+
+    // 🛠️ 2. SANITIZACIÓN DE INVENTARIO: Evitar valores undefined que rompan el JSON de n8n
+    const safeChecks = checks || { tvRemote: true, acRemote: true, keys: true };
+
+    // 3. ACTUALIZAR LA RESERVA A CHECKED_OUT
     const resOut: any = await lastValueFrom(
       this.http.post(`${crudUrl}/hotel_bookings`, {
         operation: 'update',
-        id: bookingId,
+        id: validId,
         fields: {
           status: 'checked_out',
           check_out: new Date().toISOString(),
-          notes: inventoryReport,
-          inventory_tv_ok: checks.tvRemote,
-          inventory_ac_ok: checks.acRemote,
-          inventory_keys_ok: checks.keys
+          notes: inventoryReport || '',
+          inventory_tv_ok: safeChecks.tvRemote,
+          inventory_ac_ok: safeChecks.acRemote,
+          inventory_keys_ok: safeChecks.keys
         }
       }, { headers: this.adminService.getAuthHeaders() })
     );
-    // 🛑 ESCUDO ANTI-ERRORES SILENCIOSOS
-    if (resOut?.error) throw new Error(`Error en Check-out: ${resOut.message}`);
 
+    // 🛑 ESCUDO ANTI-ERRORES SILENCIOSOS (Detiene todo si PostgreSQL falla)
+    if (resOut?.error) {
+      throw new Error(`Fallo DB al cerrar reserva: ${resOut.message}`);
+    }
+
+    // 4. RADAR DE TICKETS DE MANTENIMIENTO
     let hasPendingTickets = false;
     try {
       const ticketsRes: any = await lastValueFrom(
@@ -440,10 +454,14 @@ export class BookingService {
           filters: { room_id: room.id, status: 'PENDING' }
         }, { headers: this.adminService.getAuthHeaders() })
       );
+
       const pendingTickets = Array.isArray(ticketsRes?.data) ? ticketsRes.data : (Array.isArray(ticketsRes) ? ticketsRes : []);
       hasPendingTickets = pendingTickets.some((t: any) => Number(t.room_id) === Number(room.id) && t.status === 'PENDING');
-    } catch (error) { }
+    } catch (error) {
+      console.warn('Advertencia: No se pudo verificar el estado de mantenimiento.', error);
+    }
 
+    // 5. ACTUALIZAR EL ESTADO DE LA HABITACIÓN
     const nextStatus = hasPendingTickets ? 'maintenance' : 'available';
 
     const resRoom: any = await lastValueFrom(
@@ -452,11 +470,14 @@ export class BookingService {
         id: room.id,
         fields: {
           status: nextStatus,
-          cleaning_status: 'dirty'
+          cleaning_status: 'dirty' // Siempre queda sucia
         }
       }, { headers: this.adminService.getAuthHeaders() })
     );
-    if (resRoom?.error) throw new Error(`Error actualizando cuarto: ${resRoom.message}`);
+
+    if (resRoom?.error) {
+      throw new Error(`Fallo DB al actualizar habitación: ${resRoom.message}`);
+    }
 
     this.loadRooms();
   }
