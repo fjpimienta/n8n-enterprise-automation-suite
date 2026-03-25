@@ -30,7 +30,15 @@ export class ReservationFormComponent implements OnInit, OnChanges { // 2. Agreg
   availableRooms: Room[] = [];
   guest = { name: '', doc_id: '', phone: '', email: '', notes: '' };
   dateUtils = inject(DateUtilsService);
-  minDate = this.dateUtils.todayStr;
+
+  // 🚨 FECHA BLINDADA (Ignora UTC, toma hora local de México)
+  minDate = (() => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  })();
 
   selectedRoomForRes: Room | null = null; // Para modo simple
   selectedRooms: Room[] = [];             // Para modo múltiple (Nuevo)
