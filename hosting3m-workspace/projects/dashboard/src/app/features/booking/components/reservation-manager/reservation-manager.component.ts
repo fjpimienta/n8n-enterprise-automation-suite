@@ -34,19 +34,18 @@ export class ReservationManagerComponent implements OnInit, OnDestroy {
     const selectedRoom = this.hotelService.selectedRoom();
 
     const currentRes = all.filter((r: any) => {
-      // 1. Filtrar por habitación si hay una seleccionada en el dashboard
+      // 1. Filtrar por habitación si hay una seleccionada
       if (selectedRoom && r.room_id !== selectedRoom.id) return false;
 
-      // 2. 🛠️ REGLA DE NEGOCIO: Mostrar ÚNICAMENTE reservas futuras 
-      // (Confirmadas o Pendientes por aprobar de la web)
-      if (r.status !== 'confirmed' && r.status !== 'pending') {
+      // 2. 🛠️ REGLA DE NEGOCIO: Mostrar reservas futuras y ACTUALES (checked_in)
+      if (r.status !== 'confirmed' && r.status !== 'pending' && r.status !== 'checked_in') {
         return false;
       }
 
       return true;
     });
 
-    // 3. Ordenar cronológicamente (las más próximas a llegar primero)
+    // 3. Ordenar cronológicamente
     const sorted = currentRes.sort((a: any, b: any) => {
       return new Date(a.check_in).getTime() - new Date(b.check_in).getTime();
     });
