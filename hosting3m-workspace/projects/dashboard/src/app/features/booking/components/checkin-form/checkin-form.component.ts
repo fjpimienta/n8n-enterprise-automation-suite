@@ -158,7 +158,12 @@ export class CheckinFormComponent implements OnInit {
   private initDefaultValues() {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
-    const dateString = tomorrow.toISOString().split('T')[0];
+
+    // 🚨 FECHA BLINDADA: Evita que a las 18:00 hrs salte 2 días al futuro
+    const year = tomorrow.getFullYear();
+    const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+    const day = String(tomorrow.getDate()).padStart(2, '0');
+    const dateString = `${year}-${month}-${day}`;
 
     this.checkinForm.patchValue({
       check_out: dateString,
