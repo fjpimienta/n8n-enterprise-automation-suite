@@ -22,8 +22,9 @@ graph TD
     Layout -->|"Lazy/Child Route"| Inv["Inventory View"]
     
     subgraph "Business Logic Layer (Services)"
-       Rooms & Maint & Fin & Inv -->|Signals| Services["Injectable Services"]
+       Rooms & Maint & Fin -->|Signals| Services["Injectable Services"]
        Services -->|Computed| KPIs["Reactive KPIs"]
+       Services -->|Sanitization & Boundary Shield| Gateway["Error Boundary Layer"]
     end
     
     Services -->|HTTP| API["n8n Dynamic CRUD"]

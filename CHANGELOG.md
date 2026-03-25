@@ -2,6 +2,22 @@
 
 Todos los cambios notables en esta suite de automatización serán documentados en este archivo. El sistema se adhiere estrictamente a **Semantic Versioning** para la gestión de dependencias entre microservicios, flujos de n8n y frontends.
 
+# Changelog Principal: n8n Enterprise Automation Suite 🚀
+
+Todos los cambios notables en esta suite de automatización serán documentados en este archivo. El sistema se adhiere estrictamente a **Semantic Versioning** para la gestión de dependencias entre microservicios, flujos de n8n y frontends.
+
+---
+
+## [1.2.0] - 2026-03-25
+
+### 🛡️ Dashboard Resilience & Financial Engine (AdminHotel v0.11.0)
+Transformación crítica en la capa de datos y lógica de negocio del ERP Hotelero, implementando un escudo estricto contra errores de concurrencia y un nuevo motor de estados financieros.
+
+* **MetaCRUD Error Boundary:** Implementación de un escudo de validación que intercepta falsos positivos (`HTTP 200 OK` con bandera interna `error: true`) desde n8n. Las violaciones de base de datos de PostgreSQL (ej. índices únicos) ahora detienen la ejecución en el cliente, previniendo la desincronización entre el estado físico de la habitación y el *ledger* contable.
+* **Soft-Booking & Workflow Evolution:** Arquitectura dual que permite registrar "Cotizaciones" (`pending`) con bloqueo de inventario sin afección fiscal, evolucionando automáticamente a "Reservas Confirmadas" al detectar peticiones de cobro.
+* **Bulk Waterfall Payments:** Integración de lógica de pagos en cascada. Permite seleccionar múltiples estancias de un grupo corporativo y distribuir un abono maestro matemáticamente entre todas las reservas.
+* **Timezone Armor:** Reemplazo de métodos genéricos de parseo ISO por constructores de tiempo local estricto, erradicando el "bug vespertino" que inhabilitaba operaciones y adelantaba calendarios después de las 18:00 hrs (UTC-6).
+
 ---
 
 ## [1.1.0] - 2026-03-02

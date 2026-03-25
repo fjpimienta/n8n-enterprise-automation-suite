@@ -4,188 +4,63 @@ Todos los cambios notables en el proyecto **n8n Enterprise Automation Suite** se
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/), y este proyecto se adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [0.11.0] - 2026-03-25
+
+### 🛡️ Seguridad & Arquitectura (Boundary Resilience)
+
+* **MetaCRUD Silent Error Shield:** Implementación de un escudo de validación estricta en `BookingService`. El sistema ahora intercepta respuestas `HTTP 200 OK` de n8n que contienen la bandera interna `error: true`. Las violaciones de base de datos (ej. `idx_prevent_double_checkin_global`) se capturan y lanzan como excepciones reales hacia la UI, evitando que la interfaz y la base de datos se desincronicen.
+* **Payload Sanitization:** Limpieza profunda de los paquetes de datos (`INSERT` y `UPDATE`) enviados a PostgreSQL para evitar colisiones de esquemas y errores 500 (CORS bloqueados). El ID de actualización fue movido a la raíz de la petición REST.
+* **Signal Binding Fix:** Resolución de errores de inyección de Signals en el DOM (`activeBooking()`), garantizando la transmisión de datos primitivos a los modales hijos.
+
+### 💰 Motor Financiero & Flujos (Business Logic)
+
+* **Soft-Booking vs Hard-Booking:** Arquitectura dual de reservas. El sistema ahora permite registrar "Cotizaciones" (`pending`) que bloquean el inventario sin exigir pago, y evolucionan automáticamente a "Reservas Confirmadas" (`confirmed`) al detectar un abono.
+* **Pagos en Cascada (Bulk Waterfall Payments):** Nuevo botón de "Abono Grupal" en el Gestor de Reservas. Permite seleccionar múltiples habitaciones de un cliente (ej. empresas) y distribuir un pago único matemáticamente entre todas las estancias seleccionadas.
+* **Extensiones de Estancia Activas:** Los huéspedes con estatus `checked_in` ahora son editables. Al extender los días, el motor financiero recalcula el nuevo `total_amount` vs `amount_paid` y degrada dinámicamente la cuenta de `paid` a `partial` para activar el cobro.
+* **Impuestos Dinámicos:** Los PDFs de exportación ahora evalúan el estado de la reserva y la bandera `is_invoiced` para titular el documento de forma inteligente ("PRESUPUESTO DE HOSPEDAJE" vs "COMPROBANTE DE RESERVA").
+
+### 🕒 UX & Timezone Integrity
+
+* **Timezone Offset Shield:** Reemplazo de funciones `toISOString()` por evaluadores de tiempo local (`getFullYear`, `getMonth`). Se erradicó el bug que causaba que el sistema "saltara" al día siguiente después de las 18:00 hrs (UTC-6 CDMX/Mérida).
+* **Walk-in Decoupling:** Modificación en `room-detail-modal` para independizar el flujo de *Walk-ins* de las reservas futuras. Si una habitación tiene una reserva para dentro de 3 días, el sistema ahora permite ingresar a un huésped de "Descanso" hoy mismo sin sobrescribir el ID de la reserva futura.
+* **Dark Mode UI Fix:** Limpieza de clases estáticas (`bg-light`) en formularios financieros que rompían la jerarquía visual del modo oscuro.
+
 ## [0.10.0] - 2026-02-19
 
 ### 📄 Documentación Digital & Exportación
 
-Integración del módulo de generación de documentos PDF para la formalización de reservas y cotizaciones, impulsado por la nueva librería corporativa `ui-pdf-export`.
-
-#### 📚 Nueva Librería: UI PDF Export
-
-* **Motor de Renderizado:** Creación de `projects/ui-pdf-export`, una librería agnóstica basada en `jspdf-autotable` para generar documentos vectoriales directamente en el navegador (Client-Side generation).
-* **Motor Financiero:** Lógica interna encapsulada para el desglose automático de impuestos mexicanos:
-    * **Base Imponible**
-    * **IVA (16%)**
-    * **ISH (2%)**
-* **Diseño Corporativo:** Plantillas estandarizadas con encabezados dinámicos, datos fiscales y alineación contable precisa (columnas numéricas a la derecha).
-
-#### 🏨 Gestión de Reservas (Booking)
-
-* **Impresión de Cotizaciones:** Nueva funcionalidad en `ReservationManager` para generar PDFs de "Presupuesto de Hospedaje" personalizados para clientes corporativos (ej. PCP Construcciones).
-* **Selección Múltiple:** Implementación de casillas de verificación (checkboxes) y "Select All" en la tabla de reservas para agrupar múltiples estancias en un solo documento.
-* **Agrupación Inteligente:** Algoritmo que detecta habitaciones del mismo tipo, precio y duración para resumirlas en una sola línea del reporte (ej. "3x Habitación Doble - 7 Noches").
-
-#### 🔧 Arquitectura (Monorepo)
-
-* **Path Mapping Refactor:** Reingeniería de los archivos `tsconfig` (Root y Dashboard) para soportar correctamente la compilación AOT y los imports de librerías locales (`ui-chat`, `ui-pdf-export`) en entorno de desarrollo y producción.
-* **Strict Typing:** Adopción de interfaces `PdfExportConfig` para garantizar la integridad de los datos financieros antes de la exportación.
+* **Motor de Renderizado:** Creación de `projects/ui-pdf-export`, librería agnóstica basada en `jspdf-autotable`.
+* **Motor Financiero:** Desglose automático de Base Imponible, IVA (16%) e ISH (2%).
+* **Agrupación Inteligente:** Algoritmo que detecta habitaciones del mismo tipo para resumirlas en una partida.
 
 ## [0.9.0] - 2026-02-18
 
 ### 🚀 Eco-Hotel Optimization (Phase II)
 
-Transición de una arquitectura monolítica (basada en modales) a una arquitectura distribuida (basada en páginas), junto con optimizaciones críticas de rendimiento y experiencia de usuario.
-
-#### 🏗️ Arquitectura de Navegación (Routing)
-
-* **Rutas Hijas (Child Routes):** Implementación de una arquitectura de enrutamiento anidado para desacoplar módulos del `DashboardComponent`.
-    * `/dashboard/mantenimiento`: Monitor de tickets a pantalla completa.
-    * `/dashboard/finanzas`: Reportes financieros y caja.
-    * `/dashboard/huespedes` y `/dashboard/personal`: Gestión administrativa dedicada.
-    * `/dashboard/inventario`: Nuevo módulo centralizado.
-* **Impacto:** Mejor separación de responsabilidades (*Separation of Concerns*), URLs compartibles y reducción significativa del tamaño del DOM inicial.
-
-#### ⚡ Optimización de Rendimiento (Performance)
-
-* **Estrategia de Carga Asíncrona:** Priorización de la carga de `loadRooms` en el hilo principal del `DashboardComponent`. La carga de datos secundarios (Reservas, Usuarios) se difirió (*deferred loading*), mejorando el *Time to Interactive (TTI)*.
-* **Skeletons Optimizados:**
-    * Reducción de nodos DOM de 8 a 4 elementos.
-    * Aceleración de animación CSS (`fadeIn`) de 0.3s a 0.1s.
-    * Adaptación visual al *Dark Mode* para evitar el "flashbang".
-
-#### 🧠 Gestión de Estado (Business Logic)
-
-* **Servicios Reactivos (Signals):** Extracción de lógica compleja hacia servicios inyectables.
-    * **ReportService:** Centraliza cálculos financieros (balances, filtrado por fechas, sumatorias), dejando a `DailyReportModal` como componente puramente presentacional.
-    * **AssetService:** Maneja operaciones CRUD universales para inventario global y local.
-* **Computed Signals:** Recálculo automático de KPIs (Totales, Alertas, Saldos) ante cambios en los datos crudos.
-
-#### 📦 Sistema de Inventario Centralizado
-
-* **Componente Polimórfico:** Refactorización de `AssetFormModal` para operar en dos contextos:
-    * **Global:** Gestión de activos en bodega.
-    * **Local:** Asignación directa desde el detalle de habitación.
-* **Trazabilidad:** Filtrado avanzado por estado (`GOOD`, `DAMAGED`, `MISSING`) y ubicación.
-
-#### 🎨 UX & Theming
-
-* **Dark Mode Nativo:** Reemplazo de estilos *hardcoded* por Variables CSS (`var(--tblr-body-bg)`), permitiendo cambio de tema instantáneo.
-* **Layout Limpio:** Eliminación de *headers* redundantes para ganar espacio vertical en móviles.
-* **Smart Sidebar:** Auto-cierre del menú lateral en dispositivos móviles al navegar.
+* **Rutas Hijas (Child Routes):** Implementación de arquitectura distribuida para `/mantenimiento`, `/finanzas`, `/inventario`.
+* **Estrategia de Carga Asíncrona:** Priorización del Hilo Principal (`Room Rack`) sobre datos secundarios difiriendo la carga.
 
 ## [0.8.0] - 2026-02-14
 
 ### 🚀 Eco-Hotel Transformation (Phase I)
 
-Implementación de los módulos estratégicos para la gestión de activos y mantenimiento, elevando el sistema a un **ERP Hotelero**.
-
-#### 💰 Finanzas & CAPEX
-
-* **Estrategia de Inversión:** Separación lógica de gastos operativos (`OPEX`) vs inversión en remodelación (`CAPEX`).
-* **Fases de Proyecto:** Nueva columna `project_phase` en base de datos y selector en `ExpenseFormModal` (Fase 0 a 3) para auditar el costo de la transformación.
-
-#### 🛠️ Mantenimiento (Tickets)
-
-* **Sistema de Incidencias:** Nueva tabla `hotel_maintenance_tickets` para convertir quejas en tickets de soporte.
-* **Monitor de Mantenimiento:** Dashboard centralizado para visualizar tickets abiertos, en progreso y resueltos.
-* **Automatización de Estados:** Lógica de negocio que cambia el estado de la habitación automáticamente (`Reportar` → `Maintenance` | `Resolver` → `Dirty`).
-* **Bitácora de Soluciones:** Campo obligatorio para registrar la solución técnica aplicada antes de cerrar un ticket.
-
-#### 📺 Gestión de Activos (Assets)
-
-* **Inventario Digital:** Nueva tabla `hotel_assets` para el control de equipos valiosos (TVs, Aires Acondicionados) por habitación.
-* **Integración UI:** Pestaña "Inventario" agregada al `RoomDetailModal` para auditoría rápida durante el check-out.
-* **Validación de Garantías:** Registro de fecha de compra y proveedor para alertas de garantía.
-
-## [0.7.1] - 2026-02-14
-
-### ♻️ Refactorización (Architecture)
-
-* **Shared Library Migration:** Desacoplamiento total del módulo de chat. El Dashboard ahora consume la librería corporativa `@hosting3m/ui-chat` en lugar de mantener una copia local.
-    * **Impacto:** Centralización de la lógica de UI/UX del asistente para compartir mejoras automáticamente con *Pista Hielo*.
-    * **Deuda Técnica:** Eliminación del directorio `features/ai-assistant`.
-* **Dependency Injection Pattern:** Adopción de `CHAT_CONFIG_TOKEN` en `app.config.ts`. La URL del Webhook de Hotel ahora se inyecta dinámicamente.
-
-### 🔧 Configuración
-
-* **Standalone Providers:** Actualización del registro en `app.config.ts` para instanciar `AiService` explícitamente.
+* **Finanzas & CAPEX:** Separación de OPEX y CAPEX mediante `project_phase`.
+* **Mantenimiento (Tickets):** Sistema de incidencias con automatización de estados físicos de cuarto.
+* **Gestión de Activos:** Auditoría de equipos físicos en recámaras (TVs, AC).
 
 ## [0.7.0] - 2026-02-09
-
-### 🚀 Añadido (New Features)
-
-* **AI Concierge Module (v1):** Implementación de un Asistente Virtual Inteligente capaz de gestionar operaciones hoteleras mediante lenguaje natural.
-* **Architecture MCP (Model Context Protocol):** Desacoplamiento total entre el LLM y la base de datos.
-    * **MCP Server:** Microservicio en n8n que expone herramientas seguras (`Query Available`, `Query Reservation`) conectadas a PostgreSQL.
-* **Strict Business Logic:** El "System Prompt" del agente impone reglas de integridad referencial.
-* **Context Awareness:** Memoria a corto plazo (`Memory Buffer Window`).
-
-### 🔄 Cambiado (Improvements)
-
-* **Security Hardening:** El Agente de IA genera y utiliza sus propios tokens de autorización (`Genera Token` sub-workflow).
-* **Error Handling:** Protocolo "Zero-Hallucination" implementado en el prompt.
-
-### 🔧 Tech Stack Update
-
-* **LLM Engine:** Integración de `gpt-4o-mini`.
-
-## [0.6.1] - 2026-02-03
-
-### 🚀 Añadido (New Features)
-
-* **Quality Assurance Module (Rondines):** Sistema integral para la inspección diaria de habitaciones.
-    * **Checklist Dinámico:** Formulario persistido como JSONB.
-    * **Smart Save Logic:** Detección automática de `INSERT` vs `UPDATE`.
-* **Hybrid Persistence:** Implementación de tablas mixtas (SQL + JSONB) en PostgreSQL.
-
-### 🔄 Cambiado (Improvements)
-
-* **n8n Integration Protocol:** Estandarización del payload de Angular (propiedad `fields`).
-* **DevOps:** Configuración de Proxy Reverso para CORS.
+* **AI Concierge Module:** Integración de Asistente Virtual y protocolo MCP con PostgreSQL.
 
 ## [0.6.0] - 2026-01-27
-
-### 🚀 Añadido (New Features)
-
-* **Finance Module (Hotel):** Lógica financiera avanzada integrada en el flujo de Check-in.
-    * **Descuentos Dinámicos** y **Auditoría Financiera**.
-* **Mobile Accessibility (Senior-First):** Rediseño total de la interfaz Dashboard para facilitar el uso táctil.
-    * **Grid Navigation** y **Fat-Finger Design**.
-
-### 🔄 Cambiado (Improvements)
-
-* **Room Rack UI:** Diseño de "Semáforo Visual" (Verde/Rojo/Naranja).
+* **Finance Module:** Lógica de Check-in con descuentos, y rediseño Mobile-First (Fat-Finger).
 
 ## [0.5.0] - 2026-01-13
-
-### 🚀 Añadido (New Features)
-
-* **Hotel Management Core:** Implementación completa del ecosistema hotelero.
-    * **MCP Server** y **Dashboard SPA**.
-* **Auth Gateway v2:** Microservicio centralizado para JWT.
-* **News Intelligence v2:** Generación de imágenes con IA.
-
-## [0.4.0] - 2026-01-03
-
-### 🚀 Añadido
-
-* **Arquitectura Modular:** Sub-workflows reutilizables.
-* **Sistema de Versionado:** Semantic Versioning.
+* **Hotel Core:** MCP Server, Auth Gateway v2.
 
 ## [0.3.0] - 2025-12-20
-
-### 🎉 Lanzamiento Inicial
-
-* Despliegue de infraestructura base, PostgreSQL + pgvector y Core Workflows iniciales.
+* Lanzamiento Inicial.
 
 ## 📦 Authors
-
 **Francisco Jesus Pérez Pimienta**
 *Senior Systems Architect & Project Lead*
 Hosting3M Automation Suite
-
-```
----
-*Built with the assistance of AI-powered development tools.*
-
-```

@@ -61,10 +61,11 @@ Capa de abstracción SQL que actúa como un **Backend as a Service (BaaS)** con 
 ### 7. 🏨 MCP Server: Hotel Management
 Implementación del **Model Context Protocol** para consultas de inventario mediante IA en lenguaje natural.
 
-### 🏨 08. AdminHotel Dashboard (v0.10.0 - Digital Billing)
-ERP integral evolucionado a una **Arquitectura Distribuida**.
-* **Digital Billing:** Generación de cotizaciones PDF con desglose de impuestos (IVA/ISH).
-* **Inventario Centralizado:** Módulo polimórfico para activos en bodega y habitaciones.
+### 🏨 08. AdminHotel Dashboard (v0.11.0 - Fin Engine & Resilience)
+ERP integral evolucionado a una **Arquitectura Distribuida** con motor financiero.
+* **Boundary Resilience:** Escudo estricto contra fallos silenciosos del MetaCRUD y protección contra *Timezone Offsets*.
+* **Financial Engine:** Soporte nativo para *Soft-Bookings* (Cotizaciones), Pagos en Cascada (Waterfall) para grupos, y recálculo dinámico de deudas en extensiones de estancia.
+* **Digital Billing:** Generación de cotizaciones PDF con desglose fiscal (IVA/ISH) mediante `ui-pdf-export`.
 
 ### ⛸️ 09. PistaHielo Operations Center (v0.7.1 - Ops AI)
 
@@ -116,16 +117,16 @@ La interfaz pública de alta conversión del ecosistema Hosting3M (*Customer-Fac
 ## 📈 Roadmap & Gestión de Proyectos (SDLC)
 
 ### ✅ Completado (Q1 2026)
-* [x] **Digital Formalization:** Lanzamiento de `ui-pdf-export` e integración en el flujo de reservas.
-* [x] **Sovereign Media:** Implementación de `upload-service` propio y DALL-E 3.
-* [x] **Public Interface:** Despliegue de `hotel-website` en el monorepo con conexión a webhooks.
 * [x] **Monorepo Scaling:** Optimización de `tsconfig` para soporte de múltiples librerías.
+* [x] **Sovereign Media:** Implementación de `upload-service` propio y DALL-E 3.
+* [x] **Public Interface:** Despliegue de `hotel-website` interactivo conectado a webhooks.
+* [x] **Digital Formalization:** Liberación de `ui-pdf-export` y flujos de presupuestación corporativa.
+* [x] **Core Resilience:** Implementación de MetaCRUD Boundary Shields y motor de pagos en cascada.
 
 ### 🏗️ En Progreso / Backlog (Q2 2026)
 * [ ] **Huéspedes CRM:** Segmentación eco-boutique y analítica de comportamiento.
 * [ ] **Eco-Metrics:** Módulo de sustentabilidad para medición de huella hídrica y eléctrica.
 * [ ] **Conversion & Sales:** A/B Testing en la landing page y conexión con pasarelas de pago directo (Stripe/PayPal).
-
 ---
 
 ## 📦 Authors

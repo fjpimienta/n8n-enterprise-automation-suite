@@ -24,7 +24,25 @@ En su versión actual (**v0.10.0**), el sistema integra capacidades avanzadas de
 | **v0.7.0** | `Stable` | **AI Concierge** | **Shared Lib** | **Integración de `ui-chat`, Inyección de Tokens.** |
 | **v0.8.0** | `Stable` | **Eco-Transformation I** | **Tickets / Assets** | **Gestión de Mantenimiento, Activos y Finanzas CAPEX.** |
 | **v0.9.0** | `Stable` | **Performance & Scale** | **Routing / Signals** | **Arquitectura Distribuida, Carga Asíncrona, Inventario Centralizado.** |
-| **v0.10.0** | `Released` | **Digital Doc Export** | **ui-pdf-export** | **Exportación de cotizaciones PDF, motor financiero de impuestos y selección múltiple.** |
+| **v0.10.0** | `Stable` | **Digital Doc Export** | **ui-pdf-export** | **Exportación de cotizaciones PDF, motor financiero de impuestos y selección múltiple.** |
+| **v0.11.0**| `Released` | **Resilience & Fin Engine**| **Signals/Services** | **Soft/Hard Bookings, Pagos Cascada, Timezone Armor, Error Boundary Shield.** |
+
+---
+
+## 🚀 Key Features (v0.11.0 Update)
+
+### 1. 🛡️ Resiliencia y Manejo de Errores (MetaCRUD Shield)
+* **Zero-Ghost States:** Interceptación estricta de validaciones de PostgreSQL (Ej: doble ocupación de cuarto). Si el backend de n8n falla silenciosamente, Angular intercepta la bandera interna, detiene la UI y alerta al operador, garantizando 100% de consistencia de datos.
+* **Timezone Armor:** Funciones blindadas que calculan fechas relativas en hora local (CST/UTC-6), previniendo desfasajes de calendario o bloqueos automáticos en el turno vespertino (post 18:00 hrs).
+
+### 2. 💰 Motor Financiero Avanzado
+* **Soft-Booking vs Hard-Booking:** Generación de Cotizaciones sin impacto fiscal, con evolución automática a Reservas en firme tras detectar un depósito financiero.
+* **Pagos Multi-Cuarto (Waterfall):** Abono masivo que inyecta capital a grupos (Master Folios) distribuyendo automáticamente la liquidación habitación por habitación.
+* **Recálculo Dinámico:** Capacidad para extender días de estancias activas (`checked_in`), ajustando la deuda y reabriendo el estatus contable a "Parcial" automáticamente.
+
+### 3. 📄 Generación de Documentos Digitales (PDF)
+* **Cotizaciones Proactivas:** Generación instantánea de presupuestos ("PRESUPUESTO" vs "COMPROBANTE" dinámico).
+* **Motor Fiscal:** Cálculo automático y desglosado de impuestos locales: Base Imponible, IVA (16%) e ISH (2%).
 
 ---
 
