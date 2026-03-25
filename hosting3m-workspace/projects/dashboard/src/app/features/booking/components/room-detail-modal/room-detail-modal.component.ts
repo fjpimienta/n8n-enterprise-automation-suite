@@ -108,4 +108,19 @@ export class RoomDetailModalComponent implements OnInit {
     const expiry = new Date(dateStr);
     return expiry < today;
   }
+
+  isBookingForToday(): boolean {
+    const b = this.activeBooking();
+    if (!b) return false;
+    if (this.room().status === 'occupied') return true;
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${year}-${month}-${day}`;
+
+    const inStr = String(b.check_in).split(/[ T]/)[0];
+    return inStr <= todayStr;
+  }
 }
