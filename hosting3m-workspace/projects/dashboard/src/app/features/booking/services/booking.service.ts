@@ -312,20 +312,16 @@ export class BookingService {
     this.isProcessing.set(true);
 
     try {
-      // 🧠 LÓGICA DE ESTADO FINANCIERO INICIAL
       const totalAmount = Number(formData.total_amount) || 0;
       const amountPaid = Number(formData.amount_paid) || 0;
       let paymentStatus = 'pending';
 
-      if (amountPaid >= totalAmount && totalAmount > 0) {
-        paymentStatus = 'paid';
-      } else if (amountPaid > 0) {
-        paymentStatus = 'partial';
-      }
+      if (amountPaid >= totalAmount && totalAmount > 0) paymentStatus = 'paid';
+      else if (amountPaid > 0) paymentStatus = 'partial';
 
       // --- ESCENARIO A: TRANSICIÓN DE RESERVA ---
       if (existingBookingId) {
-        await lastValueFrom(
+        const resUpd: any = await lastValueFrom(
           this.http.post(`${crudUrl}/hotel_bookings`, {
             operation: 'update',
             id: existingBookingId,
@@ -339,6 +335,8 @@ export class BookingService {
             }
           }, { headers: this.adminService.getAuthHeaders() })
         );
+        // 🛑 ESCUDO ANTI-ERRORES SILENCIOSOS
+        if (resUpd?.error) throw new Error(resUpd.message || 'Fallo DB: Update Reserva');
 
       }
       // --- ESCENARIO B: WALK-IN ---
@@ -364,12 +362,13 @@ export class BookingService {
               }
             }, { headers: this.adminService.getAuthHeaders() })
           );
+          if (guestRes?.error) throw new Error(guestRes.message);
           guestId = guestRes?.data?.[0]?.id || guestRes?.id || guestRes?.data?.id;
         }
 
         if (!guestId) throw new Error("No se pudo obtener el ID del huésped");
 
-        await lastValueFrom(
+        const insertRes: any = await lastValueFrom(
           this.http.post(`${crudUrl}/hotel_bookings`, {
             operation: 'insert',
             fields: {
@@ -386,10 +385,11 @@ export class BookingService {
             }
           }, { headers: this.adminService.getAuthHeaders() })
         );
+        if (insertRes?.error) throw new Error(insertRes.message || 'Fallo DB: Insertar Reserva');
       }
 
       // --- PASO COMÚN FINAL: OCUPAR LA HABITACIÓN ---
-      await lastValueFrom(
+      const roomRes: any = await lastValueFrom(
         this.http.post(`${crudUrl}/hotel_rooms`, {
           operation: 'update',
           id: room.id,
@@ -399,24 +399,23 @@ export class BookingService {
           }
         }, { headers: this.adminService.getAuthHeaders() })
       );
+      if (roomRes?.error) throw new Error(roomRes.message || 'Fallo DB: Ocupar Habitación');
 
       this.loadRooms();
 
     } catch (error) {
       console.error('❌ Error en Check-in:', error);
-      throw error;
+      throw error; // Propaga el error para que el Dashboard lance la alerta roja
     } finally {
       this.isProcessing.set(false);
     }
   }
 
-
-
   public async processCheckout(room: Room, bookingId: number, inventoryReport: string, checks: any): Promise<void> {
     const crudUrl = this.apiUrl_crud;
 
     // 1. Cerrar la reserva del huésped (Check-out normal)
-    await lastValueFrom(
+    const resOut: any = await lastValueFrom(
       this.http.post(`${crudUrl}/hotel_bookings`, {
         operation: 'update',
         id: bookingId,
@@ -430,40 +429,34 @@ export class BookingService {
         }
       }, { headers: this.adminService.getAuthHeaders() })
     );
+    // 🛑 ESCUDO ANTI-ERRORES SILENCIOSOS
+    if (resOut?.error) throw new Error(`Error en Check-out: ${resOut.message}`);
 
-    // 2. 📡 RADAR DE TICKETS BLINDADO (Defensa en Profundidad)
     let hasPendingTickets = false;
     try {
       const ticketsRes: any = await lastValueFrom(
         this.http.post(`${crudUrl}/hotel_maintenance_tickets`, {
           operation: 'getall',
-          filters: { room_id: room.id, status: 'PENDING' } // Usamos 'filters' como manda tu arquitectura
+          filters: { room_id: room.id, status: 'PENDING' }
         }, { headers: this.adminService.getAuthHeaders() })
       );
-
-      // Normalizamos la respuesta por si n8n manda el array directo o dentro de "data"
       const pendingTickets = Array.isArray(ticketsRes?.data) ? ticketsRes.data : (Array.isArray(ticketsRes) ? ticketsRes : []);
-
-      // 🛑 DOBLE CANDADO: Obligamos a Angular a verificar que el ticket coincida con el ID del cuarto
       hasPendingTickets = pendingTickets.some((t: any) => Number(t.room_id) === Number(room.id) && t.status === 'PENDING');
+    } catch (error) { }
 
-    } catch (error) {
-      console.warn('No se pudieron verificar los tickets de mantenimiento (Fallback a disponible)', error);
-    }
-
-    // 3. ⚡ TRANSICIÓN DE ESTADO INTELIGENTE
     const nextStatus = hasPendingTickets ? 'maintenance' : 'available';
 
-    await lastValueFrom(
+    const resRoom: any = await lastValueFrom(
       this.http.post(`${crudUrl}/hotel_rooms`, {
         operation: 'update',
         id: room.id,
         fields: {
           status: nextStatus,
-          cleaning_status: 'dirty' // Siempre queda sucia al salir un huésped
+          cleaning_status: 'dirty'
         }
       }, { headers: this.adminService.getAuthHeaders() })
     );
+    if (resRoom?.error) throw new Error(`Error actualizando cuarto: ${resRoom.message}`);
 
     this.loadRooms();
   }

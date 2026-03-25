@@ -166,29 +166,36 @@ export class DashboardComponent {
   }
 
   /* 3. SECCIÓN: CHECK-IN Y CHECK-OUT */
-  async handleCheckinSave(formData: any) { // TODO: Define CheckinFormData interface
+  async handleCheckinSave(formData: any) {
     const room = this.hotelService.selectedRoom();
     if (!room) return;
 
     try {
-      // 1. Buscamos si hay una reserva HOY para esta habitación en la lista global
-      const todayStr = new Date().toLocaleDateString('sv-SE');
+      // 1. Extraemos el ID directamente del Signal (si el usuario abrió el modal desde una reserva)
+      let bookingId = this.activeBooking()?.id;
 
-      const existingRes = this.adminService.reservations().find(res =>
-        Number(res.room_id) === Number(room.id) &&
-        res.status === 'confirmed' &&
-        res.check_in.split(/[ T]/)[0] === todayStr
-      );
+      // 2. Fallback: Búsqueda global incluyendo estados "pending" (Cotizaciones)
+      if (!bookingId) {
+        // 🚨 FECHA BLINDADA
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
-      const bookingId = existingRes ? existingRes.id : undefined;
+        const existingRes = this.adminService.reservations().find(res =>
+          Number(res.room_id) === Number(room.id) &&
+          (res.status === 'confirmed' || res.status === 'pending') && // 🛠️ FIX: Detectar cotizaciones
+          res.check_in.split(/[ T]/)[0] <= todayStr &&
+          res.check_out.split(/[ T]/)[0] > todayStr
+        );
+        bookingId = existingRes ? existingRes.id : undefined;
+      }
 
-      // 2. Llamamos al servicio pasando el ID si existe
+      // 3. Procesamos y ESPERAMOS validación estricta de base de datos
       await this.bookingService.processCheckin(formData, room, bookingId);
 
       this.completeActionSuccess(`✅ Check-in exitoso en Hab. ${room.room_number}`);
     } catch (error: any) {
       console.error('Error en Check-in:', error);
-      alert(`Error: ${error.message}`);
+      alert(`❌ Operación Rechazada por el Sistema:\n${error.message}`);
     }
   }
 
