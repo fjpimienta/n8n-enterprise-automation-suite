@@ -171,23 +171,34 @@ export class DashboardComponent {
     if (!room) return;
 
     try {
-      // 1. Extraemos el ID directamente del Signal (si el usuario abrió el modal desde una reserva)
-      let bookingId = this.activeBooking()?.id;
+      let bookingId = undefined;
+      const active = this.activeBooking();
 
-      // 2. Fallback: Búsqueda global incluyendo estados "pending" (Cotizaciones)
-      if (!bookingId) {
-        // 🚨 FECHA BLINDADA
+      // 1. Extraer ID validando que no sea una reserva del futuro
+      if (active) {
         const now = new Date();
         const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const checkInStr = String(active.check_in).split(/[ T]/)[0];
 
+        if (checkInStr <= todayStr || active.status === 'checked_in') {
+          bookingId = active.id;
+        }
+      }
+
+      // 2. Fallback
+      if (!bookingId) {
+        const now = new Date();
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
         const existingRes = this.adminService.reservations().find(res =>
           Number(res.room_id) === Number(room.id) &&
-          (res.status === 'confirmed' || res.status === 'pending') && // 🛠️ FIX: Detectar cotizaciones
+          (res.status === 'confirmed' || res.status === 'pending') &&
           res.check_in.split(/[ T]/)[0] <= todayStr &&
           res.check_out.split(/[ T]/)[0] > todayStr
         );
         bookingId = existingRes ? existingRes.id : undefined;
       }
+
+      // ... continúa el resto de la función: await this.bookingService.processCheckin...
 
       // 3. Procesamos y ESPERAMOS validación estricta de base de datos
       await this.bookingService.processCheckin(formData, room, bookingId);

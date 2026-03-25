@@ -70,14 +70,14 @@
     }
 
     @if (viewMode() === 'checkin') {
-    <app-checkin-form [room]="hotelService.selectedRoom()" [reservation]="activeBooking"
+    <app-checkin-form [room]="hotelService.selectedRoom()" [reservation]="activeBooking()"
       (onClose)="viewMode.set('details')" (saved)="handleCheckinSave($event)">
     </app-checkin-form>
     }
 
     @if (viewMode() === 'checkout_validation') {
-    <app-checkout-form [room]="hotelService.selectedRoom()" [reservation]="activeBooking" (saved)="onCheckoutSuccess()"
-      (canceled)="onCheckoutCancel()">
+    <app-checkout-form [room]="hotelService.selectedRoom()" [reservation]="activeBooking()"
+      (saved)="onCheckoutSuccess()" (canceled)="onCheckoutCancel()">
     </app-checkout-form>
     }
 
