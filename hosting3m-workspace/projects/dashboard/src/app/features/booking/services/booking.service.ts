@@ -341,6 +341,12 @@ export class BookingService {
       }
       // --- ESCENARIO B: WALK-IN ---
       else {
+        // 🚨 PREVENCIÓN DE OVERLAPPING: Validar que el walk-in no choque con reservas futuras confirmadas
+        const isFree = await this.isRoomFree(room.id, new Date().toISOString(), formData.check_out);
+        if (!isFree) {
+          throw new Error(`La habitación ya tiene una reserva confirmada que choca con la fecha de salida seleccionada (${formData.check_out}). Por favor acorte la estancia o asigne otra habitación.`);
+        }
+
         let guestId = formData.guest_id;
 
         if (!guestId) {

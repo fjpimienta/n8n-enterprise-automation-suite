@@ -81,8 +81,17 @@ export class CheckinFormComponent implements OnInit {
     let passedRes = this.reservation();
     const currentRoom = this.room();
 
+    // 🚨 FIX: Blindaje para no auto-llenar el formulario con reservas del futuro
     if (passedRes && passedRes.id) {
-      this.activeRes = passedRes;
+      const now = new Date();
+      const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const inStr = String(passedRes.check_in).split(/[ T]/)[0];
+
+      if (inStr <= todayStr) {
+        this.activeRes = passedRes;
+      } else {
+        this.activeRes = null; // Ignorar la reserva futura para el formulario Walk-in
+      }
     } else if (currentRoom) {
       const allRes = this.adminService.reservations();
       const now = new Date();
