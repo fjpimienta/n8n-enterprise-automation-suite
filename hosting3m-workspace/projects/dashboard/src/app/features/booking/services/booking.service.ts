@@ -609,18 +609,32 @@ export class BookingService {
   public async updateReservation(formData: any): Promise<void> {
     this.isProcessing.set(true);
     try {
+      // 🧠 LÓGICA DE EVOLUCIÓN FINANCIERA PARA EXTENSIONES
+      const currentPaid = Number(formData.amount_paid) || 0;
+      const newTotal = Number(formData.total_amount) || 0;
+      let newPaymentStatus = formData.payment_status || 'pending';
+
+      // Si el total subió, evaluamos si la cuenta debe pasar de 'paid' a 'partial'
+      if (currentPaid >= newTotal && newTotal > 0) {
+        newPaymentStatus = 'paid';
+      } else if (currentPaid > 0) {
+        newPaymentStatus = 'partial';
+      } else {
+        newPaymentStatus = 'pending';
+      }
+
       await lastValueFrom(
         this.http.post(`${this.apiUrl_crud}/hotel_bookings`, {
           operation: 'update',
-          id: formData.id, // 🛠️ ¡AQUÍ ESTABA EL BUG! El ID debe ir en la raíz para el WHERE de SQL
+          id: formData.id, // 🛠️ ESTRICTAMENTE EN LA RAÍZ
           fields: {
             room_id: formData.room_id,
             check_in: formData.check_in,
             check_out: formData.check_out,
-            total_amount: Number(formData.total_amount),
+            total_amount: newTotal,
+            payment_status: newPaymentStatus, // 🛠️ INYECTAMOS EL NUEVO ESTADO FINANCIERO
             notes: formData.notes,
             is_invoiced: formData.is_invoiced || false
-            // Eliminamos id_company y el id duplicado de aquí adentro para evitar choques
           }
         }, { headers: this.adminService.getAuthHeaders() })
       );

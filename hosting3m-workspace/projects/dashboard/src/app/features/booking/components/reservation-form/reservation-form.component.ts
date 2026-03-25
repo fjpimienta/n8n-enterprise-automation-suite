@@ -190,8 +190,10 @@ export class ReservationFormComponent implements OnInit, OnChanges { // 2. Agreg
           id: this.reservationToEdit().id,
           room_id: this.reservationToEdit().room_id,
           check_in: this.dates.start,
-          check_out: this.dates.end,
-          total_amount: this.customTotal,
+          check_out: this.dates.end, // Nueva fecha extendida
+          total_amount: this.customTotal, // Nuevo monto manual
+          amount_paid: this.reservationToEdit().amount_paid,       // 🛠️ ENVIAMOS LO QUE YA PAGÓ
+          payment_status: this.reservationToEdit().payment_status, // 🛠️ ENVIAMOS SU ESTADO ACTUAL
           notes: this.guest.notes,
           is_invoiced: this.requiresInvoice
         };
