@@ -33,19 +33,34 @@ export class ReservationManagerComponent implements OnInit, OnDestroy {
     const all = this.adminService.reservations();
     const selectedRoom = this.hotelService.selectedRoom();
 
+    // 🚨 FECHA BLINDADA (Hora local) para limpieza automática
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const todayStr = `${year}-${month}-${day}`;
+
     const currentRes = all.filter((r: any) => {
       // 1. Filtrar por habitación si hay una seleccionada
       if (selectedRoom && r.room_id !== selectedRoom.id) return false;
 
-      // 2. 🛠️ REGLA DE NEGOCIO: Mostrar reservas futuras y ACTUALES (checked_in)
-      if (r.status !== 'confirmed' && r.status !== 'pending' && r.status !== 'checked_in') {
+      // 2. 🛠️ REGLA DE NEGOCIO (Opción A): Solo llegadas futuras (pending / confirmed)
+      if (r.status !== 'confirmed' && r.status !== 'pending') {
         return false;
+      }
+
+      // 3. 🧹 LIMPIEZA DE PIPELINE: Ocultar reservas "fantasma" que ya vencieron
+      if (r.check_out) {
+        const checkOutStr = String(r.check_out).split(/[ T]/)[0];
+        if (checkOutStr < todayStr) {
+          return false;
+        }
       }
 
       return true;
     });
 
-    // 3. Ordenar cronológicamente
+    // 4. Ordenar cronológicamente (las más próximas primero)
     const sorted = currentRes.sort((a: any, b: any) => {
       return new Date(a.check_in).getTime() - new Date(b.check_in).getTime();
     });
