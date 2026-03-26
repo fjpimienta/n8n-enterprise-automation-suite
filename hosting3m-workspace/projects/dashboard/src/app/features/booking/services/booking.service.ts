@@ -18,16 +18,17 @@ export class BookingService {
   public roomGroup = signal<RoomGroup[]>([]);
   public isProcessing = signal<boolean>(false);
   public searchQuery = signal<string>('');
-  public filter = signal<'all' | 'available' | 'occupied' | 'dirty' | 'maintenance' | 'reserved'>('available');
+  public filter = signal<'all' | 'available' | 'occupied' | 'dirty' | 'maintenance' | 'reserved' | 'checkout_today'>('available');
   public translatedFilter = computed(() => this.translations[this.filter()]);
 
-  readonly translations: Record<'all' | 'available' | 'occupied' | 'dirty' | 'maintenance' | 'reserved', string> = {
+  readonly translations: Record<'all' | 'available' | 'occupied' | 'dirty' | 'maintenance' | 'reserved' | 'checkout_today', string> = {
     all: 'ninguno',
     available: 'disponible',
     occupied: 'ocupada',
     dirty: 'por limpiar',
     maintenance: 'mantenimiento',
-    reserved: 'reservada'
+    reserved: 'reservada',
+    checkout_today: 'salidas hoy'
   };
 
   private readonly roomTypeConfig = [
@@ -55,6 +56,8 @@ export class BookingService {
         );
       case 'reserved':
         return rooms.filter(r => r.hasIncomingToday && r.status === 'available');
+      case 'checkout_today':
+        return rooms.filter(r => r.isCheckoutDate === true && r.status === 'occupied');
       case 'occupied':
         return rooms.filter(r => r.status === 'occupied');
       case 'dirty':
