@@ -188,12 +188,13 @@ export class ReservationFormComponent implements OnInit, OnChanges { // 2. Agreg
         // Extensión de Estancia / Modificación
         const updateData = {
           id: this.reservationToEdit().id,
-          room_id: this.reservationToEdit().room_id,
+          // 🛠️ FIX: Tomar la nueva habitación si se seleccionó una, de lo contrario, mantener la original
+          room_id: this.selectedRoomForRes ? this.selectedRoomForRes.id : this.reservationToEdit().room_id,
           check_in: this.dates.start,
-          check_out: this.dates.end, // Nueva fecha extendida
-          total_amount: this.customTotal, // Nuevo monto manual
-          amount_paid: this.reservationToEdit().amount_paid,       // 🛠️ ENVIAMOS LO QUE YA PAGÓ
-          payment_status: this.reservationToEdit().payment_status, // 🛠️ ENVIAMOS SU ESTADO ACTUAL
+          check_out: this.dates.end,
+          total_amount: this.customTotal,
+          amount_paid: this.reservationToEdit().amount_paid,
+          payment_status: this.reservationToEdit().payment_status,
           notes: this.guest.notes,
           is_invoiced: this.requiresInvoice
         };
