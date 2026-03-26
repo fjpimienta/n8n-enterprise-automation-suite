@@ -113,6 +113,12 @@ export class DashboardComponent {
         description: 'No se esperan más huéspedes por reserva este día.',
         color: 'text-info'
       },
+      'checkout_today': {
+        icon: 'ti ti-logout',
+        title: 'Sin salidas para hoy',
+        description: 'Ningún huésped tiene programada su salida el día de hoy.',
+        color: 'text-orange'
+      },
       'all': {
         icon: 'ti ti-ghost',
         title: 'Vaya, esto está vacío',
