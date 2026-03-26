@@ -2,7 +2,8 @@ import { CommonModule } from '@angular/common';
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 
 /** Tipo de unión literal para el filtro de habitaciones; alineado con BookingService.filter */
-export type RoomFilterStatus = 'all' | 'available' | 'occupied' | 'dirty' | 'maintenance' | 'reserved';
+// 🚀 FIX: Agregamos 'checkout_today' a los tipos permitidos
+export type RoomFilterStatus = 'all' | 'available' | 'occupied' | 'dirty' | 'maintenance' | 'reserved' | 'checkout_today';
 
 @Component({
   selector: 'app-room-filters',
@@ -28,7 +29,8 @@ export class RoomFiltersComponent {
     { label: '🔒 Ocupada', value: 'occupied', activeClass: 'btn-danger' },
     { label: '🗑️ Limpieza', value: 'dirty', activeClass: 'btn-warning' },
     { label: '🔧 Mantenimiento', value: 'maintenance', activeClass: 'btn-secondary' },
-    { label: '📅 Llegadas Hoy', value: 'reserved', activeClass: 'btn-info' }
+    { label: '📅 Llegadas Hoy', value: 'reserved', activeClass: 'btn-info' },
+    { label: '🚪 Salidas Hoy', value: 'checkout_today', activeClass: 'btn-orange' }
   ];
 
   setFilter(filter: RoomFilterStatus) {
