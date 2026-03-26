@@ -86,17 +86,21 @@ export class AdminService {
         retry({ count: 5, delay: 4000 })
       )
       .subscribe({
-        next: (res) => {
-          if (res && !res.error && res.data) {
-            this.reservations.set(res.data);
+        next: (res: any) => {
+          // 🚀 FIX: Aseguramos apagar el spinner INMEDIATAMENTE al recibir cualquier respuesta
+          this.loadingReservations.set(false);
+
+          // Extraemos la data de forma segura, incluso si n8n manda la estructura anidada
+          const rawData = res?.data?.data || res?.data || res || [];
+
+          if (Array.isArray(rawData) && rawData.length > 0) {
+            this.reservations.set(rawData);
           } else {
             this.reservations.set([]);
           }
-          this.loadingReservations.set(false);
         },
         error: (err) => {
           console.error('❌ Error cargando reservas (agotó los 5 reintentos):', err);
-          // 🚀 FIX: Ya NO vaciamos el arreglo. Apagamos el loading y mostramos una alerta honesta.
           this.loadingReservations.set(false);
           alert('El servidor está experimentando un retraso inusual al despertar. Por favor, recarga la página (F5).');
         }
