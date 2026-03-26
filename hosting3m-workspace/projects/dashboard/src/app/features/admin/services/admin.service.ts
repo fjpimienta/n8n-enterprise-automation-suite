@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { lastValueFrom } from 'rxjs';
+import { lastValueFrom, retry } from 'rxjs'; // 🚀 FIX: Importamos 'retry' de rxjs
 import { ApiResponse } from '@core/interfaces/api-response.interface';
 import { Company, Guest, Room, User } from '@core/models/hotel.types';
 import { environment } from '@env/environment';
@@ -79,21 +79,26 @@ export class AdminService {
 
     this.http.post<ApiResponse<any>>(`${this.apiUrl_crud}/hotel_bookings`, payload, {
       headers: this.getAuthHeaders()
-    }).subscribe({
-      next: (res) => {
-        if (res && !res.error && res.data) {
-          this.reservations.set(res.data);
-        } else {
+    })
+      .pipe(
+        // 🚀 FIX: Inyectamos resiliencia. Reintenta 3 veces con 2 segundos de espera entre cada una si ocurre el 502.
+        retry({ count: 3, delay: 2000 })
+      )
+      .subscribe({
+        next: (res) => {
+          if (res && !res.error && res.data) {
+            this.reservations.set(res.data);
+          } else {
+            this.reservations.set([]);
+          }
+          this.loadingReservations.set(false);
+        },
+        error: (err) => {
+          console.error('Error cargando reservas (tras 3 reintentos):', err);
           this.reservations.set([]);
+          this.loadingReservations.set(false);
         }
-        this.loadingReservations.set(false);
-      },
-      error: (err) => {
-        console.error('Error cargando reservas:', err);
-        this.reservations.set([]);
-        this.loadingReservations.set(false);
-      }
-    });
+      });
   }
 
   /* Users */
