@@ -102,11 +102,13 @@ export class ReservationManagerComponent implements OnInit, OnDestroy {
       this.bookingService.loadRooms();
     }
 
-    // 3. Fallback de Seguridad: Si la base de datos realmente está en 0 y nunca llega info,
-    // quitamos el spinner a los 2.5 segundos para mostrar el estado vacío permanentemente.
+    // 3. Fallback de Seguridad: Damos 10 segundos de tolerancia para el Cold Start del backend
     this.fallbackTimeout = setTimeout(() => {
-      this.isLoading.set(false);
-    }, 2500);
+      // Solo apagamos el spinner si realmente no llegó data
+      if (this.adminService.reservations().length === 0) {
+        this.isLoading.set(false);
+      }
+    }, 10000);
   }
 
   ngOnDestroy() {
