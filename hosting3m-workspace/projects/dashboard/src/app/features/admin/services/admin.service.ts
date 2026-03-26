@@ -81,8 +81,9 @@ export class AdminService {
       headers: this.getAuthHeaders()
     })
       .pipe(
-        // 🚀 FIX: Inyectamos resiliencia. Reintenta 3 veces con 2 segundos de espera entre cada una si ocurre el 502.
-        retry({ count: 3, delay: 2000 })
+        // 🚀 FIX: Aumentamos a 5 intentos, con 4 segundos de descanso entre cada uno.
+        // Esto le da a n8n hasta 20+ segundos de margen para despertar.
+        retry({ count: 5, delay: 4000 })
       )
       .subscribe({
         next: (res) => {
@@ -94,9 +95,10 @@ export class AdminService {
           this.loadingReservations.set(false);
         },
         error: (err) => {
-          console.error('Error cargando reservas (tras 3 reintentos):', err);
-          this.reservations.set([]);
+          console.error('❌ Error cargando reservas (agotó los 5 reintentos):', err);
+          // 🚀 FIX: Ya NO vaciamos el arreglo. Apagamos el loading y mostramos una alerta honesta.
           this.loadingReservations.set(false);
+          alert('El servidor está experimentando un retraso inusual al despertar. Por favor, recarga la página (F5).');
         }
       });
   }
