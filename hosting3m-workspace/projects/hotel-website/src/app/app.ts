@@ -41,6 +41,11 @@ export class App implements OnInit {
   // --- MÉTODOS DEL MODAL ---
   openReviewModal() {
     this.showReviewModal.set(true);
+    // 🛠️ FIX: Forzamos a Lucide a dibujar la "X" cuando el modal aparece
+    setTimeout(() => {
+      // @ts-ignore
+      if (window.lucide) window.lucide.createIcons();
+    }, 50);
   }
 
   closeReviewModal() {
@@ -54,25 +59,22 @@ export class App implements OnInit {
 
   // --- CARGA DE RESEÑAS DESDE n8n MetaCRUD ---
   loadDbReviews() {
-    // Pasamos el modelo como Query Parameter
     const url = `${this.apiUrl_crud}/hotel_reviews`;
-
-    // AGREGADO: Payload vacío u operación explícita para satisfacer la firma de http.post()
     const payload = { operation: 'getall' };
 
     this.http.post(url, payload).subscribe({
       next: (res: any) => {
-        console.log('✅ MetaCRUD Respondió (POST):', res);
-
         const data = res.data || res;
-        if (Array.isArray(data) && data.length > 0) {
-          this.dbReviews.set(data.slice(0, 3));
+        if (Array.isArray(data)) {
+          // 🛠️ FIX: Filtramos objetos vacíos. Solo pasan los que tengan texto y nombre.
+          const validReviews = data.filter((r: any) => r.guest_name && r.review_text && r.review_text.trim() !== '');
+
+          this.dbReviews.set(validReviews.slice(0, 3)); // Se auto-ocultará si queda en 0
+
           setTimeout(() => {
             // @ts-ignore
             if (window.lucide) window.lucide.createIcons();
           }, 50);
-        } else {
-          console.warn('⚠️ N8n respondió bien, pero el arreglo de reseñas viene vacío.');
         }
       },
       error: (err) => {
@@ -85,10 +87,20 @@ export class App implements OnInit {
     if (!this.reviewForm.guest_name || !this.reviewForm.review_text) return;
 
     this.isSubmittingReview.set(true);
-    const payload = { ...this.reviewForm, is_approved: false };
 
-    // Ajuste arquitectónico: Pasamos el modelo como Query Parameter
-    const url = `${this.apiUrl_crud}?model=hotel_reviews`;
+    // 🛠️ FIX: Estructuramos el payload bajo el estándar del MetaCRUD v4
+    // Agregamos la operación 'insert' y envolvemos los datos en 'fields'
+    const payload = {
+      operation: 'insert',
+      fields: {
+        guest_name: this.reviewForm.guest_name,
+        rating: this.reviewForm.rating,
+        review_text: this.reviewForm.review_text,
+        is_approved: false
+      }
+    };
+
+    const url = `${this.apiUrl_crud}/hotel_reviews`;
 
     this.http.post(url, payload).subscribe({
       next: (res: any) => {
