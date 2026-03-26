@@ -1,0 +1,258 @@
+{
+  "name": "v3/SW ValidaToken",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "c5a4ce25-be84-428b-b405-d16718ad303f",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [
+        -768,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "bypass-condition-1",
+              "leftValue": "={{ $json.model_name }}",
+              "rightValue": "hotel_reviews",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ef828a58-8543-48f5-8e67-ef458d5ea921",
+      "name": "Bypass para Reseñas?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -512,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"status\": \"success\",\n  \"data\": {\n    \"id_company\": 1,\n    \"user\": {\n      \"role\": \"PUBLIC\",\n      \"user\": \"web_guest\"\n    }\n  },\n  \"message\": \"Authorized by Public Bypass\"\n}",
+        "options": {}
+      },
+      "id": "742ac0e8-2116-4e0f-b09e-3b6095d9e2c1",
+      "name": "Gafete PUBLIC",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -224,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://jwt-service:4000/verify-token",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "={{ $json.headers?.authorization || $json.authorization }}"
+            },
+            {
+              "name": "internal_secret",
+              "value": "={{$env[\"INTERNAL_SECRET\"]}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6639a68f-b3d1-4fde-b19b-5e2c5fcf4f64",
+      "name": "Verify Token",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -224,
+        448
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "51275301-bea2-454d-b495-3f942bbdb9e6",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7b397f2a-9a3a-4e00-839e-afc544308403",
+      "name": "If",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        16,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"status\": \"success\",\n  \"data\": {\n    \"id_company\": {{ $json.id_company }},\n    \"user\": {\n      \"role\": \"{{ $json.role }}\",\n      \"user\": \"{{ $json.user }}\"\n    }\n  },\n  \"message\": \"Authorized\"\n}",
+        "options": {}
+      },
+      "id": "9f971483-4382-4adf-8136-cbd81e7173a6",
+      "name": "Send Token",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"status\": \"error\",\n  \"data\": null,\n  \"message\": \"Token inválido o expirado\"\n}",
+        "options": {}
+      },
+      "id": "556dd055-8ca2-4017-b2e5-97945fb9ca9e",
+      "name": "Stop and Error",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        576
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Bypass para Reseñas?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bypass para Reseñas?": {
+      "main": [
+        [
+          {
+            "node": "Gafete PUBLIC",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Verify Token",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Verify Token": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send Token",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Stop and Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "9SrVXdATmlrZemJT"
+  },
+  "versionId": "78006166-b377-4f0d-ae5c-2c6dd7ffb7d6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
+  },
+  "id": "RSz6L3aXj3NfumwG",
+  "tags": [
+    {
+      "updatedAt": "2025-12-20T19:25:50.503Z",
+      "createdAt": "2025-12-20T19:25:50.503Z",
+      "id": "wJ0vNQ7idcCu9BGu",
+      "name": "JWT"
+    },
+    {
+      "updatedAt": "2025-12-20T19:25:45.288Z",
+      "createdAt": "2025-12-20T19:25:45.288Z",
+      "id": "TEcAAV8ImkhhzPtv",
+      "name": "Token"
+    },
+    {
+      "updatedAt": "2025-12-20T19:25:38.936Z",
+      "createdAt": "2025-12-20T19:24:03.065Z",
+      "id": "kej8yFK0WMHHioIl",
+      "name": "Security"
+    },
+    {
+      "updatedAt": "2025-12-20T19:25:08.685Z",
+      "createdAt": "2025-12-20T19:25:08.685Z",
+      "id": "ljhw24TcxNVpCPyc",
+      "name": "Webhook"
+    }
+  ]
+}
