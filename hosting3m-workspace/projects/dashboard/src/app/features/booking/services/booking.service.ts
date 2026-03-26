@@ -276,15 +276,18 @@ export class BookingService {
 
     const allReservations = this.adminService.reservations();
 
-    // Filtramos reservas confirmadas/pendientes cuya fecha de salida AÚN NO HAYA PASADO
+    // 🛠️ FIX: Filtramos estrictamente reservas que APLICAN PARA HOY
     const validReservations = allReservations.filter(r => {
       if (!r.check_in || !r.check_out) return false;
+
+      const checkInStr = String(r.check_in).split(/[ T]/)[0];
       const checkOutStr = String(r.check_out).split(/[ T]/)[0];
       const status = String(r.status || '').toLowerCase().trim();
 
       return Number(r.room_id) === Number(room.id) &&
         ['confirmed', 'pending'].includes(status) &&
-        checkOutStr > todayStr; // Acepta a Juan Miguel incluso si entró ayer, siempre que salga mañana.
+        checkInStr <= todayStr && // 🚀 PREVIENE EL BUG: Ignora reservas del futuro (deben empezar hoy o antes)
+        checkOutStr > todayStr;   // Y obviamente no deben haber caducado
     }).sort((a, b) => String(a.check_in).localeCompare(String(b.check_in)));
 
     const reservation = validReservations[0];
