@@ -521,8 +521,7 @@ export class BookingService {
     try {
       const payload = {
         operation: 'getall',
-        table_name: 'hotel_bookings',
-        fields: { status: 'confirmed' }
+        table_name: 'hotel_bookings'
       };
 
       const res: any = await lastValueFrom(
@@ -540,6 +539,11 @@ export class BookingService {
           if (excludeId && Number(b.id) === Number(excludeId)) {
             return false;
           }
+
+          // 🚀 FIX: Ignorar reservas canceladas o que ya hicieron check_out. 
+          // Esto significa que 'checked_in', 'pending' y 'confirmed' SÍ bloquearán la disponibilidad.
+          if (b.status === 'cancelled' || b.status === 'checked_out') return false;
+
           const bStart = new Date(b.check_in).setHours(0, 0, 0, 0);
           const bEnd = new Date(b.check_out).setHours(0, 0, 0, 0);
           return (start < bEnd && end > bStart);
