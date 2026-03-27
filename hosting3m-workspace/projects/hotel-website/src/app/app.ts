@@ -66,10 +66,10 @@ export class App implements OnInit {
         if (!res) return; // 🚀 FIX: Escudo anti-null
 
         const data = res?.data || res; // 🚀 FIX: Lectura segura
-        
+
         if (Array.isArray(data)) {
           const validReviews = data.filter((r: any) => r.guest_name && r.review_text && r.review_text.trim() !== '');
-          this.dbReviews.set(validReviews.slice(0, 3)); 
+          this.dbReviews.set(validReviews.slice(0, 3));
 
           setTimeout(() => {
             // @ts-ignore
@@ -156,6 +156,21 @@ export class App implements OnInit {
   }
 
   searchAvailability() {
+    // 🛑 KILL SWITCH DE EMERGENCIA: Previene overbooking por error en SQL
+    alert('Nuestro sistema de reservas online se encuentra en mantenimiento programado para mejorar nuestro servicio.\n\nPor favor, contáctanos por WhatsApp o teléfono para verificar disponibilidad y atenderte personalmente.');
+
+    // Aseguramos que el botón no se quede cargando
+    this.isSearching.set(false);
+
+    // Bloqueamos la ejecución para que no haga la petición a n8n
+    return;
+
+    /* ========================================================
+    AQUÍ ABAJO SE QUEDA TU CÓDIGO ORIGINAL INTACTO PARA CUANDO 
+    ESTEMOS LISTOS PARA VOLVER A ENCENDERLO
+    ========================================================
+    */
+
     if (!this.dates.checkin || !this.dates.checkout) return;
     this.isSearching.set(true);
 
@@ -163,10 +178,9 @@ export class App implements OnInit {
 
     this.http.post(`${this.apiUrl_public}/availability`, payload).subscribe({
       next: (res: any) => {
-        // 🚀 FIX: Escudo anti-null
         if (!res) {
-           this.isSearching.set(false);
-           return;
+          this.isSearching.set(false);
+          return;
         }
 
         if (res?.status === 'success' && res?.data) {
@@ -275,4 +289,6 @@ export class App implements OnInit {
     this.dates = { checkin: '', checkout: '' };
     this.guest = { name: '', email: '', phone: '', guests: 2 };
   }
+
+
 }
