@@ -4,5 +4,5 @@ export const environment = {
   apiUrl_ai: 'http://localhost:5678/webhook/v3/ai/chat',
   apiUrl_public: 'http://localhost:5678/webhook/public',
   apiUrl_token: 'http://localhost:5678/webhook/v3/genera-token',
-  apiUrl_crud: 'http://localhost:5678/webhook/ba815555-f67d-4e9b-b43e-1120ad7698c4/crud/v4'
+  apiUrl_crud: 'http://localhost:5679/webhook/0cce9eb9-5022-433f-a04b-67840e015870/crud/v5'
 };

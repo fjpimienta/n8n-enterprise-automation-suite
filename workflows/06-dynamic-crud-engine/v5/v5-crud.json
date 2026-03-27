@@ -1,5 +1,5 @@
 {
-  "name": "v4/CRUD",
+  "name": "v5/CRUD",
   "nodes": [
     {
       "parameters": {
@@ -12,31 +12,31 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        1600,
-        32
+        1792,
+        176
       ],
-      "id": "028acbca-df2c-4189-a35a-945805a508b1",
+      "id": "9aa17361-522f-4a02-8fb2-caa727e78056",
       "name": "Respond to Webhook",
       "alwaysOutputData": true
     },
     {
       "parameters": {
         "httpMethod": "POST",
-        "path": "crud/v4/:model",
+        "path": "crud/v5/:model",
         "responseMode": "responseNode",
         "options": {
           "allowedOrigins": "https://hosting3m.com, https://sanjose.hosting3m.com"
         }
       },
-      "id": "b37c9dca-4c33-4ed8-ab97-1e604a2947fb",
+      "id": "77c38fec-d27d-4a19-ac3f-062f50e48b77",
       "name": "WebhookCRUD",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [
-        -3232,
-        48
+        -2592,
+        192
       ],
-      "webhookId": "ba815555-f67d-4e9b-b43e-1120ad7698c4"
+      "webhookId": "0cce9eb9-5022-433f-a04b-67840e015870"
     },
     {
       "parameters": {
@@ -45,10 +45,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -3008,
-        48
+        -2368,
+        192
       ],
-      "id": "1ce6a871-bb69-4173-bb5e-06d958bf980a",
+      "id": "5f5abdde-d6db-4b19-b954-8fc712629f92",
       "name": "Get Model Name"
     },
     {
@@ -60,10 +60,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        -2112,
-        -48
+        -1472,
+        96
       ],
-      "id": "cbf3553d-0d6a-44b7-b1ca-7587692f6104",
+      "id": "50ef996a-1cf1-4a5f-b59d-3905ad6a2be5",
       "name": "Get Model Config",
       "retryOnFail": false,
       "alwaysOutputData": true,
@@ -76,91 +76,15 @@
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "27ec18a9-6d19-4c5b-b388-9b0a32264843",
-              "name": "model_config",
-              "value": "={{ $json }}",
-              "type": "object"
-            },
-            {
-              "id": "b852315d-2a90-4979-a0f7-a3649edecad5",
-              "name": "body",
-              "value": "={{ $('WebhookCRUD').item.json.body }}",
-              "type": "object"
-            },
-            {
-              "id": "f468dffb-69ae-4df4-8acd-e6b11f93a073",
-              "name": "operation",
-              "value": "={{ $('WebhookCRUD').item.json.body.operation }}",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        32,
-        -48
-      ],
-      "id": "e87d0cb6-efc9-4d5b-bca2-cc36054a2d26",
-      "name": "Prepare Subworkflow Input"
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "9480a411-c509-4994-b9dd-c57519b1c1e2",
-              "name": "data",
-              "value": "={{ $json.error ? [] : $input.all().map(item => item.json) }}",
-              "type": "array"
-            },
-            {
-              "id": "ca19a287-6b7a-4732-8f2d-4ea53e5ee8fa",
-              "name": "operation",
-              "value": "={{ $item(0, 0).$node[\"Get Model Name\"].json.operation }}",
-              "type": "string"
-            },
-            {
-              "id": "0ee83d12-cbad-49a3-b23e-48870cf02936",
-              "name": "error",
-              "value": "={{ $json.error ? true : false }}",
-              "type": "boolean"
-            },
-            {
-              "id": "5fb468ab-a3f8-4c7a-b341-6a0aafc48e36",
-              "name": "message",
-              "value": "={{ $json.error ? $json.message + ' - ' + $json.error.description : 'Ejecución satisfactoria' }}",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        704,
-        -48
-      ],
-      "id": "b41384e0-a9ee-49ef-a8d7-3889a62ea440",
-      "name": "Prepare Normalize"
-    },
-    {
-      "parameters": {
         "jsCode": "const modelConfig = $node[\"Get Model Config\"].json;\nconst webhookBody = $node[\"WebhookCRUD\"].json.body || {};\nconst operation = (webhookBody.operation || \"\").toLowerCase();\nconst bodyFields = webhookBody.fields || {};\n\n// SOLO validamos campos requeridos si es INSERT o UPDATE\nif ([\"insert\", \"update\"].includes(operation)) {\n    if (modelConfig.schema_json) {\n        const schema = modelConfig.schema_json;\n        Object.keys(schema).forEach(field => {\n            if (schema[field].required === true) {\n                if (bodyFields[field] === undefined || bodyFields[field] === null) {\n                    // throw new Error(`Campo requerido faltante: ${field}`);\n                    return {\n                      json: {\n                        error: true,\n                        status: 400,\n                        message: `Campo requerido faltante: ${field}`,\n                        code: \"SCHEMA_VALIDATION\"\n                      }\n                    };\n                }\n            }\n        });\n    }\n}\n\nreturn { json: { ...modelConfig, validated: true } };"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -640,
-        -144
+        0,
+        0
       ],
-      "id": "ca384b19-3f9d-45de-b053-ec7332e2f717",
+      "id": "18aae50d-8e34-493e-b18b-b2b1ab270cd5",
       "name": "Schema Validate"
     },
     {
@@ -172,10 +96,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        -1664,
-        48
+        -1024,
+        192
       ],
-      "id": "4cb692d3-3deb-48d1-9f61-94a412b76692",
+      "id": "5bbcf983-8b47-4090-b696-fa017983b683",
       "name": "Get",
       "credentials": {
         "postgres": {
@@ -212,10 +136,10 @@
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 2.1,
       "position": [
-        -1216,
-        48
+        -576,
+        192
       ],
-      "id": "8a1d7ac3-6905-402b-8934-8051513db280",
+      "id": "07505e52-fe2d-44f3-8ea9-9c8ee94a7be3",
       "name": "Message a model",
       "credentials": {
         "openAiApi": {
@@ -232,10 +156,10 @@
       "type": "n8n-nodes-base.aggregate",
       "typeVersion": 1,
       "position": [
-        -1440,
-        48
+        -800,
+        192
       ],
-      "id": "5d953ac7-5c3a-4bcc-9df8-f82355000341",
+      "id": "d935102c-8cc5-4269-a6eb-b3c3d80aeb66",
       "name": "Aggregate"
     },
     {
@@ -245,10 +169,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -864,
-        48
+        -224,
+        192
       ],
-      "id": "c47b6f0b-f667-474e-baaf-ee0900d47a70",
+      "id": "25a23916-0dfb-402d-8777-14d2c418f3fe",
       "name": "Parse IA"
     },
     {
@@ -262,10 +186,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        -640,
-        48
+        0,
+        192
       ],
-      "id": "fba0c6d3-7794-4e03-9093-01cf046adc11",
+      "id": "f29f2435-2c32-4679-9569-d4044538cfa1",
       "name": "Execute a SQL query",
       "credentials": {
         "postgres": {
@@ -302,10 +226,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        1152,
-        -48
+        1344,
+        96
       ],
-      "id": "17ceec5f-4903-4427-b499-2070f671d36a",
+      "id": "efec97a4-ab75-4872-9c55-b4311788a165",
       "name": "Check Post-Hooks"
     },
     {
@@ -317,10 +241,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        1376,
-        -128
+        1568,
+        32
       ],
-      "id": "87637bee-ebb0-498b-8278-408729e102bd",
+      "id": "4d3e9b0d-9213-4d17-b57d-c194e0c4a1ab",
       "name": "Insert Logs",
       "credentials": {
         "postgres": {
@@ -357,10 +281,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        1376,
-        176
+        1568,
+        320
       ],
-      "id": "55f7c9aa-3d90-41c8-b5d2-0561c96bcc7e",
+      "id": "8d297d0f-2bed-4aa2-914b-b146419b3ef7",
       "name": "If1"
     },
     {
@@ -370,23 +294,23 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -416,
-        -48
+        224,
+        96
       ],
-      "id": "be6371e3-3f2c-4bf6-abde-f8d5569a81c8",
+      "id": "6ab3d359-9b80-419c-b910-1cb55ff0055f",
       "name": "Extract Auth Context"
     },
     {
       "parameters": {
-        "jsCode": "// 1. Obtener datos de entrada\nconst authContext = $json;\n\n// 2. Acceder al Webhook original de forma segura (usando .first() para saltar ramas)\nconst webhookData = $('WebhookCRUD').first().json;\nconst body = webhookData.body || {};\n\n// Capturamos 'action' o 'operation' (Angular mandó 'action': 'list')\nconst operationRaw = (body.action || body.operation || \"\").toLowerCase();\n\n// VALIDACIÓN DE OPERACIÓN FALTANTE\nif (!operationRaw) {\n  return [{\n    json: {\n      error: true,\n      status: 400,\n      message: \"No se especificó ninguna acción u operación (list, insert, etc.)\",\n      code: \"MISSING_OPERATION\"\n    }\n  }];\n}\n\nconst userRole = authContext.user?.role;\nif (!userRole) {\n  return [{\n    json: {\n      error: true,\n      status: 401,\n      message: \"Acceso Denegado: Rol de usuario no definido.\",\n      code: \"AUTH_ERROR\"\n    }\n  }];\n}\n\n// 3. Mapeo de operaciones\nconst opMapping = { \n    'list': 'select',\n    'getall': 'select',\n    'getone': 'select',\n    'insert': 'insert',\n    'update': 'update',\n    'delete': 'delete'\n};\n\nconst opToValidate = opMapping[operationRaw] || 'select';\n\n// 4. Obtener la configuración del modelo (viene de Schema Validate o Execute SQL)\nconst modelConfig = $('Schema Validate').first().json;\n\n// 5. Verificación de permisos de Operación\nconst allowedOps = Array.isArray(modelConfig.allowed_ops) ? modelConfig.allowed_ops : [];\nconst isOpAllowed = allowedOps.map(op => op.toLowerCase()).includes(opToValidate);\n\nif (!isOpAllowed) {\n  return [{\n    json: {\n      error: true,\n      status: 403,\n      message: `Operación ${operationRaw.toUpperCase()} no permitida para este modelo.`,\n      code: \"OPERATION_NOT_ALLOWED\"\n    }\n  }];\n}\n\n// 6. Verificación de Rol contra la DB\nconst roleKey = `allowed_roles_${opToValidate}`;\n\nconst allowedRolesStr = modelConfig[roleKey] || \"\"; // Si no existe la columna, queda vacío\nif (!allowedRolesStr) {\n    return [{\n        json: {\n            error: true,\n            status: 500,\n            message: `Configuración de seguridad faltante: No se encontró la columna ${roleKey} en la tabla crud_models.`,\n            code: \"CONFIG_ERROR\"\n        }\n    }];\n}\n\nconst allowedRolesList = allowedRolesStr.split(',').map(r => r.trim().toUpperCase());\nif (!allowedRolesList.includes(userRole.toUpperCase())) {\n  return [{\n    json: {\n      error: true,\n      status: 403,\n      message: `Prohibido: El rol '${userRole}' no tiene permiso para '${operationRaw.toUpperCase()}'`,\n      code: \"SECURITY_VALIDATION\"\n    }\n  }];\n}\n\n// TODO OK: Retornar configuración con bandera de éxito\nreturn [{\n  json: {\n    ...modelConfig,\n    user_role: userRole,\n    operation: opToValidate,\n    error: false\n  }\n}];"
+        "jsCode": "// 1. Obtener datos de entrada\nconst authContext = $json;\n\n// 2. Acceder al Webhook original de forma segura (usando .first() para saltar ramas)\nconst webhookData = $('WebhookCRUD').first().json;\nconst body = webhookData.body || {};\n\n// Capturamos 'action' o 'operation' (Angular mandó 'action': 'list')\nconst operationRaw = (body.action || body.operation || \"\").toLowerCase();\n\n// VALIDACIÓN DE OPERACIÓN FALTANTE\nif (!operationRaw) {\n  return [{\n    json: {\n      error: true,\n      status: 400,\n      message: \"No se especificó ninguna acción u operación (list, insert, etc.)\",\n      code: \"MISSING_OPERATION\"\n    }\n  }];\n}\n\nconst userRole = authContext.user?.role;\nif (!userRole) {\n  return [{\n    json: {\n      error: true,\n      status: 401,\n      message: \"Acceso Denegado: Rol de usuario no definido.\",\n      code: \"AUTH_ERROR\"\n    }\n  }];\n}\n\n// 3. Mapeo de operaciones\nconst opMapping = { \n    'list': 'getall',\n    'getall': 'getall',\n    'getone': 'getone',\n    'insert': 'insert',\n    'update': 'update',\n    'delete': 'delete',\n    'select': 'getall'\n};\n\nconst opToValidate = opMapping[operationRaw] || 'getall';\n\n// Mapeo para revisar permisos en DB (la DB sí usa select/insert/update/delete)\nconst opForSecurity = ['getall', 'getone'].includes(opToValidate) ? 'select' : opToValidate;\n\n// 4. Obtener la configuración del modelo\nconst modelConfig = $('Schema Validate').first().json;\n\n// 5. Verificación de permisos de Operación\nconst allowedOps = Array.isArray(modelConfig.allowed_ops) ? modelConfig.allowed_ops : [];\nconst isOpAllowed = allowedOps.map(op => op.toLowerCase()).includes(opForSecurity);\n\nif (!isOpAllowed) {\n  return [{ json: { error: true, status: 403, message: `Operación no permitida para este modelo.` } }];\n}\n\n// 6. Verificación de Rol contra la DB\nconst roleKey = `allowed_roles_${opForSecurity}`;\n\nconst allowedRolesStr = modelConfig[roleKey] || \"\"; // Si no existe la columna, queda vacío\nif (!allowedRolesStr) {\n    return [{\n        json: {\n            error: true,\n            status: 500,\n            message: `Configuración de seguridad faltante: No se encontró la columna ${roleKey} en la tabla crud_models.`,\n            code: \"CONFIG_ERROR\"\n        }\n    }];\n}\n\nconst allowedRolesList = allowedRolesStr.split(',').map(r => r.trim().toUpperCase());\nif (!allowedRolesList.includes(userRole.toUpperCase())) {\n  return [{\n    json: {\n      error: true,\n      status: 403,\n      message: `Prohibido: El rol '${userRole}' no tiene permiso para '${operationRaw.toUpperCase()}'`,\n      code: \"SECURITY_VALIDATION\"\n    }\n  }];\n}\n\n// TODO OK: Retornar configuración con bandera de éxito\nreturn [{\n  json: {\n    ...modelConfig,\n    user_role: userRole,\n    operation: opToValidate,\n    error: false\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -192,
-        -48
+        448,
+        96
       ],
-      "id": "c2448815-b5a0-4178-b1bd-f2d2fa8bfc60",
+      "id": "1c5fae98-7879-4a7f-b5be-ccb4255dc02a",
       "name": "Security Validation",
       "onError": "continueRegularOutput"
     },
@@ -401,10 +325,10 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        -2112,
-        176
+        -1472,
+        320
       ],
-      "id": "060b2dfd-7fd1-4371-bae2-fb6946216cc6",
+      "id": "0958a73f-7e67-41a6-8a89-c938bd266c46",
       "name": "Respond Denegate"
     },
     {
@@ -434,10 +358,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -2336,
-        128
+        -1696,
+        272
       ],
-      "id": "17edffd1-ab41-49a4-8728-f06e85136d1c",
+      "id": "b6921a1a-1b0d-4b53-97c8-54daaae38d99",
       "name": "IsValid"
     },
     {
@@ -468,10 +392,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -1888,
-        -48
+        -1248,
+        96
       ],
-      "id": "346c69d7-d97b-4d18-8b7e-8d9f8174e551",
+      "id": "e31999b8-5daa-4b33-b80e-dfeebb119687",
       "name": "ModelExist"
     },
     {
@@ -496,42 +420,11 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        -2560,
-        128
+        -1920,
+        272
       ],
-      "id": "15dd953a-16aa-4336-a7da-cf38840903f9",
+      "id": "d880466f-1e17-47c2-ba8e-1e68279ecebf",
       "name": "Verify Token"
-    },
-    {
-      "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "value": "PRM7zAek1zKcR9hq",
-          "mode": "list",
-          "cachedResultUrl": "/workflow/PRM7zAek1zKcR9hq",
-          "cachedResultName": "v4/Build Query"
-        },
-        "workflowInputs": {
-          "mappingMode": "defineBelow",
-          "value": {},
-          "matchingColumns": [],
-          "schema": [],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": true
-        },
-        "mode": "each",
-        "options": {
-          "waitForSubWorkflow": true
-        }
-      },
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.3,
-      "position": [
-        928,
-        -48
-      ],
-      "id": "c9c63619-3c9e-47a9-b702-c0439e6166b0",
-      "name": "Call 'v3/Build Query'1"
     },
     {
       "parameters": {
@@ -570,10 +463,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -2784,
-        48
+        -2144,
+        192
       ],
-      "id": "71ba0826-b1c8-4e7e-9a82-07f9b2c7f0e1",
+      "id": "0ff1d2c9-c5d7-4b48-9cb1-79c89e6ccca6",
       "name": "If"
     },
     {
@@ -587,10 +480,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        480,
-        -48
+        896,
+        96
       ],
-      "id": "fc9950dc-4b8f-4a58-9465-9f6e0be09714",
+      "id": "8db4215a-2faf-4874-ab8c-2ccf8740a715",
       "name": "Execute SQL",
       "alwaysOutputData": true,
       "credentials": {
@@ -603,34 +496,29 @@
     },
     {
       "parameters": {
-        "workflowId": {
-          "__rl": true,
-          "value": "PRM7zAek1zKcR9hq",
-          "mode": "list",
-          "cachedResultUrl": "/workflow/PRM7zAek1zKcR9hq",
-          "cachedResultName": "v4/Build Query"
-        },
-        "workflowInputs": {
-          "mappingMode": "defineBelow",
-          "value": {},
-          "matchingColumns": [],
-          "schema": [],
-          "attemptToConvertTypes": false,
-          "convertFieldsToString": true
-        },
-        "mode": "each",
-        "options": {
-          "waitForSubWorkflow": true
-        }
+        "jsCode": "const crypto = require('crypto');\n\n// Capturamos los datos directamente de los nodos anteriores\nconst config = $('Security Validation').first().json;\nconst body = $('WebhookCRUD').first().json.body || {};\nconst operation = config.operation.toLowerCase().trim();\nconst fields = body.filters || body.fields || body;\nconst table = config.table_name;\n\nif (!table) throw new Error(`Modelo sin table_name configurado.`);\n\nconst joins = config.joins || [];\nconst buildJoins = () => {\n    if (!joins.length) return '';\n    return joins.map(j => {\n        const myCol = j.own_col || j.localField;\n        const otherCol = j.foreign_col || j.foreignField || 'id';\n        return ` LEFT JOIN ${j.table} ON ${table}.${myCol} = ${j.table}.${otherCol}`;\n    }).join(' ');\n};\n\nconst buildSelectFields = () => {\n    if (!joins.length) return `${table}.*`;\n    let select = `${table}.*`;\n    joins.forEach(j => { select += `, row_to_json(${j.table}.*) as ${j.table}_data`; });\n    return select;\n};\n\nconst processValue = (key, value) => {\n    if (key === 'password' && value) return crypto.createHash('sha256').update(value).digest('hex');\n    return value;\n};\n\n// Sanitización de paginación\nconst sanitizePaginationParams = (limitInput, offsetInput) => {\n    let limit = 500;\n    let offset = 0;\n    if (limitInput) {\n        const parsedLimit = parseInt(limitInput, 10);\n        if (!isNaN(parsedLimit) && parsedLimit > 0) limit = Math.min(parsedLimit, 2000);\n    }\n    if (offsetInput) {\n        const parsedOffset = parseInt(offsetInput, 10);\n        if (!isNaN(parsedOffset) && parsedOffset >= 0) offset = parsedOffset;\n    }\n    return { limit, offset };\n};\n\nlet query = '';\nlet values = [];\n\nswitch (operation) {\n    case 'insert': {\n        const allowedFields = config.allowed_fields || [];\n        const insertFields = [];\n        const placeholders = [];\n        let paramIndex = 1;\n\n        Object.entries(fields).forEach(([key, value]) => {\n            if (allowedFields.includes(key)) {\n                insertFields.push(key);\n                placeholders.push(`$${paramIndex++}`);\n                values.push(processValue(key, value));\n            }\n        });\n\n        if (insertFields.length === 0) throw new Error(\"No hay campos válidos para insertar.\");\n        \n        let effectivePk = config.primary_key || 'id';\n        if (effectivePk === 'id' && !fields.id) {\n            effectivePk = fields.doc_id ? 'doc_id' : (fields.email ? 'email' : effectivePk);\n        }\n\n        const updateStr = insertFields\n            .filter(f => f !== 'url' && f !== 'id' && f !== 'created_at' && f !== effectivePk)\n            .map(f => `${f} = EXCLUDED.${f}`).join(', ');\n\n        query = `INSERT INTO ${table} (${insertFields.join(', ')}) VALUES (${placeholders.join(', ')}) ON CONFLICT (${effectivePk}) DO UPDATE SET ${updateStr} RETURNING *;`;\n        break;\n    }\n    case 'update': {\n        const pkFieldFromConfig = config.primary_key || 'id';\n        const idValue = body[pkFieldFromConfig] || fields[pkFieldFromConfig] || body.id || fields.id || body.email || fields.email;\n        const pkField = (pkFieldFromConfig === 'id' && !fields.id && idValue && typeof idValue === 'string' && idValue.includes('@')) ? 'email' : pkFieldFromConfig;\n\n        if (!idValue) throw new Error(`UPDATE requiere un ID o llave primaria (${pkField}).`);\n\n        const updateParts = [];\n        let paramIndex = 1;\n        \n        Object.entries(fields).forEach(([key, value]) => {\n            if ((config.allowed_fields || []).includes(key) && key !== 'id' && key !== pkField) {\n                if (key === 'password' && (value === null || value === undefined || value === '')) return; \n                updateParts.push(`${key} = $${paramIndex++}`);\n                values.push(processValue(key, value));\n            }\n        });\n        \n        if (updateParts.length === 0) throw new Error(\"No hay campos válidos para actualizar.\");\n        query = `UPDATE ${table} SET ${updateParts.join(', ')} WHERE ${pkField} = $${paramIndex++} RETURNING *;`;\n        values.push(idValue);\n        break;\n    }\n    case 'getall': {\n        const { limit, offset } = sanitizePaginationParams(body.limit, body.offset);\n        let baseQuery = `SELECT ${buildSelectFields()} FROM ${table} ${buildJoins()}`;\n        let whereParts = [];\n        let paramIndex = 1;\n\n        Object.entries(fields).forEach(([key, value]) => {\n            if ((config.allowed_fields || []).includes(key) && key !== 'limit' && key !== 'offset') {\n                let dbColumn = `${table}.${key}`;\n                if (key === 'created_at' || key === 'check_in') dbColumn = `(${table}.${key} - INTERVAL '6 hours')::date`;\n\n                if (value !== null && typeof value === 'object' && !Array.isArray(value)) {\n                    Object.entries(value).forEach(([op, val]) => {\n                        const sqlOp = op === '_gte' ? '>=' : op === '_lte' ? '<=' : op === '_gt' ? '>' : op === '_lt' ? '<' : '=';\n                        const isDateLike = typeof val === 'string' && (val.includes('T') || /^\\d{4}-\\d{2}-\\d{2}$/.test(val));\n                        if (isDateLike && key !== 'created_at' && key !== 'check_in') {\n                             whereParts.push(`${dbColumn}::date ${sqlOp} $${paramIndex++}::date`);\n                             values.push(val.split('T')[0]);\n                        } else {\n                             whereParts.push(`${dbColumn} ${sqlOp} $${paramIndex++}`);\n                             values.push(val);\n                        }\n                    });\n                } else if (value !== undefined && value !== '' && value !== null) {\n                    const isDateLike = typeof value === 'string' && (value.includes('T') || /^\\d{4}-\\d{2}-\\d{2}$/.test(value));\n                    if (isDateLike && key !== 'created_at' && key !== 'check_in') {\n                        whereParts.push(`${dbColumn}::date = $${paramIndex++}::date`);\n                        values.push(value.split('T')[0]);\n                    } else {\n                        whereParts.push(`${dbColumn} = $${paramIndex++}`);\n                        values.push(value);\n                    }\n                } else if (value === null) {\n                    whereParts.push(`${dbColumn} IS NULL`);\n                }\n            }\n        });\n\n        if (config.default_filter && !fields.hasOwnProperty('is_active') && !config.default_filter.includes('$1')) {\n            whereParts.push(config.default_filter);\n        }\n\n        if (whereParts.length > 0) baseQuery += ` WHERE ${whereParts.join(' AND ')}`;\n        \n        let sortCol = body.sort_by ? body.sort_by : (fields.published_at ? 'published_at' : 'created_at');\n        baseQuery += ` ORDER BY ${table}.${sortCol} DESC NULLS LAST LIMIT $${paramIndex++} OFFSET $${paramIndex++};`;\n        \n        query = baseQuery;\n        values.push(limit, offset);\n        break;\n    }\n    case 'delete': {\n        const pkField = config.primary_key || 'id';\n        const idValue = body[pkField] || fields[pkField] || body.id || fields.id;\n        if (!idValue) throw new Error(`DELETE requiere el valor de ${pkField}`);\n        query = `UPDATE ${table} SET is_active = false WHERE ${pkField} = $1 RETURNING *;`;\n        values = [idValue];\n        break;\n    }\n    case 'getone': {\n        const pkField = config.primary_key || 'id';\n        let val = fields[pkField] || body[pkField] || body.id || fields.id || fields.email || body.email;\n        if (!val && Object.keys(fields).length > 0) {\n            const firstKey = Object.keys(fields)[0];\n            val = fields[firstKey];\n            query = `SELECT ${buildSelectFields()} FROM ${table} ${buildJoins()} WHERE ${table}.${firstKey} = $1 LIMIT 1;`;\n        } else if (val) {\n            const searchField = (fields.email || body.email) && !fields[pkField] ? 'email' : pkField;\n            query = `SELECT ${buildSelectFields()} FROM ${table} ${buildJoins()} WHERE ${table}.${searchField} = $1 LIMIT 1;`;\n        }\n        if (!val) throw new Error(`GETONE requiere un ID o un campo de búsqueda.`);\n        values = [val];\n        break;\n    }\n}\n\nreturn [{ json: { query, values, operation, is_transactional: ['insert', 'update', 'delete'].includes(operation) } }];"
       },
-      "type": "n8n-nodes-base.executeWorkflow",
-      "typeVersion": 1.3,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        256,
-        -48
+        672,
+        96
       ],
-      "id": "2a841700-7b81-4247-96c3-e8f776201f42",
-      "name": "Call 'v4/Build Query'"
+      "id": "24cf2086-7d99-43ba-9dd4-bfe806c56b36",
+      "name": "Build Query"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Recuperamos los datos ejecutados\nconst sqlResults = $input.all().map(item => item.json); \nconst config = $('Security Validation').first().json;\nconst operation = config.operation.toLowerCase();\n\n// Validamos si Postgres tiró error (continueOnFail)\nif (sqlResults.length > 0 && sqlResults[0].error) {\n    return [{\n        json: {\n            error: true,\n            operation,\n            message: sqlResults[0].message || \"Error al ejecutar consulta en base de datos\",\n            data: null\n        }\n    }];\n}\n\n// Filtramos filas reales (evitamos metadatos vacíos si los hay)\nconst rows = sqlResults.filter(row => row && typeof row === 'object' && !row.hasOwnProperty('success'));\n\nlet data = rows;\nlet resultStatus = \"success\";\nlet message = \"Ejecución satisfactoria\";\nlet foundRecords = rows.length;\n\n// Lógica de Normalización\nswitch (operation) {\n  case 'getone':\n    if (rows.length === 0) {\n      data = null; resultStatus = \"error\"; message = \"Registro no encontrado.\"; foundRecords = 0;\n    } else {\n      data = rows[0]; foundRecords = 1;\n    }\n    break;\n  case 'update':\n    if (rows.length === 0) {\n      data = []; resultStatus = \"error\"; message = \"No se actualizó ningún registro. Verifica el ID.\"; foundRecords = 0;\n    }\n    break;\n  case 'delete':\n    if (rows.length === 0) {\n      data = []; resultStatus = \"error\"; message = \"No se pudo eliminar. El registro no existe.\"; foundRecords = 0;\n    } else {\n      message = \"Registro eliminado con éxito.\";\n    }\n    break;\n  case 'getall':\n    data = rows; foundRecords = rows.length;\n    break;\n  case 'insert':\n    data = rows[0] || rows; foundRecords = rows.length;\n    break;\n}\n\nconst postHooks = (resultStatus === \"success\" && config.hooks?.post) ? config.hooks.post : [];\n\nreturn [{\n  json: {\n    error: resultStatus !== \"success\",\n    operation,\n    message,\n    data,\n    execution_info: {\n      timestamp: new Date().toISOString(),\n      model: config.model_name,\n      has_post_hooks: postHooks.length > 0\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        96
+      ],
+      "id": "e11e71f2-5942-485f-bca2-e3542184691e",
+      "name": "Normalize Data"
     }
   ],
   "pinData": {},
@@ -662,28 +550,6 @@
         [
           {
             "node": "ModelExist",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Prepare Subworkflow Input": {
-      "main": [
-        [
-          {
-            "node": "Call 'v4/Build Query'",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Prepare Normalize": {
-      "main": [
-        [
-          {
-            "node": "Call 'v3/Build Query'1",
             "type": "main",
             "index": 0
           }
@@ -811,7 +677,7 @@
       "main": [
         [
           {
-            "node": "Prepare Subworkflow Input",
+            "node": "Build Query",
             "type": "main",
             "index": 0
           }
@@ -865,17 +731,6 @@
         ]
       ]
     },
-    "Call 'v3/Build Query'1": {
-      "main": [
-        [
-          {
-            "node": "Check Post-Hooks",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "If": {
       "main": [
         [
@@ -898,18 +753,29 @@
       "main": [
         [
           {
-            "node": "Prepare Normalize",
+            "node": "Normalize Data",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Call 'v4/Build Query'": {
+    "Build Query": {
       "main": [
         [
           {
             "node": "Execute SQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Data": {
+      "main": [
+        [
+          {
+            "node": "Check Post-Hooks",
             "type": "main",
             "index": 0
           }
@@ -921,18 +787,17 @@
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
-    "callerPolicy": "workflowsFromSameOwner",
     "availableInMCP": false,
-    "errorWorkflow": "9SrVXdATmlrZemJT",
     "timeSavedMode": "fixed",
-    "timeSavedPerExecution": 1
+    "errorWorkflow": "9SrVXdATmlrZemJT",
+    "callerPolicy": "workflowsFromSameOwner",
+    "executionTimeout": -1
   },
-  "versionId": "59547bd8-0c75-48db-a3a1-7aece9992075",
+  "versionId": "524a2c7f-29fa-4c15-8864-8bc91ac160b7",
   "meta": {
-    "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
   },
-  "id": "emMetC8yPU1RVsIG",
+  "id": "v7_VshNU6iTPzIyq9J4A6",
   "tags": [
     {
       "updatedAt": "2025-12-20T19:25:08.685Z",
