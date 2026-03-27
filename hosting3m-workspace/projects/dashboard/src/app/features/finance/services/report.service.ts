@@ -99,11 +99,24 @@ export class ReportService {
     return stats;
   }
 
-  // 1. 🚀 FIX MATEMÁTICO: Extraemos la fecha literal sin dejar que el navegador reste horas
+  // 1. 🚀 FIX MATEMÁTICO: Convertimos la hora UTC a Local antes de extraer el string
   private toLocalDate(dateStr: string): string {
     if (!dateStr) return '';
-    // Ej: "2026-03-28 00:00:00+00" -> Retorna "2026-03-28" exacto
-    return dateStr.split(/[ T]/)[0];
+
+    // Limpieza estándar de formato ISO
+    const cleanStr = dateStr.trim().replace(' ', 'T');
+    // Forzamos la lectura en UTC si la base de datos no mandó la 'Z' o el '+00'
+    const finalStr = cleanStr.includes('Z') || cleanStr.includes('+') ? cleanStr : cleanStr + 'Z';
+
+    // MAGIA AQUÍ: Al instanciar Date(), el navegador resta automáticamente las 6 horas (CST).
+    // Así, las 02:38 AM UTC (del día 27) se convierten en las 20:38 (del día 26).
+    const dateObj = new Date(finalStr);
+
+    const year = dateObj.getFullYear();
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const day = String(dateObj.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
   }
 
   // 2. 🚀 FIX LÓGICO: Forzamos los cálculos al mediodía para evitar saltos de día
