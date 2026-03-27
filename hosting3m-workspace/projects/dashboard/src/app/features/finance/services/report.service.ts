@@ -13,18 +13,6 @@ export class ReportService {
   public loadingReports = signal<boolean>(false);
   public adminService = inject(AdminService);
 
-  private toLocalDate(dateStr: string): string {
-    if (!dateStr) return '';
-    const cleanStr = dateStr.trim().replace(' ', 'T');
-    const dateObj = new Date(cleanStr.includes('Z') || cleanStr.includes('+') ? cleanStr : cleanStr + 'Z');
-
-    const year = dateObj.getFullYear();
-    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
-    const day = String(dateObj.getDate()).padStart(2, '0');
-
-    return `${year}-${month}-${day}`;
-  }
-
   /** * Calcula el reporte unificado con Filtros Avanzados */
   calculateDailyReport(
     bookings: any[],
@@ -36,7 +24,7 @@ export class ReportService {
     expensePaymentFilter: string = 'Todos',
     incomeRoomFilter: string = 'Todos',
     incomeStatusFilter: string = 'Todos',
-    expenseConceptFilter: string = '', 
+    expenseConceptFilter: string = '',
     expenseCategoryFilter: string = 'Todas'
   ) {
     const now = new Date();
@@ -111,16 +99,23 @@ export class ReportService {
     return stats;
   }
 
+  // 1. 🚀 FIX MATEMÁTICO: Extraemos la fecha literal sin dejar que el navegador reste horas
+  private toLocalDate(dateStr: string): string {
+    if (!dateStr) return '';
+    // Ej: "2026-03-28 00:00:00+00" -> Retorna "2026-03-28" exacto
+    return dateStr.split(/[ T]/)[0];
+  }
+
+  // 2. 🚀 FIX LÓGICO: Forzamos los cálculos al mediodía para evitar saltos de día
   private isDateInPeriod(dateStr: string, filter: string, nowObj: Date, todayStr: string, customStart?: string, customEnd?: string): boolean {
     if (!dateStr) return false;
-    const dateLocalStr = this.toLocalDate(dateStr);
+    const dateLocalStr = this.toLocalDate(dateStr); // "2026-03-28"
 
-    const cleanStr = dateStr.trim().replace(' ', 'T');
-    const utcDate = new Date(cleanStr.includes('Z') || cleanStr.includes('+') ? cleanStr : cleanStr + 'Z');
-    const dateObj = new Date(utcDate.toLocaleString("en-US", { timeZone: "America/Mexico_City" }));
+    // Creamos la fecha a las 12:00 PM local para que soporte cálculos de semana/mes sin atrasarse
+    const dateObj = new Date(`${dateLocalStr}T12:00:00`);
 
     switch (filter) {
-      case 'day': return dateLocalStr === todayStr;
+      case 'day': return dateLocalStr === todayStr; // Comparación estricta de strings
       case 'week':
         const startOfWeek = new Date(nowObj);
         startOfWeek.setDate(nowObj.getDate() - nowObj.getDay());
@@ -135,6 +130,23 @@ export class ReportService {
         return dateLocalStr >= customStart && dateLocalStr <= customEnd;
       default: return dateLocalStr === todayStr;
     }
+  }
+
+  // 3. 🚀 FIX VISUAL: Interceptamos la data antes de que llegue a la tabla HTML
+  async getRawBookingsForReport(start: string, end: string): Promise<any[]> {
+    const data = await this.fetchData('hotel_bookings', 'check_in', start, end);
+
+    // Si una reserva futura viene a las 00:00 UTC, la empujamos hacia adelante
+    // para que la tabla HTML la dibuje en su día correcto.
+    return data.map(b => {
+      if (b.check_in && b.check_in.includes('00:00:00+00')) {
+        b.check_in = b.check_in.replace('00:00:00+00', '15:00:00+00'); // Equivalente a 09:00 AM CST
+      }
+      if (b.check_out && b.check_out.includes('00:00:00+00')) {
+        b.check_out = b.check_out.replace('00:00:00+00', '18:00:00+00'); // Equivalente a 12:00 PM CST
+      }
+      return b;
+    });
   }
 
   private getPeriodLabel(filter: string): string {
@@ -170,10 +182,6 @@ export class ReportService {
         break;
     }
     return { start, end };
-  }
-
-  async getRawBookingsForReport(start: string, end: string): Promise<any[]> {
-    return this.fetchData('hotel_bookings', 'check_in', start, end);
   }
 
   async getRawExpensesForReport(start: string, end: string): Promise<any[]> {
