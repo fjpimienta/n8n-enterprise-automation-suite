@@ -99,17 +99,14 @@ export class ReportService {
     return stats;
   }
 
-  // 1. 🚀 FIX MATEMÁTICO: Convertimos la hora UTC a Local antes de extraer el string
+  // 1. FIX MATEMÁTICO: Convertimos la hora UTC a Local antes de extraer el string
   private toLocalDate(dateStr: string): string {
     if (!dateStr) return '';
 
-    // Limpieza estándar de formato ISO
     const cleanStr = dateStr.trim().replace(' ', 'T');
-    // Forzamos la lectura en UTC si la base de datos no mandó la 'Z' o el '+00'
     const finalStr = cleanStr.includes('Z') || cleanStr.includes('+') ? cleanStr : cleanStr + 'Z';
 
-    // MAGIA AQUÍ: Al instanciar Date(), el navegador resta automáticamente las 6 horas (CST).
-    // Así, las 02:38 AM UTC (del día 27) se convierten en las 20:38 (del día 26).
+    // Al usar new Date(), forzamos a que el sistema aplique el UTC-6 (CST)
     const dateObj = new Date(finalStr);
 
     const year = dateObj.getFullYear();
@@ -145,19 +142,23 @@ export class ReportService {
     }
   }
 
-  // 3. 🚀 FIX VISUAL: Interceptamos la data antes de que llegue a la tabla HTML
+  // 3. FIX VISUAL DEFINITIVO: Interceptamos JSON puro de API con Regex
   async getRawBookingsForReport(start: string, end: string): Promise<any[]> {
     const data = await this.fetchData('hotel_bookings', 'check_in', start, end);
 
-    // Si una reserva futura viene a las 00:00 UTC, la empujamos hacia adelante
-    // para que la tabla HTML la dibuje en su día correcto.
     return data.map(b => {
-      if (b.check_in && b.check_in.includes('00:00:00+00')) {
-        b.check_in = b.check_in.replace('00:00:00+00', '15:00:00+00'); // Equivalente a 09:00 AM CST
+      let ci = b.check_in ? String(b.check_in) : '';
+      let co = b.check_out ? String(b.check_out) : '';
+
+      // Usamos Regex para atrapar la medianoche exacta que viene de n8n o PostgreSQL
+      if (ci.includes('T00:00:00') || ci.includes(' 00:00:00')) {
+        b.check_in = ci.replace(/T00:00:00(\.000Z)?| 00:00:00(\+00)?/g, 'T15:00:00.000Z');
       }
-      if (b.check_out && b.check_out.includes('00:00:00+00')) {
-        b.check_out = b.check_out.replace('00:00:00+00', '18:00:00+00'); // Equivalente a 12:00 PM CST
+
+      if (co.includes('T00:00:00') || co.includes(' 00:00:00')) {
+        b.check_out = co.replace(/T00:00:00(\.000Z)?| 00:00:00(\+00)?/g, 'T18:00:00.000Z');
       }
+
       return b;
     });
   }
