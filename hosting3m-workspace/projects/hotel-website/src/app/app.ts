@@ -41,7 +41,6 @@ export class App implements OnInit {
   // --- MÉTODOS DEL MODAL ---
   openReviewModal() {
     this.showReviewModal.set(true);
-    // 🛠️ FIX: Forzamos a Lucide a dibujar la "X" cuando el modal aparece
     setTimeout(() => {
       // @ts-ignore
       if (window.lucide) window.lucide.createIcons();
@@ -64,12 +63,13 @@ export class App implements OnInit {
 
     this.http.post(url, payload).subscribe({
       next: (res: any) => {
-        const data = res.data || res;
-        if (Array.isArray(data)) {
-          // 🛠️ FIX: Filtramos objetos vacíos. Solo pasan los que tengan texto y nombre.
-          const validReviews = data.filter((r: any) => r.guest_name && r.review_text && r.review_text.trim() !== '');
+        if (!res) return; // 🚀 FIX: Escudo anti-null
 
-          this.dbReviews.set(validReviews.slice(0, 3)); // Se auto-ocultará si queda en 0
+        const data = res?.data || res; // 🚀 FIX: Lectura segura
+        
+        if (Array.isArray(data)) {
+          const validReviews = data.filter((r: any) => r.guest_name && r.review_text && r.review_text.trim() !== '');
+          this.dbReviews.set(validReviews.slice(0, 3)); 
 
           setTimeout(() => {
             // @ts-ignore
@@ -88,8 +88,6 @@ export class App implements OnInit {
 
     this.isSubmittingReview.set(true);
 
-    // 🛠️ FIX: Estructuramos el payload bajo el estándar del MetaCRUD v4
-    // Agregamos la operación 'insert' y envolvemos los datos en 'fields'
     const payload = {
       operation: 'insert',
       fields: {
@@ -165,7 +163,13 @@ export class App implements OnInit {
 
     this.http.post(`${this.apiUrl_public}/availability`, payload).subscribe({
       next: (res: any) => {
-        if (res.status === 'success' && res.data) {
+        // 🚀 FIX: Escudo anti-null
+        if (!res) {
+           this.isSearching.set(false);
+           return;
+        }
+
+        if (res?.status === 'success' && res?.data) {
 
           const mappedRooms = res.data.map((room: any) => {
             const typeKey = room.type.toLowerCase();
@@ -206,6 +210,8 @@ export class App implements OnInit {
           } else {
             this.bookingStep.set(2);
           }
+        } else {
+          this.isSearching.set(false);
         }
       },
       error: (err) => {
