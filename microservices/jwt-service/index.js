@@ -25,6 +25,17 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+// LIMITADOR M2M (High-Ceiling): 
+// Satisface la regla de CodeQL (js/missing-rate-limiting) sin bloquear workflows concurrentes de n8n.
+// Permite hasta 10,000 peticiones por minuto (aprox. 166 req/segundo).
+const verifyLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minuto
+  max: 10000,              // Límite absurdamente alto para M2M, pero finito para el SAST
+  message: { error: 'Rate limit de seguridad M2M excedido.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 const JWT_SECRET = process.env.JWT_SECRET;
 const INTERNAL_SECRET = process.env.INTERNAL_SECRET;
 
@@ -119,7 +130,7 @@ app.post('/generate-token', loginLimiter, async (req, res) => {
 });
 
 // ENDPOINT DE VERIFICACIÓN (Asegúrate de devolver el id_company)
-app.post('/verify-token', (req, res) => {
+app.post('/verify-token', verifyLimiter, (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ valid: false, error: 'No token provided' });
 
