@@ -2,41 +2,41 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "../../out-tsc/app",
+    "rootDir": "..",
     "types": [],
-    "baseUrl": ".",
     "paths": {
       "ui-pdf-export": [
-        "../ui-pdf-export/src/public-api.ts"
+        "projects/ui-pdf-export/src/public-api.ts"
       ],
       "ui-pdf-export/*": [
-        "../ui-pdf-export/src/lib/*"
+        "projects/ui-pdf-export/src/lib/*"
       ],
       "ui-chat": [
-        "../ui-chat/src/public-api.ts"
+        "projects/ui-chat/src/public-api.ts"
       ],
       "ui-chat/*": [
-        "../ui-chat/src/lib/*"
+        "projects/ui-chat/src/lib/*"
       ],
       "@core/*": [
-        "src/app/core/*"
+        "projects/dashboard/src/app/core/*"
       ],
       "@shared/*": [
-        "src/app/shared/*"
+        "projects/dashboard/src/app/shared/*"
       ],
       "@features/*": [
-        "src/app/features/*"
+        "projects/dashboard/src/app/features/*"
       ],
       "@env/*": [
-        "src/environments/*"
+        "projects/dashboard/src/environments/*"
       ],
       "@auth/*": [
-        "src/app/core/auth/*"
+        "projects/dashboard/src/app/core/auth/*"
       ],
       "@models/*": [
-        "src/app/core/models/*"
+        "projects/dashboard/src/app/core/models/*"
       ],
       "@ui/*": [
-        "src/app/shared/ui/*"
+        "projects/dashboard/src/app/shared/ui/*"
       ]
     }
   },
