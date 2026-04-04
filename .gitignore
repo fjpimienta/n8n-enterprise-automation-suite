@@ -66,3 +66,19 @@ infrastructure/upload-file/app/uploads/*
 infrastructure/n8n_data/config
 infrastructure/n8n_data/crash.journal
 infrastructure/n8n_data/nodes/package.json
+
+# --- .NET / C# ---
+# Directorios de compilación y dependencias
+**/[Bb]in/
+**/[Oo]bj/
+**/.vs/
+*.user
+
+# Caché de paquetes NuGet
+*.nuget.props
+*.nuget.targets
+
+# Configuraciones locales de desarrollo (Mitigación de riesgos de seguridad)
+**/appsettings.Development.json
+**/appsettings.*.json
+!**/appsettings.json
