@@ -1,0 +1,32 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "microservices", "microservices", "{8A367DDA-5161-A942-4F09-60E4726C9306}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "fea-signer-service", "fea-signer-service", "{CCC0C0FF-1B6A-659A-53AA-A470317CCAC1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FeaSignerAPI", "microservices\fea-signer-service\FeaSignerAPI\FeaSignerAPI.csproj", "{FC4BB2AA-4625-1714-46E1-423711D0D302}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{FC4BB2AA-4625-1714-46E1-423711D0D302}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FC4BB2AA-4625-1714-46E1-423711D0D302}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FC4BB2AA-4625-1714-46E1-423711D0D302}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FC4BB2AA-4625-1714-46E1-423711D0D302}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{CCC0C0FF-1B6A-659A-53AA-A470317CCAC1} = {8A367DDA-5161-A942-4F09-60E4726C9306}
+		{FC4BB2AA-4625-1714-46E1-423711D0D302} = {CCC0C0FF-1B6A-659A-53AA-A470317CCAC1}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {92E2EE2D-A4BE-4D19-80D6-8605C03C4D4F}
+	EndGlobalSection
+EndGlobal
