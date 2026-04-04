@@ -152,6 +152,34 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  fea-signer-service:
+    build:
+      context: ../microservices/fea-signer-service/FeaSignerAPI
+      dockerfile: Dockerfile
+    container_name: n8n-fea-signer
+    restart: always
+    environment:
+      # Inyección segura de la contraseña en tiempo de ejecución
+      - FIEL_PASSWORD=${FIEL_PASSWORD}
+      - FIEL_CER_PATH=/app/certs/csd.cer
+      - FIEL_KEY_PATH=/app/certs/csd.key
+    volumes:
+      # Montaje de volumen en modo Read-Only (:ro). 
+      # El contenedor puede leer las llaves, pero NUNCA modificarlas o borrarlas.
+      - ./certs/fea:/app/certs:ro
+    networks:
+      - n8n_enterprise_net
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512m
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   n8n_restored_data: {}
   postgres_data: {}

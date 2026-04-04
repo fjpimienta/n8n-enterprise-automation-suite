@@ -1,41 +1,66 @@
+using FeaSignerAPI.Services;
+using Microsoft.AspNetCore.Mvc;
+using System.IO;
+
 var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
-
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
-
-var summaries = new[]
+// --- ENDPOINT CRÍTICO DE SELLADO INTERNO ---
+app.MapPost("/api/sign/internal", async ([FromForm] IFormFile pdf) =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+    // 1. Validación de Entrada (Solo pedimos el PDF)
+    if (pdf == null)
+    {
+        return Results.BadRequest(new { error = "Payload incompleto. Se requiere únicamente el archivo pdf." });
+    }
 
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
+    // 2. Extracción segura de secretos (Variables de Entorno)
+    string cerPath = Environment.GetEnvironmentVariable("FIEL_CER_PATH") ?? "/app/certs/csd.cer";
+    string keyPath = Environment.GetEnvironmentVariable("FIEL_KEY_PATH") ?? "/app/certs/csd.key";
+    string password = Environment.GetEnvironmentVariable("FIEL_PASSWORD");
+
+    // Validar que la infraestructura esté correctamente montada
+    if (string.IsNullOrEmpty(password) || !File.Exists(cerPath) || !File.Exists(keyPath))
+    {
+        return Results.Problem("Error SecOps: Certificados o contraseña no encontrados en el contenedor.", statusCode: 500);
+    }
+
+    using var pdfStream = new MemoryStream();
+    await pdf.CopyToAsync(pdfStream);
+
+    try
+    {
+        // 3. Cargar secretos físicos a la memoria RAM
+        byte[] cerBytes = await File.ReadAllBytesAsync(cerPath);
+        byte[] keyBytes = await File.ReadAllBytesAsync(keyPath);
+
+        using var cerStream = new MemoryStream(cerBytes);
+        using var keyStream = new MemoryStream(keyBytes);
+
+        pdfStream.Position = 0;
+
+        // 4. Ejecutar Motor Criptográfico
+        byte[] signedPdfBytes = SatSignerService.SignPAdES(pdfStream, cerStream, keyStream, password);
+
+        // Devolver documento sellado
+        return Results.File(signedPdfBytes, "application/pdf", $"sellado_{pdf.FileName}");
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(detail: ex.Message, title: "Error Criptográfico Interno");
+    }
+    finally
+    {
+        // 5. Destruir variables sensibles de la memoria
+        GC.Collect();
+    }
 })
-.WithName("GetWeatherForecast");
+.DisableAntiforgery();
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
