@@ -181,7 +181,15 @@ export class ReservationManagerComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const rawReservations = this.adminService.reservations().filter((r: any) => ids.has(r.id));
+    const rawReservations = this.adminService.reservations().filter((r: any) =>
+      ids.has(r.id) && r.status !== 'cancelled' && r.status !== 'checked_out'
+    );
+
+    if (rawReservations.length === 0) {
+      alert('Las reservas seleccionadas ya no están activas o fueron canceladas.');
+      this.selectedIds.set(new Set()); // Limpiamos el estado colgante
+      return;
+    }
     const reportItems = this.mapToPdfItems(rawReservations);
     const clientName = rawReservations[0]?.hotel_guests_data?.full_name || rawReservations[0]?.guest_name || 'Cliente Mostrador';
 
@@ -229,10 +237,21 @@ export class ReservationManagerComponent implements OnInit, OnDestroy {
     const ids = this.selectedIds();
     if (ids.size === 0) return;
 
-    const selectedRes = this.adminService.reservations().filter((r: any) => ids.has(r.id));
+    // 🛠️ FIX 1: Filtrar registros fantasmas (cancelados o expirados) ANTES de procesar pagos
+    const selectedRes = this.adminService.reservations().filter((r: any) =>
+      ids.has(r.id) && r.status !== 'cancelled' && r.status !== 'checked_out'
+    );
+
+    // 🛠️ FIX 2: Si por alguna razón la selección solo tenía basura, abortamos y limpiamos
+    if (selectedRes.length === 0) {
+      alert('Las reservas seleccionadas ya no están activas o fueron canceladas.');
+      this.selectedIds.set(new Set());
+      return;
+    }
+
     const clientName = selectedRes[0]?.hotel_guests_data?.full_name || selectedRes[0]?.guest_name || 'Grupo';
 
-    // 1. Calcular deuda total del grupo seleccionado
+    // 1. Calcular deuda total del grupo seleccionado (solo los activos)
     let totalDeuda = 0;
     let totalPagado = 0;
     selectedRes.forEach(r => {
@@ -244,6 +263,7 @@ export class ReservationManagerComponent implements OnInit, OnDestroy {
 
     if (saldoRestante <= 0) {
       alert('Las habitaciones seleccionadas ya están liquidadas.');
+      this.selectedIds.set(new Set()); // Auto-limpieza por buena práctica
       return;
     }
 
@@ -275,7 +295,7 @@ export class ReservationManagerComponent implements OnInit, OnDestroy {
     let remainingAbono = amountToPay;
 
     try {
-      // 3. 🧠 Distribución Financiera en Cascada (Waterfall)
+      // 3. 🧠 Distribución Financiera en Cascada (Waterfall) - Solo procesa reservas válidas
       for (const res of selectedRes) {
         const currentTotal = Number(res.total_amount) || 0;
         const currentPaid = Number(res.amount_paid) || 0;
@@ -292,7 +312,7 @@ export class ReservationManagerComponent implements OnInit, OnDestroy {
       }
 
       alert('✅ Pago distribuido y habitaciones confirmadas exitosamente.');
-      this.selectedIds.set(new Set()); // Limpiamos selección
+      this.selectedIds.set(new Set()); // Limpiamos selección post-éxito
       this.adminService.loadReservations();
       this.hotelService.clearSelection();
 
@@ -376,6 +396,13 @@ export class ReservationManagerComponent implements OnInit, OnDestroy {
     try {
       await this.bookingService.cancelReservation(reservation.id);
       alert('✅ Reserva cancelada.');
+
+      // 🛠️ FIX: Eliminar del Set de selección para evitar impresión fantasma
+      this.selectedIds.update(set => {
+        set.delete(reservation.id);
+        return new Set(set);
+      });
+
       this.adminService.loadReservations();
     } catch (error) {
       alert('❌ Error al cancelar.');
