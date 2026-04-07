@@ -225,7 +225,7 @@ export class ReservationManagerComponent implements OnInit, OnDestroy {
 
       footerTitle: 'Forma de Pago',
       footerText: [
-        'Transferencia a nombre de: Diana Perez Pimienta | RFC: PEPD690214176',
+        'Transferencia a nombre de: Diana Perez Pimienta | RFC: PEPD690214I76',
         'Banco BBVA | CLABE: 012180015615151108 | No. Cuenta: 1561515110',
       ]
     };
