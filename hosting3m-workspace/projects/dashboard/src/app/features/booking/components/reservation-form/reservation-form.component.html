@@ -17,7 +17,8 @@
             <div class="col-12 col-xl-6">
                 <label class="form-label required mb-1 small">Entrada</label>
                 <input type="date" class="form-control form-control-sm" [(ngModel)]="dates.start" [min]="minDate"
-                    (change)="availableRooms = []; selectedRoomForRes = null">
+                    (change)="availableRooms = []; selectedRoomForRes = null"
+                    [disabled]="reservationToEdit()?.status === 'checked_in'">
             </div>
             <div class="col-12 col-xl-6">
                 <label class="form-label required mb-1 small">Salida</label>

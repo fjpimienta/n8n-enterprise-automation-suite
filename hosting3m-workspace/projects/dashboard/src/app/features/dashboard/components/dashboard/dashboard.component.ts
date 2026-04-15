@@ -251,6 +251,13 @@ export class DashboardComponent {
     this.refresh(); // Recargamos el grid de habitaciones
   }
 
+  // 👇 AÑADE ESTE NUEVO MÉTODO JUSTO DEBAJO
+  onReservationUpdated() {
+    this.viewMode.set('details');
+    this.hotelService.clearSelection();
+    this.refresh(); // 🔥 ESTO ES LO QUE OBLIGA AL DASHBOARD A PINTAR LOS CAMBIOS
+  }
+
   onCheckoutCancel() {
     this.viewMode.set('details');
   }
@@ -595,6 +602,98 @@ export class DashboardComponent {
       this.completeActionSuccess('🚫 Reserva cancelada exitosamente.');
     } catch (error) {
       alert('❌ Ocurrió un error al intentar cancelar la reserva.');
+    }
+  }
+
+  /* 🧠 QUICK EXTEND: Extensión rápida de estancias */
+  async handleQuickExtend() {
+    const room = this.hotelService.selectedRoom();
+    const booking = this.activeBooking();
+    if (!room || !booking) return;
+
+    // 🛠️ FIX 1: Limpiar las fechas de la Base de Datos que traen hora (e.g. "2026-04-13 00:00:00+00")
+    const rawCheckOut = String(booking.check_out).split(/[ T]/)[0];
+    const rawCheckIn = String(booking.check_in).split(/[ T]/)[0];
+
+    // 1. Preguntamos los días con un UX limpio
+    const currentOutFormat = new Date(rawCheckOut + 'T12:00:00').toLocaleDateString('es-MX');
+    const input = window.prompt(
+      `🏨 AMPLIAR ESTANCIA\n\n` +
+      `Fecha de salida actual: ${currentOutFormat}\n\n` +
+      `¿Cuántas noches EXTRA desea agregar?`,
+      '1'
+    );
+
+    if (input === null) return; // El usuario canceló
+
+    const extraNights = parseInt(input, 10);
+    if (isNaN(extraNights) || extraNights <= 0) {
+      alert('❌ Ingrese un número válido de noches.');
+      return;
+    }
+
+    try {
+      // 2. Calcular la nueva fecha matemáticamente
+      const currentOutDate = new Date(rawCheckOut + 'T12:00:00');
+      currentOutDate.setDate(currentOutDate.getDate() + extraNights);
+
+      const year = currentOutDate.getFullYear();
+      const month = String(currentOutDate.getMonth() + 1).padStart(2, '0');
+      const day = String(currentOutDate.getDate()).padStart(2, '0');
+      const newCheckOutStr = `${year}-${month}-${day}`;
+
+      // 3. 🛡️ REGLA DE NEGOCIO: Validar que la habitación no esté apartada
+      const availableRooms = await this.bookingService.checkAvailability(
+        rawCheckOut, // Checamos a partir de la salida original
+        newCheckOutStr,
+        [room],
+        booking.id
+      );
+
+      if (availableRooms.length === 0) {
+        alert(`⚠️ No se puede extender.\nLa habitación ya está reservada por otro huésped a partir del ${currentOutFormat}.`);
+        return;
+      }
+
+      // 4. Recálculo Financiero Automático
+      const baseExtraCost = extraNights * room.price_night;
+      const totalExtraCost = booking.is_invoiced ? (baseExtraCost * 1.18) : baseExtraCost;
+
+      const currentTotal = Number(booking.total_amount) || 0;
+      const currentPaid = Number(booking.amount_paid) || 0;
+      const newTotal = currentTotal + totalExtraCost;
+
+      let newPaymentStatus = 'pending';
+      if (currentPaid >= newTotal) newPaymentStatus = 'paid';
+      else if (currentPaid > 0) newPaymentStatus = 'partial';
+
+      // 5. Preparar actualización a Base de Datos
+      const updateData = {
+        id: booking.id,
+        room_id: room.id,
+        check_in: rawCheckIn,      // 🛠️ FIX 2: Mandamos entrada limpia
+        check_out: newCheckOutStr, // Nueva salida calculada (YYYY-MM-DD)
+        total_amount: newTotal,
+        amount_paid: currentPaid,
+        payment_status: newPaymentStatus,
+        notes: booking.notes,
+        is_invoiced: booking.is_invoiced
+      };
+
+      // Esperamos respuesta de la BD
+      await this.bookingService.updateReservation(updateData);
+
+      const newDebt = newTotal - currentPaid;
+      alert(`✅ Estancia extendida exitosamente por ${extraNights} noche(s).\n\nSaldo pendiente a cobrar: $${newDebt.toFixed(2)}`);
+
+      // 6. Refrescar el Dashboard para mostrar los cambios instantáneamente
+      this.hotelService.clearSelection();
+      this.viewMode.set('details');
+      this.refresh();
+
+    } catch (error) {
+      console.error('Error al extender:', error);
+      alert('❌ Ocurrió un error al intentar extender la estancia.');
     }
   }
 }
