@@ -100,8 +100,15 @@
                   <td>
                     <span class="badge" [class.bg-success-lt]="res.status === 'confirmed'"
                       [class.bg-warning-lt]="res.status === 'pending'"
-                      [class.bg-primary-lt]="res.status === 'checked_in'">
+                      [class.bg-primary-lt]="res.status === 'checked_in' && !isOverstay(res)"
+                      [class.bg-danger]="isOverstay(res)">
+                      @if (isOverstay(res)) {
+                      <i class="ti ti-alert-triangle me-1 text-white"></i> DEMORADA
+                      } @else if (res.status === 'checked_in') {
+                      HOSPEDADO
+                      } @else {
                       {{ res.status }}
+                      }
                     </span>
                   </td>
                   <td class="text-end">

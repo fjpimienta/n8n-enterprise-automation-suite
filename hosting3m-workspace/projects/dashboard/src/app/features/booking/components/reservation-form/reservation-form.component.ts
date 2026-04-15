@@ -186,21 +186,35 @@ export class ReservationFormComponent implements OnInit, OnChanges { // 2. Agreg
     try {
       if (this.reservationToEdit()) {
         // Extensión de Estancia / Modificación
+
+        // 🧠 LÓGICA DE RECALIBRACIÓN FINANCIERA
+        const updatedTotal = this.customTotal;
+        const currentPaid = Number(this.reservationToEdit().amount_paid) || 0;
+        let newPaymentStatus = this.reservationToEdit().payment_status;
+
+        // Si al ampliar los días el costo supera lo pagado, degradamos el estatus de pago
+        if (currentPaid >= updatedTotal) {
+          newPaymentStatus = 'paid';
+        } else if (currentPaid > 0) {
+          newPaymentStatus = 'partial';
+        } else {
+          newPaymentStatus = 'pending';
+        }
+
         const updateData = {
           id: this.reservationToEdit().id,
-          // 🛠️ FIX: Tomar la nueva habitación si se seleccionó una, de lo contrario, mantener la original
           room_id: this.selectedRoomForRes ? this.selectedRoomForRes.id : this.reservationToEdit().room_id,
           check_in: this.dates.start,
           check_out: this.dates.end,
-          total_amount: this.customTotal,
-          amount_paid: this.reservationToEdit().amount_paid,
-          payment_status: this.reservationToEdit().payment_status,
+          total_amount: updatedTotal,
+          amount_paid: currentPaid,
+          payment_status: newPaymentStatus, // 🛠️ Estatus dinámico inyectado
           notes: this.guest.notes,
           is_invoiced: this.requiresInvoice
         };
 
         await this.bookingService.updateReservation(updateData);
-        alert('✅ Estancia actualizada correctamente.');
+        alert('✅ Estancia ampliada/actualizada correctamente.');
 
         this.saved.emit();
         this.resetForm();

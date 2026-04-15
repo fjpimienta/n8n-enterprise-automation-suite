@@ -137,8 +137,8 @@
   (onClose)="hotelService.clearSelection()" (onCheckin)="viewMode.set('checkin')" (onMarkAsClean)="markRoomAsClean()"
   (onReservations)="viewMode.set('reservation')" (onCheckout)="startCheckoutProcess()" (onPay)="markAsPaid($event)"
   (onMaintenance)="reportMaintenance()" (onFinishMaintenance)="handleFinishMaintenance()"
-  (onOpenChecklist)="viewMode.set('checklist')" (onCancelRes)="handleCancelReservation($event)">
-</app-room-detail-modal>
+  (onOpenChecklist)="viewMode.set('checklist')" (onCancelRes)="handleCancelReservation($event)"
+  (onQuickExtend)="handleQuickExtend()"> </app-room-detail-modal>
 }
 
 <app-user-form-modal [isOpen]="isUserModalOpen()" [selectedUser]="hotelService.selectedUser()" [(userData)]="tempUser"

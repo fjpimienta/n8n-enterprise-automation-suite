@@ -1,10 +1,10 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy, effect } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy, effect, EventEmitter, Output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReservationFormComponent } from '../reservation-form/reservation-form.component';
 import { AdminService } from '@features/admin/services/admin.service';
 import { HotelService } from '@features/dashboard/services/hotel.service';
 import { BookingService } from '@features/booking/services/booking.service';
-import { PdfExportConfig, PdfExportService } from 'ui-pdf-export';
+import { PdfExportService } from 'ui-pdf-export';
 
 @Component({
   selector: 'app-reservation-manager',
@@ -17,6 +17,9 @@ export class ReservationManagerComponent implements OnInit, OnDestroy {
   public hotelService = inject(HotelService);
   private bookingService = inject(BookingService);
   private pdfService = inject(PdfExportService);
+
+  @Output() onSaved = new EventEmitter<void>();
+  @Output() onClose = new EventEmitter<void>();
 
   selectedIds = signal<Set<number>>(new Set());
   selectedReservation = signal<any | null>(null);
@@ -44,16 +47,22 @@ export class ReservationManagerComponent implements OnInit, OnDestroy {
       // 1. Filtrar por habitación si hay una seleccionada
       if (selectedRoom && r.room_id !== selectedRoom.id) return false;
 
-      // 2. 🛠️ REGLA DE NEGOCIO (Opción A): Solo llegadas futuras (pending / confirmed)
-      if (r.status !== 'confirmed' && r.status !== 'pending') {
+      // 2. 🛠️ REGLA DE NEGOCIO: Mostrar pending, confirmed, y AHORA TAMBIÉN checked_in
+      if (r.status !== 'confirmed' && r.status !== 'pending' && r.status !== 'checked_in') {
         return false;
       }
 
-      // 3. 🧹 LIMPIEZA DE PIPELINE: Ocultar reservas "fantasma" que ya vencieron
+      // 3. 🧹 LIMPIEZA DE PIPELINE Y PREVENCIÓN DE LIMBO
       if (r.check_out) {
         const checkOutStr = String(r.check_out).split(/[ T]/)[0];
-        if (checkOutStr < todayStr) {
-          return false;
+
+        if (r.status === 'checked_in') {
+          // 🚨 RESCATE DEL LIMBO: Si el huésped está físicamente adentro, NUNCA lo ocultamos.
+          // Esto nos permite ver los "Overstays" (Salidas demoradas) y poder ampliar su fecha.
+          return true;
+        } else {
+          // Es pending o confirmed. Si la fecha de salida ya pasó y nunca llegó, es un fantasma real.
+          if (checkOutStr < todayStr) return false;
         }
       }
 
@@ -67,6 +76,15 @@ export class ReservationManagerComponent implements OnInit, OnDestroy {
 
     return sorted;
   });
+
+  // Verifica si un huésped se pasó de su fecha de salida
+  isOverstay(res: any): boolean {
+    if (res.status !== 'checked_in' || !res.check_out) return false;
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const outStr = String(res.check_out).split(/[ T]/)[0];
+    return outStr < todayStr;
+  }
 
   paginatedReservations = computed(() => {
     const startIndex = (this.currentPage() - 1) * this.itemsPerPage;
@@ -141,6 +159,8 @@ export class ReservationManagerComponent implements OnInit, OnDestroy {
     this.selectedReservation.set(null);
     this.hotelService.selectRoom(null as any);
     this.adminService.loadReservations();
+    this.bookingService.loadRooms();
+    this.onSaved.emit();
   }
 
   focusNewReservation() {
