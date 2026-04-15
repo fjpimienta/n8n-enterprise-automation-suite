@@ -154,6 +154,15 @@
                         </div>
                     </button>
                     }
+
+                    <button
+                        class="btn btn-outline-info btn-lg d-flex align-items-center justify-content-between px-4 mb-2"
+                        (click)="onQuickExtend.emit()">
+                        <div class="text-start">
+                            <div class="fw-bold">✏️ Ampliar Estancia</div>
+                            <div class="small opacity-75">Agregar noches extra automáticamente</div>
+                        </div>
+                    </button>
                     <button class="btn btn-outline-danger btn-lg d-flex align-items-center justify-content-between px-4"
                         (click)="onCheckout.emit()">
                         <div class="text-start">
