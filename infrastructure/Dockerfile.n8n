@@ -1,15 +1,13 @@
 # Usamos la imagen oficial 'latest'.
-# Al no necesitar Python, esta imagen es perfecta: ligera, segura y mantenida por n8n.
 FROM n8nio/n8n:latest
 
 USER root
 
-# Instalamos solo las librerías de Node.js que usas en tus scripts (Function Nodes)
-# y la extensión de LangChain.
-# El flag '--omit=dev' ahorra espacio y memoria al no bajar dependencias de desarrollo.
+# Instalamos estrictamente las librerías permitidas en NODE_FUNCTION_ALLOW_EXTERNAL.
+# Se eliminó la instalación manual de LangChain para reducir deuda técnica, 
+# ya que n8n ahora soporta IA nativamente.
 RUN npm install -g jsonwebtoken pdf-parse && \
     mkdir -p /home/node/.n8n/custom && \
-    npm install --prefix /home/node/.n8n/custom @n8n/n8n-nodes-langchain@latest --omit=dev && \
     npm cache clean --force
 
 # Volvemos al usuario seguro 'node' para la ejecución

@@ -13,14 +13,13 @@ services:
     env_file:
       - .env
     environment:
-      - N8N_LOG_LEVEL=info                          # o debug para troubleshooting
-      - N8N_LOG_OUTPUT=console,file                 # escribe tanto en stdout como en archivo
+      - N8N_LOG_LEVEL=info
+      - N8N_LOG_OUTPUT=console,file
       - N8N_LOG_FILE_LOCATION=/home/node/.n8n/logs/n8n.log
-      - N8N_LOG_FILE_SIZE_MAX=50                    # MB por archivo
-      - N8N_LOG_FILE_COUNT_MAX=10                   # cantidad de archivos retenidos (rotación)
-      # Execution / retention
+      - N8N_LOG_FILE_SIZE_MAX=50
+      - N8N_LOG_FILE_COUNT_MAX=10
       - EXECUTIONS_DATA_PRUNE=true
-      - EXECUTIONS_DATA_MAX_AGE=336                 # horas (336 = 14 días). Ajusta según necesidad
+      - EXECUTIONS_DATA_MAX_AGE=336
       - EXECUTIONS_DATA_SAVE_ON_ERROR=all
       - EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
       - N8N_EXPRESS_TRUST_PROXY=loopback,linklocal,unicast
@@ -36,7 +35,7 @@ services:
       - N8N_EDITOR_BASE_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}
       - N8N_FORCE_HTTPS=true
       - DB_TYPE=postgresdb
-      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_HOST=postgres # Se resuelve por DNS interno de Docker
       - DB_POSTGRESDB_PORT=${port_db}
       - DB_POSTGRESDB_DATABASE=${n8n_db}
       - DB_POSTGRESDB_USER=${n8n_user}
@@ -47,10 +46,8 @@ services:
       - JWT_SECRET=${JWT_SECRET}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_API_KEY_IMMS=${OPENAI_API_KEY_IMMS}
-      # - N8N_WORKER_COUNT=2
       - N8N_GIT_NODE_DISABLE_BARE_REPOS=true
-      - SERVICES_TIMEOUT=300   # 60
-      #- NODE_OPTIONS=--max-old-space-size=1024 --require /home/node/.n8n/custom/init-blob.js
+      - SERVICES_TIMEOUT=300
       - INTERNAL_SECRET=${INTERNAL_SECRET}
       - N8N_BLOCK_ENV_VARS_INCLUDE=INTERNAL_SECRET
       - N8N_BLOCK_EXTERNAL_STORAGE_FUNCTIONS=true
@@ -59,12 +56,10 @@ services:
     depends_on:
       - postgres
     volumes:
-      # Cambiamos el volumen nombrado (vacio) por la ruta real de tus datos
-      - /opt/n8n/data/n8n_data:/home/node/.n8n  # <--- ASEGÚRATE QUE ESTA RUTA ES LA CORRECTA
+      - /opt/n8n/data/n8n_data:/home/node/.n8n
       - ${PROJECT_ROOT}/local-files:/files
       - ${PROJECT_ROOT}/custom:/home/node/.n8n/custom
       - ${LOGS_PATH}:/home/node/.n8n/logs
-      # Rutas de sistema (Mantenidas por necesidad de Plesk)
       - /var/lib/psa/dumps:/var/lib/psa/dumps
       - ./.env:/home/node/.env
     networks:
@@ -90,8 +85,9 @@ services:
     volumes:
       - /opt/n8n/data/postgres_db_backup:/var/lib/postgresql/data
       - ./postgres/initdb:/docker-entrypoint-initdb.d
-    ports:
-      - "${port_db}:${port_db}"
+    # ELIMINADO: ports: - "${port_db}:${port_db}" (Seguridad Crítica)
+    expose:
+      - "${port_db}" # Permite tráfico solo dentro de n8n_enterprise_net
     networks:
       - n8n_enterprise_net
     logging:
@@ -106,8 +102,9 @@ services:
       dockerfile: Dockerfile
     container_name: n8n-jwt-service
     restart: always
-    ports:
-      - "${port_jwt}:${port_jwt}"
+    # ELIMINADO: ports expuestos al mundo.
+    expose:
+      - "${port_jwt}"
     env_file:
       - .env
     environment:
@@ -128,8 +125,9 @@ services:
       dockerfile: Dockerfile
     container_name: n8n-scraper-service
     restart: always
-    ports:
-      - "${port_scraper}:${port_scraper}"
+    # ELIMINADO: ports expuestos al mundo.
+    expose:
+      - "${port_scraper}"
     environment:
       - NODE_ENV=production
       - USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
@@ -137,15 +135,14 @@ services:
       - PORT=3001
     networks:
       - n8n_enterprise_net
-    shm_size: '1g' # Establecer a 1 GB. (La mitad de tu RAM física es lo ideal)
+    # OPTIMIZACIÓN DE RECURSOS PARA EVITAR OOM KILL EN VPS DE 2 VCPU
+    shm_size: '512m' # Reducido temporalmente. Si usa Puppeteer, 512m es suficiente para concurrencia baja.
     deploy:
       resources:
         limits:
-          memory: 1200m # Limita su uso total a 1.2 GB (RAM + SWAP).
-          # Si no tienes Swap activado, usa 700m como límite duro.
-          # Dado que tienes Swap, podemos darle más techo aquí.
+          memory: 800m # Techo más conservador para evitar colisionar con Plesk y n8n
         reservations:
-          memory: 500m
+          memory: 300m
     logging:
       driver: "json-file"
       options:
@@ -164,7 +161,7 @@ services:
       - FIEL_CER_PATH=/app/certs/csd.cer
       - FIEL_KEY_PATH=/app/certs/csd.key
     volumes:
-      # Montaje de volumen en modo Read-Only (:ro). 
+      # Montaje de volumen en modo Read-Only (:ro).
       # El contenedor puede leer las llaves, pero NUNCA modificarlas o borrarlas.
       - ./certs/fea:/app/certs:ro
     networks:
