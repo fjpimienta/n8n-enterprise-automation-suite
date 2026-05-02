@@ -41,19 +41,6 @@ function isSafeUrl(inputUrl) {
     }
 }
 
-// NAVEGACIÓN
-try {
-    if (!isSafeUrl(finalUrl)) {
-        throw new Error("URL rechazada por políticas de seguridad (SSRF prevention).");
-    }
-
-    // USAR finalUrl AQUÍ (Variable que viene del objeto URL validado)
-    await page.goto(finalUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
-
-} catch (e) {
-    console.log(`[WARN] Goto: ${e.message}`);
-}
-
 app.post('/scrape', async (req, res) => {
     let browser = null;
     try {
