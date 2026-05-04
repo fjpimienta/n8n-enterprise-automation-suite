@@ -1,0 +1,76 @@
+<div class="max-w-7xl mx-auto">
+    <header class="mb-8">
+        <h1 class="text-3xl font-bold text-stone-800">Inteligencia Financiera</h1>
+        <p class="text-stone-500 mt-1">Rendimiento Biológico (ADG) y Control de Mermas</p>
+    </header>
+
+    <!-- Tarjetas KPI -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200">
+            <p class="text-xs font-bold text-stone-400 uppercase tracking-widest">Inventario Activo</p>
+            <p class="text-4xl font-black text-stone-800 mt-2">{{ totalHeads() }} <span
+                    class="text-xl font-medium text-stone-400">Cabezas</span></p>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200">
+            <p class="text-xs font-bold text-stone-400 uppercase tracking-widest">Rendimiento Promedio</p>
+            <p class="text-4xl font-black text-stone-800 mt-2">{{ averageAdg() }} <span
+                    class="text-xl font-medium text-stone-400">kg/día</span></p>
+        </div>
+
+        <!-- Alerta Condicional -->
+        <div class="p-6 rounded-2xl shadow-sm border transition-colors" [class.bg-red-50]="criticalAlerts() > 0"
+            [class.border-red-200]="criticalAlerts() > 0" [class.bg-white]="criticalAlerts() === 0"
+            [class.border-stone-200]="criticalAlerts() === 0">
+            <p class="text-xs font-bold uppercase tracking-widest" [class.text-red-500]="criticalAlerts() > 0"
+                [class.text-stone-400]="criticalAlerts() === 0">
+                Riesgo Operativo (ADG < 200g) </p>
+                    <p class="text-4xl font-black mt-2" [class.text-red-700]="criticalAlerts() > 0"
+                        [class.text-stone-800]="criticalAlerts() === 0">
+                        {{ criticalAlerts() }} <span class="text-xl font-medium"
+                            [class.text-red-400]="criticalAlerts() > 0">Alertas</span>
+                    </p>
+        </div>
+    </div>
+
+    <!-- Tabla de Datos -->
+    <div class="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr
+                    class="bg-stone-50 border-b border-stone-200 text-xs font-bold tracking-wider text-stone-500 uppercase">
+                    <th class="px-6 py-4">Arete (RFID)</th>
+                    <th class="px-6 py-4">Socio Operativo</th>
+                    <th class="px-6 py-4 text-right">Peso Base</th>
+                    <th class="px-6 py-4 text-right">Peso Actual</th>
+                    <th class="px-6 py-4 text-right">Rendimiento (ADG)</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-stone-100">
+                @for (animal of cattleList(); track animal.rfid_tag) {
+                <tr class="hover:bg-stone-50/50 transition-colors">
+                    <td class="px-6 py-4 font-mono font-medium text-stone-800">{{ animal.rfid_tag }}</td>
+                    <td class="px-6 py-4 text-sm text-stone-600">{{ animal.dueno }}</td>
+                    <td class="px-6 py-4 text-sm text-stone-500 text-right">{{ animal.peso_anterior | number:'1.2-2' }}
+                        kg</td>
+                    <td class="px-6 py-4 text-sm font-bold text-stone-800 text-right">{{ animal.peso_actual |
+                        number:'1.2-2' }} kg</td>
+                    <td class="px-6 py-4 text-right font-bold flex justify-end">
+                        @if (animal.ganancia_diaria_kg >= 0.5) {
+                        <span class="text-emerald-700 bg-emerald-100/50 px-3 py-1 rounded-md text-sm">▲ +{{
+                            animal.ganancia_diaria_kg | number:'1.2-2' }}</span>
+                        } @else if (animal.ganancia_diaria_kg > 0) {
+                        <span class="text-amber-700 bg-amber-100/50 px-3 py-1 rounded-md text-sm">▶ +{{
+                            animal.ganancia_diaria_kg | number:'1.2-2' }}</span>
+                        } @else {
+                        <span
+                            class="text-red-700 bg-red-100/50 px-3 py-1 rounded-md text-sm shadow-sm border border-red-200">▼
+                            {{ animal.ganancia_diaria_kg | number:'1.2-2' }}</span>
+                        }
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

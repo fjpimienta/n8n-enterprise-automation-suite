@@ -54,15 +54,30 @@
       "@pista-shared/*": [
         "projects/pista-hielo/src/app/shared/*"
       ],
+      /* --- Cattle Dashboard --- */
+      "@cattle-core/*": [
+        "projects/cattle-dashboard/src/app/core/*"
+      ],
+      "@cattle-features/*": [
+        "projects/cattle-dashboard/src/app/features/*"
+      ],
+      "@cattle-env/*": [
+        "projects/cattle-dashboard/src/environments/*"
+      ],
+      "@cattle-shared/*": [
+        "projects/cattle-dashboard/src/app/shared/*"
+      ],
       /* --- Alias Genéricos (Si quieres mantener los nombres originales) --- */
       /* OJO: Esto puede causar confusión si ambas apps usan @core/* */
       "@core/*": [
         "projects/dashboard/src/app/core/*",
-        "projects/pista-hielo/src/app/core/*"
+        "projects/pista-hielo/src/app/core/*",
+        "projects/cattle-dashboard/src/app/core/*"
       ],
       "@shared/*": [
         "projects/dashboard/src/app/shared/*",
-        "projects/pista-hielo/src/app/shared/*"
+        "projects/pista-hielo/src/app/shared/*",
+        "projects/cattle-dashboard/src/app/shared/*"
       ]
     }
   },
@@ -97,6 +112,12 @@
     },
     {
       "path": "./projects/hotel-website/tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/cattle-dashboard/tsconfig.app.json"
+    },
+    {
+      "path": "./projects/cattle-dashboard/tsconfig.spec.json"
     }
   ]
 }
