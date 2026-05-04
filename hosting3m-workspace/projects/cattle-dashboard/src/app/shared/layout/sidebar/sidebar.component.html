@@ -1,26 +1,114 @@
-<aside class="h-full flex flex-col p-4">
-    <div class="flex items-center gap-3 px-2 mb-8 mt-2">
-        <div class="w-10 h-10 rounded-xl bg-emerald-700 flex items-center justify-center shadow-inner">
-            <span class="text-white font-bold tracking-wider text-sm">H3M</span>
+<aside class="navbar navbar-vertical navbar-expand-lg navbar-light" [class.show-mobile]="isMobileMenuOpen()"
+    [class.collapsed]="isCollapsed()">
+    <div class="container-fluid">
+        <button class="navbar-toggler d-lg-none d-flex align-items-center border-0 bg-transparent ps-0 mb-4 w-100"
+            (click)="closeMenu()">
+            <span class="h3 mb-0">Cerrar Menú</span>
+        </button>
+
+        <div class="d-flex justify-content-between align-items-center mb-3 w-100 mt-3">
+            <h1 class="navbar-brand d-none d-lg-block mb-0">
+                <a routerLink="/dashboard" class="text-decoration-none text-dark d-flex items-center gap-2">
+                    <span class="bg-emerald-700 text-white rounded-md p-1 font-bold text-xs">H3M</span>
+                    <span *ngIf="!isCollapsed()" class="tracking-tight">Ganadería</span>
+                </a>
+            </h1>
+            <button class="btn btn-ghost-secondary btn-icon btn-sm d-none d-lg-block" (click)="toggleCollapse()"
+                title="Colapsar menú">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
+                    stroke-width="2" stroke="currentColor" fill="none">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                    <path d="M11 7l-5 5l5 5" />
+                    <path d="M17 7l-5 5l5 5" />
+                </svg>
+            </button>
         </div>
-        <div>
-            <h2 class="font-bold text-stone-800 leading-tight">Ganadería</h2>
-            <p class="text-xs text-stone-500 font-medium tracking-wide uppercase">Precision Suite</p>
+
+        <div class="collapse navbar-collapse show" id="sidebar-menu">
+            <ul class="navbar-nav pt-lg-3">
+                <li class="nav-item">
+                    <div
+                        class="nav-link-title text-uppercase small text-muted mt-2 mb-1 ms-2 font-bold tracking-widest">
+                        Inteligencia</div>
+                </li>
+
+                <!-- Panel Principal -->
+                <li class="nav-item">
+                    <a class="nav-link" routerLink="/dashboard" routerLinkActive="active" (click)="closeMenu()">
+                        <span class="nav-link-icon text-emerald-600">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
+                                viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                <path d="M4 4h6v8h-6z" />
+                                <path d="M4 16h6v4h-6z" />
+                                <path d="M14 12h6v8h-6z" />
+                                <path d="M14 4h6v4h-6z" />
+                            </svg>
+                        </span>
+                        <span class="nav-link-title font-medium text-stone-700">Panel de Control</span>
+                    </a>
+                </li>
+
+                <!-- Inventario -->
+                <li class="nav-item">
+                    <a class="nav-link" routerLink="/inventario" routerLinkActive="active" (click)="closeMenu()">
+                        <span class="nav-link-icon text-stone-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
+                                viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                <path
+                                    d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" />
+                                <path
+                                    d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z" />
+                                <path d="M9 14l2 2l4 -4" />
+                            </svg>
+                        </span>
+                        <span class="nav-link-title font-medium text-stone-700">Censo Biológico</span>
+                    </a>
+                </li>
+
+                <!-- Pesajes -->
+                <li class="nav-item">
+                    <a class="nav-link" routerLink="/pesajes" routerLinkActive="active" (click)="closeMenu()">
+                        <span class="nav-link-icon text-stone-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
+                                viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                <path d="M3 3v18h18" />
+                                <path d="M20 18v3" />
+                                <path d="M16 16v5" />
+                                <path d="M12 13v8" />
+                                <path d="M8 16v5" />
+                                <path d="M3 11c6 0 5 -5 9 -5s3 5 9 5" />
+                            </svg>
+                        </span>
+                        <span class="nav-link-title font-medium text-stone-700">Mermas y Alertas</span>
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <div
+                        class="nav-link-title text-uppercase small text-muted mt-4 mb-1 ms-2 font-bold tracking-widest">
+                        Configuración</div>
+                </li>
+
+                <!-- Admin Dueños -->
+                <li class="nav-item">
+                    <a class="nav-link" routerLink="/admin" routerLinkActive="active" (click)="closeMenu()">
+                        <span class="nav-link-icon text-stone-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
+                                viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                <path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" />
+                                <path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                <path d="M21 21v-2a4 4 0 0 0 -3 -3.85" />
+                            </svg>
+                        </span>
+                        <span class="nav-link-title font-medium text-stone-700">Socios Inversores</span>
+                    </a>
+                </li>
+            </ul>
         </div>
     </div>
-
-    <nav class="flex-1 space-y-1.5">
-        <a routerLink="/dashboard" routerLinkActive="bg-emerald-50 text-emerald-700 font-semibold"
-            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-stone-600 hover:bg-stone-50 transition-all">
-            📊 Panel de Control
-        </a>
-        <a routerLink="/inventario" routerLinkActive="bg-emerald-50 text-emerald-700 font-semibold"
-            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-stone-600 hover:bg-stone-50 transition-all">
-            🐄 Censo Biológico
-        </a>
-        <a routerLink="/pesajes" routerLinkActive="bg-emerald-50 text-emerald-700 font-semibold"
-            class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-stone-600 hover:bg-stone-50 transition-all">
-            ⚖️ Mermas y Alertas
-        </a>
-    </nav>
 </aside>

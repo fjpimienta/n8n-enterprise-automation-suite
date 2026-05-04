@@ -1,9 +1,52 @@
-<div class="flex h-screen bg-stone-50 font-sans overflow-hidden">
-    <!-- Menú Lateral Fijo -->
-    <app-sidebar class="w-64 flex-shrink-0 border-r border-stone-200 bg-white shadow-sm z-10"></app-sidebar>
+<div class="page">
+    <app-header></app-header>
 
-    <!-- Área de Contenido Dinámico -->
-    <main class="flex-1 overflow-y-auto p-6 lg:p-8">
-        <router-outlet></router-outlet>
-    </main>
+    <!-- El sidebar ahora recibe la clase desde el servicio de layout -->
+    <app-sidebar [class.show-mobile]="layoutService.mobileMenuOpen()">
+    </app-sidebar>
+
+    <div class="page-wrapper" [class.expanded-content]="layoutService.sidebarCollapsed()">
+
+        <!-- Sección de Métricas Críticas del Ganado[cite: 1, 2] -->
+        <div class="container-xl pt-3">
+            <div class="row row-cards">
+                <div class="col-sm-6 col-lg-3">
+                    <div class="card card-sm">
+                        <div class="card-body">
+                            <div class="subheader">Total Cabezas</div>
+                            <div class="h1">{{ totalHeads() }}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-sm-6 col-lg-3">
+                    <div class="card card-sm" [class.bg-danger-lt]="criticalAlerts() > 0">
+                        <div class="card-body">
+                            <div class="subheader">Alertas Críticas</div>
+                            <div class="h1">{{ criticalAlerts() }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contenido dinámico del dashboard[cite: 2] -->
+        <div class="container-xl mt-3">
+            <router-outlet></router-outlet>
+        </div>
+
+        <!-- Inyección de la librería de Chat IA compartida[cite: 1, 2] -->
+        <lib-ai-chat></lib-ai-chat>
+    </div>
+
+    <footer class="footer footer-transparent d-print-none">
+        <div class="container-xl">
+            <div class="row text-center align-items-center flex-row-reverse">
+                <div class="col-12 col-lg-auto mt-3 mt-lg-0">
+                    <ul class="list-inline list-inline-dots mb-0">
+                        <li class="list-inline-item">Hosting3M © 2026[cite: 2]</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </footer>
 </div>

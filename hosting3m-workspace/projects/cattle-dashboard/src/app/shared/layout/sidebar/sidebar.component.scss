@@ -1,0 +1,38 @@
+@media (max-width: 991.98px) {
+    .navbar-vertical {
+        /* 1. POR DEFECTO: OCULTO A LA IZQUIERDA */
+        transform: translateX(-100%);
+        width: 18rem !important;
+        transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+
+        /* ESTAS SON LAS REGLAS CRÍTICAS PARA SUPERPOSICIÓN: */
+        position: fixed !important;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        height: 100vh;
+        z-index: 1050;
+        /* Por encima del Dashboard */
+
+        box-shadow: 0 0 50px rgba(0, 0, 0, 0.5) !important;
+        border-right: none;
+        background-color: white;
+        /* Asegurar que no sea transparente */
+    }
+
+    /* 2. ESTADO VISIBLE (Cuando isMobileMenuOpen es true) */
+    .navbar-vertical.show-mobile {
+        transform: translateX(0) !important;
+    }
+
+    /* El resto de tu código de móvil... */
+    .navbar-vertical.collapsed {
+        width: 18rem !important;
+    }
+
+    .navbar-vertical.collapsed .nav-link-title {
+        display: block !important;
+        opacity: 1 !important;
+        width: auto !important;
+    }
+}

@@ -1,1 +1,12 @@
-/* You can add global styles to this file, and also import other style files */
+/* Variables base para conservar la identidad de Hosting3M */
+body,
+.page,
+.page-wrapper {
+    background-color: var(--tblr-body-bg, #f4f6fa) !important;
+    color: var(--tblr-body-color, #1a2234);
+}
+
+.card {
+    background-color: var(--tblr-card-bg, #ffffff) !important;
+    color: inherit;
+}
