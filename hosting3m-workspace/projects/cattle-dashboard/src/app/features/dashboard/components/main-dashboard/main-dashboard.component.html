@@ -1,73 +1,114 @@
-<div class="max-w-7xl mx-auto">
-    <header class="mb-8">
-        <h1 class="text-3xl font-bold text-stone-800">Inteligencia Financiera</h1>
-        <p class="text-stone-500 mt-1">Rendimiento Biológico (ADG) y Control de Mermas</p>
-    </header>
-
-    <!-- Tarjetas KPI -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200">
-            <p class="text-xs font-bold text-stone-400 uppercase tracking-widest">Inventario Activo</p>
-            <p class="text-4xl font-black text-stone-800 mt-2">{{ totalHeads() }} <span
-                    class="text-xl font-medium text-stone-400">Cabezas</span></p>
+<!-- Encabezado -->
+<div class="page-header d-print-none mb-4">
+    <div class="row align-items-center">
+        <div class="col">
+            <div class="page-pretitle text-uppercase font-weight-bold text-muted">Resumen Ejecutivo</div>
+            <h2 class="page-title text-dark font-weight-bold" style="font-size: 1.5rem;">Capitalización y Rendimiento
+            </h2>
         </div>
-
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-stone-200">
-            <p class="text-xs font-bold text-stone-400 uppercase tracking-widest">Rendimiento Promedio</p>
-            <p class="text-4xl font-black text-stone-800 mt-2">{{ averageAdg() }} <span
-                    class="text-xl font-medium text-stone-400">kg/día</span></p>
-        </div>
-
-        <!-- Alerta Condicional -->
-        <div class="p-6 rounded-2xl shadow-sm border transition-colors" [class.bg-red-50]="criticalAlerts() > 0"
-            [class.border-red-200]="criticalAlerts() > 0" [class.bg-white]="criticalAlerts() === 0"
-            [class.border-stone-200]="criticalAlerts() === 0">
-            <p class="text-xs font-bold uppercase tracking-widest" [class.text-red-500]="criticalAlerts() > 0"
-                [class.text-stone-400]="criticalAlerts() === 0">
-                Riesgo Operativo (ADG < 200g) </p>
-                    <p class="text-4xl font-black mt-2" [class.text-red-700]="criticalAlerts() > 0"
-                        [class.text-stone-800]="criticalAlerts() === 0">
-                        {{ criticalAlerts() }} <span class="text-xl font-medium"
-                            [class.text-red-400]="criticalAlerts() > 0">Alertas</span>
-                    </p>
+        <!-- Botón de Acción -->
+        <div class="col-auto ms-auto d-print-none">
+            <button class="btn btn-primary d-none d-sm-inline-block">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
+                    stroke-width="2" stroke="currentColor" fill="none">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                    <path d="M14 3v4a1 1 0 0 0 1 1h4" />
+                    <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" />
+                    <path d="M12 11v6" />
+                    <path d="M9.5 13.5l2.5 -2.5l2.5 2.5" />
+                </svg>
+                Exportar Reporte
+            </button>
         </div>
     </div>
+</div>
 
-    <!-- Tabla de Datos -->
-    <div class="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">
-        <table class="w-full text-left border-collapse">
-            <thead>
-                <tr
-                    class="bg-stone-50 border-b border-stone-200 text-xs font-bold tracking-wider text-stone-500 uppercase">
-                    <th class="px-6 py-4">Arete (RFID)</th>
-                    <th class="px-6 py-4">Socio Operativo</th>
-                    <th class="px-6 py-4 text-right">Peso Base</th>
-                    <th class="px-6 py-4 text-right">Peso Actual</th>
-                    <th class="px-6 py-4 text-right">Rendimiento (ADG)</th>
+<!-- Fila de 4 KPIs -->
+<div class="row row-cards mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="card shadow-sm border-0 bg-primary-lt">
+            <div class="card-body">
+                <div class="subheader text-primary font-weight-bold">Valor Estimado del Hato</div>
+                <div class="h1 mb-1 text-primary">{{ capitalizacionTotal() | currency:'MXN':'symbol-narrow':'1.0-0' }}
+                </div>
+                <div class="text-muted text-xs">Cotizado a {{ PRECIO_KILO | currency:'MXN' }}/kg</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <div class="subheader font-weight-bold">Biomasa Total</div>
+                <div class="h1 mb-1">{{ biomasaTotal() | number:'1.0-0' }} <span class="h4 text-muted">kg</span></div>
+                <div class="text-muted text-xs">Carga animal actual</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <div class="subheader font-weight-bold">Conversión Global (ADG)</div>
+                <div class="h1 mb-1">{{ averageAdg() }} <span class="h4 text-muted">kg/día</span></div>
+                <div class="text-muted text-xs">Promedio de engorda</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card shadow-sm border-0" [class.bg-danger-lt]="criticalAlerts() > 0">
+            <div class="card-body">
+                <div class="subheader font-weight-bold" [class.text-danger]="criticalAlerts() > 0">Alertas Críticas
+                </div>
+                <div class="h1 mb-1" [class.text-danger]="criticalAlerts() > 0">{{ criticalAlerts() }}</div>
+                <div class="text-muted text-xs" [class.text-danger]="criticalAlerts() > 0">Acción requerida</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabla Avanzada -->
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-white border-bottom-0">
+        <h3 class="card-title text-dark font-weight-bold mb-0">Auditoría Individual</h3>
+    </div>
+    <div class="table-responsive">
+        <table class="table card-table table-vcenter text-nowrap">
+            <thead class="bg-light">
+                <tr>
+                    <th>Arete (RFID)</th>
+                    <th>Categoría</th>
+                    <th class="text-end">Peso Actual</th>
+                    <th class="text-end">Valor ($)</th>
+                    <th class="text-end">ADG</th>
+                    <th>Estatus</th>
+                    <th>Acción Sugerida</th>
                 </tr>
             </thead>
-            <tbody class="divide-y divide-stone-100">
+            <tbody>
                 @for (animal of cattleList(); track animal.rfid_tag) {
-                <tr class="hover:bg-stone-50/50 transition-colors">
-                    <td class="px-6 py-4 font-mono font-medium text-stone-800">{{ animal.rfid_tag }}</td>
-                    <td class="px-6 py-4 text-sm text-stone-600">{{ animal.dueno }}</td>
-                    <td class="px-6 py-4 text-sm text-stone-500 text-right">{{ animal.peso_anterior | number:'1.2-2' }}
-                        kg</td>
-                    <td class="px-6 py-4 text-sm font-bold text-stone-800 text-right">{{ animal.peso_actual |
-                        number:'1.2-2' }} kg</td>
-                    <td class="px-6 py-4 text-right font-bold flex justify-end">
-                        @if (animal.ganancia_diaria_kg >= 0.5) {
-                        <span class="text-emerald-700 bg-emerald-100/50 px-3 py-1 rounded-md text-sm">▲ +{{
-                            animal.ganancia_diaria_kg | number:'1.2-2' }}</span>
-                        } @else if (animal.ganancia_diaria_kg > 0) {
-                        <span class="text-amber-700 bg-amber-100/50 px-3 py-1 rounded-md text-sm">▶ +{{
-                            animal.ganancia_diaria_kg | number:'1.2-2' }}</span>
-                        } @else {
-                        <span
-                            class="text-red-700 bg-red-100/50 px-3 py-1 rounded-md text-sm shadow-sm border border-red-200">▼
-                            {{ animal.ganancia_diaria_kg | number:'1.2-2' }}</span>
-                        }
+                <tr>
+                    <td>
+                        <div class="font-monospace text-dark">{{ animal.rfid_tag }}</div>
+                        <div class="text-muted text-xs">{{ animal.dueno }}</div>
                     </td>
+                    <td><span class="badge bg-secondary-lt">{{ animal.categoria }}</span></td>
+                    <td class="text-end font-weight-bold">{{ animal.peso_actual | number:'1.1-1' }} kg</td>
+                    <td class="text-end text-success font-weight-medium">{{ (animal.peso_actual * PRECIO_KILO) |
+                        currency:'MXN':'symbol-narrow':'1.0-0' }}</td>
+                    <td class="text-end">
+                        @if (animal.ganancia_diaria_kg >= 0.5) { <span class="text-success font-weight-bold">▲ +{{
+                            animal.ganancia_diaria_kg | number:'1.2-2' }}</span> }
+                        @else if (animal.ganancia_diaria_kg > 0) { <span class="text-warning font-weight-bold">▶ +{{
+                            animal.ganancia_diaria_kg | number:'1.2-2' }}</span> }
+                        @else { <span class="text-danger font-weight-bold">▼ {{ animal.ganancia_diaria_kg |
+                            number:'1.2-2' }}</span> }
+                    </td>
+                    <td>
+                        @if (animal.estatus_salud === 'ÓPTIMO') { <span class="badge bg-success">Óptimo</span> }
+                        @else if (animal.estatus_salud === 'PREVENTIVO') { <span
+                            class="badge bg-warning">Preventivo</span> }
+                        @else { <span class="badge bg-danger">Crítico</span> }
+                    </td>
+                    <td class="text-muted text-sm">{{ animal.proximo_evento }}</td>
                 </tr>
                 }
             </tbody>

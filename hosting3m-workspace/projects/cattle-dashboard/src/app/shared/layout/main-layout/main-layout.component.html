@@ -1,40 +1,16 @@
 <div class="page">
     <app-header></app-header>
 
-    <!-- El sidebar ahora recibe la clase desde el servicio de layout -->
-    <app-sidebar [class.show-mobile]="layoutService.mobileMenuOpen()">
-    </app-sidebar>
+    <app-sidebar [class.show-mobile]="layoutService.mobileMenuOpen()"></app-sidebar>
 
     <div class="page-wrapper" [class.expanded-content]="layoutService.sidebarCollapsed()">
 
-        <!-- Sección de Métricas Críticas del Ganado[cite: 1, 2] -->
-        <div class="container-xl pt-3">
-            <div class="row row-cards">
-                <div class="col-sm-6 col-lg-3">
-                    <div class="card card-sm">
-                        <div class="card-body">
-                            <div class="subheader">Total Cabezas</div>
-                            <div class="h1">{{ totalHeads() }}</div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-sm-6 col-lg-3">
-                    <div class="card card-sm" [class.bg-danger-lt]="criticalAlerts() > 0">
-                        <div class="card-body">
-                            <div class="subheader">Alertas Críticas</div>
-                            <div class="h1">{{ criticalAlerts() }}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Contenido dinámico del dashboard[cite: 2] -->
-        <div class="container-xl mt-3">
+        <!-- El contenido dinámico tomará el control aquí -->
+        <div class="container-xl mt-4">
             <router-outlet></router-outlet>
         </div>
 
-        <!-- Inyección de la librería de Chat IA compartida[cite: 1, 2] -->
+        <!-- Asistente IA Global -->
         <lib-ai-chat></lib-ai-chat>
     </div>
 
@@ -43,7 +19,7 @@
             <div class="row text-center align-items-center flex-row-reverse">
                 <div class="col-12 col-lg-auto mt-3 mt-lg-0">
                     <ul class="list-inline list-inline-dots mb-0">
-                        <li class="list-inline-item">Hosting3M © 2026[cite: 2]</li>
+                        <li class="list-inline-item text-stone-500">Hosting3M © 2026 - Ganadería Precision Suite</li>
                     </ul>
                 </div>
             </div>

@@ -3,40 +3,24 @@
   "compilerOptions": {
     "outDir": "../../out-tsc/app",
     "types": [],
-    "baseUrl": ".",
     "paths": {
       "ui-chat": [
-        "../ui-chat/src/public-api.ts"
-      ],
-      "ui-chat/*": [
-        "../ui-chat/src/lib/*"
+        "projects/ui-chat/src/public-api.ts"
       ],
       "ui-pdf-export": [
-        "../ui-pdf-export/src/public-api.ts"
-      ],
-      "ui-pdf-export/*": [
-        "../ui-pdf-export/src/lib/*"
+        "projects/ui-pdf-export/src/public-api.ts"
       ],
       "@core/*": [
-        "src/app/core/*"
+        "projects/cattle-dashboard/src/app/core/*"
       ],
       "@shared/*": [
-        "src/app/shared/*"
+        "projects/cattle-dashboard/src/app/shared/*"
       ],
       "@features/*": [
-        "src/app/features/*"
+        "projects/cattle-dashboard/src/app/features/*"
       ],
       "@env/*": [
-        "src/environments/*"
-      ],
-      "@interfaces/*": [
-        "src/app/core/interfaces/*"
-      ],
-      "@services/*": [
-        "src/app/core/services/*"
-      ],
-      "@admin/*": [
-        "src/app/features/admin/*"
+        "projects/cattle-dashboard/src/environments/*"
       ]
     }
   },
