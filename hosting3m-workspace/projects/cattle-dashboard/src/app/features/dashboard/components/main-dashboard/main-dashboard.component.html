@@ -65,49 +65,77 @@
     </div>
 </div>
 
-<!-- Tabla Avanzada -->
+<!-- Tabla Avanzada: Los 12 Escenarios Estratégicos -->
 <div class="card shadow-sm border-0">
-    <div class="card-header bg-white border-bottom-0">
-        <h3 class="card-title text-dark font-weight-bold mb-0">Auditoría Individual</h3>
+    <div class="card-header bg-white border-bottom-0 d-flex justify-content-between align-items-center">
+        <h3 class="card-title text-dark font-weight-bold mb-0">Auditoría Operativa y Casos de Uso (MVP)</h3>
+        <span class="badge bg-purple-lt">Mostrando 12 Escenarios Simulados</span>
     </div>
     <div class="table-responsive">
         <table class="table card-table table-vcenter text-nowrap">
             <thead class="bg-light">
                 <tr>
                     <th>Arete (RFID)</th>
-                    <th>Categoría</th>
-                    <th class="text-end">Peso Actual</th>
-                    <th class="text-end">Valor ($)</th>
-                    <th class="text-end">ADG</th>
+                    <th class="text-end">Peso / Valor ($)</th>
+                    <th class="text-end">Rendimiento (ADG)</th>
                     <th>Estatus</th>
+                    <th>Contexto Estratégico (Caso de Uso)</th>
                     <th>Acción Sugerida</th>
                 </tr>
             </thead>
             <tbody>
                 @for (animal of cattleList(); track animal.rfid_tag) {
                 <tr>
+                    <!-- Arete y Categoría -->
                     <td>
-                        <div class="font-monospace text-dark">{{ animal.rfid_tag }}</div>
-                        <div class="text-muted text-xs">{{ animal.dueno }}</div>
+                        <div class="font-monospace text-dark font-weight-bold">{{ animal.rfid_tag }}</div>
+                        <div class="text-muted text-xs">{{ animal.dueno }} | <span class="text-primary">{{
+                                animal.categoria }}</span></div>
                     </td>
-                    <td><span class="badge bg-secondary-lt">{{ animal.categoria }}</span></td>
-                    <td class="text-end font-weight-bold">{{ animal.peso_actual | number:'1.1-1' }} kg</td>
-                    <td class="text-end text-success font-weight-medium">{{ (animal.peso_actual * PRECIO_KILO) |
-                        currency:'MXN':'symbol-narrow':'1.0-0' }}</td>
+
+                    <!-- Financiero -->
                     <td class="text-end">
-                        @if (animal.ganancia_diaria_kg >= 0.5) { <span class="text-success font-weight-bold">▲ +{{
-                            animal.ganancia_diaria_kg | number:'1.2-2' }}</span> }
-                        @else if (animal.ganancia_diaria_kg > 0) { <span class="text-warning font-weight-bold">▶ +{{
-                            animal.ganancia_diaria_kg | number:'1.2-2' }}</span> }
-                        @else { <span class="text-danger font-weight-bold">▼ {{ animal.ganancia_diaria_kg |
-                            number:'1.2-2' }}</span> }
+                        <div class="font-weight-bold">{{ animal.peso_actual | number:'1.1-1' }} kg</div>
+                        <div class="text-success text-xs font-weight-medium">{{ (animal.peso_actual * PRECIO_KILO) |
+                            currency:'MXN':'symbol-narrow':'1.0-0' }}</div>
                     </td>
+
+                    <!-- ADG -->
+                    <td class="text-end">
+                        @if (animal.ganancia_diaria_kg >= 0.5) {
+                        <span class="text-success font-weight-bold">▲ +{{ animal.ganancia_diaria_kg | number:'1.2-2'
+                            }}</span>
+                        } @else if (animal.ganancia_diaria_kg > 0) {
+                        <span class="text-warning font-weight-bold">▶ +{{ animal.ganancia_diaria_kg | number:'1.2-2'
+                            }}</span>
+                        } @else {
+                        <span class="text-danger font-weight-bold">▼ {{ animal.ganancia_diaria_kg | number:'1.2-2'
+                            }}</span>
+                        }
+                    </td>
+
+                    <!-- Estatus -->
                     <td>
-                        @if (animal.estatus_salud === 'ÓPTIMO') { <span class="badge bg-success">Óptimo</span> }
-                        @else if (animal.estatus_salud === 'PREVENTIVO') { <span
-                            class="badge bg-warning">Preventivo</span> }
-                        @else { <span class="badge bg-danger">Crítico</span> }
+                        @if (animal.estatus_salud === 'ÓPTIMO') {
+                        <span class="badge bg-success">Óptimo</span>
+                        } @else if (animal.estatus_salud === 'PREVENTIVO') {
+                        <span class="badge bg-warning">Preventivo</span>
+                        } @else {
+                        <span class="badge bg-danger text-white">Crítico</span>
+                        }
                     </td>
+
+                    <!-- Nuevo: Contexto del Caso de Uso para la Junta -->
+                    <td>
+                        <div class="text-dark font-weight-bold mb-1">
+                            <span class="badge bg-secondary-lt me-1">{{ animal.caso_uso }}</span>
+                        </div>
+                        <div class="text-muted text-xs text-wrap" style="min-width: 250px;">
+                            {{ animal.contexto_estrategico }}
+                        </div>
+                    </td>
+
+                    <!-- Acción -->
                     <td class="text-muted text-sm">{{ animal.proximo_evento }}</td>
                 </tr>
                 }
