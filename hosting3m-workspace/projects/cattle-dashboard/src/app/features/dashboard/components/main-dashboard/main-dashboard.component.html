@@ -65,7 +65,90 @@
     </div>
 </div>
 
+@if (activeTab() !== 'ENGORDA') {
+<div class="row row-cards mb-4">
+    <div class="col-12">
+        <h3 class="card-title text-emerald-800">Módulo de Cría (Tasa de Parición)</h3>
+    </div>
+    <div class="col-md-6 col-lg-3">
+        <div class="card card-sm bg-stone-100">
+            <div class="card-body">
+                <div class="subheader">Eficiencia Actual</div>
+                <div class="h1">{{ paricionRate() }}</div>
+                <div class="progress progress-sm mt-2">
+                    <div class="progress-bar bg-warning" [style.width]="'50%'"></div>
+                </div>
+                <div class="text-muted mt-2 small text-uppercase">Objetivo Experto: {{ targetParicion() }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+}
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white">
+        <ul class="nav nav-tabs card-header-tabs">
+            <li class="nav-item">
+                <a class="nav-link cursor-pointer font-weight-bold" [class.active]="activeTab() === 'TODOS'"
+                    (click)="setTab('TODOS')">
+                    Vista Global
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link cursor-pointer font-weight-bold text-blue" [class.active]="activeTab() === 'CRIA'"
+                    (click)="setTab('CRIA')">
+                    Módulo de Cría
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link cursor-pointer font-weight-bold text-green"
+                    [class.active]="activeTab() === 'ENGORDA'" (click)="setTab('ENGORDA')">
+                    Módulo de Engorda
+                </a>
+            </li>
+        </ul>
+    </div>
+    <div class="table-responsive">
+        <table class="table card-table table-vcenter">
+            <thead>
+                <tr>
+                    <th>Arete (Modelo)</th>
+                    <th>Estatus / Etapa</th>
+                    <th class="text-end">Peso Actual</th>
+                    <th class="text-end">Métrica Clave</th>
+                    <th>Acción Requerida</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (item of filteredCattleList(); track item.rfid_tag) {
+                <tr>
+                    <td>
+                        <span class="badge" [class.bg-blue-lt]="item.modelo === 'CRIA'"
+                            [class.bg-green-lt]="item.modelo === 'ENGORDA'">
+                            {{ item.modelo }}
+                        </span>
+                        <div class="font-monospace mt-1">{{ item.rfid_tag }}</div>
+                    </td>
+                    <td>{{ item.estatus || item.etapa }}</td>
+                    <td class="text-end font-weight-bold">{{ item.peso_actual }} kg</td>
+                    <td class="text-end">
+                        @if (item.modelo === 'CRIA') {
+                        <span class="text-muted">{{ item.meses_gestacion }} meses gest.</span>
+                        } @else {
+                        <span class="text-success font-weight-bold">+{{ item.ganancia_diaria_kg | number:'1.2-2' }}
+                            kg/día</span>
+                        }
+                    </td>
+                    <td class="text-danger font-weight-bold">{{ item.alerta }}</td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
 <!-- Tabla Avanzada: Los 12 Escenarios Estratégicos -->
+@if (activeTab() === 'TODOS') {
 <div class="card shadow-sm border-0">
     <div class="card-header bg-white border-bottom-0 d-flex justify-content-between align-items-center">
         <h3 class="card-title text-dark font-weight-bold mb-0">Auditoría Operativa y Casos de Uso (MVP)</h3>
@@ -84,7 +167,7 @@
                 </tr>
             </thead>
             <tbody>
-                @for (animal of cattleList(); track animal.rfid_tag) {
+                @for (animal of filteredCattleList(); track animal.rfid_tag) {
                 <tr>
                     <!-- Arete y Categoría -->
                     <td>
@@ -143,3 +226,4 @@
         </table>
     </div>
 </div>
+}
