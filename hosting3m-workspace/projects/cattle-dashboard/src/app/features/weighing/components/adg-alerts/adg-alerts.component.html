@@ -1,1 +1,65 @@
-<p>adg-alerts works!</p>
+<div class="page-header d-print-none mb-4">
+    <div class="row align-items-center">
+        <div class="col">
+            <div class="page-pretitle text-uppercase font-weight-bold text-danger">Atención Inmediata</div>
+            <h2 class="page-title text-dark font-weight-bold" style="font-size: 1.5rem;">Mermas y Alertas Operativas
+            </h2>
+        </div>
+    </div>
+</div>
+
+<div class="row row-cards mb-4">
+    <div class="col-sm-6 col-lg-3">
+        <div class="card shadow-sm border-0 bg-danger-lt">
+            <div class="card-body">
+                <div class="subheader font-weight-bold text-danger">Focos Rojos Activos</div>
+                <div class="h1 mb-1 text-danger">{{ totalAlerts() }}</div>
+                <div class="text-muted text-xs text-danger">Animales en riesgo</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 border-top border-danger border-3">
+    <div class="table-responsive">
+        <table class="table card-table table-vcenter text-nowrap">
+            <thead class="bg-light">
+                <tr>
+                    <th>Arete Afectado</th>
+                    <th>Nivel de Gravedad</th>
+                    <th>Motivo de Alerta / Merma</th>
+                    <th>Rendimiento (ADG)</th>
+                    <th>Acción Correctiva Sugerida</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (animal of alertList(); track animal.rfid_tag) {
+                <tr>
+                    <td>
+                        <div class="font-monospace font-weight-bold">{{ animal.rfid_tag }}</div>
+                        <div class="text-muted text-xs">{{ animal.dueno }}</div>
+                    </td>
+                    <td>
+                        @if (animal.estatus_salud === 'CRÍTICO') {
+                        <span class="badge bg-danger">Crítico</span>
+                        } @else {
+                        <span class="badge bg-warning">Preventivo</span>
+                        }
+                    </td>
+                    <td class="font-weight-bold text-dark">
+                        {{ animal.alerta || 'Merma Biológica Detectada' }}
+                    </td>
+                    <td>
+                        @if (animal.ganancia_diaria_kg <= 0) { <span class="text-danger font-weight-bold">▼ {{
+                            animal.ganancia_diaria_kg }} kg/día</span>
+                            } @else {
+                            <span class="text-warning font-weight-bold">▶ +{{ animal.ganancia_diaria_kg }} kg/día</span>
+                            }
+                    </td>
+                    <td class="text-muted">{{ animal.proximo_evento }}</td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
