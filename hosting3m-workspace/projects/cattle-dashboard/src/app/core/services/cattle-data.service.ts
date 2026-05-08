@@ -61,4 +61,19 @@ export class CattleDataService {
     const list = this.cattleState();
     return list.length ? (list.reduce((acc, curr) => acc + curr.ganancia_diaria_kg, 0) / list.length).toFixed(2) : '0';
   });
+
+
+  // Métrica de Blindaje Pediátrico (Tope 3%)
+  public nacimientosAno = signal(120);
+  public bajasRegistradas = signal(2); // Equivale a 1.6% de mortandad
+  public mortandadActual = computed(() =>
+    ((this.bajasRegistradas() / this.nacimientosAno()) * 100).toFixed(1)
+  );
+
+  // Métrica de Sementales (Regla 1:25)
+  public sementalesActivos = signal(2);
+  public vacasEnEmpadre = signal(48); // Ratio actual 1:24 (Óptimo)
+  public bullEfficiency = computed(() =>
+    Math.min(100, (25 / (this.vacasEnEmpadre() / this.sementalesActivos())) * 100).toFixed(0)
+  );
 }

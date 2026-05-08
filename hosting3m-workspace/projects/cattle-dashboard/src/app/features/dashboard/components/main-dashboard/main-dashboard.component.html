@@ -1,4 +1,3 @@
-<!-- Encabezado -->
 <div class="page-header d-print-none mb-4">
     <div class="row align-items-center">
         <div class="col">
@@ -6,24 +5,9 @@
             <h2 class="page-title text-dark font-weight-bold" style="font-size: 1.5rem;">Capitalización y Rendimiento
             </h2>
         </div>
-        <!-- Botón de Acción -->
-        <div class="col-auto ms-auto d-print-none">
-            <button class="btn btn-primary d-none d-sm-inline-block">
-                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
-                    stroke-width="2" stroke="currentColor" fill="none">
-                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                    <path d="M14 3v4a1 1 0 0 0 1 1h4" />
-                    <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2z" />
-                    <path d="M12 11v6" />
-                    <path d="M9.5 13.5l2.5 -2.5l2.5 2.5" />
-                </svg>
-                Exportar Reporte
-            </button>
-        </div>
     </div>
 </div>
 
-<!-- Fila de 4 KPIs -->
 <div class="row row-cards mb-4">
     <div class="col-sm-6 col-xl-3">
         <div class="card shadow-sm border-0 bg-primary-lt">
@@ -31,7 +15,6 @@
                 <div class="subheader text-primary font-weight-bold">Valor Estimado del Hato</div>
                 <div class="h1 mb-1 text-primary">{{ capitalizacionTotal() | currency:'MXN':'symbol-narrow':'1.0-0' }}
                 </div>
-                <div class="text-muted text-xs">Cotizado a {{ PRECIO_KILO | currency:'MXN' }}/kg</div>
             </div>
         </div>
     </div>
@@ -40,7 +23,6 @@
             <div class="card-body">
                 <div class="subheader font-weight-bold">Biomasa Total</div>
                 <div class="h1 mb-1">{{ biomasaTotal() | number:'1.0-0' }} <span class="h4 text-muted">kg</span></div>
-                <div class="text-muted text-xs">Carga animal actual</div>
             </div>
         </div>
     </div>
@@ -49,7 +31,6 @@
             <div class="card-body">
                 <div class="subheader font-weight-bold">Conversión Global (ADG)</div>
                 <div class="h1 mb-1">{{ averageAdg() }} <span class="h4 text-muted">kg/día</span></div>
-                <div class="text-muted text-xs">Promedio de engorda</div>
             </div>
         </div>
     </div>
@@ -59,64 +40,85 @@
                 <div class="subheader font-weight-bold" [class.text-danger]="criticalAlerts() > 0">Alertas Críticas
                 </div>
                 <div class="h1 mb-1" [class.text-danger]="criticalAlerts() > 0">{{ criticalAlerts() }}</div>
-                <div class="text-muted text-xs" [class.text-danger]="criticalAlerts() > 0">Acción requerida</div>
             </div>
         </div>
     </div>
 </div>
 
-@if (activeTab() !== 'ENGORDA') {
-<div class="row row-cards mb-4">
-    <div class="col-12">
-        <h3 class="card-title text-emerald-800">Módulo de Cría (Tasa de Parición)</h3>
+<div class="row mb-4">
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white">
+                <h3 class="card-title text-dark font-weight-bold">Semáforo Biológico del Hato</h3>
+            </div>
+            <div class="card-body d-flex align-items-center justify-content-center">
+                <apx-chart [series]="$any(healthSeries)" [chart]="$any(chartOptions.donut)"
+                    [labels]="$any(['Óptimo', 'Preventivo', 'Crítico'])" [colors]="$any(chartOptions.colors.health)"
+                    [dataLabels]="$any({enabled: true})" [legend]="$any({position: 'bottom'})">
+                </apx-chart>
+            </div>
+        </div>
     </div>
-    <div class="col-md-6 col-lg-3">
-        <div class="card card-sm bg-stone-100">
+
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white">
+                <h3 class="card-title text-dark font-weight-bold">Distribución de Biomasa (kg)</h3>
+            </div>
             <div class="card-body">
-                <div class="subheader">Eficiencia Actual</div>
-                <div class="h1">{{ paricionRate() }}</div>
-                <div class="progress progress-sm mt-2">
-                    <div class="progress-bar bg-warning" [style.width]="'50%'"></div>
-                </div>
-                <div class="text-muted mt-2 small text-uppercase">Objetivo Experto: {{ targetParicion() }}</div>
+                <apx-chart [series]="$any(biomasaSeries)" [chart]="$any(chartOptions.bar)" [xaxis]="$any(biomasaX)"
+                    [colors]="$any(chartOptions.colors.primary)" [plotOptions]="$any(chartOptions.plotOptions)"
+                    [dataLabels]="$any({enabled: false})">
+                </apx-chart>
             </div>
         </div>
     </div>
 </div>
-}
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white">
+                <h3 class="card-title text-dark font-weight-bold">Evolución Histórica de Biomasa (Últimos 6 Meses)</h3>
+            </div>
+            <div class="card-body">
+                <apx-chart [series]="$any(biomassTrendSeries)" [chart]="$any(chartOptions.area)"
+                    [xaxis]="$any(biomassTrendX)" [colors]="$any(chartOptions.colors.trend)"
+                    [stroke]="$any(chartOptions.area.stroke)" [fill]="$any(chartOptions.area.fill)"
+                    [dataLabels]="$any(chartOptions.area.dataLabels)">
+                </apx-chart>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div class="card shadow-sm border-0 mb-4">
     <div class="card-header bg-white">
         <ul class="nav nav-tabs card-header-tabs">
             <li class="nav-item">
-                <a class="nav-link cursor-pointer font-weight-bold" [class.active]="activeTab() === 'TODOS'"
-                    (click)="setTab('TODOS')">
-                    Vista Global
-                </a>
+                <a class="nav-link cursor-pointer" [class.active]="activeTab() === 'TODOS'"
+                    (click)="setTab('TODOS')">Vista Global</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link cursor-pointer font-weight-bold text-blue" [class.active]="activeTab() === 'CRIA'"
-                    (click)="setTab('CRIA')">
-                    Módulo de Cría
-                </a>
+                <a class="nav-link cursor-pointer text-blue" [class.active]="activeTab() === 'CRIA'"
+                    (click)="setTab('CRIA')">Módulo de Cría</a>
             </li>
             <li class="nav-item">
-                <a class="nav-link cursor-pointer font-weight-bold text-green"
-                    [class.active]="activeTab() === 'ENGORDA'" (click)="setTab('ENGORDA')">
-                    Módulo de Engorda
-                </a>
+                <a class="nav-link cursor-pointer text-green" [class.active]="activeTab() === 'ENGORDA'"
+                    (click)="setTab('ENGORDA')">Módulo de Engorda</a>
             </li>
         </ul>
     </div>
+
     <div class="table-responsive">
         <table class="table card-table table-vcenter">
             <thead>
                 <tr>
-                    <th>Arete (Modelo)</th>
+                    <th>Arete</th>
                     <th>Estatus / Etapa</th>
-                    <th class="text-end">Peso Actual</th>
-                    <th class="text-end">Métrica Clave</th>
-                    <th>Acción Requerida</th>
+                    <th class="text-end">Peso</th>
+                    <th class="text-end">Salud</th>
+                    <th>Acción</th>
                 </tr>
             </thead>
             <tbody>
@@ -129,101 +131,19 @@
                         </span>
                         <div class="font-monospace mt-1">{{ item.rfid_tag }}</div>
                     </td>
-                    <td>{{ item.estatus || item.etapa }}</td>
+                    <td>{{ item.estatus_salud }}</td>
                     <td class="text-end font-weight-bold">{{ item.peso_actual }} kg</td>
-                    <td class="text-end">
-                        @if (item.modelo === 'CRIA') {
-                        <span class="text-muted">{{ item.meses_gestacion }} meses gest.</span>
-                        } @else {
-                        <span class="text-success font-weight-bold">+{{ item.ganancia_diaria_kg | number:'1.2-2' }}
-                            kg/día</span>
-                        }
+                    <td>
+                        <span class="status" [class.status-green]="item.estatus_salud === 'ÓPTIMO'"
+                            [class.status-orange]="item.estatus_salud === 'PREVENTIVO'"
+                            [class.status-red]="item.estatus_salud === 'CRÍTICO'">
+                            <span class="status-dot status-dot-animated"></span> {{ item.estatus_salud }}
+                        </span>
                     </td>
-                    <td class="text-danger font-weight-bold">{{ item.alerta }}</td>
+                    <td class="text-muted text-sm">{{ item.proximo_evento }}</td>
                 </tr>
                 }
             </tbody>
         </table>
     </div>
 </div>
-
-<!-- Tabla Avanzada: Los 12 Escenarios Estratégicos -->
-@if (activeTab() === 'TODOS') {
-<div class="card shadow-sm border-0">
-    <div class="card-header bg-white border-bottom-0 d-flex justify-content-between align-items-center">
-        <h3 class="card-title text-dark font-weight-bold mb-0">Auditoría Operativa y Casos de Uso (MVP)</h3>
-        <span class="badge bg-purple-lt">Mostrando 12 Escenarios Simulados</span>
-    </div>
-    <div class="table-responsive">
-        <table class="table card-table table-vcenter text-nowrap">
-            <thead class="bg-light">
-                <tr>
-                    <th>Arete (RFID)</th>
-                    <th class="text-end">Peso / Valor ($)</th>
-                    <th class="text-end">Rendimiento (ADG)</th>
-                    <th>Estatus</th>
-                    <th>Contexto Estratégico (Caso de Uso)</th>
-                    <th>Acción Sugerida</th>
-                </tr>
-            </thead>
-            <tbody>
-                @for (animal of filteredCattleList(); track animal.rfid_tag) {
-                <tr>
-                    <!-- Arete y Categoría -->
-                    <td>
-                        <div class="font-monospace text-dark font-weight-bold">{{ animal.rfid_tag }}</div>
-                        <div class="text-muted text-xs">{{ animal.dueno }} | <span class="text-primary">{{
-                                animal.categoria }}</span></div>
-                    </td>
-
-                    <!-- Financiero -->
-                    <td class="text-end">
-                        <div class="font-weight-bold">{{ animal.peso_actual | number:'1.1-1' }} kg</div>
-                        <div class="text-success text-xs font-weight-medium">{{ (animal.peso_actual * PRECIO_KILO) |
-                            currency:'MXN':'symbol-narrow':'1.0-0' }}</div>
-                    </td>
-
-                    <!-- ADG -->
-                    <td class="text-end">
-                        @if (animal.ganancia_diaria_kg >= 0.5) {
-                        <span class="text-success font-weight-bold">▲ +{{ animal.ganancia_diaria_kg | number:'1.2-2'
-                            }}</span>
-                        } @else if (animal.ganancia_diaria_kg > 0) {
-                        <span class="text-warning font-weight-bold">▶ +{{ animal.ganancia_diaria_kg | number:'1.2-2'
-                            }}</span>
-                        } @else {
-                        <span class="text-danger font-weight-bold">▼ {{ animal.ganancia_diaria_kg | number:'1.2-2'
-                            }}</span>
-                        }
-                    </td>
-
-                    <!-- Estatus -->
-                    <td>
-                        @if (animal.estatus_salud === 'ÓPTIMO') {
-                        <span class="badge bg-success">Óptimo</span>
-                        } @else if (animal.estatus_salud === 'PREVENTIVO') {
-                        <span class="badge bg-warning">Preventivo</span>
-                        } @else {
-                        <span class="badge bg-danger text-white">Crítico</span>
-                        }
-                    </td>
-
-                    <!-- Nuevo: Contexto del Caso de Uso para la Junta -->
-                    <td>
-                        <div class="text-dark font-weight-bold mb-1">
-                            <span class="badge bg-secondary-lt me-1">{{ animal.caso_uso }}</span>
-                        </div>
-                        <div class="text-muted text-xs text-wrap" style="min-width: 250px;">
-                            {{ animal.contexto_estrategico }}
-                        </div>
-                    </td>
-
-                    <!-- Acción -->
-                    <td class="text-muted text-sm">{{ animal.proximo_evento }}</td>
-                </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-</div>
-}
