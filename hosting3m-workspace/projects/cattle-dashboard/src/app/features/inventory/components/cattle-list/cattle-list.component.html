@@ -11,7 +11,7 @@
                         Descargar Excel
                     </button>
                 </span>
-                <button class="btn btn-primary d-none d-sm-inline-block">
+                <button class="btn btn-primary d-none d-sm-inline-block" (click)="openModal('ALTA')">
                     <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
                         stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
                         stroke-linejoin="round">
@@ -54,6 +54,7 @@
                     <th>Modelo de Negocio</th>
                     <th class="text-end">Peso Actual</th>
                     <th>Estatus Actual</th>
+                    <th class="text-end">Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -70,9 +71,23 @@
                     </td>
                     <td class="text-end font-weight-bold">{{ animal.peso_actual }} kg</td>
                     <td class="text-muted">{{ animal.estatus || animal.etapa || 'ACTIVO' }}</td>
+
+                    <td class="text-end">
+                        <button class="btn btn-sm btn-ghost-success me-2" (click)="openModal('PESO', animal.rfid_tag)">
+                            Pesar
+                        </button>
+                        <button class="btn btn-sm btn-ghost-warning" (click)="openModal('SALUD', animal.rfid_tag)">
+                            Sanidad
+                        </button>
+                    </td>
                 </tr>
                 }
             </tbody>
         </table>
     </div>
 </div>
+
+@if (isModalOpen) {
+<app-cattle-detail-modal [actionType]="modalAction" [selectedRfid]="selectedRfid" (close)="isModalOpen = false">
+</app-cattle-detail-modal>
+}

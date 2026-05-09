@@ -1,1 +1,157 @@
-<p>cattle-detail-modal works!</p>
+<div class="modal modal-blur fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1"
+    role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content shadow-lg border-0">
+
+            <div class="modal-header bg-light">
+                <h5 class="modal-title font-weight-bold text-dark">
+                    @switch (actionType) {
+                    @case ('ALTA') { <span class="status-dot status-blue me-2"></span> Nuevo Registro (SINIIGA) }
+                    @case ('SALUD') { <span class="status-dot status-orange me-2"></span> Evento Sanitario /
+                    Reproductivo }
+                    @case ('PESO') { <span class="status-dot status-green me-2"></span> Control de Biomasa (Pesaje) }
+                    }
+                </h5>
+                <button type="button" class="btn-close" (click)="closeModal()" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body p-4">
+                @switch (actionType) {
+
+                @case ('ALTA') {
+                <form [formGroup]="altaForm">
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label required">Arete Visual (SINIIGA)</label>
+                            <input type="text" class="form-control font-monospace text-uppercase"
+                                formControlName="rfid_siniiga" placeholder="Ej. 09-1234">
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label text-muted">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1 text-blue" width="24"
+                                    height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                    <path d="M7 8l10 8l-5 4l0 -16l5 4l-10 8" />
+                                </svg>
+                                Chip RFID (15 dígitos)
+                            </label>
+                            <input type="text" class="form-control font-monospace"
+                                [class.is-invalid]="altaForm.get('electronic_rfid')?.invalid && altaForm.get('electronic_rfid')?.touched"
+                                formControlName="electronic_rfid" placeholder="Ej. 984000123456789">
+
+                            @if (altaForm.get('electronic_rfid')?.errors?.['minlength']) {
+                            <div class="invalid-feedback">El chip electrónico debe tener exactamente 15 dígitos.</div>
+                            }
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label required">Modelo de Negocio</label>
+                            <select class="form-select" formControlName="business_model">
+                                <option value="CRIA">Cría (Cow-Calf)</option>
+                                <option value="ENGORDA">Engorda (Feedlot)</option>
+                            </select>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label required">Categoría</label>
+                            <select class="form-select" formControlName="category">
+                                <option value="VACA">Vaca</option>
+                                <option value="TORO">Toro Semental</option>
+                                <option value="NOVILLO">Novillo</option>
+                                <option value="BECERRA">Becerra (Recría)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label required">Peso Inicial (kg)</label>
+                            <input type="number" class="form-control" formControlName="current_weight_kg"
+                                placeholder="0.00">
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label required">Fecha de Nacimiento</label>
+                            <input type="date" class="form-control" formControlName="birth_date">
+                        </div>
+                    </div>
+                </form>
+                }
+
+                @case ('SALUD') {
+                <form [formGroup]="saludForm">
+                    <div class="mb-3">
+                        <label class="form-label">Arete Afectado</label>
+                        <input type="text" class="form-control font-monospace bg-light" formControlName="rfid_siniiga"
+                            readonly>
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label required">Tipo de Evento</label>
+                            <select class="form-select" formControlName="event_type">
+                                <option value="VACUNACION">Vacunación / Desparasitación</option>
+                                <option value="PALPACION">Palpación (Diagnóstico)</option>
+                                <option value="MONTA">Monta Observada / Celo</option>
+                                <option value="PARTO">Parto Registrado</option>
+                            </select>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label required">Fecha del Evento</label>
+                            <input type="date" class="form-control" formControlName="event_date">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Notas / Medicina Aplicada</label>
+                        <textarea class="form-control" formControlName="description" rows="3"
+                            placeholder="Ej. Se aplicó vitamina B12 (Lote 908)"></textarea>
+                    </div>
+                </form>
+                }
+
+                @case ('PESO') {
+                <form [formGroup]="pesoForm">
+                    <div class="mb-3">
+                        <label class="form-label">Arete a Pesar</label>
+                        <input type="text" class="form-control font-monospace bg-light" formControlName="rfid_siniiga"
+                            readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required">Nuevo Peso Registrado (kg)</label>
+                        <div class="input-group input-group-flat">
+                            <input type="number" class="form-control form-control-lg text-end font-weight-bold"
+                                formControlName="weight_kg" placeholder="0.00">
+                            <span class="input-group-text px-3">kg</span>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required">Fecha de Báscula</label>
+                        <input type="date" class="form-control" formControlName="log_date">
+                    </div>
+                </form>
+                }
+                }
+            </div>
+
+            <div class="modal-footer bg-light">
+                <a href="javascript:void(0)" class="btn btn-link link-secondary me-auto"
+                    (click)="closeModal()">Cancelar</a>
+
+                <button type="button" class="btn btn-primary" (click)="submitForm()" [disabled]="isSaving()">
+                    @if (isSaving()) {
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    Procesando...
+                    } @else {
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-device-floppy"
+                        width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2" />
+                        <path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" />
+                        <path d="M14 4l0 4l-6 0l0 -4" />
+                    </svg>
+                    Guardar Evento en Ledger
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
