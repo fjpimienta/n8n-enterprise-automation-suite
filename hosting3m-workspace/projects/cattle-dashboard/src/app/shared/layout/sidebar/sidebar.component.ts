@@ -1,7 +1,10 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule } from '@angular/router';
-import { LayoutService } from '../../services/layout.service';
+import { RouterModule, Router } from '@angular/router';
+import { LayoutService } from '@shared/services/layout.service';
+import { AuthService } from '@core/services/auth.service';
+import { ThemeService } from '@core/services/theme.service';
+
 
 @Component({
   selector: 'app-sidebar',
@@ -12,6 +15,9 @@ import { LayoutService } from '../../services/layout.service';
 })
 export class SidebarComponent {
   public layoutService = inject(LayoutService);
+  public authService = inject(AuthService);
+  public themeService = inject(ThemeService);
+  private router = inject(Router);
 
   isMobileMenuOpen = this.layoutService.mobileMenuOpen;
   isCollapsed = this.layoutService.sidebarCollapsed;
@@ -22,5 +28,10 @@ export class SidebarComponent {
 
   toggleCollapse() {
     this.layoutService.toggleSidebar();
+  }
+
+  logout() {
+    this.authService.logout();
+    this.router.navigate(['/login']);
   }
 }

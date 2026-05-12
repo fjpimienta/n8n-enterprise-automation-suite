@@ -1,14 +1,30 @@
 import { Component, inject } from '@angular/core';
-import { LayoutService } from '@shared/services/layout.service';
+import { CommonModule } from '@angular/common';
+import { RouterModule, Router } from '@angular/router'; // <-- Agregamos Router
+import { AuthService } from '@core/services/auth.service';
+import { ThemeService } from '@core/services/theme.service'; // <-- Agregamos ThemeService
 
 @Component({
   selector: 'app-header',
-  standalone: true, // Asegurar que sea standalone
-  imports: [],
-  templateUrl: './header.component.html',
-  styleUrl: './header.component.scss', // Mantener en singular
+  standalone: true,
+  imports: [CommonModule, RouterModule],
+  templateUrl: './header.component.html'
 })
 export class HeaderComponent {
-  // Inyección de dependencias para controlar el menú móvil[cite: 9]
-  public layoutService = inject(LayoutService);
+  public authService = inject(AuthService);
+  public themeService = inject(ThemeService); // <-- Inyectado
+  private router = inject(Router);            // <-- Inyectado
+
+  // MOCK: Simulamos el servicio de layout móvil
+  public layoutService = {
+    toggleMobileMenu: () => {
+      document.body.classList.toggle('offcanvas-active');
+    }
+  };
+
+  // 🛠️ Función para destruir la sesión
+  public logout() {
+    this.authService.logout();
+    this.router.navigate(['/login']);
+  }
 }

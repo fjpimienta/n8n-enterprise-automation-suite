@@ -10,7 +10,6 @@ export class CattleApiService {
 
     public isProcessing = signal<boolean>(false);
 
-    // Método auxiliar para headers (igual que en tu app de hotel)
     private getAuthHeaders() {
         const token = localStorage.getItem('authToken');
         console.warn('🕵️ Token actual enviado a n8n:', token);

@@ -8,9 +8,12 @@
 
         <div class="d-flex justify-content-between align-items-center mb-3 w-100 mt-3">
             <h1 class="navbar-brand d-none d-lg-block mb-0">
-                <a routerLink="/dashboard" class="text-decoration-none text-dark d-flex items-center gap-2">
-                    <span class="bg-emerald-700 text-white rounded-md p-1 font-bold text-xs">H3M</span>
-                    <span *ngIf="!isCollapsed()" class="tracking-tight">Ganadería</span>
+                <a routerLink="/dashboard" class="text-decoration-none text-dark d-flex align-items-center gap-2">
+                    <span class="bg-primary text-white rounded p-1 font-weight-bold"
+                        style="font-size: 0.8rem;">RSJ</span>
+                    @if (!isCollapsed()) {
+                    <span class="tracking-tight">Rancho San José</span>
+                    }
                 </a>
             </h1>
             <button class="btn btn-ghost-secondary btn-icon btn-sm d-none d-lg-block" (click)="toggleCollapse()"
@@ -25,17 +28,17 @@
         </div>
 
         <div class="collapse navbar-collapse show" id="sidebar-menu">
-            <ul class="navbar-nav pt-lg-3">
+            <ul class="navbar-nav pt-lg-3 h-100 d-flex flex-column">
+
                 <li class="nav-item">
-                    <div
-                        class="nav-link-title text-uppercase small text-muted mt-2 mb-1 ms-2 font-bold tracking-widest">
-                        Inteligencia</div>
+                    <div class="nav-link-title text-uppercase small text-muted mt-2 mb-1 ms-2 font-weight-bold">
+                        Inteligencia
+                    </div>
                 </li>
 
-                <!-- Panel Principal -->
                 <li class="nav-item">
                     <a class="nav-link" routerLink="/dashboard" routerLinkActive="active" (click)="closeMenu()">
-                        <span class="nav-link-icon text-emerald-600">
+                        <span class="nav-link-icon text-primary">
                             <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
                                 viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
                                 <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -45,14 +48,13 @@
                                 <path d="M14 4h6v4h-6z" />
                             </svg>
                         </span>
-                        <span class="nav-link-title font-medium text-stone-700">Panel de Control</span>
+                        <span class="nav-link-title font-weight-bold">Panel de Control</span>
                     </a>
                 </li>
 
-                <!-- Inventario -->
                 <li class="nav-item">
                     <a class="nav-link" routerLink="/inventario" routerLinkActive="active" (click)="closeMenu()">
-                        <span class="nav-link-icon text-stone-500">
+                        <span class="nav-link-icon text-muted">
                             <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
                                 viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
                                 <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -63,14 +65,13 @@
                                 <path d="M9 14l2 2l4 -4" />
                             </svg>
                         </span>
-                        <span class="nav-link-title font-medium text-stone-700">Censo Biológico</span>
+                        <span class="nav-link-title">Censo Biológico</span>
                     </a>
                 </li>
 
-                <!-- Pesajes -->
                 <li class="nav-item">
                     <a class="nav-link" routerLink="/pesajes" routerLinkActive="active" (click)="closeMenu()">
-                        <span class="nav-link-icon text-stone-500">
+                        <span class="nav-link-icon text-muted">
                             <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
                                 viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
                                 <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -82,20 +83,19 @@
                                 <path d="M3 11c6 0 5 -5 9 -5s3 5 9 5" />
                             </svg>
                         </span>
-                        <span class="nav-link-title font-medium text-stone-700">Mermas y Alertas</span>
+                        <span class="nav-link-title">Mermas y Alertas</span>
                     </a>
                 </li>
 
                 <li class="nav-item">
-                    <div
-                        class="nav-link-title text-uppercase small text-muted mt-4 mb-1 ms-2 font-bold tracking-widest">
-                        Configuración</div>
+                    <div class="nav-link-title text-uppercase small text-muted mt-4 mb-1 ms-2 font-weight-bold">
+                        Configuración
+                    </div>
                 </li>
 
-                <!-- Admin Dueños -->
                 <li class="nav-item">
                     <a class="nav-link" routerLink="/admin" routerLinkActive="active" (click)="closeMenu()">
-                        <span class="nav-link-icon text-stone-500">
+                        <span class="nav-link-icon text-muted">
                             <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
                                 viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
                                 <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -105,7 +105,49 @@
                                 <path d="M21 21v-2a4 4 0 0 0 -3 -3.85" />
                             </svg>
                         </span>
-                        <span class="nav-link-title font-medium text-stone-700">Socios Inversores</span>
+                        <span class="nav-link-title">Socios Inversores</span>
+                    </a>
+                </li>
+
+                <li class="nav-item mt-auto pt-3">
+                    <hr class="my-0">
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link cursor-pointer" (click)="themeService.toggleTheme()">
+                        <span class="nav-link-icon">
+                            @if (themeService.currentTheme() === 'dark') {
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
+                                viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                                <path d="M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" />
+                                <path
+                                    d="M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7" />
+                            </svg>
+                            } @else {
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
+                                viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                                <path
+                                    d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+                            </svg>
+                            }
+                        </span>
+                        <span class="nav-link-title">Cambiar a Modo {{ themeService.currentTheme() === 'dark' ? 'Claro'
+                            : 'Oscuro' }}</span>
+                    </a>
+                </li>
+
+                <li class="nav-item mb-4">
+                    <a class="nav-link cursor-pointer text-danger font-weight-bold" (click)="logout()">
+                        <span class="nav-link-icon text-danger">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
+                                viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                                <path
+                                    d="M14 8v-2a2 2 0 0 0 -2 -2h-7a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h7a2 2 0 0 0 2 -2v-2" />
+                                <path d="M9 12h12l-3 -3" />
+                                <path d="M18 15l3 -3" />
+                            </svg>
+                        </span>
+                        <span class="nav-link-title">Cerrar Sesión</span>
                     </a>
                 </li>
             </ul>
