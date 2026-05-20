@@ -58,29 +58,71 @@
                 </tr>
             </thead>
             <tbody>
-                @for (animal of cattleList(); track animal.rfid_tag) {
+                @if (isLoading()) {
                 <tr>
-                    <td class="font-monospace text-dark font-weight-bold">{{ animal.rfid_tag }}</td>
-                    <td class="text-muted">{{ animal.dueno }}</td>
-                    <td><span class="badge bg-secondary-lt">{{ animal.categoria }}</span></td>
+                    <td colspan="7" class="text-center py-5 text-muted">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <div class="mt-2">Sincronizando con Ledger Criptográfico...</div>
+                    </td>
+                </tr>
+                } @else if (cattleList().length === 0) {
+                <tr>
+                    <td colspan="7" class="text-center py-5 text-muted">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-database-off"
+                            width="48" height="48" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"
+                            fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                            <path
+                                d="M12.983 8.978c3.955 -.182 7.017 -1.446 7.017 -2.978c0 -1.657 -4.477 -3 -10 -3c-3.2 0 -6.047 .712 -7.761 1.74" />
+                            <path d="M4 10c0 1.228 2.302 2.27 5.518 2.766" />
+                            <path d="M4 14c0 1.657 4.477 3 10 3c1.7 0 3.303 -.212 4.694 -.58" />
+                            <path d="M4 18c0 1.657 4.477 3 10 3c2.736 0 5.215 -.548 7.005 -1.458" />
+                            <path d="M20 13.914v-9.914" />
+                            <path d="M3 3l18 18" />
+                        </svg>
+                        <div class="mt-2">No hay cabezas de ganado registradas en este rancho.</div>
+                    </td>
+                </tr>
+                } @else {
+                @for (animal of cattleList(); track animal.id) {
+                <tr>
                     <td>
-                        <span class="badge" [class.bg-blue-lt]="animal.modelo === 'CRIA'"
-                            [class.bg-green-lt]="animal.modelo === 'ENGORDA'">
-                            {{ animal.modelo }}
+                        <div class="font-monospace font-weight-bold fs-3">{{ animal.rfid_siniiga }}</div>
+
+                        @if (animal.electronic_rfid) {
+                        <div class="text-muted small mt-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-sm me-1" width="24" height="24"
+                                viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                <path d="M7 8l10 8l-5 4l0 -16l5 4l-10 8" />
+                            </svg>
+                            {{ animal.electronic_rfid }}
+                        </div>
+                        }
+                    </td>
+                    <td class="text-muted">{{ animal.tenant_name || 'Rancho San José' }}</td>
+                    <td><span class="badge bg-secondary-lt">{{ animal.category }}</span></td>
+                    <td>
+                        <span class="badge" [class.bg-blue-lt]="animal.business_model === 'CRIA'"
+                            [class.bg-green-lt]="animal.business_model === 'ENGORDA'">
+                            {{ animal.business_model }}
                         </span>
                     </td>
-                    <td class="text-end font-weight-bold">{{ animal.peso_actual }} kg</td>
-                    <td class="text-muted">{{ animal.estatus || animal.etapa || 'ACTIVO' }}</td>
+                    <td class="text-end font-weight-bold">{{ animal.current_weight_kg }} kg</td>
+                    <td class="text-muted">{{ animal.current_status }}</td>
 
                     <td class="text-end">
-                        <button class="btn btn-sm btn-ghost-success me-2" (click)="openModal('PESO', animal.rfid_tag)">
+                        <button class="btn btn-sm btn-ghost-success me-2"
+                            (click)="openModal('PESO', animal.rfid_siniiga, animal.id)">
                             Pesar
                         </button>
-                        <button class="btn btn-sm btn-ghost-warning" (click)="openModal('SALUD', animal.rfid_tag)">
+                        <button class="btn btn-sm btn-ghost-warning"
+                            (click)="openModal('SALUD', animal.rfid_siniiga, animal.id)">
                             Sanidad
                         </button>
                     </td>
                 </tr>
+                }
                 }
             </tbody>
         </table>
@@ -88,6 +130,7 @@
 </div>
 
 @if (isModalOpen) {
-<app-cattle-detail-modal [actionType]="modalAction" [selectedRfid]="selectedRfid" (close)="isModalOpen = false">
+<app-cattle-detail-modal [actionType]="modalAction" [selectedRfid]="selectedRfid" [livestockId]="selectedId"
+    (close)="onModalClose($event)">
 </app-cattle-detail-modal>
 }

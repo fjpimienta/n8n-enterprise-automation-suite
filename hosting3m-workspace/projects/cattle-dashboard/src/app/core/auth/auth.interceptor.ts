@@ -5,18 +5,6 @@ import { Router } from '@angular/router';
 import { environment } from '@env/environment';
 import { AuthService } from '../services/auth.service';
 
-function isOwnApiRequest(url: string): boolean {
-  try {
-    const apiBase = environment.apiUrl.replace(/\/$/, '');
-    const normalizedUrl = url.startsWith('http')
-      ? url
-      : `${window.location.origin}${url.startsWith('/') ? '' : '/'}${url}`;
-    return normalizedUrl.startsWith(apiBase);
-  } catch {
-    return false;
-  }
-}
-
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
   const router = inject(Router);
@@ -24,7 +12,11 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   let clonedReq = req;
   const token = authService.getStoredToken();
 
-  if (token && isOwnApiRequest(req.url)) {
+  // 🛠️ FIX: Validamos usando la variable correcta de tu entorno (apiUrl_crud)
+  const isApiRequest = req.url.startsWith(environment.apiUrl_crud);
+
+  // Si tenemos token y la URL va hacia nuestro n8n, inyectamos los headers
+  if (token && isApiRequest) {
     clonedReq = req.clone({
       setHeaders: { Authorization: `Bearer ${token}` }
     });
@@ -33,19 +25,15 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   return next(clonedReq).pipe(
     catchError((error: HttpErrorResponse) => {
       if (error.status === 401) {
-        // VALIDACIÓN DE FALSO POSITIVO:
-        // Verificamos criptográficamente el payload antes de destruir la sesión.
-        // Si getStoredToken() retorna null, el token realmente expiró.
         const currentToken = authService.getStoredToken();
-        
+
         if (!currentToken) {
-          // Expiración real confirmada: Ejecutamos logout seguro.
+          // El token realmente caducó
           authService.logout();
           router.navigate(['/login']);
         } else {
-          // Falso 401: El servidor falló (timeout/rate limit) pero la sesión es válida.
+          // El servidor rechazó, pero el token vive
           console.warn('⚠️ Tolerancia a fallos: Petición rechazada (401), pero el token local sigue vigente.');
-          // Omitimos el logout para no perjudicar la experiencia de usuario (UX).
         }
       }
       return throwError(() => error);
