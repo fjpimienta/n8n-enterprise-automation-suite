@@ -14,20 +14,20 @@ export class CattleApiService {
     public isProcessing = signal<boolean>(false);
 
     // 0. Obtener Inventario Completo (Censo Biológico)
+    // 0. Obtener Inventario Completo (Ahora lee de la Vista SQL con los KPIs integrados)
     public async getAllLivestock(): Promise<any[]> {
         const companyId = this.authService.currentUser()?.id_company;
         if (!companyId) throw new Error('Sesión inválida: No se detectó una empresa activa.');
 
         const res: any = await lastValueFrom(
-            this.http.post(`${this.apiUrl_crud}/cattle_livestock`, {
+            // 🚀 CAMBIO AQUÍ: Apuntamos a la vista vw_cattle_kpi en lugar de la tabla base
+            this.http.post(`${this.apiUrl_crud}/vw_cattle_kpi`, {
                 operation: 'getall'
-                // Si tu Meta-CRUD lo soporta, aquí podrías enviar: where: `tenant_id = ${companyId}`
             })
         );
 
         if (res && res.error) throw new Error(res.message);
 
-        // Filtramos localmente por seguridad multi-tenant (por si el backend envía todo)
         const data = res.data || [];
         return data.filter((animal: any) => animal.tenant_id === companyId);
     }

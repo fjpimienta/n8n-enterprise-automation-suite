@@ -21,28 +21,36 @@
                 @case ('ALTA') {
                 <form [formGroup]="altaForm">
                     <div class="row">
-                        <div class="col-6 mb-3">
-                            <label class="form-label required">Arete Visual (SINIIGA)</label>
-                            <input type="text" class="form-control font-monospace text-uppercase"
-                                formControlName="rfid_siniiga" placeholder="Ej. 09-1234">
-                        </div>
-                        <div class="col-6 mb-3">
-                            <label class="form-label text-muted">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1 text-blue" width="24"
-                                    height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
-                                    stroke-linecap="round" stroke-linejoin="round">
-                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                    <path d="M7 8l10 8l-5 4l0 -16l5 4l-10 8" />
-                                </svg>
-                                Chip RFID (15 dígitos)
-                            </label>
-                            <input type="text" class="form-control font-monospace"
-                                [class.is-invalid]="altaForm.get('electronic_rfid')?.invalid && altaForm.get('electronic_rfid')?.touched"
-                                formControlName="electronic_rfid" placeholder="Ej. 984000123456789">
+                        <div class="row">
+                            <div class="col-md-4 col-12 mb-3">
+                                <label class="form-label required">Arete (SINIIGA)</label>
+                                <input type="text" class="form-control font-monospace text-uppercase"
+                                    formControlName="rfid_siniiga" placeholder="S/N si no tiene">
+                            </div>
+                            <div class="col-md-4 col-12 mb-3">
+                                <label class="form-label text-orange">Nº a Fuego (Manejo)</label>
+                                <input type="text" class="form-control font-monospace text-uppercase border-orange-lt"
+                                    formControlName="numero_fuego" placeholder="Ej. 2012-9 P">
+                            </div>
+                            <div class="col-md-4 col-12 mb-3">
+                                <label class="form-label text-muted">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon me-1 text-blue" width="24"
+                                        height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+                                        fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                        <path d="M7 8l10 8l-5 4l0 -16l5 4l-10 8" />
+                                    </svg>
+                                    Chip RFID (15 dig)
+                                </label>
+                                <input type="text" class="form-control font-monospace"
+                                    [class.is-invalid]="altaForm.get('electronic_rfid')?.invalid && altaForm.get('electronic_rfid')?.touched"
+                                    formControlName="electronic_rfid" placeholder="Ej. 984000123456789">
 
-                            @if (altaForm.get('electronic_rfid')?.errors?.['minlength']) {
-                            <div class="invalid-feedback">El chip electrónico debe tener exactamente 15 dígitos.</div>
-                            }
+                                @if (altaForm.get('electronic_rfid')?.errors?.['minlength']) {
+                                <div class="invalid-feedback">El chip electrónico debe tener exactamente 15 dígitos.
+                                </div>
+                                }
+                            </div>
                         </div>
                     </div>
                     <div class="row">
@@ -98,6 +106,44 @@
                             <label class="form-label required">Fecha del Evento</label>
                             <input type="date" class="form-control" formControlName="event_date">
                         </div>
+                        @if (saludForm.get('event_type')?.value === 'PALPACION') {
+                        <div class="card bg-blue-lt border-0 mb-3 p-3">
+                            <div class="row">
+                                <div class="col-6 mb-3">
+                                    <label class="form-label font-weight-bold text-blue">Diagnóstico (DX)</label>
+                                    <select class="form-select" formControlName="dx_resultado">
+                                        <option value="VACIA">Vacía (V)</option>
+                                        <option value="PREÑADA">Preñada (P)</option>
+                                    </select>
+                                </div>
+                                @if (saludForm.get('dx_resultado')?.value === 'PREÑADA') {
+                                <div class="col-6 mb-3">
+                                    <label class="form-label text-blue">Días de Gestación</label>
+                                    <input type="number" class="form-control" formControlName="dx_dias_gestacion"
+                                        placeholder="Ej. 120">
+                                </div>
+                                }
+                            </div>
+                            <div class="row">
+                                <div class="col-6">
+                                    <label class="form-label text-blue">Condición Uterina</label>
+                                    <select class="form-select" formControlName="dx_condicion">
+                                        <option value="UNE">UNE (Útero Normal Estático)</option>
+                                        <option value="UT">UT (Útero Turgente)</option>
+                                        <option value="OTRO">Otro</option>
+                                    </select>
+                                </div>
+                                <div class="col-6">
+                                    <label class="form-label text-blue">Ovario</label>
+                                    <select class="form-select" formControlName="dx_ovario">
+                                        <option value="N/A">No Aplica / Normal</option>
+                                        <option value="OI">OI (Ovario Izquierdo)</option>
+                                        <option value="OD">OD (Ovario Derecho)</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        }
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Notas / Medicina Aplicada</label>
