@@ -8,6 +8,18 @@ Todos los cambios notables en esta suite de automatización serán documentados 
 
 ---
 
+## [1.3.0] - 2026-05-21
+
+### 🐄 Ganadería Digital: BI Engine & Clinical Metadata
+Integración oficial del módulo ERP para el sector agropecuario, enfocado en trazabilidad bovina, biometría y reproducción inteligente.
+
+* **SQL Analytical Engine:** Implementación de Vistas SQL (`vw_cattle_kpi`) para cómputo de Inteligencia de Negocios en el servidor (Server-Side Computation). Cálculo en tiempo real de la Ganancia Diaria de Peso (ADG), Días Abiertos y Tasa de Preñez sin sobrecargar el cliente Angular.
+* **Clinical JSONB Persistence:** Refactorización del MetaCRUD para admitir metadata veterinaria dinámica. Los eventos de palpación ahora guardan diagnósticos complejos (días de gestación, condición uterina, ovarios) en una estructura JSON anidada y blindada.
+* **Triple Identificación (Censo Biológico):** Soporte en base de datos e interfaz gráfica para manejar la realidad operativa del campo: Arete Visual (SINIIGA), Número a Fuego (Manejo Interno) y Chip RFID (15 dígitos).
+* **Reactividad Visual UI:** Implementación de Tabler UI con semáforos biológicos reactivos. El estado de salud ("Óptimo", "Preventivo", "Crítico") se auto-calcula cruzando el historial clínico con el tiempo transcurrido.
+
+---
+
 ## [1.2.0] - 2026-03-25
 
 ### 🛡️ Dashboard Resilience & Financial Engine (AdminHotel v0.11.0)

@@ -93,6 +93,13 @@ La interfaz pública de alta conversión del ecosistema Hosting3M (*Customer-Fac
 * **Reactive Lead Capture:** Integración directa de formularios con los webhooks de n8n mediante `HttpClient` para desencadenar notificaciones y embudos en tiempo real.
 * **AI Concierge:** Inyección nativa de la librería `@hosting3m/ui-chat` para pre-calificar visitantes 24/7.
 
+
+### 🐄 13. Ganadería Digital (Cattle Ops Dashboard)
+ERP agropecuario para trazabilidad bovina e inteligencia de producción.
+* **Server-Side BI:** Cálculo de KPIs complejos (ADG, Tasa de Preñez) directamente en Vistas de PostgreSQL (`vw_cattle_kpi`) para máximo rendimiento del frontend.
+* **Metadata Clínica:** Uso de JSONB dinámico para almacenar diagnósticos veterinarios detallados (Palpación, Condición Uterina) integrados al historial del animal.
+* **Identificación Resiliente:** Soporte nativo para lectura RFID, SINIIGA oficial y Números a Fuego internos.
+
 ---
 
 ## 📚 Documentación Técnica por Módulo
@@ -111,6 +118,7 @@ La interfaz pública de alta conversión del ecosistema Hosting3M (*Customer-Fac
 | `10`|**Shared AI Chat Lib**|Librería agnóstica de chat IA reutilizable con configuración dinámica.|`Angular 21` `InjectionToken`|[📖 Ver Docs](hosting3m-workspace/projects/ui-chat/README.md)|
 | `11` | **UI PDF Export Lib** | Librería de exportación de documentos PDF. | `jsPDF` `TypeScript` | [📖 Docs](hosting3m-workspace/projects/ui-pdf-export/README.md) |
 | `12` | **Hotel Eco-Website** | Landing page de alta conversión y captura de prospectos. | `Angular`, `Tailwind` | [📖 Docs](hosting3m-workspace/projects/hotel-website/README.md) |
+| `13` | **Ganadería Digital** | ERP especializado en trazabilidad bovina, biometría y reproducción. | `Angular 21` `SQL Views` `n8n` | [📖 Docs](hosting3m-workspace/projects/cattle-dashboard/README.md) |
 
 ---
 
@@ -127,6 +135,14 @@ La interfaz pública de alta conversión del ecosistema Hosting3M (*Customer-Fac
 * [ ] **Huéspedes CRM:** Segmentación eco-boutique y analítica de comportamiento.
 * [ ] **Eco-Metrics:** Módulo de sustentabilidad para medición de huella hídrica y eléctrica.
 * [ ] **Conversion & Sales:** A/B Testing en la landing page y conexión con pasarelas de pago directo (Stripe/PayPal).
+
+### 🏗️ En Progreso / Backlog ( Q3 2026)
+* [ ] **Huéspedes CRM:** Segmentación eco-boutique y analítica de comportamiento.
+* [ ] **Eco-Metrics:** Módulo de sustentabilidad para medición de huella hídrica y eléctrica.
+* [ ] **Conversion & Sales:** A/B Testing en la landing page y conexión con pasarelas de pago directo (Stripe/PayPal).
+* [ ] **WhatsApp Cattle Agent (Agro):** Agente IA con transcripción de audio (Whisper) para registrar eventos sanitarios y partos directamente desde el campo mediante notas de voz.
+* [ ] **Agro-Finance & IoT:** Módulo de gastos operativos (`cattle_expenses`) para cálculo de ROI por biomasa e integración de telemetría mediante básculas RFID Bluetooth/Serial.
+
 ---
 
 ## 📦 Authors
