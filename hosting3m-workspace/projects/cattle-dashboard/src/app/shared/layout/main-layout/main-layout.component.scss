@@ -1,0 +1,19 @@
+/* Espaciado responsivo del dashboard[cite: 6] */
+.page-wrapper {
+    margin-left: 16rem;
+    transition: margin-left 0.3s ease-in-out;
+    min-height: 100vh;
+    padding-top: 1rem;
+}
+
+.page-wrapper.expanded-content {
+    margin-left: 5rem !important;
+}
+
+@media (max-width: 991.98px) {
+
+    .page-wrapper,
+    .page-wrapper.expanded-content {
+        margin-left: 0 !important;
+    }
+}

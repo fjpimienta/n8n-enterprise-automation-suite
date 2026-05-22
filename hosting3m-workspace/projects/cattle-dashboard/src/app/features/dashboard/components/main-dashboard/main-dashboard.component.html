@@ -1,0 +1,149 @@
+<div class="page-header d-print-none mb-4">
+    <div class="row align-items-center">
+        <div class="col">
+            <div class="page-pretitle text-uppercase font-weight-bold text-muted">Resumen Ejecutivo</div>
+            <h2 class="page-title text-dark font-weight-bold" style="font-size: 1.5rem;">Capitalización y Rendimiento
+            </h2>
+        </div>
+    </div>
+</div>
+
+<div class="row row-cards mb-4">
+    <div class="col-sm-6 col-xl-3">
+        <div class="card shadow-sm border-0 bg-primary-lt">
+            <div class="card-body">
+                <div class="subheader text-primary font-weight-bold">Valor Estimado del Hato</div>
+                <div class="h1 mb-1 text-primary">{{ capitalizacionTotal() | currency:'MXN':'symbol-narrow':'1.0-0' }}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <div class="subheader font-weight-bold">Biomasa Total</div>
+                <div class="h1 mb-1">{{ biomasaTotal() | number:'1.0-0' }} <span class="h4 text-muted">kg</span></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card shadow-sm border-0">
+            <div class="card-body">
+                <div class="subheader font-weight-bold">Conversión Global (ADG)</div>
+                <div class="h1 mb-1">{{ averageAdg() }} <span class="h4 text-muted">kg/día</span></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+        <div class="card shadow-sm border-0" [class.bg-danger-lt]="criticalAlerts() > 0">
+            <div class="card-body">
+                <div class="subheader font-weight-bold" [class.text-danger]="criticalAlerts() > 0">Alertas Críticas
+                </div>
+                <div class="h1 mb-1" [class.text-danger]="criticalAlerts() > 0">{{ criticalAlerts() }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white">
+                <h3 class="card-title text-dark font-weight-bold">Semáforo Biológico del Hato</h3>
+            </div>
+            <div class="card-body d-flex align-items-center justify-content-center">
+                <apx-chart [series]="$any(healthSeries)" [chart]="$any(chartOptions.donut)"
+                    [labels]="$any(['Óptimo', 'Preventivo', 'Crítico'])" [colors]="$any(chartOptions.colors.health)"
+                    [dataLabels]="$any({enabled: true})" [legend]="$any({position: 'bottom'})">
+                </apx-chart>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header bg-white">
+                <h3 class="card-title text-dark font-weight-bold">Distribución de Biomasa (kg)</h3>
+            </div>
+            <div class="card-body">
+                <apx-chart [series]="$any(biomasaSeries)" [chart]="$any(chartOptions.bar)" [xaxis]="$any(biomasaX)"
+                    [colors]="$any(chartOptions.colors.primary)" [plotOptions]="$any(chartOptions.plotOptions)"
+                    [dataLabels]="$any({enabled: false})">
+                </apx-chart>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card shadow-sm border-0">
+            <div class="card-header bg-white">
+                <h3 class="card-title text-dark font-weight-bold">Evolución Histórica de Biomasa (Últimos 6 Meses)</h3>
+            </div>
+            <div class="card-body">
+                <apx-chart [series]="$any(biomassTrendSeries)" [chart]="$any(chartOptions.area)"
+                    [xaxis]="$any(biomassTrendX)" [colors]="$any(chartOptions.colors.trend)"
+                    [stroke]="$any(chartOptions.area.stroke)" [fill]="$any(chartOptions.area.fill)"
+                    [dataLabels]="$any(chartOptions.area.dataLabels)">
+                </apx-chart>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-header bg-white">
+        <ul class="nav nav-tabs card-header-tabs">
+            <li class="nav-item">
+                <a class="nav-link cursor-pointer" [class.active]="activeTab() === 'TODOS'"
+                    (click)="setTab('TODOS')">Vista Global</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link cursor-pointer text-blue" [class.active]="activeTab() === 'CRIA'"
+                    (click)="setTab('CRIA')">Módulo de Cría</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link cursor-pointer text-green" [class.active]="activeTab() === 'ENGORDA'"
+                    (click)="setTab('ENGORDA')">Módulo de Engorda</a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table card-table table-vcenter">
+            <thead>
+                <tr>
+                    <th>Arete</th>
+                    <th>Estatus / Etapa</th>
+                    <th class="text-end">Peso</th>
+                    <th class="text-end">Salud</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (item of filteredCattleList(); track item.rfid_tag) {
+                <tr>
+                    <td>
+                        <span class="badge" [class.bg-blue-lt]="item.modelo === 'CRIA'"
+                            [class.bg-green-lt]="item.modelo === 'ENGORDA'">
+                            {{ item.modelo }}
+                        </span>
+                        <div class="font-monospace mt-1">{{ item.rfid_tag }}</div>
+                    </td>
+                    <td>{{ item.estatus_salud }}</td>
+                    <td class="text-end font-weight-bold">{{ item.peso_actual }} kg</td>
+                    <td>
+                        <span class="status" [class.status-green]="item.estatus_salud === 'ÓPTIMO'"
+                            [class.status-orange]="item.estatus_salud === 'PREVENTIVO'"
+                            [class.status-red]="item.estatus_salud === 'CRÍTICO'">
+                            <span class="status-dot status-dot-animated"></span> {{ item.estatus_salud }}
+                        </span>
+                    </td>
+                    <td class="text-muted text-sm">{{ item.proximo_evento }}</td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

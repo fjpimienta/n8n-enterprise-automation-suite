@@ -1,0 +1,33 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../out-tsc/app",
+    "types": [],
+    "paths": {
+      "ui-chat": [
+        "projects/ui-chat/src/public-api.ts"
+      ],
+      "ui-pdf-export": [
+        "projects/ui-pdf-export/src/public-api.ts"
+      ],
+      "@core/*": [
+        "projects/cattle-dashboard/src/app/core/*"
+      ],
+      "@shared/*": [
+        "projects/cattle-dashboard/src/app/shared/*"
+      ],
+      "@features/*": [
+        "projects/cattle-dashboard/src/app/features/*"
+      ],
+      "@env/*": [
+        "projects/cattle-dashboard/src/environments/*"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "src/**/*.spec.ts"
+  ]
+}
