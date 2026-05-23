@@ -2,11 +2,12 @@ import { Component, inject, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CattleApiService } from '@core/services/cattle-api.service';
 import { NgApexchartsModule } from 'ng-apexcharts';
+import { ReproductiveDashboardComponent } from '../reproductive-dashboard/reproductive-dashboard.component';
 
 @Component({
   selector: 'app-main-dashboard',
   standalone: true,
-  imports: [CommonModule, NgApexchartsModule],
+  imports: [CommonModule, NgApexchartsModule, ReproductiveDashboardComponent],
   templateUrl: './main-dashboard.component.html'
 })
 export class MainDashboardComponent implements OnInit {
@@ -17,7 +18,7 @@ export class MainDashboardComponent implements OnInit {
 
   public cattleList = signal<any[]>([]);
   public isLoading = signal<boolean>(true);
-  public activeTab = signal<'TODOS' | 'CRIA' | 'ENGORDA'>('TODOS');
+  public activeTab = signal<'CRIA' | 'ENGORDA'>('CRIA');
 
   async ngOnInit() {
     await this.loadDashboardData();
@@ -64,9 +65,7 @@ export class MainDashboardComponent implements OnInit {
   // Lógica de Filtrado (Reactiva)
   public filteredCattleList = computed(() => {
     const currentTab = this.activeTab();
-    const list = this.cattleList();
-    if (currentTab === 'TODOS') return list;
-    return list.filter(animal => animal.modelo === currentTab);
+    return this.cattleList().filter(animal => animal.modelo === currentTab);
   });
 
   // ==========================================
@@ -107,7 +106,7 @@ export class MainDashboardComponent implements OnInit {
     };
   }
 
-  public setTab(tab: 'TODOS' | 'CRIA' | 'ENGORDA') {
+  public setTab(tab: 'CRIA' | 'ENGORDA') {
     this.activeTab.set(tab);
   }
 
