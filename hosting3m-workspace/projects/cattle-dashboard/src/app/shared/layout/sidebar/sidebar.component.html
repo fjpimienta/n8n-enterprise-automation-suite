@@ -1,4 +1,4 @@
-<aside class="navbar navbar-vertical navbar-expand-lg navbar-light" [class.show-mobile]="isMobileMenuOpen()"
+<aside class="navbar navbar-vertical navbar-expand-lg" [class.show-mobile]="isMobileMenuOpen()"
     [class.collapsed]="isCollapsed()">
     <div class="container-fluid">
         <button class="navbar-toggler d-lg-none d-flex align-items-center border-0 bg-transparent ps-0 mb-4 w-100"
@@ -8,7 +8,7 @@
 
         <div class="d-flex justify-content-between align-items-center mb-3 w-100 mt-3">
             <h1 class="navbar-brand d-none d-lg-block mb-0">
-                <a routerLink="/dashboard" class="text-decoration-none text-dark d-flex align-items-center gap-2">
+                <a routerLink="/dashboard" class="text-decoration-none d-flex align-items-center gap-2">
                     <span class="bg-primary text-white rounded p-1 font-weight-bold"
                         style="font-size: 0.8rem;">RSJ</span>
                     @if (!isCollapsed()) {
