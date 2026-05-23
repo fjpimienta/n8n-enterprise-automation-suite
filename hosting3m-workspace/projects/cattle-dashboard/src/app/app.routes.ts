@@ -17,6 +17,12 @@ export const routes: Routes = [
         loadComponent: () => import('./features/dashboard/components/main-dashboard/main-dashboard.component').then(m => m.MainDashboardComponent)
       },
       {
+        path: 'dashboard',
+        children: [
+          { path: 'reproductivo', loadComponent: () => import('./features/dashboard/components/reproductive-dashboard/reproductive-dashboard.component').then(m => m.ReproductiveDashboardComponent) }
+        ]
+      },
+      {
         path: 'inventario',
         loadComponent: () => import('./features/inventory/components/cattle-list/cattle-list.component').then(m => m.CattleListComponent)
       },
