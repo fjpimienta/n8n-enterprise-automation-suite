@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CattleApiService } from '@core/services/cattle-api.service';
 import { NgApexchartsModule } from 'ng-apexcharts';
@@ -8,132 +8,93 @@ import { ReproductiveDashboardComponent } from '../reproductive-dashboard/reprod
   selector: 'app-main-dashboard',
   standalone: true,
   imports: [CommonModule, NgApexchartsModule, ReproductiveDashboardComponent],
-  templateUrl: './main-dashboard.component.html'
+  templateUrl: './main-dashboard.component.html',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class MainDashboardComponent implements OnInit {
   private cattleApi = inject(CattleApiService);
 
-  // Variables de Negocio
-  public PRECIO_KILO = 65.00; // Precio de mercado (Puedes cambiarlo después a una configuración de la DB)
+  public PRECIO_KILO = 65.00;
 
   public cattleList = signal<any[]>([]);
   public isLoading = signal<boolean>(true);
+
+  // Controladores de Navegación
   public activeTab = signal<'CRIA' | 'ENGORDA'>('CRIA');
+  public activeSubTab = signal<'RESUMEN' | 'INVENTARIO'>('RESUMEN');
+
+  // Controladores de Paginación
+  public currentPage = signal(1);
+  public pageSize = signal(10);
 
   async ngOnInit() {
     await this.loadDashboardData();
   }
 
-  // 🚀 Descarga y procesa la data real de PostgreSQL
   async loadDashboardData() {
     this.isLoading.set(true);
     try {
       const rawData = await this.cattleApi.getAllLivestock();
-
-      // Mapeamos los datos de la vista SQL (vw_cattle_kpi) al formato visual del Dashboard
-      const mappedData = rawData.map(animal => {
-
-        // Regla de Negocio: Semáforo de Salud basado en días de abandono
-        let salud = 'ÓPTIMO';
-        const diasSinRevision = animal.days_since_last_event;
-
-        if (diasSinRevision === null || diasSinRevision > 90) {
-          salud = 'CRÍTICO'; // Más de 3 meses sin checar
-        } else if (diasSinRevision > 45) {
-          salud = 'PREVENTIVO'; // Alerta amarilla
-        }
-
-        return {
-          ...animal,
-          rfid_tag: animal.rfid_siniiga,
-          modelo: animal.business_model,
-          peso_actual: Number(animal.current_weight_kg) || 0,
-          ganancia_diaria_kg: Number(animal.adg_lifetime_kg) || 0,
-          estatus_salud: salud,
-          proximo_evento: animal.last_palpation_result ? `DX: ${animal.last_palpation_result}` : 'Sin DX Reciente'
-        };
-      });
-
-      this.cattleList.set(mappedData);
+      this.cattleList.set(rawData);
     } catch (error) {
-      console.error('Error cargando KPIs:', error);
+      console.error('Error en el Data Pipeline de Ganadería:', error);
     } finally {
       this.isLoading.set(false);
     }
   }
 
-  // Lógica de Filtrado (Reactiva)
   public filteredCattleList = computed(() => {
     const currentTab = this.activeTab();
-    return this.cattleList().filter(animal => animal.modelo === currentTab);
+    return this.cattleList().filter(animal => animal.business_model === currentTab);
   });
 
-  // ==========================================
-  // KPIs (Matemáticas en tiempo real)
-  // ==========================================
-  public biomasaTotal = computed(() => this.filteredCattleList().reduce((acc, curr) => acc + curr.peso_actual, 0));
-  public capitalizacionTotal = computed(() => this.biomasaTotal() * this.PRECIO_KILO);
-  public criticalAlerts = computed(() => this.filteredCattleList().filter(a => a.estatus_salud === 'CRÍTICO').length);
-  public averageAdg = computed(() => {
-    const list = this.filteredCattleList();
-    return list.length ? (list.reduce((acc, curr) => acc + curr.ganancia_diaria_kg, 0) / list.length).toFixed(2) : '0.00';
+  public totalPages = computed(() => Math.ceil(this.filteredCattleList().length / this.pageSize()) || 1);
+
+  public showingStart = computed(() => {
+    if (this.filteredCattleList().length === 0) return 0;
+    return ((this.currentPage() - 1) * this.pageSize()) + 1;
   });
 
-  // ==========================================
-  // CONFIGURACIÓN DE GRÁFICAS (SERIES REACTIVAS)
-  // ==========================================
-  public get healthSeries(): any {
-    const list = this.filteredCattleList();
-    return [
-      list.filter(a => a.estatus_salud === 'ÓPTIMO').length,
-      list.filter(a => a.estatus_salud === 'PREVENTIVO').length,
-      list.filter(a => a.estatus_salud === 'CRÍTICO').length
-    ];
-  }
+  public showingEnd = computed(() => Math.min(this.currentPage() * this.pageSize(), this.filteredCattleList().length));
 
-  public get biomasaSeries(): any {
-    return [{
-      name: 'Peso (kg)',
-      data: this.filteredCattleList().map(a => a.peso_actual)
-    }];
-  }
-
-  public get biomasaX(): any {
-    return {
-      categories: this.filteredCattleList().map(a => a.rfid_tag),
-      labels: { show: false },
-      axisBorder: { show: false }
-    };
-  }
+  public paginatedCattleList = computed(() => {
+    const startIndex = (this.currentPage() - 1) * this.pageSize();
+    return this.filteredCattleList().slice(startIndex, startIndex + this.pageSize());
+  });
 
   public setTab(tab: 'CRIA' | 'ENGORDA') {
     this.activeTab.set(tab);
+    this.activeSubTab.set('RESUMEN');
+    this.currentPage.set(1);
   }
 
-  // ==========================================
-  // CONFIGURACIÓN DE TENDENCIAS (MOCK DATA TEMPORAL)
-  // ==========================================
-  public get biomassTrendSeries(): any {
-    return [{
-      name: 'Biomasa Total (kg)',
-      data: [3200, 3450, 3600, 3750, 3890, 3985] // Próxima iteración: leeremos el histórico
-    }];
+  public setSubTab(subTab: 'RESUMEN' | 'INVENTARIO') {
+    this.activeSubTab.set(subTab);
+    this.currentPage.set(1);
   }
 
-  public get biomassTrendX(): any {
-    return { categories: ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun'], tooltip: { enabled: true } };
+  public changePageSize(event: Event) {
+    const size = Number((event.target as HTMLSelectElement).value);
+    this.pageSize.set(size);
+    this.currentPage.set(1);
   }
+
+  public changePage(delta: number) {
+    const newPage = this.currentPage() + delta;
+    if (newPage >= 1 && newPage <= this.totalPages()) {
+      this.currentPage.set(newPage);
+    }
+  }
+
+  public biomasaTotal = computed(() => {
+    return this.filteredCattleList().reduce((acc, curr) => acc + Number(curr.current_weight_kg || 0), 0);
+  });
+
+  public capitalizacionTotal = computed(() => {
+    return this.biomasaTotal() * this.PRECIO_KILO;
+  });
 
   public chartOptions: any = {
-    donut: { type: 'donut', height: 280, animations: { enabled: true } },
-    bar: { type: 'bar', height: 280, toolbar: { show: false } },
-    area: {
-      type: 'area', height: 300, toolbar: { show: false },
-      stroke: { curve: 'smooth', width: 2 },
-      fill: { type: 'gradient', gradient: { shadeIntensity: 1, opacityFrom: 0.7, opacityTo: 0.2, stops: [0, 90, 100] } },
-      dataLabels: { enabled: false }
-    },
-    plotOptions: { bar: { borderRadius: 4, columnWidth: '60%', dataLabels: { position: 'top' } } },
-    colors: { health: ['#2fb344', '#f76707', '#d63939'], primary: ['#206bc4'], trend: ['#206bc4'] }
+    donut: { type: 'donut', height: 280, animations: { enabled: true } }
   };
 }
