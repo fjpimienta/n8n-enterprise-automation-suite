@@ -16,8 +16,9 @@
 
         box-shadow: 0 0 50px rgba(0, 0, 0, 0.5) !important;
         border-right: none;
-        background-color: white;
-        /* Asegurar que no sea transparente */
+
+        /* 🚀 FIX: Variable nativa en lugar del 'white' quemado */
+        background-color: var(--tblr-bg-surface) !important;
     }
 
     /* 2. ESTADO VISIBLE (Cuando isMobileMenuOpen es true) */
