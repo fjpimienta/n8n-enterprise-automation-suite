@@ -1,14 +1,5 @@
-<div class="page-header d-print-none mb-4">
-    <div class="row align-items-center">
-        <div class="col">
-            <h2 class="page-title text-dark font-weight-bold">Dashboard Reproductivo</h2>
-            <div class="text-muted">Gestión de Vientres y Diagnóstico de Gestación</div>
-        </div>
-    </div>
-</div>
-
 @if (data().length === 0) {
-<div class="text-center py-5 border rounded bg-light">
+<div class="text-center py-5 border rounded shadow-sm">
     <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-vaccine text-muted mb-3" width="48"
         height="48" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round"
         stroke-linejoin="round">
@@ -27,18 +18,18 @@
 } @else {
 <div class="row row-cards">
     <div class="col-md-4">
-        <div class="card shadow-sm border-0 bg-primary-lt">
-            <div class="card-body text-center">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body text-center d-flex flex-column justify-content-center">
                 <div class="subheader mb-2">Tasa de Preñez Global</div>
-                <div class="h1 mb-0 text-primary">{{ stats().tasa }}%</div>
-                <small class="text-muted">{{ stats().prenadas }} de {{ stats().total }} vientres preñados</small>
+                <div class="h1 mb-0 text-primary" style="font-size: 3rem;">{{ stats().tasa }}%</div>
+                <small class="text-muted mt-2">{{ stats().prenadas }} de {{ stats().total }} vientres preñados</small>
             </div>
         </div>
     </div>
 
     <div class="col-md-8">
-        <div class="card shadow-sm border-0">
-            <div class="card-header">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-header border-bottom-0 pb-0">
                 <h3 class="card-title">Distribución del Hato (Gestación)</h3>
             </div>
             <div class="card-body">
@@ -51,11 +42,41 @@
 </div>
 
 <div class="card mt-4 shadow-sm border-0">
-    <div class="card-header">
-        <h3 class="card-title">Vientres con Diagnóstico</h3>
+    <div class="card-header" style="cursor: pointer;" (click)="toggleTable()">
+        <h3 class="card-title mb-0">Auditoría de Vientres con Diagnóstico</h3>
+        <div class="card-actions ms-auto">
+            <span class="text-muted d-flex align-items-center">
+                {{ isTableCollapsed() ? 'Mostrar Tabla' : 'Ocultar Tabla' }}
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon ms-2"
+                    [style.transform]="isTableCollapsed() ? 'rotate(0deg)' : 'rotate(180deg)'"
+                    [style.transition]="'transform 0.3s ease'" width="24" height="24" viewBox="0 0 24 24"
+                    stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                    <path d="M6 9l6 6l6 -6" />
+                </svg>
+            </span>
+        </div>
     </div>
-    <div class="table-responsive">
-        <table class="table table-vcenter">
+
+    @if (!isTableCollapsed()) {
+    <div class="card-body border-bottom py-3">
+        <div class="d-flex align-items-center">
+            <div class="text-muted">
+                Mostrar
+                <div class="mx-2 d-inline-block">
+                    <select class="form-select form-select-sm" [value]="pageSize()" (change)="changePageSize($event)">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                    </select>
+                </div>
+                registros clínicos
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive border-top">
+        <table class="table table-vcenter table-hover mb-0">
             <thead>
                 <tr>
                     <th>Arete (SINIIGA)</th>
@@ -65,9 +86,11 @@
                 </tr>
             </thead>
             <tbody>
-                @for (animal of data(); track animal.id) {
+                @for (animal of paginatedData(); track animal.id) {
                 <tr>
-                    <td><strong>{{ animal.rfid_siniiga }}</strong></td>
+                    <td>
+                        <div class="font-monospace text-primary font-weight-bold">{{ animal.rfid_siniiga }}</div>
+                    </td>
                     <td>
                         <span class="badge" [class.bg-green-lt]="animal.last_palpation_result === 'PREÑADA'"
                             [class.bg-danger-lt]="animal.last_palpation_result === 'VACIA'">
@@ -75,11 +98,28 @@
                         </span>
                     </td>
                     <td>{{ animal.current_gestation_days || 0 }} días</td>
-                    <td>{{ animal.condicion_utero || 'N/A' }}</td>
+                    <td class="text-muted">{{ animal.condicion_utero || 'N/A' }}</td>
                 </tr>
                 }
             </tbody>
         </table>
     </div>
+
+    <div class="card-footer d-flex align-items-center border-top">
+        <p class="m-0 text-muted">
+            Mostrando <span>{{ showingStart() }}</span> a <span>{{ showingEnd() }}</span>
+            de <span>{{ data().length }}</span> vientres bajo control
+        </p>
+        <ul class="pagination m-0 ms-auto">
+            <li class="page-item" [class.disabled]="currentPage() === 1">
+                <a class="page-link" (click)="changePage(-1)" style="cursor: pointer;">Ant</a>
+            </li>
+            <li class="page-item active"><a class="page-link">{{ currentPage() }} de {{ totalPages() }}</a></li>
+            <li class="page-item" [class.disabled]="currentPage() === totalPages()">
+                <a class="page-link" (click)="changePage(1)" style="cursor: pointer;">Sig</a>
+            </li>
+        </ul>
+    </div>
+    }
 </div>
 }
