@@ -2,35 +2,26 @@
     <div class="row align-items-center">
         <div class="col">
             <div class="page-pretitle text-uppercase font-weight-bold text-muted">Resumen Ejecutivo</div>
-            <h2 class="page-title text-dark font-weight-bold" style="font-size: 1.5rem;">Capitalización y Rendimiento
-            </h2>
+            <h2 class="page-title font-weight-bold" style="font-size: 1.5rem;">Capitalización y Rendimiento</h2>
         </div>
 
         <div class="col-auto ms-auto d-print-none">
             <div class="btn-group" role="group">
                 <input type="radio" class="btn-check" name="btn-radio-tab" id="tab-cria" autocomplete="off"
                     [checked]="activeTab() === 'CRIA'" (click)="setTab('CRIA')">
-                <label for="tab-cria" class="btn btn-outline-primary">Módulo de Cría</label>
+                <label for="tab-cria" class="btn btn-outline-primary font-weight-bold">Módulo de Cría</label>
 
                 <input type="radio" class="btn-check" name="btn-radio-tab" id="tab-engorda" autocomplete="off"
                     [checked]="activeTab() === 'ENGORDA'" (click)="setTab('ENGORDA')">
-                <label for="tab-engorda" class="btn btn-outline-primary">Módulo de Engorda</label>
+                <label for="tab-engorda" class="btn btn-outline-primary font-weight-bold">Módulo de Engorda</label>
             </div>
         </div>
     </div>
 </div>
 
-@if (activeTab() === 'CRIA') {
-<div class="row mt-4">
-    <div class="col-12">
-        <app-reproductive-dashboard [cattleData]="filteredCattleList()"></app-reproductive-dashboard>
-    </div>
-</div>
-}
-
 <div class="row row-cards mb-4">
-    <div class="col-sm-6 col-xl-3">
-        <div class="card shadow-sm border-0 bg-primary-lt">
+    <div class="col-sm-6 col-xl-4">
+        <div class="card shadow-sm border-0">
             <div class="card-body">
                 <div class="subheader text-primary font-weight-bold">Valor Estimado del Hato</div>
                 <div class="h1 mb-1 text-primary">{{ capitalizacionTotal() | currency:'MXN':'symbol-narrow':'1.0-0' }}
@@ -38,7 +29,7 @@
             </div>
         </div>
     </div>
-    <div class="col-sm-6 col-xl-3">
+    <div class="col-sm-6 col-xl-4">
         <div class="card shadow-sm border-0">
             <div class="card-body">
                 <div class="subheader font-weight-bold">Biomasa Total</div>
@@ -46,116 +37,145 @@
             </div>
         </div>
     </div>
-    <div class="col-sm-6 col-xl-3">
+    <div class="col-sm-6 col-xl-4">
         <div class="card shadow-sm border-0">
             <div class="card-body">
-                <div class="subheader font-weight-bold">Conversión Global (ADG)</div>
-                <div class="h1 mb-1">{{ averageAdg() }} <span class="h4 text-muted">kg/día</span></div>
+                <div class="subheader font-weight-bold">Cabezas Totales Activas</div>
+                <div class="h1 mb-1">{{ filteredCattleList().length }}</div>
             </div>
         </div>
     </div>
-    <div class="col-sm-6 col-xl-3">
-        <div class="card shadow-sm border-0" [class.bg-danger-lt]="criticalAlerts() > 0">
-            <div class="card-body">
-                <div class="subheader font-weight-bold" [class.text-danger]="criticalAlerts() > 0">Alertas Críticas
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-header border-bottom-0 pb-0">
+        <ul class="nav nav-tabs card-header-tabs">
+            <li class="nav-item">
+                <a class="nav-link font-weight-bold" [class.active]="activeSubTab() === 'RESUMEN'"
+                    (click)="setSubTab('RESUMEN')" style="cursor: pointer;">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24"
+                        stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M4 19l16 0" />
+                        <path d="M4 15l4 -6l4 2l4 -5l4 4" />
+                    </svg>
+                    Resumen y Gráficas
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link font-weight-bold" [class.active]="activeSubTab() === 'INVENTARIO'"
+                    (click)="setSubTab('INVENTARIO')" style="cursor: pointer;">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24"
+                        stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" />
+                        <path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z" />
+                    </svg>
+                    Inventario Detallado ({{ filteredCattleList().length }})
+                </a>
+            </li>
+        </ul>
+    </div>
+
+    <div class="card-body p-0">
+        @if (activeSubTab() === 'RESUMEN') {
+        <div class="p-4 rounded-bottom">
+            @if (activeTab() === 'CRIA') {
+            <app-reproductive-dashboard [cattleData]="filteredCattleList()"></app-reproductive-dashboard>
+            }
+            @if (activeTab() === 'ENGORDA') {
+            <div class="text-center py-5 border rounded">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-chart-line text-muted mb-3"
+                    width="48" height="48" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                    <path d="M4 19l16 0" />
+                    <path d="M4 15l4 -6l4 2l4 -5l4 4" />
+                </svg>
+                <h3 class="text-muted">Rendimiento de Engorda</h3>
+                <p class="text-muted">Las gráficas de conversión alimenticia, curvas de crecimiento y ADG están en
+                    desarrollo.</p>
+            </div>
+            }
+        </div>
+        }
+
+        @if (activeSubTab() === 'INVENTARIO') {
+        <div class="card-body border-bottom py-3">
+            <div class="d-flex align-items-center">
+                <div class="text-muted">
+                    Mostrar
+                    <div class="mx-2 d-inline-block">
+                        <select class="form-select form-select-sm" [value]="pageSize()"
+                            (change)="changePageSize($event)">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                        </select>
+                    </div>
+                    registros por página
                 </div>
-                <div class="h1 mb-1" [class.text-danger]="criticalAlerts() > 0">{{ criticalAlerts() }}</div>
             </div>
         </div>
-    </div>
-</div>
 
-<div class="row mb-4">
-    <div class="col-lg-6">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-header bg-white">
-                <h3 class="card-title text-dark font-weight-bold">Semáforo Biológico del Hato</h3>
-            </div>
-            <div class="card-body d-flex align-items-center justify-content-center">
-                <apx-chart [series]="$any(healthSeries)" [chart]="$any(chartOptions.donut)"
-                    [labels]="$any(['Óptimo', 'Preventivo', 'Crítico'])" [colors]="$any(chartOptions.colors.health)"
-                    [dataLabels]="$any({enabled: true})" [legend]="$any({position: 'bottom'})">
-                </apx-chart>
-            </div>
+        <div class="table-responsive">
+            <table class="table card-table table-vcenter text-nowrap datatable table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Arete SINIIGA</th>
+                        <th>Nº Fuego</th>
+                        <th>Categoría</th>
+                        <th>Estado Actual</th>
+                        <th>Peso Registrado</th>
+                        <th>ADG Histórico</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (animal of paginatedCattleList(); track animal.id) {
+                    <tr>
+                        <td>
+                            <div class="font-monospace text-primary font-weight-bold">{{ animal.rfid_siniiga }}</div>
+                        </td>
+                        <td><strong>{{ animal.numero_fuego || 'S/N' }}</strong></td>
+                        <td>{{ animal.category }}</td>
+                        <td>
+                            <span class="badge"
+                                [class.bg-green-lt]="animal.current_status === 'ACTIVO' || animal.current_status === 'PREÑADA'"
+                                [class.bg-danger-lt]="animal.current_status === 'VACÍA' || animal.current_status === 'RIESGO'">
+                                {{ animal.current_status }}
+                            </span>
+                        </td>
+                        <td><span class="font-weight-bold">{{ animal.current_weight_kg | number:'1.2-2' }} kg</span>
+                        </td>
+                        <td class="text-muted">{{ animal.adg_lifetime_kg || '0.00' }} kg/día</td>
+                    </tr>
+                    } @empty {
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-muted">No existen registros de ganado cargados para
+                            este módulo.</td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
         </div>
-    </div>
 
-    <div class="col-lg-6">
-        <div class="card shadow-sm border-0 h-100">
-            <div class="card-header bg-white">
-                <h3 class="card-title text-dark font-weight-bold">Distribución de Biomasa (kg)</h3>
-            </div>
-            <div class="card-body">
-                <apx-chart [series]="$any(biomasaSeries)" [chart]="$any(chartOptions.bar)" [xaxis]="$any(biomasaX)"
-                    [colors]="$any(chartOptions.colors.primary)" [plotOptions]="$any(chartOptions.plotOptions)"
-                    [dataLabels]="$any({enabled: false})">
-                </apx-chart>
-            </div>
+        <div class="card-footer d-flex align-items-center border-top">
+            <p class="m-0 text-muted">
+                Mostrando <span>{{ showingStart() }}</span> a <span>{{ showingEnd() }}</span>
+                de <span>{{ filteredCattleList().length }}</span> cabezas registradas
+            </p>
+            <ul class="pagination m-0 ms-auto">
+                <li class="page-item" [class.disabled]="currentPage() === 1">
+                    <a class="page-link" (click)="changePage(-1)" style="cursor: pointer;">Anterior</a>
+                </li>
+                <li class="page-item active"><a class="page-link">{{ currentPage() }} de {{ totalPages() }}</a></li>
+                <li class="page-item" [class.disabled]="currentPage() === totalPages()">
+                    <a class="page-link" (click)="changePage(1)" style="cursor: pointer;">Siguiente</a>
+                </li>
+            </ul>
         </div>
-    </div>
-</div>
-
-<div class="row mb-4">
-    <div class="col-12">
-        <div class="card shadow-sm border-0">
-            <div class="card-header bg-white">
-                <h3 class="card-title text-dark font-weight-bold">Evolución Histórica de Biomasa (Últimos 6 Meses)</h3>
-            </div>
-            <div class="card-body">
-                <apx-chart [series]="$any(biomassTrendSeries)" [chart]="$any(chartOptions.area)"
-                    [xaxis]="$any(biomassTrendX)" [colors]="$any(chartOptions.colors.trend)"
-                    [stroke]="$any(chartOptions.area.stroke)" [fill]="$any(chartOptions.area.fill)"
-                    [dataLabels]="$any(chartOptions.area.dataLabels)">
-                </apx-chart>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="card shadow-sm border-0 mb-4">
-
-    <div class="table-responsive">
-        <table class="table card-table table-vcenter">
-            <thead>
-                <tr>
-                    <th>Arete</th>
-                    <th>Estatus / Etapa</th>
-                    <th class="text-end">Peso</th>
-                    <th class="text-end">Salud</th>
-                    <th>Acción</th>
-                </tr>
-            </thead>
-            <tbody>
-                @for (item of filteredCattleList(); track item.rfid_tag) {
-                <tr>
-                    <td>
-                        <span class="badge" [class.bg-blue-lt]="item.modelo === 'CRIA'"
-                            [class.bg-green-lt]="item.modelo === 'ENGORDA'">
-                            {{ item.modelo }}
-                        </span>
-                        <div class="font-monospace mt-1">{{ item.rfid_tag }}</div>
-                    </td>
-                    <td>{{ item.estatus_salud }}</td>
-                    <td class="text-end font-weight-bold">{{ item.peso_actual }} kg</td>
-                    <td>
-                        <span class="status" [class.status-green]="item.estatus_salud === 'ÓPTIMO'"
-                            [class.status-orange]="item.estatus_salud === 'PREVENTIVO'"
-                            [class.status-red]="item.estatus_salud === 'CRÍTICO'">
-                            <span class="status-dot status-dot-animated"></span> {{ item.estatus_salud }}
-                        </span>
-                    </td>
-                    <td class="text-muted text-sm">{{ item.proximo_evento }}</td>
-                </tr>
-                }
-            </tbody>
-        </table>
-    </div>
-
-
-
-    <div class="row">
-        <div class="col-12">
-            <app-reproductive-dashboard></app-reproductive-dashboard>
-        </div>
+        }
     </div>
 </div>
