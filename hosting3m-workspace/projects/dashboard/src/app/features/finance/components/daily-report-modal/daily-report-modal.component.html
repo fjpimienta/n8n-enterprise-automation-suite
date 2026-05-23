@@ -76,6 +76,7 @@
                   <option value="No Facturado">No Facturados</option>
                 </select>
               </div>
+
             </div>
           </div>
         </div>
@@ -145,48 +146,71 @@
         </div>
       </div>
       } @else {
-      <div class="col-sm-6 col-lg-3">
-        <div class="card card-sm border-0 shadow-sm p-3 bg-success-lt">
-          <div class="d-flex align-items-center">
-            <span class="bg-success text-white avatar me-3"><i class="ti ti-currency-dollar"></i></span>
-            <div class="me-auto">
-              <div class="text-success text-uppercase fw-bold small">Ingresos Cobrados</div>
-              <div class="h2 fw-bold text-success mb-0">${{ reportData().paid_in | number:'1.2-2' }}</div>
+      <div class="col-12 mb-2">
+        <div class="row row-cols-1 row-cols-md-3 row-cols-xl-5 g-3">
+
+          <div class="col">
+            <div class="card card-sm border-0 shadow-sm p-3 bg-success-lt h-100">
+              <div class="d-flex align-items-center">
+                <span class="bg-success text-white avatar me-3"><i class="ti ti-currency-dollar"></i></span>
+                <div class="me-auto">
+                  <div class="text-success text-uppercase fw-bold small">Ingresos Cobrados</div>
+                  <div class="h2 fw-bold text-success mb-0">${{ reportData().paid_in | number:'1.2-2' }}</div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-      <div class="col-sm-6 col-lg-3">
-        <div class="card card-sm border-0 shadow-sm p-3 bg-danger-lt">
-          <div class="d-flex align-items-center">
-            <span class="bg-danger text-white avatar me-3"><i class="ti ti-shopping-cart"></i></span>
-            <div class="me-auto">
-              <div class="text-danger text-uppercase fw-bold small">Gastos Totales</div>
-              <div class="h2 fw-bold text-danger mb-0">-${{ reportData().total_expenses | number:'1.2-2' }}</div>
+
+          <div class="col">
+            <div class="card card-sm border-0 shadow-sm p-3 bg-danger-lt h-100">
+              <div class="d-flex align-items-center">
+                <span class="bg-danger text-white avatar me-3"><i class="ti ti-shopping-cart"></i></span>
+                <div class="me-auto">
+                  <div class="text-danger text-uppercase fw-bold small">Gastos Totales</div>
+                  <div class="h2 fw-bold text-danger mb-0">-${{ reportData().total_expenses | number:'1.2-2' }}</div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-      <div class="col-sm-6 col-lg-3">
-        <div class="card card-sm border-0 shadow-sm p-3 bg-primary-lt">
-          <div class="d-flex align-items-center">
-            <span class="bg-primary text-white avatar me-3"><i class="ti ti-scale"></i></span>
-            <div class="me-auto">
-              <div class="text-primary text-uppercase fw-bold small">Utilidad Neta</div>
-              <div class="h2 fw-bold text-primary mb-0">${{ reportData().balance | number:'1.2-2' }}</div>
+
+          <div class="col">
+            <div class="card card-sm border-0 shadow-sm p-3 bg-primary-lt h-100">
+              <div class="d-flex align-items-center">
+                <span class="bg-primary text-white avatar me-3"><i class="ti ti-scale"></i></span>
+                <div class="me-auto">
+                  <div class="text-primary text-uppercase fw-bold small">Utilidad Neta</div>
+                  <div class="h2 fw-bold text-primary mb-0">${{ reportData().balance | number:'1.2-2' }}</div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
-      <div class="col-sm-6 col-lg-3">
-        <div class="card card-sm border-0 shadow-sm p-3 bg-warning-lt">
-          <div class="d-flex align-items-center">
-            <span class="bg-warning text-white avatar me-3"><i class="ti ti-clock"></i></span>
-            <div class="me-auto">
-              <div class="text-warning text-uppercase fw-bold small">Pendiente de Cobro</div>
-              <div class="h2 fw-bold text-warning mb-0">${{ reportData().pending | number:'1.2-2' }}</div>
+
+          <div class="col">
+            <div class="card card-sm border-0 shadow-sm p-3 bg-warning-lt h-100">
+              <div class="d-flex align-items-center">
+                <span class="bg-warning text-white avatar me-3"><i class="ti ti-clock"></i></span>
+                <div class="me-auto">
+                  <div class="text-warning text-uppercase fw-bold small">Pendiente de Cobro</div>
+                  <div class="h2 fw-bold text-warning mb-0">${{ reportData().pending | number:'1.2-2' }}</div>
+                </div>
+              </div>
             </div>
           </div>
+
+          <div class="col">
+            <div class="card bg-dark text-white border-0 shadow-sm h-100">
+              <div class="card-body p-3 d-flex align-items-center">
+                <div class="bg-success text-dark p-3 rounded-3 me-3 d-flex align-items-center justify-content-center">
+                  <i class="ti ti-building-bank fs-2"></i>
+                </div>
+                <div>
+                  <div class="text-success text-uppercase fw-bold small">Saldo Real en Banco</div>
+                  <div class="h2 m-0 text-success">${{ saldoBancarioReal() | number:'1.2-2' }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
         </div>
       </div>
       }

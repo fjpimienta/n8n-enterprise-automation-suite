@@ -219,4 +219,28 @@ export class ReportService {
       return [];
     }
   }
+
+  // Agrega esto donde calculas tu reporte financiero
+  async getCapitalTotal(): Promise<number> {
+    try {
+      // 🛠️ FIX: Usamos el mismo motor POST dinámico de tu backend (n8n/Supabase)
+      const payload = {
+        operation: 'getall',
+        table_name: 'hotel_capital', // El model_name que registramos en BD
+        fields: { id_company: 1 }
+      };
+
+      const res: any = await lastValueFrom(
+        this.http.post(`${this.apiUrl_crud}/hotel_capital`, payload, { headers: this.adminService.getAuthHeaders() })
+      );
+
+      const capitalList = Array.isArray(res?.data) ? res.data : [];
+
+      // Sumamos todo el capital inyectado
+      return capitalList.reduce((acc: number, curr: any) => acc + Number(curr.amount), 0);
+    } catch (error) {
+      console.error('Error cargando capital', error);
+      return 0; // Fallback
+    }
+  }
 }

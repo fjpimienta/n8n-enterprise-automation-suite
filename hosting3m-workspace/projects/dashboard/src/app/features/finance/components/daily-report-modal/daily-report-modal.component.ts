@@ -44,6 +44,10 @@ export class DailyReportModalComponent implements OnInit {
   expandedIncomeGroups = signal<Set<string>>(new Set());
   expandedExpenseGroups = signal<Set<string>>(new Set());
 
+  // 👇 AÑADE ESTAS DOS LÍNEAS AQUÍ 👇
+  capitalTotal = signal<number>(0);
+  saldoBancarioReal = computed(() => this.reportData().balance + this.capitalTotal());
+
   // --- INTERCEPTORES DE FILTROS ---
   onIncomeRoomFilterChange(val: string) {
     this.incomeRoomFilter.set(val);
@@ -209,6 +213,13 @@ export class DailyReportModalComponent implements OnInit {
   ngOnInit() {
     if (this.bookingService.rooms().length === 0) this.bookingService.loadRooms();
     this.loadData();
+    this.loadCapital(); // 👈 AÑADE ESTA LÍNEA
+  }
+
+  // 👇 AÑADE ESTE MÉTODO JUSTO DEBAJO DE ngOnInit 👇
+  async loadCapital() {
+    const total = await this.reportService.getCapitalTotal();
+    this.capitalTotal.set(total);
   }
 
   async loadData() {
