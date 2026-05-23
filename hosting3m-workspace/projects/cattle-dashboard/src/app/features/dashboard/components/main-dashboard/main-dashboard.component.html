@@ -5,8 +5,28 @@
             <h2 class="page-title text-dark font-weight-bold" style="font-size: 1.5rem;">Capitalización y Rendimiento
             </h2>
         </div>
+
+        <div class="col-auto ms-auto d-print-none">
+            <div class="btn-group" role="group">
+                <input type="radio" class="btn-check" name="btn-radio-tab" id="tab-cria" autocomplete="off"
+                    [checked]="activeTab() === 'CRIA'" (click)="setTab('CRIA')">
+                <label for="tab-cria" class="btn btn-outline-primary">Módulo de Cría</label>
+
+                <input type="radio" class="btn-check" name="btn-radio-tab" id="tab-engorda" autocomplete="off"
+                    [checked]="activeTab() === 'ENGORDA'" (click)="setTab('ENGORDA')">
+                <label for="tab-engorda" class="btn btn-outline-primary">Módulo de Engorda</label>
+            </div>
+        </div>
     </div>
 </div>
+
+@if (activeTab() === 'CRIA') {
+<div class="row mt-4">
+    <div class="col-12">
+        <app-reproductive-dashboard [cattleData]="filteredCattleList()"></app-reproductive-dashboard>
+    </div>
+</div>
+}
 
 <div class="row row-cards mb-4">
     <div class="col-sm-6 col-xl-3">
@@ -93,22 +113,6 @@
 </div>
 
 <div class="card shadow-sm border-0 mb-4">
-    <div class="card-header bg-white">
-        <ul class="nav nav-tabs card-header-tabs">
-            <li class="nav-item">
-                <a class="nav-link cursor-pointer" [class.active]="activeTab() === 'TODOS'"
-                    (click)="setTab('TODOS')">Vista Global</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link cursor-pointer text-blue" [class.active]="activeTab() === 'CRIA'"
-                    (click)="setTab('CRIA')">Módulo de Cría</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link cursor-pointer text-green" [class.active]="activeTab() === 'ENGORDA'"
-                    (click)="setTab('ENGORDA')">Módulo de Engorda</a>
-            </li>
-        </ul>
-    </div>
 
     <div class="table-responsive">
         <table class="table card-table table-vcenter">
@@ -145,5 +149,13 @@
                 }
             </tbody>
         </table>
+    </div>
+
+
+
+    <div class="row">
+        <div class="col-12">
+            <app-reproductive-dashboard></app-reproductive-dashboard>
+        </div>
     </div>
 </div>

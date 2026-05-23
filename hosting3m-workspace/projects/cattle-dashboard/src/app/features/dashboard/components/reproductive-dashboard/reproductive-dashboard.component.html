@@ -1,0 +1,85 @@
+<div class="page-header d-print-none mb-4">
+    <div class="row align-items-center">
+        <div class="col">
+            <h2 class="page-title text-dark font-weight-bold">Dashboard Reproductivo</h2>
+            <div class="text-muted">Gestión de Vientres y Diagnóstico de Gestación</div>
+        </div>
+    </div>
+</div>
+
+@if (data().length === 0) {
+<div class="text-center py-5 border rounded bg-light">
+    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-vaccine text-muted mb-3" width="48"
+        height="48" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+        <path d="M17 3l4 4" />
+        <path d="M19 5l-4.5 4.5" />
+        <path d="M11.5 6.5l6 6" />
+        <path d="M16.5 11.5l-6.5 6.5h-4v-4l6.5 -6.5" />
+        <path d="M7.5 12.5l1.5 1.5" />
+        <path d="M10.5 9.5l1.5 1.5" />
+        <path d="M3 21l3 -3" />
+    </svg>
+    <h3 class="text-muted">Sin Diagnósticos Reproductivos</h3>
+    <p class="text-muted">Aún no se han registrado eventos de palpación para este grupo.</p>
+</div>
+} @else {
+<div class="row row-cards">
+    <div class="col-md-4">
+        <div class="card shadow-sm border-0 bg-primary-lt">
+            <div class="card-body text-center">
+                <div class="subheader mb-2">Tasa de Preñez Global</div>
+                <div class="h1 mb-0 text-primary">{{ stats().tasa }}%</div>
+                <small class="text-muted">{{ stats().prenadas }} de {{ stats().total }} vientres preñados</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card shadow-sm border-0">
+            <div class="card-header">
+                <h3 class="card-title">Distribución del Hato (Gestación)</h3>
+            </div>
+            <div class="card-body">
+                <apx-chart [series]="getChartOptions().series" [labels]="getChartOptions().labels"
+                    [colors]="getChartOptions().colors" [chart]="{ type: 'donut', height: 250 }">
+                </apx-chart>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-4 shadow-sm border-0">
+    <div class="card-header">
+        <h3 class="card-title">Vientres con Diagnóstico</h3>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-vcenter">
+            <thead>
+                <tr>
+                    <th>Arete (SINIIGA)</th>
+                    <th>Estado</th>
+                    <th>Días Gestación</th>
+                    <th>Condición Uterina</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (animal of data(); track animal.id) {
+                <tr>
+                    <td><strong>{{ animal.rfid_siniiga }}</strong></td>
+                    <td>
+                        <span class="badge" [class.bg-green-lt]="animal.last_palpation_result === 'PREÑADA'"
+                            [class.bg-danger-lt]="animal.last_palpation_result === 'VACIA'">
+                            {{ animal.last_palpation_result || 'N/A' }}
+                        </span>
+                    </td>
+                    <td>{{ animal.current_gestation_days || 0 }} días</td>
+                    <td>{{ animal.condicion_utero || 'N/A' }}</td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+}
