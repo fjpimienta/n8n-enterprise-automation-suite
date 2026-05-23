@@ -11,7 +11,7 @@ import { AiChatComponent } from 'ui-chat';
   standalone: true,
   imports: [CommonModule, RouterModule, SidebarComponent, HeaderComponent, AiChatComponent],
   templateUrl: './main-layout.component.html',
-  styleUrl: './main-layout.component.scss' // <-- Corregido a singular[cite: 11]
+  styleUrl: './main-layout.component.scss'
 })
 export class MainLayoutComponent {
   public layoutService = inject(LayoutService);

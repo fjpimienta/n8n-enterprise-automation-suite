@@ -1,8 +1,9 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterModule, Router } from '@angular/router'; // <-- Agregamos Router
+import { RouterModule, Router } from '@angular/router';
 import { AuthService } from '@core/services/auth.service';
-import { ThemeService } from '@core/services/theme.service'; // <-- Agregamos ThemeService
+import { ThemeService } from '@core/services/theme.service';
+import { LayoutService } from '@shared/services/layout.service'; // 🚀 IMPORTANTE: Servicio Real
 
 @Component({
   selector: 'app-header',
@@ -12,17 +13,15 @@ import { ThemeService } from '@core/services/theme.service'; // <-- Agregamos Th
 })
 export class HeaderComponent {
   public authService = inject(AuthService);
-  public themeService = inject(ThemeService); // <-- Inyectado
-  private router = inject(Router);            // <-- Inyectado
+  public themeService = inject(ThemeService);
+  public layoutService = inject(LayoutService); // 🚀 Inyectado correctamente
+  private router = inject(Router);
 
-  // MOCK: Simulamos el servicio de layout móvil
-  public layoutService = {
-    toggleMobileMenu: () => {
-      document.body.classList.toggle('offcanvas-active');
-    }
-  };
+  // 🚀 Disparador real usando Signals
+  public toggleMenu() {
+    this.layoutService.mobileMenuOpen.update(val => !val);
+  }
 
-  // 🛠️ Función para destruir la sesión
   public logout() {
     this.authService.logout();
     this.router.navigate(['/login']);
