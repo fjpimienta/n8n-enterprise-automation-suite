@@ -1,24 +1,35 @@
 <div class="page-header d-print-none mb-4">
-    <div class="row g-3 flex-column flex-md-row align-items-md-center">
-
+    <div class="row g-2 align-items-center">
         <div class="col-12 col-md">
             <div class="page-pretitle text-uppercase font-weight-bold text-muted">Resumen Ejecutivo</div>
-            <h2 class="page-title font-weight-bold text-wrap" style="font-size: 1.5rem; line-height: 1.3;">
-                Capitalización y Rendimiento</h2>
+            <h2 class="page-title font-weight-bold" style="font-size: 1.5rem;">Capitalización y Rendimiento</h2>
         </div>
 
-        <div class="col-12 col-md-auto ms-md-auto d-print-none mt-3 mt-md-0">
-            <div class="btn-group w-100" role="group">
-                <input type="radio" class="btn-check" name="btn-radio-tab" id="tab-cria" autocomplete="off"
-                    [checked]="activeTab() === 'CRIA'" (click)="setTab('CRIA')">
-                <label for="tab-cria" class="btn btn-outline-primary font-weight-bold">Módulo de Cría</label>
+        <div class="col-12 col-md-auto ms-md-auto d-print-none mt-2 mt-md-0">
+            <div class="d-flex flex-column flex-sm-row gap-2">
+                <div class="btn-group" role="group">
+                    <input type="radio" class="btn-check" name="btn-radio-tab" id="tab-cria" autocomplete="off"
+                        [checked]="activeTab() === 'CRIA'" (click)="setTab('CRIA')">
+                    <label for="tab-cria" class="btn btn-outline-primary font-weight-bold">Módulo de Cría</label>
 
-                <input type="radio" class="btn-check" name="btn-radio-tab" id="tab-engorda" autocomplete="off"
-                    [checked]="activeTab() === 'ENGORDA'" (click)="setTab('ENGORDA')">
-                <label for="tab-engorda" class="btn btn-outline-primary font-weight-bold">Módulo de Engorda</label>
+                    <input type="radio" class="btn-check" name="btn-radio-tab" id="tab-engorda" autocomplete="off"
+                        [checked]="activeTab() === 'ENGORDA'" (click)="setTab('ENGORDA')">
+                    <label for="tab-engorda" class="btn btn-outline-primary font-weight-bold">Módulo de Engorda</label>
+                </div>
+
+                <button class="btn btn-primary font-weight-bold d-flex align-items-center justify-content-center"
+                    (click)="showExpenseModal.set(true)">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
+                        stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M12 5l0 14" />
+                        <path d="M5 12l14 0" />
+                    </svg>
+                    Registrar Gasto
+                </button>
             </div>
         </div>
-
     </div>
 </div>
 
@@ -55,29 +66,17 @@
         <ul class="nav nav-tabs card-header-tabs">
             <li class="nav-item">
                 <a class="nav-link font-weight-bold" [class.active]="activeSubTab() === 'RESUMEN'"
-                    (click)="setSubTab('RESUMEN')" style="cursor: pointer;">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24"
-                        stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                        <path d="M4 19l16 0" />
-                        <path d="M4 15l4 -6l4 2l4 -5l4 4" />
-                    </svg>
-                    Resumen y Gráficas
-                </a>
+                    (click)="setSubTab('RESUMEN')" style="cursor: pointer;">Resumen y Gráficas</a>
             </li>
             <li class="nav-item">
                 <a class="nav-link font-weight-bold" [class.active]="activeSubTab() === 'INVENTARIO'"
-                    (click)="setSubTab('INVENTARIO')" style="cursor: pointer;">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="icon me-2" width="24" height="24" viewBox="0 0 24 24"
-                        stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                        <path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" />
-                        <path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z" />
-                    </svg>
-                    Inventario Detallado ({{ filteredCattleList().length }})
-                </a>
+                    (click)="setSubTab('INVENTARIO')" style="cursor: pointer;">Inventario Detallado ({{
+                    filteredCattleList().length }})</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link font-weight-bold" [class.active]="activeSubTab() === 'GASTOS'"
+                    (click)="setSubTab('GASTOS')" style="cursor: pointer;">Historial de Gastos ({{
+                    filteredExpensesList().length }})</a>
             </li>
         </ul>
     </div>
@@ -85,44 +84,22 @@
     <div class="card-body p-0">
         @if (activeSubTab() === 'RESUMEN') {
         <div class="p-4 rounded-bottom">
-            @if (activeTab() === 'CRIA') {
-            <app-reproductive-dashboard [cattleData]="filteredCattleList()"></app-reproductive-dashboard>
-            }
-            @if (activeTab() === 'ENGORDA') {
-            <div class="text-center py-5 border rounded">
-                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-chart-line text-muted mb-3"
-                    width="48" height="48" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none"
-                    stroke-linecap="round" stroke-linejoin="round">
-                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                    <path d="M4 19l16 0" />
-                    <path d="M4 15l4 -6l4 2l4 -5l4 4" />
-                </svg>
-                <h3 class="text-muted">Rendimiento de Engorda</h3>
-                <p class="text-muted">Las gráficas de conversión alimenticia, curvas de crecimiento y ADG están en
-                    desarrollo.</p>
-            </div>
-            }
+            @if (activeTab() === 'CRIA') { <app-reproductive-dashboard
+                [cattleData]="filteredCattleList()"></app-reproductive-dashboard> }
+            @if (activeTab() === 'ENGORDA') { <app-engorda-dashboard
+                [cattleData]="filteredCattleList()"></app-engorda-dashboard> }
         </div>
         }
 
         @if (activeSubTab() === 'INVENTARIO') {
         <div class="card-body border-bottom py-3">
-            <div class="d-flex align-items-center">
-                <div class="text-muted">
-                    Mostrar
-                    <div class="mx-2 d-inline-block">
-                        <select class="form-select form-select-sm" [value]="pageSize()"
-                            (change)="changePageSize($event)">
-                            <option value="10">10</option>
-                            <option value="25">25</option>
-                            <option value="50">50</option>
-                        </select>
-                    </div>
-                    registros por página
-                </div>
-            </div>
+            <div class="text-muted">Mostrar <div class="mx-2 d-inline-block"><select class="form-select form-select-sm"
+                        [value]="pageSize()" (change)="changePageSize($event)">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                    </select></div> registros</div>
         </div>
-
         <div class="table-responsive">
             <table class="table card-table table-vcenter text-nowrap datatable table-hover mb-0">
                 <thead>
@@ -143,42 +120,93 @@
                         </td>
                         <td><strong>{{ animal.numero_fuego || 'S/N' }}</strong></td>
                         <td>{{ animal.category }}</td>
-                        <td>
-                            <span class="badge"
+                        <td><span class="badge"
                                 [class.bg-green-lt]="animal.current_status === 'ACTIVO' || animal.current_status === 'PREÑADA'"
-                                [class.bg-danger-lt]="animal.current_status === 'VACÍA' || animal.current_status === 'RIESGO'">
-                                {{ animal.current_status }}
-                            </span>
-                        </td>
+                                [class.bg-danger-lt]="animal.current_status === 'VACÍA'">{{ animal.current_status
+                                }}</span></td>
                         <td><span class="font-weight-bold">{{ animal.current_weight_kg | number:'1.2-2' }} kg</span>
                         </td>
                         <td class="text-muted">{{ animal.adg_lifetime_kg || '0.00' }} kg/día</td>
-                    </tr>
-                    } @empty {
-                    <tr>
-                        <td colspan="6" class="text-center py-4 text-muted">No existen registros de ganado cargados para
-                            este módulo.</td>
                     </tr>
                     }
                 </tbody>
             </table>
         </div>
+        }
 
+        @if (activeSubTab() === 'GASTOS') {
+        <div class="card-body border-bottom py-3">
+            <div class="text-muted">Mostrar <div class="mx-2 d-inline-block"><select class="form-select form-select-sm"
+                        [value]="pageSize()" (change)="changePageSize($event)">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                    </select></div> movimientos financieros</div>
+        </div>
+        <div class="table-responsive">
+            <table class="table card-table table-vcenter text-nowrap datatable table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Categoría</th>
+                        <th>Concepto / Descripción</th>
+                        <th>Volumen</th>
+                        <th>Monto Invertido</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (expense of paginatedExpensesList(); track expense.id) {
+                    <tr>
+                        <td><span class="text-muted">{{ expense.expense_date | date:'dd/MM/yyyy' }}</span></td>
+                        <td>
+                            <span class="badge bg-blue-lt font-weight-bold">{{ expense.category }}</span>
+                        </td>
+                        <td>
+                            <div class="text-wrap" style="max-width: 400px;">
+                                {{ expense.description || 'Sin descripción registrada.' }}
+                            </div>
+                            @if(expense.rfid_siniiga) {
+                            <small class="text-primary d-block mt-1 font-monospace">Asociado al Arete: {{
+                                expense.rfid_siniiga }}</small>
+                            }
+                        </td>
+                        <td>
+                            @if(expense.quantity) {
+                            <span class="font-weight-bold">{{ expense.quantity | number:'1.1-2' }}</span> <small
+                                class="text-muted">{{ expense.unit_measure }}</small>
+                            } @else { <span class="text-muted">-</span> }
+                        </td>
+                        <td><span class="font-weight-bold text-danger">{{ expense.amount |
+                                currency:'MXN':'symbol-narrow':'1.2-2' }}</span></td>
+                    </tr>
+                    } @empty {
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">No se han registrado costos operativos en
+                            este periodo.</td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        }
+
+        @if (activeSubTab() !== 'RESUMEN') {
         <div class="card-footer d-flex align-items-center border-top">
-            <p class="m-0 text-muted">
-                Mostrando <span>{{ showingStart() }}</span> a <span>{{ showingEnd() }}</span>
-                de <span>{{ filteredCattleList().length }}</span> cabezas registradas
-            </p>
+            <p class="m-0 text-muted">Mostrando <span>{{ showingStart() }}</span> a <span>{{ showingEnd() }}</span> de
+                un total disponible</p>
             <ul class="pagination m-0 ms-auto">
-                <li class="page-item" [class.disabled]="currentPage() === 1">
-                    <a class="page-link" (click)="changePage(-1)" style="cursor: pointer;">Anterior</a>
-                </li>
+                <li class="page-item" [class.disabled]="currentPage() === 1"><a class="page-link"
+                        (click)="changePage(-1)" style="cursor: pointer;">Anterior</a></li>
                 <li class="page-item active"><a class="page-link">{{ currentPage() }} de {{ totalPages() }}</a></li>
-                <li class="page-item" [class.disabled]="currentPage() === totalPages()">
-                    <a class="page-link" (click)="changePage(1)" style="cursor: pointer;">Siguiente</a>
-                </li>
+                <li class="page-item" [class.disabled]="currentPage() === totalPages()"><a class="page-link"
+                        (click)="changePage(1)" style="cursor: pointer;">Siguiente</a></li>
             </ul>
         </div>
         }
     </div>
 </div>
+
+@if (showExpenseModal()) {
+<app-expense-modal (onClose)="showExpenseModal.set(false)"
+    (onSaveSuccess)="showExpenseModal.set(false); loadDashboardData()"></app-expense-modal>
+}
