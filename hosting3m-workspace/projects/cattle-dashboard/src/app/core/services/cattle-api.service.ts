@@ -17,19 +17,25 @@ export class CattleApiService {
     // 0. Obtener Inventario Completo (Ahora lee de la Vista SQL con los KPIs integrados)
     public async getAllLivestock(): Promise<any[]> {
         const companyId = this.authService.currentUser()?.id_company;
-        if (!companyId) throw new Error('Sesión inválida: No se detectó una empresa activa.');
 
         const res: any = await lastValueFrom(
-            // 🚀 CAMBIO AQUÍ: Apuntamos a la vista vw_cattle_kpi en lugar de la tabla base
-            this.http.post(`${this.apiUrl_crud}/vw_cattle_kpi`, {
-                operation: 'getall'
-            })
+            this.http.post(`${this.apiUrl_crud}/vw_cattle_kpi`, { operation: 'getall' })
         );
 
-        if (res && res.error) throw new Error(res.message);
+        // Extraemos el arreglo del objeto data que vimos en la captura
+        const rawData = res.data || [];
 
-        const data = res.data || [];
-        return data.filter((animal: any) => animal.tenant_id === companyId);
+        // 🚀 BLINDAJE DE TIPOS DE DATOS: Sanitizamos el payload antes de enviarlo al dashboard
+        const sanitizedData = rawData.map((animal: any) => ({
+            ...animal,
+            tenant_id: Number(animal.tenant_id),
+            current_weight_kg: animal.current_weight_kg ? Number(animal.current_weight_kg) : 0,
+            adg_lifetime_kg: animal.adg_lifetime_kg ? Number(animal.adg_lifetime_kg) : 0,
+            current_gestation_days: animal.current_gestation_days ? Number(animal.current_gestation_days) : 0
+        }));
+
+        // Aplicamos el filtro de empresa de forma segura con números
+        return sanitizedData.filter((animal: any) => animal.tenant_id === Number(companyId));
     }
 
     // 1. Crear Alta de Animal
