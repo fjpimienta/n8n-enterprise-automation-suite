@@ -70,4 +70,43 @@ export class CattleApiService {
         );
         if (res && res.error) throw new Error(res.message);
     }
+
+    /**
+   * 🚀 Registra un nuevo Gasto Operativo (Alimentación, Medicina, etc.)
+   * Endpoint orquestado a través del webhook de n8n para insertar en 'cattle_expenses'
+   */
+    public async createExpense(fields: any): Promise<void> {
+        // 1. Extraemos dinámicamente la empresa del usuario actual (Mejor que dejarlo fijo)
+        const companyId = this.authService.currentUser()?.id_company;
+        if (!companyId) throw new Error('Sesión inválida: No se detectó una empresa activa.');
+
+        // 2. Sobrescribimos el tenant_id por seguridad
+        fields.tenant_id = companyId;
+
+        // 3. Ejecutamos la petición con la estructura estándar de n8n
+        const res: any = await lastValueFrom(
+            this.http.post(`${this.apiUrl_crud}/cattle_expenses`, {
+                operation: 'insert',
+                fields: fields
+            })
+        );
+
+        if (res && res.error) throw new Error(res.message);
+    }
+
+    // 🚀 Obtener historial de gastos operativos
+    public async getExpenses(): Promise<any[]> {
+        const companyId = this.authService.currentUser()?.id_company;
+        if (!companyId) throw new Error('Sesión inválida: No se detectó una empresa activa.');
+
+        const res: any = await lastValueFrom(
+            this.http.post(`${this.apiUrl_crud}/cattle_expenses`, {
+                operation: 'getall'
+            })
+        );
+
+        if (res && res.error) throw new Error(res.message);
+        const data = res.data || [];
+        return data.filter((expense: any) => expense.tenant_id === companyId);
+    }
 }
