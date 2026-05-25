@@ -53,8 +53,14 @@ export class MainDashboardComponent implements OnInit {
   }
 
   // Filtrado de ganado
+  // Filtrado de ganado robustecido con sanitización de espacios
   public filteredCattleList = computed(() => {
-    return this.cattleList().filter(animal => animal.business_model === this.activeTab());
+    const currentTab = this.activeTab();
+    return this.cattleList().filter(animal => {
+      if (!animal.business_model) return false;
+      // 🚀 Aplicamos .trim() para remover cualquier espacio oculto de producción
+      return animal.business_model.trim() === currentTab;
+    });
   });
 
   // 🚀 Filtrado de Gastos por Módulo
