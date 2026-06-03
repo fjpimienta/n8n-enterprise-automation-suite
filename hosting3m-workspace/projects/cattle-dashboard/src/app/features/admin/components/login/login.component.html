@@ -50,36 +50,6 @@
         }
 
         <div class="mb-3">
-          <label class="form-label">Empresa / Sucursal</label>
-          <div class="input-group">
-            <span class="input-group-text">
-              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
-                stroke-width="2" stroke="currentColor" fill="none">
-                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                <path d="M3 21l18 0" />
-                <path d="M5 21v-14l8 -4l8 4v14" />
-                <path d="M19 21v-10l-6 -4" />
-                <path d="M9 9l0 .01" />
-                <path d="M9 12l0 .01" />
-                <path d="M9 15l0 .01" />
-                <path d="M9 18l0 .01" />
-              </svg>
-            </span>
-            <select class="form-select" formControlName="id_company" [class.is-invalid]="isFieldInvalid('id_company')">
-              <option value="" disabled selected>Cargando catálogo...</option>
-              @for (company of adminService.companies(); track company.id_company) {
-              <option [value]="company.id_company">
-                {{ company.company_name }}
-              </option>
-              }
-            </select>
-          </div>
-          @if (isFieldInvalid('id_company')) {
-          <div class="text-danger small mt-1">Debe seleccionar una empresa para continuar.</div>
-          }
-        </div>
-
-        <div class="mb-3">
           <label class="form-label">Usuario / Email</label>
           <div class="input-icon">
             <span class="input-icon-addon">
@@ -95,7 +65,7 @@
           </div>
         </div>
 
-        <div class="mb-4">
+        <div class="mb-3">
           <label class="form-label">Contraseña</label>
           <div class="input-group input-group-flat">
             <span class="input-group-text">
@@ -133,13 +103,35 @@
           </div>
         </div>
 
+        @if (showCompanySelection()) {
+        <div class="mb-4 animate__animated animate__fadeIn">
+          <label class="form-label text-primary font-weight-bold">Seleccionar Empresa / Rancho</label>
+          <div class="input-icon">
+            <span class="input-icon-addon">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-building-community" width="24"
+                height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                <path d="M8 9l5 5v7h-5v-4m0 4h-4v-7l5 -5m1 1v-3l4 4v7h-5" />
+              </svg>
+            </span>
+            <select formControlName="id_company" class="form-select" [class.is-invalid]="isFieldInvalid('id_company')">
+              <option value="" disabled selected>-- Seleccione el entorno de trabajo --</option>
+              @for (company of availableCompanies(); track company.id_company) {
+              <option [value]="company.id_company">{{ company.company_name }} ({{ company.role }})</option>
+              }
+            </select>
+          </div>
+        </div>
+        }
+
         <div class="form-footer">
           <button type="submit" class="btn btn-primary w-100" [disabled]="isLoading()">
             @if (isLoading()) {
             <div class="spinner-border spinner-border-sm me-2" role="status"></div>
-            Verificando Credenciales...
+            Procesando Solicitud...
             } @else {
-            Ingresar al Sistema
+            {{ showCompanySelection() ? 'Confirmar y Entrar' : 'Ingresar al Sistema' }}
             }
           </button>
         </div>

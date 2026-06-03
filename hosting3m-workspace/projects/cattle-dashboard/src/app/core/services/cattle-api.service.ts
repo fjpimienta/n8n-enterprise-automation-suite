@@ -1,41 +1,47 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
-import { AuthService } from './auth.service';
 import { environment } from '@env/environment';
+import { AuthService } from 'core-auth';
+// 🚀 FIX: Importamos el LoggerService para poder usarlo
+import { LoggerService } from './logger.service';
 
+//import { LoggerService } from 'core-auth';
 
 @Injectable({ providedIn: 'root' })
 export class CattleApiService {
     private http = inject(HttpClient);
     private authService = inject(AuthService);
+    // 🚀 FIX: Inyectamos el logger
+    private logger = inject(LoggerService);
     private apiUrl_crud = environment.apiUrl_crud;
 
     public isProcessing = signal<boolean>(false);
 
-    // 0. Obtener Inventario Completo (Censo Biológico)
     // 0. Obtener Inventario Completo (Ahora lee de la Vista SQL con los KPIs integrados)
     public async getAllLivestock(): Promise<any[]> {
         const companyId = this.authService.currentUser()?.id_company;
 
-        const res: any = await lastValueFrom(
-            this.http.post(`${this.apiUrl_crud}/vw_cattle_kpi`, { operation: 'getall' })
-        );
+        try {
+            const res: any = await lastValueFrom(
+                this.http.post(`${this.apiUrl_crud}/vw_cattle_kpi`, { operation: 'getall' })
+            );
 
-        // Extraemos el arreglo del objeto data que vimos en la captura
-        const rawData = res.data || [];
+            const rawData = res?.data || [];
 
-        // 🚀 BLINDAJE DE TIPOS DE DATOS: Sanitizamos el payload antes de enviarlo al dashboard
-        const sanitizedData = rawData.map((animal: any) => ({
-            ...animal,
-            tenant_id: Number(animal.tenant_id),
-            current_weight_kg: animal.current_weight_kg ? Number(animal.current_weight_kg) : 0,
-            adg_lifetime_kg: animal.adg_lifetime_kg ? Number(animal.adg_lifetime_kg) : 0,
-            current_gestation_days: animal.current_gestation_days ? Number(animal.current_gestation_days) : 0
-        }));
+            const sanitizedData = rawData.map((animal: any) => ({
+                ...animal,
+                tenant_id: Number(animal.tenant_id),
+                current_weight_kg: animal.current_weight_kg ? Number(animal.current_weight_kg) : 0,
+                adg_lifetime_kg: animal.adg_lifetime_kg ? Number(animal.adg_lifetime_kg) : 0,
+                current_gestation_days: animal.current_gestation_days ? Number(animal.current_gestation_days) : 0
+            }));
 
-        // Aplicamos el filtro de empresa de forma segura con números
-        return sanitizedData.filter((animal: any) => animal.tenant_id === Number(companyId));
+            return sanitizedData.filter((animal: any) => animal.tenant_id === Number(companyId));
+        } catch (error) {
+            this.logger.warn('Error al cargar inventario:', error);
+            return [];
+        }
     }
 
     // 1. Crear Alta de Animal
@@ -78,18 +84,14 @@ export class CattleApiService {
     }
 
     /**
-   * 🚀 Registra un nuevo Gasto Operativo (Alimentación, Medicina, etc.)
-   * Endpoint orquestado a través del webhook de n8n para insertar en 'cattle_expenses'
-   */
+     * Registra un nuevo Gasto Operativo
+     */
     public async createExpense(fields: any): Promise<void> {
-        // 1. Extraemos dinámicamente la empresa del usuario actual (Mejor que dejarlo fijo)
         const companyId = this.authService.currentUser()?.id_company;
         if (!companyId) throw new Error('Sesión inválida: No se detectó una empresa activa.');
 
-        // 2. Sobrescribimos el tenant_id por seguridad
         fields.tenant_id = companyId;
 
-        // 3. Ejecutamos la petición con la estructura estándar de n8n
         const res: any = await lastValueFrom(
             this.http.post(`${this.apiUrl_crud}/cattle_expenses`, {
                 operation: 'insert',
@@ -100,19 +102,41 @@ export class CattleApiService {
         if (res && res.error) throw new Error(res.message);
     }
 
-    // 🚀 Obtener historial de gastos operativos
+    /**
+     * 🚀 FIX: Obtener historial de gastos operativos refactorizado
+     * Utiliza async/await para ser compatible con main-dashboard.component.ts
+     * y aplica el patrón defensivo contra nulos.
+     */
     public async getExpenses(): Promise<any[]> {
         const companyId = this.authService.currentUser()?.id_company;
-        if (!companyId) throw new Error('Sesión inválida: No se detectó una empresa activa.');
 
-        const res: any = await lastValueFrom(
-            this.http.post(`${this.apiUrl_crud}/cattle_expenses`, {
-                operation: 'getall'
-            })
-        );
+        // El payload que n8n espera para leer datos
+        const payload = {
+            operation: 'getall'
+        };
 
-        if (res && res.error) throw new Error(res.message);
-        const data = res.data || [];
-        return data.filter((expense: any) => expense.tenant_id === companyId);
+        try {
+            // Hacemos la petición HTTP al endpoint de gastos (ajusta la URL si es necesario)
+            const res: any = await lastValueFrom(
+                // OJO: No necesitas getAuthHeaders porque tu Interceptor ya los inyecta
+                this.http.post(`${this.apiUrl_crud}/cattle_expenses`, payload)
+            );
+
+            // 🛡️ PATRÓN DEFENSIVO: Si res y res.data existen, devolvemos el arreglo
+            if (res && Array.isArray(res.data)) {
+                // Filtramos por seguridad para que solo vea los de su empresa
+                return res.data.filter((expense: any) => Number(expense.tenant_id) === Number(companyId));
+            } else if (res && res.data && Array.isArray(res.data.data)) {
+                // Por si n8n manda el doble envoltorio
+                return res.data.data.filter((expense: any) => Number(expense.tenant_id) === Number(companyId));
+            }
+
+            return []; // Si no hay datos, retornamos arreglo vacío
+
+        } catch (error) {
+            // Capturamos el error 404/500 silenciosamente para que no rompa la UI
+            this.logger.warn('No se pudieron cargar los gastos del Tenant:', error);
+            return [];
+        }
     }
 }

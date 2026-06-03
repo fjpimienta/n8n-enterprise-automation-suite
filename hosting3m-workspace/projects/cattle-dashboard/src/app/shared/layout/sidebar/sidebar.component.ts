@@ -2,7 +2,7 @@ import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { LayoutService } from '@shared/services/layout.service';
-import { AuthService } from '@core/services/auth.service';
+import { AuthService } from 'core-auth';
 import { ThemeService } from '@core/services/theme.service';
 
 
