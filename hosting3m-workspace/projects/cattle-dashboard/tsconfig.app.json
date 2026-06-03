@@ -21,6 +21,12 @@
       ],
       "@env/*": [
         "projects/cattle-dashboard/src/environments/*"
+      ],
+      "core-auth": [
+        "dist/core-auth"
+      ],
+      "core-auth/*": [
+        "dist/core-auth/*"
       ]
     }
   },

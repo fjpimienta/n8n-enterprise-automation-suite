@@ -352,6 +352,32 @@
           "builder": "@angular/build:unit-test"
         }
       }
+    },
+    "core-auth": {
+      "projectType": "library",
+      "root": "projects/core-auth",
+      "sourceRoot": "projects/core-auth/src",
+      "prefix": "lib",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:ng-packagr",
+          "configurations": {
+            "production": {
+              "tsConfig": "projects/core-auth/tsconfig.lib.prod.json"
+            },
+            "development": {
+              "tsConfig": "projects/core-auth/tsconfig.lib.json"
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/core-auth/tsconfig.spec.json"
+          }
+        }
+      }
     }
   }
 }

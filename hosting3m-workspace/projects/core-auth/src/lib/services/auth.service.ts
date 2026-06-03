@@ -1,8 +1,11 @@
+import { LoggerService } from './logger.service';
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { catchError, tap, throwError } from 'rxjs';
+import { catchError, tap, throwError, Observable, map } from 'rxjs';
 import { jwtDecode } from 'jwt-decode';
-import { environment } from '@env/environment';
+
+// ✅ ÚNICA declaración de CompanyContext (viene de auth.config)
+import { AUTH_ENV_CONFIG, CompanyContext } from '../auth.config';
 
 const TOKEN_KEY = 'authToken';
 
@@ -23,7 +26,13 @@ interface JwtPayload extends UserPayload {
 })
 export class AuthService {
   private http = inject(HttpClient);
-  private apiUrl_token = environment.apiUrl_token;
+
+  // Inyectamos la configuración del entorno para el desacoplamiento Multi-App
+  private envConfig = inject(AUTH_ENV_CONFIG);
+  private apiUrl_token = this.envConfig.apiUrl_token;
+
+  // ✅ FIX: Inyección correcta de la instancia del Logger
+  private logger = inject(LoggerService);
 
   private readonly _currentUser = signal<UserPayload | null>(this.loadUserFromStorage());
   private readonly _isAuthenticated = signal<boolean>(this.hasValidToken());
@@ -53,8 +62,9 @@ export class AuthService {
     try {
       const decoded = jwtDecode<JwtPayload>(token);
       if (!decoded.exp) return false;
-      const now = Math.floor(Date.now() / 1000);
-      return decoded.exp < now;
+
+      const currentTime = Math.floor(Date.now() / 1000);
+      return decoded.exp < currentTime;
     } catch {
       return true;
     }
@@ -71,11 +81,27 @@ export class AuthService {
     }
   }
 
+  /**
+   * Realiza la petición de autenticación integrando el system_id del entorno actual.
+   * Puede retornar el token directamente si viene resuelto, o el listado de empresas
+   * si el backend requiere que el usuario elija en cuál conectarse.
+   */
   login(credentials: { user: string; pass: string }) {
     return this.http.post<any>(this.apiUrl_token, credentials).pipe(
-      tap(response => {
-        if (response.status === 'success' && response.data?.token) {
-          const token = response.data.token;
+      // 🛡️ PATRÓN ADAPTADOR: Normalizamos la respuesta de n8n
+      map(response => {
+        // Si detectamos el "doble envoltorio" de n8n (Matryoshka)
+        if (response?.data && response.data.status) {
+          // ✅ FIX: Llamada correcta a la instancia (this.logger)
+          this.logger.log('🔧 Adaptador: Desenvolviendo respuesta de n8n');
+          return response.data; // Entregamos solo el núcleo útil
+        }
+        return response; // Si la respuesta ya es plana, la dejamos pasar
+      }),
+      // ⬇️ A partir de aquí, 'res' ya es perfectamente plano para el componente y el tap
+      tap(res => {
+        if (res.status === 'success' && res.data?.token) {
+          const token = res.data.token;
           localStorage.setItem(TOKEN_KEY, token);
           const decoded = jwtDecode<JwtPayload>(token);
           const { exp, ...user } = decoded;
@@ -103,9 +129,5 @@ export class AuthService {
   hasRole(role: string): boolean {
     const userRole = this._currentUser()?.role;
     return userRole ? userRole.toUpperCase() === role.toUpperCase() : false;
-  }
-
-  isAdmin(): boolean {
-    return this.hasRole('admin');
   }
 }

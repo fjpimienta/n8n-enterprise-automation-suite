@@ -1,0 +1,51 @@
+<div class="page page-center" style="min-height: 100vh; background-color: #f8f9fa;">
+    <div class="container container-tight py-4">
+        <div class="text-center mb-4">
+            <h2 class="h2 text-center mt-3 mb-1">Selecciona tu Entorno</h2>
+            <div class="text-muted">Tienes acceso a múltiples espacios de trabajo. ¿A dónde vamos hoy?</div>
+        </div>
+
+        <div class="row row-cards">
+            @for (tenant of tenantService.availableTenants(); track tenant.id_company) {
+            <div class="col-12 mb-3">
+                <a href="#" class="card card-link shadow-sm border-0" (click)="selectTenant($event, tenant)"
+                    style="transition: transform 0.2s;">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-auto">
+                                <span class="avatar rounded bg-primary text-white">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
+                                        viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                        <path [attr.d]="getIconForIndustry(tenant.industry)" />
+                                    </svg>
+                                </span>
+                            </div>
+                            <div class="col">
+                                <div class="font-weight-medium h4 mb-0 text-dark">{{ tenant.company_name }}</div>
+                                <div class="text-muted small mt-1">
+                                    <span class="badge bg-blue-lt me-1">{{ tenant.role }}</span>
+                                    {{ tenant.industry }}
+                                </div>
+                            </div>
+                            <div class="col-auto">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="icon text-muted" width="24" height="24"
+                                    viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                    <path d="M9 6l6 6l-6 6" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            }
+
+            @empty {
+            <div class="alert alert-warning text-center" role="alert">
+                No tienes empresas asignadas a tu cuenta. Contacta a soporte.
+            </div>
+            }
+        </div>
+    </div>
+</div>

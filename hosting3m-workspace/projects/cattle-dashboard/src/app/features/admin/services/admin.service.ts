@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { lastValueFrom, retry } from 'rxjs'; // 🚀 FIX: Importamos 'retry' de rxjs
+import { lastValueFrom, retry, catchError, of } from 'rxjs'; // 🚀 FIX: Importamos catchError y of
 import { ApiResponse } from '@core/interfaces/api-response.interface';
 import { environment } from '@env/environment';
 import { Company } from '@core/models/company.model';
@@ -24,7 +24,6 @@ export class AdminService {
 
   public reservations = signal<any[]>([]);
 
-
   /* Headers con token de autenticación */
   private getHeaders() {
     return new HttpHeaders({ 'Authorization': `Bearer ${localStorage.getItem('authToken')}` });
@@ -39,9 +38,19 @@ export class AdminService {
     });
   }
 
-  /* Companies */
+  /* Companies Refactorizado: Blindaje contra nulos y errores de red */
   public loadCompanies() {
     this.loadingCompanies.set(true);
+
+    // Verificación temprana: Si no hay token, no intentamos hacer la petición
+    // para evitar saturar el backend con errores 401 obvios.
+    if (!localStorage.getItem('authToken')) {
+      console.warn('⚠️ loadCompanies cancelado: No hay token de autenticación disponible.');
+      this.companies.set([]);
+      this.loadingCompanies.set(false);
+      return;
+    }
+
     const payload = {
       entity: 'companys',
       table_name: 'companys',
@@ -49,21 +58,34 @@ export class AdminService {
       action: 'list',
       filters: {}
     };
+
     this.http.post<ApiResponse<Company>>(`${this.apiUrl_crud}/companys`, payload, {
       headers: this.getAuthHeaders()
-    }).subscribe({
+    }).pipe(
+      // 🛡️ Capturamos el error a nivel de flujo de RxJS
+      catchError(error => {
+        console.warn('⚠️ No se pudo cargar el catálogo de empresas:', error.message || error);
+        // Retornamos un objeto "seguro" para que el subscribe no reviente
+        return of({ status: 'error', data: [] } as any);
+      })
+    ).subscribe({
       next: (res) => {
-        const data = res.data || [];
-        const sortedCompanies = data.sort((a, b) => {
-          return String(a.id_company).localeCompare(String(b.id_company), undefined, { numeric: true });
-        });
-        this.companies.set(sortedCompanies);
+        // 🛡️ Validación estricta de estructura antes de iterar
+        if (res && Array.isArray(res.data)) {
+          const sortedCompanies = res.data.sort((a: Company, b: Company) => {
+            return String(a.id_company).localeCompare(String(b.id_company), undefined, { numeric: true });
+          });
+          this.companies.set(sortedCompanies);
+        } else {
+          this.companies.set([]);
+        }
         this.loadingCompanies.set(false);
       },
       error: (err) => {
-        console.error('Error en API:', err);
+        // Este bloque ahora solo atrapará errores muy atípicos no cubiertos por catchError
+        console.error('❌ Error no controlado en loadCompanies:', err);
         this.companies.set([]);
-        this.loadingCompanies.set(false)
+        this.loadingCompanies.set(false);
       }
     });
   }

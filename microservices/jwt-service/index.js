@@ -61,71 +61,107 @@ const pool = new Pool({
 
 // ENDPOINT DE GENERACIÓN
 app.post('/generate-token', loginLimiter, async (req, res) => {
-  const { user, pass, internal_secret } = req.body;
-
-  // LOGS DE DEBUG
-  console.log(`Intento de login para: ${user}`);
-  console.log(`¿Llegó contraseña?: ${pass ? 'SÍ (longitud: ' + pass.length + ')' : 'NO'}`);
-  console.log(`Internal Secret recibido: ${internal_secret}`);
+  // 1. Extraemos system_id e id_company que envía Angular
+  const { user, pass, system_id, id_company, internal_secret } = req.body;
 
   if (internal_secret !== INTERNAL_SECRET) {
     return res.status(403).json({ error: 'Unauthorized' });
   }
 
   try {
-    const query = 'SELECT role, password, id_company, names FROM users WHERE email = $1 LIMIT 1';
+    const query = `
+      SELECT 
+        u.names, 
+        u.password, 
+        uc.role, 
+        uc.id_company,
+        c.company_name,
+        c.industry
+      FROM users u
+      INNER JOIN user_companies uc ON u.email = uc.email
+      INNER JOIN companys c ON uc.id_company = c.id_company
+      WHERE u.email = $1 AND uc.is_active = true
+    `;
     const result = await pool.query(query, [user]);
 
     if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
+      return res.status(404).json({ status: 'error', message: 'User not found or no companies assigned' });
     }
 
-    const { role, password: dbHash, id_company, names } = result.rows[0];
-
+    const { password: dbHash, names } = result.rows[0];
     const crypto = require('crypto');
     const inputHash = crypto.createHash('sha256').update(pass).digest('hex');
-
-    /**
-     * MEJOR PRÁCTICA: Transición a Bcrypt
-     * Intentamos comparar con bcrypt. Si falla (porque la clave está en texto plano),
-     * comparamos texto plano directamente. Esto permite que tus usuarios actuales entren
-     * y puedas actualizar sus claves después.
-     */
-    // Intentamos comparar con Bcrypt
     let isMatch = false;
 
-    // Verificamos si dbHash parece un hash de bcrypt (empieza con $2)
     if (dbHash && dbHash.startsWith('$2')) {
       isMatch = await bcrypt.compare(pass, dbHash);
     }
-
-    // Si no hubo match con bcrypt, probamos con texto plano (Fallback)
     if (!isMatch) {
       isMatch = (inputHash === dbHash);
     }
 
     if (!isMatch) {
-      console.log(`❌ Login fallido para ${user}: Los hashes no coinciden.`);
-      return res.status(401).json({ error: 'Invalid credentials' });
+      return res.status(401).json({ status: 'error', message: 'Invalid credentials' });
     }
 
-    // FIRMAMOS EL TOKEN con el "Scope" completo
+    const authorizedCompanies = result.rows.map(row => ({
+      id_company: row.id_company,
+      company_name: row.company_name,
+      role: row.role,
+      industry: row.industry
+    }));
+
+    // 🚀 LÓGICA DE 2 PASOS (MULTI-TENANT)
+
+    // PASO A: El usuario NO ha enviado un rancho, y tiene MÁS DE 1 asignado
+    if (authorizedCompanies.length > 1 && !id_company) {
+      return res.json({
+        status: "select_company",
+        message: "Múltiples empresas detectadas",
+        data: {
+          companies: authorizedCompanies
+        }
+      });
+    }
+
+    // PASO B: El usuario ya seleccionó un rancho, o solo tiene 1 rancho disponible
+    const selectedCompanyId = id_company ? Number(id_company) : authorizedCompanies[0].id_company;
+
+    // Validar por seguridad que la empresa solicitada realmente le pertenece
+    const companyData = authorizedCompanies.find(c => c.id_company === selectedCompanyId);
+
+    if (!companyData) {
+      return res.status(403).json({ status: 'error', message: 'No tienes permisos de acceso para esta empresa.' });
+    }
+
+    // Generamos el token inyectando el id_company y el rol específico de ESA empresa
     const token = jwt.sign(
       {
         user,
-        role,
-        id_company,
-        name: names // Útil para mostrar en el frontend
+        name: names,
+        id_company: companyData.id_company,
+        role: companyData.role,
+        system_id: system_id || 'unknown'
       },
       JWT_SECRET,
       { expiresIn: '8h' }
     );
 
-    res.json({ token, role, id_company });
+    // Retornamos el formato exacto que Angular espera para "success"
+    return res.json({
+      status: "success",
+      message: "Autenticación exitosa",
+      data: {
+        token: token,
+        role: companyData.role,
+        id_company: companyData.id_company,
+        company: companyData
+      }
+    });
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: 'Database error' });
+    res.status(500).json({ status: 'error', message: 'Database error' });
   }
 });
 
