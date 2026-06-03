@@ -2,9 +2,18 @@
 
 Todos los cambios notables en esta suite de automatización serán documentados en este archivo. El sistema se adhiere estrictamente a **Semantic Versioning** para la gestión de dependencias entre microservicios, flujos de n8n y frontends.
 
-# Changelog Principal: n8n Enterprise Automation Suite 🚀
+---
 
-Todos los cambios notables en esta suite de automatización serán documentados en este archivo. El sistema se adhiere estrictamente a **Semantic Versioning** para la gestión de dependencias entre microservicios, flujos de n8n y frontends.
+## [1.5.0] - 2026-06-02
+
+### 🏢 Arquitectura Multi-Tenant & 🤖 AI Zero-Hallucination (Suite Core Update)
+Esta liberación representa una actualización estructural transversal (Cross-Cutting) en la suite, abstrayendo la seguridad a nivel monorepo y certificando los protocolos de grado empresarial para los Agentes IA.
+
+* **Librería `@hosting3m/core-auth`:** Extracción de toda la lógica de autenticación (Guards, Interceptors, Services) hacia una librería Angular centralizada. Implementación de un *Context Switcher* reactivo (Signals) que orquesta el ruteo de usuarios con acceso a múltiples unidades de negocio (ej. Rancho y Hotel).
+* **Zero-Hallucination Firewall:** Inyección de directivas restrictivas en el *System Prompt* del Agente IA (`v6_ai_chat_cattle`) para prohibir la inferencia algorítmica de parámetros faltantes y mitigar la inyección de datos "basura" (GIGO).
+* **Anti-Jailbreak Protocol (Human-in-the-Loop):** Implementación de un candado estricto de doble confirmación (Sí/No) que bloquea el `Tool Calling` del LLM ante instrucciones autoritarias, garantizando la supervisión humana en cada escritura transaccional.
+* **MCP Strongly Typed Schemas:** Refactorización del Servidor MCP (`v6_MCP_Server_Cattle`) implementando casting determinista (`$fromAI`) para asegurar el tipado fuerte hacia PostgreSQL y corrección del desfase de columnas mediante `CURRENT_TIMESTAMP`.
+* **Data Pipeline Resilience:** Programación defensiva con operadores RxJS (`catchError`, `map`) en las llamadas al MetaCRUD, previniendo colapsos de UI (`TypeError`) al desenvolver cargas útiles (payloads) anidadas.
 
 ---
 
