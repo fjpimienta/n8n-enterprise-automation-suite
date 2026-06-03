@@ -1,0 +1,246 @@
+{
+  "name": "v6/MCP Server Cattle",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "v6/cattle-management"
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
+      "typeVersion": 2,
+      "position": [
+        576,
+        832
+      ],
+      "id": "20140a69-ad24-4392-850e-789f2ff32e45",
+      "name": "MCP Server Cattle",
+      "webhookId": "68e31c86-2f32-4234-be5d-32fd5260fd1c"
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Busca la informacion de un animal en la base de datos.",
+        "operation": "executeQuery",
+        "query": "SELECT id, tenant_id, rfid_siniiga, numero_fuego, category, current_status, current_weight_kg \nFROM cattle_livestock \nWHERE rfid_siniiga = $1::text \n   OR numero_fuego = $1::text\nLIMIT 1;",
+        "options": {
+          "queryReplacement": "={{ [ $fromAI('identificador', 'El numero de arete SINIIGA o numero de fuego a buscar', 'string') ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        320,
+        976
+      ],
+      "id": "13eab66a-2941-48d8-846a-52cf31e8517a",
+      "name": "get_livestock_info",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Diccionario de datos. Úsala para descubrir la estructura de cualquier tabla del sistema (ej. cattle_expenses, cattle_health_logs, cattle_livestock).",
+        "operation": "executeQuery",
+        "query": "SELECT table_name, schema_json, joins, allowed_ops\nFROM crud_models\nWHERE table_name = $1 AND is_active = true;",
+        "options": {
+          "queryReplacement": "={{ [ $fromAI('table_name', 'Nombre de la tabla a consultar', 'string') ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        544,
+        1104
+      ],
+      "id": "5d209495-6de0-4419-8deb-43efd1f4ba94",
+      "name": "get_table_metadata",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Registra el peso actual de un animal. REQUIERE obligatoriamente: livestock_id y weight_kg. Solo ejecuta esto si ya confirmaste el UUID y el peso con el usuario.",
+        "operation": "executeQuery",
+        "query": "INSERT INTO cattle_weight_logs (livestock_id, weight_kg, log_date, source_device)\nVALUES ($1::uuid, $2::numeric, CURRENT_TIMESTAMP, 'WhatsApp_AI')\nRETURNING id, weight_kg, log_date;",
+        "options": {
+          "queryBatching": "transaction",
+          "queryReplacement": "={{ [ $fromAI('livestock_id', 'UUID del animal', 'string'), $fromAI('weight_kg', 'Peso numerico en kg', 'number') ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        800,
+        1104
+      ],
+      "id": "a0d3dd3f-0664-4e65-b801-a92684302056",
+      "name": "log_cattle_weight",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Registra eventos de salud, vacunación o enfermedad. REQUIERE: livestock_id, event_type y description.",
+        "operation": "executeQuery",
+        "query": "INSERT INTO cattle_health_logs (livestock_id, event_type, description, event_date) \nVALUES ($1::uuid, $2, $3, CURRENT_TIMESTAMP) \nRETURNING id, event_type;",
+        "options": {
+          "queryReplacement": "={{ [ $fromAI('livestock_id', 'UUID del animal', 'string'), $fromAI('event_type', 'Tipo de evento ej. VACUNACION o ENFERMEDAD', 'string'), $fromAI('description', 'Detalles del evento', 'string') ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        1040,
+        1072
+      ],
+      "id": "84d7567d-a46c-4811-9ff3-6b0b573bed48",
+      "name": "log_health_event",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Registra gastos, compra de insumos o pagos. REQUIERE: tenant_id, category, amount y description.",
+        "operation": "executeQuery",
+        "query": "INSERT INTO cattle_expenses (tenant_id, category, amount, description, expense_date) \nVALUES ($1::int, $2, $3::numeric, $4, CURRENT_TIMESTAMP) \nRETURNING id, amount;",
+        "options": {
+          "queryReplacement": "={{ [ $fromAI('tenant_id', 'ID del inquilino, asume 1', 'number'), $fromAI('category', 'Categoria del gasto ej. ALIMENTO', 'string'), $fromAI('amount', 'Monto numerico', 'number'), $fromAI('description', 'Descripcion del gasto', 'string') ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        1248,
+        992
+      ],
+      "id": "f57ce210-42a3-4c01-9319-648f61197d82",
+      "name": "register_ranch_expense",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "get_livestock_info": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_table_metadata": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "log_cattle_weight": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "log_health_event": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "register_ranch_expense": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "9SrVXdATmlrZemJT",
+    "timeSavedMode": "fixed",
+    "timeSavedPerExecution": 3
+  },
+  "versionId": "7a0ca66e-e540-4637-97ec-3b457ae46740",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
+  },
+  "nodeGroups": [],
+  "id": "pJ3CEaO70QEiGL0C",
+  "tags": [
+    {
+      "updatedAt": "2025-12-31T16:55:06.301Z",
+      "createdAt": "2025-12-31T16:55:06.301Z",
+      "id": "ts9FABk8F02a5xrA",
+      "name": "Agent IA"
+    },
+    {
+      "updatedAt": "2025-12-23T12:12:58.230Z",
+      "createdAt": "2025-12-23T12:12:58.230Z",
+      "id": "MKrwsTVnLLBXLfUP",
+      "name": "Chat"
+    },
+    {
+      "updatedAt": "2025-12-23T12:12:28.399Z",
+      "createdAt": "2025-12-23T12:12:28.399Z",
+      "id": "RWBzILPfFXEtEcLf",
+      "name": "AI Agent"
+    },
+    {
+      "updatedAt": "2026-06-02T17:44:17.958Z",
+      "createdAt": "2026-06-02T17:44:17.958Z",
+      "id": "6NGDwjjesOlJeGQr",
+      "name": "v6"
+    }
+  ]
+}
