@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
-import { AuthService } from '@core/services/auth.service';
+import { AuthService } from 'core-auth';
 import { ThemeService } from '@core/services/theme.service';
 import { LayoutService } from '@shared/services/layout.service'; // 🚀 IMPORTANTE: Servicio Real
 

@@ -66,6 +66,12 @@
       ],
       "@cattle-shared/*": [
         "projects/cattle-dashboard/src/app/shared/*"
+      ],
+      "core-auth": [
+        "dist/core-auth"
+      ],
+      "core-auth/*": [
+        "dist/core-auth/*"
       ]
     }
   },
@@ -106,6 +112,12 @@
     },
     {
       "path": "./projects/cattle-dashboard/tsconfig.spec.json"
+    },
+    {
+      "path": "./projects/core-auth/tsconfig.lib.json"
+    },
+    {
+      "path": "./projects/core-auth/tsconfig.spec.json"
     }
   ]
 }
