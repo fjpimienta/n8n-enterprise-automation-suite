@@ -91,8 +91,15 @@
           <div class="flex items-center gap-3"><i data-lucide="map-pin"
               class="w-5 h-5 text-tierra-100 flex-shrink-0"></i><span class="text-base">Playas de Catazajá,
               Chiapas</span></div>
-          <div class="flex items-center gap-3"><i data-lucide="phone"
-              class="w-5 h-5 text-tierra-100 flex-shrink-0"></i><span class="text-base">+52 (993) 109 2457</span></div>
+          <div class="flex items-center gap-3">
+            <!-- Icono oficial de WhatsApp usando Tabler Icons -->
+            <i class="ti ti-brand-whatsapp fs-2 text-tierra-100 flex-shrink-0 animate-pulse"></i>
+            <a href="https://wa.me/529931092457?text=Hola,%20me%20gustaría%20consultar%20la%20disponibilidad%20de%20una%20habitación%20en%20el%20Hotel%20San%20José."
+              target="_blank"
+              class="text-base text-white hover:text-tierra-100 transition-colors font-semibold tracking-wide">
+              +52 (993) 109 2457
+            </a>
+          </div>
         </div>
       </div>
       <a href="#amenidades"
@@ -668,5 +675,17 @@
   </div>
 </div>
 }
+
+<div class="fixed bottom-6 left-6 z-[9999] animate-bounce d-print-none">
+  <a href="https://wa.me/529931092457?text=Hola,%20me%20gustaría%20consultar%20la%20disponibilidad%20de%20una%20habitación%20en%20el%20Hotel%20San%20José."
+    target="_blank" rel="noopener noreferrer"
+    class="w-14 h-14 md:w-16 md:h-16 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow-2xl hover:bg-[#20ba56] hover:scale-110 transition-all duration-300 group"
+    title="Chat de Ventas WhatsApp">
+
+    <i class="ti ti-brand-whatsapp text-3xl md:text-4xl group-hover:rotate-12 transition-transform"></i>
+
+    <span class="absolute inset-0 rounded-full bg-[#25D366] opacity-40 animate-ping pointer-events-none"></span>
+  </a>
+</div>
 
 <lib-ai-chat></lib-ai-chat>
