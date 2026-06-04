@@ -149,14 +149,11 @@ app.post('/generate-token', loginLimiter, async (req, res) => {
 
     // Retornamos el formato exacto que Angular espera para "success"
     return res.json({
-      status: "success",
-      message: "Autenticación exitosa",
-      data: {
-        token: token,
-        role: companyData.role,
-        id_company: companyData.id_company,
-        company: companyData
-      }
+      token: token,
+      role: companyData.role,
+      id_company: companyData.id_company,
+      company: companyData, // Inyectamos la metadata para el TenantService
+      status: "success"
     });
 
   } catch (err) {
