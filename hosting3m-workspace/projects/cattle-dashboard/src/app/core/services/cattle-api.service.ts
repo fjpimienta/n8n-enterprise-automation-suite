@@ -3,71 +3,55 @@ import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { environment } from '@env/environment';
 import { AuthService, TenantService } from 'core-auth';
-// 🚀 FIX: Importamos el LoggerService para poder usarlo
 import { LoggerService } from './logger.service';
-
-//import { LoggerService } from 'core-auth';
 
 @Injectable({ providedIn: 'root' })
 export class CattleApiService {
     private http = inject(HttpClient);
     private authService = inject(AuthService);
-    // 🚀 FIX: Inyectamos el logger
+    private tenantService = inject(TenantService);
     private logger = inject(LoggerService);
     private apiUrl_crud = environment.apiUrl_crud;
 
     public isProcessing = signal<boolean>(false);
 
-    private tenantService = inject(TenantService);
-
-    // 0. Obtener Inventario Completo (Ahora lee de la Vista SQL con los KPIs integrados)
+    /**
+     * 0. Obtener Inventario Completo (Filtrado dinámico por Contexto de Rancho)
+     */
     public async getAllLivestock(): Promise<any[]> {
+        const idRanchoActivo = this.tenantService.activeTenantId();
+        if (!idRanchoActivo) {
+            this.logger.warn('🚫 No hay un contexto de rancho activo seleccionado.');
+            return [];
+        }
+
         try {
             const payload = {
                 operation: 'getall',
-                id_company: this.tenantService.activeTenantId() // 🚀 Extraemos el ID del rancho activo
+                // 🚀 MEJOR PRÁCTICA: Mapeamos id_company de la UI al nombre de columna física 'tenant_id'
+                tenant_id: Number(idRanchoActivo)
             };
 
             const res: any = await lastValueFrom(
                 this.http.post(`${this.apiUrl_crud}/vw_cattle_kpi`, payload)
             );
 
-            // 🛡️ NULL SAFETY: Verificamos que res y res.data existan antes de leerlos
-            if (!res || !res.data) {
-                this.logger.warn('La API no devolvió datos (res o res.data es null)');
-                return []; // Retornamos un arreglo vacío para evitar el colapso del Dashboard
-            }
-
+            if (!res || !res.data) return [];
             return res.data;
-
         } catch (error) {
-            this.logger.error('Error crítico en el data pipeline (getAllLivestock):', error);
-            return []; // Fallback seguro
+            this.logger.error('Error en getAllLivestock:', error);
+            return [];
         }
     }
 
-    async getInventario() {
-        // 🚀 Extraes el ID del rancho que el usuario seleccionó en el login
-        const idRanchoActivo = this.tenantService.activeTenantId();
-
-        if (!idRanchoActivo) {
-            console.error("No hay un rancho seleccionado");
-            return;
-        }
-
-        // Envías ese ID a tu backend para filtrar los datos
-        return this.http.post('tu-url-api/vw_cattle_kpi', {
-            operation: 'getall',
-            id_company: idRanchoActivo
-        }).toPromise();
-    }
-
-    // 1. Crear Alta de Animal
+    /**
+     * 1. Crear Alta de Animal (Asignación automática al Tenant Activo)
+     */
     public async createLivestock(fields: any): Promise<void> {
-        const companyId = this.authService.currentUser()?.id_company;
-        if (!companyId) throw new Error('Sesión inválida: No se detectó una empresa activa.');
+        const idRanchoActivo = this.tenantService.activeTenantId();
+        if (!idRanchoActivo) throw new Error('Sesión inválida: No hay un rancho activo.');
 
-        fields.tenant_id = companyId;
+        fields.tenant_id = Number(idRanchoActivo); // 🚀 Forzamos el ID del rancho actual
 
         const res: any = await lastValueFrom(
             this.http.post(`${this.apiUrl_crud}/cattle_livestock`, {
@@ -102,13 +86,13 @@ export class CattleApiService {
     }
 
     /**
-     * Registra un nuevo Gasto Operativo
+     * 4. Registrar un nuevo Gasto Operativo
      */
     public async createExpense(fields: any): Promise<void> {
-        const companyId = this.authService.currentUser()?.id_company;
-        if (!companyId) throw new Error('Sesión inválida: No se detectó una empresa activa.');
+        const idRanchoActivo = this.tenantService.activeTenantId();
+        if (!idRanchoActivo) throw new Error('Sesión inválida: No se detectó un rancho activo.');
 
-        fields.tenant_id = companyId;
+        fields.tenant_id = Number(idRanchoActivo);
 
         const res: any = await lastValueFrom(
             this.http.post(`${this.apiUrl_crud}/cattle_expenses`, {
@@ -121,38 +105,34 @@ export class CattleApiService {
     }
 
     /**
-     * 🚀 FIX: Obtener historial de gastos operativos refactorizado
-     * Utiliza async/await para ser compatible con main-dashboard.component.ts
-     * y aplica el patrón defensivo contra nulos.
+     * 5. Obtener historial de Gastos Operativos (Aislamiento de Datos por n8n/SQL)
      */
     public async getExpenses(): Promise<any[]> {
-        const companyId = this.authService.currentUser()?.id_company;
+        const idRanchoActivo = this.tenantService.activeTenantId();
+        if (!idRanchoActivo) {
+            this.logger.warn('🚫 No se pueden solicitar gastos sin un rancho activo.');
+            return [];
+        }
 
-        // El payload que n8n espera para leer datos
         const payload = {
-            operation: 'getall'
+            operation: 'getall',
+            // 🚀 MEJOR PRÁCTICA: Aseguramos el nombre de propiedad idéntico a allowed_fields de la DB
+            tenant_id: Number(idRanchoActivo)
         };
 
         try {
-            // Hacemos la petición HTTP al endpoint de gastos (ajusta la URL si es necesario)
             const res: any = await lastValueFrom(
-                // OJO: No necesitas getAuthHeaders porque tu Interceptor ya los inyecta
                 this.http.post(`${this.apiUrl_crud}/cattle_expenses`, payload)
             );
 
-            // 🛡️ PATRÓN DEFENSIVO: Si res y res.data existen, devolvemos el arreglo
             if (res && Array.isArray(res.data)) {
-                // Filtramos por seguridad para que solo vea los de su empresa
-                return res.data.filter((expense: any) => Number(expense.tenant_id) === Number(companyId));
-            } else if (res && res.data && Array.isArray(res.data.data)) {
-                // Por si n8n manda el doble envoltorio
-                return res.data.data.filter((expense: any) => Number(expense.tenant_id) === Number(companyId));
+                return res.data;
+            } else if (res?.data && Array.isArray(res.data.data)) {
+                return res.data.data;
             }
 
-            return []; // Si no hay datos, retornamos arreglo vacío
-
+            return [];
         } catch (error) {
-            // Capturamos el error 404/500 silenciosamente para que no rompa la UI
             this.logger.warn('No se pudieron cargar los gastos del Tenant:', error);
             return [];
         }

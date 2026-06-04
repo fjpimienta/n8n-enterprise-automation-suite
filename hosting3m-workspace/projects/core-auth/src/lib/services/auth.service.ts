@@ -83,49 +83,40 @@ export class AuthService {
    * Permite recibir el id_company opcional durante el paso 2 de selección.
    */
   login(credentials: { user: string; pass: string; id_company?: number | string }) {
-
-    // 1. Inyectamos la identidad de la aplicación al payload
     const payload = {
       ...credentials,
       system_id: this.envConfig.system_id
     };
 
     return this.http.post<any>(this.apiUrl_token, payload).pipe(
-
-      // 🛡️ PATRÓN ADAPTADOR: Normalizamos la respuesta de n8n
+      // 🛡️ PATRÓN ADAPTADOR: Normalización del Contrato Multi-Tenant
       map(response => {
-        if (response?.data && response.data.status) {
-          this.logger.log('🔧 Adaptador: Desenvolviendo respuesta de n8n (Matryoshka)');
+        // Si n8n envolvió la respuesta estructurada del microservicio dentro de su propio 'data'
+        if (response?.data && (response.data.status === 'select_company' || response.data.status === 'success')) {
           return response.data;
         }
+
+        // Caso de uso Legacy: Si viene el formato plano antiguo (Pista de hielo / Contratos anteriores)
+        if (response?.data && response.data.token) {
+          return {
+            status: 'success',
+            data: response.data
+          };
+        }
+
         return response;
       }),
-
-      // 2. Intercepción del Token si el Backend resolvió el acceso
       tap(res => {
-        // Si es 'select_company', el tap no hace nada, fluye directo al LoginComponent
         if (res.status === 'success' && res.data?.token) {
           const token = res.data.token;
           localStorage.setItem(TOKEN_KEY, token);
 
-          const decoded = jwtDecode<JwtPayload>(token);
-          const { exp, ...user } = decoded;
-
-          this._currentUser.set(user);
+          const decoded = jwtDecode<any>(token);
+          this._currentUser.set(decoded);
           this._isAuthenticated.set(true);
         }
       }),
-
-      // 3. Manejo estandarizado de errores HTTP
-      catchError(err => {
-        if (err.status === 401) {
-          return throwError(() => new Error('Credenciales inválidas'));
-        }
-        if (err.status === 403) {
-          return throwError(() => new Error('No tienes permisos de acceso para esta aplicación'));
-        }
-        return throwError(() => err);
-      })
+      catchError(err => throwError(() => err))
     );
   }
 

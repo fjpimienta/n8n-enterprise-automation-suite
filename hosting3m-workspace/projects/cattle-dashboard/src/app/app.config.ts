@@ -4,7 +4,7 @@ import { provideHttpClient, withInterceptors } from '@angular/common/http';
 
 import { routes } from './app.routes';
 import { environment } from '@env/environment';
-import { AUTH_ENV_CONFIG, authInterceptor } from 'core-auth';
+import { AUTH_ENV_CONFIG, authInterceptor, tenantInterceptor } from 'core-auth';
 
 // ✅ 1. Importar el Token y el Servicio desde la librería ui-chat
 import { AiService, CHAT_CONFIG_TOKEN } from 'ui-chat';
@@ -13,7 +13,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([authInterceptor])),
+    provideHttpClient(withInterceptors([authInterceptor, tenantInterceptor])),
 
     // Configuración de la librería core-auth
     {
