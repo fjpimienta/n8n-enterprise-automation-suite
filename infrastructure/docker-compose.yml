@@ -112,7 +112,8 @@ services:
       - N8N_CORS_ALLOW_HEADERS=Authorization,Content-Type
       - N8N_CORS_ORIGINS=https://hosting3m.com,https://cattle.hosting3m.com
     volumes:
-      - ../microservices/jwt-service:/usr/src/app
+      - ../microservices/jwt-service/index.js:/usr/src/app/index.js # Monta solo el archivo JS
+      - ../microservices/jwt-service/package.json:/usr/src/app/package.json # Monta el package.json
     networks:
       - n8n_enterprise_net
     logging:
