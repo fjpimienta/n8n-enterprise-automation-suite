@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-
 import { LoggerService } from '../../services/logger.service';
 import { AuthService, TenantService, CompanyContext } from 'core-auth';
 import { ThemeService } from '@core/services/theme.service';
@@ -25,11 +24,9 @@ export class LoginComponent {
   showPassword = signal(false);
   errorMessage = signal<string>('');
 
-  // 🚀 Signals para resolver las propiedades faltantes en la UI
   availableCompanies = signal<CompanyContext[]>([]);
   showCompanySelection = signal(false);
 
-  // El campo id_company inicia deshabilitado hasta que el backend requiera selección
   loginForm: FormGroup = this.fb.group({
     user: ['', Validators.required],
     pass: ['', Validators.required],
@@ -47,58 +44,48 @@ export class LoginComponent {
   }
 
   onSubmit() {
-    if (this.loginForm.valid) {
-      this.isLoading.set(true);
-      this.errorMessage.set('');
-
-      // Extraemos el valor del formulario (incluyendo campos deshabilitados si aplica)
-      const rawPayload = this.loginForm.getRawValue();
-
-      this.authService.login(rawPayload).subscribe({
-        next: (res: any) => {
-          // 🛠️ Escenario 1: El backend solicita explícitamente seleccionar un contexto de empresa
-          if (res.status === 'select_company' && res.data?.companies) {
-            this.logger.log('⚠️ Múltiples compañías detectadas. Activando selector de contexto.');
-            this.isLoading.set(false);
-
-            // Cargamos las opciones y habilitamos el control en la interfaz
-            this.availableCompanies.set(res.data.companies);
-            this.showCompanySelection.set(true);
-            this.loginForm.get('id_company')?.enable();
-          } else {
-            // 🛠️ Escenario 2: Login resuelto (Token final emitido directamente)
-            this.logger.log('✅ Login autorizado. Sincronizando contexto global.');
-
-            // Apagamos el loader antes de navegar
-            this.isLoading.set(false); // <-- 🚀 AGREGA ESTA LÍNEA
-
-            // Si el backend retornó datos de la compañía activa, los mapeamos al TenantService
-            const activeCompany = res.data?.company || this.authService.currentUser();
-            if (activeCompany) {
-              this.tenantService.setActiveTenant({
-                id_company: activeCompany.id_company,
-                company_name: activeCompany.company_name || 'Compañía Activa',
-                role: activeCompany.role,
-                industry: 'AgTech'
-              });
-            }
-
-            this.router.navigate(['/dashboard']);
-          }
-        },
-        error: (err: any) => {
-          this.isLoading.set(false);
-          this.logger.error('❌ Acceso denegado', err);
-
-          if (err.status === 401 || err.status === 403) {
-            this.errorMessage.set(err.message || 'Usuario o contraseña incorrectos.');
-          } else {
-            this.errorMessage.set('Error de conexión con el servidor. Intente más tarde.');
-          }
-        }
-      });
-    } else {
+    if (this.loginForm.invalid) {
       this.loginForm.markAllAsTouched();
+      return;
     }
+
+    this.isLoading.set(true);
+    this.errorMessage.set('');
+
+    const payload = this.loginForm.getRawValue();
+
+    this.authService.login(payload).subscribe({
+      next: (res: any) => {
+        this.isLoading.set(false);
+
+        // Paso 1: El backend solicita resolución de contexto (Multi-Tenant)
+        if (res.status === 'select_company' && res.data?.companies) {
+          this.logger.log('⚠️ Múltiples entornos detectados. Activando selector de contexto.');
+          this.availableCompanies.set(res.data.companies);
+          this.showCompanySelection.set(true);
+          this.loginForm.get('id_company')?.enable();
+        }
+        // Paso 2: Autenticación e inserción de sesión exitosa
+        else if (res.status === 'success') {
+          this.logger.log('✅ Acceso autorizado. Sincronizando tenant activo.');
+
+          const activeCompany = res.data?.company;
+          if (activeCompany) {
+            this.tenantService.setActiveTenant({
+              id_company: activeCompany.id_company,
+              company_name: activeCompany.company_name,
+              role: activeCompany.role,
+              industry: activeCompany.industry || 'Generic'
+            });
+          }
+          this.router.navigate(['/dashboard']);
+        }
+      },
+      error: (err) => {
+        this.isLoading.set(false);
+        this.logger.error('❌ Error de autenticación:', err);
+        this.errorMessage.set(err.message || 'Error de comunicación con el servidor.');
+      }
+    });
   }
 }
