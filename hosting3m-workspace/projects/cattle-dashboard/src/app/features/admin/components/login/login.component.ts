@@ -2,7 +2,6 @@ import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
-
 import { LoggerService } from '../../services/logger.service';
 import { AuthService, TenantService, CompanyContext } from 'core-auth';
 import { ThemeService } from '@core/services/theme.service';
@@ -25,11 +24,9 @@ export class LoginComponent {
   showPassword = signal(false);
   errorMessage = signal<string>('');
 
-  // 🚀 Signals para resolver las propiedades faltantes en la UI
   availableCompanies = signal<CompanyContext[]>([]);
   showCompanySelection = signal(false);
 
-  // El campo id_company inicia deshabilitado hasta que el backend requiera selección
   loginForm: FormGroup = this.fb.group({
     user: ['', Validators.required],
     pass: ['', Validators.required],
@@ -46,41 +43,49 @@ export class LoginComponent {
     this.showPassword.update(value => !value);
   }
 
-  // En tu método onSubmit, actualiza la lógica para incluir el id_company si existe:
   onSubmit() {
-    // Si ya mostramos el selector, validamos que tenga una empresa elegida
-    if (this.showCompanySelection() && !this.loginForm.value.id_company) {
-      this.errorMessage.set('Por favor, selecciona un entorno de trabajo.');
+    if (this.loginForm.invalid) {
+      this.loginForm.markAllAsTouched();
       return;
     }
 
-    if (this.loginForm.valid) {
-      this.isLoading.set(true);
+    this.isLoading.set(true);
+    this.errorMessage.set('');
 
-      // getRawValue() incluirá el id_company, incluso si estaba deshabilitado antes
-      const payload = this.loginForm.getRawValue();
+    const payload = this.loginForm.getRawValue();
 
-      this.authService.login(payload).subscribe({
-        next: (res: any) => {
-          if (res.status === 'select_company') {
-            // Ya sabemos que esto funciona:
-            this.availableCompanies.set(res.data.companies);
-            this.showCompanySelection.set(true);
-            this.loginForm.get('id_company')?.enable();
-            this.isLoading.set(false);
-          } else if (res.status === 'success') {
-            // ¡Aquí está la clave! 
-            // Al llegar aquí con un payload que ya tiene id_company,
-            // n8n debe retornar el token final.
-            this.isLoading.set(false);
-            this.router.navigate(['/dashboard']);
-          }
-        },
-        error: (err) => {
-          this.isLoading.set(false);
-          this.errorMessage.set('Error en la autenticación final.');
+    this.authService.login(payload).subscribe({
+      next: (res: any) => {
+        this.isLoading.set(false);
+
+        // Paso 1: El backend solicita resolución de contexto (Multi-Tenant)
+        if (res.status === 'select_company' && res.data?.companies) {
+          this.logger.log('⚠️ Múltiples entornos detectados. Activando selector de contexto.');
+          this.availableCompanies.set(res.data.companies);
+          this.showCompanySelection.set(true);
+          this.loginForm.get('id_company')?.enable();
         }
-      });
-    }
+        // Paso 2: Autenticación e inserción de sesión exitosa
+        else if (res.status === 'success') {
+          this.logger.log('✅ Acceso autorizado. Sincronizando tenant activo.');
+
+          const activeCompany = res.data?.company;
+          if (activeCompany) {
+            this.tenantService.setActiveTenant({
+              id_company: activeCompany.id_company,
+              company_name: activeCompany.company_name,
+              role: activeCompany.role,
+              industry: activeCompany.industry || 'Generic'
+            });
+          }
+          this.router.navigate(['/dashboard']);
+        }
+      },
+      error: (err) => {
+        this.isLoading.set(false);
+        this.logger.error('❌ Error de autenticación:', err);
+        this.errorMessage.set(err.message || 'Error de comunicación con el servidor.');
+      }
+    });
   }
 }
