@@ -5,6 +5,7 @@ import { AdminService } from '@features/admin/services/admin.service';
 import { lastValueFrom } from 'rxjs';
 import { Expense } from '../models/expense.model';
 import { ApiResponse } from '@core/interfaces/api-response.interface';
+import { TenantService } from 'core-auth';
 
 @Injectable({
   providedIn: 'root'
@@ -13,6 +14,7 @@ export class ExpenseService {
   private http = inject(HttpClient);
   private adminService = inject(AdminService);
   private apiUrl = environment.apiUrl_crud;
+  private tenantService = inject(TenantService);
 
   public loading = signal<boolean>(false);
 
@@ -21,7 +23,9 @@ export class ExpenseService {
     this.loading.set(true);
     try {
       // Filtros dinámicos para el JSONB del backend
-      const filters: any = {};
+      const filters: any = {
+        id_company: this.tenantService.activeTenantId()
+      };
       if (startDate && endDate) {
         filters.expense_date = { gte: startDate, lte: endDate };
       }
@@ -58,7 +62,7 @@ export class ExpenseService {
         table_name: 'hotel_expenses',
         fields: {
           ...expense,
-          id_company: 1, // Multi-tenancy hardcoded por ahora
+          id_company: this.tenantService.activeTenantId(),
           status: 'APPROVED' // Auto-aprobado si lo hace el admin
         }
       };

@@ -5,10 +5,12 @@ import { environment } from '@env/environment';
 import { lastValueFrom, map, Observable, shareReplay } from 'rxjs';
 import { BookingService } from '@features/booking/services/booking.service';
 import { AdminService } from '@features/admin/services/admin.service';
+import { TenantService } from 'core-auth';
 
 @Injectable({ providedIn: 'root' })
 export class HotelService {
   private http = inject(HttpClient);
+  private tenantService = inject(TenantService);
   private apiUrl_crud = environment.apiUrl_crud;
   public adminService = inject(AdminService);
   public bookingService = inject(BookingService);
@@ -138,7 +140,7 @@ export class HotelService {
         checklist_data: checklist,
         observaciones: observaciones || "",
         inspection_date: new Date().toISOString().split('T')[0],
-        id_company: 1
+        id_company: this.tenantService.activeTenantId()
       }
     };
 

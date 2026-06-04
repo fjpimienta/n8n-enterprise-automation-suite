@@ -5,6 +5,9 @@
     "types": [],
     "baseUrl": ".",
     "paths": {
+      "core-auth": [
+        "../core-auth/src/public-api.ts"
+      ],
       "ui-chat": [
         "../ui-chat/src/public-api.ts"
       ],

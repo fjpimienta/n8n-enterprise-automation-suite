@@ -2,6 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
 import { environment } from '@env/environment';
 import { AdminService } from '@features/admin/services/admin.service';
+import { TenantService } from 'core-auth';
 import { lastValueFrom } from 'rxjs';
 
 @Injectable({
@@ -10,6 +11,8 @@ import { lastValueFrom } from 'rxjs';
 export class ReportService {
   private http = inject(HttpClient);
   private apiUrl_crud = environment.apiUrl_crud;
+  private tenantService = inject(TenantService);
+  
   public loadingReports = signal<boolean>(false);
   public adminService = inject(AdminService);
 
@@ -207,7 +210,7 @@ export class ReportService {
       const payload = {
         operation: 'getall',
         table_name: table,
-        fields: { id_company: 1 },
+        fields: { id_company: this.tenantService.activeTenantId() },
         date_range: { column: dateColumn, start: startDate, end: endDate }
       };
       const res: any = await lastValueFrom(
@@ -227,7 +230,7 @@ export class ReportService {
       const payload = {
         operation: 'getall',
         table_name: 'hotel_capital', // El model_name que registramos en BD
-        fields: { id_company: 1 }
+        fields: { id_company: this.tenantService.activeTenantId() }
       };
 
       const res: any = await lastValueFrom(

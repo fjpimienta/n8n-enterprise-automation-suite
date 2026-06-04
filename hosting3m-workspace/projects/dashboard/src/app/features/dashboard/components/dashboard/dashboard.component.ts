@@ -20,7 +20,7 @@ import { ExpenseFormModalComponent } from '@features/finance/components/expense-
 import { MaintenanceTicketModalComponent } from '@features/dashboard/components/maintenance-ticket-modal/maintenance-ticket-modal.component';
 import { MaintenanceMonitorModalComponent } from '@features/dashboard/components/maintenance-monitor-modal/maintenance-monitor-modal.component';
 // Servicios
-import { AuthService } from '@core/services/auth.service';
+import { AuthService, TenantService } from 'core-auth';
 import { HotelService } from '@features/dashboard/services/hotel.service';
 import { ReportService } from '@features/finance/services/report.service';
 import { BookingService } from '@features/booking/services/booking.service';
@@ -41,6 +41,7 @@ import { ApiResponse } from '@core/interfaces/api-response.interface';
 export class DashboardComponent {
   private router = inject(Router);
   private authService = inject(AuthService);
+  public tenantService = inject(TenantService);
   public hotelService = inject(HotelService);
   public adminService = inject(AdminService);
   public bookingService = inject(BookingService);
@@ -366,7 +367,7 @@ export class DashboardComponent {
       next: () => {
         alert('✅ Usuario guardado');
         this.isUserModalOpen.set(false);
-        this.adminService.loadUsers(this.authService.currentUser()?.id_company);
+        this.adminService.loadUsers(this.tenantService.activeTenantId() as number);
       },
       error: (err) => alert('❌ Error: ' + err.message)
     });
@@ -414,7 +415,7 @@ export class DashboardComponent {
 
       alert('✅ Huésped guardado correctamente');
       this.isGuestModalOpen.set(false);
-      this.adminService.loadGuests(this.authService.currentUser()?.id_company);
+      this.adminService.loadGuests(this.tenantService.activeTenantId() as number);
     } catch (error: any) {
       if (error.message === 'OPERACION_CANCELADA_POR_DUPLICADO') return;
       console.error('Error al guardar huésped:', error);
@@ -488,7 +489,9 @@ export class DashboardComponent {
   /* Obtiene un usuario vacío para el formulario */
   private getEmptyUser(): User {
     return {
-      email: '', id_company: 1, names: '', lastname: '',
+      email: '',
+      id_company: this.tenantService.activeTenantId() as number, // 🚀 FIX DINÁMICO
+      names: '', lastname: '',
       phone: '', role: 'EDITOR', password: '', is_active: true,
       created_at: new Date().toISOString()
     };
@@ -499,7 +502,9 @@ export class DashboardComponent {
     return {
       id: 0, full_name: '', phone: '', email: '', doc_id: '',
       vip_status: false, created_at: new Date().toISOString(),
-      ine_front_url: '', ine_back_url: '', id_company: 1, city: '', state: '',
+      ine_front_url: '', ine_back_url: '',
+      id_company: this.tenantService.activeTenantId() as number, // 🚀 FIX DINÁMICO
+      city: '', state: '',
       country: 'México', notes: '', requires_invoice: false, is_active: true
     };
   }

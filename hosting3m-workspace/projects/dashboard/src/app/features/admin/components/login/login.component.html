@@ -1,17 +1,15 @@
 <div class="position-absolute top-0 end-0 p-3" style="z-index: 100;">
   <button class="btn btn-icon shadow-sm" (click)="themeService.toggleTheme()"
     [class.btn-dark]="themeService.currentTheme() === 'light'"
-    [class.btn-light]="themeService.currentTheme() === 'dark'" title="Cambiar tema" style="border-radius: 50px;"> @if
-    (themeService.currentTheme() === 'dark') {
+    [class.btn-light]="themeService.currentTheme() === 'dark'" title="Cambiar tema" style="border-radius: 50px;">
+    @if (themeService.currentTheme() === 'dark') {
     <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2"
       stroke="currentColor" fill="none">
       <path stroke="none" d="M0 0h24v24H0z" fill="none" />
       <path d="M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" />
       <path d="M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7" />
     </svg>
-    }
-
-    @else {
+    } @else {
     <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2"
       stroke="currentColor" fill="none">
       <path stroke="none" d="M0 0h24v24H0z" fill="none" />
@@ -23,7 +21,6 @@
 
 <div class="page page-center">
   <div class="container container-tight py-4">
-
     <div class="text-center mb-4">
       <div class="avatar avatar-xl rounded bg-transparent">
         <img src="assets/images/logo_hotel_san_jose.png" alt="Logo Hotel San Jose"
@@ -33,9 +30,9 @@
       <div class="text-muted">Catazajá, Chiapas, México</div>
     </div>
 
-    <form class="card card-md" [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+    <form class="card card-md shadow-sm border-0" [formGroup]="loginForm" (ngSubmit)="onSubmit()">
       <div class="card-body">
-        <h2 class="card-title text-center mb-4">Iniciar Sesión</h2>
+        <h2 class="card-title text-center mb-4">Acceso Seguro</h2>
 
         @if (errorMessage()) {
         <div class="alert alert-danger" role="alert">
@@ -52,37 +49,7 @@
         }
 
         <div class="mb-3">
-          <label class="form-label">Empresa / Sucursal</label>
-          <div class="input-group">
-            <span class="input-group-text">
-              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
-                stroke-width="2" stroke="currentColor" fill="none">
-                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                <path d="M3 21l18 0" />
-                <path d="M5 21v-14l8 -4l8 4v14" />
-                <path d="M19 21v-10l-6 -4" />
-                <path d="M9 9l0 .01" />
-                <path d="M9 12l0 .01" />
-                <path d="M9 15l0 .01" />
-                <path d="M9 18l0 .01" />
-              </svg>
-            </span>
-            <select class="form-select" formControlName="id_company" [class.is-invalid]="isFieldInvalid('id_company')">
-              <option value="" disabled selected>Seleccione una empresa...</option>
-              @for (company of adminService.companies(); track company.id_company) {
-              <option [value]="company.id_company">
-                {{ company.company_name }}
-              </option>
-              }
-            </select>
-          </div>
-          @if (isFieldInvalid('id_company')) {
-          <div class="text-danger small mt-1">Debe seleccionar una empresa para continuar</div>
-          }
-        </div>
-
-        <div class="mb-3">
-          <label class="form-label">Usuario</label>
+          <label class="form-label">Usuario / Email</label>
           <div class="input-icon">
             <span class="input-icon-addon">
               <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
@@ -97,10 +64,8 @@
           </div>
         </div>
 
-        <div class="mb-2">
-          <label class="form-label">
-            Contraseña
-          </label>
+        <div class="mb-3">
+          <label class="form-label">Contraseña</label>
           <div class="input-group input-group-flat">
             <span class="input-group-text">
               <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
@@ -113,7 +78,6 @@
             </span>
             <input [type]="showPassword() ? 'text' : 'password'" formControlName="pass" class="form-control"
               placeholder="••••••••" [class.is-invalid]="isFieldInvalid('pass')">
-
             <span class="input-group-text">
               <a href="#" class="link-secondary" title="Ver contraseña" (click)="togglePassword($event)">
                 @if (showPassword()) {
@@ -138,34 +102,44 @@
           </div>
         </div>
 
-        <div class="mb-2">
-          <label class="form-check">
-            <input type="checkbox" class="form-check-input" />
-            <span class="form-check-label">Recordar dispositivo</span>
-          </label>
+        @if (showCompanySelection()) {
+        <div class="mb-4 animate__animated animate__fadeIn">
+          <label class="form-label text-primary font-weight-bold">Seleccionar Sucursal / Hotel</label>
+          <div class="input-icon">
+            <span class="input-icon-addon">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-building-community" width="24"
+                height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                <path d="M8 9l5 5v7h-5v-4m0 4h-4v-7l5 -5m1 1v-3l4 4v7h-5" />
+              </svg>
+            </span>
+            <select formControlName="id_company" class="form-select" [class.is-invalid]="isFieldInvalid('id_company')">
+              <option value="" disabled selected>-- Seleccione su entorno --</option>
+              @for (company of availableCompanies(); track company.id_company) {
+              <option [value]="company.id_company">{{ company.company_name }} ({{ company.role }})</option>
+              }
+            </select>
+          </div>
         </div>
+        }
 
         <div class="form-footer">
           <button type="submit" class="btn btn-primary w-100" [disabled]="loginForm.invalid || isLoading()">
             @if (isLoading()) {
             <div class="spinner-border spinner-border-sm me-2" role="status"></div>
-            Verificando...
+            Verificando Credenciales...
             } @else {
-            Ingresar al Sistema
+            {{ showCompanySelection() ? 'Confirmar y Entrar' : 'Ingresar al Sistema' }}
             }
           </button>
         </div>
       </div>
     </form>
 
-    <div class="text-center text-muted mt-3">
-      ¿Olvidaste tu contraseña? <a href="https://hosting3m.com/#contact" tabindex="-1">Contactar Soporte IT</a>
-    </div>
-
-    <div class="text-center mb-4">
+    <div class="text-center mb-4 mt-3">
       <h2 class="h2 text-center mt-3 mb-1">By Hosting3M Suite</h2>
       <div class="text-muted">Gestión Hotelera & Automatización</div>
     </div>
-
   </div>
 </div>

@@ -54,33 +54,30 @@ export class IceOperationsService {
    * 🔄 PRE-CARGA DE DATOS: Descarga todos los catálogos en paralelo.
    * Se debe llamar al iniciar el componente de Entrada.
    */
+  // 2. Corrige preloadCatalogs (Cerca de la línea 50)
   async preloadCatalogs() {
-    // Si ya están cargados, no hacemos nada (ahorra datos)
     if (this.dataLoaded.clients && this.dataLoaded.instructors) {
       this.catalogsLoaded.set(true);
       return;
     }
 
     try {
-      // Peticiones en paralelo para máxima velocidad
       const [clientsRes, instructorsRes, inventoryRes] = await Promise.all([
         firstValueFrom(this.http.post<{ data: PhClient[] }>(this.apiUrlClients, {
           operation: 'getall', model: 'ph_clients', where: { status: 'ACT' }
-        })),
+        })).catch(() => ({ data: [] })), // Captura error individual y devuelve array vacío
         firstValueFrom(this.http.post<{ data: PhInstructor[] }>(this.apiUrlInstructors, {
           operation: 'getall', model: 'ph_instructores', where: { status: 'ACT' }
-        })),
+        })).catch(() => ({ data: [] })),
         firstValueFrom(this.http.post<{ data: any[] }>(this.apiUrlInventory, {
           operation: 'getall', model: 'ph_inventory'
-        }))
+        })).catch(() => ({ data: [] }))
       ]);
 
-      // Guardamos en Signals locales
-      this.clientsCache.set(Array.isArray(clientsRes) ? clientsRes : (clientsRes.data || []));
-      this.instructorsCache.set(Array.isArray(instructorsRes) ? instructorsRes : (instructorsRes.data || []));
-      this.inventoryCache.set(Array.isArray(inventoryRes) ? inventoryRes : (inventoryRes.data || []));
+      this.clientsCache.set(clientsRes?.data || []);
+      this.instructorsCache.set(instructorsRes?.data || []);
+      this.inventoryCache.set(inventoryRes?.data || []);
 
-      // Marcamos como listos
       this.dataLoaded.clients = true;
       this.dataLoaded.instructors = true;
       this.catalogsLoaded.set(true);
@@ -168,6 +165,7 @@ export class IceOperationsService {
   // 4. MÉTODOS DE OPERACIÓN (CHECK-IN / CHECK-OUT)
   // ==========================================================
 
+  // 1. Corrige fetchActiveSkaters (Cerca de la línea 170)
   async fetchActiveSkaters() {
     this.isLoading.set(true);
     try {
@@ -176,9 +174,11 @@ export class IceOperationsService {
           operation: 'getall', model: 'transactions', where: { status: 'ACT' }
         })
       );
-      this.skatersSignal.set(response.data || []);
+      // BLINDAJE: Si response o response.data es null/undefined, asigna un array vacío
+      this.skatersSignal.set(response?.data ?? []);
     } catch (error) {
       console.error('❌ Error sincronizando pista:', error);
+      this.skatersSignal.set([]); // Limpiamos el monitor en caso de error de red
     } finally {
       this.isLoading.set(false);
     }

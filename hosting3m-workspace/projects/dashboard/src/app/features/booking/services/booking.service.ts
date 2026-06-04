@@ -6,10 +6,12 @@ import { AdminService } from '@features/admin/services/admin.service';
 import { ReportService } from '@features/finance/services/report.service';
 import { environment } from '@env/environment';
 import { Room, RoomGroup } from '@core/models/hotel.types';
+import { TenantService } from 'core-auth';
 
 @Injectable({ providedIn: 'root' })
 export class BookingService {
   private http = inject(HttpClient);
+  private tenantService = inject(TenantService);
   private apiUrl_crud = environment.apiUrl_crud;
   public adminService = inject(AdminService);
   public reportService = inject(ReportService);
@@ -363,7 +365,7 @@ export class BookingService {
                 full_name: formData.full_name,
                 phone: formData.phone,
                 doc_id: formData.doc_id,
-                id_company: 1,
+                id_company: this.tenantService.activeTenantId(),
                 email: formData.email || null,
                 country: formData.country || 'México',
                 state: formData.state || '',
@@ -393,7 +395,7 @@ export class BookingService {
               status: 'checked_in',
               payment_status: paymentStatus,
               is_invoiced: formData.is_invoiced || false,
-              id_company: 1
+              id_company: this.tenantService.activeTenantId()
             }
           }, { headers: this.adminService.getAuthHeaders() })
         );
@@ -597,7 +599,7 @@ export class BookingService {
               email: finalEmail,
               doc_id: finalDocId,
               notes: formData.notes,
-              id_company: 1
+              id_company: this.tenantService.activeTenantId()
             }
           }, { headers: this.adminService.getAuthHeaders() })
         );
@@ -620,7 +622,7 @@ export class BookingService {
             amount_paid: formData.amount_paid || 0,
             notes: formData.notes || (formData.status === 'pending' ? 'Cotización (Bloqueo Temporal)' : 'Reserva Futura'),
             is_invoiced: formData.is_invoiced || false,
-            id_company: 1
+            id_company: this.tenantService.activeTenantId()
           }
         }, { headers: this.adminService.getAuthHeaders() })
       );
