@@ -1,9 +1,10 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
-import { AuthService } from 'core-auth';
+// 🚀 FIX: Importamos TenantService
+import { AuthService, TenantService } from 'core-auth';
 import { ThemeService } from '@core/services/theme.service';
-import { LayoutService } from '@shared/services/layout.service'; // 🚀 IMPORTANTE: Servicio Real
+import { LayoutService } from '@shared/services/layout.service';
 
 @Component({
   selector: 'app-header',
@@ -13,11 +14,12 @@ import { LayoutService } from '@shared/services/layout.service'; // 🚀 IMPORTA
 })
 export class HeaderComponent {
   public authService = inject(AuthService);
+  // 🚀 FIX: Inyectamos el servicio
+  public tenantService = inject(TenantService);
   public themeService = inject(ThemeService);
-  public layoutService = inject(LayoutService); // 🚀 Inyectado correctamente
+  public layoutService = inject(LayoutService);
   private router = inject(Router);
 
-  // 🚀 Disparador real usando Signals
   public toggleMenu() {
     this.layoutService.mobileMenuOpen.update(val => !val);
   }
