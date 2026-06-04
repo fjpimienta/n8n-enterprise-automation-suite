@@ -1,10 +1,10 @@
 import { LoggerService } from './logger.service';
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { catchError, tap, throwError, Observable, map } from 'rxjs';
+import { catchError, tap, throwError, map } from 'rxjs';
 import { jwtDecode } from 'jwt-decode';
 
-// ✅ ÚNICA declaración de CompanyContext (viene de auth.config)
+// ✅ Importación consolidada de configuración y contexto
 import { AUTH_ENV_CONFIG, CompanyContext } from '../auth.config';
 
 const TOKEN_KEY = 'authToken';
@@ -27,11 +27,11 @@ interface JwtPayload extends UserPayload {
 export class AuthService {
   private http = inject(HttpClient);
 
-  // Inyectamos la configuración del entorno para el desacoplamiento Multi-App
+  // Inyectamos la configuración del entorno (Desacoplamiento Multi-App)
   private envConfig = inject(AUTH_ENV_CONFIG);
   private apiUrl_token = this.envConfig.apiUrl_token;
 
-  // ✅ FIX: Inyección correcta de la instancia del Logger
+  // Inyección de dependencias de utilidades
   private logger = inject(LoggerService);
 
   private readonly _currentUser = signal<UserPayload | null>(this.loadUserFromStorage());
@@ -40,9 +40,6 @@ export class AuthService {
   readonly currentUser = this._currentUser.asReadonly();
   readonly isAuthenticated = this._isAuthenticated.asReadonly();
 
-  /**
-   * Única fuente de lectura del token. Usado por el interceptor.
-   */
   getStoredToken(): string | null {
     const token = localStorage.getItem(TOKEN_KEY);
     if (!token) return null;
@@ -82,36 +79,50 @@ export class AuthService {
   }
 
   /**
-   * Realiza la petición de autenticación integrando el system_id del entorno actual.
-   * Puede retornar el token directamente si viene resuelto, o el listado de empresas
-   * si el backend requiere que el usuario elija en cuál conectarse.
+   * 🚀 Lógica Multi-Tenant y Multi-App fusionada con Adaptador n8n
+   * Permite recibir el id_company opcional durante el paso 2 de selección.
    */
-  login(credentials: { user: string; pass: string }) {
-    return this.http.post<any>(this.apiUrl_token, credentials).pipe(
+  login(credentials: { user: string; pass: string; id_company?: number | string }) {
+
+    // 1. Inyectamos la identidad de la aplicación al payload
+    const payload = {
+      ...credentials,
+      system_id: this.envConfig.system_id
+    };
+
+    return this.http.post<any>(this.apiUrl_token, payload).pipe(
+
       // 🛡️ PATRÓN ADAPTADOR: Normalizamos la respuesta de n8n
       map(response => {
-        // Si detectamos el "doble envoltorio" de n8n (Matryoshka)
         if (response?.data && response.data.status) {
-          // ✅ FIX: Llamada correcta a la instancia (this.logger)
-          this.logger.log('🔧 Adaptador: Desenvolviendo respuesta de n8n');
-          return response.data; // Entregamos solo el núcleo útil
+          this.logger.log('🔧 Adaptador: Desenvolviendo respuesta de n8n (Matryoshka)');
+          return response.data;
         }
-        return response; // Si la respuesta ya es plana, la dejamos pasar
+        return response;
       }),
-      // ⬇️ A partir de aquí, 'res' ya es perfectamente plano para el componente y el tap
+
+      // 2. Intercepción del Token si el Backend resolvió el acceso
       tap(res => {
+        // Si es 'select_company', el tap no hace nada, fluye directo al LoginComponent
         if (res.status === 'success' && res.data?.token) {
           const token = res.data.token;
           localStorage.setItem(TOKEN_KEY, token);
+
           const decoded = jwtDecode<JwtPayload>(token);
           const { exp, ...user } = decoded;
+
           this._currentUser.set(user);
           this._isAuthenticated.set(true);
         }
       }),
+
+      // 3. Manejo estandarizado de errores HTTP
       catchError(err => {
         if (err.status === 401) {
           return throwError(() => new Error('Credenciales inválidas'));
+        }
+        if (err.status === 403) {
+          return throwError(() => new Error('No tienes permisos de acceso para esta aplicación'));
         }
         return throwError(() => err);
       })
@@ -125,7 +136,6 @@ export class AuthService {
     this._isAuthenticated.set(false);
   }
 
-  /** Comparación case-insensitive para evitar inconsistencia admin vs ADMIN */
   hasRole(role: string): boolean {
     const userRole = this._currentUser()?.role;
     return userRole ? userRole.toUpperCase() === role.toUpperCase() : false;
