@@ -46,59 +46,35 @@ export class LoginComponent {
     this.showPassword.update(value => !value);
   }
 
+  // En tu método onSubmit, actualiza la lógica para incluir el id_company si existe:
   onSubmit() {
-    if (this.loginForm.valid) {
-      this.isLoading.set(true);
-      this.errorMessage.set('');
+  if (this.loginForm.valid) {
+    this.isLoading.set(true);
+    this.errorMessage.set('');
 
-      // Extraemos el valor del formulario (incluyendo campos deshabilitados si aplica)
-      const rawPayload = this.loginForm.getRawValue();
+    // Extraemos los valores del formulario
+    const credentials = this.loginForm.getRawValue();
 
-      this.authService.login(rawPayload).subscribe({
-        next: (res: any) => {
-          // 🛠️ Escenario 1: El backend solicita explícitamente seleccionar un contexto de empresa
-          if (res.status === 'select_company' && res.data?.companies) {
-            this.logger.log('⚠️ Múltiples compañías detectadas. Activando selector de contexto.');
-            this.isLoading.set(false);
-
-            // Cargamos las opciones y habilitamos el control en la interfaz
-            this.availableCompanies.set(res.data.companies);
-            this.showCompanySelection.set(true);
-            this.loginForm.get('id_company')?.enable();
-          } else {
-            // 🛠️ Escenario 2: Login resuelto (Token final emitido directamente)
-            this.logger.log('✅ Login autorizado. Sincronizando contexto global.');
-
-            // Apagamos el loader antes de navegar
-            this.isLoading.set(false); // <-- 🚀 AGREGA ESTA LÍNEA
-
-            // Si el backend retornó datos de la compañía activa, los mapeamos al TenantService
-            const activeCompany = res.data?.company || this.authService.currentUser();
-            if (activeCompany) {
-              this.tenantService.setActiveTenant({
-                id_company: activeCompany.id_company,
-                company_name: activeCompany.company_name || 'Compañía Activa',
-                role: activeCompany.role,
-                industry: 'AgTech'
-              });
-            }
-
-            this.router.navigate(['/dashboard']);
-          }
-        },
-        error: (err: any) => {
+    this.authService.login(credentials).subscribe({
+      next: (res: any) => {
+        // Escenario A: Selección de empresa requerida
+        if (res.status === 'select_company') {
           this.isLoading.set(false);
-          this.logger.error('❌ Acceso denegado', err);
-
-          if (err.status === 401 || err.status === 403) {
-            this.errorMessage.set(err.message || 'Usuario o contraseña incorrectos.');
-          } else {
-            this.errorMessage.set('Error de conexión con el servidor. Intente más tarde.');
-          }
+          this.availableCompanies.set(res.data.companies);
+          this.showCompanySelection.set(true);
+          this.loginForm.get('id_company')?.enable();
+        } 
+        // Escenario B: Login exitoso (AuthService ya actualizó los signals internamente)
+        else if (res.status === 'success') {
+          this.isLoading.set(false);
+          this.router.navigate(['/dashboard']);
         }
-      });
-    } else {
-      this.loginForm.markAllAsTouched();
-    }
+      },
+      error: (err) => {
+        this.isLoading.set(false);
+        this.errorMessage.set(err.message || 'Error de conexión');
+      }
+    });
   }
+}
 }
