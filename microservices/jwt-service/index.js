@@ -25,12 +25,10 @@ const loginLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// LIMITADOR M2M (High-Ceiling): 
-// Satisface la regla de CodeQL (js/missing-rate-limiting) sin bloquear workflows concurrentes de n8n.
-// Permite hasta 10,000 peticiones por minuto (aprox. 166 req/segundo).
+// LIMITADOR M2M (High-Ceiling)
 const verifyLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minuto
-  max: 10000,              // Límite absurdamente alto para M2M, pero finito para el SAST
+  max: 10000,
   message: { error: 'Rate limit de seguridad M2M excedido.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -47,21 +45,19 @@ console.log("User:", process.env.n8n_user);
 console.log("database:", process.env.n8n_hosting3m_db);
 console.log(`port: ${process.env.port_db}`);
 
-// Optimización del Pool de Conexiones para mitigar bloqueos en ráfagas
 const pool = new Pool({
   user: process.env.n8n_user,
   host: process.env.n8n_host,
   database: process.env.n8n_hosting3m_db,
   password: process.env.n8n_pass,
   port: process.env.port_db,
-  max: 20, // Límite máximo de conexiones simultáneas
-  idleTimeoutMillis: 30000, // Cierra conexiones inactivas después de 30s
-  connectionTimeoutMillis: 2000, // Timeout de conexión rápida (2 segundos)
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
 });
 
 // ENDPOINT DE GENERACIÓN
 app.post('/generate-token', loginLimiter, async (req, res) => {
-  // 1. Extraemos system_id e id_company que envía Angular
   const { user, pass, system_id, id_company, internal_secret } = req.body;
 
   if (internal_secret !== INTERNAL_SECRET) {
@@ -111,9 +107,7 @@ app.post('/generate-token', loginLimiter, async (req, res) => {
       industry: row.industry
     }));
 
-    // 🚀 LÓGICA DE 2 PASOS (MULTI-TENANT)
-
-    // PASO A: El usuario NO ha enviado un rancho, y tiene MÁS DE 1 asignado
+    // 🚀 PASO A: El usuario NO ha enviado un rancho, y tiene MÁS DE 1 asignado
     if (authorizedCompanies.length > 1 && !id_company) {
       return res.json({
         status: "select_company",
@@ -127,14 +121,12 @@ app.post('/generate-token', loginLimiter, async (req, res) => {
     // PASO B: El usuario ya seleccionó un rancho, o solo tiene 1 rancho disponible
     const selectedCompanyId = id_company ? Number(id_company) : authorizedCompanies[0].id_company;
 
-    // Validar por seguridad que la empresa solicitada realmente le pertenece
     const companyData = authorizedCompanies.find(c => c.id_company === selectedCompanyId);
 
     if (!companyData) {
       return res.status(403).json({ status: 'error', message: 'No tienes permisos de acceso para esta empresa.' });
     }
 
-    // Generamos el token inyectando el id_company y el rol específico de ESA empresa
     const token = jwt.sign(
       {
         user,
@@ -147,13 +139,16 @@ app.post('/generate-token', loginLimiter, async (req, res) => {
       { expiresIn: '8h' }
     );
 
-    // Retornamos el formato exacto que Angular espera para "success"
+    // 🚀 CONTRATO FIJO: Formato exacto requerido por el frontend y n8n
     return res.json({
-      token: token,
-      role: companyData.role,
-      id_company: companyData.id_company,
-      company: companyData, // Inyectamos la metadata para el TenantService
-      status: "success"
+      status: "success",
+      message: "Autenticación exitosa",
+      data: {
+        token: token,
+        role: companyData.role,
+        id_company: companyData.id_company,
+        company: companyData
+      }
     });
 
   } catch (err) {
@@ -162,7 +157,7 @@ app.post('/generate-token', loginLimiter, async (req, res) => {
   }
 });
 
-// ENDPOINT DE VERIFICACIÓN (Asegúrate de devolver el id_company)
+// ENDPOINT DE VERIFICACIÓN
 app.post('/verify-token', verifyLimiter, (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ valid: false, error: 'No token provided' });
@@ -172,7 +167,6 @@ app.post('/verify-token', verifyLimiter, (req, res) => {
   jwt.verify(token, JWT_SECRET, (err, decoded) => {
     if (err) return res.status(401).json({ valid: false, error: 'Invalid token' });
 
-    // Devolvemos TODO el contenido decodificado para que n8n lo use
     res.json({
       valid: true,
       user: decoded.user,
