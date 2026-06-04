@@ -51,7 +51,7 @@ hosting3m-workspace/projects/**/out-tsc/
 hosting3m-workspace/projects/**/.angular/cache/
 hosting3m-workspace/projects/**/src/environments/environment.prod.ts
 hosting3m-workspace/projects/**/src/environments/environment.development.ts
-!hosting3m-workspace/projects/**/src/environments/environment.ts
+hosting3m-workspace/projects/**/src/environments/environment.ts
 
 # --- Upload-file (Microservicio) ---
 # Esta es la ruta exacta de tu árbol para los binarios subidos
