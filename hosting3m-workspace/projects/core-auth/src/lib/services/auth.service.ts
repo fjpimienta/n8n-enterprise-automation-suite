@@ -94,10 +94,16 @@ export class AuthService {
 
       // 🛡️ PATRÓN ADAPTADOR: Normalizamos la respuesta de n8n
       map(response => {
-        if (response?.data && response.data.status) {
-          this.logger.log('🔧 Adaptador: Desenvolviendo respuesta de n8n (Matryoshka)');
+        this.logger.log('Respuesta cruda recibida:', response);
+
+        // Si n8n envolvió la respuesta del microservicio dentro de una propiedad 'data'
+        // (Esto pasa cuando la respuesta del microservicio se vuelve 'input' de otro nodo)
+        if (response?.data && response.status === undefined) {
+          this.logger.log('🔧 Adaptador: Desenvolviendo anidamiento de n8n');
           return response.data;
         }
+
+        // Si es la respuesta correcta y plana del microservicio, retorna directo
         return response;
       }),
 
