@@ -2,7 +2,7 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CattleDetailModalComponent } from '../cattle-detail-modal/cattle-detail-modal.component';
 import { CattleApiService } from '@core/services/cattle-api.service';
-
+import { TenantService } from 'core-auth';
 
 @Component({
   selector: 'app-cattle-list',
@@ -13,6 +13,7 @@ import { CattleApiService } from '@core/services/cattle-api.service';
 })
 export class CattleListComponent implements OnInit {
   private cattleApi = inject(CattleApiService);
+  public tenantService = inject(TenantService);
 
   // Signals para manejar el estado reactivo
   public cattleList = signal<any[]>([]);
