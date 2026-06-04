@@ -11,9 +11,7 @@
         <circle cx="12" cy="12" r="4"></circle>
         <path d="M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7"></path>
       </svg>
-      }
-
-      @else {
+      } @else {
       <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-moon text-secondary" width="24"
         height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
         stroke-linejoin="round">
@@ -44,7 +42,9 @@
 
     <form class="card card-md border-0 shadow-lg touch-card" [formGroup]="loginForm" (ngSubmit)="onSubmit()">
       <div class="card-body p-4 p-md-5">
-        <h2 class="card-title text-center mb-4 font-weight-bold">Iniciar Sesión</h2>
+        <h2 class="card-title text-center mb-4 font-weight-bold">
+          {{ step() === 1 ? 'Iniciar Sesión' : 'Seleccionar Sucursal' }}
+        </h2>
 
         @if (errorMessage()) {
         <div class="alert alert-danger d-flex align-items-center mb-3" role="alert">
@@ -59,31 +59,7 @@
         </div>
         }
 
-        <div class="mb-3">
-          <label class="form-label text-muted small text-uppercase fw-bold">Empresa / Sucursal</label>
-
-          <div class="input-group custom-input-group" [class.is-invalid-border]="isFieldInvalid('id_company')">
-            <span class="input-group-text">
-              <svg xmlns="http://www.w3.org/2000/svg" class="icon text-muted" width="24" height="24" viewBox="0 0 24 24"
-                stroke-width="1.5" stroke="currentColor" fill="none">
-                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                <path d="M3 21l18 0" />
-                <path d="M5 21v-14l8 -4l8 4v14" />
-                <path d="M19 21v-10l-6 -4" />
-              </svg>
-            </span>
-            <select class="form-select" formControlName="id_company">
-              <option value="" disabled selected>Seleccione una empresa...</option>
-              @for (company of adminService.companies(); track company.id_company) {
-              <option [value]="company.id_company">{{ company.company_name }}</option>
-              }
-            </select>
-          </div>
-          @if (isFieldInvalid('id_company')) {
-          <div class="text-danger small mt-1">Seleccione una sucursal</div>
-          }
-        </div>
-
+        @if (step() === 1) {
         <div class="mb-3">
           <label class="form-label text-muted small text-uppercase fw-bold">Usuario</label>
           <div class="input-group custom-input-group" [class.is-invalid-border]="isFieldInvalid('user')">
@@ -141,17 +117,77 @@
             <span class="form-check-label text-muted small">Recordar dispositivo</span>
           </label>
         </div>
+        }
+
+        @if (step() === 2) {
+        <div class="text-center mb-4 animate-fade-in">
+          <div class="avatar avatar-sm bg-primary-lt rounded-circle mb-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="icon text-primary" width="24" height="24" viewBox="0 0 24 24"
+              stroke-width="2" stroke="currentColor" fill="none">
+              <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+              <path d="M5 13l4 4l10 -10" />
+            </svg>
+          </div>
+          <h4 class="m-0 text-success">Usuario validado</h4>
+          <div class="text-muted small">{{ loginForm.value.user }}</div>
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label text-muted small text-uppercase fw-bold">Empresa / Sucursal Asignada</label>
+
+          <div class="input-group custom-input-group" [class.is-invalid-border]="isFieldInvalid('id_company')">
+            <span class="input-group-text">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon text-muted" width="24" height="24" viewBox="0 0 24 24"
+                stroke-width="1.5" stroke="currentColor" fill="none">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                <path d="M3 21l18 0" />
+                <path d="M5 21v-14l8 -4l8 4v14" />
+                <path d="M19 21v-10l-6 -4" />
+              </svg>
+            </span>
+            <select class="form-select" formControlName="id_company">
+              <option [ngValue]="null" disabled selected>Seleccione una sucursal...</option>
+              @for (company of adminService.companies(); track company.id_company) {
+              <option [value]="company.id_company">{{ company.company_name }}</option>
+              }
+            </select>
+          </div>
+          @if (isFieldInvalid('id_company')) {
+          <div class="text-danger small mt-1">Debe seleccionar una sucursal para continuar.</div>
+          }
+        </div>
+        }
 
         <div class="form-footer">
+          @if (step() === 1) {
           <button type="submit" class="btn btn-primary w-100 btn-lg shadow-sm touch-button"
-            [disabled]="loginForm.invalid || isLoading()">
+            [disabled]="loginForm.invalid && (loginForm.get('user')?.touched && loginForm.get('pass')?.touched) || isLoading()">
             @if (isLoading()) {
             <div class="spinner-border spinner-border-sm me-2" role="status"></div>
             Verificando...
             } @else {
-            Ingresar al Sistema
+            Continuar
             }
           </button>
+          } @else {
+          <div class="row g-2">
+            <div class="col-4">
+              <button type="button" class="btn btn-outline-secondary w-100 btn-lg shadow-sm" (click)="goBack()">
+                Atrás
+              </button>
+            </div>
+            <div class="col-8">
+              <button type="submit" class="btn btn-success w-100 btn-lg shadow-sm touch-button"
+                [disabled]="isLoading()">
+                @if (isLoading()) {
+                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                } @else {
+                Ingresar
+                }
+              </button>
+            </div>
+          </div>
+          }
         </div>
       </div>
     </form>

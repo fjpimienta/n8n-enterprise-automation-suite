@@ -1,12 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject, signal, effect } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 
 import { LoggerService } from '../../services/logger.service';
-import { AuthService } from '@core/services/auth.service';
-import { HotelService } from '@features/dashboard/services/hotel.service';
-import { AdminService } from '@features/admin/services/admin.service';
+import { AuthService, TenantService, CompanyContext } from 'core-auth';
 import { ThemeService } from '@core/services/theme.service';
 
 @Component({
@@ -18,39 +16,24 @@ import { ThemeService } from '@core/services/theme.service';
 export class LoginComponent {
   private fb = inject(FormBuilder);
   private authService = inject(AuthService);
+  private tenantService = inject(TenantService);
   private router = inject(Router);
   private logger = inject(LoggerService);
-  public hotelService = inject(HotelService);
-  public adminService = inject(AdminService);
   public themeService = inject(ThemeService);
 
   isLoading = signal(false);
   showPassword = signal(false);
   errorMessage = signal<string>('');
 
+  availableCompanies = signal<CompanyContext[]>([]);
+  showCompanySelection = signal(false);
+
+  // Inicia deshabilitado, forzando la validación del backend en el paso 1
   loginForm: FormGroup = this.fb.group({
     user: ['', Validators.required],
     pass: ['', Validators.required],
-    id_company: ['', Validators.required]
+    id_company: [{ value: '', disabled: true }, Validators.required]
   });
-
-  constructor() {
-    effect(() => {
-      const list = this.adminService.companies();
-      if (list.length > 0) {
-        const defaultComp = list.find(c => c.is_default === true);
-
-        if (defaultComp) {
-          this.loginForm.patchValue({ id_company: defaultComp.id_company });
-        }
-      }
-    });
-  }
-
-  ngOnInit() {
-    this.adminService.loadCompanies();
-    this.loginForm.get('id_company')?.disable();
-  }
 
   isFieldInvalid(field: string): boolean {
     const control = this.loginForm.get(field);
@@ -67,25 +50,39 @@ export class LoginComponent {
       this.isLoading.set(true);
       this.errorMessage.set('');
 
-      // Llamamos al login
-      this.authService.login(this.loginForm.value).subscribe({
-        next: (res) => {
-          this.logger.log('✅ Login autorizado. Token recibido.');
+      const rawPayload = this.loginForm.getRawValue();
 
-          // ELIMINADO: this.authService.login(res.data.token); (Esto estaba mal y causaba error)
-          // ELIMINADO: localStorage.setItem... (El servicio ya lo hace en el tap)
+      this.authService.login(rawPayload).subscribe({
+        next: (res: any) => {
+          if (res.status === 'select_company' && res.data?.companies) {
+            this.logger.log('⚠️ Múltiples sucursales detectadas. Activando selector.');
+            this.isLoading.set(false);
+            this.availableCompanies.set(res.data.companies);
+            this.showCompanySelection.set(true);
+            this.loginForm.get('id_company')?.enable();
+          } else {
+            this.logger.log('✅ Login autorizado. Sincronizando contexto global del hotel.');
+            this.isLoading.set(false);
 
-          // Solo navegamos, la reactividad del servicio hará el resto
-          this.router.navigate(['/dashboard']);
+            const activeCompany = res.data?.company || this.authService.currentUser();
+            if (activeCompany) {
+              this.tenantService.setActiveTenant({
+                id_company: activeCompany.id_company,
+                company_name: activeCompany.company_name || 'Hotel San José',
+                role: activeCompany.role,
+                industry: 'Hotelera'
+              });
+            }
+            this.router.navigate(['/dashboard']);
+          }
         },
-        error: (err) => {
+        error: (err: any) => {
           this.isLoading.set(false);
           this.logger.error('❌ Acceso denegado', err);
-
           if (err.status === 401 || err.status === 403) {
-            this.errorMessage.set('Usuario o contraseña incorrectos.');
+            this.errorMessage.set(err.message || 'Usuario o contraseña incorrectos.');
           } else {
-            this.errorMessage.set('Error de conexión con el servidor. Intente más tarde.');
+            this.errorMessage.set('Error de conexión. Intente más tarde.');
           }
         }
       });
@@ -93,5 +90,4 @@ export class LoginComponent {
       this.loginForm.markAllAsTouched();
     }
   }
-
 }

@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom } from 'rxjs';
 import { environment } from '@env/environment';
-import { AuthService } from 'core-auth';
+import { AuthService, TenantService } from 'core-auth';
 // 🚀 FIX: Importamos el LoggerService para poder usarlo
 import { LoggerService } from './logger.service';
 
@@ -18,30 +18,48 @@ export class CattleApiService {
 
     public isProcessing = signal<boolean>(false);
 
+    private tenantService = inject(TenantService);
+
     // 0. Obtener Inventario Completo (Ahora lee de la Vista SQL con los KPIs integrados)
     public async getAllLivestock(): Promise<any[]> {
-        const companyId = this.authService.currentUser()?.id_company;
-
         try {
+            const payload = {
+                operation: 'getall',
+                id_company: this.tenantService.activeTenantId() // 🚀 Extraemos el ID del rancho activo
+            };
+
             const res: any = await lastValueFrom(
-                this.http.post(`${this.apiUrl_crud}/vw_cattle_kpi`, { operation: 'getall' })
+                this.http.post(`${this.apiUrl_crud}/vw_cattle_kpi`, payload)
             );
 
-            const rawData = res?.data || [];
+            // 🛡️ NULL SAFETY: Verificamos que res y res.data existan antes de leerlos
+            if (!res || !res.data) {
+                this.logger.warn('La API no devolvió datos (res o res.data es null)');
+                return []; // Retornamos un arreglo vacío para evitar el colapso del Dashboard
+            }
 
-            const sanitizedData = rawData.map((animal: any) => ({
-                ...animal,
-                tenant_id: Number(animal.tenant_id),
-                current_weight_kg: animal.current_weight_kg ? Number(animal.current_weight_kg) : 0,
-                adg_lifetime_kg: animal.adg_lifetime_kg ? Number(animal.adg_lifetime_kg) : 0,
-                current_gestation_days: animal.current_gestation_days ? Number(animal.current_gestation_days) : 0
-            }));
+            return res.data;
 
-            return sanitizedData.filter((animal: any) => animal.tenant_id === Number(companyId));
         } catch (error) {
-            this.logger.warn('Error al cargar inventario:', error);
-            return [];
+            this.logger.error('Error crítico en el data pipeline (getAllLivestock):', error);
+            return []; // Fallback seguro
         }
+    }
+
+    async getInventario() {
+        // 🚀 Extraes el ID del rancho que el usuario seleccionó en el login
+        const idRanchoActivo = this.tenantService.activeTenantId();
+
+        if (!idRanchoActivo) {
+            console.error("No hay un rancho seleccionado");
+            return;
+        }
+
+        // Envías ese ID a tu backend para filtrar los datos
+        return this.http.post('tu-url-api/vw_cattle_kpi', {
+            operation: 'getall',
+            id_company: idRanchoActivo
+        }).toPromise();
     }
 
     // 1. Crear Alta de Animal
