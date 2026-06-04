@@ -11,7 +11,7 @@ app.set('trust proxy', 1);
 
 app.use(express.json());
 app.use(cors({
-  origin: 'https://hosting3m.com',
+  origin: ['https://hosting3m.com', 'https://cattle.hosting3m.com'],
   methods: ['POST'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
