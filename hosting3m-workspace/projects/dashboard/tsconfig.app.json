@@ -37,6 +37,9 @@
       ],
       "@ui/*": [
         "projects/dashboard/src/app/shared/ui/*"
+      ],
+      "core-auth": [
+        "dist/core-auth"
       ]
     }
   },

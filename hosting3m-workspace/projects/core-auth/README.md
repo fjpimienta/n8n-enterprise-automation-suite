@@ -1,64 +1,69 @@
-# CoreAuth
+# Core Auth Shared Library 🔐
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 21.2.0.
+![Angular](https://img.shields.io/badge/Angular-21%2B-red) ![Pattern](https://img.shields.io/badge/Architecture-Standalone-orange) ![Status](https://img.shields.io/badge/Status-Beta-blue)
 
-## Code scaffolding
+## 📖 Executive Summary
+**Core Auth** is a reusable, multi-tenant Angular library designed to manage authentication, route guarding, and IAM (Identity and Access Management) context across Hosting3M applications. 
 
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+It abstracts the complexity of token management and tenant selection (Multi-empresa), ensuring a standardized security layer for applications like the Hotel Dashboard.
 
-```bash
-ng generate component component-name
+## ⚡ Key Features
+* **Multi-Tenant Context:** Built-in `CompanyContext` management supporting multi-company environments (`id_company`, `company_name`, `role`)[cite: 29].
+* **Standalone Architecture:** Fully compatible with modern Angular using standalone components and functional interceptors.
+* **Zero-Config Logic:** Relies on the consuming app to provide environment variables via the `AUTH_ENV_CONFIG` InjectionToken[cite: 29].
+* **Integrated Security:** Ships with a ready-to-use `AuthGuard` and `AuthInterceptor` to secure routes and outgoing HTTP requests automatically[cite: 27].
+
+## 🛠 Installation & Integration
+
+### 1. Configuration & Provisioning (Crucial Step) ⚠️
+Since the library is stateless, you **MUST** provide the configuration token in your `app.config.ts`.
+
+```typescript
+import { ApplicationConfig } from '@angular/core';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { AUTH_ENV_CONFIG, AuthEnvironmentConfig, authInterceptor } from 'core-auth';
+import { environment } from '../environments/environment';
+
+const authConfig: AuthEnvironmentConfig = {
+  apiUrl_crud: environment.apiUrl_crud,
+  apiUrl_token: environment.apiUrl_token,
+  system_id: 'hotel_app' // Unique identifier for the consuming app
+};
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideHttpClient(withInterceptors([authInterceptor])),
+    {
+      provide: AUTH_ENV_CONFIG,
+      useValue: authConfig
+    }
+  ]
+};
+
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+### 2. Utilizing the Tenant Selector
 
-```bash
-ng generate --help
+Import the visual component to allow users to switch between their assigned companies.
+
+```typescript
+import { TenantSelectorComponent } from 'core-auth';
+
+@Component({
+  standalone: true,
+  imports: [TenantSelectorComponent], // <--- Import directly
+  // ...
+})
+export class HeaderComponent { }
+
 ```
 
-## Building
+## 📦 Authors
 
-To build the library, run:
+**Francisco Jesus Pérez Pimienta**
+*Senior Systems Architect & Project Lead*
+Hosting3M Automation Suite
 
-```bash
-ng build core-auth
-```
+---
 
-This command will compile your project, and the build artifacts will be placed in the `dist/` directory.
-
-### Publishing the Library
-
-Once the project is built, you can publish your library by following these steps:
-
-1. Navigate to the `dist` directory:
-
-   ```bash
-   cd dist/core-auth
-   ```
-
-2. Run the `npm publish` command to publish your library to the npm registry:
-   ```bash
-   npm publish
-   ```
-
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
-```bash
-ng test
-```
-
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
-```bash
-ng e2e
-```
-
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
-
-## Additional Resources
-
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+*Built with the assistance of AI-powered development tools.*

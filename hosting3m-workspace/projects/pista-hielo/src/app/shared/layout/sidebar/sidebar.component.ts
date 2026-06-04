@@ -1,7 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { AuthService } from '@core/auth/auth.service';
+import { AuthService } from 'core-auth';
 import { ThemeService } from '@core/services/theme.service';
 
 // 1. SOLO IMPORTAS EL MÓDULO (Ya no necesitas los iconos individuales aquí)

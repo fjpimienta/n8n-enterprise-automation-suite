@@ -4,6 +4,7 @@ import { lastValueFrom, retry } from 'rxjs'; // 🚀 FIX: Importamos 'retry' de 
 import { ApiResponse } from '@core/interfaces/api-response.interface';
 import { Company, Guest, Room, User } from '@core/models/hotel.types';
 import { environment } from '@env/environment';
+import { TenantService } from 'core-auth';
 
 @Injectable({
   providedIn: 'root',
@@ -11,6 +12,7 @@ import { environment } from '@env/environment';
 export class AdminService {
   private http = inject(HttpClient);
   private apiUrl_crud = environment.apiUrl_crud;
+  private tenantService = inject(TenantService);
 
   public loadingUsers = signal<boolean>(false);
   public loadingGuests = signal<boolean>(false);
@@ -74,7 +76,9 @@ export class AdminService {
       table_name: 'hotel_bookings',
       operation: 'getall',
       action: 'list',
-      filters: {}
+      filters: {
+        id_company: this.tenantService.activeTenantId()
+      }
     };
 
     this.http.post<ApiResponse<any>>(`${this.apiUrl_crud}/hotel_bookings`, payload, {

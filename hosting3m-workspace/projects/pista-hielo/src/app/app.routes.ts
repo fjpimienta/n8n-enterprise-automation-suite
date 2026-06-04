@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { LoginComponent } from './features/admin/components/login/login.component';
-import { authGuard } from '@core/auth/guards/auth-guard';
+// 🟢 AGREGAR LA IMPORTACIÓN DE LA LIBRERÍA:
+import { authGuard } from 'core-auth';
 import { MainLayoutComponent } from '@shared/layout/main-layout/main-layout.component';
 
 export const routes: Routes = [

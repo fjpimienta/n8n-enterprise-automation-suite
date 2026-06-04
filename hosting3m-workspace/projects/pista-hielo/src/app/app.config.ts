@@ -4,9 +4,10 @@ import { routes } from './app.routes';
 import { CHAT_CONFIG_TOKEN, AiService } from 'ui-chat';
 // 1. IMPORTANTE: Agregar 'withInterceptors' aquí
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
+// 🟢 AGREGAR ESTAS IMPORTACIONES DE TU LIBRERÍA:
 
 // 2. IMPORTANTE: Importar tu interceptor (ajusta la ruta si es diferente, usé la de tu versión anterior)
-import { authInterceptor } from '@core/auth/auth-interceptor';
+import { authInterceptor, AUTH_ENV_CONFIG } from 'core-auth';
 import { environment } from '@env/environment';
 
 import {
@@ -26,6 +27,15 @@ export const appConfig: ApplicationConfig = {
       withFetch(),
       withInterceptors([authInterceptor])
     ),
+    // 👇 NUEVO: Le pasamos la configuración a la librería de Auth
+    {
+      provide: AUTH_ENV_CONFIG,
+      useValue: {
+        apiUrl_crud: environment.apiUrl_crud,
+        apiUrl_token: environment.apiUrl_token,
+        system_id: environment.system_id
+      }
+    },
     AiService,
     {
       provide: CHAT_CONFIG_TOKEN,
