@@ -28,21 +28,18 @@ export class CattleApiService {
         try {
             const payload = {
                 operation: 'getall',
-                id_company: Number(idRanchoActivo) // 🚀 Enviamos el ID dinámico al backend
+                // 🚀 MEJOR PRÁCTICA: Mapeamos id_company de la UI al nombre de columna física 'tenant_id'
+                tenant_id: Number(idRanchoActivo)
             };
 
             const res: any = await lastValueFrom(
                 this.http.post(`${this.apiUrl_crud}/vw_cattle_kpi`, payload)
             );
 
-            if (!res || !res.data) {
-                this.logger.warn('La API de KPIs no devolvió datos utilizables.');
-                return [];
-            }
-
+            if (!res || !res.data) return [];
             return res.data;
         } catch (error) {
-            this.logger.error('Error crítico en el data pipeline (getAllLivestock):', error);
+            this.logger.error('Error en getAllLivestock:', error);
             return [];
         }
     }
@@ -119,7 +116,8 @@ export class CattleApiService {
 
         const payload = {
             operation: 'getall',
-            id_company: Number(idRanchoActivo) // 🚀 Clave: El microservicio filtrará en el WHERE de SQL
+            // 🚀 MEJOR PRÁCTICA: Aseguramos el nombre de propiedad idéntico a allowed_fields de la DB
+            tenant_id: Number(idRanchoActivo)
         };
 
         try {
@@ -127,7 +125,6 @@ export class CattleApiService {
                 this.http.post(`${this.apiUrl_crud}/cattle_expenses`, payload)
             );
 
-            // 🛡️ PATRÓN DEFENSIVO CONTRA DOBLE ENVOLTORIO DE N8N
             if (res && Array.isArray(res.data)) {
                 return res.data;
             } else if (res?.data && Array.isArray(res.data.data)) {
