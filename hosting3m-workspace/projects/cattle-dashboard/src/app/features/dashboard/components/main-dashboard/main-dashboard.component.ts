@@ -43,6 +43,10 @@ export class MainDashboardComponent implements OnInit {
         this.cattleApi.getAllLivestock(),
         this.cattleApi.getExpenses()
       ]);
+
+      // 🚀 AGREGA ESTE CONSOLE LOG TEMPORAL AQUÍ:
+      console.log('AUDITORÍA DE DATOS (Primer Animal):', cattleRaw[0]);
+
       this.cattleList.set(cattleRaw);
       this.expensesList.set(expensesRaw);
     } catch (error) {
@@ -54,7 +58,19 @@ export class MainDashboardComponent implements OnInit {
 
   // 🚀 Extracción dinámica de especies existentes en el hato para los selectores de la UI
   public availableSpecies = computed(() => {
-    const speciesSet = new Set<string>(this.cattleList().map(a => a.species).filter(Boolean));
+    const speciesSet = new Set<string>(
+      this.cattleList().map(animal => {
+        // 1. Intenta leer la columna nativa si ya se destrabó la caché
+        if (animal.species) return animal.species;
+
+        // 2. Si no viene, la extrae directamente del objeto metadata que ya tienes seguro
+        if (animal.metadata) {
+          const meta = typeof animal.metadata === 'string' ? JSON.parse(animal.metadata) : animal.metadata;
+          return meta.species;
+        }
+        return null;
+      }).filter(Boolean)
+    );
     return Array.from(speciesSet);
   });
 
@@ -67,7 +83,10 @@ export class MainDashboardComponent implements OnInit {
       if (!animal.business_model) return false;
 
       const matchesTab = animal.business_model.trim() === currentTab;
-      const matchesSpecies = currentSpecies === 'TODOS' || animal.species === currentSpecies;
+
+      // Extrae la especie de forma segura desde la raíz o metadata
+      const animalSpecies = animal.species || (animal.metadata ? (typeof animal.metadata === 'string' ? JSON.parse(animal.metadata).species : animal.metadata.species) : null);
+      const matchesSpecies = currentSpecies === 'TODOS' || animalSpecies === currentSpecies;
 
       return matchesTab && matchesSpecies;
     });
