@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
-import { AuthService } from '@core/services/auth.service';
+import { AuthService } from 'core-auth';
 import { AiChatComponent } from 'ui-chat';
 
 @Component({

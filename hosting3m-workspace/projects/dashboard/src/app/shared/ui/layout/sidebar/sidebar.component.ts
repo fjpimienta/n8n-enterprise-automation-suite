@@ -1,7 +1,7 @@
 import { Component, inject, output, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive } from '@angular/router';
-import { AuthService } from '@core/services/auth.service';
+import { AuthService } from 'core-auth';
 import { ThemeService } from '@core/services/theme.service';
 
 interface NavItem {

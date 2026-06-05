@@ -2,7 +2,7 @@ import { Component, EventEmitter, inject, Input, Output, signal } from '@angular
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ExpenseService } from '../../services/expense.service';
-import { AuthService } from '@core/services/auth.service';
+import { AuthService } from 'core-auth';
 
 @Component({
   selector: 'app-expense-form-modal',
