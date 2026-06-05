@@ -19,12 +19,13 @@ export class MainDashboardComponent implements OnInit {
   public PRECIO_KILO = 65.00;
 
   public cattleList = signal<any[]>([]);
-  public expensesList = signal<any[]>([]); // 🚀 Lista de gastos del backend
+  public expensesList = signal<any[]>([]);
   public isLoading = signal<boolean>(true);
 
-  // Controladores de Navegación (Soporta la nueva pestaña)
+  // Navegación y Filtros de Trazabilidad Biológica
   public activeTab = signal<'CRIA' | 'ENGORDA'>('CRIA');
   public activeSubTab = signal<'RESUMEN' | 'INVENTARIO' | 'GASTOS'>('RESUMEN');
+  public selectedSpecies = signal<string>('TODOS'); // 🚀 Filtro maestro de especie
   public showExpenseModal = signal<boolean>(false);
 
   // Controladores de Paginación Única
@@ -38,7 +39,6 @@ export class MainDashboardComponent implements OnInit {
   async loadDashboardData() {
     this.isLoading.set(true);
     try {
-      // Carga paralela para optimizar tiempos de respuesta
       const [cattleRaw, expensesRaw] = await Promise.all([
         this.cattleApi.getAllLivestock(),
         this.cattleApi.getExpenses()
@@ -52,35 +52,50 @@ export class MainDashboardComponent implements OnInit {
     }
   }
 
-  // Filtrado de ganado
-  // Filtrado de ganado robustecido con sanitización de espacios
+  // 🚀 Extracción dinámica de especies existentes en el hato para los selectores de la UI
+  public availableSpecies = computed(() => {
+    const speciesSet = new Set<string>(this.cattleList().map(a => a.species).filter(Boolean));
+    return Array.from(speciesSet);
+  });
+
+  // 🚀 Filtrado Jerárquico: Módulo (Tab) + Especie (Selector) con sanitización
   public filteredCattleList = computed(() => {
     const currentTab = this.activeTab();
+    const currentSpecies = this.selectedSpecies();
+
     return this.cattleList().filter(animal => {
       if (!animal.business_model) return false;
-      // 🚀 Aplicamos .trim() para remover cualquier espacio oculto de producción
-      return animal.business_model.trim() === currentTab;
+
+      const matchesTab = animal.business_model.trim() === currentTab;
+      const matchesSpecies = currentSpecies === 'TODOS' || animal.species === currentSpecies;
+
+      return matchesTab && matchesSpecies;
     });
   });
 
-  // 🚀 Filtrado de Gastos por Módulo
+  // Filtrado de Gastos por Módulo y Especie vinculada
   public filteredExpensesList = computed(() => {
-    return this.expensesList().filter(expense => {
-      // Si el gasto no está amarrado a un arete específico (gasto global del rancho),
-      // lo mostramos en el historial de ambos módulos para transparencia financiera.
-      if (!expense.business_model) return true;
+    const currentTab = this.activeTab();
+    const currentSpecies = this.selectedSpecies();
 
-      // Si el gasto sí tiene un arete, lo mostramos solo en el módulo de ese animal.
-      return expense.business_model === this.activeTab();
+    return this.expensesList().filter(expense => {
+      // Cruzar con la tabla de ganado si el gasto tiene un livestock_id para saber su especie
+      if (expense.livestock_id) {
+        const animal = this.cattleList().find(a => a.id === expense.livestock_id);
+        if (animal) {
+          const matchesTab = animal.business_model === currentTab;
+          const matchesSpecies = currentSpecies === 'TODOS' || animal.species === currentSpecies;
+          return matchesTab && matchesSpecies;
+        }
+      }
+      return !expense.business_model || expense.business_model === currentTab;
     });
   });
 
-  // Dataset adaptativo según la sub-pestaña seleccionada
   private currentDataset = computed(() => {
     return this.activeSubTab() === 'GASTOS' ? this.filteredExpensesList() : this.filteredCattleList();
   });
 
-  // Algoritmo de Paginación Compartido de Alto Rendimiento
   public totalPages = computed(() => Math.ceil(this.currentDataset().length / this.pageSize()) || 1);
 
   public showingStart = computed(() => {
@@ -102,7 +117,6 @@ export class MainDashboardComponent implements OnInit {
     return this.filteredExpensesList().slice(startIndex, startIndex + this.pageSize());
   });
 
-  // Setters Reactivos
   public setTab(tab: 'CRIA' | 'ENGORDA') {
     this.activeTab.set(tab);
     this.activeSubTab.set('RESUMEN');
@@ -111,6 +125,11 @@ export class MainDashboardComponent implements OnInit {
 
   public setSubTab(subTab: 'RESUMEN' | 'INVENTARIO' | 'GASTOS') {
     this.activeSubTab.set(subTab);
+    this.currentPage.set(1);
+  }
+
+  public setSpecies(species: string) {
+    this.selectedSpecies.set(species);
     this.currentPage.set(1);
   }
 

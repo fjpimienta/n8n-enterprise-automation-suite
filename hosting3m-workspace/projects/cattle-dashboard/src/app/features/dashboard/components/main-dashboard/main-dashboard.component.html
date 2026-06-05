@@ -6,7 +6,19 @@
         </div>
 
         <div class="col-12 col-md-auto ms-md-auto d-print-none mt-2 mt-md-0">
-            <div class="d-flex flex-column flex-sm-row gap-2">
+            <div class="d-flex flex-column flex-sm-row gap-2 align-items-sm-center">
+
+                <div class="d-flex align-items-center gap-2">
+                    <span class="text-muted small font-weight-bold text-nowrap">Filtrar Especie:</span>
+                    <select class="form-select font-weight-bold border-primary text-primary" [value]="selectedSpecies()"
+                        (change)="setSpecies($any($event.target).value)">
+                        <option value="TODOS">Ver Todo el Hato</option>
+                        @for (species of availableSpecies(); track species) {
+                        <option [value]="species">{{ species }}</option>
+                        }
+                    </select>
+                </div>
+
                 <div class="btn-group" role="group">
                     <input type="radio" class="btn-check" name="btn-radio-tab" id="tab-cria" autocomplete="off"
                         [checked]="activeTab() === 'CRIA'" (click)="setTab('CRIA')">
@@ -104,6 +116,7 @@
             <table class="table card-table table-vcenter text-nowrap datatable table-hover mb-0">
                 <thead>
                     <tr>
+                        <th>Especie</th>
                         <th>Arete SINIIGA</th>
                         <th>Nº Fuego</th>
                         <th>Categoría</th>
@@ -115,6 +128,9 @@
                 <tbody>
                     @for (animal of paginatedCattleList(); track animal.id) {
                     <tr>
+                        <td>
+                            <span class="badge bg-purple-lt font-weight-bold">{{ animal.species }}</span>
+                        </td>
                         <td>
                             <div class="font-monospace text-primary font-weight-bold">{{ animal.rfid_siniiga }}</div>
                         </td>
