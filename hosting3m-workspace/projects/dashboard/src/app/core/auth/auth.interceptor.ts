@@ -3,7 +3,7 @@ import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { catchError, throwError } from 'rxjs';
 import { Router } from '@angular/router';
 import { environment } from '@env/environment';
-import { AuthService } from '../services/auth.service';
+import { AuthService } from 'core-auth';
 
 function isOwnApiRequest(url: string): boolean {
   try {
