@@ -96,10 +96,13 @@
     <div class="card-body p-0">
         @if (activeSubTab() === 'RESUMEN') {
         <div class="p-4 rounded-bottom">
-            @if (activeTab() === 'CRIA') { <app-reproductive-dashboard
-                [cattleData]="filteredCattleList()"></app-reproductive-dashboard> }
-            @if (activeTab() === 'ENGORDA') { <app-engorda-dashboard
-                [cattleData]="filteredCattleList()"></app-engorda-dashboard> }
+            @if (activeTab() === 'CRIA') {
+            <app-reproductive-dashboard [cattleData]="filteredCattleList()"></app-reproductive-dashboard>
+            }
+
+            @if (activeTab() === 'ENGORDA') {
+            <app-engorda-dashboard [cattleData]="filteredCattleList()"></app-engorda-dashboard>
+            }
         </div>
         }
 
