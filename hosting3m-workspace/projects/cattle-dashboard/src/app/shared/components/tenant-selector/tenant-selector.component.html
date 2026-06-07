@@ -1,0 +1,11 @@
+@if (tenantService.availableTenants().length > 0) {
+<select class="form-select form-select-sm border-primary" (change)="onSelect($any($event.target).value)">
+    @for (tenant of tenantService.availableTenants(); track tenant.id_company) {
+    <option [value]="tenant.id_company" [selected]="tenant.id_company === tenantService.activeTenantId()">
+        {{ tenant.company_name }}
+    </option>
+    }
+</select>
+} @else {
+<span class="text-muted small">Sin ranchos asignados</span>
+}
