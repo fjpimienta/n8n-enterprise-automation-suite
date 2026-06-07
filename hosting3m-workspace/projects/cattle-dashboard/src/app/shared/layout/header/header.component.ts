@@ -5,11 +5,12 @@ import { RouterModule, Router } from '@angular/router';
 import { AuthService, TenantService } from 'core-auth';
 import { ThemeService } from '@core/services/theme.service';
 import { LayoutService } from '@shared/services/layout.service';
+import { TenantSelectorComponent } from '@shared/components/tenant-selector/tenant-selector.component';
 
 @Component({
   selector: 'app-header',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, TenantSelectorComponent],
   templateUrl: './header.component.html'
 })
 export class HeaderComponent {

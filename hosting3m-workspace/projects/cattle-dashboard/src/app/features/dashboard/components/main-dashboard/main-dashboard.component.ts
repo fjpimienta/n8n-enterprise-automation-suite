@@ -1,10 +1,11 @@
-import { Component, inject, signal, computed, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, ChangeDetectionStrategy, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { CattleApiService } from '@core/services/cattle-api.service';
 import { NgApexchartsModule } from 'ng-apexcharts';
 import { ReproductiveDashboardComponent } from '../reproductive-dashboard/reproductive-dashboard.component';
 import { EngordaDashboardComponent } from '../engorda-dashboard/engorda-dashboard.component';
 import { ExpenseModalComponent } from '../../../expenses/components/expense-modal/expense-modal.component';
+import { TenantService } from 'core-auth';
 
 @Component({
   selector: 'app-main-dashboard',
@@ -15,6 +16,7 @@ import { ExpenseModalComponent } from '../../../expenses/components/expense-moda
 })
 export class MainDashboardComponent implements OnInit {
   private cattleApi = inject(CattleApiService);
+  private tenantService = inject(TenantService);
 
   public PRECIO_KILO = 65.00;
 
@@ -32,23 +34,32 @@ export class MainDashboardComponent implements OnInit {
   public currentPage = signal(1);
   public pageSize = signal(10);
 
-  async ngOnInit() {
-    await this.loadDashboardData();
+  constructor() {
+    // 🛡️ REACCIÓN NATIVA: Escucha el cambio de tenant en tiempo real y actualiza el Data Pipeline
+    effect(() => {
+      const tenantId = this.tenantService.activeTenantId();
+      if (tenantId) {
+        this.loadDashboardData();
+      }
+    }, { allowSignalWrites: true });
+  }
+
+  ngOnInit() {
+    // La carga inicial ahora es gestionada de manera única por el constructor a través del effect nativo,
+    // garantizando sincronía y evitando llamadas duplicadas al backend en el ciclo de vida.
   }
 
   async loadDashboardData() {
     this.isLoading.set(true);
     try {
+      // Respetando tus llamadas nativas asíncronas basadas en Promesas
       const [cattleRaw, expensesRaw] = await Promise.all([
         this.cattleApi.getAllLivestock(),
         this.cattleApi.getExpenses()
       ]);
-
-      // 🚀 AGREGA ESTE CONSOLE LOG TEMPORAL AQUÍ:
-      console.log('AUDITORÍA DE DATOS (Primer Animal):', cattleRaw[0]);
-
-      this.cattleList.set(cattleRaw);
-      this.expensesList.set(expensesRaw);
+      
+      this.cattleList.set(cattleRaw || []);
+      this.expensesList.set(expensesRaw || []);
     } catch (error) {
       console.error('Error en el Data Pipeline del Dashboard:', error);
     } finally {

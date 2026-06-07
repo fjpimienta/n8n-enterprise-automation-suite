@@ -57,10 +57,24 @@ export class LoginComponent {
     this.authService.login(payload).subscribe({
       next: (res: any) => {
         this.isLoading.set(false);
-
         // Paso 1: El backend solicita resolución de contexto (Multi-Tenant)
-        if (res.status === 'select_company' && res.data?.companies) {
-          this.logger.log('⚠️ Múltiples entornos detectados. Activando selector de contexto.');
+        const companies = res.data?.companies || [];
+
+        // En LoginComponent.ts -> onSubmit -> next -> status === 'success'
+
+        if (companies && companies.length > 0) {
+          this.tenantService.setAvailableTenants(companies);
+
+          // AÑADE ESTO AQUÍ MISMO:
+          this.tenantService.debugState();
+
+          if (!this.tenantService.activeTenant()) {
+            this.tenantService.setActiveTenant(companies[0]);
+          }
+        }
+
+        if (res.status === 'select_company' && companies) {
+          this.logger.log('res.data:', res.data);
           this.availableCompanies.set(res.data.companies);
           this.showCompanySelection.set(true);
           this.loginForm.get('id_company')?.enable();
@@ -68,6 +82,19 @@ export class LoginComponent {
         // Paso 2: Autenticación e inserción de sesión exitosa
         else if (res.status === 'success') {
           this.logger.log('✅ Acceso autorizado. Sincronizando tenant activo.');
+          this.logger.log('res.data:', res.data);
+
+          if (res.data) {
+            const companies = res.data.companies;
+            if (companies && companies.length > 0) {
+              this.tenantService.setAvailableTenants(companies);
+              // Opcional: auto-seleccionar el primero si no hay uno activo
+              if (!this.tenantService.activeTenant()) {
+                this.tenantService.setActiveTenant(companies[0]);
+              }
+            }
+            this.logger.log('companies:', companies);
+          }
 
           const activeCompany = res.data?.company;
           if (activeCompany) {
