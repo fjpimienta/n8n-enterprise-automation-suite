@@ -3,11 +3,7 @@
  */
 
 export * from './lib/core-auth';
-
 export * from './lib/services/tenant.service';
-export * from './lib/tenant-selector/tenant-selector.component';
-
-
 export * from './lib/auth.config';
 export * from './lib/services/auth.service';
 export * from './lib/auth/auth.interceptor';
