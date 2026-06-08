@@ -18,11 +18,11 @@
     {
       "parameters": {
         "descriptionType": "manual",
-        "toolDescription": "Busca la informacion de un animal en la base de datos.",
+        "toolDescription": "Busca la información de un animal en la base de datos del rancho actual. REQUIERE: identificador (arete SINIIGA o fuego) y el tenant_id del contexto del usuario. Si devuelve más de un registro, detén el flujo y pide al usuario que aclare a cuál animal se refiere usando la categoría o especie.",
         "operation": "executeQuery",
-        "query": "SELECT id, tenant_id, rfid_siniiga, numero_fuego, category, current_status, current_weight_kg \nFROM cattle_livestock \nWHERE rfid_siniiga = $1::text \n   OR numero_fuego = $1::text\nLIMIT 1;",
+        "query": "SELECT id, tenant_id, rfid_siniiga, numero_fuego, species, category, current_status, current_weight_kg \nFROM cattle_livestock \nWHERE (rfid_siniiga = $1::text OR numero_fuego = $1::text)\nAND tenant_id = $2::int\nLIMIT 5;\n",
         "options": {
-          "queryReplacement": "={{ [ $fromAI('identificador', 'El numero de arete SINIIGA o numero de fuego a buscar', 'string') ] }}"
+          "queryReplacement": "=={{ [ $fromAI('identificador', 'El numero de arete SINIIGA o numero de fuego a buscar (sin espacios)', 'string'), $fromAI('tenant_id', 'ID del rancho / tenant_id actual del usuario', 'number') ] }}\n"
         }
       },
       "type": "n8n-nodes-base.postgresTool",
@@ -119,11 +119,11 @@
     {
       "parameters": {
         "descriptionType": "manual",
-        "toolDescription": "Registra gastos, compra de insumos o pagos. REQUIERE: tenant_id, category, amount y description.",
+        "toolDescription": "Registra gastos, compra de insumos o pagos. REQUIERE: tenant_id (del contexto del usuario), category, amount y description.",
         "operation": "executeQuery",
         "query": "INSERT INTO cattle_expenses (tenant_id, category, amount, description, expense_date) \nVALUES ($1::int, $2, $3::numeric, $4, CURRENT_TIMESTAMP) \nRETURNING id, amount;",
         "options": {
-          "queryReplacement": "={{ [ $fromAI('tenant_id', 'ID del inquilino, asume 1', 'number'), $fromAI('category', 'Categoria del gasto ej. ALIMENTO', 'string'), $fromAI('amount', 'Monto numerico', 'number'), $fromAI('description', 'Descripcion del gasto', 'string') ] }}"
+          "queryReplacement": "=={{ [ $fromAI('tenant_id', 'ID del rancho (tenant_id) extraído del contexto del usuario', 'number'), $fromAI('category', 'Categoria del gasto ej. ALIMENTO', 'string'), $fromAI('amount', 'Monto numerico', 'number'), $fromAI('description', 'Descripcion del gasto', 'string') ] }}\n"
         }
       },
       "type": "n8n-nodes-base.postgresTool",
@@ -210,7 +210,7 @@
     "timeSavedMode": "fixed",
     "timeSavedPerExecution": 3
   },
-  "versionId": "7a0ca66e-e540-4637-97ec-3b457ae46740",
+  "versionId": "bd2cdf69-6c10-4200-bc87-fa7ce0fdf157",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
@@ -219,16 +219,10 @@
   "id": "pJ3CEaO70QEiGL0C",
   "tags": [
     {
-      "updatedAt": "2025-12-31T16:55:06.301Z",
-      "createdAt": "2025-12-31T16:55:06.301Z",
-      "id": "ts9FABk8F02a5xrA",
-      "name": "Agent IA"
-    },
-    {
-      "updatedAt": "2025-12-23T12:12:58.230Z",
-      "createdAt": "2025-12-23T12:12:58.230Z",
-      "id": "MKrwsTVnLLBXLfUP",
-      "name": "Chat"
+      "updatedAt": "2026-06-02T17:44:17.958Z",
+      "createdAt": "2026-06-02T17:44:17.958Z",
+      "id": "6NGDwjjesOlJeGQr",
+      "name": "v6"
     },
     {
       "updatedAt": "2025-12-23T12:12:28.399Z",
@@ -237,10 +231,16 @@
       "name": "AI Agent"
     },
     {
-      "updatedAt": "2026-06-02T17:44:17.958Z",
-      "createdAt": "2026-06-02T17:44:17.958Z",
-      "id": "6NGDwjjesOlJeGQr",
-      "name": "v6"
+      "updatedAt": "2025-12-23T12:12:58.230Z",
+      "createdAt": "2025-12-23T12:12:58.230Z",
+      "id": "MKrwsTVnLLBXLfUP",
+      "name": "Chat"
+    },
+    {
+      "updatedAt": "2025-12-31T16:55:06.301Z",
+      "createdAt": "2025-12-31T16:55:06.301Z",
+      "id": "ts9FABk8F02a5xrA",
+      "name": "Agent IA"
     }
   ]
 }
