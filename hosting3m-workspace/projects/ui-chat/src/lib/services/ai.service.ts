@@ -1,8 +1,9 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { map, catchError, of, finalize } from 'rxjs';
-import { CHAT_CONFIG_TOKEN } from '../tokens/chat.token'; // Asegúrate de la ruta
+import { CHAT_CONFIG_TOKEN } from '../tokens/chat.token';
 import { ChatConfig } from '../interfaces/chat-config';
+import { TenantService } from 'core-auth'; // 🚀 IMPORTANTE: Importamos el servicio de sesión multi-tenant
 
 export interface ChatMessage {
   text: string;
@@ -15,6 +16,7 @@ export interface ChatMessage {
 export class AiService {
   private http = inject(HttpClient);
   private config = inject(CHAT_CONFIG_TOKEN); // Inyección segura del token
+  private tenantService = inject(TenantService); // 🚀 Inyección del contexto del rancho
 
   private sessionId = 'web-' + crypto.randomUUID();
 
@@ -30,9 +32,13 @@ export class AiService {
     this.updateChat(query, 'user');
     this.isLoading.set(true);
 
+    // 🚀 Extraemos el ID del rancho activo de forma segura
+    const currentTenantId = this.tenantService.activeTenant()?.id_company;
+
     this.http.post<{ output: string }>(this.config.apiUrl_ai, {
       chatInput: query,
-      sessionId: this.sessionId
+      sessionId: this.sessionId,
+      tenant_id: currentTenantId // 🚀 ENVIAMOS EL CONTEXTO A N8N
     }).pipe(
       map(response => response?.output || '⚠️ Sin respuesta del servidor.'),
       catchError(err => {
