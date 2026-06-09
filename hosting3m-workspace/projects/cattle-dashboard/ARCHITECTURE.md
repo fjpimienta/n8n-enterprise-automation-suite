@@ -3,8 +3,8 @@
 ## 📝 Descripción
 
 **Project:** Hosting3M Automation Suite (Cattle Dashboard / Ganadería Digital)
-**Version:** v1.0.0 (Core Engine & BI)
-**Stack:** Angular 21 (Signals) | n8n (API Gateway) | PostgreSQL (JSONB & Views) | Tabler UI
+**Version:** v1.6.0 (Multi-Species & Stateful AI)
+**Stack:** Angular 21 (Signals) | n8n (API Gateway / MCP) | PostgreSQL (JSONB & Views) | Tabler UI
 **Author:** Francisco Jesus Pérez Pimienta
 
 El módulo **cattle-dashboard** introduce capacidades de ERP Agropecuario al Monorepositorio de Hosting3M. Se diseñó bajo el principio de "Lean Architecture" y delegación computacional, asegurando que el cliente web sea ultra-ligero y el servidor asuma la carga analítica.
@@ -42,5 +42,3 @@ graph TD
         Router -->|Select/GetAll| View
         Tables -.->|Pre-compute ADG & Gestation| View
     end
-
-```
