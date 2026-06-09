@@ -22,7 +22,7 @@
         "operation": "executeQuery",
         "query": "SELECT id, tenant_id, rfid_siniiga, numero_fuego, species, category, current_status, current_weight_kg \nFROM cattle_livestock \nWHERE (rfid_siniiga = $1::text OR numero_fuego = $1::text)\nAND tenant_id = $2::int\nLIMIT 5;\n",
         "options": {
-          "queryReplacement": "=={{ [ $fromAI('identificador', 'El numero de arete SINIIGA o numero de fuego a buscar (sin espacios)', 'string'), $fromAI('tenant_id', 'ID del rancho / tenant_id actual del usuario', 'number') ] }}\n"
+          "queryReplacement": "={{ [ $fromAI('identificador', 'El numero de arete SINIIGA o numero de fuego a buscar (sin espacios)', 'string'), $fromAI('tenant_id', 'ID del rancho / tenant_id actual del usuario', 'number') ] }}\n"
         }
       },
       "type": "n8n-nodes-base.postgresTool",
@@ -210,7 +210,7 @@
     "timeSavedMode": "fixed",
     "timeSavedPerExecution": 3
   },
-  "versionId": "bd2cdf69-6c10-4200-bc87-fa7ce0fdf157",
+  "versionId": "292661ff-3b6c-42bf-b5ff-59ef028361b6",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
@@ -219,16 +219,10 @@
   "id": "pJ3CEaO70QEiGL0C",
   "tags": [
     {
-      "updatedAt": "2026-06-02T17:44:17.958Z",
-      "createdAt": "2026-06-02T17:44:17.958Z",
-      "id": "6NGDwjjesOlJeGQr",
-      "name": "v6"
-    },
-    {
-      "updatedAt": "2025-12-23T12:12:28.399Z",
-      "createdAt": "2025-12-23T12:12:28.399Z",
-      "id": "RWBzILPfFXEtEcLf",
-      "name": "AI Agent"
+      "updatedAt": "2025-12-31T16:55:06.301Z",
+      "createdAt": "2025-12-31T16:55:06.301Z",
+      "id": "ts9FABk8F02a5xrA",
+      "name": "Agent IA"
     },
     {
       "updatedAt": "2025-12-23T12:12:58.230Z",
@@ -237,10 +231,16 @@
       "name": "Chat"
     },
     {
-      "updatedAt": "2025-12-31T16:55:06.301Z",
-      "createdAt": "2025-12-31T16:55:06.301Z",
-      "id": "ts9FABk8F02a5xrA",
-      "name": "Agent IA"
+      "updatedAt": "2025-12-23T12:12:28.399Z",
+      "createdAt": "2025-12-23T12:12:28.399Z",
+      "id": "RWBzILPfFXEtEcLf",
+      "name": "AI Agent"
+    },
+    {
+      "updatedAt": "2026-06-02T17:44:17.958Z",
+      "createdAt": "2026-06-02T17:44:17.958Z",
+      "id": "6NGDwjjesOlJeGQr",
+      "name": "v6"
     }
   ]
 }
