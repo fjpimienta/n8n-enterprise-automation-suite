@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { CattleDetailModalComponent } from '../cattle-detail-modal/cattle-detail-modal.component';
 import { CattleApiService } from '@core/services/cattle-api.service';
 import { TenantService } from 'core-auth';
+import { CattleDataService } from '@core/services/cattle-data.service';
 
 @Component({
   selector: 'app-cattle-list',
@@ -12,13 +13,17 @@ import { TenantService } from 'core-auth';
   styleUrl: './cattle-list.component.scss',
 })
 export class CattleListComponent implements OnInit {
+  // 1. Inyectamos el servicio de datos globales que ya tiene el effect integrado
+  private cattleDataService = inject(CattleDataService);
+
+  // 2. Exponemos los signals globales directamente hacia el HTML (.html)
+  public cattleList = this.cattleDataService.cattleList;
+  public isLoading = this.cattleDataService.isLoading;
   private cattleApi = inject(CattleApiService);
   public tenantService = inject(TenantService);
 
   // Signals para manejar el estado reactivo
-  public cattleList = signal<any[]>([]);
   public totalHeads = signal<number>(0);
-  public isLoading = signal<boolean>(true);
 
   // Variables para el Modal
   public isModalOpen = false;
