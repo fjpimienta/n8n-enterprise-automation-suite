@@ -33,30 +33,30 @@
                 </tr>
             </thead>
             <tbody>
-                @for (animal of alertList(); track animal.rfid_tag) {
+                @for (animal of alertList(); track animal.id) {
                 <tr>
                     <td>
-                        <div class="font-monospace font-weight-bold">{{ animal.rfid_tag }}</div>
-                        <div class="text-muted text-xs">{{ animal.dueno }}</div>
+                        <div class="font-monospace font-weight-bold text-primary">{{ animal.rfid_siniiga }}</div>
+                        <div class="text-muted text-xs">{{ animal.tenant_name || 'Hosting3m' }}</div>
                     </td>
                     <td>
-                        @if (animal.estatus_salud === 'CRÍTICO') {
+                        @if (animal.current_status === 'CRÍTICO' || animal.current_status === 'VACÍA') {
                         <span class="badge bg-danger">Crítico</span>
                         } @else {
                         <span class="badge bg-warning">Preventivo</span>
                         }
                     </td>
                     <td class="font-weight-bold text-dark">
-                        {{ animal.alerta || 'Merma Biológica Detectada' }}
+                        {{ animal.alerta || 'Merma Biológica / Estado Reproductivo Crítico' }}
                     </td>
                     <td>
-                        @if (animal.ganancia_diaria_kg <= 0) { <span class="text-danger font-weight-bold">▼ {{
-                            animal.ganancia_diaria_kg }} kg/día</span>
+                        @if (animal.adg_lifetime_kg <= 0) { <span class="text-danger font-weight-bold">▼ {{
+                            animal.adg_lifetime_kg || '0.00' }} kg/día</span>
                             } @else {
-                            <span class="text-warning font-weight-bold">▶ +{{ animal.ganancia_diaria_kg }} kg/día</span>
+                            <span class="text-warning font-weight-bold">▶ +{{ animal.adg_lifetime_kg }} kg/día</span>
                             }
                     </td>
-                    <td class="text-muted">{{ animal.proximo_evento }}</td>
+                    <td class="text-muted">{{ animal.proximo_evento || 'Revisión Veterinaria Requerida' }}</td>
                 </tr>
                 }
             </tbody>
