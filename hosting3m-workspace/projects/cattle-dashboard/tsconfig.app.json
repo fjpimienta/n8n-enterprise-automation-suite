@@ -2,6 +2,7 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "../../out-tsc/app",
+    "rootDir": "../../",
     "types": [],
     "paths": {
       "ui-chat": [
@@ -26,7 +27,7 @@
         "projects/core-auth/src/public-api.ts"
       ],
       "core-auth/*": [
-        "dist/core-auth/*"
+        "projects/core-auth/src/lib/*"
       ]
     }
   },

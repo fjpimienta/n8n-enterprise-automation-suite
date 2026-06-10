@@ -39,7 +39,10 @@
         "projects/dashboard/src/app/shared/ui/*"
       ],
       "core-auth": [
-        "dist/core-auth"
+        "projects/core-auth/src/public-api.ts"
+      ],
+      "core-auth/*": [
+        "projects/core-auth/src/lib/*"
       ]
     }
   },

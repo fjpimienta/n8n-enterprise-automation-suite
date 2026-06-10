@@ -1,5 +1,7 @@
 import { Component, inject, signal, computed, OnInit, ChangeDetectionStrategy, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute, Router } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { CattleApiService } from '@core/services/cattle-api.service';
 import { NgApexchartsModule } from 'ng-apexcharts';
 import { ReproductiveDashboardComponent } from '../reproductive-dashboard/reproductive-dashboard.component';
@@ -17,6 +19,8 @@ import { TenantService } from 'core-auth';
 export class MainDashboardComponent implements OnInit {
   private cattleApi = inject(CattleApiService);
   private tenantService = inject(TenantService);
+  private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   public PRECIO_KILO = 65.00;
 
@@ -34,8 +38,20 @@ export class MainDashboardComponent implements OnInit {
   public currentPage = signal(1);
   public pageSize = signal(10);
 
+  // Bridge reactivo: convierte los queryParams del Router en un Signal nativo de Angular
+  private queryParams = toSignal(this.route.queryParamMap);
+
   constructor() {
-    // 🛡️ REACCIÓN NATIVA: Escucha el cambio de tenant en tiempo real y actualiza el Data Pipeline
+    // EFECTO 1: Sincronización URL → Signal. Lee el query param 'tab' y actualiza el estado
+    // interno sin duplicar el pipeline de datos. Valor por defecto: 'CRIA'.
+    effect(() => {
+      const tab = this.queryParams()?.get('tab')?.toUpperCase();
+      this.activeTab.set(tab === 'ENGORDA' ? 'ENGORDA' : 'CRIA');
+      this.activeSubTab.set('RESUMEN');
+      this.currentPage.set(1);
+    }, { allowSignalWrites: true });
+
+    // EFECTO 2: Sincronización del pipeline de datos con el tenant activo (sin cambios)
     effect(() => {
       const tenantId = this.tenantService.activeTenantId();
       if (tenantId) {
@@ -148,9 +164,13 @@ export class MainDashboardComponent implements OnInit {
   });
 
   public setTab(tab: 'CRIA' | 'ENGORDA') {
-    this.activeTab.set(tab);
-    this.activeSubTab.set('RESUMEN');
-    this.currentPage.set(1);
+    // Navega actualizando solo el query param 'tab'. El EFECTO 1 en el constructor
+    // escucha el cambio y propaga la actualización a activeTab, activeSubTab y currentPage.
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { tab: tab.toLowerCase() },
+      queryParamsHandling: 'merge'
+    });
   }
 
   public setSubTab(subTab: 'RESUMEN' | 'INVENTARIO' | 'GASTOS') {
