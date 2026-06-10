@@ -1,16 +1,16 @@
-import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { TenantService } from '../services/tenant.service'; // Ajusta la ruta a tu estructura
+import { HttpInterceptorFn } from '@angular/common/http';
+import { TenantService } from '../services/tenant.service'; // 🎯 Ruta relativa corregida
 
 export const tenantInterceptor: HttpInterceptorFn = (req, next) => {
   const tenantService = inject(TenantService);
-  const activeTenantId = tenantService.activeTenantId();
+  const activeTenantId = tenantService.activeTenantId(); // Lectura reactiva del Signal
 
-  // Si hay un tenant activo en el sistema, clonamos la petición e inyectamos la cabecera
-  if (activeTenantId) {
+  if (activeTenantId !== undefined && activeTenantId !== null) {
     const clonedRequest = req.clone({
       setHeaders: {
-        'X-Tenant-ID': String(activeTenantId)
+        'X-Tenant-ID': String(activeTenantId),
+        'x-tenant-id': String(activeTenantId) // Doble canal de compatibilidad para NodeJS/n8n
       }
     });
     return next(clonedRequest);

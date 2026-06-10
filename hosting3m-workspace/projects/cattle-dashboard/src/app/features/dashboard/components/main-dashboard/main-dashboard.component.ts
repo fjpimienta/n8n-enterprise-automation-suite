@@ -42,22 +42,19 @@ export class MainDashboardComponent implements OnInit {
   private queryParams = toSignal(this.route.queryParamMap);
 
   constructor() {
-    // EFECTO 1: Sincronización URL → Signal. Lee el query param 'tab' y actualiza el estado
-    // interno sin duplicar el pipeline de datos. Valor por defecto: 'CRIA'.
+    /**
+     * 🔄 EFECTO REACTIVO: Escucha activa del Contexto de Rancho.
+     * Cada vez que el tenantService cambie el rancho activo en el header del ERP,
+     * este bloque detectará el cambio de ID y re-orquestará el pipeline automáticamente.
+     */
     effect(() => {
-      const tab = this.queryParams()?.get('tab')?.toUpperCase();
-      this.activeTab.set(tab === 'ENGORDA' ? 'ENGORDA' : 'CRIA');
-      this.activeSubTab.set('RESUMEN');
-      this.currentPage.set(1);
-    }, { allowSignalWrites: true });
+      const activeTenantId = this.tenantService.activeTenantId();
 
-    // EFECTO 2: Sincronización del pipeline de datos con el tenant activo (sin cambios)
-    effect(() => {
-      const tenantId = this.tenantService.activeTenantId();
-      if (tenantId) {
+      if (activeTenantId) {
+        console.log(`🔄 [Dashboard Pipeline] Detectado cambio de rancho a ID: ${activeTenantId}. Re-indexando KPIs...`);
         this.loadDashboardData();
       }
-    }, { allowSignalWrites: true });
+    }, { allowSignalWrites: true }); // Permite que la escritura de isLoading y listas ocurra en cascada
   }
 
   ngOnInit() {
@@ -68,16 +65,24 @@ export class MainDashboardComponent implements OnInit {
   async loadDashboardData() {
     this.isLoading.set(true);
     try {
-      // Respetando tus llamadas nativas asíncronas basadas en Promesas
       const [cattleRaw, expensesRaw] = await Promise.all([
         this.cattleApi.getAllLivestock(),
         this.cattleApi.getExpenses()
       ]);
-      
-      this.cattleList.set(cattleRaw || []);
-      this.expensesList.set(expensesRaw || []);
+
+      // 🎯 DIAGNÓSTICO: Monitoreo del pipeline en consola
+      console.log('🚀 [DataPipeline] Respuesta de n8n:', cattleRaw);
+
+      // 🛡️ SOLUCIÓN AL ERROR TS2339:
+      // Castor intermedio a 'any' para evadir la restricción estricta del compilador sobre el objeto/arreglo
+      const rawResponse: any = cattleRaw;
+
+      // Si n8n regresa el array directo, se asigna. Si viene envuelto en { data: [...] }, se extrae de forma segura.
+      this.cattleList.set(Array.isArray(rawResponse) ? rawResponse : (rawResponse?.data || []));
+      this.expensesList.set(Array.isArray(expensesRaw) ? expensesRaw : []);
+
     } catch (error) {
-      console.error('Error en el Data Pipeline del Dashboard:', error);
+      console.error('Error en el Data Pipeline:', error);
     } finally {
       this.isLoading.set(false);
     }
@@ -85,12 +90,16 @@ export class MainDashboardComponent implements OnInit {
 
   // 🚀 Extracción dinámica de especies existentes en el hato para los selectores de la UI
   public availableSpecies = computed(() => {
-    const speciesSet = new Set<string>(
-      this.cattleList().map(animal => {
-        // 1. Intenta leer la columna nativa si ya se destrabó la caché
-        if (animal.species) return animal.species;
+    const list = this.cattleList();
+    // 🛡️ BLINDAJE: Si no es un array, devuelve array vacío inmediatamente
+    if (!Array.isArray(list)) {
+      console.warn('⚠️ [availableSpecies] Se recibió un tipo no iterable:', list);
+      return [];
+    }
 
-        // 2. Si no viene, la extrae directamente del objeto metadata que ya tienes seguro
+    const speciesSet = new Set<string>(
+      list.map(animal => { // Aquí ya no fallará
+        if (animal.species) return animal.species;
         if (animal.metadata) {
           const meta = typeof animal.metadata === 'string' ? JSON.parse(animal.metadata) : animal.metadata;
           return meta.species;

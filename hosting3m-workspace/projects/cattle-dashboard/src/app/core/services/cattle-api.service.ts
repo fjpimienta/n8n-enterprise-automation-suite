@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { lastValueFrom } from 'rxjs';
+import { lastValueFrom, firstValueFrom } from 'rxjs';
 import { environment } from '@env/environment';
 import { AuthService, TenantService } from 'core-auth';
 import { LoggerService } from './logger.service';
@@ -19,25 +19,35 @@ export class CattleApiService {
      * 0. Obtener Inventario Completo (Filtrado dinámico por Contexto de Rancho)
      */
     public async getAllLivestock(): Promise<any[]> {
-        const idRanchoActivo = this.tenantService.activeTenantId();
-        if (!idRanchoActivo) {
-            this.logger.warn('🚫 No hay un contexto de rancho activo seleccionado.');
+        const currentTenantId = this.tenantService.activeTenantId();
+        if (!currentTenantId) {
+            this.logger.warn('🚫 Bypass: Intento de fetch sin contexto de Tenant activo.');
             return [];
         }
 
         try {
+            // 🚀 SOLUCIÓN DEFENSIVA: Mandamos la propiedad de ambas formas (raíz y estructurada)
+            // por si el Meta-CRUD de n8n espera la misma anatomía que el 'insert' o un query directo.
             const payload = {
                 operation: 'getall',
-                // 🚀 MEJOR PRÁCTICA: Mapeamos id_company de la UI al nombre de columna física 'tenant_id'
-                tenant_id: Number(idRanchoActivo)
+                tenant_id: Number(currentTenantId),
+                fields: {
+                    tenant_id: Number(currentTenantId)
+                }
             };
 
-            const res: any = await lastValueFrom(
-                this.http.post(`${this.apiUrl_crud}/vw_cattle_kpi`, payload)
+            this.logger.log(`📡 [CattleAPI] Solicitando vw_cattle_kpi para Tenant ID: ${currentTenantId}`, payload);
+
+            const res: any = await firstValueFrom(
+                this.http.post<any>(this.apiUrl_crud + '/vw_cattle_kpi', payload)
             );
 
-            if (!res || !res.data) return [];
-            return res.data;
+            // Desempaquetado resiliente con logs para auditoría en vivo
+            if (res && Array.isArray(res)) return res;
+            if (res && Array.isArray(res.data)) return res.data;
+            if (res?.data && Array.isArray(res.data.data)) return res.data.data;
+
+            return [];
         } catch (error) {
             this.logger.error('Error en getAllLivestock:', error);
             return [];
