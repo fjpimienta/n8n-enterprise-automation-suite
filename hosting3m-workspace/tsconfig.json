@@ -68,7 +68,7 @@
         "projects/cattle-dashboard/src/app/shared/*"
       ],
       "core-auth": [
-        "dist/core-auth"
+        "../core-auth/src/public-api.ts"
       ],
       "core-auth/*": [
         "dist/core-auth/*"
