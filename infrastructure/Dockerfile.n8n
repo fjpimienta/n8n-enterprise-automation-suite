@@ -1,14 +1,13 @@
-# Usamos la imagen oficial 'latest'.
-FROM n8nio/n8n:latest
+# Pinned to stable version. DO NOT change to latest.
+FROM docker.n8n.io/n8nio/n8n:2.23.3
 
 USER root
 
-# Instalamos estrictamente las librerías permitidas en NODE_FUNCTION_ALLOW_EXTERNAL.
-# Se eliminó la instalación manual de LangChain para reducir deuda técnica, 
-# ya que n8n ahora soporta IA nativamente.
-RUN npm install -g jsonwebtoken pdf-parse && \
+# pdf-parse removed from global install — crashes Task Runner via DOMMatrix.
+# It remains available via NODE_FUNCTION_ALLOW_EXTERNAL as n8n bundles it internally.
+# Only jsonwebtoken is required for jwt-service microservice integration.
+RUN npm install -g jsonwebtoken && \
     mkdir -p /home/node/.n8n/custom && \
     npm cache clean --force
 
-# Volvemos al usuario seguro 'node' para la ejecución
 USER node
