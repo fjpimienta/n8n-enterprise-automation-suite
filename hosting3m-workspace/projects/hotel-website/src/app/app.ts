@@ -102,13 +102,13 @@ export class App implements OnInit {
 
     this.http.post(url, payload).subscribe({
       next: (res: any) => {
-        console.log('✅ MetaCRUD Respondió (POST):', res);
+        // console.log('✅ MetaCRUD Respondió (POST):', res);
         this.isSubmittingReview.set(false);
         this.closeReviewModal();
         alert('¡Gracias por tu reseña! Ha sido enviada a moderación y pronto aparecerá en la página.');
       },
       error: (err) => {
-        console.error('❌ Error enviando reseña hacia n8n:', err);
+        // console.error('❌ Error enviando reseña hacia n8n:', err);
         this.isSubmittingReview.set(false);
         alert('Hubo un error al enviar tu reseña. Por favor, intenta de nuevo.');
       }

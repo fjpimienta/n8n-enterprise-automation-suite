@@ -74,15 +74,15 @@ export class LoginComponent {
         }
 
         if (res.status === 'select_company' && companies) {
-          this.logger.log('res.data:', res.data);
+          // this.logger.log('res.data:', res.data);
           this.availableCompanies.set(res.data.companies);
           this.showCompanySelection.set(true);
           this.loginForm.get('id_company')?.enable();
         }
         // Paso 2: Autenticación e inserción de sesión exitosa
         else if (res.status === 'success') {
-          this.logger.log('✅ Acceso autorizado. Sincronizando tenant activo.');
-          this.logger.log('res.data:', res.data);
+          // this.logger.log('✅ Acceso autorizado. Sincronizando tenant activo.');
+          // this.logger.log('res.data:', res.data);
 
           if (res.data) {
             const companies = res.data.companies;

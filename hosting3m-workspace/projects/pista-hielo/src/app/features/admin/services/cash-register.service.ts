@@ -18,7 +18,7 @@ export class CashRegisterService {
     // Genera fecha formato YYYY-MM-DD
     const localDate = new Date().toLocaleDateString('sv-SE');
 
-    console.log('📅 Consultando fecha:', localDate); // DEBUG: Ver qué fecha enviamos
+    // console.log('📅 Consultando fecha:', localDate); // DEBUG: Ver qué fecha enviamos
 
     return this.http.post<{ data: PhTransaction[] }>(this.apiUrl, {
       operation: 'getall',
@@ -32,7 +32,7 @@ export class CashRegisterService {
       map(res => res.data || [])
     ).subscribe({
       next: (data) => {
-        console.log('✅ Datos recibidos:', data.length, 'registros'); // DEBUG
+        // console.log('✅ Datos recibidos:', data.length, 'registros'); // DEBUG
 
         // ¡ESTO FALTABA! Actualizar los signals para que la pantalla cambie
         this.todayTransactions.set(data);

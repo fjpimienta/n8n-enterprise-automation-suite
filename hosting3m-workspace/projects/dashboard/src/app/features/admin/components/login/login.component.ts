@@ -55,13 +55,13 @@ export class LoginComponent {
       this.authService.login(rawPayload).subscribe({
         next: (res: any) => {
           if (res.status === 'select_company' && res.data?.companies) {
-            this.logger.log('⚠️ Múltiples sucursales detectadas. Activando selector.');
+            // this.logger.log('⚠️ Múltiples sucursales detectadas. Activando selector.');
             this.isLoading.set(false);
             this.availableCompanies.set(res.data.companies);
             this.showCompanySelection.set(true);
             this.loginForm.get('id_company')?.enable();
           } else {
-            this.logger.log('✅ Login autorizado. Sincronizando contexto global del hotel.');
+            // this.logger.log('✅ Login autorizado. Sincronizando contexto global del hotel.');
             this.isLoading.set(false);
 
             const activeCompany = res.data?.company || this.authService.currentUser();

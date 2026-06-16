@@ -51,7 +51,7 @@ export class MainDashboardComponent implements OnInit {
       const activeTenantId = this.tenantService.activeTenantId();
 
       if (activeTenantId) {
-        console.log(`🔄 [Dashboard Pipeline] Detectado cambio de rancho a ID: ${activeTenantId}. Re-indexando KPIs...`);
+        //console.log(`🔄 [Dashboard Pipeline] Detectado cambio de rancho a ID: ${activeTenantId}. Re-indexando KPIs...`);
         this.loadDashboardData();
       }
     }, { allowSignalWrites: true }); // Permite que la escritura de isLoading y listas ocurra en cascada
@@ -71,7 +71,7 @@ export class MainDashboardComponent implements OnInit {
       ]);
 
       // 🎯 DIAGNÓSTICO: Monitoreo del pipeline en consola
-      console.log('🚀 [DataPipeline] Respuesta de n8n:', cattleRaw);
+      // console.log('🚀 [DataPipeline] Respuesta de n8n:', cattleRaw);
 
       // 🛡️ SOLUCIÓN AL ERROR TS2339:
       // Castor intermedio a 'any' para evadir la restricción estricta del compilador sobre el objeto/arreglo

@@ -6,6 +6,7 @@ import { environment } from '@env/environment';
 import { Company } from '@core/models/company.model';
 import { User } from '@core/models/user.model';
 import { Guest } from '@core/models/guest.model';
+import { TenantService } from 'core-auth';
 
 @Injectable({
   providedIn: 'root',
@@ -13,7 +14,7 @@ import { Guest } from '@core/models/guest.model';
 export class AdminService {
   private http = inject(HttpClient);
   private apiUrl_crud = environment.apiUrl_crud;
-
+  private tenantService = inject(TenantService);
   public loadingUsers = signal<boolean>(false);
   public loadingGuests = signal<boolean>(false);
   public users = signal<User[]>([]);
@@ -91,14 +92,15 @@ export class AdminService {
   }
 
   /* Users */
-  public loadUsers(id_company?: number) {
+  public loadUsers() {
+    const currentTenantId = this.tenantService.activeTenantId();
     this.loadingUsers.set(true);
     const payload = {
       entity: 'users',
       table_name: 'users',
       operation: 'getall',
       action: 'list',
-      filter: { id_company: id_company }
+      filters: { tenant_id: Number(currentTenantId) }
     };
     this.http.post<ApiResponse<User>>(`${this.apiUrl_crud}/users`, payload, {
       headers: this.getAuthHeaders()
