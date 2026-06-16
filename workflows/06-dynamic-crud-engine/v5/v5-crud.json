@@ -12,31 +12,12 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        1792,
-        176
+        3824,
+        1072
       ],
-      "id": "9aa17361-522f-4a02-8fb2-caa727e78056",
+      "id": "32e3d436-e1b2-4cc9-98df-57c653ea8cea",
       "name": "Respond to Webhook",
       "alwaysOutputData": true
-    },
-    {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "crud/v5/:model",
-        "responseMode": "responseNode",
-        "options": {
-          "allowedOrigins": "https://hosting3m.com, https://sanjose.hosting3m.com"
-        }
-      },
-      "id": "77c38fec-d27d-4a19-ac3f-062f50e48b77",
-      "name": "WebhookCRUD",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 1,
-      "position": [
-        -2592,
-        192
-      ],
-      "webhookId": "0cce9eb9-5022-433f-a04b-67840e015870"
     },
     {
       "parameters": {
@@ -45,10 +26,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -2368,
-        192
+        -336,
+        1088
       ],
-      "id": "5f5abdde-d6db-4b19-b954-8fc712629f92",
+      "id": "cf7a348c-47fb-4747-b6b4-87d4e8e63a67",
       "name": "Get Model Name"
     },
     {
@@ -60,10 +41,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        -1472,
-        96
+        560,
+        992
       ],
-      "id": "50ef996a-1cf1-4a5f-b59d-3905ad6a2be5",
+      "id": "fa1b7882-2a22-4212-8dcb-e6ae7cf513bf",
       "name": "Get Model Config",
       "retryOnFail": false,
       "alwaysOutputData": true,
@@ -81,10 +62,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        0,
-        0
+        2032,
+        896
       ],
-      "id": "18aae50d-8e34-493e-b18b-b2b1ab270cd5",
+      "id": "7cec03c0-bd42-46fc-a35b-40ffc81d0761",
       "name": "Schema Validate"
     },
     {
@@ -96,10 +77,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        -1024,
-        192
+        1008,
+        1088
       ],
-      "id": "5bbcf983-8b47-4090-b696-fa017983b683",
+      "id": "6d979a83-80f0-447a-b217-e406a2498366",
       "name": "Get",
       "credentials": {
         "postgres": {
@@ -136,10 +117,10 @@
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 2.1,
       "position": [
-        -576,
-        192
+        1456,
+        1088
       ],
-      "id": "07505e52-fe2d-44f3-8ea9-9c8ee94a7be3",
+      "id": "d058aa1a-3fdb-4020-8a3c-88f420006023",
       "name": "Message a model",
       "credentials": {
         "openAiApi": {
@@ -156,10 +137,10 @@
       "type": "n8n-nodes-base.aggregate",
       "typeVersion": 1,
       "position": [
-        -800,
-        192
+        1232,
+        1088
       ],
-      "id": "d935102c-8cc5-4269-a6eb-b3c3d80aeb66",
+      "id": "09216e17-a240-42a3-b021-0faf91bd8cfc",
       "name": "Aggregate"
     },
     {
@@ -169,10 +150,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -224,
-        192
+        1808,
+        1088
       ],
-      "id": "25a23916-0dfb-402d-8777-14d2c418f3fe",
+      "id": "1b221973-2e32-4e3a-a1d6-bfe37bc2af19",
       "name": "Parse IA"
     },
     {
@@ -186,10 +167,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        0,
-        192
+        2032,
+        1088
       ],
-      "id": "f29f2435-2c32-4679-9569-d4044538cfa1",
+      "id": "82e14481-27b7-44d3-bb79-6c2bf890166b",
       "name": "Execute a SQL query",
       "credentials": {
         "postgres": {
@@ -226,10 +207,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        1344,
-        96
+        3376,
+        992
       ],
-      "id": "efec97a4-ab75-4872-9c55-b4311788a165",
+      "id": "34f48dd3-daee-4a84-b1fc-f36b76ec18e4",
       "name": "Check Post-Hooks"
     },
     {
@@ -241,10 +222,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        1568,
-        32
+        3600,
+        928
       ],
-      "id": "4d3e9b0d-9213-4d17-b57d-c194e0c4a1ab",
+      "id": "d942d82b-7c21-4914-bdd3-31c3085b0cae",
       "name": "Insert Logs",
       "credentials": {
         "postgres": {
@@ -281,10 +262,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        1568,
-        320
+        3600,
+        1216
       ],
-      "id": "8d297d0f-2bed-4aa2-914b-b146419b3ef7",
+      "id": "c2571f94-26e8-4148-81e2-7ef42a34cc37",
       "name": "If1"
     },
     {
@@ -294,10 +275,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        224,
-        96
+        2256,
+        992
       ],
-      "id": "6ab3d359-9b80-419c-b910-1cb55ff0055f",
+      "id": "923a0cb9-def6-457a-9bb8-b5cbee41e17f",
       "name": "Extract Auth Context"
     },
     {
@@ -307,10 +288,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        448,
-        96
+        2480,
+        992
       ],
-      "id": "1c5fae98-7879-4a7f-b5be-ccb4255dc02a",
+      "id": "6287a260-522e-4255-a000-b85cd9f68094",
       "name": "Security Validation",
       "onError": "continueRegularOutput"
     },
@@ -325,10 +306,10 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        -1472,
-        320
+        560,
+        1216
       ],
-      "id": "0958a73f-7e67-41a6-8a89-c938bd266c46",
+      "id": "5dfb6079-1a95-4c7c-b734-afbbf9222774",
       "name": "Respond Denegate"
     },
     {
@@ -358,10 +339,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -1696,
-        272
+        336,
+        1168
       ],
-      "id": "b6921a1a-1b0d-4b53-97c8-54daaae38d99",
+      "id": "2d62dd5a-9178-450a-bde6-633340474b34",
       "name": "IsValid"
     },
     {
@@ -392,10 +373,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -1248,
-        96
+        784,
+        992
       ],
-      "id": "e31999b8-5daa-4b33-b80e-dfeebb119687",
+      "id": "8e066c68-fd87-40a2-991c-ccabbec91459",
       "name": "ModelExist"
     },
     {
@@ -420,10 +401,10 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        -1920,
-        272
+        112,
+        1168
       ],
-      "id": "d880466f-1e17-47c2-ba8e-1e68279ecebf",
+      "id": "6b9ebc59-76a6-4c49-b1c1-21fb2d969994",
       "name": "Verify Token"
     },
     {
@@ -463,10 +444,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -2144,
-        192
+        -112,
+        1088
       ],
-      "id": "0ff1d2c9-c5d7-4b48-9cb1-79c89e6ccca6",
+      "id": "84dd252f-df5f-48f9-b713-23a67addfc7e",
       "name": "If"
     },
     {
@@ -480,10 +461,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        896,
-        96
+        2928,
+        992
       ],
-      "id": "8db4215a-2faf-4874-ab8c-2ccf8740a715",
+      "id": "30167e14-aad5-4a09-b27e-b0eb76f9e44f",
       "name": "Execute SQL",
       "alwaysOutputData": true,
       "credentials": {
@@ -496,15 +477,15 @@
     },
     {
       "parameters": {
-        "jsCode": "const crypto = require('crypto');\n\n// Capturamos los datos directamente de los nodos anteriores\nconst config = $('Security Validation').first().json;\nconst body = $('WebhookCRUD').first().json.body || {};\nconst operation = config.operation.toLowerCase().trim();\nconst fields = body.filters || body.fields || body;\nconst table = config.table_name;\n\nif (!table) throw new Error(`Modelo sin table_name configurado.`);\n\nconst joins = config.joins || [];\nconst buildJoins = () => {\n    if (!joins.length) return '';\n    return joins.map(j => {\n        const myCol = j.own_col || j.localField;\n        const otherCol = j.foreign_col || j.foreignField || 'id';\n        return ` LEFT JOIN ${j.table} ON ${table}.${myCol} = ${j.table}.${otherCol}`;\n    }).join(' ');\n};\n\nconst buildSelectFields = () => {\n    if (!joins.length) return `${table}.*`;\n    let select = `${table}.*`;\n    joins.forEach(j => { select += `, row_to_json(${j.table}.*) as ${j.table}_data`; });\n    return select;\n};\n\nconst processValue = (key, value) => {\n    if (key === 'password' && value) return crypto.createHash('sha256').update(value).digest('hex');\n    return value;\n};\n\n// Sanitización de paginación\nconst sanitizePaginationParams = (limitInput, offsetInput) => {\n    let limit = 500;\n    let offset = 0;\n    if (limitInput) {\n        const parsedLimit = parseInt(limitInput, 10);\n        if (!isNaN(parsedLimit) && parsedLimit > 0) limit = Math.min(parsedLimit, 2000);\n    }\n    if (offsetInput) {\n        const parsedOffset = parseInt(offsetInput, 10);\n        if (!isNaN(parsedOffset) && parsedOffset >= 0) offset = parsedOffset;\n    }\n    return { limit, offset };\n};\n\nlet query = '';\nlet values = [];\n\nswitch (operation) {\n    case 'insert': {\n        const allowedFields = config.allowed_fields || [];\n        const insertFields = [];\n        const placeholders = [];\n        let paramIndex = 1;\n\n        Object.entries(fields).forEach(([key, value]) => {\n            if (allowedFields.includes(key)) {\n                insertFields.push(key);\n                placeholders.push(`$${paramIndex++}`);\n                values.push(processValue(key, value));\n            }\n        });\n\n        if (insertFields.length === 0) throw new Error(\"No hay campos válidos para insertar.\");\n        \n        let effectivePk = config.primary_key || 'id';\n        if (effectivePk === 'id' && !fields.id) {\n            effectivePk = fields.doc_id ? 'doc_id' : (fields.email ? 'email' : effectivePk);\n        }\n\n        const updateStr = insertFields\n            .filter(f => f !== 'url' && f !== 'id' && f !== 'created_at' && f !== effectivePk)\n            .map(f => `${f} = EXCLUDED.${f}`).join(', ');\n\n        query = `INSERT INTO ${table} (${insertFields.join(', ')}) VALUES (${placeholders.join(', ')}) ON CONFLICT (${effectivePk}) DO UPDATE SET ${updateStr} RETURNING *;`;\n        break;\n    }\n    case 'update': {\n        const pkFieldFromConfig = config.primary_key || 'id';\n        const idValue = body[pkFieldFromConfig] || fields[pkFieldFromConfig] || body.id || fields.id || body.email || fields.email;\n        const pkField = (pkFieldFromConfig === 'id' && !fields.id && idValue && typeof idValue === 'string' && idValue.includes('@')) ? 'email' : pkFieldFromConfig;\n\n        if (!idValue) throw new Error(`UPDATE requiere un ID o llave primaria (${pkField}).`);\n\n        const updateParts = [];\n        let paramIndex = 1;\n        \n        Object.entries(fields).forEach(([key, value]) => {\n            if ((config.allowed_fields || []).includes(key) && key !== 'id' && key !== pkField) {\n                if (key === 'password' && (value === null || value === undefined || value === '')) return; \n                updateParts.push(`${key} = $${paramIndex++}`);\n                values.push(processValue(key, value));\n            }\n        });\n        \n        if (updateParts.length === 0) throw new Error(\"No hay campos válidos para actualizar.\");\n        query = `UPDATE ${table} SET ${updateParts.join(', ')} WHERE ${pkField} = $${paramIndex++} RETURNING *;`;\n        values.push(idValue);\n        break;\n    }\n    case 'getall': {\n        const { limit, offset } = sanitizePaginationParams(body.limit, body.offset);\n        let baseQuery = `SELECT ${buildSelectFields()} FROM ${table} ${buildJoins()}`;\n        let whereParts = [];\n        let paramIndex = 1;\n\n        Object.entries(fields).forEach(([key, value]) => {\n            if ((config.allowed_fields || []).includes(key) && key !== 'limit' && key !== 'offset') {\n                let dbColumn = `${table}.${key}`;\n                if (key === 'created_at' || key === 'check_in') dbColumn = `(${table}.${key} - INTERVAL '6 hours')::date`;\n\n                if (value !== null && typeof value === 'object' && !Array.isArray(value)) {\n                    Object.entries(value).forEach(([op, val]) => {\n                        const sqlOp = op === '_gte' ? '>=' : op === '_lte' ? '<=' : op === '_gt' ? '>' : op === '_lt' ? '<' : '=';\n                        const isDateLike = typeof val === 'string' && (val.includes('T') || /^\\d{4}-\\d{2}-\\d{2}$/.test(val));\n                        if (isDateLike && key !== 'created_at' && key !== 'check_in') {\n                             whereParts.push(`${dbColumn}::date ${sqlOp} $${paramIndex++}::date`);\n                             values.push(val.split('T')[0]);\n                        } else {\n                             whereParts.push(`${dbColumn} ${sqlOp} $${paramIndex++}`);\n                             values.push(val);\n                        }\n                    });\n                } else if (value !== undefined && value !== '' && value !== null) {\n                    const isDateLike = typeof value === 'string' && (value.includes('T') || /^\\d{4}-\\d{2}-\\d{2}$/.test(value));\n                    if (isDateLike && key !== 'created_at' && key !== 'check_in') {\n                        whereParts.push(`${dbColumn}::date = $${paramIndex++}::date`);\n                        values.push(value.split('T')[0]);\n                    } else {\n                        whereParts.push(`${dbColumn} = $${paramIndex++}`);\n                        values.push(value);\n                    }\n                } else if (value === null) {\n                    whereParts.push(`${dbColumn} IS NULL`);\n                }\n            }\n        });\n\n        if (config.default_filter && !fields.hasOwnProperty('is_active') && !config.default_filter.includes('$1')) {\n            whereParts.push(config.default_filter);\n        }\n\n        if (whereParts.length > 0) baseQuery += ` WHERE ${whereParts.join(' AND ')}`;\n        \n        let sortCol = body.sort_by ? body.sort_by : (fields.published_at ? 'published_at' : 'created_at');\n        baseQuery += ` ORDER BY ${table}.${sortCol} DESC NULLS LAST LIMIT $${paramIndex++} OFFSET $${paramIndex++};`;\n        \n        query = baseQuery;\n        values.push(limit, offset);\n        break;\n    }\n    case 'delete': {\n        const pkField = config.primary_key || 'id';\n        const idValue = body[pkField] || fields[pkField] || body.id || fields.id;\n        if (!idValue) throw new Error(`DELETE requiere el valor de ${pkField}`);\n        query = `UPDATE ${table} SET is_active = false WHERE ${pkField} = $1 RETURNING *;`;\n        values = [idValue];\n        break;\n    }\n    case 'getone': {\n        const pkField = config.primary_key || 'id';\n        let val = fields[pkField] || body[pkField] || body.id || fields.id || fields.email || body.email;\n        if (!val && Object.keys(fields).length > 0) {\n            const firstKey = Object.keys(fields)[0];\n            val = fields[firstKey];\n            query = `SELECT ${buildSelectFields()} FROM ${table} ${buildJoins()} WHERE ${table}.${firstKey} = $1 LIMIT 1;`;\n        } else if (val) {\n            const searchField = (fields.email || body.email) && !fields[pkField] ? 'email' : pkField;\n            query = `SELECT ${buildSelectFields()} FROM ${table} ${buildJoins()} WHERE ${table}.${searchField} = $1 LIMIT 1;`;\n        }\n        if (!val) throw new Error(`GETONE requiere un ID o un campo de búsqueda.`);\n        values = [val];\n        break;\n    }\n}\n\nreturn [{ json: { query, values, operation, is_transactional: ['insert', 'update', 'delete'].includes(operation) } }];"
+        "jsCode": "const crypto = require('crypto');\n\n// Capturamos los datos directamente de los nodos anteriores\nconst config = $('Security Validation').first().json;\nconst webhookData = $('WebhookCRUD').first().json; // Obtenemos el payload completo\nconst body = webhookData.body || {};\nconst headers = webhookData.headers || {};\nconst operation = (config.operation || '').toLowerCase();\nconst table = config.table_name;\n\n// 🚀 FIX: Soportar \"filter\" en singular y aislar el payload\n// Hacemos una copia profunda (JSON.parse) para no mutar el objeto original\nlet fields = body.filter || body.filters || body.fields || JSON.parse(JSON.stringify(body));\n\n// 🛡️ SECURITY PATCH: Aislamiento Multi-Tenant (Zero-Trust)\n// Sobrescribimos el tenant_id del payload con el del Header seguro\nconst tenantIdHeader = headers['x-tenant-id'];\nif (tenantIdHeader) {\n    fields['tenant_id'] = tenantIdHeader;\n}\nconst joins = config.joins || [];\nconst buildJoins = () => {\n    if (!joins.length) return '';\n    return joins.map(j => {\n        const myCol = j.own_col || j.localField;\n        const otherCol = j.foreign_col || j.foreignField || 'id';\n        return ` LEFT JOIN ${j.table} ON ${table}.${myCol} = ${j.table}.${otherCol}`;\n    }).join(' ');\n};\n\nconst buildSelectFields = () => {\n    if (!joins.length) return `${table}.*`;\n    let select = `${table}.*`;\n    joins.forEach(j => { select += `, row_to_json(${j.table}.*) as ${j.table}_data`; });\n    return select;\n};\n\nconst processValue = (key, value) => {\n    if (key === 'password' && value) return crypto.createHash('sha256').update(value).digest('hex');\n    return value;\n};\n\n// Sanitización de paginación\nconst sanitizePaginationParams = (limitInput, offsetInput) => {\n    let limit = 1000;\n    let offset = 0;\n    if (limitInput) {\n        const parsedLimit = parseInt(limitInput, 10);\n        if (!isNaN(parsedLimit) && parsedLimit > 0) limit = Math.min(parsedLimit, 2000);\n    }\n    if (offsetInput) {\n        const parsedOffset = parseInt(offsetInput, 10);\n        if (!isNaN(parsedOffset) && parsedOffset >= 0) offset = parsedOffset;\n    }\n    return { limit, offset };\n};\n\nlet query = '';\nlet values = [];\n\nswitch (operation) {\n    case 'insert': {\n        const allowedFields = config.allowed_fields || [];\n        const insertFields = [];\n        const placeholders = [];\n        let paramIndex = 1;\n\n        Object.entries(fields).forEach(([key, value]) => {\n            if (allowedFields.includes(key)) {\n                insertFields.push(key);\n                placeholders.push(`$${paramIndex++}`);\n                values.push(processValue(key, value));\n            }\n        });\n\n        if (insertFields.length === 0) throw new Error(\"No hay campos válidos para insertar.\");\n        \n        let effectivePk = config.primary_key || 'id';\n        if (effectivePk === 'id' && !fields.id) {\n            effectivePk = fields.doc_id ? 'doc_id' : (fields.email ? 'email' : effectivePk);\n        }\n\n        const updateStr = insertFields\n            .filter(f => f !== 'url' && f !== 'id' && f !== 'created_at' && f !== effectivePk)\n            .map(f => `${f} = EXCLUDED.${f}`).join(', ');\n\n        query = `INSERT INTO ${table} (${insertFields.join(', ')}) VALUES (${placeholders.join(', ')}) ON CONFLICT (${effectivePk}) DO UPDATE SET ${updateStr} RETURNING *;`;\n        break;\n    }\n    case 'update': {\n        const pkFieldFromConfig = config.primary_key || 'id';\n        const idValue = body[pkFieldFromConfig] || fields[pkFieldFromConfig] || body.id || fields.id || body.email || fields.email;\n        const pkField = (pkFieldFromConfig === 'id' && !fields.id && idValue && typeof idValue === 'string' && idValue.includes('@')) ? 'email' : pkFieldFromConfig;\n\n        if (!idValue) throw new Error(`UPDATE requiere un ID o llave primaria (${pkField}).`);\n\n        const updateParts = [];\n        let paramIndex = 1;\n        \n        Object.entries(fields).forEach(([key, value]) => {\n            if ((config.allowed_fields || []).includes(key) && key !== 'id' && key !== pkField) {\n                if (key === 'password' && (value === null || value === undefined || value === '')) return; \n                updateParts.push(`${key} = $${paramIndex++}`);\n                values.push(processValue(key, value));\n            }\n        });\n        \n        if (updateParts.length === 0) throw new Error(\"No hay campos válidos para actualizar.\");\n        query = `UPDATE ${table} SET ${updateParts.join(', ')} WHERE ${pkField} = $${paramIndex++} RETURNING *;`;\n        values.push(idValue);\n        break;\n    }\n    case 'getall': {\n        const { limit, offset } = sanitizePaginationParams(body.limit, body.offset);\n        \n        let selectFields = buildSelectFields();\n        // 🚀 HOTFIX ARQUITECTÓNICO 1: Sobrescribir el Rol global con el Rol del Tenant\n        if (table === 'users') {\n            selectFields = selectFields.replace(`${table}.*`, `${table}.*, uc.role`);\n        }\n        \n        let baseQuery = `SELECT ${selectFields} FROM ${table} ${buildJoins()}`;\n        let whereParts = [];\n        let paramIndex = 1;\n\n        // 🚀 HOTFIX ARQUITECTÓNICO 2: Inyectar JOIN con tabla pivote para Multi-Tenancy\n        if (table === 'users') {\n            if (!baseQuery.includes('user_companies')) {\n                baseQuery += ` INNER JOIN user_companies uc ON ${table}.email = uc.email`;\n            }\n        }\n\n        Object.entries(fields).forEach(([key, value]) => {\n            const isAllowed = (config.allowed_fields || []).includes(key) || key === 'tenant_id';\n            \n            if (isAllowed && key !== 'limit' && key !== 'offset') {\n                let dbColumn = `${table}.${key}`;\n                \n                // Redirección del filtro hacia la tabla pivote\n                if (table === 'users' && key === 'tenant_id') {\n                    dbColumn = 'uc.id_company';\n                } else if (key === 'created_at' || key === 'check_in') {\n                    dbColumn = `(${table}.${key} - INTERVAL '6 hours')::date`;\n                }\n\n                if (value !== null && typeof value === 'object' && !Array.isArray(value)) {\n                    Object.entries(value).forEach(([op, val]) => {\n                        const sqlOp = op === '_gte' ? '>=' : op === '_lte' ? '<=' : op === '_gt' ? '>' : op === '_lt' ? '<' : '=';\n                        const isDateLike = typeof val === 'string' && (val.includes('T') || /^\\d{4}-\\d{2}-\\d{2}$/.test(val));\n                        if (isDateLike && key !== 'created_at' && key !== 'check_in') {\n                             whereParts.push(`${dbColumn}::date ${sqlOp} $${paramIndex++}::date`);\n                             values.push(val.split('T')[0]);\n                        } else {\n                             whereParts.push(`${dbColumn} ${sqlOp} $${paramIndex++}`);\n                             values.push(val);\n                        }\n                    });\n                } else if (value !== undefined && value !== '' && value !== null) {\n                    const isDateLike = typeof value === 'string' && (value.includes('T') || /^\\d{4}-\\d{2}-\\d{2}$/.test(value));\n                    if (isDateLike && key !== 'created_at' && key !== 'check_in') {\n                        whereParts.push(`${dbColumn}::date = $${paramIndex++}::date`);\n                        values.push(value.split('T')[0]);\n                    } else {\n                        whereParts.push(`${dbColumn} = $${paramIndex++}`);\n                        values.push(value);\n                    }\n                } else if (value === null) {\n                    whereParts.push(`${dbColumn} IS NULL`);\n                }\n            }\n        });\n\n        // 🛡️ FIX: Resolver la Ambigüedad de la columna is_active en el default_filter\n        if (config.default_filter && !fields.hasOwnProperty('is_active') && !config.default_filter.includes('$1')) {\n            let defFilter = config.default_filter;\n            if (table === 'users' && defFilter.includes('is_active')) {\n                defFilter = defFilter.replace('is_active', `${table}.is_active`);\n            }\n            whereParts.push(defFilter);\n        }\n\n        if (whereParts.length > 0) baseQuery += ` WHERE ${whereParts.join(' AND ')}`;\n        \n        let sortCol = body.sort_by ? body.sort_by : (fields.published_at ? 'published_at' : 'created_at');\n        let finalSortCol = (table === 'users' && sortCol === 'tenant_id') ? 'uc.id_company' : `${table}.${sortCol}`;\n        \n        baseQuery += ` ORDER BY ${finalSortCol} DESC NULLS LAST LIMIT $${paramIndex++} OFFSET $${paramIndex++};`;\n        \n        query = baseQuery;\n        values.push(limit, offset);\n        break;\n    }\n    case 'delete': {\n        const pkField = config.primary_key || 'id';\n        const idValue = body[pkField] || fields[pkField] || body.id || fields.id;\n        if (!idValue) throw new Error(`DELETE requiere el valor de ${pkField}`);\n        query = `UPDATE ${table} SET is_active = false WHERE ${pkField} = $1 RETURNING *;`;\n        values = [idValue];\n        break;\n    }\n    case 'getone': {\n        const pkField = config.primary_key || 'id';\n        let val = fields[pkField] || body[pkField] || body.id || fields.id || fields.email || body.email;\n        if (!val && Object.keys(fields).length > 0) {\n            const firstKey = Object.keys(fields)[0];\n            val = fields[firstKey];\n            query = `SELECT ${buildSelectFields()} FROM ${table} ${buildJoins()} WHERE ${table}.${firstKey} = $1 LIMIT 1;`;\n        } else if (val) {\n            const searchField = (fields.email || body.email) && !fields[pkField] ? 'email' : pkField;\n            query = `SELECT ${buildSelectFields()} FROM ${table} ${buildJoins()} WHERE ${table}.${searchField} = $1 LIMIT 1;`;\n        }\n        if (!val) throw new Error(`GETONE requiere un ID o un campo de búsqueda.`);\n        values = [val];\n        break;\n    }\n}\n\nreturn [{ json: { query, values, operation, is_transactional: ['insert', 'update', 'delete'].includes(operation) } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        672,
-        96
+        2704,
+        992
       ],
-      "id": "24cf2086-7d99-43ba-9dd4-bfe806c56b36",
+      "id": "8e91c6eb-1c9c-457d-8b43-f651ea4ae054",
       "name": "Build Query"
     },
     {
@@ -514,26 +495,34 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1120,
-        96
+        3152,
+        992
       ],
-      "id": "e11e71f2-5942-485f-bca2-e3542184691e",
+      "id": "f19226dc-0336-428c-97ad-8857b087c6e2",
       "name": "Normalize Data"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "crud/v5/:model",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "*"
+        }
+      },
+      "id": "48c26219-6fc6-4195-9f86-e1b2c0678f9b",
+      "name": "WebhookCRUD",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -560,
+        1088
+      ],
+      "webhookId": "0cce9eb9-5022-433f-a04b-67840e015870"
     }
   ],
   "pinData": {},
   "connections": {
-    "WebhookCRUD": {
-      "main": [
-        [
-          {
-            "node": "Get Model Name",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Get Model Name": {
       "main": [
         [
@@ -781,35 +770,43 @@
           }
         ]
       ]
+    },
+    "WebhookCRUD": {
+      "main": [
+        [
+          {
+            "node": "Get Model Name",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
-    "availableInMCP": false,
-    "timeSavedMode": "fixed",
-    "errorWorkflow": "9SrVXdATmlrZemJT",
     "callerPolicy": "workflowsFromSameOwner",
-    "executionTimeout": -1
+    "availableInMCP": false,
+    "errorWorkflow": "9SrVXdATmlrZemJT",
+    "timeSavedMode": "fixed",
+    "timeSavedPerExecution": 1,
+    "redactionPolicy": "all"
   },
-  "versionId": "524a2c7f-29fa-4c15-8864-8bc91ac160b7",
+  "versionId": "b440685b-c4a9-437b-8e39-c258fd8f0147",
   "meta": {
+    "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
   },
-  "id": "v7_VshNU6iTPzIyq9J4A6",
+  "nodeGroups": [],
+  "id": "UUQDC6U5uI3VeBVV",
   "tags": [
     {
-      "updatedAt": "2025-12-20T19:25:08.685Z",
-      "createdAt": "2025-12-20T19:25:08.685Z",
-      "id": "ljhw24TcxNVpCPyc",
-      "name": "Webhook"
-    },
-    {
-      "updatedAt": "2025-12-20T20:03:23.298Z",
-      "createdAt": "2025-12-20T20:03:23.298Z",
-      "id": "UUN2qPnY76eYwC1y",
-      "name": "CRUD"
+      "updatedAt": "2025-12-31T16:55:06.301Z",
+      "createdAt": "2025-12-31T16:55:06.301Z",
+      "id": "ts9FABk8F02a5xrA",
+      "name": "Agent IA"
     },
     {
       "updatedAt": "2025-12-20T20:03:46.545Z",
@@ -818,10 +815,16 @@
       "name": "Postgres"
     },
     {
-      "updatedAt": "2025-12-31T16:55:06.301Z",
-      "createdAt": "2025-12-31T16:55:06.301Z",
-      "id": "ts9FABk8F02a5xrA",
-      "name": "Agent IA"
+      "updatedAt": "2025-12-20T20:03:23.298Z",
+      "createdAt": "2025-12-20T20:03:23.298Z",
+      "id": "UUN2qPnY76eYwC1y",
+      "name": "CRUD"
+    },
+    {
+      "updatedAt": "2025-12-20T19:25:08.685Z",
+      "createdAt": "2025-12-20T19:25:08.685Z",
+      "id": "ljhw24TcxNVpCPyc",
+      "name": "Webhook"
     }
   ]
 }

@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { LayoutService } from '@shared/services/layout.service';
@@ -21,8 +21,17 @@ export class SidebarComponent {
   public tenantService = inject(TenantService);
   private router = inject(Router);
 
+  public userRole = signal<string | null>(null);
+
   isMobileMenuOpen = this.layoutService.mobileMenuOpen;
   isCollapsed = this.layoutService.sidebarCollapsed;
+
+  ngOnInit() {
+    // 2. Recupera el rol de la sesión actual (Ajusta esto si usas el AuthService de core-auth)
+    // Para no bloquear el build de Angular, hacemos una lectura segura estándar:
+    const currentRole = localStorage.getItem('role') || 'EDITOR';
+    this.userRole.set(currentRole);
+  }
 
   closeMenu() {
     this.layoutService.mobileMenuOpen.set(false);

@@ -1,0 +1,86 @@
+<div class="container-fluid p-3 p-md-4 animate__animated animate__fadeIn">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <div class="d-none d-md-block">
+                <span class="bg-green-lt p-2 rounded-3"><i class="ti ti-tractor fs-2"></i></span>
+            </div>
+            <div>
+                <h2 class="page-title mb-0">Personal de la UPP</h2>
+                <div class="text-muted small mt-1">Gestiona los accesos, caporales y administradores</div>
+            </div>
+        </div>
+        <div>
+            <button class="btn btn-primary shadow-sm" (click)="openModal()">
+                <i class="ti ti-user-plus me-2"></i>
+                <span class="d-none d-sm-inline">Registrar Personal</span>
+                <span class="d-inline d-sm-none">Nuevo</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="row row-cards">
+        @for (user of users(); track user.email) {
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="card shadow-sm border-0 h-100 hover-shadow-lg transition-all"
+                [class.opacity-50]="!user.is_active">
+                <div class="card-body d-flex align-items-center p-3">
+
+                    <span class="avatar avatar-md me-3 text-uppercase fw-bold rounded shadow-sm"
+                        [class.bg-green-lt]="user.role === 'ADMIN'" [class.bg-orange-lt]="user.role !== 'ADMIN'">
+                        {{ (user.names || '?').charAt(0) }}{{ (user.lastname || '').charAt(0) }}
+                    </span>
+
+                    <div class="flex-fill overflow-hidden">
+                        <div class="font-weight-medium fs-4 text-truncate mb-1">
+                            {{ user.names }} {{ user.lastname }}
+                        </div>
+
+                        <div class="mb-1">
+                            <span class="badge" [class.bg-green-lt]="user.role === 'ADMIN'"
+                                [class.bg-orange-lt]="user.role === 'EDITOR'"
+                                [class.bg-blue-lt]="user.role === 'CUSTOMER'">
+                                {{ user.role === 'ADMIN' ? 'Administrador' : (user.role === 'EDITOR' ? 'Operador' :
+                                'Veterinario') }}
+                            </span>
+                            @if(!user.is_active) {
+                            <span class="badge bg-red-lt ms-1">Inactivo</span>
+                            }
+                        </div>
+
+                        <div class="text-muted fs-5 mt-1 text-truncate">
+                            <i class="ti ti-mail me-2"></i> {{ user.email }}
+                        </div>
+                    </div>
+
+                    <div class="ms-3">
+                        <button class="btn btn-icon btn-ghost-secondary" (click)="openModal(user)"
+                            title="Editar Perfil">
+                            <i class="ti ti-edit fs-4"></i>
+                        </button>
+                    </div>
+
+                </div>
+                <div class="card-progress-bottom"
+                    [style.background-color]="user.role === 'ADMIN' ? '#2fb344' : '#f76707'"></div>
+            </div>
+        </div>
+        } @empty {
+        <div class="col-12 text-center py-5">
+            <div class="empty-state">
+                <div class="empty-img"><i class="ti ti-users-off fs-1 text-muted"></i></div>
+                <p class="empty-title fs-3">No hay personal registrado en esta UPP</p>
+                <p class="empty-subtitle text-muted">Da de alta a tus operadores de campo y administradores para
+                    comenzar a operar.</p>
+                <button class="btn btn-primary mt-3" (click)="openModal()">
+                    <i class="ti ti-user-plus me-2"></i> Registrar Personal
+                </button>
+            </div>
+        </div>
+        }
+    </div>
+</div>
+
+<app-user-form-modal [isOpen]="isModalOpen()" [selectedUser]="selectedUser()" [(userData)]="currentUserData"
+    (onClose)="closeModal()" (onSave)="saveUser()">
+</app-user-form-modal>

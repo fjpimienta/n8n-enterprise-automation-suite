@@ -166,7 +166,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        0,
+        416,
         192
       ],
       "id": "de696807-1b04-4e78-89d6-a1f860918919",
@@ -181,7 +181,7 @@
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.8,
       "position": [
-        224,
+        640,
         96
       ],
       "id": "4b55141d-9940-4072-bf50-73f4c2e01138",
@@ -201,7 +201,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        448,
+        864,
         96
       ],
       "id": "15cc1ad9-3763-4b77-a1bb-bc12206d0be6",
@@ -219,7 +219,7 @@
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
       "position": [
-        672,
+        1088,
         96
       ],
       "id": "7894f202-fc5f-4d57-9c47-e8bb49de7883",
@@ -243,7 +243,7 @@
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
       "position": [
-        224,
+        640,
         288
       ],
       "id": "b784f086-8e7a-4f2c-9d6a-70789e74f5c7",
@@ -404,24 +404,11 @@
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "typeVersion": 1.3,
       "position": [
-        -336,
+        80,
         160
       ],
       "id": "b452a01d-b2c2-4f6b-9455-31dfc433eeac",
       "name": "Simple Memory"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Usamos $json para capturar los datos del nodo que haya disparado la ejecución\nreturn {\n  text: $json.text,\n  number: $json.number,\n  whatsapp_data: $json.message\n};"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -1360,
-        192
-      ],
-      "id": "69aa3da5-7699-461b-9538-4a3c4c95fe15",
-      "name": "Set Message"
     },
     {
       "parameters": {
@@ -479,7 +466,7 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.4,
       "position": [
-        -688,
+        -272,
         192
       ],
       "id": "caed1e4d-523c-4646-b0fa-01afb21a4489",
@@ -499,7 +486,7 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
       "position": [
-        -464,
+        -48,
         160
       ],
       "id": "f4fa3130-d3f1-4669-9538-883906ef59a0",
@@ -519,7 +506,7 @@
       "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
       "typeVersion": 1.2,
       "position": [
-        -208,
+        208,
         160
       ],
       "id": "83c47eaa-e8ca-4657-a2f8-6206ddaa0314",
@@ -528,15 +515,15 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT role, active_tenant_id \nFROM users \nWHERE phone = $1 \nAND is_active = true \nLIMIT 1;",
+        "query": "SELECT role, tenant_id \nFROM users \nWHERE phone = $1 \nAND is_active = true \nLIMIT 1;",
         "options": {
-          "queryReplacement": "={{ $('Set Message').item.json.number.toString().slice(-10) }}"
+          "queryReplacement": "={{ $('Set Message Delete').item.json.number.toString().slice(-10) }}"
         }
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        -1136,
+        -928,
         192
       ],
       "id": "e33ca6b7-6b0c-4373-a101-713121226fc0",
@@ -551,29 +538,16 @@
     },
     {
       "parameters": {
-        "jsCode": "// 1. Obtener los usuarios de la base de datos (Entrada inmediata del nodo)\nconst dbUsers = $input.all();\n\n// 2. RESCATE DE DATOS: Obtener el mensaje original del nodo \"Set Message\"\nconst originalMessage = $(\"Set Message\").first().json;\n\n// Extraemos los datos seguros\nlet text = originalMessage.text || \"?\";\n\n// 🧹 SANITIZACIÓN DETERMINISTA: Eliminar espacios entre números\n// Esto convierte \"7156 90 242\" en \"715690242\" sin alterar el resto de las palabras.\ntext = text.replace(/(?<=\\d)\\s+(?=\\d)/g, \"\");\n\nconst number = (originalMessage.number || \"0\").toString();\nconst whatsapp_data = originalMessage.whatsapp_data || {};\n\n// 3. Lógica de asignación de Rol y Tenant (Optimizada)\nlet foundRole = 'GUEST'; \nlet activeTenant = null;\n\n// Si la base de datos devolvió un registro, extraemos el rol y el rancho activo\nif (dbUsers.length > 0 && dbUsers[0].json.role) {\n  foundRole = dbUsers[0].json.role;\n  activeTenant = dbUsers[0].json.active_tenant_id;\n}\n\n// 4. Retorno final consolidado\nreturn {\n  text: text,\n  number: number,\n  whatsapp_data: whatsapp_data,\n  role: foundRole,\n  tenant_id: activeTenant // 🚀 Puente vital para el Multi-Tenant\n};"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -912,
-        192
-      ],
-      "id": "45bb06d0-abe8-44f7-808c-6427a0c7b9ca",
-      "name": "Set Role"
-    },
-    {
-      "parameters": {
         "promptType": "define",
         "text": "={{ $json.text }}",
         "options": {
-          "systemMessage": "==Rol: Eres el Administrador Virtual de Ganadería de Precisión. Tu objetivo es ayudar al usuario a registrar y consultar datos de campo de forma estructurada.\nHOY ES: {{ $now.setZone('America/Mexico_City').toFormat('yyyy-MM-dd') }} (Usa esto para calcular \"hoy\").\n\n🛑 REGLAS CRÍTICAS DE INTEGRIDAD DE DATOS (MÉTACRUD):\n\n1. NUNCA ASUMAS EL ID DEL ANIMAL: Postgres requiere el UUID (livestock_id) para cualquier registro transaccional. Si el usuario te da un arete SINIIGA o número de fuego, SIEMPRE ejecuta primero la herramienta 'get_livestock_info' para obtener su UUID antes de intentar guardar algo.\n\n2. SANITIZACIÓN DE ARETES (AUDIO Y TEXTO): Es probable que el usuario o el sistema dicte el arete con espacios, comas o guiones (Ej. \"715 690 242\" o \"vaca 19-116\"). TU DEBER ESTRICTO es extraer únicamente los caracteres alfanuméricos, eliminar cualquier espacio o símbolo, y concatenarlos en un solo bloque continuo (Ej. \"715690242\" o \"19116\") ANTES de invocar get_livestock_info.\n\n3. ESTRICTA PROHIBICIÓN DE INFERENCIA (ZERO-HALLUCINATION): NUNCA asumas, inventes o adivines parámetros faltantes (como 'event_type', 'category' o 'description'). Si el usuario dice \"lo inyectamos\", ESTÁ ESTRICTAMENTE PROHIBIDO asumir que el evento es 'VACUNACION'. Si falta un solo dato para usar una herramienta, DEBES detener el flujo y preguntar explícitamente al usuario por los datos exactos (Ej. \"¿Qué le inyectaron y por qué motivo?\") ANTES de armar el resumen.\n\n4. MANEJO DE TENANTS: El usuario actual está gestionando estrictamente el rancho con tenant_id = {{ $('Set Role').item.json.tenant_id }}. Al usar herramientas como 'register_ranch_expense' o 'get_livestock_info', DEBES usar exactamente este número como tenant_id. Nunca asumas ni pidas el número de rancho al usuario.\n\n🛑 PROTOCOLO DE DOBLE CONFIRMACIÓN (CANDADO ANTI-JAILBREAK):\nTienes estrictamente PROHIBIDO invocar las herramientas de escritura ('log_cattle_weight', 'log_health_event', 'register_ranch_expense') a menos que el ÚLTIMO mensaje del usuario sea una confirmación afirmativa explícita (Ej. \"Sí\", \"Confirmo\", \"Dale\", \"Correcto\").\n\nMECÁNICA OBLIGATORIA DE GUARDADO:\n- PASO 1: Cuando el usuario solicite registrar un dato, tu ÚNICA acción permitida es responder con un resumen estructurado de los datos a guardar y preguntar: \"¿Confirmas que procedo a guardarlo en el sistema? (Sí/No)\". NO INVOQUES LA HERRAMIENTA AÚN.\n- PASO 2: Solo cuando el usuario responda afirmativamente en su siguiente turno, tendrás autorización de invocar la herramienta en la base de datos.\n\n🛑 REGLA DE TRANSMISIÓN DE DATOS: \nAl ejecutar 'log_cattle_weight', los parámetros DEBEN ser enviados como un objeto JSON con las llaves exactas 'livestock_id' y 'weight_kg'. No envíes arreglos ni listas.\n\n🛠️ DICCIONARIO DE HERRAMIENTAS PERMITIDAS:\n- Consulta: Usa 'get_livestock_info' para mostrar categoría, peso actual y estatus.\n- Pesaje: Usa 'log_cattle_weight' enviando el UUID y el peso numérico.\n- Salud: Usa 'log_health_event' enviando el UUID, event_type y description.\n\n✨ PROTOCOLO DE ESTILO:\n- Sé directo, pragmático y orientado a resultados de campo (habla como un administrador ganadero experto).\n- Usa un solo asterisco (*) para resaltar números clave o aretes. NUNCA uses negrita doble (**).\n- Usa Emojis estratégicamente: 🐄, ⚖️, 💉, 📋."
+          "systemMessage": "==Rol: Eres el Administrador Virtual de Ganadería de Precisión. Tu objetivo es ayudar al usuario a registrar y consultar datos de campo de forma estructurada.\nHOY ES: {{ $now.setZone('America/Mexico_City').toFormat('yyyy-MM-dd') }} (Usa esto para calcular \"hoy\").\n\n🛑 REGLAS CRÍTICAS DE INTEGRIDAD DE DATOS (MÉTACRUD):\n\n1. NUNCA ASUMAS EL ID DEL ANIMAL: Postgres requiere el UUID (livestock_id) para cualquier registro transaccional. Si el usuario te da un arete SINIIGA o número de fuego, SIEMPRE ejecuta primero la herramienta 'get_livestock_info' para obtener su UUID antes de intentar guardar algo.\n\n2. SANITIZACIÓN DE ARETES (AUDIO Y TEXTO): Es probable que el usuario o el sistema dicte el arete con espacios, comas o guiones (Ej. \"715 690 242\" o \"vaca 19-116\"). TU DEBER ESTRICTO es extraer únicamente los caracteres alfanuméricos, eliminar cualquier espacio o símbolo, y concatenarlos en un solo bloque continuo (Ej. \"715690242\" o \"19116\") ANTES de invocar get_livestock_info.\n\n3. ESTRICTA PROHIBICIÓN DE INFERENCIA (ZERO-HALLUCINATION): NUNCA asumas, inventes o adivines parámetros faltantes (como 'event_type', 'category' o 'description'). Si el usuario dice \"lo inyectamos\", ESTÁ ESTRICTAMENTE PROHIBIDO asumir que el evento es 'VACUNACION'. Si falta un solo dato para usar una herramienta, DEBES detener el flujo y preguntar explícitamente al usuario por los datos exactos (Ej. \"¿Qué le inyectaron y por qué motivo?\") ANTES de armar el resumen.\n\n4. MANEJO DE TENANTS: El usuario actual está gestionando estrictamente el rancho con tenant_id = {{ $('Switch Role').item.json.tenant_id }}. Al usar herramientas como 'register_ranch_expense' o 'get_livestock_info', DEBES usar exactamente este número como tenant_id. Nunca asumas ni pidas el número de rancho al usuario.\n\n🛑 REGLA DE TRANSMISIÓN DE DATOS: \nAl ejecutar 'log_cattle_weight', los parámetros DEBEN ser enviados como un objeto JSON con las llaves exactas 'livestock_id' y 'weight_kg'. No envíes arreglos ni listas.\n\n🛠️ DICCIONARIO DE HERRAMIENTAS PERMITIDAS:\n- Consulta: Usa 'get_livestock_info' para mostrar categoría, peso actual y estatus.\n- Pesaje: Usa 'log_cattle_weight' enviando el UUID y el peso numérico.\n- Salud: Usa 'log_health_event' enviando el UUID, event_type y description.\n\n✨ PROTOCOLO DE ESTILO:\n- Sé directo, pragmático y orientado a resultados de campo (habla como un administrador ganadero experto).\n- Usa un solo asterisco (*) para resaltar números clave o aretes. NUNCA uses negrita doble (**).\n- Usa Emojis estratégicamente: 🐄, ⚖️, 💉, 📋."
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
       "position": [
-        -400,
+        16,
         -64
       ],
       "id": "8bb0e662-274e-48b3-9efa-e51f4ec46fda",
@@ -619,11 +593,93 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -336,
+        80,
         336
       ],
       "id": "afb94924-c767-4628-ae58-da42e658e29b",
       "name": "Set Output"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a4e9fb9c-b643-438b-9748-3af68c9addf6",
+              "name": "text",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "0f44dc67-0f30-404c-939f-5d382deb899c",
+              "name": "number",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            },
+            {
+              "id": "2bdea723-1590-4078-86b9-ce21dcfa3428",
+              "name": "whatsapp_data",
+              "value": "={{ $json.message }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1152,
+        192
+      ],
+      "id": "c303b47d-125a-4988-92bb-67e6e7e82d47",
+      "name": "Set Message"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "cd25c005-0abf-470e-9b66-fa14015922f7",
+              "name": "text",
+              "value": "={{ $('Set Message').first().json.text ? $('Set Message').first().json.text.replace(/(?<=\\d)\\s+(?=\\d)/g, \"\") : \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "0c794212-f450-481c-940b-3e7ee181bb8a",
+              "name": "number",
+              "value": "={{ $('Set Message').first().json.number.toString() }}",
+              "type": "string"
+            },
+            {
+              "id": "1c955845-8797-46d7-8172-de98079b4716",
+              "name": "whatsapp_data",
+              "value": "={{ $('Set Message').first().json.whatsapp_data }}",
+              "type": "string"
+            },
+            {
+              "id": "ae9f432f-fdb0-4aa4-8ed2-9ff6a8da5f09",
+              "name": "role",
+              "value": "={{ $json.role ? $json.role : 'GUEST' }}",
+              "type": "string"
+            },
+            {
+              "id": "b36bcabc-02d6-47c8-8883-497a69085dad",
+              "name": "tenant_id",
+              "value": "={{ $json.tenant_id ? $json.tenant_id : null }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -496,
+        192
+      ],
+      "id": "f21ba439-c27c-4170-8a4a-d703101f1685",
+      "name": "Set Role"
     }
   ],
   "pinData": {},
@@ -770,17 +826,6 @@
         ]
       ]
     },
-    "Set Message": {
-      "main": [
-        [
-          {
-            "node": "Get User Role",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Switch Role": {
       "main": [
         [
@@ -832,17 +877,6 @@
         ]
       ]
     },
-    "Set Role": {
-      "main": [
-        [
-          {
-            "node": "Switch Role",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "AI Agent": {
       "main": [
         [
@@ -875,6 +909,28 @@
           }
         ]
       ]
+    },
+    "Set Message": {
+      "main": [
+        [
+          {
+            "node": "Get User Role",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Role": {
+      "main": [
+        [
+          {
+            "node": "Switch Role",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -887,7 +943,7 @@
     "availableInMCP": true,
     "timeSavedPerExecution": 5
   },
-  "versionId": "9c321525-67be-40be-805a-08bfc2c9d132",
+  "versionId": "87519b5a-0538-4b70-b4db-b1cf1b8ee460",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
@@ -896,22 +952,10 @@
   "id": "lqgFIeTbSdPRT8zz",
   "tags": [
     {
-      "updatedAt": "2026-06-02T17:44:17.958Z",
-      "createdAt": "2026-06-02T17:44:17.958Z",
-      "id": "6NGDwjjesOlJeGQr",
-      "name": "v6"
-    },
-    {
-      "updatedAt": "2025-12-31T16:55:06.301Z",
-      "createdAt": "2025-12-31T16:55:06.301Z",
-      "id": "ts9FABk8F02a5xrA",
-      "name": "Agent IA"
-    },
-    {
-      "updatedAt": "2025-12-23T12:12:58.230Z",
-      "createdAt": "2025-12-23T12:12:58.230Z",
-      "id": "MKrwsTVnLLBXLfUP",
-      "name": "Chat"
+      "updatedAt": "2025-12-23T12:12:15.209Z",
+      "createdAt": "2025-12-23T12:12:15.209Z",
+      "id": "3iH8LadFwT23eiH0",
+      "name": "WhatsApp"
     },
     {
       "updatedAt": "2025-12-23T12:12:28.399Z",
@@ -920,10 +964,22 @@
       "name": "AI Agent"
     },
     {
-      "updatedAt": "2025-12-23T12:12:15.209Z",
-      "createdAt": "2025-12-23T12:12:15.209Z",
-      "id": "3iH8LadFwT23eiH0",
-      "name": "WhatsApp"
+      "updatedAt": "2025-12-23T12:12:58.230Z",
+      "createdAt": "2025-12-23T12:12:58.230Z",
+      "id": "MKrwsTVnLLBXLfUP",
+      "name": "Chat"
+    },
+    {
+      "updatedAt": "2025-12-31T16:55:06.301Z",
+      "createdAt": "2025-12-31T16:55:06.301Z",
+      "id": "ts9FABk8F02a5xrA",
+      "name": "Agent IA"
+    },
+    {
+      "updatedAt": "2026-06-02T17:44:17.958Z",
+      "createdAt": "2026-06-02T17:44:17.958Z",
+      "id": "6NGDwjjesOlJeGQr",
+      "name": "v6"
     }
   ]
 }

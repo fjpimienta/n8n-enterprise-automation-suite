@@ -36,7 +36,7 @@ export class CattleApiService {
                 }
             };
 
-            this.logger.log(`📡 [CattleAPI] Solicitando vw_cattle_kpi para Tenant ID: ${currentTenantId}`, payload);
+            // this.logger.log(`📡 [CattleAPI] Solicitando vw_cattle_kpi para Tenant ID: ${currentTenantId}`, payload);
 
             const res: any = await firstValueFrom(
                 this.http.post<any>(this.apiUrl_crud + '/vw_cattle_kpi', payload)

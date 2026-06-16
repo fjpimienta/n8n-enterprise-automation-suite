@@ -184,16 +184,10 @@
   "id": "RM60Dm0e3r03dvnp",
   "tags": [
     {
-      "updatedAt": "2026-06-02T17:44:17.958Z",
-      "createdAt": "2026-06-02T17:44:17.958Z",
-      "id": "6NGDwjjesOlJeGQr",
-      "name": "v6"
-    },
-    {
-      "updatedAt": "2025-12-31T16:55:06.301Z",
-      "createdAt": "2025-12-31T16:55:06.301Z",
-      "id": "ts9FABk8F02a5xrA",
-      "name": "Agent IA"
+      "updatedAt": "2025-12-23T12:12:28.399Z",
+      "createdAt": "2025-12-23T12:12:28.399Z",
+      "id": "RWBzILPfFXEtEcLf",
+      "name": "AI Agent"
     },
     {
       "updatedAt": "2025-12-23T12:12:58.230Z",
@@ -202,10 +196,16 @@
       "name": "Chat"
     },
     {
-      "updatedAt": "2025-12-23T12:12:28.399Z",
-      "createdAt": "2025-12-23T12:12:28.399Z",
-      "id": "RWBzILPfFXEtEcLf",
-      "name": "AI Agent"
+      "updatedAt": "2025-12-31T16:55:06.301Z",
+      "createdAt": "2025-12-31T16:55:06.301Z",
+      "id": "ts9FABk8F02a5xrA",
+      "name": "Agent IA"
+    },
+    {
+      "updatedAt": "2026-06-02T17:44:17.958Z",
+      "createdAt": "2026-06-02T17:44:17.958Z",
+      "id": "6NGDwjjesOlJeGQr",
+      "name": "v6"
     }
   ]
 }
