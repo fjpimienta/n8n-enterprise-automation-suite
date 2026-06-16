@@ -22,11 +22,11 @@ export class TenantService {
 
   // En tenant.service.ts
   public debugState(): void {
-    console.group('🔍 [TenantService Audit]');
-    console.log('Available Tenants Count:', this._availableTenants().length);
-    console.log('Current Available:', this._availableTenants());
-    console.log('Active Tenant:', this._activeTenant());
-    console.groupEnd();
+    // console.group('🔍 [TenantService Audit]');
+    // console.log('Available Tenants Count:', this._availableTenants().length);
+    // console.log('Current Available:', this._availableTenants());
+    // console.log('Active Tenant:', this._activeTenant());
+    // console.groupEnd();
   }
 
   constructor() {
@@ -36,10 +36,6 @@ export class TenantService {
   public hydrate(): void {
     const cached = localStorage.getItem('user_tenants');
     const active = localStorage.getItem('active_tenant_context');
-    console.log('✅ [TenantService] Estableciendo cached:', cached);
-    console.log('✅ [TenantService] Estableciendo active:', active);
-    console.log('this._availableTenants():', this._availableTenants());
-    console.log('this._availableTenants().length:', this._availableTenants().length);
 
     if (cached && this._availableTenants().length === 0) {
       try {
@@ -52,13 +48,11 @@ export class TenantService {
   }
 
   public setAvailableTenants(tenants: TenantContext[]): void {
-    console.log('🚀 [TenantService] SETEANDO NUEVOS TENANTS:', tenants);
     this._availableTenants.set(tenants);
     localStorage.setItem('user_tenants', JSON.stringify(tenants));
   }
 
   public setActiveTenant(tenant: TenantContext): void {
-    console.log('🚀 [TenantService] SETEANDO TENANT:', tenant);
     this._activeTenant.set(tenant);
     localStorage.setItem('active_tenant_context', JSON.stringify(tenant));
   }

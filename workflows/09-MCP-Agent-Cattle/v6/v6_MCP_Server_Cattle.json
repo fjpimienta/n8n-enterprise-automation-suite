@@ -18,31 +18,6 @@
     {
       "parameters": {
         "descriptionType": "manual",
-        "toolDescription": "Busca la información de un animal en la base de datos del rancho actual. REQUIERE: identificador (arete SINIIGA o fuego) y el tenant_id del contexto del usuario. Si devuelve más de un registro, detén el flujo y pide al usuario que aclare a cuál animal se refiere usando la categoría o especie.",
-        "operation": "executeQuery",
-        "query": "SELECT id, tenant_id, rfid_siniiga, numero_fuego, species, category, current_status, current_weight_kg \nFROM cattle_livestock \nWHERE (rfid_siniiga = $1::text OR numero_fuego = $1::text)\nAND tenant_id = $2::int\nLIMIT 5;\n",
-        "options": {
-          "queryReplacement": "={{ [ $fromAI('identificador', 'El numero de arete SINIIGA o numero de fuego a buscar (sin espacios)', 'string'), $fromAI('tenant_id', 'ID del rancho / tenant_id actual del usuario', 'number') ] }}\n"
-        }
-      },
-      "type": "n8n-nodes-base.postgresTool",
-      "typeVersion": 2.6,
-      "position": [
-        320,
-        976
-      ],
-      "id": "13eab66a-2941-48d8-846a-52cf31e8517a",
-      "name": "get_livestock_info",
-      "credentials": {
-        "postgres": {
-          "id": "BQrod4uGVzM1nvLw",
-          "name": "Postgres account"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "descriptionType": "manual",
         "toolDescription": "Diccionario de datos. Úsala para descubrir la estructura de cualquier tabla del sistema (ej. cattle_expenses, cattle_health_logs, cattle_livestock).",
         "operation": "executeQuery",
         "query": "SELECT table_name, schema_json, joins, allowed_ops\nFROM crud_models\nWHERE table_name = $1 AND is_active = true;",
@@ -119,20 +94,45 @@
     {
       "parameters": {
         "descriptionType": "manual",
-        "toolDescription": "Registra gastos, compra de insumos o pagos. REQUIERE: tenant_id (del contexto del usuario), category, amount y description.",
+        "toolDescription": "Busca la información de un animal en la base de datos del rancho actual. REQUIERE: identificador (arete SINIIGA o fuego) y el tenant_id del contexto del usuario. Si devuelve más de un registro, detén el flujo y pide al usuario que aclare a cuál animal se refiere usando la categoría o especie.",
         "operation": "executeQuery",
-        "query": "INSERT INTO cattle_expenses (tenant_id, category, amount, description, expense_date) \nVALUES ($1::int, $2, $3::numeric, $4, CURRENT_TIMESTAMP) \nRETURNING id, amount;",
+        "query": "SELECT id, tenant_id, rfid_siniiga, numero_fuego, species, category, current_status, current_weight_kg \nFROM cattle_livestock \nWHERE (rfid_siniiga = $1::text OR numero_fuego = $1::text)\nAND tenant_id = $2::int\nLIMIT 5;",
         "options": {
-          "queryReplacement": "=={{ [ $fromAI('tenant_id', 'ID del rancho (tenant_id) extraído del contexto del usuario', 'number'), $fromAI('category', 'Categoria del gasto ej. ALIMENTO', 'string'), $fromAI('amount', 'Monto numerico', 'number'), $fromAI('description', 'Descripcion del gasto', 'string') ] }}\n"
+          "queryReplacement": "={{ [ $fromAI('identificador', 'El numero de arete SINIIGA o numero de fuego a buscar', 'string'), $fromAI('tenant_id', 'ID del rancho / tenant_id actual del usuario', 'number') ] }}"
         }
       },
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1248,
+        336,
+        1040
+      ],
+      "id": "090fab19-82ec-406c-9246-b466011a7e4c",
+      "name": "get_livestock_info",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Registra gastos, compra de insumos o pagos. REQUIERE: tenant_id (del contexto del usuario), category, amount y description.",
+        "operation": "executeQuery",
+        "query": "INSERT INTO cattle_expenses (tenant_id, category, amount, description, expense_date) \nVALUES ($1::int, $2, $3::numeric, $4, CURRENT_TIMESTAMP) \nRETURNING id, amount;",
+        "options": {
+          "queryReplacement": "={{ [ $fromAI('tenant_id', 'ID del rancho', 'number'), $fromAI('category', 'Categoria del gasto ej. ALIMENTO', 'string'), $fromAI('amount', 'Monto numerico', 'number'), $fromAI('description', 'Descripcion del gasto', 'string') ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        1296,
         992
       ],
-      "id": "f57ce210-42a3-4c01-9319-648f61197d82",
+      "id": "7ee7280c-51d3-4c11-acf2-69cff0c1039b",
       "name": "register_ranch_expense",
       "credentials": {
         "postgres": {
@@ -144,17 +144,6 @@
   ],
   "pinData": {},
   "connections": {
-    "get_livestock_info": {
-      "ai_tool": [
-        [
-          {
-            "node": "MCP Server Cattle",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "get_table_metadata": {
       "ai_tool": [
         [
@@ -188,6 +177,17 @@
         ]
       ]
     },
+    "get_livestock_info": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
     "register_ranch_expense": {
       "ai_tool": [
         [
@@ -210,7 +210,7 @@
     "timeSavedMode": "fixed",
     "timeSavedPerExecution": 3
   },
-  "versionId": "292661ff-3b6c-42bf-b5ff-59ef028361b6",
+  "versionId": "42fbbeeb-51dd-4c30-9eea-b9f64fe5a46e",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
@@ -219,16 +219,10 @@
   "id": "pJ3CEaO70QEiGL0C",
   "tags": [
     {
-      "updatedAt": "2025-12-31T16:55:06.301Z",
-      "createdAt": "2025-12-31T16:55:06.301Z",
-      "id": "ts9FABk8F02a5xrA",
-      "name": "Agent IA"
-    },
-    {
-      "updatedAt": "2025-12-23T12:12:58.230Z",
-      "createdAt": "2025-12-23T12:12:58.230Z",
-      "id": "MKrwsTVnLLBXLfUP",
-      "name": "Chat"
+      "updatedAt": "2026-06-02T17:44:17.958Z",
+      "createdAt": "2026-06-02T17:44:17.958Z",
+      "id": "6NGDwjjesOlJeGQr",
+      "name": "v6"
     },
     {
       "updatedAt": "2025-12-23T12:12:28.399Z",
@@ -237,10 +231,16 @@
       "name": "AI Agent"
     },
     {
-      "updatedAt": "2026-06-02T17:44:17.958Z",
-      "createdAt": "2026-06-02T17:44:17.958Z",
-      "id": "6NGDwjjesOlJeGQr",
-      "name": "v6"
+      "updatedAt": "2025-12-23T12:12:58.230Z",
+      "createdAt": "2025-12-23T12:12:58.230Z",
+      "id": "MKrwsTVnLLBXLfUP",
+      "name": "Chat"
+    },
+    {
+      "updatedAt": "2025-12-31T16:55:06.301Z",
+      "createdAt": "2025-12-31T16:55:06.301Z",
+      "id": "ts9FABk8F02a5xrA",
+      "name": "Agent IA"
     }
   ]
 }
