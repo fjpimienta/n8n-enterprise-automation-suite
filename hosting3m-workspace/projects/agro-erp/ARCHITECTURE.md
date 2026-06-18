@@ -1,44 +1,47 @@
-# 🏛️ Architecture Overview: Cattle Dashboard
+# 🏛️ Architecture Overview: Agro ERP Suite
 
 ## 📝 Descripción
 
-**Project:** Hosting3M Automation Suite (Cattle Dashboard / Ganadería Digital)
-**Version:** v1.6.0 (Multi-Species & Stateful AI)
+**Project:** Hosting3M Automation Suite (Agro ERP)
+**Version:** v1.7.0 (Multi-Domain & Hybrid Telemetry)
 **Stack:** Angular 21 (Signals) | n8n (API Gateway / MCP) | PostgreSQL (JSONB & Views) | Tabler UI
 **Author:** Francisco Jesus Pérez Pimienta
 
-El módulo **agro-erp** introduce capacidades de ERP Agropecuario al Monorepositorio de Hosting3M. Se diseñó bajo el principio de "Lean Architecture" y delegación computacional, asegurando que el cliente web sea ultra-ligero y el servidor asuma la carga analítica.
+El módulo **agro-erp** evoluciona la plataforma hacia un modelo Multi-Negocio. Se diseñó bajo el principio de "Lean Architecture" y "Feature-Driven Routing", asegurando que el cliente web sea ultra-ligero y asilado por dominio de negocio (Ganadería vs Agricultura).
 
 ---
 
 ## 1. 🗺️ High-Level Design (Data Flow)
 
-El sistema utiliza un patrón de acceso a datos híbrido: transaccional puro para escrituras, y vistas pre-computadas para lecturas, orquestado completamente por n8n.
+El sistema utiliza un patrón de acceso a datos híbrido: relacional estricto para la integridad multi-tenant, y columnas JSONB para la telemetría dinámica de campo, orquestado por el motor Meta-CRUD.
 
 ```mermaid
 graph TD
-    subgraph "Frontend Layer (Angular 21)"
-        UI["Tabler Dashboards & Modals"]
-        Forms["Reactive Forms (Alta, Peso, Salud)"]
-        Signals["State Management (Signals)"]
+    subgraph "Frontend Layer (Angular 21 - Lazy Loaded)"
+        CS["Context Switcher (TenantService)"]
+        UI_Cattle["Livestock Features (Biomasa, Sanidad)"]
+        UI_Palm["Agriculture Features (Drones, Hectáreas)"]
+        Signals["State Management (Computed Signals)"]
         
-        UI <--> Signals
-        Forms --> Signals
+        CS -->|Inyecta ID & Theme| Signals
+        UI_Cattle <--> Signals
+        UI_Palm <--> Signals
     end
 
-    subgraph "Integration Layer (n8n Meta-CRUD)"
-        Auth["JWT Validator"]
-        Router["Dynamic Table Router"]
+    subgraph "Integration Layer (n8n Meta-CRUD v3)"
+        Auth["JWT Validator (core-auth)"]
+        Router["Dynamic Model Router"]
         
-        Signals -->|HTTP POST| Auth
+        Signals -->|HTTP POST + tenant_id| Auth
         Auth --> Router
     end
     
     subgraph "Persistence & BI Layer (PostgreSQL 15)"
-        Tables[("Raw Tables: cattle_livestock, health, weight")]
-        View{{"BI Engine: vw_cattle_kpi"}}
+        Table_Cattle[("Raw Tables: cattle_livestock, health")]
+        Table_Palm[("Hybrid Tables: agriculture_telemetry (JSONB)")]
+        View_BI{{"BI Engine: vw_cattle_kpi, vw_palm_kpi"}}
         
-        Router -->|Insert/Update| Tables
-        Router -->|Select/GetAll| View
-        Tables -.->|Pre-compute ADG & Gestation| View
+        Router -->|Insert/Update| Table_Cattle
+        Router -->|Insert/Update| Table_Palm
+        Router -->|Select/GetAll| View_BI
     end

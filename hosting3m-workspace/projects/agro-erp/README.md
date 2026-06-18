@@ -1,47 +1,41 @@
-# 🐄 Cattle Dashboard (Ganadería Digital)
+# 🌾 Agro ERP Suite (Ganadería & Agricultura Digital)
 
-### 🌾 Agro ERP & Sistema de Trazabilidad Biométrica
+### 🚜 Sistema de Trazabilidad Biométrica y Telemetría Agrícola
 
 ## 📝 Descripción
 
-**agro-erp** es el módulo agropecuario de grado industrial dentro de la Hosting3M Automation Suite. Está diseñado para modernizar la gestión ganadera mediante la trazabilidad de biomasa, reproducción inteligente y gobernanza de datos en tiempo real.
+**agro-erp** es el sistema de planificación de recursos empresariales de grado industrial dentro de la Hosting3M Automation Suite. Está diseñado para modernizar la gestión agropecuaria mediante la trazabilidad de biomasa, telemetría de drones y gobernanza de datos financieros en tiempo real.
 
-Desarrollada como una **Angular 21 SPA** (Single Page Application) dentro del monorepo, esta aplicación interactúa con un motor analítico en PostgreSQL a través de la capa Meta-CRUD de **n8n**, eliminando la carga computacional en el cliente y operando bajo el principio de "Soberanía de Datos".
+Desarrollada como una **Angular 21 SPA** (Single Page Application) estructurada por dominios (*Feature-Driven*), interactúa con un motor analítico híbrido en PostgreSQL a través de la capa Meta-CRUD de **n8n**, eliminando la carga computacional en el cliente y operando bajo estricta "Soberanía de Datos".
 
 ---
 
-## 🚀 Key Features (v1.6.0)
+## 🚀 Key Features (v1.7.0)
 
-### 1. 🐾 Arquitectura Multi-Especie (Bovinos, Búfalos, Borregos)
-* **Gestión Universal:** Soporte de primera clase para la segmentación y análisis de hatos mixtos, permitiendo el aislamiento de biomasa y KPIs de capitalización por especie sin alterar la API genérica.
-* **Filtrado Reactivo (Signals):** Interfaz ultra-rápida basada en `computed` signals que recalcula el valor del hato y ganancias diarias de peso al instante en el lado del cliente.
+### 1. 🏢 Escalabilidad Multi-Dominio (Context Switcher)
+* **Aislamiento de Negocios:** Capacidad nativa para gestionar simultáneamente Ranchos Ganaderos y Plantaciones (ej. Palma Africana) desde una misma sesión mediante un selector reactivo, aislando el DOM y el estado en memoria.
+* **Lazy Loading:** Enrutamiento inteligente que solo descarga los módulos necesarios para la vertical operativa seleccionada.
 
-### 2. 🧬 Trazabilidad y Triple Identificación
-* **Identidad Resiliente:** Soporte nativo para tres capas de identificación: Arete Oficial (SINIIGA), Número a Fuego (Manejo Interno) y Chip RFID (Lectura electrónica de 15 dígitos).
-* **Historial Inmutable:** Relación estricta mediante UUID para asociar eventos de peso y sanidad a lo largo de toda la vida del animal.
+### 2. 🚁 Arquitectura Híbrida para Telemetría (IoT & Drones)
+* **Ingesta Flexible (JSONB):** Capacidad para absorber reportes de vuelo de aspersión agrícola, variables de clima y uso de agroquímicos sin romper esquemas relacionales.
+* **Server-Side BI:** Delegación de cálculos pesados de rendimiento (litros por hectárea, OPEX) a Vistas Materializadas en PostgreSQL.
 
-### 3. 🧠 Server-Side Business Intelligence (BI)
-* **SQL Analytical Engine:** Uso de Vistas SQL (`vw_cattle_kpi`) para calcular la Ganancia Diaria de Peso (ADG) y los "Días Abiertos" directamente en el servidor.
-* **Semáforo Biológico Reactivo:** La UI clasifica el hato en estado *Óptimo, Preventivo o Crítico* basándose en reglas matemáticas computadas desde el backend.
+### 3. 🐾 Trazabilidad Multi-Especie y Biométrica
+* **Identidad Resiliente:** Soporte nativo para lectura de Chip RFID (subcutáneo/ruminal) y Número a Fuego.
+* **Filtrado Reactivo (Signals):** Interfaz ultra-rápida basada en `computed` signals que recalcula el valor del hato y ganancias de peso al instante.
 
-### 4. 🤖 Inteligencia Artificial Contextual & Captura en Campo
-* **WhatsApp & Web Field Agents:** Integración con n8n y MCP (Model Context Protocol). Ejecución de la **Fase Obligatoria de 12 Meses de Recolección de Datos** antes de implementar hardware físico.
-* **Stateful Context Injection:** Desambiguación contextual dinámica. El Agente aísla automáticamente las consultas y registros transaccionales basándose en el `tenant_id` de la sesión activa del usuario, impidiendo la contaminación cruzada entre socios inversores.
-* **Zero-Hallucination & Anti-Jailbreak:** Protocolo estricto *Human-in-the-Loop* que requiere confirmación explícita antes de inyectar datos en la base de datos de producción.
-
-### 5. 🏢 Arquitectura Multi-Tenant Abstraída
-* **Core-Auth Library:** Consumo de la librería transversal `@hosting3m/core-auth` para garantizar un aislamiento seguro de sesión. Incluye un `Context Switcher` reactivo que orquesta el ruteo de usuarios con acceso a múltiples unidades de negocio.
+### 4. 🤖 Inteligencia Artificial Contextual & Anti-Jailbreak
+* **WhatsApp & Web Field Agents:** Desambiguación contextual dinámica inyectando silenciosamente el `tenant_id`. Protocolo estricto *Human-in-the-Loop* que requiere confirmación explícita para registrar información en la base de datos de producción.
 
 ---
 
 ## 🏗️ Arquitectura Técnica
 
-El proyecto está optimizado para entornos de baja conectividad garantizando un rendimiento extremo:
+El proyecto está optimizado para entornos rurales de baja conectividad garantizando un rendimiento extremo:
 * **Framework:** Angular 21 (Standalone Components, Signals).
-* **Styling:** Tabler UI + SCSS.
+* **Styling:** Tabler UI + SCSS dinámico (`theme-cattle` / `theme-palm`).
 * **Communication:** REST API via n8n Meta-CRUD & Webhooks.
-* **Data Processing:** Delegado a PostgreSQL (Views & JSONB).
-
+* **Data Processing:** PostgreSQL 15+ (Views & JSONB GIN Indexes).
 
 ---
 
@@ -66,12 +60,14 @@ ng build agro-erp --configuration=production
 ```
 ---
 
-## 📋 Roadmap del Proyecto
+## 📋 Roadmap del Proyecto (Hito Q3 2026)
 
-* [x] **WhatsApp Field Agent:** Integración de flujos vía n8n para permitir altas y reportes operativos mediante lenguaje natural desde el campo.
-* [x] **Multi-Species Support:** Migración a columnas físicas y soporte reactivo para múltiples familias biológicas.
-* [ ] **Módulo de Gastos (CAPEX/OPEX):** Integración completa en UI de `cattle_expenses` para calcular el costo de producción por kilo de biomasa.
-* [ ] **IoT Scale Integration:** Recepción automatizada de archivos `.csv` o tramas Bluetooth desde básculas Tru-Test/Gallagher (Post-Fase 12 Meses).
+* [x] **Refactoring Estructural (Fase 1):** Migración a `agro-erp` y aislamiento Multi-Negocio.
+* [x] **Adaptación del Backend (Fase 2):** Tablas JSONB y despliegue del modelo `PalmTelemetry` en Meta-CRUD.
+* [x] **Frontend Multi-Dominio (Fase 3):** Implementación de menús reactivos y Context Switcher.
+* [ ] **Motor Financiero (Fase 4):** Integración transversal del OPEX para calcular costo por kilo de biomasa vs. costo por litro de agroquímico.
+* [ ] **Dashboards Consolidados (Fase 5):** Estabilización final y pruebas E2E.
+
 
 ---
 

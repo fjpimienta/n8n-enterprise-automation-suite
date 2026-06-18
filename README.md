@@ -34,7 +34,7 @@ El ecosistema opera en un entorno de alta densidad, maximizando los recursos del
 
 ---
 
-## 📦 Módulos Implementados (Suite v1.5.0)
+## 📦 Módulos Implementados (Suite v1.6.0)
 
 La suite se compone de módulos interconectados que operan como una malla de servicios:
 
@@ -74,13 +74,16 @@ Librería para la estandarización de documentos salientes con motor de cálculo
 ### 🌍 12. Hotel Eco-Website
 La interfaz pública de alta conversión del ecosistema (*Customer-Facing*) con diseño Eco-Boutique y captura reactiva.
 
-### 🐄 13. Ganadería Digital (Cattle Ops Dashboard)
-ERP agropecuario para trazabilidad bovina e inteligencia de producción.
-* **Server-Side BI:** Cálculo de KPIs complejos (ADG, Tasa de Preñez) directamente en Vistas SQL.
-* **Inteligencia Artificial de Campo:** Uso del **WhatsApp Cattle Agent** (MCP) blindado con directivas *Zero-Hallucination* y validación *Human-in-the-Loop* para la recolección natural de datos.
+### 🌾 13. Agro ERP Suite (Ganadería & Agricultura Digital)
+ERP agroindustrial evolucionado a una arquitectura Multi-Dominio para la gestión de biomasa, trazabilidad biológica y telemetría de drones agrícolas (Plantaciones).
+* **Server-Side BI:** Cálculo de KPIs complejos (ADG, Litros por Hectárea) directamente en Vistas SQL.
+* **Trazabilidad Resiliente IoT:** Implementación estricta de chips subcutáneos y bolos ruminales (rechazando aretes físicos por baja durabilidad en campo).
+* **Inteligencia Artificial de Campo:** Uso del **WhatsApp Field Agent** (MCP) blindado con directivas *Zero-Hallucination* y validación *Human-in-the-Loop* operando bajo el *Context Switcher* Multi-Empresa.
 
 ### 🛡️ 14. Core Auth Library (`@hosting3m/core-auth`)
-Librería central de seguridad para todo el monorepo. Gestiona el ciclo de vida del JWT, Interceptors, Guards y provee el **Context Switcher** (TenantSelector) para enrutamiento Multi-Empresa.
+Librería central de seguridad para todo el monorepo. Gestiona el ciclo de vida del JWT, Interceptors, Guards y provee el **Context Switcher Defensivo** para el enrutamiento y la inyección reactiva de temas visuales entre Unidades de Negocio.
+
+*(Módulo 15 eliminado por consolidación de la numeración)*
 
 ---
 
@@ -100,9 +103,9 @@ Librería central de seguridad para todo el monorepo. Gestiona el ciclo de vida 
 | `10`|**Shared AI Chat Lib**|Componente reutilizable de UI Conversacional.|`Angular 21` `InjectionToken`|[📖 Ver Docs](hosting3m-workspace/projects/ui-chat/README.md)|
 | `11`|**UI PDF Export Lib**|Motor de renderizado vectorial PDF.|`jsPDF` `TypeScript`|[📖 Docs](hosting3m-workspace/projects/ui-pdf-export/README.md)|
 | `12`|**Hotel Eco-Website**|Landing page optimizada para Core Web Vitals.|`Angular` `Tailwind`|[📖 Docs](hosting3m-workspace/projects/hotel-website/README.md)|
-| `13`|**Cattle Dashboard**|ERP agropecuario y BI Dashboard.|`Angular 21` `SQL Views`|[📖 Docs](hosting3m-workspace/projects/agro-erp/README.md)|
-| `14`|**MCP Agent Cattle**|Agente IA de campo (WhatsApp/Chat) con Zero-Hallucination.|`n8n` `MCP` `OpenAI`|[📖 Docs](workflows/09-MCP-Agent-Cattle/v6/README.md)|
-| `15`|**Core Auth Lib**|Núcleo de Autenticación y Context Switcher Multi-Tenant.|`Angular 21` `RxJS`|[📖 Docs](hosting3m-workspace/projects/core-auth/README.md)|
+| `13`|**Agro ERP Suite**|ERP multi-dominio (Ganadería y Agricultura).|`Angular 21` `SQL Views`|[📖 Docs](hosting3m-workspace/projects/agro-erp/README.md)|
+| `14`|**MCP Field Agent**|Agente IA agropecuario con Zero-Hallucination.|`n8n` `MCP` `OpenAI`|[📖 Docs](workflows/09-MCP-Agent-Cattle/v6/README.md)|
+| `15`|**Core Auth Lib**|Núcleo Auth y Context Switcher Defensivo.|`Angular 21` `RxJS`|[📖 Docs](hosting3m-workspace/projects/core-auth/README.md)|
 
 ---
 
@@ -113,13 +116,14 @@ Librería central de seguridad para todo el monorepo. Gestiona el ciclo de vida 
 * [x] **Sovereign Media:** Implementación de `upload-service` propio y DALL-E 3.
 * [x] **Public Interface:** Despliegue de `hotel-website` interactivo conectado a webhooks.
 * [x] **Core Resilience:** Implementación de MetaCRUD Boundary Shields y motor de pagos en cascada (Hotel).
-* [x] **WhatsApp Cattle Agent (Agro):** Agente IA con procesamiento de lenguaje natural integrado vía `09-MCP-Agent-Cattle`. Certificado con protocolos Anti-Jailbreak para la fase de recolección de datos obligatoria.
+* [x] **WhatsApp Field Agent (Agro):** Agente IA con NLP integrado. Certificado con protocolos Anti-Jailbreak para la fase obligatoria de recolección de datos.
+* [x] **Agro ERP Transition:** Refactorización arquitectónica a entorno Multi-Dominio (Feature-Driven), habilitando la gestión paralela de Ganadería y Agricultura de Palma mediante el mismo motor Meta-CRUD.
 
 ### 🏗️ En Progreso / Backlog (Q3 / Q4 2026)
 * [ ] **Huéspedes CRM:** Segmentación eco-boutique y analítica de comportamiento.
 * [ ] **Eco-Metrics:** Módulo de sustentabilidad para medición de huella hídrica y eléctrica en instalaciones.
 * [ ] **Conversion & Sales:** A/B Testing en la landing page y conexión con pasarelas de pago directo (Stripe/PayPal).
-* [ ] **Agro-Finance & IoT:** Integración en UI del módulo de gastos operativos (`cattle_expenses`) para cálculo de ROI por biomasa, e integración de telemetría mediante básculas RFID Bluetooth/Serial.
+* [ ] **Agro-Finance (OPEX Consolidation):** Abstracción del módulo `cattle_expenses` para consolidar costos transversales por kilo de biomasa o litro de agroquímico en la nueva vertical.
 
 ---
 
