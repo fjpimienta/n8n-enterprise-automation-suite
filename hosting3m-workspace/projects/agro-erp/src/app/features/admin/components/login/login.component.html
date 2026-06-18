@@ -1,0 +1,146 @@
+<div class="position-absolute top-0 end-0 p-3" style="z-index: 100;">
+  <button class="btn btn-icon shadow-sm" (click)="themeService.toggleTheme()"
+    [class.btn-dark]="themeService.currentTheme() === 'light'"
+    [class.btn-light]="themeService.currentTheme() === 'dark'" title="Cambiar tema" style="border-radius: 50px;">
+    @if (themeService.currentTheme() === 'dark') {
+    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2"
+      stroke="currentColor" fill="none">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 12m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" />
+      <path d="M3 12h1m8 -9v1m8 8h1m-9 8v1m-6.4 -15.4l.7 .7m12.1 -.7l-.7 .7m0 11.4l.7 .7m-12.1 -.7l-.7 .7" />
+    </svg>
+    } @else {
+    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24" stroke-width="2"
+      stroke="currentColor" fill="none">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+    }
+  </button>
+</div>
+
+<div class="page page-center">
+  <div class="container container-tight py-4">
+
+    <div class="text-center mb-4">
+      <div class="avatar avatar-xl rounded bg-transparent">
+        <img src="assets/images/logo_cattle.png" alt="Logo Hosting3M"
+          style="width: 100%; height: 100%; object-fit: contain;">
+      </div>
+      <h2 class="h2 text-center mt-3 mb-1">AGRO ERP</h2>
+      <div class="text-muted">Portal de Acceso Centralizado</div>
+    </div>
+
+    <form class="card card-md shadow-sm border-0" [formGroup]="loginForm" (ngSubmit)="onSubmit()">
+      <div class="card-body">
+        <h2 class="card-title text-center mb-4">Acceso Seguro</h2>
+
+        @if (errorMessage()) {
+        <div class="alert alert-danger" role="alert">
+          <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-alert-circle" width="24"
+            height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+            <path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" />
+            <path d="M12 8v4" />
+            <path d="M12 16h.01" />
+          </svg>
+          {{ errorMessage() }}
+        </div>
+        }
+
+        <div class="mb-3">
+          <label class="form-label">Usuario / Email</label>
+          <div class="input-icon">
+            <span class="input-icon-addon">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
+                stroke-width="2" stroke="currentColor" fill="none">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                <path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0" />
+                <path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
+              </svg>
+            </span>
+            <input type="text" formControlName="user" class="form-control" placeholder="Ej. admin"
+              [class.is-invalid]="isFieldInvalid('user')">
+          </div>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Contraseña</label>
+          <div class="input-group input-group-flat">
+            <span class="input-group-text">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
+                stroke-width="2" stroke="currentColor" fill="none">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                <path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6z" />
+                <path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0" />
+                <path d="M8 11v-4a4 4 0 1 1 8 0v4" />
+              </svg>
+            </span>
+            <input [type]="showPassword() ? 'text' : 'password'" formControlName="pass" class="form-control"
+              placeholder="••••••••" [class.is-invalid]="isFieldInvalid('pass')">
+            <span class="input-group-text">
+              <a href="#" class="link-secondary" title="Ver contraseña" (click)="togglePassword($event)">
+                @if (showPassword()) {
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
+                  stroke-width="2" stroke="currentColor" fill="none">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                  <path d="M10.585 10.587a2 2 0 0 0 2.829 2.828" />
+                  <path
+                    d="M16.681 16.673a8.717 8.717 0 0 1 -4.681 1.327c-3.6 0 -6.6 -2 -9 -6c1.272 -2.12 3.145 -3.594 5.23 -4.381" />
+                  <path d="M3 3l18 18" />
+                </svg>
+                } @else {
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
+                  stroke-width="2" stroke="currentColor" fill="none">
+                  <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                  <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+                  <path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6" />
+                </svg>
+                }
+              </a>
+            </span>
+          </div>
+        </div>
+
+        @if (showCompanySelection()) {
+        <div class="mb-4 animate__animated animate__fadeIn">
+          <label class="form-label text-primary font-weight-bold">Seleccionar Empresa / Rancho</label>
+          <div class="input-group input-group-flat">
+            <span class="input-group-text">
+              <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-building-community" width="24"
+                height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                <path d="M8 9l5 5v7h-5v-4m0 4h-4v-7l5 -5m1 1v-3l4 4v7h-5" />
+              </svg>
+            </span>
+            <select formControlName="id_company" class="form-select" [class.is-invalid]="isFieldInvalid('id_company')">
+              <option value="" disabled selected>-- Seleccione el entorno de trabajo --</option>
+              @for (company of availableCompanies(); track company.id_company) {
+              <option [value]="company.id_company">{{ company.company_name }} ({{ company.role }})</option>
+              }
+            </select>
+          </div>
+        </div>
+        }
+
+        <div class="form-footer">
+          <button type="submit" class="btn btn-primary w-100" [disabled]="isLoading()">
+            @if (isLoading()) {
+            <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+            Procesando Solicitud...
+            } @else {
+            {{ showCompanySelection() ? 'Confirmar y Entrar' : 'Ingresar al Sistema' }}
+            }
+          </button>
+        </div>
+      </div>
+    </form>
+
+    <div class="text-center mb-4 mt-4">
+      <div class="text-muted small">Plataforma Multi-Tenant protegida por encriptación RS256.</div>
+    </div>
+
+  </div>
+</div>

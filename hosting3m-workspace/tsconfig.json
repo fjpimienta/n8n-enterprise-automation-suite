@@ -56,16 +56,16 @@
       ],
       /* --- Cattle Dashboard --- */
       "@cattle-core/*": [
-        "projects/cattle-dashboard/src/app/core/*"
+        "projects/agro-erp/src/app/core/*"
       ],
       "@cattle-features/*": [
-        "projects/cattle-dashboard/src/app/features/*"
+        "projects/agro-erp/src/app/features/*"
       ],
       "@cattle-env/*": [
-        "projects/cattle-dashboard/src/environments/*"
+        "projects/agro-erp/src/environments/*"
       ],
       "@cattle-shared/*": [
-        "projects/cattle-dashboard/src/app/shared/*"
+        "projects/agro-erp/src/app/shared/*"
       ],
       "core-auth": [
         "../core-auth/src/public-api.ts"
@@ -108,10 +108,10 @@
       "path": "./projects/hotel-website/tsconfig.spec.json"
     },
     {
-      "path": "./projects/cattle-dashboard/tsconfig.app.json"
+      "path": "./projects/agro-erp/tsconfig.app.json"
     },
     {
-      "path": "./projects/cattle-dashboard/tsconfig.spec.json"
+      "path": "./projects/agro-erp/tsconfig.spec.json"
     },
     {
       "path": "./projects/core-auth/tsconfig.lib.json"
