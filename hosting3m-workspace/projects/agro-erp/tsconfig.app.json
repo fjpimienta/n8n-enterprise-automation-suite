@@ -1,0 +1,40 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../out-tsc/app",
+    "rootDir": "../../",
+    "types": [],
+    "paths": {
+      "ui-chat": [
+        "projects/ui-chat/src/public-api.ts"
+      ],
+      "ui-pdf-export": [
+        "projects/ui-pdf-export/src/public-api.ts"
+      ],
+      "@core/*": [
+        "projects/agro-erp/src/app/core/*"
+      ],
+      "@shared/*": [
+        "projects/agro-erp/src/app/shared/*"
+      ],
+      "@features/*": [
+        "projects/agro-erp/src/app/features/*"
+      ],
+      "@env/*": [
+        "projects/agro-erp/src/environments/*"
+      ],
+      "core-auth": [
+        "projects/core-auth/src/public-api.ts"
+      ],
+      "core-auth/*": [
+        "projects/core-auth/src/lib/*"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "src/**/*.spec.ts"
+  ]
+}

@@ -285,31 +285,31 @@
         }
       }
     },
-    "cattle-dashboard": {
+    "agro-erp": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:component": {
           "style": "scss"
         }
       },
-      "root": "projects/cattle-dashboard",
-      "sourceRoot": "projects/cattle-dashboard/src",
+      "root": "projects/agro-erp",
+      "sourceRoot": "projects/agro-erp/src",
       "prefix": "app",
       "architect": {
         "build": {
           "builder": "@angular/build:application",
           "options": {
-            "browser": "projects/cattle-dashboard/src/main.ts",
-            "tsConfig": "projects/cattle-dashboard/tsconfig.app.json",
+            "browser": "projects/agro-erp/src/main.ts",
+            "tsConfig": "projects/agro-erp/tsconfig.app.json",
             "inlineStyleLanguage": "scss",
             "assets": [
               {
                 "glob": "**/*",
-                "input": "projects/cattle-dashboard/public"
+                "input": "projects/agro-erp/public"
               }
             ],
             "styles": [
-              "projects/cattle-dashboard/src/styles.scss"
+              "projects/agro-erp/src/styles.scss"
             ]
           },
           "configurations": {
@@ -340,10 +340,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "cattle-dashboard:build:production"
+              "buildTarget": "agro-erp:build:production"
             },
             "development": {
-              "buildTarget": "cattle-dashboard:build:development"
+              "buildTarget": "agro-erp:build:development"
             }
           },
           "defaultConfiguration": "development"
