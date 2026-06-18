@@ -1,0 +1,17 @@
+<div class="page" [ngClass]="themeClass()">
+
+    <app-sidebar></app-sidebar>
+
+    <app-header></app-header>
+
+    <div class="page-wrapper">
+        <div class="page-body">
+            <div class="container-xl pt-4">
+                <router-outlet></router-outlet>
+            </div>
+        </div>
+    </div>
+
+    <lib-ai-chat></lib-ai-chat>
+
+</div>

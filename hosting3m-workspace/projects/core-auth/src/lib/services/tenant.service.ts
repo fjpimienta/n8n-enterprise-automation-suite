@@ -5,6 +5,7 @@ export interface TenantContext {
   company_name: string;
   role: string;
   industry: string;
+  business_type: 'AGRICULTURE' | 'LIVESTOCK' | 'ADMIN';
 }
 
 @Injectable({ providedIn: 'root' })

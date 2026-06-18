@@ -1,0 +1,63 @@
+@if (cattleData().length === 0) {
+<div class="text-center py-5 border rounded shadow-sm">
+    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-trending-up text-muted mb-3" width="48"
+        height="48" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+        <path d="M3 17l6 -6l4 4l8 -8" />
+        <path d="M14 7l7 0l0 7" />
+    </svg>
+    <h3 class="text-muted">Sin Datos de Engorda</h3>
+    <p class="text-muted">Agrega animales al modelo de engorda para visualizar su rendimiento.</p>
+</div>
+} @else if (validEngordaData().length === 0) {
+<div class="text-center py-5 border rounded shadow-sm">
+    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-alert-circle text-muted mb-3" width="48"
+        height="48" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round"
+        stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+        <path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0" />
+        <path d="M12 8v4" />
+        <path d="M12 16h.01" />
+    </svg>
+    <h3 class="text-muted">Sin Datos de Engorda para esta Especie</h3>
+    <p class="text-muted">No se han detectado animales de esta variedad bajo el modelo de engorda en este lote.</p>
+</div>
+} @else {
+<div class="row row-cards">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body text-center d-flex flex-column justify-content-center">
+                <div class="subheader mb-2 text-primary font-weight-bold">ADG Promedio del Lote</div>
+                <div class="h1 mb-0 text-primary" style="font-size: 3rem;">
+                    {{ stats().avgAdg }} <span style="font-size: 1.5rem" class="text-muted">kg/día</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 h-100">
+            <div class="card-body text-center d-flex flex-column justify-content-center">
+                <div class="subheader mb-2 text-primary font-weight-bold">Peso Biológico Promedio</div>
+                <div class="h1 mb-0 text-primary" style="font-size: 3rem;">
+                    {{ stats().avgWeight }} <span style="font-size: 1.5rem" class="text-muted">kg</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mt-4 shadow-sm border-0">
+    <div class="card-header border-bottom-0 pb-0">
+        <h3 class="card-title">Distribución de Biomasa por Arete / Fuego</h3>
+    </div>
+    <div class="card-body">
+        <apx-chart [series]="weightChartOptions().series" [xaxis]="weightChartOptions().xaxis"
+            [colors]="weightChartOptions().colors"
+            [chart]="{ type: 'bar', height: 320, toolbar: { show: false }, background: 'transparent' }"
+            [plotOptions]="{ bar: { borderRadius: 4, horizontal: false, columnWidth: '50%' } }"
+            [dataLabels]="{ enabled: false }" [theme]="{ mode: 'dark' }"> </apx-chart>
+    </div>
+</div>
+}

@@ -100,7 +100,7 @@ Librería central de seguridad para todo el monorepo. Gestiona el ciclo de vida 
 | `10`|**Shared AI Chat Lib**|Componente reutilizable de UI Conversacional.|`Angular 21` `InjectionToken`|[📖 Ver Docs](hosting3m-workspace/projects/ui-chat/README.md)|
 | `11`|**UI PDF Export Lib**|Motor de renderizado vectorial PDF.|`jsPDF` `TypeScript`|[📖 Docs](hosting3m-workspace/projects/ui-pdf-export/README.md)|
 | `12`|**Hotel Eco-Website**|Landing page optimizada para Core Web Vitals.|`Angular` `Tailwind`|[📖 Docs](hosting3m-workspace/projects/hotel-website/README.md)|
-| `13`|**Cattle Dashboard**|ERP agropecuario y BI Dashboard.|`Angular 21` `SQL Views`|[📖 Docs](hosting3m-workspace/projects/cattle-dashboard/README.md)|
+| `13`|**Cattle Dashboard**|ERP agropecuario y BI Dashboard.|`Angular 21` `SQL Views`|[📖 Docs](hosting3m-workspace/projects/agro-erp/README.md)|
 | `14`|**MCP Agent Cattle**|Agente IA de campo (WhatsApp/Chat) con Zero-Hallucination.|`n8n` `MCP` `OpenAI`|[📖 Docs](workflows/09-MCP-Agent-Cattle/v6/README.md)|
 | `15`|**Core Auth Lib**|Núcleo de Autenticación y Context Switcher Multi-Tenant.|`Angular 21` `RxJS`|[📖 Docs](hosting3m-workspace/projects/core-auth/README.md)|
 
