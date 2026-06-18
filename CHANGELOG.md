@@ -4,6 +4,23 @@ Todos los cambios notables en esta suite de automatización serán documentados 
 
 ---
 
+## [1.6.0] - 2026-06-18
+
+### 🌾 Agro ERP & Multi-Domain Architecture (Suite Evolution)
+Esta liberación marca la transición del módulo vertical `cattle-dashboard` hacia una plataforma agroindustrial horizontal (`agro-erp`), consolidando la resiliencia del Monorepo Angular y la flexibilidad del motor Meta-CRUD.
+
+* **Arquitectura Orientada a Características (Feature-Driven):** Reestructuración del workspace Angular para soportar Carga Diferida (*Lazy Loading*) estricta entre los dominios `features/livestock` y `features/agriculture`, garantizando un cliente web ultra-ligero.
+* **Context Switcher Defensivo:** Actualización de la librería `@hosting3m/core-auth` e inyección de *Signals* computadas en el layout principal. El sistema ahora evalúa dinámicamente el `business_type` y la columna `industry` para enrutar de forma segura entre "Ganadería" y "Plantaciones", previniendo colapsos visuales ("Ghost Town Effect").
+* **Soberanía de Datos Híbrida:** Despliegue de esquemas de datos `JSONB` en PostgreSQL (`agriculture_telemetry`) orquestados vía n8n, permitiendo ingestar formatos variables de drones agrícolas sin requerir endpoints dedicados.
+* **Standalone UI-Chat (Bugfix):** Corrección arquitectónica en la librería compartida `@hosting3m/ui-chat`. Se ajustó el selector estricto a `<lib-ai-chat>` y se purgaron etiquetas huérfanas (`NG5002`, `NG8113`), restaurando la disponibilidad del Agente IA en toda la suite.
+
+---
+
+## [1.5.0] - 2026-06-02
+
+### 🏢 Arquitectura Multi-Tenant & 🤖 AI Zero-Hallucination (Suite Core Update)
+*(El resto del historial se mantiene intacto...)*
+
 ## [1.5.0] - 2026-06-02
 
 ### 🏢 Arquitectura Multi-Tenant & 🤖 AI Zero-Hallucination (Suite Core Update)

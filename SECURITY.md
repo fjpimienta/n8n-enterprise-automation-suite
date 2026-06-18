@@ -7,8 +7,9 @@ currently being supported with security updates.
 
 | Version           | Status                        | n8n Core  |  PGVector / DB |
 | -------           | ------------------            | -------   | -------        |
-| v2.2.x (Stable)   | :white_check_mark: Supported  | v2.2.4+   | Versioned      |
-| v1.x.x            | :x: Outdated                  | < v2.0.0  | Legacy         |
+| v2.4.x (Stable)   | :white_check_mark: Supported  | v2.4.6+   | Versioned      |
+| v1.6.x (Frontend) | :white_check_mark: Supported  | N/A       | N/A            |
+| v1.x.x (Legacy)   | :x: Outdated                  | < v2.0.0  | Legacy         |
 | Dev / Beta        | :warning: Testing             | Latest    | Experimental   |
 
 ## Reporting a Vulnerability

@@ -1,10 +1,30 @@
 # Changelog
 
 Todos los cambios notables en el proyecto **n8n Enterprise Automation Suite** serán documentados en este archivo.
-
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/), y este proyecto se adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
-# Changelog - Cattle Dashboard (Ganadería Digital)
+# Changelog - Agro ERP Suite (Antes Cattle Dashboard)
+
+## [1.7.0] - 2026-06-18
+
+### 🚀 Evolución a Agro-ERP y Arquitectura Multi-Dominio
+
+Transformación estructural del proyecto para soportar múltiples verticales de negocio (Ganadería y Agricultura) bajo un mismo ecosistema de código y persistencia, garantizando la escalabilidad transversal.
+
+#### 🏗️ Refactorización Estructural (Feature-Driven Architecture)
+* **Domain Isolation:** Renombramiento del workspace a `agro-erp`. Separación estricta de módulos en `features/livestock` y `features/agriculture`.
+* **Lazy Loading Estricto:** Reescritura del `app.routes.ts` para delegar la carga de componentes mediante *Lazy Loading*, asegurando que el código agrícola no sature clientes ganaderos y viceversa.
+* **Context Switcher Reactivo:** Actualización del `MainLayoutComponent` y `SidebarComponent` para reaccionar dinámicamente al `business_type` y la columna `industry` de la base de datos, alternando rutas y temas visuales (`theme-cattle` vs `theme-palm`) sin recargar la SPA.
+
+#### 🚁 Arquitectura Híbrida y Telemetría Agrícola
+* **JSONB Persistence Layer:** Creación de la tabla `agriculture_telemetry` en PostgreSQL utilizando tipos de datos JSONB para ingestar formatos variables provenientes de vuelos de drones (litros, hectáreas, agroquímicos).
+* **Meta-CRUD Integration (v3):** Registro del modelo `PalmTelemetry` en el motor de n8n, permitiendo operaciones CRUD completas para la plantación de palma con seguridad Multi-Tenant inherente sin requerir nuevos endpoints.
+
+#### 🛡️ Programación Defensiva y Paridad IA
+* **Resilient Routing:** Implementación de Signals computadas (`isLivestock`, `isAgriculture`) para mitigar desincronizaciones en el Payload JWT, previniendo pantallas vacías.
+* **UI Chat Restoration:** Corrección del selector de Standalone Components (`<lib-ai-chat>`) para garantizar la persistencia del Agente IA en ambos dominios operativos.
+
+---
 
 ## [1.6.0] - 2026-06-09
 
