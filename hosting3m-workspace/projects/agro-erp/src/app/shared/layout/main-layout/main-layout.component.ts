@@ -3,15 +3,18 @@ import { RouterOutlet } from '@angular/router';
 import { NgClass } from '@angular/common';
 import { TenantService } from 'core-auth';
 
-// 🚀 FIX: Importamos tus componentes. (Verifica que la ruta relativa sea correcta según tus carpetas)
 import { SidebarComponent } from '../sidebar/sidebar.component';
 import { HeaderComponent } from '../header/header.component';
+
+import { AiChatComponent } from 'ui-chat';
+
+// 🚀 IMPORTANTE: Importa el componente visual del chat desde tu librería (Ajusta el nombre si es diferente)
 
 @Component({
   selector: 'app-main-layout',
   standalone: true,
-  // 🚀 FIX: Inyectamos los componentes y removemos RouterLink/RouterLinkActive que ya no se usan aquí
-  imports: [RouterOutlet, NgClass, SidebarComponent, HeaderComponent],
+  // 🚀 Agrégalo al arreglo de imports
+  imports: [RouterOutlet, NgClass, SidebarComponent, HeaderComponent, AiChatComponent],
   templateUrl: './main-layout.component.html',
   styleUrls: ['./main-layout.component.scss']
 })
@@ -20,9 +23,10 @@ export class MainLayoutComponent {
 
   public currentTenant = this.tenantService.activeTenant;
 
-  // Signal computada para determinar el color/estilo según el negocio activo
+  // 🚀 FIX: Fallback dinámico para inyección de tema
   public themeClass = computed(() => {
     const tenant = this.currentTenant();
-    return tenant?.business_type === 'AGRICULTURE' ? 'theme-palm' : 'theme-cattle';
+    const isAgri = tenant?.business_type === 'AGRICULTURE' || tenant?.industry?.toLowerCase().includes('agricultura');
+    return isAgri ? 'theme-palm' : 'theme-cattle';
   });
 }

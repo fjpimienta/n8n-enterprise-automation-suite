@@ -25,11 +25,12 @@ export class TenantSelectorComponent implements OnInit {
     const tenant = this.tenantService.availableTenants().find(t => t.id_company === id);
 
     if (tenant) {
-      // 1. Actualiza el Signal Global
       this.tenantService.setActiveTenant(tenant);
 
-      // 2. 🚀 Lógica de Enrutamiento Dinámico (Context Switcher)
-      const targetRoute = tenant.business_type === 'AGRICULTURE' ? '/agricultura/dashboard' : '/ganaderia/dashboard';
+      // 🚀 FIX: Enrutamiento defensivo basado en la industria
+      const isAgri = tenant.business_type === 'AGRICULTURE' || tenant.industry?.toLowerCase().includes('agricultura');
+      const targetRoute = isAgri ? '/agricultura/dashboard' : '/ganaderia/dashboard';
+
       this.router.navigate([targetRoute]);
     }
   }

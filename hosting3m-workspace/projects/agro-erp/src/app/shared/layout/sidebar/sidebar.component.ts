@@ -1,8 +1,7 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core'; // 🚀 FIX: Agregar computed
 import { CommonModule } from '@angular/common';
 import { RouterModule, Router } from '@angular/router';
 import { LayoutService } from '@shared/services/layout.service';
-// 🚀 FIX: Importamos TenantService
 import { AuthService, TenantService } from 'core-auth';
 import { ThemeService } from '@core/services/theme.service';
 
@@ -17,7 +16,6 @@ export class SidebarComponent {
   public layoutService = inject(LayoutService);
   public authService = inject(AuthService);
   public themeService = inject(ThemeService);
-  // 🚀 FIX: Inyectamos el gestor de estado Multi-Tenant
   public tenantService = inject(TenantService);
   private router = inject(Router);
 
@@ -26,9 +24,18 @@ export class SidebarComponent {
   isMobileMenuOpen = this.layoutService.mobileMenuOpen;
   isCollapsed = this.layoutService.sidebarCollapsed;
 
+  // 🚀 FIX: Programación defensiva para inferir el tipo de negocio
+  public isLivestock = computed(() => {
+    const t = this.tenantService.activeTenant();
+    return t?.business_type === 'LIVESTOCK' || t?.industry?.toLowerCase().includes('ganader');
+  });
+
+  public isAgriculture = computed(() => {
+    const t = this.tenantService.activeTenant();
+    return t?.business_type === 'AGRICULTURE' || t?.industry?.toLowerCase().includes('agricultura');
+  });
+
   ngOnInit() {
-    // 2. Recupera el rol de la sesión actual (Ajusta esto si usas el AuthService de core-auth)
-    // Para no bloquear el build de Angular, hacemos una lectura segura estándar:
     const currentRole = localStorage.getItem('role') || 'EDITOR';
     this.userRole.set(currentRole);
   }
@@ -46,7 +53,6 @@ export class SidebarComponent {
     this.router.navigate(['/login']);
   }
 
-  // 🚀 Helper para extraer las iniciales dinámicamente (Ej. "Rancho San José" -> "RSJ")
   getInitials(name?: string): string {
     if (!name) return 'H3M';
     return name.split(' ').map(n => n[0]).join('').substring(0, 3).toUpperCase();

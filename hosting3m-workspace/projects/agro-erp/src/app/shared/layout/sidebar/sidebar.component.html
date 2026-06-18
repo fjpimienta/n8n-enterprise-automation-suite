@@ -38,56 +38,45 @@
                     </div>
                 </li>
 
+                @if (isLivestock()) {
                 <li class="nav-item">
-                    <a class="nav-link" routerLink="/dashboard" routerLinkActive="active" (click)="closeMenu()">
-                        <span class="nav-link-icon text-primary">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
-                                viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
-                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                <path d="M4 4h6v8h-6z" />
-                                <path d="M4 16h6v4h-6z" />
-                                <path d="M14 12h6v8h-6z" />
-                                <path d="M14 4h6v4h-6z" />
-                            </svg>
-                        </span>
+                    <a class="nav-link" routerLink="/ganaderia/dashboard" routerLinkActive="active"
+                        (click)="closeMenu()">
+                        <span class="nav-link-icon text-primary">📊</span>
                         <span class="nav-link-title font-weight-bold">Panel de Control</span>
                     </a>
                 </li>
-
                 <li class="nav-item">
-                    <a class="nav-link" routerLink="/inventario" routerLinkActive="active" (click)="closeMenu()">
-                        <span class="nav-link-icon text-muted">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
-                                viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
-                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                <path
-                                    d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" />
-                                <path
-                                    d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z" />
-                                <path d="M9 14l2 2l4 -4" />
-                            </svg>
-                        </span>
+                    <a class="nav-link" routerLink="/ganaderia/inventario" routerLinkActive="active"
+                        (click)="closeMenu()">
+                        <span class="nav-link-icon text-muted">🐄</span>
                         <span class="nav-link-title">Censo Biológico</span>
                     </a>
                 </li>
-
                 <li class="nav-item">
-                    <a class="nav-link" routerLink="/pesajes" routerLinkActive="active" (click)="closeMenu()">
-                        <span class="nav-link-icon text-muted">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
-                                viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
-                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                <path d="M3 3v18h18" />
-                                <path d="M20 18v3" />
-                                <path d="M16 16v5" />
-                                <path d="M12 13v8" />
-                                <path d="M8 16v5" />
-                                <path d="M3 11c6 0 5 -5 9 -5s3 5 9 5" />
-                            </svg>
-                        </span>
+                    <a class="nav-link" routerLink="/ganaderia/pesajes" routerLinkActive="active" (click)="closeMenu()">
+                        <span class="nav-link-icon text-muted">⚖️</span>
                         <span class="nav-link-title">Mermas y Alertas</span>
                     </a>
                 </li>
+                }
+
+                @if (isAgriculture()) {
+                <li class="nav-item">
+                    <a class="nav-link" routerLink="/agricultura/dashboard" routerLinkActive="active"
+                        (click)="closeMenu()">
+                        <span class="nav-link-icon text-success">🌴</span>
+                        <span class="nav-link-title font-weight-bold">Dashboard Agrícola</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" routerLink="/agricultura/telemetria" routerLinkActive="active"
+                        (click)="closeMenu()">
+                        <span class="nav-link-icon text-muted">🛸</span>
+                        <span class="nav-link-title">Vuelos & Aspersión</span>
+                    </a>
+                </li>
+                }
 
                 <li class="nav-item">
                     <div class="nav-link-title text-uppercase small text-muted mt-4 mb-1 ms-2 font-weight-bold">
