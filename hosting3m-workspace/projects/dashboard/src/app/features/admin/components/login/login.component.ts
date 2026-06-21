@@ -70,7 +70,8 @@ export class LoginComponent {
                 id_company: activeCompany.id_company,
                 company_name: activeCompany.company_name || 'Hotel San José',
                 role: activeCompany.role,
-                industry: 'Hotelera'
+                industry: 'Hotelera',
+              business_type: 'ADMIN'
               });
             }
             this.router.navigate(['/dashboard']);

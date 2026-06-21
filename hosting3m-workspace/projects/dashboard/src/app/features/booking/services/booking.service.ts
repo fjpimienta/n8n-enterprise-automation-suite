@@ -603,7 +603,13 @@ export class BookingService {
             }
           }, { headers: this.adminService.getAuthHeaders() })
         );
-        guestIdToUse = guestRes?.data?.[0]?.id || guestRes?.id;
+
+        // 🛡️ PATCH: Detección inteligente de la estructura de la respuesta
+        if (guestRes && !guestRes.error && guestRes.data) {
+          guestIdToUse = Array.isArray(guestRes.data) ? guestRes.data[0]?.id : guestRes.data?.id;
+        } else {
+          guestIdToUse = guestRes?.id; // Fallback extremo
+        }
       }
 
       if (!guestIdToUse) throw new Error("No se pudo obtener un ID de huésped válido.");
