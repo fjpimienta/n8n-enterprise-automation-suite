@@ -30,8 +30,8 @@ export const appConfig: ApplicationConfig = {
       provide: CHAT_CONFIG_TOKEN,
       useValue: {
         apiUrl_ai: environment.apiUrl_ai, // Asegúrate que esta variable exista en environment.ts
-        logoUrl: 'assets/images/logo_cattle.png',
-        title: 'Asistente de Agro ERP',
+        logoUrl: 'assets/images/logo_agroerp.png',
+        title: 'Asistente IA - Agro ERP',
         primaryColor: '#6c9a40' // Verde para el AGRO ERP
       }
     }
