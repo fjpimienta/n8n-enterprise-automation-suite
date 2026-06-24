@@ -7,9 +7,9 @@
                 <h5 class="modal-title font-weight-bold text-dark">
                     @switch (actionType) {
                     @case ('ALTA') { <span class="status-dot status-blue me-2"></span> Nuevo Registro (SINIIGA) }
-                    @case ('SALUD') { <span class="status-dot status-orange me-2"></span> Evento Sanitario /
-                    Reproductivo }
+                    @case ('SALUD') { <span class="status-dot status-orange me-2"></span> Evento Sanitario / Reproductivo }
                     @case ('PESO') { <span class="status-dot status-green me-2"></span> Control de Biomasa (Pesaje) }
+                    @case ('EDITAR') { <span class="status-dot status-purple me-2"></span> Editar Ficha del Animal }
                     }
                 </h5>
                 <button type="button" class="btn-close" (click)="closeModal()" aria-label="Cerrar"></button>
@@ -149,6 +149,70 @@
                         <label class="form-label">Notas / Medicina Aplicada</label>
                         <textarea class="form-control" formControlName="description" rows="3"
                             placeholder="Ej. Se aplicó vitamina B12 (Lote 908)"></textarea>
+                    </div>
+                </form>
+                }
+
+                @case ('EDITAR') {
+                <form [formGroup]="editForm">
+                    <div class="row">
+                        <div class="col-md-4 col-12 mb-3">
+                            <label class="form-label required">Arete (SINIIGA)</label>
+                            <input type="text" class="form-control font-monospace text-uppercase"
+                                formControlName="rfid_siniiga" placeholder="S/N si no tiene">
+                        </div>
+                        <div class="col-md-4 col-12 mb-3">
+                            <label class="form-label text-orange">Nº a Fuego (Manejo)</label>
+                            <input type="text" class="form-control font-monospace text-uppercase"
+                                formControlName="numero_fuego" placeholder="Ej. 2012-9 P">
+                        </div>
+                        <div class="col-md-4 col-12 mb-3">
+                            <label class="form-label text-muted">Chip RFID (15 dig)</label>
+                            <input type="text" class="form-control font-monospace"
+                                [class.is-invalid]="editForm.get('electronic_rfid')?.invalid && editForm.get('electronic_rfid')?.touched"
+                                formControlName="electronic_rfid" placeholder="Ej. 984000123456789">
+                            @if (editForm.get('electronic_rfid')?.errors?.['minlength']) {
+                            <div class="invalid-feedback">El chip debe tener exactamente 15 dígitos.</div>
+                            }
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label required">Modelo de Negocio</label>
+                            <select class="form-select" formControlName="business_model">
+                                <option value="CRIA">Cría (Cow-Calf)</option>
+                                <option value="ENGORDA">Engorda (Feedlot)</option>
+                            </select>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label required">Categoría</label>
+                            <select class="form-select" formControlName="category">
+                                <option value="VACA">Vaca</option>
+                                <option value="TORO">Toro Semental</option>
+                                <option value="NOVILLO">Novillo</option>
+                                <option value="BECERRA">Becerra (Recría)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-6 mb-3">
+                            <label class="form-label required">Estatus Actual</label>
+                            <select class="form-select" formControlName="current_status">
+                                <option value="ACTIVO">Activo</option>
+                                <option value="VENDIDO">Vendido</option>
+                                <option value="MUERTO">Muerto</option>
+                                <option value="BAJA">Baja Administrativa</option>
+                            </select>
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label required">Peso Actual (kg)</label>
+                            <input type="number" class="form-control" formControlName="current_weight_kg"
+                                placeholder="0.00">
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label required">Fecha de Nacimiento</label>
+                        <input type="date" class="form-control" formControlName="birth_date">
                     </div>
                 </form>
                 }
