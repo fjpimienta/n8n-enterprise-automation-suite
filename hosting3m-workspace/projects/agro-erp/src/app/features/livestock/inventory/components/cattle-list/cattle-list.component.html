@@ -131,7 +131,12 @@
                     <td class="text-muted">{{ animal.current_status }}</td>
 
                     <td class="text-end">
-                        <button class="btn btn-sm btn-ghost-success me-2"
+                        <button class="btn btn-sm btn-ghost-primary me-1"
+                            (click)="openModal('EDITAR', animal.rfid_siniiga, animal.id, animal)"
+                            title="Editar ficha del animal">
+                            <i class="ti ti-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-ghost-success me-1"
                             (click)="openModal('PESO', animal.rfid_siniiga, animal.id)">
                             Pesar
                         </button>
@@ -150,6 +155,6 @@
 
 @if (isModalOpen) {
 <app-cattle-detail-modal [actionType]="modalAction" [selectedRfid]="selectedRfid" [livestockId]="selectedId"
-    (close)="onModalClose($event)">
+    [selectedAnimal]="selectedAnimal" (close)="onModalClose($event)">
 </app-cattle-detail-modal>
 }

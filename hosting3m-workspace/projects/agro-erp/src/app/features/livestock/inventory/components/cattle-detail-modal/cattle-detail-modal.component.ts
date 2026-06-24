@@ -14,10 +14,11 @@ export class CattleDetailModalComponent implements OnInit {
   private fb = inject(FormBuilder);
   private cattleApi = inject(CattleApiService); // Inyectamos el nuevo servicio
 
-  @Input() actionType: 'ALTA' | 'SALUD' | 'PESO' = 'ALTA';
+  @Input() actionType: 'ALTA' | 'SALUD' | 'PESO' | 'EDITAR' = 'ALTA';
   @Input() selectedRfid: string = '';
-  @Input() livestockId: string = ''; // Necesitaremos el UUID interno (id) para relacionar salud y peso
-  @Output() close = new EventEmitter<boolean>(); // Emitimos true si se guardó con éxito
+  @Input() livestockId: string = '';
+  @Input() selectedAnimal: any = null;
+  @Output() close = new EventEmitter<boolean>();
 
   public isSaving = signal<boolean>(false); // Control de carga
   private today = new Date().toISOString().split('T')[0];
@@ -47,30 +48,47 @@ export class CattleDetailModalComponent implements OnInit {
   });
 
   public pesoForm: FormGroup = this.fb.group({
-    livestock_id: [''], // El UUID foráneo
-    rfid_siniiga: [{ value: '', disabled: true }, Validators.required], // Solo visual
+    livestock_id: [''],
+    rfid_siniiga: [{ value: '', disabled: true }, Validators.required],
     weight_kg: ['', [Validators.required, Validators.min(1)]],
     log_date: [this.today, Validators.required]
   });
 
+  public editForm: FormGroup = this.fb.group({
+    rfid_siniiga: ['', Validators.required],
+    numero_fuego: [''],
+    electronic_rfid: ['', [Validators.minLength(15)]],
+    business_model: ['CRIA', Validators.required],
+    category: ['VACA', Validators.required],
+    current_status: ['ACTIVO', Validators.required],
+    current_weight_kg: ['', [Validators.required, Validators.min(1)]],
+    birth_date: ['', Validators.required]
+  });
+
   ngOnInit() {
     if (this.selectedRfid) {
-      this.saludForm.patchValue({
-        rfid_siniiga: this.selectedRfid,
-        livestock_id: this.livestockId
-      });
-      this.pesoForm.patchValue({
-        rfid_siniiga: this.selectedRfid,
-        livestock_id: this.livestockId
+      this.saludForm.patchValue({ rfid_siniiga: this.selectedRfid, livestock_id: this.livestockId });
+      this.pesoForm.patchValue({ rfid_siniiga: this.selectedRfid, livestock_id: this.livestockId });
+    }
+    if (this.selectedAnimal && this.actionType === 'EDITAR') {
+      this.editForm.patchValue({
+        rfid_siniiga: this.selectedAnimal.rfid_siniiga,
+        numero_fuego: this.selectedAnimal.numero_fuego ?? '',
+        electronic_rfid: this.selectedAnimal.electronic_rfid ?? '',
+        business_model: this.selectedAnimal.business_model,
+        category: this.selectedAnimal.category,
+        current_status: this.selectedAnimal.current_status,
+        current_weight_kg: this.selectedAnimal.current_weight_kg,
+        birth_date: this.selectedAnimal.birth_date?.split('T')[0] ?? ''
       });
     }
   }
 
   public async submitForm() {
-    // 1. Validar el formulario activo
     if (this.actionType === 'ALTA' && this.altaForm.invalid) return alert('Completa los campos obligatorios./ALTA');
     if (this.actionType === 'SALUD' && this.saludForm.invalid) return alert('Completa los campos obligatorios./SALUD');
     if (this.actionType === 'PESO' && this.pesoForm.invalid) return alert('Completa los campos obligatorios./PESO');
+    if (this.actionType === 'EDITAR' && this.editForm.invalid) return alert('Completa los campos obligatorios./EDITAR');
 
     this.isSaving.set(true);
 
@@ -107,6 +125,9 @@ export class CattleDetailModalComponent implements OnInit {
           log_date: payload.log_date,
           source_device: 'CAPTURA_MANUAL'
         });
+      }
+      else if (this.actionType === 'EDITAR') {
+        await this.cattleApi.updateLivestock(this.livestockId, this.editForm.value);
       }
 
       alert('✅ Registro guardado exitosamente en el Ledger.');
