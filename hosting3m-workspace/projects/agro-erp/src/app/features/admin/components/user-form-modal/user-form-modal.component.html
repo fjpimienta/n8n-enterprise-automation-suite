@@ -14,24 +14,28 @@
                 <div class="row">
                     <div class="col-6 mb-3">
                         <label class="form-label fw-bold">Nombres <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control shadow-sm" [(ngModel)]="userData().names"
+                        <input type="text" class="form-control shadow-sm"
+                            [ngModel]="userData().names" (ngModelChange)="updateField('names', $event)"
                             placeholder="Ej. Juan Carlos">
                     </div>
                     <div class="col-6 mb-3">
                         <label class="form-label fw-bold">Apellidos</label>
-                        <input type="text" class="form-control shadow-sm" [(ngModel)]="userData().lastname"
+                        <input type="text" class="form-control shadow-sm"
+                            [ngModel]="userData().lastname" (ngModelChange)="updateField('lastname', $event)"
                             placeholder="Ej. Hermida">
                     </div>
                 </div>
                 <div class="row">
                     <div class="col-6 mb-3">
                         <label class="form-label fw-bold">Teléfono (WhatsApp)</label>
-                        <input type="tel" class="form-control shadow-sm" [(ngModel)]="userData().phone"
+                        <input type="tel" class="form-control shadow-sm"
+                            [ngModel]="userData().phone" (ngModelChange)="updateField('phone', $event)"
                             placeholder="Ej. 9930000000">
                     </div>
                     <div class="col-6 mb-3">
                         <label class="form-label fw-bold">Rol Operativo <span class="text-danger">*</span></label>
-                        <select class="form-select shadow-sm" [(ngModel)]="userData().role">
+                        <select class="form-select shadow-sm"
+                            [ngModel]="userData().role" (ngModelChange)="updateField('role', $event)">
                             <option value="ADMIN">Administrador (Acceso Total)</option>
                             <option value="EDITOR">Operador / Caporal</option>
                             <option value="CUSTOMER">Veterinario / Consultor</option>
@@ -40,7 +44,8 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-bold">Correo Electrónico <span class="text-danger">*</span></label>
-                    <input type="email" class="form-control shadow-sm" [(ngModel)]="userData().email"
+                    <input type="email" class="form-control shadow-sm"
+                        [ngModel]="userData().email" (ngModelChange)="updateField('email', $event)"
                         [disabled]="selectedUser() !== null" placeholder="correo@racho.com">
                     @if(selectedUser() !== null) {
                     <small class="text-muted">El correo es la llave primaria y no puede ser modificado.</small>
@@ -48,13 +53,15 @@
                 </div>
                 <div class="mb-3">
                     <label class="form-label fw-bold">Contraseña</label>
-                    <input type="password" class="form-control shadow-sm" [(ngModel)]="userData().password"
+                    <input type="password" class="form-control shadow-sm"
+                        [ngModel]="userData().password" (ngModelChange)="updateField('password', $event)"
                         placeholder="{{ selectedUser() ? 'Dejar vacío para mantener actual' : 'Asignar contraseña inicial' }}">
                 </div>
                 @if(selectedUser() !== null) {
                 <div class="mb-3">
                     <label class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" [(ngModel)]="userData().is_active">
+                        <input class="form-check-input" type="checkbox"
+                            [ngModel]="userData().is_active" (ngModelChange)="updateField('is_active', $event)">
                         <span class="form-check-label fw-bold">Cuenta Activa</span>
                     </label>
                 </div>

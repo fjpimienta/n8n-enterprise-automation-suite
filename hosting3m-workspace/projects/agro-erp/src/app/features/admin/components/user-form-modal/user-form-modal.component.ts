@@ -16,4 +16,8 @@ export class UserFormModalComponent {
 
   onClose = output<void>();
   onSave = output<void>();
+
+  updateField(key: string, value: any) {
+    this.userData.update(current => ({ ...current, [key]: value }));
+  }
 }

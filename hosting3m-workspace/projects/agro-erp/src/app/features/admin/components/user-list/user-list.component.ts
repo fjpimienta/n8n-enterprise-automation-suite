@@ -1,5 +1,7 @@
-import { Component, inject, signal, OnInit, effect } from '@angular/core';
+import { Component, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { lastValueFrom } from 'rxjs';
 import { AdminService } from '@features/admin/services/admin.service';
 import { UserFormModalComponent } from '../user-form-modal/user-form-modal.component';
 import { TenantService } from 'core-auth/services/tenant.service';
@@ -7,40 +9,45 @@ import { TenantService } from 'core-auth/services/tenant.service';
 @Component({
   selector: 'app-user-list',
   standalone: true,
-  imports: [CommonModule, UserFormModalComponent],
+  imports: [CommonModule, FormsModule, UserFormModalComponent],
   templateUrl: './user-list.component.html',
   styleUrl: './user-list.component.css',
 })
-export class UserListComponent implements OnInit {
+export class UserListComponent {
   public adminService = inject(AdminService);
   public tenantService = inject(TenantService);
 
-  // Mantenemos la reactividad delegada al servicio
   users = this.adminService.users;
 
-  // Signals para el manejo de estado local (Lean Architecture)
+  searchQuery = signal<string>('');
+  roleFilter = signal<string>('ALL');
+
+  filteredUsers = computed(() => {
+    const q = this.searchQuery().toLowerCase();
+    const role = this.roleFilter();
+    return this.users().filter(u => {
+      const matchesQuery = !q ||
+        u.names?.toLowerCase().includes(q) ||
+        u.lastname?.toLowerCase().includes(q) ||
+        u.email?.toLowerCase().includes(q);
+      const matchesRole = role === 'ALL' || u.role === role;
+      return matchesQuery && matchesRole;
+    });
+  });
+
   isModalOpen = signal<boolean>(false);
   selectedUser = signal<any>(null);
   currentUserData = signal<any>({});
 
   constructor() {
+    // Reacciona al cambio de tenant activo: limpia y recarga la lista
     effect(() => {
       const activeTenant = this.tenantService.activeTenant();
-
-      if (activeTenant && activeTenant.role === 'ADMIN') {
-        // 1. Limpiamos la matriz actual para forzar el re-render (Feedback visual)
-        // Nota: Asegúrate de que tu servicio permita hacer .set([]) o exponga un método clearUsers()
+      if (activeTenant?.role === 'ADMIN') {
         this.adminService.users.set([]);
-
-        // 2. Solicitamos los datos de la nueva UPP
         this.adminService.loadUsers();
       }
-    }, { allowSignalWrites: true }); // Permiso necesario en Angular 21 para escribir en un effect
-  }
-
-  ngOnInit() {
-    // La carga inicial asume que el backend filtra por el tenant_id activo
-    this.adminService.loadUsers();
+    }, { allowSignalWrites: true });
   }
 
   openModal(userToEdit: any = null) {
@@ -62,6 +69,7 @@ export class UserListComponent implements OnInit {
   async saveUser() {
     const data = this.currentUserData();
     const operation = this.selectedUser() ? 'update' : 'insert';
+    const tenantId = Number(this.tenantService.activeTenantId());
 
     if (!data.email || !data.names || !data.role) {
       alert('⚠️ Nombre, Correo y Rol son obligatorios para la trazabilidad.');
@@ -69,13 +77,11 @@ export class UserListComponent implements OnInit {
     }
 
     try {
-      await new Promise((resolve, reject) => {
-        // El tenantInterceptor inyectará el tenant_id en la petición HTTP
-        this.adminService.saveUser(data, operation, data.email).subscribe({
-          next: (res) => resolve(res),
-          error: (err) => reject(err)
-        });
-      });
+      await lastValueFrom(this.adminService.saveUser(data, operation, data.email));
+
+      await lastValueFrom(
+        this.adminService.saveUserCompany(data.email, tenantId, data.role, data.is_active ?? true, operation)
+      );
 
       alert(operation === 'insert' ? '✅ Personal registrado en la UPP' : '✅ Perfil actualizado');
       this.closeModal();
@@ -86,10 +92,24 @@ export class UserListComponent implements OnInit {
     }
   }
 
+  async deleteUser(user: any) {
+    const name = `${user.names ?? ''} ${user.lastname ?? ''}`.trim();
+    if (!confirm(`⚠️ ¿Eliminar a ${name} de la UPP? Esta acción no puede deshacerse.`)) return;
+
+    try {
+      await lastValueFrom(this.adminService.deleteUser(user.email));
+      this.adminService.loadUsers();
+    } catch (error) {
+      console.error('[Agro-ERP] Error al eliminar usuario:', error);
+      alert('❌ No se pudo eliminar el registro.');
+    }
+  }
+
   private getEmptyUser() {
     return {
-      names: '', lastname: '', phone: '',
-      email: '', password: '', role: 'OPERADOR', is_active: true
+      names: '', lastname: '', phone: '', email: '',
+      password: '', role: 'EDITOR', is_active: true,
+      tenant_id: Number(this.tenantService.activeTenantId())
     };
   }
 }

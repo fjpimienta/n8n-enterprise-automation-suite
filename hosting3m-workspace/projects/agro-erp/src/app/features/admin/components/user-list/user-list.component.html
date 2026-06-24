@@ -19,8 +19,33 @@
         </div>
     </div>
 
+    <div class="row g-2 mb-3 align-items-center">
+        <div class="col-12 col-md-6">
+            <div class="input-group">
+                <span class="input-group-text bg-white border-end-0">
+                    <i class="ti ti-search text-muted"></i>
+                </span>
+                <input type="text" class="form-control border-start-0"
+                    placeholder="Buscar por nombre, apellido o correo..."
+                    [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)">
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <select class="form-select"
+                [ngModel]="roleFilter()" (ngModelChange)="roleFilter.set($event)">
+                <option value="ALL">Todos los roles</option>
+                <option value="ADMIN">Administradores</option>
+                <option value="EDITOR">Operadores / Caporales</option>
+                <option value="CUSTOMER">Veterinarios / Consultores</option>
+            </select>
+        </div>
+        <div class="col-12 col-md-2 text-muted small text-end">
+            {{ filteredUsers().length }} / {{ users().length }} registros
+        </div>
+    </div>
+
     <div class="row row-cards">
-        @for (user of users(); track user.email) {
+        @for (user of filteredUsers(); track user.email) {
         <div class="col-12 col-md-6 col-xl-4">
             <div class="card shadow-sm border-0 h-100 hover-shadow-lg transition-all"
                 [class.opacity-50]="!user.is_active">
@@ -53,10 +78,14 @@
                         </div>
                     </div>
 
-                    <div class="ms-3">
-                        <button class="btn btn-icon btn-ghost-secondary" (click)="openModal(user)"
+                    <div class="ms-3 d-flex flex-column gap-1">
+                        <button class="btn btn-icon btn-outline-secondary btn-sm" (click)="openModal(user)"
                             title="Editar Perfil">
-                            <i class="ti ti-edit fs-4"></i>
+                            <i class="ti ti-edit"></i>
+                        </button>
+                        <button class="btn btn-icon btn-outline-danger btn-sm" (click)="deleteUser(user)"
+                            title="Eliminar Personal">
+                            <i class="ti ti-trash"></i>
                         </button>
                     </div>
 
