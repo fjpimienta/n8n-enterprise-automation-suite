@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { lastValueFrom, retry, catchError, of } from 'rxjs'; // 🚀 FIX: Importamos catchError y of
+import { catchError, of } from 'rxjs';
 import { ApiResponse } from '@core/interfaces/api-response.interface';
 import { environment } from '@env/environment';
 import { Company } from '@core/models/company.model';
@@ -25,13 +25,7 @@ export class AdminService {
 
   public reservations = signal<any[]>([]);
 
-  /* Headers con token de autenticación */
-  private getHeaders() {
-    return new HttpHeaders({ 'Authorization': `Bearer ${localStorage.getItem('authToken')}` });
-  }
-
-  /* Método para obtener los headers con el token de autenticación */
-  public getAuthHeaders() {
+  private getAuthHeaders() {
     const token = localStorage.getItem('authToken');
     return new HttpHeaders({
       'Content-Type': 'application/json',
@@ -125,6 +119,19 @@ export class AdminService {
     });
   }
 
+  /* Eliminar usuario (CASCADE elimina automáticamente user_companies vía FK) */
+  public deleteUser(email: string) {
+    const payload = {
+      entity: 'users',
+      table_name: 'users',
+      operation: 'delete',
+      email
+    };
+    return this.http.post<ApiResponse<any>>(`${this.apiUrl_crud}/users`, payload, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
   /* Guardar o actualizar usuario */
   public saveUser(user: Partial<User>, operation: 'insert' | 'update', email?: string) {
     const payload = {
@@ -136,6 +143,28 @@ export class AdminService {
     };
 
     return this.http.post<ApiResponse<User>>(`${this.apiUrl_crud}/users`, payload, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  /* Sincroniza el registro de pertenencia en user_companies (insert en alta, update en edición) */
+  public saveUserCompany(
+    email: string,
+    idCompany: number,
+    role: string,
+    isActive = true,
+    operation: 'insert' | 'update' = 'insert'
+  ) {
+    const payload = {
+      entity: 'user_companies',
+      table_name: 'user_companies',
+      operation,
+      email,
+      id_company: idCompany,
+      fields: { email, id_company: idCompany, role, is_active: isActive }
+    };
+
+    return this.http.post<ApiResponse<any>>(`${this.apiUrl_crud}/user_companies`, payload, {
       headers: this.getAuthHeaders()
     });
   }
