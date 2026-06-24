@@ -27,9 +27,10 @@ export class CattleListComponent implements OnInit {
 
   // Variables para el Modal
   public isModalOpen = false;
-  public modalAction: 'ALTA' | 'SALUD' | 'PESO' = 'ALTA';
+  public modalAction: 'ALTA' | 'SALUD' | 'PESO' | 'EDITAR' = 'ALTA';
   public selectedRfid = '';
-  public selectedId = ''; // Necesitamos el UUID real de la DB para anexar salud/pesos
+  public selectedId = '';
+  public selectedAnimal: any = null;
 
   async ngOnInit() {
     await this.loadCattle();
@@ -48,10 +49,11 @@ export class CattleListComponent implements OnInit {
     }
   }
 
-  public openModal(action: 'ALTA' | 'SALUD' | 'PESO', rfid: string = '', id: string = '') {
+  public openModal(action: 'ALTA' | 'SALUD' | 'PESO' | 'EDITAR', rfid: string = '', id: string = '', animal: any = null) {
     this.modalAction = action;
     this.selectedRfid = rfid;
-    this.selectedId = id; // Guardamos el UUID
+    this.selectedId = id;
+    this.selectedAnimal = animal;
     this.isModalOpen = true;
   }
 

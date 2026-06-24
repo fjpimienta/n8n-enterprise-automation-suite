@@ -2,13 +2,12 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { lastValueFrom, firstValueFrom } from 'rxjs';
 import { environment } from '@env/environment';
-import { AuthService, TenantService } from 'core-auth';
+import { TenantService } from 'core-auth';
 import { LoggerService } from './logger.service';
 
 @Injectable({ providedIn: 'root' })
 export class CattleApiService {
     private http = inject(HttpClient);
-    private authService = inject(AuthService);
     private tenantService = inject(TenantService);
     private logger = inject(LoggerService);
     private apiUrl_crud = environment.apiUrl_crud;
@@ -115,7 +114,21 @@ export class CattleApiService {
     }
 
     /**
-     * 5. Obtener historial de Gastos Operativos (Aislamiento de Datos por n8n/SQL)
+     * 5. Actualizar características de un Animal (por UUID interno)
+     */
+    public async updateLivestock(id: string, fields: any): Promise<void> {
+        const res: any = await lastValueFrom(
+            this.http.post(`${this.apiUrl_crud}/cattle_livestock`, {
+                operation: 'update',
+                id: id,
+                fields: fields
+            })
+        );
+        if (res && res.error) throw new Error(res.message);
+    }
+
+    /**
+     * 6. Obtener historial de Gastos Operativos (Aislamiento de Datos por n8n/SQL)
      */
     public async getExpenses(): Promise<any[]> {
         const idRanchoActivo = this.tenantService.activeTenantId();
