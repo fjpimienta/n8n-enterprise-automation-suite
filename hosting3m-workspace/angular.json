@@ -92,11 +92,10 @@
             "assets": [
               {
                 "glob": "**/*",
-                "input": "projects/dashboard/public"
+                "input": "projects/dashboard/public",
+                "output": "/"
               },
-              "projects/dashboard/src/favicon.ico",
-              "projects/dashboard/src/assets",
-              "projects/dashboard/public"
+              "projects/dashboard/src/favicon.ico"
             ],
             "styles": [
               "projects/dashboard/src/styles.scss"
