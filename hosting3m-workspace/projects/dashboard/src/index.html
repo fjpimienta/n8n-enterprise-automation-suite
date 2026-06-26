@@ -29,10 +29,11 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        // 🟢 Aquí es donde se cambia a la ruta limpia en la raíz
+        // Usamos la ruta absoluta '/sw.js'
+        // Esto funcionará correctamente una vez que el archivo esté en la raíz
         navigator.serviceWorker.register('/sw.js')
-          .then(reg => console.log('PWA Service Worker ready:', reg.scope))
-          .catch(err => console.error('PWA Service Worker failed:', err));
+          .then(reg => console.log('PWA Service Worker registrado:', reg.scope))
+          .catch(err => console.error('PWA Service Worker falló:', err));
       });
     }
   </script>
