@@ -1,21 +1,25 @@
 {
-  "name": "AGRO ERP",
-  "short_name": "aroerp",
+  "name": "Agro ERP Agroindustrial",
+  "short_name": "Agro ERP",
+  "description": "Sistema administrativo para Agroindustria Ganadera y Agricultura",
   "theme_color": "#206bc4",
   "background_color": "#ffffff",
   "display": "standalone",
+  "orientation": "portrait",
   "scope": "/",
   "start_url": "/agroerp",
   "icons": [
     {
-      "src": "/assets/images/logo_agroerp.png",
+      "src": "/assets/images/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "src": "/assets/images/logo_agroerp.png",
+      "src": "/assets/images/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
