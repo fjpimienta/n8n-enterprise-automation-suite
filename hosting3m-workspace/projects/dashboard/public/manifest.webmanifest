@@ -1,21 +1,25 @@
 {
   "name": "AdminHotel Dashboard",
   "short_name": "Hotel San José",
+  "description": "Sistema administrativo para Hotel San José",
   "theme_color": "#206bc4",
   "background_color": "#ffffff",
   "display": "standalone",
+  "orientation": "portrait",
   "scope": "/",
   "start_url": "/dashboard",
   "icons": [
     {
-      "src": "/assets/images/logo_hotel_san_jose.png",
+      "src": "/assets/images/icon-192x192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "src": "/assets/images/logo_hotel_san_jose.png",
+      "src": "/assets/images/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
