@@ -13,11 +13,11 @@
 
   <link rel="manifest" href="/assets/manifest.webmanifest">
 
-  <link rel="apple-touch-icon" href="assets/images/logo_hotel_san_jose.png">
-  <link rel="apple-touch-icon" sizes="152x152" href="assets/images/logo_hotel_san_jose.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="assets/images/logo_hotel_san_jose.png">
+  <link rel="apple-touch-icon" href="/assets/images/logo_hotel_san_jose.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="/assets/images/logo_hotel_san_jose.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/logo_hotel_san_jose.png">
 
-  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@latest/dist/css/tabler.min.css">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
@@ -25,6 +25,16 @@
 
 <body>
   <app-root></app-root>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/assets/sw.js')
+          .then(reg => console.log('PWA Service Worker ready:', reg.scope))
+          .catch(err => console.error('PWA Service Worker failed:', err));
+      });
+    }
+  </script>
 </body>
 
 </html>
