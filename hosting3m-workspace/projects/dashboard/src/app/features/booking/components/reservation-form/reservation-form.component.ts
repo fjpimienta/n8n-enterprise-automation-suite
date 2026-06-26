@@ -59,7 +59,7 @@ export class ReservationFormComponent implements OnInit, OnChanges { // 2. Agreg
     }
 
     // 🛠️ CÁLCULO DINÁMICO FISCAL (16% IVA + 2% ISH)
-    this.customTotal = this.requiresInvoice ? (baseTotal * 1.18) : baseTotal;
+    this.customTotal = baseTotal;
   }
 
   toggleRoom(room: Room) {

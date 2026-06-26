@@ -662,7 +662,7 @@ export class DashboardComponent {
 
       // 4. Recálculo Financiero Automático
       const baseExtraCost = extraNights * room.price_night;
-      const totalExtraCost = booking.is_invoiced ? (baseExtraCost * 1.18) : baseExtraCost;
+      const totalExtraCost = baseExtraCost;
 
       const currentTotal = Number(booking.total_amount) || 0;
       const currentPaid = Number(booking.amount_paid) || 0;
