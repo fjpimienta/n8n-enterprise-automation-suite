@@ -1,6 +1,6 @@
 {
   "name": "AGRO ERP",
-  "short_name": "AGRO ERP",
+  "short_name": "aroerp",
   "theme_color": "#206bc4",
   "background_color": "#ffffff",
   "display": "standalone",
@@ -8,7 +8,7 @@
   "start_url": "/agroerp",
   "icons": [
     {
-      "src": "assets/images/logo_agroerp.png",
+      "src": "/assets/images/logo_agroerp.png",
       "sizes": "192x192",
       "type": "image/png"
     }
