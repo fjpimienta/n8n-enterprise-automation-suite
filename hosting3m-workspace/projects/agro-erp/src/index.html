@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="utf-8">
-  <title>AGRO ERP</title>
+  <title>AGRO ERP AGROINDUSTRIAL</title>
   <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
@@ -15,12 +15,14 @@
 
   <link rel="manifest" href="/manifest.webmanifest">
 
+  <meta name="theme-color" content="#206bc4">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="AGRO ERP">
-  <link rel="apple-touch-icon" href="/assets/images/logo_agroerp.png">
-  <link rel="apple-touch-icon" sizes="152x152" href="/assets/images/logo_agroerp.png">
-  <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/logo_agroerp.png">
+  <link rel="apple-touch-icon" href="/assets/images/icon-192x192.png">
+  <link rel="apple-touch-icon" sizes="152x152" href="/assets/images/icon-192x192.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/icon-192x192.png">
+  <link rel="apple-touch-icon" sizes="192x192" href="/assets/images/icon-192x192.png">
 
   <style>
     :root {
@@ -38,7 +40,6 @@
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        // 🟢 Aquí es donde se cambia a la ruta limpia en la raíz
         navigator.serviceWorker.register('/sw.js')
           .then(reg => console.log('AGRO ERP Service Worker ready:', reg.scope))
           .catch(err => console.error('AGRO ERP Service Worker failed:', err));
