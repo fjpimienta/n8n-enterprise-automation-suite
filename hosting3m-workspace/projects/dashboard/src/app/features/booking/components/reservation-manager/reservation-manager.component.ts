@@ -375,7 +375,7 @@ export class ReservationManagerComponent implements OnInit, OnDestroy {
 
       // Si la reserva exige factura, la BD ya tiene el total inflado (+18%). 
       // Debemos darle a la librería el subtotal base para que su "auto-calculadora" cuadre.
-      const baseTotalPerRoom = requiresInvoice ? (finalTotalStored / 1.18) : finalTotalStored;
+      const baseTotalPerRoom = finalTotalStored;
       const baseDailyRate = baseTotalPerRoom / nights;
 
       // Llave estricta
