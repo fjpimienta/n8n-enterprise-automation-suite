@@ -141,7 +141,7 @@ export class CheckinFormComponent implements OnInit {
       const basePrice = this.daysCount * (roomData.price_night || 0);
       const wantsInvoice = this.checkinForm.get('is_invoiced')?.value;
 
-      this.standardPrice = wantsInvoice ? (basePrice * 1.18) : basePrice;
+      this.standardPrice = basePrice;
 
       const currentTotal = this.checkinForm.get('total_amount')?.value;
       if (!res || currentTotal === 0 || currentTotal === null) {
