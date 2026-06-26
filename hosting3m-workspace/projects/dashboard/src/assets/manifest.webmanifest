@@ -1,6 +1,6 @@
 {
-  "name": "AdminHotel San José, Ctazajá",
-  "short_name": "AdminHotel",
+  "name": "AdminHotel Dashboard",
+  "short_name": "Hotel San José",
   "theme_color": "#206bc4",
   "background_color": "#ffffff",
   "display": "standalone",
@@ -10,6 +10,11 @@
     {
       "src": "/assets/images/logo_hotel_san_jose.png",
       "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/images/logo_hotel_san_jose.png",
+      "sizes": "512x512",
       "type": "image/png"
     }
   ]
