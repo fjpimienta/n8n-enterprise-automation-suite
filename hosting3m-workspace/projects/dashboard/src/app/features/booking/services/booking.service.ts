@@ -223,7 +223,7 @@ export class BookingService {
           }
           this.loadingRooms.set(false);
         },
-        error: (err) => {
+        error: () => {
           this.rooms.set([]);
           this.loadingRooms.set(false);
         }
@@ -339,6 +339,7 @@ export class BookingService {
               total_amount: totalAmount,
               amount_paid: amountPaid,
               payment_status: paymentStatus,
+              payment_method: formData.payment_method || null,
               is_invoiced: formData.is_invoiced || false
             }
           }, { headers: this.adminService.getAuthHeaders() })
@@ -394,6 +395,7 @@ export class BookingService {
               amount_paid: amountPaid,
               status: 'checked_in',
               payment_status: paymentStatus,
+              payment_method: formData.payment_method || null,
               is_invoiced: formData.is_invoiced || false,
               id_company: this.tenantService.activeTenantId()
             }
