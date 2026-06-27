@@ -31,13 +31,14 @@ export class DailyReportModalComponent implements OnInit {
   incomeBillingFilter = signal<'Todos' | 'Facturado' | 'No Facturado'>('Todos');
   incomeRoomFilter = signal<string>('Todos');
   incomeStatusFilter = signal<string>('Todos');
+  incomePaymentFilter = signal<string>('Todos');
 
   expensePaymentFilter = signal<'Todos' | 'Efectivo' | 'Transferencia' | 'Tarjeta Corp'>('Todos');
   expenseConceptFilter = signal<string>('');
   expenseCategoryFilter = signal<string>('Todas');
 
   // ESTADOS DE AGRUPACIÓN
-  incomeGroup = signal<'none' | 'room' | 'status' | 'billing'>('none');
+  incomeGroup = signal<'none' | 'room' | 'status' | 'billing' | 'payment'>('none');
   expenseGroup = signal<'none' | 'category' | 'payment'>('none');
 
   // 🧠 MEMORIA DE GRUPOS EXPANDIDOS (Acordeones)
@@ -60,6 +61,10 @@ export class DailyReportModalComponent implements OnInit {
   onIncomeBillingFilterChange(val: 'Todos' | 'Facturado' | 'No Facturado' | any) {
     this.incomeBillingFilter.set(val);
     if (val !== 'Todos' && this.incomeGroup() === 'billing') this.onIncomeGroupChange('none');
+  }
+  onIncomePaymentFilterChange(val: string) {
+    this.incomePaymentFilter.set(val);
+    if (val !== 'Todos' && this.incomeGroup() === 'payment') this.onIncomeGroupChange('none');
   }
   onExpenseCategoryFilterChange(val: string) {
     this.expenseCategoryFilter.set(val);
@@ -142,6 +147,7 @@ export class DailyReportModalComponent implements OnInit {
       this.expensePaymentFilter(),
       this.incomeRoomFilter(),
       this.incomeStatusFilter(),
+      this.incomePaymentFilter(),
       this.expenseConceptFilter(),
       this.expenseCategoryFilter()
     );
@@ -166,6 +172,14 @@ export class DailyReportModalComponent implements OnInit {
       } else if (groupType === 'billing') {
         key = t.is_invoiced ? 'Facturado' : 'No Facturado';
         label = `Facturación: ${key}`;
+      } else if (groupType === 'payment') {
+        const paymentLabels: Record<string, string> = {
+          cash: 'Efectivo',
+          credit_card: 'Tarjeta de Crédito',
+          transfer: 'Transferencia'
+        };
+        key = t.payment_method || 'pending';
+        label = `Método: ${paymentLabels[key] ?? 'Pago Pendiente'}`;
       }
 
       if (!groupsMap.has(key)) groupsMap.set(key, { label, items: [] });
@@ -329,7 +343,7 @@ export class DailyReportModalComponent implements OnInit {
       companyName: 'Hotel San José',
       companyAddress: 'Av. Juarez s/n, Centro, Catazajá, Chiapas',
       clientName: 'Reporte Financiero',
-      clientSubtitle: `Filtros: Hab:${this.incomeRoomFilter()} / Est:${this.incomeStatusFilter()} / Cat:${this.expenseCategoryFilter()} / Pago:${this.expensePaymentFilter()}`,
+      clientSubtitle: `Filtros Inc: Hab:${this.incomeRoomFilter()} / Est:${this.incomeStatusFilter()} / Método:${this.incomePaymentFilter()} | Filtros Gasto: Cat:${this.expenseCategoryFilter()} / Pago:${this.expensePaymentFilter()}`,
       items: reportItems, showTaxes: false, showTotals: false, showValidity: false,
       footerTitle: 'Resumen Global',
       footerText: [
