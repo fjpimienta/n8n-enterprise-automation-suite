@@ -190,7 +190,7 @@ export class DailyReportModalComponent implements OnInit {
       key,
       label: group.label,
       items: group.items,
-      total: group.items.reduce((sum, i) => sum + (Number(i.total_amount) || 0), 0)
+      total: group.items.reduce((sum, i) => sum + (i.status !== 'cancelled' ? (Number(i.total_amount) || 0) : 0), 0)
     })).sort((a, b) => a.label.localeCompare(b.label));
   });
 

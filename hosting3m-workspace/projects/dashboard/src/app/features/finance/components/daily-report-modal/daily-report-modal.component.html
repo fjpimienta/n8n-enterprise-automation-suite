@@ -341,6 +341,16 @@
               }
               }
             </tbody>
+            <tfoot class="border-top border-2">
+              <tr class="bg-success-lt">
+                <td colspan="4" class="text-end fw-bold text-success text-uppercase small py-2">
+                  <i class="ti ti-receipt-2 me-1"></i> Total Ingresos (excl. cancelados)
+                </td>
+                <td class="text-end fw-bold text-success font-monospace fs-5 py-2">
+                  ${{ (reportData().paid_in + reportData().pending) | number:'1.2-2' }}
+                </td>
+              </tr>
+            </tfoot>
           </table>
         </div>
 
@@ -407,6 +417,16 @@
               }
               }
             </tbody>
+            <tfoot class="border-top border-2">
+              <tr class="bg-danger-lt">
+                <td colspan="4" class="text-end fw-bold text-danger text-uppercase small py-2">
+                  <i class="ti ti-receipt me-1"></i> Total Gastos
+                </td>
+                <td class="text-end fw-bold text-danger font-monospace fs-5 py-2">
+                  -${{ reportData().total_expenses | number:'1.2-2' }}
+                </td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </div>
