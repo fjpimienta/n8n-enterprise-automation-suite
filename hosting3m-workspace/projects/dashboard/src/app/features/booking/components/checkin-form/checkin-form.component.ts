@@ -37,6 +37,7 @@ export class CheckinFormComponent implements OnInit {
     total_amount: new FormControl(0, [Validators.required, Validators.min(0)]),
     initial_payment_type: new FormControl('pending'),
     amount_paid: new FormControl<number | null>(0, [Validators.min(0)]),
+    payment_method: new FormControl('cash'),
     vip_status: new FormControl(false),
     requires_invoice: new FormControl(false),
     is_invoiced: new FormControl(false),
@@ -58,19 +59,27 @@ export class CheckinFormComponent implements OnInit {
       this.cdr.detectChanges();
     });
 
-    // 🧠 MÁQUINA DE ESTADOS DE UI: Reacciona al cambio de modalidad de pago
+    // Payment mode state machine: controls amount_paid and payment_method fields
     this.checkinForm.get('initial_payment_type')?.valueChanges.subscribe(mode => {
       const total = this.checkinForm.get('total_amount')?.value || 0;
+      const paymentMethodCtrl = this.checkinForm.get('payment_method');
+
       if (mode === 'full') {
         this.checkinForm.patchValue({ amount_paid: total }, { emitEvent: false });
+        paymentMethodCtrl?.setValidators([Validators.required]);
       } else if (mode === 'pending') {
         this.checkinForm.patchValue({ amount_paid: 0 }, { emitEvent: false });
+        paymentMethodCtrl?.clearValidators();
       } else if (mode === 'partial') {
         const currentPaid = this.checkinForm.get('amount_paid')?.value;
         if (currentPaid === total || currentPaid === 0) {
-          this.checkinForm.patchValue({ amount_paid: null }, { emitEvent: false }); // Limpiamos para que escriba
+          this.checkinForm.patchValue({ amount_paid: null }, { emitEvent: false });
         }
+        paymentMethodCtrl?.setValidators([Validators.required]);
       }
+
+      paymentMethodCtrl?.updateValueAndValidity({ emitEvent: false });
+      this.cdr.detectChanges();
     });
 
     this.checkinForm.get('is_invoiced')?.valueChanges.subscribe(() => {
@@ -189,6 +198,7 @@ export class CheckinFormComponent implements OnInit {
       vip_status: false,
       requires_invoice: false,
       is_invoiced: false,
+      payment_method: 'cash',
       notes: ''
     }, { emitEvent: false });
   }
@@ -232,6 +242,7 @@ export class CheckinFormComponent implements OnInit {
       vip_status: guestData.vip_status || false,
       requires_invoice: res.is_invoiced || false,
       is_invoiced: res.is_invoiced || false,
+      payment_method: res.payment_method || 'cash',
       notes: res.notes || ''
     });
 
@@ -277,6 +288,7 @@ export class CheckinFormComponent implements OnInit {
         ...finalVal,
         amount_paid: finalVal.initial_payment_type === 'full' ? finalVal.total_amount :
           finalVal.initial_payment_type === 'pending' ? 0 : finalVal.amount_paid,
+        payment_method: finalVal.initial_payment_type === 'pending' ? null : finalVal.payment_method,
         guest_id: this.activeRes?.guest_id || null,
         discount_amount: this.discountAmount
       };

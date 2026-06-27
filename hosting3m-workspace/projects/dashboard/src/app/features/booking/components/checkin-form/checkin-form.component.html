@@ -16,19 +16,20 @@
               <input type="text" class="form-control" formControlName="full_name" placeholder="Ej. Juan Pérez">
             </div>
 
-            <div class="mb-3">
-              <label class="form-label">Doc. ID (INE/Pasaporte)</label>
-              <input type="text" class="form-control" formControlName="doc_id">
-            </div>
-
             <div class="row">
-              <div class="col-6">
+              <div class="col-12 col-md-4">
+                <div class="mb-3">
+                  <label class="form-label">Doc. ID (INE/Pasaporte)</label>
+                  <input type="text" class="form-control" formControlName="doc_id">
+                </div>
+              </div>
+              <div class="col-12 col-md-4">
                 <div class="mb-3">
                   <label class="form-label">Correo Electrónico</label>
                   <input type="email" class="form-control" formControlName="email" placeholder="usuario@ejemplo.com">
                 </div>
               </div>
-              <div class="col-6">
+              <div class="col-12 col-md-4">
                 <div class="mb-3">
                   <label class="form-label">Teléfono</label>
                   <input type="tel" class="form-control" formControlName="phone" placeholder="9933...">
@@ -97,8 +98,9 @@
 
             <div class="hr-text mt-4 mb-3">Acuerdo de Pago</div>
 
-            <div class="row mb-3">
-              <div class="col-md-6">
+            <!-- Payment row: col-md (auto equal-width) distributes space among visible columns -->
+            <div class="row mb-3 align-items-end">
+              <div class="col-12 col-md">
                 <div class="mb-3 mb-md-0">
                   <label class="form-label required">¿Modalidad de Pago Inicial?</label>
                   <select class="form-select fw-bold" formControlName="initial_payment_type" [ngClass]="{'text-success': checkinForm.get('initial_payment_type')?.value === 'full',
@@ -111,14 +113,31 @@
                 </div>
               </div>
 
-              <div class="col-md-6" *ngIf="checkinForm.get('initial_payment_type')?.value === 'partial'">
-                <div class="mb-0 animate__animated animate__fadeIn">
+              <div class="col-12 col-md animate__animated animate__fadeIn" *ngIf="checkinForm.get('initial_payment_type')?.value === 'partial'">
+                <div class="mb-3 mb-md-0">
                   <label class="form-label text-warning fw-bold">💰 Monto del Anticipo</label>
                   <div class="input-group">
                     <span class="input-group-text bg-warning-lt text-warning border-warning">$</span>
                     <input type="number" class="form-control fw-bold border-warning text-warning"
                       formControlName="amount_paid">
                   </div>
+                </div>
+              </div>
+
+              <div class="col-12 col-md animate__animated animate__fadeIn" *ngIf="checkinForm.get('initial_payment_type')?.value !== 'pending'">
+                <div class="mb-0">
+                  <label class="form-label required fw-bold"
+                    [ngClass]="{'text-success': checkinForm.get('initial_payment_type')?.value === 'full',
+                                'text-warning': checkinForm.get('initial_payment_type')?.value === 'partial'}">
+                    Método de Pago
+                  </label>
+                  <select class="form-select fw-bold" formControlName="payment_method"
+                    [ngClass]="{'text-success': checkinForm.get('initial_payment_type')?.value === 'full',
+                                'text-warning': checkinForm.get('initial_payment_type')?.value === 'partial'}">
+                    <option value="cash">Efectivo</option>
+                    <option value="credit_card">Tarjeta de Crédito</option>
+                    <option value="transfer">Transferencia</option>
+                  </select>
                 </div>
               </div>
             </div>
