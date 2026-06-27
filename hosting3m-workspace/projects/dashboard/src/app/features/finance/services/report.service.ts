@@ -27,6 +27,7 @@ export class ReportService {
     expensePaymentFilter: string = 'Todos',
     incomeRoomFilter: string = 'Todos',
     incomeStatusFilter: string = 'Todos',
+    incomePaymentFilter: string = 'Todos',
     expenseConceptFilter: string = '',
     expenseCategoryFilter: string = 'Todas'
   ) {
@@ -43,6 +44,7 @@ export class ReportService {
       if (incomeBillingFilter === 'No Facturado' && b.is_invoiced) return false;
 
       if (incomeRoomFilter !== 'Todos' && String(b.room_id) !== incomeRoomFilter) return false;
+      if (incomePaymentFilter !== 'Todos' && b.payment_method !== incomePaymentFilter) return false;
 
       const isCancelled = b.status === 'cancelled';
       const isPaid = String(b.payment_status || '').trim().toLowerCase() === 'paid';
