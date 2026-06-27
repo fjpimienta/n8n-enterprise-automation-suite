@@ -47,7 +47,7 @@
               <i class="ti ti-arrow-down-right me-1"></i> Filtros de Ingresos
             </div>
             <div class="row g-2">
-              <div class="col-12 col-sm-4">
+              <div class="col-6">
                 <label class="form-label small text-muted mb-1" style="font-size: 0.7rem;">Habitación</label>
                 <select class="form-select form-select-sm" [ngModel]="incomeRoomFilter()"
                   (ngModelChange)="onIncomeRoomFilterChange($event)">
@@ -57,7 +57,7 @@
                   }
                 </select>
               </div>
-              <div class="col-12 col-sm-4">
+              <div class="col-6">
                 <label class="form-label small text-muted mb-1" style="font-size: 0.7rem;">Estado</label>
                 <select class="form-select form-select-sm" [ngModel]="incomeStatusFilter()"
                   (ngModelChange)="onIncomeStatusFilterChange($event)">
@@ -67,7 +67,7 @@
                   <option value="Cancelado">Cancelados</option>
                 </select>
               </div>
-              <div class="col-12 col-sm-4">
+              <div class="col-6">
                 <label class="form-label small text-muted mb-1" style="font-size: 0.7rem;">Facturación</label>
                 <select class="form-select form-select-sm" [ngModel]="incomeBillingFilter()"
                   (ngModelChange)="onIncomeBillingFilterChange($event)">
@@ -76,7 +76,16 @@
                   <option value="No Facturado">No Facturados</option>
                 </select>
               </div>
-
+              <div class="col-6">
+                <label class="form-label small text-muted mb-1" style="font-size: 0.7rem;">Método de Pago</label>
+                <select class="form-select form-select-sm" [ngModel]="incomePaymentFilter()"
+                  (ngModelChange)="onIncomePaymentFilterChange($event)">
+                  <option value="Todos">Todos</option>
+                  <option value="cash">Efectivo</option>
+                  <option value="credit_card">Tarjeta de Crédito</option>
+                  <option value="transfer">Transferencia</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
@@ -245,6 +254,7 @@
             <option value="room" [disabled]="incomeRoomFilter() !== 'Todos'">🛏️ Habitación</option>
             <option value="status" [disabled]="incomeStatusFilter() !== 'Todos'">🚦 Estado</option>
             <option value="billing" [disabled]="incomeBillingFilter() !== 'Todos'">🧾 Facturación</option>
+            <option value="payment" [disabled]="incomePaymentFilter() !== 'Todos'">💳 Método de Pago</option>
           </select>
           } @else {
           <select class="form-select form-select-sm border-0 bg-transparent fw-bold"
