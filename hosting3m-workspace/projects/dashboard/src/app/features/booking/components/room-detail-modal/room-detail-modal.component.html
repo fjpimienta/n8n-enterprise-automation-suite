@@ -187,8 +187,13 @@
 
                 <ul class="nav nav-tabs mt-4">
                     <li class="nav-item">
-                        <a class="nav-link" [class.active]="activeTab === 'assets'" (click)="activeTab = 'assets'">
+                        <a class="nav-link" [class.active]="activeTab === 'assets'" (click)="switchTab('assets')">
                             📺 Inventario ({{ roomAssets.length }})
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" [class.active]="activeTab === 'costs'" (click)="switchTab('costs')">
+                            💸 Costos
                         </a>
                     </li>
                 </ul>
@@ -240,7 +245,125 @@
                                 <i class="ti ti-plus me-1"></i> Asignar Nuevo Activo
                             </button>
                         </div>
+                    </div>
 
+                    <!-- TAB: COSTOS POR HABITACIÓN -->
+                    <div class="tab-pane fade" [class.show]="activeTab === 'costs'"
+                        [class.active]="activeTab === 'costs'">
+
+                        @if (loadingCosts()) {
+                        <div class="text-center p-4 text-muted">
+                            <div class="spinner-border spinner-border-sm me-2"></div> Cargando costos...
+                        </div>
+                        } @else {
+
+                        <!-- RESUMEN TOTAL -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-4">
+                                <div class="card border-0 bg-blue-lt text-center p-2">
+                                    <div class="text-muted small">Gastos / Servicios</div>
+                                    <div class="fw-bold text-blue">${{ totalExpenses() | number:'1.2-2' }}</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="card border-0 bg-warning-lt text-center p-2">
+                                    <div class="text-muted small">Mantenimiento</div>
+                                    <div class="fw-bold text-warning">${{ totalTicketCosts() | number:'1.2-2' }}</div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="card border-0 bg-danger-lt text-center p-2">
+                                    <div class="text-muted small">Total Acumulado</div>
+                                    <div class="fw-bold text-danger">${{ totalRoomCost() | number:'1.2-2' }}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- GASTOS / SERVICIOS -->
+                        @if (roomExpenses().length > 0) {
+                        <div class="mb-3">
+                            <div class="text-muted small fw-bold mb-2">GASTOS Y SERVICIOS</div>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-vcenter">
+                                    <thead>
+                                        <tr>
+                                            <th>Fecha</th>
+                                            <th>Concepto</th>
+                                            <th>Categoría</th>
+                                            <th class="text-end">Monto</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (exp of roomExpenses(); track exp.id) {
+                                        <tr>
+                                            <td class="text-muted small">{{ exp.expense_date | date:'dd/MM/yy':'UTC' }}</td>
+                                            <td>
+                                                {{ exp.description }}
+                                                @if (exp.maintenance_ticket_id) {
+                                                <span class="badge bg-warning-lt ms-1">🎫 Ticket #{{ exp.maintenance_ticket_id }}</span>
+                                                }
+                                            </td>
+                                            <td><span class="badge bg-blue-lt">{{ exp.category }}</span></td>
+                                            <td class="text-end fw-bold text-danger">${{ exp.amount | number:'1.2-2' }}</td>
+                                        </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        }
+
+                        <!-- TICKETS DE MANTENIMIENTO CON COSTO -->
+                        @if (roomTickets().length > 0) {
+                        <div class="mb-3">
+                            <div class="text-muted small fw-bold mb-2">TICKETS DE MANTENIMIENTO (CON COSTO)</div>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-vcenter">
+                                    <thead>
+                                        <tr>
+                                            <th>Tipo</th>
+                                            <th>Descripción</th>
+                                            <th>Prioridad</th>
+                                            <th class="text-end">Costo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @for (ticket of roomTickets(); track ticket.id) {
+                                        <tr>
+                                            <td class="text-muted small">{{ ticket.issue_type }}</td>
+                                            <td>{{ ticket.description }}</td>
+                                            <td>
+                                                <span class="badge"
+                                                    [class.bg-danger-lt]="ticket.priority === 'CRITICAL'"
+                                                    [class.bg-warning-lt]="ticket.priority === 'NORMAL'"
+                                                    [class.bg-secondary-lt]="ticket.priority === 'LOW'">
+                                                    {{ ticket.priority }}
+                                                </span>
+                                            </td>
+                                            <td class="text-end fw-bold text-warning">${{ ticket.cost | number:'1.2-2' }}</td>
+                                        </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        }
+
+                        @if (roomExpenses().length === 0 && roomTickets().length === 0) {
+                        <div class="text-center p-4 text-muted">
+                            <i class="ti ti-receipt-off" style="font-size: 2rem;"></i>
+                            <p class="mt-2">Sin costos registrados para esta habitación.</p>
+                        </div>
+                        }
+
+                        <!-- BOTÓN REGISTRAR GASTO DESDE HABITACIÓN -->
+                        <div class="mt-3 text-end">
+                            <button class="btn btn-sm btn-outline-danger" (click)="onRegisterExpense.emit(room().id)">
+                                <i class="ti ti-plus me-1"></i> Registrar Gasto en esta Hab.
+                            </button>
+                        </div>
+
+                        }
                     </div>
                 </div>
             </div>

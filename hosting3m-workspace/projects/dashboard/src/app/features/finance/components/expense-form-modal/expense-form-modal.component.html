@@ -70,11 +70,40 @@
             </select>
           </div>
 
-          @if (roomId) {
-          <div class="col-12">
-            <div class="alert alert-info py-2">
-              <small>📍 Este gasto se asignará a la <strong>Habitación #{{ roomId }}</strong></small>
-            </div>
+          <div class="col-6">
+            <label class="form-label">Habitación (opcional)</label>
+            @if (isRoomLocked) {
+            <input type="text" class="form-control" [value]="'Habitación #' + roomId" disabled>
+            } @else {
+            <select class="form-select" [ngModel]="expenseData.room_id"
+              (ngModelChange)="onRoomSelected($event)">
+              <option [ngValue]="null">Sin habitación específica</option>
+              @for (room of bookingService.rooms(); track room.id) {
+              <option [ngValue]="room.id">Hab. {{ room.room_number }}</option>
+              }
+            </select>
+            }
+          </div>
+
+          @if (effectiveRoomId) {
+          <div class="col-6">
+            <label class="form-label">Ticket de Mantenimiento (opcional)</label>
+            @if (loadingTickets()) {
+            <div class="form-control-plaintext small text-muted">Cargando tickets...</div>
+            } @else {
+            <select class="form-select" [(ngModel)]="expenseData.maintenance_ticket_id">
+              <option [ngValue]="null">Sin ticket asociado</option>
+              @for (ticket of roomTickets(); track ticket.id) {
+              <option [ngValue]="ticket.id">
+                #{{ ticket.id }} - {{ ticket.issue_type }} ({{ ticket.status }})
+                @if (ticket.cost) { · Est: ${{ ticket.cost }} }
+              </option>
+              }
+            </select>
+            @if (roomTickets().length === 0) {
+            <div class="form-hint">Esta habitación no tiene tickets de mantenimiento.</div>
+            }
+            }
           </div>
           }
 
