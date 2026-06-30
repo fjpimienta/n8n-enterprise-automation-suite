@@ -90,6 +90,12 @@
                     (click)="setSubTab('GASTOS')" style="cursor: pointer;">Historial de Gastos ({{
                     filteredExpensesList().length }})</a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link font-weight-bold" [class.active]="activeSubTab() === 'POR_ANIMAL'"
+                    (click)="setSubTab('POR_ANIMAL')" style="cursor: pointer;">
+                    Costo por Animal ({{ animalCostSummary().length }})
+                </a>
+            </li>
         </ul>
     </div>
 
@@ -209,7 +215,60 @@
         </div>
         }
 
-        @if (activeSubTab() !== 'RESUMEN') {
+        @if (activeSubTab() === 'POR_ANIMAL') {
+        @if (animalCostSummary().length === 0) {
+        <div class="text-center text-muted py-5">
+            <i class="ti ti-pig-off fs-2 d-block mb-2"></i>
+            No hay gastos vinculados a animales específicos en este periodo.
+        </div>
+        } @else {
+        <div class="table-responsive">
+            <table class="table card-table table-vcenter table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Arete</th>
+                        <th>Nº Fuego</th>
+                        <th>Categoría</th>
+                        <th class="text-end">Biomasa</th>
+                        <th class="text-end">Registros</th>
+                        <th class="text-end">Gasto Total</th>
+                        <th class="text-end">Costo / kg</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (row of animalCostSummary(); track row.livestockId; let i = $index) {
+                    <tr>
+                        <td class="text-muted">{{ i + 1 }}</td>
+                        <td class="font-monospace font-weight-bold text-primary">{{ row.rfid }}</td>
+                        <td class="text-muted">{{ row.numero_fuego || '—' }}</td>
+                        <td><span class="badge bg-secondary-lt">{{ row.category }}</span></td>
+                        <td class="text-end">{{ row.weightKg | number:'1.0-0' }} kg</td>
+                        <td class="text-end text-muted">{{ row.count }}</td>
+                        <td class="text-end font-weight-bold text-danger">
+                            ${{ row.total | number:'1.2-2' }}
+                        </td>
+                        <td class="text-end text-orange">
+                            ${{ row.costPerKg | number:'1.2-2' }}/kg
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+                <tfoot class="bg-light">
+                    <tr>
+                        <td colspan="6" class="text-end font-weight-bold">Total Gastos Vinculados a Animales:</td>
+                        <td class="text-end font-weight-bold text-danger">
+                            ${{ totalAnimalCosts() | number:'1.2-2' }}
+                        </td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        }
+        }
+
+        @if (activeSubTab() !== 'RESUMEN' && activeSubTab() !== 'POR_ANIMAL') {
         <div class="card-footer d-flex align-items-center border-top">
             <p class="m-0 text-muted">Mostrando <span>{{ showingStart() }}</span> a <span>{{ showingEnd() }}</span> de
                 un total disponible</p>

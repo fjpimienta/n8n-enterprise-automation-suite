@@ -1,27 +1,42 @@
-import { Component, inject, Input, Output, EventEmitter, signal, OnInit } from '@angular/core';
+import { Component, inject, Input, Output, EventEmitter, signal, computed, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CattleApiService } from '@core/services/cattle-api.service';
+import { ExpenseModalComponent } from '../../../expenses/components/expense-modal/expense-modal.component';
 
 @Component({
   selector: 'app-cattle-detail-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, ExpenseModalComponent],
   templateUrl: './cattle-detail-modal.component.html',
   styleUrls: ['./cattle-detail-modal.component.scss']
 })
 export class CattleDetailModalComponent implements OnInit {
   private fb = inject(FormBuilder);
-  private cattleApi = inject(CattleApiService); // Inyectamos el nuevo servicio
+  private cattleApi = inject(CattleApiService);
 
-  @Input() actionType: 'ALTA' | 'SALUD' | 'PESO' | 'EDITAR' = 'ALTA';
+  @Input() actionType: 'ALTA' | 'SALUD' | 'PESO' | 'EDITAR' | 'COSTOS' = 'ALTA';
   @Input() selectedRfid: string = '';
   @Input() livestockId: string = '';
   @Input() selectedAnimal: any = null;
   @Output() close = new EventEmitter<boolean>();
 
-  public isSaving = signal<boolean>(false); // Control de carga
+  public isSaving = signal<boolean>(false);
   private today = new Date().toISOString().split('T')[0];
+
+  // Estado del sub-módulo COSTOS
+  public animalExpenses = signal<any[]>([]);
+  public loadingCosts = signal(false);
+  public showSubExpenseModal = signal(false);
+
+  public totalCost = computed(() =>
+    this.animalExpenses().reduce((sum, e) => sum + Number(e.amount || 0), 0)
+  );
+
+  public costPerKg = computed(() => {
+    const weight = Number(this.selectedAnimal?.current_weight_kg || 0);
+    return weight > 0 ? this.totalCost() / weight : 0;
+  });
 
   public altaForm: FormGroup = this.fb.group({
     rfid_siniiga: ['S/N', [Validators.required]], // Por defecto S/N
@@ -69,6 +84,9 @@ export class CattleDetailModalComponent implements OnInit {
     if (this.selectedRfid) {
       this.saludForm.patchValue({ rfid_siniiga: this.selectedRfid, livestock_id: this.livestockId });
       this.pesoForm.patchValue({ rfid_siniiga: this.selectedRfid, livestock_id: this.livestockId });
+    }
+    if (this.actionType === 'COSTOS' && this.livestockId) {
+      this.loadAnimalCosts();
     }
     if (this.selectedAnimal && this.actionType === 'EDITAR') {
       this.editForm.patchValue({
@@ -138,6 +156,16 @@ export class CattleDetailModalComponent implements OnInit {
       alert(`❌ Ocurrió un error al guardar: ${error.message || 'Error de conexión'}`);
     } finally {
       this.isSaving.set(false);
+    }
+  }
+
+  public async loadAnimalCosts() {
+    this.loadingCosts.set(true);
+    try {
+      const expenses = await this.cattleApi.getExpensesByAnimal(this.livestockId);
+      this.animalExpenses.set(expenses);
+    } finally {
+      this.loadingCosts.set(false);
     }
   }
 
