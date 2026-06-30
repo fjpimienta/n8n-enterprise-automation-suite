@@ -48,7 +48,8 @@ export class MaintenanceTicketModalComponent implements OnDestroy {
   ticketForm: FormGroup = this.fb.group({
     issue_type: ['PLOMERIA', [Validators.required]],
     priority: ['NORMAL', [Validators.required]],
-    description: ['', [Validators.required, descriptionValidator]]
+    description: ['', [Validators.required, descriptionValidator]],
+    cost: [null as number | null]
   });
 
   // Getters para acceso fácil a los controles del formulario
@@ -79,7 +80,8 @@ export class MaintenanceTicketModalComponent implements OnDestroy {
     this.ticketForm.reset({
       issue_type: 'PLOMERIA',
       priority: 'NORMAL',
-      description: ''
+      description: '',
+      cost: null
     });
     this.ticketForm.markAsUntouched();
     this.ticketForm.markAsPristine();
@@ -114,12 +116,14 @@ export class MaintenanceTicketModalComponent implements OnDestroy {
 
     try {
       const formValue = this.ticketForm.value;
+      const rawCost = formValue.cost;
       const newTicket = {
         issue_type: formValue.issue_type,
         priority: formValue.priority,
-        description: descriptionValue, // Usar valor con trim
+        description: descriptionValue,
         room_id: this.room().id,
-        inspection_id: this.inspectionId() || null
+        inspection_id: this.inspectionId() || null,
+        cost: rawCost ? Number(rawCost) : null
       };
 
       // 1. Crear el Ticket en la base de datos

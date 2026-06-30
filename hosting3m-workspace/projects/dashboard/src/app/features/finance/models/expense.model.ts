@@ -6,6 +6,7 @@ export interface Expense {
     payment_method: 'Efectivo' | 'Transferencia' | 'Tarjeta Corp';
     expense_date: string;
     room_id?: number | null;
+    maintenance_ticket_id?: number | null;
     shift_id?: number | null;
     registered_by: number;
     receipt_url?: string;

@@ -138,7 +138,8 @@
   (onReservations)="viewMode.set('reservation')" (onCheckout)="startCheckoutProcess()" (onPay)="markAsPaid($event)"
   (onMaintenance)="reportMaintenance()" (onFinishMaintenance)="handleFinishMaintenance()"
   (onOpenChecklist)="viewMode.set('checklist')" (onCancelRes)="handleCancelReservation($event)"
-  (onQuickExtend)="handleQuickExtend()"> </app-room-detail-modal>
+  (onQuickExtend)="handleQuickExtend()"
+  (onRegisterExpense)="handleRegisterExpense($event)"> </app-room-detail-modal>
 }
 
 <app-user-form-modal [isOpen]="isUserModalOpen()" [selectedUser]="hotelService.selectedUser()" [(userData)]="tempUser"
@@ -163,8 +164,9 @@
   💵
 </button>
 
-<app-expense-form-modal [isOpen]="isExpenseModalOpen()" (onClose)="isExpenseModalOpen.set(false)"
-  (onSave)="refreshMain()">
+<app-expense-form-modal [isOpen]="isExpenseModalOpen()" [roomId]="expenseRoomId()"
+  (onClose)="isExpenseModalOpen.set(false); expenseRoomId.set(null)"
+  (onSave)="refreshMain(); expenseRoomId.set(null)">
 </app-expense-form-modal>
 
 @if (maintenanceRoom()) {

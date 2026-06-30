@@ -54,6 +54,7 @@ export class DashboardComponent {
   isUserModalOpen = signal(false);
   isGuestModalOpen = signal(false);
   isExpenseModalOpen = signal(false);
+  expenseRoomId = signal<number | null>(null);
   showReportModal = false;
   collapsedGroups = signal<Set<string>>(new Set());
   expandedGroups = signal<Set<string>>(new Set());
@@ -590,6 +591,12 @@ export class DashboardComponent {
 
   openMaintenanceReport(room: Room) {
     this.maintenanceRoom.set(room);
+  }
+
+  handleRegisterExpense(roomId: number) {
+    this.hotelService.clearSelection();
+    this.expenseRoomId.set(roomId);
+    this.isExpenseModalOpen.set(true);
   }
 
   /* Función para cancelar una reserva desde el modal del rack */
