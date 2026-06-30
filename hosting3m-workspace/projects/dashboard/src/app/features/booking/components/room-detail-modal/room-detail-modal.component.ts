@@ -1,7 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, inject, input, OnInit, Output, ChangeDetectorRef, signal } from '@angular/core';
+import { Component, EventEmitter, inject, input, OnInit, Output, ChangeDetectorRef, signal, computed } from '@angular/core';
 import { AssetFormModalComponent } from '@features/admin/components/asset-form-modal/asset-form-modal.component';
 import { AssetService } from '@features/admin/services/asset.service';
+import { ExpenseService } from '@features/finance/services/expense.service';
+import { MaintenanceService } from '@features/dashboard/services/maintenance.service';
 
 @Component({
   selector: 'app-room-detail-modal',
@@ -12,6 +14,8 @@ import { AssetService } from '@features/admin/services/asset.service';
 })
 export class RoomDetailModalComponent implements OnInit {
   private assetService = inject(AssetService);
+  private expenseService = inject(ExpenseService);
+  private maintenanceService = inject(MaintenanceService);
   private cdr = inject(ChangeDetectorRef);
 
   room = input.required<any>();
@@ -19,10 +23,21 @@ export class RoomDetailModalComponent implements OnInit {
 
   activeTab: string = 'assets';
   roomAssets: any[] = [];
+  roomExpenses = signal<any[]>([]);
+  roomTickets = signal<any[]>([]);
+  loadingCosts = signal(false);
+
+  readonly totalExpenses = computed(() =>
+    this.roomExpenses().reduce((sum, e) => sum + (Number(e.amount) || 0), 0)
+  );
+  readonly totalTicketCosts = computed(() =>
+    this.roomTickets().filter(t => t.cost).reduce((sum, t) => sum + (Number(t.cost) || 0), 0)
+  );
+  readonly totalRoomCost = computed(() => this.totalExpenses() + this.totalTicketCosts());
 
   // Datos para el modal hijo (Nuevo Inventario)
   currentAsset = signal<any>({});
-  showAssetForm = false; // Controla si existe el componente en el DOM
+  showAssetForm = false;
 
   @Output() onClose = new EventEmitter<void>();
   @Output() onCheckin = new EventEmitter<void>();
@@ -35,6 +50,7 @@ export class RoomDetailModalComponent implements OnInit {
   @Output() onOpenChecklist = new EventEmitter<void>();
   @Output() onCancelRes = new EventEmitter<any>();
   @Output() onQuickExtend = new EventEmitter<void>();
+  @Output() onRegisterExpense = new EventEmitter<number>();
 
   ngOnInit() {
     this.loadAssets();
@@ -51,6 +67,32 @@ export class RoomDetailModalComponent implements OnInit {
     } catch (error) {
       this.roomAssets = [];
     }
+  }
+
+  async loadRoomCosts() {
+    const roomId = this.room()?.id;
+    if (!roomId) return;
+
+    this.loadingCosts.set(true);
+    try {
+      const [expenses, tickets] = await Promise.all([
+        this.expenseService.getExpensesByRoom(roomId),
+        this.maintenanceService.getTickets({ room_id: roomId })
+      ]);
+      this.roomExpenses.set(expenses);
+      this.roomTickets.set(tickets.filter((t: any) => t.cost));
+    } catch (error) {
+      this.roomExpenses.set([]);
+      this.roomTickets.set([]);
+    } finally {
+      this.loadingCosts.set(false);
+      this.cdr.detectChanges();
+    }
+  }
+
+  switchTab(tab: string) {
+    this.activeTab = tab;
+    if (tab === 'costs') this.loadRoomCosts();
   }
 
   openAssetForm() {

@@ -25,7 +25,7 @@ export class DailyReportModalComponent implements OnInit {
   currentFilter = signal<'day' | 'week' | 'month' | 'year' | 'custom'>('day');
   customStartDate = signal<string>('');
   customEndDate = signal<string>('');
-  activeTab = signal<'ingresos' | 'gastos'>('ingresos');
+  activeTab = signal<'ingresos' | 'gastos' | 'por-habitacion'>('ingresos');
 
   // FILTROS AVANZADOS
   incomeBillingFilter = signal<'Todos' | 'Facturado' | 'No Facturado'>('Todos');
@@ -193,6 +193,28 @@ export class DailyReportModalComponent implements OnInit {
       total: group.items.reduce((sum, i) => sum + (i.status !== 'cancelled' ? (Number(i.total_amount) || 0) : 0), 0)
     })).sort((a, b) => a.label.localeCompare(b.label));
   });
+
+  roomCostSummary = computed(() => {
+    const expenses = this.rawExpenses().filter(e => e.room_id != null);
+    const map = new Map<number, { roomNumber: string; total: number; count: number }>();
+
+    expenses.forEach(e => {
+      const roomId = Number(e.room_id);
+      const roomNumber = this.getRoomNumber(roomId);
+      if (!map.has(roomId)) map.set(roomId, { roomNumber, total: 0, count: 0 });
+      const entry = map.get(roomId)!;
+      entry.total += Number(e.amount) || 0;
+      entry.count += 1;
+    });
+
+    return Array.from(map.entries())
+      .map(([roomId, data]) => ({ roomId, ...data }))
+      .sort((a, b) => b.total - a.total);
+  });
+
+  readonly totalRoomCosts = computed(() =>
+    this.roomCostSummary().reduce((sum, r) => sum + r.total, 0)
+  );
 
   groupedExpenses = computed(() => {
     const groupType = this.expenseGroup();

@@ -52,6 +52,16 @@
                     </div>
 
                     <div class="mb-3">
+                        <label class="form-label">Costo Estimado ($)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" class="form-control" formControlName="cost"
+                                placeholder="0.00 — opcional" min="0" step="0.01">
+                        </div>
+                        <div class="form-hint">Si ya conoces el costo del servicio, captúralo ahora.</div>
+                    </div>
+
+                    <div class="mb-3">
                         <label class="form-label required">Descripción del Daño</label>
                         <textarea class="form-control" rows="4" formControlName="description"
                             [class.is-invalid]="descriptionControl.invalid && descriptionControl.touched"

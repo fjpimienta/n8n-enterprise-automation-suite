@@ -53,6 +53,30 @@ export class ExpenseService {
     }
   }
 
+  /** Obtener gastos filtrados por habitación */
+  async getExpensesByRoom(roomId: number): Promise<Expense[]> {
+    try {
+      const payload = {
+        operation: 'getall',
+        table_name: 'hotel_expenses',
+        filters: {
+          id_company: this.tenantService.activeTenantId(),
+          room_id: roomId
+        },
+        sort: { field: 'expense_date', order: 'DESC' }
+      };
+      const res = await lastValueFrom(
+        this.http.post<ApiResponse<Expense>>(`${this.apiUrl}/hotel_expenses`, payload, {
+          headers: this.adminService.getAuthHeaders()
+        })
+      );
+      return Array.isArray(res.data) ? res.data : [];
+    } catch (error) {
+      console.error('Error cargando gastos por habitación', error);
+      return [];
+    }
+  }
+
   /** Registrar un nuevo gasto */
   async createExpense(expense: Partial<Expense>): Promise<void> {
     this.loading.set(true);
