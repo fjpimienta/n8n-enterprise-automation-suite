@@ -30,7 +30,7 @@ export class MainDashboardComponent implements OnInit {
 
   // Navegación y Filtros de Trazabilidad Biológica
   public activeTab = signal<'CRIA' | 'ENGORDA'>('CRIA');
-  public activeSubTab = signal<'RESUMEN' | 'INVENTARIO' | 'GASTOS'>('RESUMEN');
+  public activeSubTab = signal<'RESUMEN' | 'INVENTARIO' | 'GASTOS' | 'POR_ANIMAL'>('RESUMEN');
   public selectedSpecies = signal<string>('TODOS'); // 🚀 Filtro maestro de especie
   public showExpenseModal = signal<boolean>(false);
 
@@ -182,7 +182,7 @@ export class MainDashboardComponent implements OnInit {
     });
   }
 
-  public setSubTab(subTab: 'RESUMEN' | 'INVENTARIO' | 'GASTOS') {
+  public setSubTab(subTab: 'RESUMEN' | 'INVENTARIO' | 'GASTOS' | 'POR_ANIMAL') {
     this.activeSubTab.set(subTab);
     this.currentPage.set(1);
   }
@@ -211,4 +211,39 @@ export class MainDashboardComponent implements OnInit {
   public capitalizacionTotal = computed(() => {
     return this.biomasaTotal() * this.PRECIO_KILO;
   });
+
+  /** Ranking de gastos por animal: agrupa filteredExpensesList por livestock_id y cruza con cattleList */
+  public animalCostSummary = computed(() => {
+    const expenses = this.filteredExpensesList().filter(e => e.livestock_id);
+    const grouped = new Map<string, { total: number; count: number }>();
+
+    for (const e of expenses) {
+      const existing = grouped.get(e.livestock_id) ?? { total: 0, count: 0 };
+      grouped.set(e.livestock_id, {
+        total: existing.total + Number(e.amount || 0),
+        count: existing.count + 1
+      });
+    }
+
+    return Array.from(grouped.entries())
+      .map(([livestockId, stats]) => {
+        const animal = this.cattleList().find(a => a.id === livestockId);
+        const weightKg = Number(animal?.current_weight_kg || 0);
+        return {
+          livestockId,
+          rfid:        animal?.rfid_siniiga ?? 'Desconocido',
+          numero_fuego: animal?.numero_fuego ?? '',
+          category:    animal?.category ?? '',
+          weightKg,
+          total:       stats.total,
+          count:       stats.count,
+          costPerKg:   weightKg > 0 ? stats.total / weightKg : 0
+        };
+      })
+      .sort((a, b) => b.total - a.total);
+  });
+
+  public totalAnimalCosts = computed(() =>
+    this.animalCostSummary().reduce((sum, row) => sum + row.total, 0)
+  );
 }

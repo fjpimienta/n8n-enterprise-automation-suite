@@ -10,6 +10,7 @@
                     @case ('SALUD') { <span class="status-dot status-orange me-2"></span> Evento Sanitario / Reproductivo }
                     @case ('PESO') { <span class="status-dot status-green me-2"></span> Control de Biomasa (Pesaje) }
                     @case ('EDITAR') { <span class="status-dot status-purple me-2"></span> Editar Ficha del Animal }
+                    @case ('COSTOS') { <span class="status-dot status-red me-2"></span> Costos — {{ selectedAnimal?.rfid_siniiga }} }
                     }
                 </h5>
                 <button type="button" class="btn-close" (click)="closeModal()" aria-label="Cerrar"></button>
@@ -238,13 +239,98 @@
                     </div>
                 </form>
                 }
+
+                @case ('COSTOS') {
+                <!-- KPI cards -->
+                <div class="row g-3 mb-4">
+                    <div class="col-4">
+                        <div class="card border-0 bg-red-lt text-center p-3">
+                            <div class="text-muted small mb-1">Gasto Total</div>
+                            <div class="fs-3 font-weight-bold text-danger">
+                                ${{ totalCost() | number:'1.2-2' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="card border-0 bg-blue-lt text-center p-3">
+                            <div class="text-muted small mb-1">Peso Actual</div>
+                            <div class="fs-3 font-weight-bold text-blue">
+                                {{ selectedAnimal?.current_weight_kg }} kg
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="card border-0 bg-orange-lt text-center p-3">
+                            <div class="text-muted small mb-1">Costo / kg</div>
+                            <div class="fs-3 font-weight-bold text-orange">
+                                ${{ costPerKg() | number:'1.2-2' }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla de gastos -->
+                @if (loadingCosts()) {
+                <div class="text-center text-muted py-4">
+                    <div class="spinner-border spinner-border-sm me-2"></div>Cargando gastos...
+                </div>
+                } @else if (animalExpenses().length === 0) {
+                <div class="text-center text-muted py-4">
+                    <i class="ti ti-receipt-off fs-2 d-block mb-2"></i>
+                    Este animal no tiene gastos registrados.
+                </div>
+                } @else {
+                <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
+                    <table class="table table-sm table-vcenter">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Categoría</th>
+                                <th>Descripción</th>
+                                <th>Evento Sanitario</th>
+                                <th class="text-end">Monto</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (exp of animalExpenses(); track exp.id) {
+                            <tr>
+                                <td class="text-muted small">{{ exp.expense_date | date:'dd/MM/yy' }}</td>
+                                <td><span class="badge bg-secondary-lt">{{ exp.category }}</span></td>
+                                <td class="text-muted small">{{ exp.description || '—' }}</td>
+                                <td>
+                                    @if (exp.health_event_id) {
+                                    <span class="badge bg-orange-lt text-orange">
+                                        🩺 {{ exp.health_event_type || 'Sanitario' }}
+                                    </span>
+                                    } @else { <span class="text-muted">—</span> }
+                                </td>
+                                <td class="text-end font-weight-bold text-danger">
+                                    ${{ exp.amount | number:'1.2-2' }}
+                                </td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                }
+
+                <!-- Botón para registrar nuevo gasto -->
+                <div class="mt-3 text-end">
+                    <button type="button" class="btn btn-danger btn-sm"
+                        (click)="showSubExpenseModal.set(true)">
+                        + Registrar Gasto para este Animal
+                    </button>
+                </div>
+                }
+
                 }
             </div>
 
             <div class="modal-footer bg-light">
                 <a href="javascript:void(0)" class="btn btn-link link-secondary me-auto"
-                    (click)="closeModal()">Cancelar</a>
+                    (click)="closeModal()">Cerrar</a>
 
+                @if (actionType !== 'COSTOS') {
                 <button type="button" class="btn btn-primary" (click)="submitForm()" [disabled]="isSaving()">
                     @if (isSaving()) {
                     <span class="spinner-border spinner-border-sm me-2" role="status"></span>
@@ -261,7 +347,17 @@
                     Guardar Evento en Ledger
                     }
                 </button>
+                }
             </div>
         </div>
     </div>
 </div>
+
+<!-- Sub-modal de gastos (se abre desde el case COSTOS) -->
+@if (showSubExpenseModal()) {
+<app-expense-modal
+    [preSelectedAnimal]="selectedAnimal"
+    (onClose)="showSubExpenseModal.set(false)"
+    (onSaveSuccess)="showSubExpenseModal.set(false); loadAnimalCosts()">
+</app-expense-modal>
+}
