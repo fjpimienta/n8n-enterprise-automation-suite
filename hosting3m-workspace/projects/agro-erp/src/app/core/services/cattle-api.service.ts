@@ -128,6 +128,48 @@ export class CattleApiService {
     }
 
     /**
+     * 6a. Obtener gastos vinculados a un animal específico (por UUID)
+     */
+    public async getExpensesByAnimal(livestockId: string): Promise<any[]> {
+        try {
+            const res: any = await lastValueFrom(
+                this.http.post(`${this.apiUrl_crud}/cattle_expenses`, {
+                    operation: 'getall',
+                    filters: { livestock_id: livestockId },
+                    sort: { field: 'expense_date', order: 'DESC' }
+                })
+            );
+            if (res && Array.isArray(res.data)) return res.data;
+            if (res?.data && Array.isArray(res.data.data)) return res.data.data;
+            return [];
+        } catch (error) {
+            this.logger.warn('Error cargando gastos por animal:', error);
+            return [];
+        }
+    }
+
+    /**
+     * 6b. Obtener eventos sanitarios de un animal específico (por UUID)
+     */
+    public async getHealthLogsByAnimal(livestockId: string): Promise<any[]> {
+        try {
+            const res: any = await lastValueFrom(
+                this.http.post(`${this.apiUrl_crud}/cattle_health_logs`, {
+                    operation: 'getall',
+                    filters: { livestock_id: livestockId },
+                    sort: { field: 'event_date', order: 'DESC' }
+                })
+            );
+            if (res && Array.isArray(res.data)) return res.data;
+            if (res?.data && Array.isArray(res.data.data)) return res.data.data;
+            return [];
+        } catch (error) {
+            this.logger.warn('Error cargando eventos sanitarios por animal:', error);
+            return [];
+        }
+    }
+
+    /**
      * 6. Obtener historial de Gastos Operativos (Aislamiento de Datos por n8n/SQL)
      */
     public async getExpenses(): Promise<any[]> {

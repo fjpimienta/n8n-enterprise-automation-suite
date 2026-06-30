@@ -140,9 +140,14 @@
                             (click)="openModal('PESO', animal.rfid_siniiga, animal.id)">
                             Pesar
                         </button>
-                        <button class="btn btn-sm btn-ghost-warning"
+                        <button class="btn btn-sm btn-ghost-warning me-1"
                             (click)="openModal('SALUD', animal.rfid_siniiga, animal.id)">
                             Sanidad
+                        </button>
+                        <button class="btn btn-sm btn-ghost-danger"
+                            (click)="openModal('COSTOS', animal.rfid_siniiga, animal.id, animal)"
+                            title="Ver costos del animal">
+                            <i class="ti ti-cash"></i>
                         </button>
                     </td>
                 </tr>

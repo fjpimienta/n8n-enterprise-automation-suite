@@ -23,6 +23,100 @@
             <form [formGroup]="expenseForm" (ngSubmit)="submit()">
                 <div class="modal-body">
 
+                    <!-- SECCIÓN: Vinculación a Animal (opcional) -->
+                    <div class="mb-4">
+                        <div class="row g-3">
+
+                            <!-- Buscador / Animal bloqueado -->
+                            <div class="col-md-6">
+                                <label class="form-label">Animal Afectado (opcional)</label>
+
+                                @if (isAnimalLocked) {
+                                <!-- Animal pre-seleccionado desde contexto externo -->
+                                <div class="d-flex align-items-center gap-2 p-2 rounded border bg-green-lt">
+                                    <span class="badge bg-green text-white font-monospace">
+                                        {{ selectedAnimal()?.rfid_siniiga }}
+                                    </span>
+                                    <span class="text-muted small">
+                                        {{ selectedAnimal()?.category }} ·
+                                        {{ selectedAnimal()?.current_weight_kg }} kg
+                                    </span>
+                                </div>
+                                } @else {
+                                <!-- Buscador libre -->
+                                <div class="position-relative">
+                                    <input type="text" class="form-control"
+                                        [value]="searchQuery()"
+                                        (input)="onSearchInput($any($event.target).value)"
+                                        placeholder="Buscar por Arete o Nº Fuego..."
+                                        autocomplete="off">
+
+                                    @if (selectedAnimal()) {
+                                    <button type="button" class="btn btn-sm btn-ghost-danger position-absolute top-0 end-0 mt-1 me-1"
+                                        (click)="clearAnimal()" title="Quitar animal">
+                                        <i class="ti ti-x"></i>
+                                    </button>
+                                    }
+
+                                    <!-- Dropdown de resultados -->
+                                    @if (showDropdown() && filteredAnimals().length > 0) {
+                                    <div class="list-group position-absolute w-100 shadow-sm"
+                                        style="z-index:1060; top:100%; left:0; max-height:200px; overflow-y:auto;">
+                                        @for (animal of filteredAnimals(); track animal.id) {
+                                        <button type="button" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+                                            (click)="selectAnimal(animal)">
+                                            <span class="font-monospace fw-bold">{{ animal.rfid_siniiga }}</span>
+                                            <span class="text-muted small">
+                                                @if (animal.numero_fuego) { Fuego: {{ animal.numero_fuego }} · }
+                                                {{ animal.category }} · {{ animal.current_weight_kg }} kg
+                                            </span>
+                                        </button>
+                                        }
+                                    </div>
+                                    }
+
+                                    @if (showDropdown() && filteredAnimals().length === 0) {
+                                    <div class="text-muted small mt-1 ps-1">Sin resultados para "{{ searchQuery() }}"</div>
+                                    }
+                                </div>
+                                }
+                            </div>
+
+                            <!-- Selector de Evento Sanitario (aparece cuando hay animal seleccionado) -->
+                            <div class="col-md-6">
+                                @if (selectedAnimal()) {
+                                <label class="form-label">Evento Sanitario Vinculado (opcional)</label>
+
+                                @if (loadingHealthLogs()) {
+                                <div class="form-control-plaintext text-muted small">
+                                    <span class="spinner-border spinner-border-sm me-1"></span>Cargando eventos...
+                                </div>
+                                } @else if (healthLogs().length === 0) {
+                                <div class="form-control-plaintext text-muted small">
+                                    Este animal no tiene eventos sanitarios registrados.
+                                </div>
+                                } @else {
+                                <select class="form-select"
+                                    [value]="selectedHealthEventId()"
+                                    (change)="selectedHealthEventId.set($any($event.target).value || null)">
+                                    <option value="">Sin evento sanitario</option>
+                                    @for (log of healthLogs(); track log.id) {
+                                    <option [value]="log.id">
+                                        {{ log.event_type }} — {{ log.event_date | date:'dd/MM/yyyy' }}
+                                        @if (log.description) { · {{ log.description | slice:0:30 }}... }
+                                    </option>
+                                    }
+                                </select>
+                                }
+                                }
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <hr class="my-2">
+
+                    <!-- SECCIÓN: Datos del gasto -->
                     <div class="row mb-3 align-items-end">
                         <div class="col-md-6">
                             <label class="form-label required">Fecha del Gasto</label>
