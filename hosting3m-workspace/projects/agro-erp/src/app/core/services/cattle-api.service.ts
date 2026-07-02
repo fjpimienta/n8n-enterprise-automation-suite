@@ -170,6 +170,28 @@ export class CattleApiService {
     }
 
     /**
+     * 7. Procesar salida (venta) de un animal vía sp_procesar_salida_ganado.
+     * El SP valida normativa TB/BR (<=60 días) y responde success:false con motivo
+     * en vez de lanzar error cuando el rechazo es normativo (no es un fallo de datos).
+     */
+    public async procesarSalidaGanado(electronicRfid: string): Promise<{
+        success: boolean;
+        motivo?: string;
+        livestock_id?: string;
+        electronic_rfid?: string;
+        current_status?: string;
+    }> {
+        const res: any = await lastValueFrom(
+            this.http.post(`${this.apiUrl_crud}/salida_ganado`, {
+                operation: 'call_sp',
+                fields: { electronic_rfid: electronicRfid }
+            })
+        );
+        if (res && res.error) throw new Error(res.message);
+        return res.data;
+    }
+
+    /**
      * 6. Obtener historial de Gastos Operativos (Aislamiento de Datos por n8n/SQL)
      */
     public async getExpenses(): Promise<any[]> {

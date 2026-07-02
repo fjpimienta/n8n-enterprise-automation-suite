@@ -27,7 +27,7 @@ export class CattleListComponent implements OnInit {
 
   // Variables para el Modal
   public isModalOpen = false;
-  public modalAction: 'ALTA' | 'SALUD' | 'PESO' | 'EDITAR' | 'COSTOS' = 'ALTA';
+  public modalAction: 'ALTA' | 'SALUD' | 'PESO' | 'EDITAR' | 'COSTOS' | 'SALIDA' = 'ALTA';
   public selectedRfid = '';
   public selectedId = '';
   public selectedAnimal: any = null;
@@ -49,7 +49,7 @@ export class CattleListComponent implements OnInit {
     }
   }
 
-  public openModal(action: 'ALTA' | 'SALUD' | 'PESO' | 'EDITAR' | 'COSTOS', rfid: string = '', id: string = '', animal: any = null) {
+  public openModal(action: 'ALTA' | 'SALUD' | 'PESO' | 'EDITAR' | 'COSTOS' | 'SALIDA', rfid: string = '', id: string = '', animal: any = null) {
     this.modalAction = action;
     this.selectedRfid = rfid;
     this.selectedId = id;

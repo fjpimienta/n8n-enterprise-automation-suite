@@ -15,7 +15,7 @@ export class CattleDetailModalComponent implements OnInit {
   private fb = inject(FormBuilder);
   private cattleApi = inject(CattleApiService);
 
-  @Input() actionType: 'ALTA' | 'SALUD' | 'PESO' | 'EDITAR' | 'COSTOS' = 'ALTA';
+  @Input() actionType: 'ALTA' | 'SALUD' | 'PESO' | 'EDITAR' | 'COSTOS' | 'SALIDA' = 'ALTA';
   @Input() selectedRfid: string = '';
   @Input() livestockId: string = '';
   @Input() selectedAnimal: any = null;
@@ -38,6 +38,22 @@ export class CattleDetailModalComponent implements OnInit {
     return weight > 0 ? this.totalCost() / weight : 0;
   });
 
+  // Referencia visual (no autoritativa) de vigencia normativa TB/BR. La validación real la hace el SP.
+  public diasDesde(fecha?: string): number | null {
+    if (!fecha) return null;
+    return Math.floor((Date.now() - new Date(fecha).getTime()) / 86400000);
+  }
+
+  // Postgres rechaza '' en columnas date ("invalid input syntax for type date").
+  // Los selects/inputs opcionales del form mandan '' cuando quedan vacíos; se normalizan a null.
+  private sanitizeDates(payload: any): any {
+    return {
+      ...payload,
+      tb_test_date: payload.tb_test_date || null,
+      br_test_date: payload.br_test_date || null
+    };
+  }
+
   public altaForm: FormGroup = this.fb.group({
     rfid_siniiga: ['S/N', [Validators.required]], // Por defecto S/N
     numero_fuego: [''], // 🐂 NUEVO: Número interno o de fierro
@@ -46,7 +62,10 @@ export class CattleDetailModalComponent implements OnInit {
     category: ['VACA', Validators.required],
     current_status: ['ACTIVO', Validators.required],
     current_weight_kg: ['', [Validators.required, Validators.min(1)]],
-    birth_date: [this.today, Validators.required]
+    birth_date: [this.today, Validators.required],
+    upp_origen: [''],
+    tb_test_date: [''],
+    br_test_date: ['']
   });
 
   public saludForm: FormGroup = this.fb.group({
@@ -77,7 +96,10 @@ export class CattleDetailModalComponent implements OnInit {
     category: ['VACA', Validators.required],
     current_status: ['ACTIVO', Validators.required],
     current_weight_kg: ['', [Validators.required, Validators.min(1)]],
-    birth_date: ['', Validators.required]
+    birth_date: ['', Validators.required],
+    upp_origen: [''],
+    tb_test_date: [''],
+    br_test_date: ['']
   });
 
   ngOnInit() {
@@ -97,7 +119,10 @@ export class CattleDetailModalComponent implements OnInit {
         category: this.selectedAnimal.category,
         current_status: this.selectedAnimal.current_status,
         current_weight_kg: this.selectedAnimal.current_weight_kg,
-        birth_date: this.selectedAnimal.birth_date?.split('T')[0] ?? ''
+        birth_date: this.selectedAnimal.birth_date?.split('T')[0] ?? '',
+        upp_origen: this.selectedAnimal.upp_origen ?? '',
+        tb_test_date: this.selectedAnimal.tb_test_date?.split('T')[0] ?? '',
+        br_test_date: this.selectedAnimal.br_test_date?.split('T')[0] ?? ''
       });
     }
   }
@@ -113,7 +138,7 @@ export class CattleDetailModalComponent implements OnInit {
     try {
       // 2. Enviar a PostgreSQL vía Meta-CRUD
       if (this.actionType === 'ALTA') {
-        const payload = this.altaForm.value;
+        const payload = this.sanitizeDates(this.altaForm.value);
         await this.cattleApi.createLivestock(payload);
       }
       else if (this.actionType === 'SALUD') {
@@ -145,7 +170,18 @@ export class CattleDetailModalComponent implements OnInit {
         });
       }
       else if (this.actionType === 'EDITAR') {
-        await this.cattleApi.updateLivestock(this.livestockId, this.editForm.value);
+        await this.cattleApi.updateLivestock(this.livestockId, this.sanitizeDates(this.editForm.value));
+      }
+      else if (this.actionType === 'SALIDA') {
+        const electronicRfid = this.selectedAnimal?.electronic_rfid;
+        if (!electronicRfid) throw new Error('Este animal no tiene RFID electrónico (bolo ruminal) registrado.');
+
+        const resultado = await this.cattleApi.procesarSalidaGanado(electronicRfid);
+        if (!resultado.success) {
+          alert(`⚠️ Salida rechazada por normativa: ${resultado.motivo}`);
+          this.closeModal(false); // No hubo cambios en BD, no hace falta recargar
+          return;
+        }
       }
 
       alert('✅ Registro guardado exitosamente en el Ledger.');
