@@ -144,10 +144,16 @@
                             (click)="openModal('SALUD', animal.rfid_siniiga, animal.id)">
                             Sanidad
                         </button>
-                        <button class="btn btn-sm btn-ghost-danger"
+                        <button class="btn btn-sm btn-ghost-danger me-1"
                             (click)="openModal('COSTOS', animal.rfid_siniiga, animal.id, animal)"
                             title="Ver costos del animal">
                             <i class="ti ti-cash"></i>
+                        </button>
+                        <button class="btn btn-sm btn-ghost-purple"
+                            (click)="openModal('SALIDA', animal.electronic_rfid, animal.id, animal)"
+                            [disabled]="!animal.electronic_rfid || animal.current_status === 'VENDIDO'"
+                            [title]="!animal.electronic_rfid ? 'Requiere bolo RFID (electronic_rfid) registrado' : 'Procesar salida (venta) del animal'">
+                            <i class="ti ti-truck-delivery"></i>
                         </button>
                     </td>
                 </tr>
