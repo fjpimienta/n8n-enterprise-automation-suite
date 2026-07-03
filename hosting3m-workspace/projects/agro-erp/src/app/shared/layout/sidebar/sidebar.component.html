@@ -84,21 +84,27 @@
                     </div>
                 </li>
 
+                @if (tenantService.activeTenant()?.role === 'ADMIN') {
                 <li class="nav-item">
-                    <a class="nav-link" routerLink="/admin" routerLinkActive="active" (click)="closeMenu()">
+                    <a class="nav-link" routerLink="/admin/tenants" routerLinkActive="active" (click)="closeMenu()">
                         <span class="nav-link-icon text-muted">
                             <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
                                 viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none">
                                 <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                <path d="M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" />
-                                <path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" />
-                                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                                <path d="M21 21v-2a4 4 0 0 0 -3 -3.85" />
+                                <path d="M3 21l18 0" />
+                                <path d="M9 8l1 0" />
+                                <path d="M9 12l1 0" />
+                                <path d="M9 16l1 0" />
+                                <path d="M14 8l1 0" />
+                                <path d="M14 12l1 0" />
+                                <path d="M14 16l1 0" />
+                                <path d="M5 21v-16a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v16" />
                             </svg>
                         </span>
-                        <span class="nav-link-title">Socios Inversores</span>
+                        <span class="nav-link-title">Unidades de Producción (UPP)</span>
                     </a>
                 </li>
+                }
 
                 @if (tenantService.activeTenant()?.role === 'ADMIN') {
                 <li class="nav-item">

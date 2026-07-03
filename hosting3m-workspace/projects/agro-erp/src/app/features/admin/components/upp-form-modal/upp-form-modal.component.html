@@ -1,0 +1,100 @@
+@if (isOpen()) {
+<div class="modal-backdrop fade show"></div>
+<div class="modal modal-blur fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">
+                    <i class="ti ti-building-warehouse me-2"></i>
+                    @if (isReadonly()) {
+                    Detalle de la UPP
+                    } @else {
+                    {{ selectedUpp() ? 'Actualizar Unidad de Producción Pecuaria' : 'Alta de Nueva UPP' }}
+                    }
+                </h5>
+                <button type="button" class="btn-close btn-close-white" (click)="onClose.emit()"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Nombre del Rancho <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control shadow-sm" [disabled]="isReadonly()"
+                        [ngModel]="uppData().company_name" (ngModelChange)="updateField('company_name', $event)"
+                        placeholder="Ej. Rancho San Isidro">
+                </div>
+
+                <hr class="my-4">
+                <h6 class="text-muted text-uppercase fw-bold mb-3">Padrón SINIIGA</h6>
+
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">Nombre del Productor</label>
+                        <input type="text" class="form-control shadow-sm" [disabled]="isReadonly()"
+                            [ngModel]="uppData().metadata?.nombre_productor"
+                            (ngModelChange)="updateMetadataField('nombre_productor', $event)"
+                            placeholder="Ej. Juan Carlos Hermida">
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">Clave UPP</label>
+                        <input type="text" class="form-control shadow-sm" [disabled]="isReadonly()"
+                            [ngModel]="uppData().metadata?.clave_upp"
+                            (ngModelChange)="updateMetadataField('clave_upp', $event)"
+                            placeholder="Ej. 23-001-0001">
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">Folio Holograma SINIIGA</label>
+                        <input type="text" class="form-control shadow-sm" [disabled]="isReadonly()"
+                            [ngModel]="uppData().metadata?.folio_holograma"
+                            (ngModelChange)="updateMetadataField('folio_holograma', $event)"
+                            placeholder="Ej. A0000001">
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">Fecha de Alta SINIIGA</label>
+                        <input type="date" class="form-control shadow-sm" [disabled]="isReadonly()"
+                            [ngModel]="uppData().metadata?.fecha_alta"
+                            (ngModelChange)="updateMetadataField('fecha_alta', $event)">
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">CURP</label>
+                        <input type="text" class="form-control shadow-sm text-uppercase" maxlength="18"
+                            [disabled]="isReadonly()"
+                            [ngModel]="uppData().metadata?.curp"
+                            (ngModelChange)="updateMetadataField('curp', $event)"
+                            placeholder="18 caracteres">
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">RFC</label>
+                        <input type="text" class="form-control shadow-sm text-uppercase" [disabled]="isReadonly()"
+                            [ngModel]="uppData().metadata?.rfc"
+                            (ngModelChange)="updateMetadataField('rfc', $event)"
+                            placeholder="Ej. HEPJ800101ABC">
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Superficie en Hectáreas</label>
+                    <input type="number" step="0.01" class="form-control shadow-sm" [disabled]="isReadonly()"
+                        [ngModel]="uppData().metadata?.superficie_ha"
+                        (ngModelChange)="updateMetadataField('superficie_ha', $event)"
+                        placeholder="Ej. 120.50">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary px-4 shadow-sm" (click)="onClose.emit()">
+                    {{ isReadonly() ? 'Cerrar' : 'Cancelar' }}
+                </button>
+                @if (!isReadonly()) {
+                <button class="btn btn-success px-4 shadow-sm" (click)="onSave.emit()">
+                    <i class="ti ti-device-floppy me-2"></i> Guardar Cambios
+                </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+}

@@ -85,6 +85,34 @@ export class AdminService {
     });
   }
 
+  /* Obtiene el detalle completo de una UPP (incluye metadata JSONB de SINIIGA) */
+  public getCompanyById(idCompany: number) {
+    const payload = {
+      entity: 'companys',
+      table_name: 'companys',
+      operation: 'getone',
+      action: 'getone',
+      filters: { id_company: idCompany }
+    };
+    return this.http.post<ApiResponse<Company>>(`${this.apiUrl_crud}/companys`, payload, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  /* Alta o actualización de una UPP (Rancho) */
+  public saveCompany(company: Partial<Company>, operation: 'insert' | 'update', idCompany?: number) {
+    const payload = {
+      entity: 'companys',
+      table_name: 'companys',
+      operation,
+      id_company: idCompany,
+      fields: company
+    };
+    return this.http.post<ApiResponse<Company>>(`${this.apiUrl_crud}/companys`, payload, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
   /* Users */
   public loadUsers() {
     const currentTenantId = this.tenantService.activeTenantId();
