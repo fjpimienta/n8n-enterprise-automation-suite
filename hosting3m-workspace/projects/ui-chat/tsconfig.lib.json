@@ -4,9 +4,15 @@
   "extends": "../../tsconfig.json",
   "compilerOptions": {
     "outDir": "../../out-tsc/lib",
+    "rootDir": "..",
     "declaration": true,
     "declarationMap": true,
-    "types": []
+    "types": [],
+    "paths": {
+      "core-auth": [
+        "dist/core-auth"
+      ]
+    }
   },
   "include": [
     "src/**/*.ts"
