@@ -33,7 +33,9 @@
         <h3 class="card-title text-dark font-weight-bold mb-0">Total de Cabezas: {{ totalHeads() }}</h3>
         <div class="text-muted text-sm">
             <div class="input-icon">
-                <input type="text" class="form-control form-control-rounded" placeholder="Buscar por Arete...">
+                <input type="text" class="form-control form-control-rounded"
+                    placeholder="Buscar por Arete, Fuego o Chip RFID..." [ngModel]="searchQuery()"
+                    (ngModelChange)="searchQuery.set($event)">
                 <span class="input-icon-addon">
                     <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
                         stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
@@ -44,18 +46,69 @@
                     </svg>
                 </span>
             </div>
+            @if (searchQuery()) {
+            <div class="small mt-1">{{ filteredCattleList().length }} / {{ totalHeads() }} resultados</div>
+            }
         </div>
     </div>
     <div class="table-responsive">
         <table class="table card-table table-vcenter text-nowrap">
             <thead class="bg-light">
                 <tr>
-                    <th>Arete (RFID)</th>
-                    <th>Socio Dueño</th>
-                    <th>Categoría</th>
-                    <th>Modelo de Negocio</th>
-                    <th class="text-end">Peso Actual</th>
-                    <th>Estatus Actual</th>
+                    <th class="cursor-pointer user-select-none" (click)="toggleSort('rfid_siniiga')">
+                        Arete (RFID)
+                        @if (sortColumn() === 'rfid_siniiga') {
+                        <i class="ti ms-1" [class.ti-sort-ascending]="sortDirection() === 'asc'"
+                            [class.ti-sort-descending]="sortDirection() === 'desc'"></i>
+                        } @else {
+                        <i class="ti ti-arrows-sort ms-1 text-muted opacity-50"></i>
+                        }
+                    </th>
+                    <th class="cursor-pointer user-select-none" (click)="toggleSort('tenant_name')">
+                        Socio Dueño
+                        @if (sortColumn() === 'tenant_name') {
+                        <i class="ti ms-1" [class.ti-sort-ascending]="sortDirection() === 'asc'"
+                            [class.ti-sort-descending]="sortDirection() === 'desc'"></i>
+                        } @else {
+                        <i class="ti ti-arrows-sort ms-1 text-muted opacity-50"></i>
+                        }
+                    </th>
+                    <th class="cursor-pointer user-select-none" (click)="toggleSort('category')">
+                        Categoría
+                        @if (sortColumn() === 'category') {
+                        <i class="ti ms-1" [class.ti-sort-ascending]="sortDirection() === 'asc'"
+                            [class.ti-sort-descending]="sortDirection() === 'desc'"></i>
+                        } @else {
+                        <i class="ti ti-arrows-sort ms-1 text-muted opacity-50"></i>
+                        }
+                    </th>
+                    <th class="cursor-pointer user-select-none" (click)="toggleSort('business_model')">
+                        Modelo de Negocio
+                        @if (sortColumn() === 'business_model') {
+                        <i class="ti ms-1" [class.ti-sort-ascending]="sortDirection() === 'asc'"
+                            [class.ti-sort-descending]="sortDirection() === 'desc'"></i>
+                        } @else {
+                        <i class="ti ti-arrows-sort ms-1 text-muted opacity-50"></i>
+                        }
+                    </th>
+                    <th class="text-end cursor-pointer user-select-none" (click)="toggleSort('current_weight_kg')">
+                        Peso Actual
+                        @if (sortColumn() === 'current_weight_kg') {
+                        <i class="ti ms-1" [class.ti-sort-ascending]="sortDirection() === 'asc'"
+                            [class.ti-sort-descending]="sortDirection() === 'desc'"></i>
+                        } @else {
+                        <i class="ti ti-arrows-sort ms-1 text-muted opacity-50"></i>
+                        }
+                    </th>
+                    <th class="cursor-pointer user-select-none" (click)="toggleSort('current_status')">
+                        Estatus Actual
+                        @if (sortColumn() === 'current_status') {
+                        <i class="ti ms-1" [class.ti-sort-ascending]="sortDirection() === 'asc'"
+                            [class.ti-sort-descending]="sortDirection() === 'desc'"></i>
+                        } @else {
+                        <i class="ti ti-arrows-sort ms-1 text-muted opacity-50"></i>
+                        }
+                    </th>
                     <th class="text-end">Acciones</th>
                 </tr>
             </thead>
@@ -67,7 +120,7 @@
                         <div class="mt-2">Sincronizando con Ledger Criptográfico...</div>
                     </td>
                 </tr>
-                } @else if (cattleList().length === 0) {
+                } @else if (filteredCattleList().length === 0) {
                 <tr>
                     <td colspan="7" class="text-center py-5 text-muted">
                         <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-database-off"
@@ -82,11 +135,14 @@
                             <path d="M20 13.914v-9.914" />
                             <path d="M3 3l18 18" />
                         </svg>
-                        <div class="mt-2">No hay cabezas de ganado registradas en este rancho.</div>
+                        <div class="mt-2">
+                            {{ searchQuery() ? 'Ningún animal coincide con la búsqueda.' : 'No hay cabezas de ganado
+                            registradas en este rancho.' }}
+                        </div>
                     </td>
                 </tr>
                 } @else {
-                @for (animal of cattleList(); track animal.id) {
+                @for (animal of filteredCattleList(); track animal.id) {
                 <tr>
                     <td>
                         <div class="font-monospace font-weight-bold fs-3"
