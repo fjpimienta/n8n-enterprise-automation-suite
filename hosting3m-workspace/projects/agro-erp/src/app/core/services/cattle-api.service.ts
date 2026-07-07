@@ -27,6 +27,8 @@ export class CattleApiService {
         try {
             // 🚀 SOLUCIÓN DEFENSIVA: Mandamos la propiedad de ambas formas (raíz y estructurada)
             // por si el Meta-CRUD de n8n espera la misma anatomía que el 'insert' o un query directo.
+            // Nota: el workflow de n8n para vw_cattle_kpi no aplica ORDER BY dinámico, por eso el
+            // orden se resuelve de forma determinística en el cliente (ver CattleListComponent).
             const payload = {
                 operation: 'getall',
                 tenant_id: Number(currentTenantId),
@@ -34,8 +36,6 @@ export class CattleApiService {
                     tenant_id: Number(currentTenantId)
                 }
             };
-
-            // this.logger.log(`📡 [CattleAPI] Solicitando vw_cattle_kpi para Tenant ID: ${currentTenantId}`, payload);
 
             const res: any = await firstValueFrom(
                 this.http.post<any>(this.apiUrl_crud + '/vw_cattle_kpi', payload)
