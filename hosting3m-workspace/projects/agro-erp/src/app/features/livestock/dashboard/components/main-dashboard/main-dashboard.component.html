@@ -222,8 +222,16 @@
             No hay gastos vinculados a animales específicos en este periodo.
         </div>
         } @else {
+        <div class="card-body border-bottom py-3">
+            <div class="text-muted">Mostrar <div class="mx-2 d-inline-block"><select class="form-select form-select-sm"
+                        [value]="pageSize()" (change)="changePageSize($event)">
+                        <option value="10">10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                    </select></div> Costos por Animal</div>
+        </div>
         <div class="table-responsive">
-            <table class="table card-table table-vcenter table-hover mb-0">
+            <table class="table card-table table-vcenter text-nowrap datatable table-hover mb-0">
                 <thead>
                     <tr>
                         <th>#</th>
