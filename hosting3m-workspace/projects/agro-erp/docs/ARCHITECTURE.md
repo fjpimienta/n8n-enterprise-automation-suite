@@ -3,8 +3,8 @@
 ## 📝 Descripción
 
 **Project:** Hosting3M Automation Suite (Agro ERP)
-**Version:** v1.7.0 (Multi-Domain & Hybrid Telemetry)
-**Stack:** Angular 21 (Signals) | n8n (API Gateway / MCP) | PostgreSQL (JSONB & Views) | Tabler UI
+**Version:** v1.8.0 (Multi-Domain, Hybrid Telemetry & PL/pgSQL Engine)
+**Stack:** Angular 21 (Signals) | n8n (API Gateway / MCP) | PostgreSQL (JSONB, Views & PL/pgSQL) | Tabler UI
 **Author:** Francisco Jesus Pérez Pimienta
 
 ## 📝 1. Estructura del Workspace (Feature-Driven Architecture)
@@ -65,13 +65,18 @@ graph TD
     end
     
     subgraph "Persistence & BI Layer (PostgreSQL 15)"
-        Table_Cattle[("Raw Tables: cattle_livestock, health")]
+        Table_Cattle[("Raw Tables: cattle_livestock, health, weight, expenses")]
+        Table_Historico[("Audit Log: historico_movimientos")]
         Table_Palm[("Hybrid Tables: agriculture_telemetry (JSONB)")]
         View_BI{{"BI Engine: vw_cattle_kpi, vw_palm_kpi"}}
+        SP_Salida["PL/pgSQL: sp_procesar_salida_ganado"]
         
         Router -->|Insert/Update| Table_Cattle
         Router -->|Insert/Update| Table_Palm
         Router -->|Select/GetAll| View_BI
+        Router -->|model: salida_ganado| SP_Salida
+        SP_Salida -->|UPDATE status=VENDIDO| Table_Cattle
+        SP_Salida -->|INSERT VENTA| Table_Historico
     end
 
 ```
@@ -103,7 +108,8 @@ A continuación se detalla el comportamiento del motor para los modelos vigentes
 
 * **RBAC Operativo:**
 * *Lectura:* `ADMIN, EDITOR, CUSTOMER`
-* *Escritura/Borrado:* `ADMIN, EDITOR`
+* *Escritura (Insert/Update):* `ADMIN, EDITOR`
+* *Borrado:* `ADMIN` (exclusivo)
 
 
 * **Declarative Joins:** Hidrata automáticamente el campo `tenant_id` hacia la tabla `companys` para retornar el alias comercial bajo la propiedad `tenant_name`.
@@ -135,10 +141,22 @@ A continuación se detalla el comportamiento del motor para los modelos vigentes
 
 
 
+### 🚪 Modelo: `salida_ganado` (ID: 46)
+
+* **Naturaleza:** Modelo Meta-CRUD atípico — `table_name` apunta a una función PL/pgSQL (`sp_procesar_salida_ganado`) en lugar de una tabla física, y `primary_key` es `electronic_rfid`.
+* **Permisos de Operación:** `INSERT` únicamente (invocación de la rutina, no persistencia directa).
+* **RBAC Operativo:**
+* *Invocación:* `ADMIN, EDITOR`
+* *Update/Delete:* `ADMIN` (sin efecto práctico, el modelo no expone esas operaciones)
+
+
+* **Efecto Colateral:** Cada invocación exitosa muta `cattle_livestock` (`current_status = VENDIDO`, `upp_origen = NULL`) e inserta un registro `VENTA` en `historico_movimientos`. Ver [`DATABASE_SCHEMA.md`](./DATABASE_SCHEMA.md#sp_procesar_salida_ganadop_electronic_rfid) para las reglas normativas de rechazo (TB/Brucelosis > 60 días).
+* **Registrado:** 2026-07-02, como parte del Sprint 1 de trazabilidad de salida de ganado (300 cabezas / UPP La Bendición, UPP 54).
+
 ### 📂 Modelos Secundarios:
 
-* **`cattle_tenants` (ID: 36):** Reservado estrictamente para operaciones de nivel `ADMIN`. Controla las organizaciones ganaderas, uniones o instancias gubernamentales.
-* **`cattle_task_evidence` (ID: 40):** Permite el almacenamiento de URLs de auditoría física (fotografías/videos de campo) vinculándolas al ciclo operativo del animal.
+* **`cattle_tenants` (ID: 36):** Controla las organizaciones ganaderas, uniones o instancias gubernamentales. *Lectura:* `ADMIN, EDITOR`. *Escritura/Borrado:* `ADMIN` exclusivo.
+* **`cattle_task_evidence` (ID: 40):** Permite el almacenamiento de URLs de auditoría física (fotografías/videos de campo) vinculándolas al ciclo operativo del animal. CRUD completo, lectura abierta a `CUSTOMER`.
 
 ```
 
