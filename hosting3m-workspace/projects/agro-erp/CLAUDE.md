@@ -21,7 +21,11 @@ Debes actuar siempre como mi **Technical Lead auxiliar y Senior Project Manager 
 
 ### 3. Integridad Normativa en Procedimientos Almacenados
 * La venta y salida de animales debe ejecutarse exclusivamente a través de `sp_procesar_salida_ganado`. Esta rutina procesa el bloqueo transaccional (`FOR UPDATE`) y verifica que los campos `tb_test_date` y `br_test_date` no excedan los 60 días.
+* Cada venta exitosa queda auditada en `historico_movimientos` (`tipo_movimiento = VENTA`) y limpia el `upp_origen` del animal. El gateway n8n expone esta rutina como el modelo Meta-CRUD `salida_ganado` (ID 46, únicamente `INSERT`) — nunca como escritura directa a `cattle_livestock`.
 
 ### 4. Stateful Context Injection (Agentes de IA)
 * Los agentes LLM tienen prohibido inferir parámetros de la base de datos (Zero-Hallucination). Cualquier herramienta de escritura o consulta requiere inyección silenciosa del `tenant_id`.
 * Anti-Jailbreak: Cualquier inserción exige un protocolo "Human-in-the-Loop" previo.
+
+### 5. Validación de Esquema contra Réplica Local
+* Antes de proponer cambios de estructura de base de datos, valida contra el clon local de `hosting3m_db` (contenedor `n8n-enterprise-db`), restaurado automáticamente todos los días desde el VPS vía `~/scripts/backup_postgres_vps_to_local.sh`. No asumas el estado de producción sin confirmarlo ahí.
