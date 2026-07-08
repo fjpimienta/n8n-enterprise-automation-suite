@@ -19,6 +19,7 @@ Desarrollada como una **Angular 21 SPA** estructurada por dominios (*Feature-Dri
 ### 2. 🧠 Server-Side Business Intelligence (BI) y Meta-CRUD transaccional
 * **Dynamic Gateway:** La función `execute_metacrud_write` orquesta todas las inyecciones de datos (INSERT/UPDATE) desde n8n de forma dinámica, validando permisos contra la tabla `crud_models`.
 * **Reglas Sanitarias Estrictas:** El procedimiento `sp_procesar_salida_ganado` bloquea ventas si el animal no cuenta con pruebas de Tuberculosis o Brucelosis vigentes (menos de 60 días de antigüedad).
+* **Auditoría de Movimientos:** Cada venta, baja o traslado queda registrado de forma inmutable en `historico_movimientos`, preservando el `upp_origen` (rancho/centro de costos) del animal al momento del evento.
 * **Sincronización de Biomasa:** Triggers en base de datos (`update_current_weight`) automatizan la actualización de la biomasa actual del animal cada vez que se registra un pesaje.
 
 ### 3. 🏢 Escalabilidad Multi-Dominio (Context Switcher)
