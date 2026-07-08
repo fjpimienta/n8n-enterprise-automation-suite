@@ -1,46 +1,108 @@
-# 🗄️ Database Architecture & Meta-CRUD Schema
+# 🗄️ Database Schema & Baseline (v2)
 
-## 📝 Resumen Ejecutivo
-Este documento define la estructura de persistencia centralizada para el módulo Agro ERP dentro de la Hosting3M Automation Suite. El sistema utiliza PostgreSQL 15+ con un modelo de datos híbrido: relaciones estrictas para la integridad y control de acceso (RBAC), y columnas `JSONB` (`metadata`, `medicines_json`) para absorber la variabilidad de la telemetría agrícola, datos de padrones oficiales y registros médicos. Todo el acceso a datos está orquestado por el router dinámico `crud_models` vía n8n (Meta-CRUD v3).
+## 📌 Core Directives
+* **RDBMS:** PostgreSQL
+* **Security:** Tenant isolation via `tenant_id` (`companys.id_company`).
+* **Primary Keys:** UUID v4 default for high-concurrency environments.
 
-## 🏗️ Diccionario de Datos (Módulo Agro/Cattle)
+## 🏗️ Cattle Management Subsystem
 
-### 1. Entidades Principales (Core & Multi-Tenant)
+### `cattle_livestock` (Core Entity)
+Registry of biomass with embedded compliance rules.
+* `id` (UUID, PK)
+* `tenant_id` (INT, FK -> `companys`)
+* `rfid_siniiga` (VARCHAR, UNIQUE) - Secondary Metadata (physical SINIIGA ear tag; loses reliability due to physical loss)
+* `electronic_rfid` (VARCHAR, UNIQUE) - Primary Operational Key (rumen bolus / subcutaneous microchip)
+* `numero_fuego` (VARCHAR) - Physical brand/iron mark identifier
+* `business_model` (ENUM: CRIA, ENGORDA, REPRODUCCION)
+* `category` (ENUM: VACA, TORO, NOVILLO, BECERRA, BECERRO, BUFALA, BUFALO, BUCERRO, BUCERRA, BORREGO, BORREGA)
+* `current_status` (ENUM: ACTIVO, EN_TRANSITO, VENDIDO, BAJA_MORTANDAD, PREÑADA, VACÍA, DESARROLLO, RIESGO, FINALIZADO, CUARENTENA)
+* `birth_date` (DATE)
+* `current_weight_kg` (NUMERIC 10,2) - Auto-updated via trigger.
+* `metadata` (JSONB) - Flexible attribute bag for vertical-specific data not worth normalizing.
+* `species` (VARCHAR, Default: 'BOVINO')
+* `upp_origen` (VARCHAR) - Origin ranch / cost center (e.g. "UPP La Bendición"). Automatically set to `NULL` on exit (`VENDIDO`) by `sp_procesar_salida_ganado`.
+* `tb_test_date` / `br_test_date` (DATE) - Compliance metrics. Regulatory validity window: 60 days.
 
-* **`companys` (Inquilinos / UPPs / Ranchos Maestros)**
-    * **Descripción:** Tabla maestra que gestiona el aislamiento Multi-Tenant y Multi-Dominio de todo el ecosistema (Hotelería, Ganadería, etc.).
-    * **Mapeo Agropecuario:** El `company_name` funge como el Nombre del Rancho, y el campo `industry` se clasifica como `"GANADERIA"`.
-    * **Soporte Híbrido (JSONB):** Incorpora la columna `metadata` para inyectar datos específicos de la vertical sin sobre-normalizar la base de datos relacional. Aquí reside la parametrización de SINIIGA: `clave_upp`, `folio_holograma`, `curp`, `rfc`, `superficie_ha`, y `fecha_alta`.
-    * **Meta-CRUD Roles:** SELECT, INSERT, UPDATE, DELETE, GETONE, GETALL. (Operaciones restringidas a ADMIN y EDITOR).
+### `cattle_weight_logs` (Telemetry)
+* `id` (UUID, PK)
+* `livestock_id` (UUID, FK -> `cattle_livestock`, `ON DELETE CASCADE`)
+* `weight_kg` (NUMERIC 10,2) - Triggers `update_current_weight()` on insert.
+* `log_date` (TIMESTAMP)
+* `source_device` (VARCHAR) - Identifies the originating scale/RFID reader (IoT ingestion).
 
-* **`cattle_livestock` (Inventario de Biomasa)**
-    * **Descripción:** Registro maestro de animales. Soporta múltiples especies biológicas y modelos de negocio transaccionales (CRIA, ENGORDA).
-    * **Campos Clave:** `id` (UUID), `tenant_id` (FK a `companys`), `rfid_siniiga` (Unique), `electronic_rfid` (Unique), `numero_fuego`, `current_status`.
-    * **Hardware de Trazabilidad:** Optimizado para lectura de Bolo Ruminal (Cápsula Cerámica) como identificador primario en campo para mitigar la pérdida física de aretes plásticos.
-    * **Check Constraints:** Valida de forma nativa estatus operativos críticos a nivel de motor (ACTIVO, PREÑADA, VACÍA, FINALIZADO).
+### `cattle_health_logs` (Sanitary Events)
+* `id` (UUID, PK)
+* `livestock_id` (UUID, FK -> `cattle_livestock`, `ON DELETE CASCADE`)
+* `event_type` (VARCHAR) - e.g. `PALPACION`, vaccination, diagnosis.
+* `description` (TEXT)
+* `medicines_json` (JSONB) - Non-relational dosage/treatment payload.
+* `event_date` (TIMESTAMP)
+* Immutable by design: exposed via Meta-CRUD as `SELECT, INSERT, GETALL` only (no `UPDATE`/`DELETE`, for audit integrity).
 
-### 2. Entidades Transaccionales (Logs & Telemetry)
+### `cattle_expenses` (Opex Tracking)
+* `id` (UUID, PK)
+* `tenant_id` (INT, FK -> `companys`)
+* `livestock_id` (UUID, FK -> `cattle_livestock`, `ON DELETE SET NULL`)
+* `health_event_id` (UUID, FK -> `cattle_health_logs`, `ON DELETE SET NULL`) - Optional link to the sanitary event that generated the cost.
+* `expense_date` (DATE), `category` (VARCHAR), `amount` (NUMERIC 12,2), `quantity` (NUMERIC 10,2), `unit_measure` (VARCHAR), `description` (TEXT), `receipt_url` (TEXT)
 
-* **`cattle_health_logs` (Eventos Sanitarios)**
-    * **Descripción:** Registra intervenciones médicas, palpaciones y diagnósticos reproductivos.
-    * **Campos Clave:** `event_type`, `event_date`, `medicines_json` (JSONB para flexibilidad de dosificación de tratamientos).
-    * **Delete Rule:** `ON DELETE CASCADE` asociado al `livestock_id`.
+### `cattle_task_evidence` (Field Audit Trail)
+* `id` (UUID, PK)
+* `livestock_id` (UUID, FK -> `cattle_livestock`, `ON DELETE SET NULL`)
+* `task_name` (VARCHAR), `evidence_url` (TEXT)
+* `status` (ENUM: PENDIENTE, COMPLETADO, RECHAZADO)
+* `uploaded_by` (VARCHAR)
 
-* **`cattle_weight_logs` (Control de Biomasa)**
-    * **Descripción:** Registro histórico inmutable de pesajes para el cálculo de la Ganancia Diaria de Peso (ADG).
-    * **Campos Clave:** `weight_kg`, `log_date`, `source_device`.
+### `cattle_tenants` (Ranch / Organization Catalog)
+* `id` (UUID, PK)
+* `tax_id` (VARCHAR), `name` (VARCHAR)
+* `org_type` (ENUM: GANADERO, UNION, GOBIERNO)
+* Reserved for `ADMIN`-only writes; `SELECT` open to `ADMIN, EDITOR`.
 
-* **`cattle_expenses` (OPEX / Gasto Operativo)**
-    * **Descripción:** Registra costos directos vinculados a un animal específico o al Rancho en general para el cálculo de rentabilidad por kilo.
-    * **Campos Clave:** `amount`, `category`, `health_event_id` (Opcional, FK a `cattle_health_logs`).
+### `historico_movimientos` (Movement Audit Log)
+* `id` (UUID, PK)
+* `livestock_id` (UUID, FK -> `cattle_livestock`)
+* `electronic_rfid` (VARCHAR)
+* `tenant_id` (INT)
+* `tipo_movimiento` (ENUM: VENTA, BAJA_MORTANDAD, TRASLADO)
+* `upp_origen_anterior` (VARCHAR) - Snapshot of the ranch of origin at the moment of the movement.
+* `fecha_registro` (TIMESTAMP)
+* Write-only side effect of `sp_procesar_salida_ganado` (`VENTA` case); not exposed as a direct Meta-CRUD model.
 
-* **`cattle_task_evidence` (Trazabilidad de Auditoría)**
-    * **Descripción:** Almacena evidencia multimedia de tareas ejecutadas en campo (fotografías/videos).
-    * **Campos Clave:** `task_name`, `evidence_url`, `status` (PENDIENTE, COMPLETADO, RECHAZADO).
+### `agriculture_telemetry` (Agriculture Module - Hybrid Table)
+* `id` (UUID, PK)
+* `tenant_id` (INT, FK -> `companys`)
+* `zone_name` (VARCHAR), `activity_type` (VARCHAR)
+* `execution_date` (TIMESTAMP)
+* `telemetry_data` (JSONB, GIN-indexed) - Drone/sensor payloads without a rigid schema.
+* Not yet registered in `crud_models`; reserved for the Agriculture domain rollout.
 
-## ⚙️ Meta-CRUD Routing Configuration (n8n v3)
-La tabla `crud_models` delega todas las validaciones de entrada, RBAC y operaciones al API Gateway, garantizando una arquitectura de *Zero-Hallucination* al no exponer endpoints rígidos.
+## 📊 Views (BI Layer)
 
-* **Validación Estricta de Payload (`schema_json`):** Bloquea inyecciones de parámetros no deseados. Campos dinámicos como `metadata` en la tabla `companys` están explícitamente habilitados (whitelisted) en la propiedad `allowed_fields` para permitir el tráfico de objetos anidados desde el cliente Angular.
-* **Aislamiento de Inyección IOT:** Entidades como `cattle_weight_logs` habilitan el rol secundario `IOT` para la ingesta automatizada de telemetría (básculas/lectores) sin requerir privilegios de `ADMIN`.
-* **Joins Declarativos Multidireccionales:** Configurados a nivel del motor en n8n. Entidades como `cattle_expenses` ejecutan *joins* automáticos con `cattle_livestock` y `cattle_health_logs` para retornar objetos consolidados al cliente sin carga computacional en el frontend.
+### `vw_cattle_kpi`
+* **Source:** `cattle_livestock` `LEFT JOIN` `companys`.
+* **Computed columns:**
+  * `tenant_name` (from `companys.company_name`)
+  * `adg_lifetime_kg` - `current_weight_kg` / age in days since `birth_date`
+  * `last_palpation_result` / `current_gestation_days` - latest `PALPACION` entry pulled from `cattle_health_logs.medicines_json`
+  * Also passes through `species`, `upp_origen`, `tb_test_date`, `br_test_date`.
+* ⚠️ **Column order constraint:** `CREATE OR REPLACE VIEW` requires existing columns to keep their name/position; new columns can only be appended at the end (see migration `004_vw_cattle_kpi_add_salida_fields.sql`).
+
+## ⚙️ Stored Procedures & Triggers (Business Logic Layer)
+
+### `execute_metacrud_write`
+* **Purpose:** Centralized Zero-Compute Client mutation gateway.
+* **Mechanism:** Validates against `crud_models` whitelist before executing dynamic INSERT/UPDATE.
+
+### `sp_procesar_salida_ganado(p_electronic_rfid)`
+* **Purpose:** Business rule enforcement for livestock checkout (sale).
+* **Mechanism:**
+  * Uses `FOR UPDATE` row-level locking on `cattle_livestock` to prevent double-processing from concurrent RFID reads.
+  * **Hard errors** (`RAISE EXCEPTION`, `ERRCODE` P0002/P0001): RFID not registered, or already `VENDIDO`.
+  * **Regulatory rejection** (returns `{"success": false, "motivo": ...}`, no exception): `tb_test_date` or `br_test_date` missing or older than 60 days. This lets the n8n gateway distinguish a "business rejection" (triggers a WhatsApp alert) from a real data error.
+  * **On success:** sets `current_status = 'VENDIDO'`, `upp_origen = NULL`, and inserts a `VENTA` row into `historico_movimientos`.
+
+### `update_current_weight()`
+* **Purpose:** Ensures `cattle_livestock.current_weight_kg` is an exact reflection of the latest `cattle_weight_logs` entry without client-side computation.
+* **Mechanism:** `AFTER INSERT` trigger on `cattle_weight_logs`.
