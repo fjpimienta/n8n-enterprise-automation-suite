@@ -102,6 +102,28 @@
     <div class="card-body p-0">
         @if (activeSubTab() === 'RESUMEN') {
         <div class="p-4 rounded-bottom">
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header border-bottom-0 pb-0 d-flex align-items-center justify-content-between">
+                    <h3 class="card-title">Balance por UPP: Capitalización vs Gastos</h3>
+                    <span class="font-weight-bold" [class.text-success]="balanceNetoUpp() >= 0"
+                        [class.text-danger]="balanceNetoUpp() < 0">
+                        Balance Neto: {{ balanceNetoUpp() | currency:'MXN':'symbol-narrow':'1.0-0' }}
+                    </span>
+                </div>
+                <div class="card-body">
+                    @if (uppBalanceSummary().length === 0) {
+                    <div class="text-center text-muted py-4">No hay datos de UPP para este periodo.</div>
+                    } @else {
+                    <apx-chart [series]="uppChartOptions().series" [xaxis]="uppChartOptions().xaxis"
+                        [colors]="uppChartOptions().colors"
+                        [chart]="{ type: 'bar', height: 320, toolbar: { show: false }, background: 'transparent' }"
+                        [plotOptions]="{ bar: { borderRadius: 4, columnWidth: '55%' } }"
+                        [dataLabels]="{ enabled: false }" [legend]="{ show: true, position: 'top' }">
+                    </apx-chart>
+                    }
+                </div>
+            </div>
+
             @if (activeTab() === 'CRIA') {
             <app-reproductive-dashboard [cattleData]="filteredCattleList()"></app-reproductive-dashboard>
             }
@@ -222,6 +244,13 @@
             No hay gastos vinculados a animales específicos en este periodo.
         </div>
         } @else {
+        <div class="card-body border-bottom">
+            <h3 class="card-title">Balance por Animal (Top 10 con más gasto)</h3>
+            <apx-chart [series]="animalBalanceChartOptions().series" [xaxis]="animalBalanceChartOptions().xaxis"
+                [chart]="{ type: 'bar', height: 300, toolbar: { show: false }, background: 'transparent' }"
+                [plotOptions]="{ bar: { borderRadius: 4, columnWidth: '50%', colors: { ranges: [{ from: -999999999, to: 0, color: '#d63939' }, { from: 0, to: 999999999, color: '#2fb344' }] } } }"
+                [dataLabels]="{ enabled: false }"> </apx-chart>
+        </div>
         <div class="card-body border-bottom py-3">
             <div class="text-muted">Mostrar <div class="mx-2 d-inline-block"><select class="form-select form-select-sm"
                         [value]="pageSize()" (change)="changePageSize($event)">
@@ -242,6 +271,8 @@
                         <th class="text-end">Registros</th>
                         <th class="text-end">Gasto Total</th>
                         <th class="text-end">Costo / kg</th>
+                        <th class="text-end">Valor Estimado</th>
+                        <th class="text-end">Balance</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -259,6 +290,13 @@
                         <td class="text-end text-orange">
                             ${{ row.costPerKg | number:'1.2-2' }}/kg
                         </td>
+                        <td class="text-end font-weight-bold text-primary">
+                            ${{ row.valorEstimado | number:'1.2-2' }}
+                        </td>
+                        <td class="text-end font-weight-bold" [class.text-success]="row.balance >= 0"
+                            [class.text-danger]="row.balance < 0">
+                            ${{ row.balance | number:'1.2-2' }}
+                        </td>
                     </tr>
                     }
                 </tbody>
@@ -268,6 +306,8 @@
                         <td class="text-end font-weight-bold text-danger">
                             ${{ totalAnimalCosts() | number:'1.2-2' }}
                         </td>
+                        <td></td>
+                        <td></td>
                         <td></td>
                     </tr>
                 </tfoot>
