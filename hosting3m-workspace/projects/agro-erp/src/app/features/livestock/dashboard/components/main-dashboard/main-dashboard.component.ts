@@ -229,6 +229,7 @@ export class MainDashboardComponent implements OnInit {
       .map(([livestockId, stats]) => {
         const animal = this.cattleList().find(a => a.id === livestockId);
         const weightKg = Number(animal?.current_weight_kg || 0);
+        const valorEstimado = weightKg * this.PRECIO_KILO;
         return {
           livestockId,
           rfid:        animal?.rfid_siniiga ?? 'Desconocido',
@@ -237,7 +238,9 @@ export class MainDashboardComponent implements OnInit {
           weightKg,
           total:       stats.total,
           count:       stats.count,
-          costPerKg:   weightKg > 0 ? stats.total / weightKg : 0
+          costPerKg:   weightKg > 0 ? stats.total / weightKg : 0,
+          valorEstimado,
+          balance:     valorEstimado - stats.total
         };
       })
       .sort((a, b) => b.total - a.total);
@@ -245,5 +248,95 @@ export class MainDashboardComponent implements OnInit {
 
   public totalAnimalCosts = computed(() =>
     this.animalCostSummary().reduce((sum, row) => sum + row.total, 0)
+  );
+
+  /** Top 10 animales con más gasto registrado: balance (valor estimado - gasto) para detectar rendimiento negativo */
+  public animalBalanceChartOptions = computed(() => {
+    const rows = this.animalCostSummary().slice(0, 10);
+    return {
+      series: [{
+        name: 'Balance',
+        data: rows.map(r => Number(r.balance.toFixed(2)))
+      }],
+      xaxis: {
+        categories: rows.map(r => r.numero_fuego || `...${r.rfid.slice(-4)}`),
+        labels: { rotate: -45, style: { cssClass: 'text-muted font-monospace' } }
+      }
+    };
+  });
+
+  private static readonly SIN_UPP = 'Sin UPP Asignada';
+  private static readonly GASTOS_GENERALES = 'Gastos Generales';
+
+  /**
+   * Balance por UPP: cruza capitalización del hato (agrupado por upp_origen) contra los gastos
+   * vinculados a esos mismos animales. Los gastos sin livestock_id (o cuyo animal no tiene UPP
+   * asignada) no pueden atribuirse a una UPP real y se agrupan aparte en "Gastos Generales".
+   */
+  public uppBalanceSummary = computed(() => {
+    const cattle = this.filteredCattleList();
+    const expenses = this.filteredExpensesList();
+
+    const grouped = new Map<string, { capitalizacion: number; cabezas: number; gasto: number }>();
+
+    for (const animal of cattle) {
+      const upp = (animal.upp_origen && String(animal.upp_origen).trim()) || MainDashboardComponent.SIN_UPP;
+      const entry = grouped.get(upp) ?? { capitalizacion: 0, cabezas: 0, gasto: 0 };
+      entry.capitalizacion += Number(animal.current_weight_kg || 0) * this.PRECIO_KILO;
+      entry.cabezas += 1;
+      grouped.set(upp, entry);
+    }
+
+    let gastosGenerales = 0;
+    for (const expense of expenses) {
+      const animal = expense.livestock_id ? cattle.find(a => a.id === expense.livestock_id) : null;
+      const upp = animal?.upp_origen && String(animal.upp_origen).trim();
+
+      if (upp) {
+        const entry = grouped.get(upp) ?? { capitalizacion: 0, cabezas: 0, gasto: 0 };
+        entry.gasto += Number(expense.amount || 0);
+        grouped.set(upp, entry);
+      } else {
+        gastosGenerales += Number(expense.amount || 0);
+      }
+    }
+
+    const rows = Array.from(grouped.entries())
+      .map(([upp, v]) => ({
+        upp,
+        capitalizacion: v.capitalizacion,
+        gasto:          v.gasto,
+        cabezas:        v.cabezas,
+        balance:        v.capitalizacion - v.gasto
+      }))
+      .sort((a, b) => b.capitalizacion - a.capitalizacion);
+
+    if (gastosGenerales > 0) {
+      rows.push({
+        upp: MainDashboardComponent.GASTOS_GENERALES,
+        capitalizacion: 0,
+        gasto: gastosGenerales,
+        cabezas: 0,
+        balance: -gastosGenerales
+      });
+    }
+
+    return rows;
+  });
+
+  public uppChartOptions = computed(() => {
+    const rows = this.uppBalanceSummary();
+    return {
+      series: [
+        { name: 'Capitalización', data: rows.map(r => Number(r.capitalizacion.toFixed(2))) },
+        { name: 'Gasto', data: rows.map(r => Number(r.gasto.toFixed(2))) }
+      ],
+      xaxis: { categories: rows.map(r => r.upp) },
+      colors: ['#2fb344', '#d63939']
+    };
+  });
+
+  public balanceNetoUpp = computed(() =>
+    this.uppBalanceSummary().reduce((sum, row) => sum + row.balance, 0)
   );
 }
