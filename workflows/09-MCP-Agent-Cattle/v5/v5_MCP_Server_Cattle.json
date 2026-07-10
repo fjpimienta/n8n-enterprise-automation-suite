@@ -45,10 +45,10 @@
         "descriptionType": "manual",
         "toolDescription": "Registra el peso actual de un animal. REQUIERE obligatoriamente: livestock_id y weight_kg. Solo ejecuta esto si ya confirmaste el UUID y el peso con el usuario.",
         "operation": "executeQuery",
-        "query": "INSERT INTO cattle_weight_logs (livestock_id, weight_kg, log_date, source_device)\nSELECT $1::uuid, $2::numeric, CURRENT_TIMESTAMP, 'AI_Agent'\nWHERE EXISTS (\n  SELECT 1 FROM cattle_livestock l\n  JOIN user_companies uc ON uc.id_company = l.tenant_id\n  JOIN users u ON u.email = uc.email\n  WHERE l.id = $1::uuid\n    AND u.email = $3::text\n    AND u.role = 'ADMIN'\n    AND uc.is_active = true\n)\nRETURNING id, weight_kg, log_date;",
+        "query": "INSERT INTO cattle_weight_logs (livestock_id, weight_kg, log_date, source_device)\nVALUES ($1::uuid, $2::numeric, CURRENT_TIMESTAMP, 'WhatsApp_AI')\nRETURNING id, weight_kg, log_date;",
         "options": {
           "queryBatching": "transaction",
-          "queryReplacement": "={{ [ $fromAI('livestock_id', 'UUID del animal', 'string'), $fromAI('weight_kg', 'Peso numerico en kg', 'number'), $fromAI('user_email', 'Email verificado del usuario actual del contexto de sesion', 'string') ] }}"
+          "queryReplacement": "={{ [ $fromAI('livestock_id', 'UUID del animal', 'string'), $fromAI('weight_kg', 'Peso numerico en kg', 'number') ] }}"
         }
       },
       "type": "n8n-nodes-base.postgresTool",
@@ -71,9 +71,9 @@
         "descriptionType": "manual",
         "toolDescription": "Registra eventos de salud, vacunación o enfermedad. REQUIERE: livestock_id, event_type y description.",
         "operation": "executeQuery",
-        "query": "INSERT INTO cattle_health_logs (livestock_id, event_type, description, event_date)\nSELECT $1::uuid, $2, $3, CURRENT_TIMESTAMP\nWHERE EXISTS (\n  SELECT 1 FROM cattle_livestock l\n  JOIN user_companies uc ON uc.id_company = l.tenant_id\n  JOIN users u ON u.email = uc.email\n  WHERE l.id = $1::uuid\n    AND u.email = $4::text\n    AND u.role = 'ADMIN'\n    AND uc.is_active = true\n)\nRETURNING id, event_type;",
+        "query": "INSERT INTO cattle_health_logs (livestock_id, event_type, description, event_date) \nVALUES ($1::uuid, $2, $3, CURRENT_TIMESTAMP) \nRETURNING id, event_type;",
         "options": {
-          "queryReplacement": "={{ [ $fromAI('livestock_id', 'UUID del animal', 'string'), $fromAI('event_type', 'Tipo de evento ej. VACUNACION o ENFERMEDAD', 'string'), $fromAI('description', 'Detalles del evento', 'string'), $fromAI('user_email', 'Email verificado del usuario actual del contexto de sesion', 'string') ] }}"
+          "queryReplacement": "={{ [ $fromAI('livestock_id', 'UUID del animal', 'string'), $fromAI('event_type', 'Tipo de evento ej. VACUNACION o ENFERMEDAD', 'string'), $fromAI('description', 'Detalles del evento', 'string') ] }}"
         }
       },
       "type": "n8n-nodes-base.postgresTool",
@@ -96,9 +96,9 @@
         "descriptionType": "manual",
         "toolDescription": "Busca la información de un animal en la base de datos del rancho actual. REQUIERE: identificador (arete SINIIGA o fuego) y el tenant_id del contexto del usuario. Si devuelve más de un registro, detén el flujo y pide al usuario que aclare a cuál animal se refiere usando la categoría o especie.",
         "operation": "executeQuery",
-        "query": "SELECT l.id, l.tenant_id, l.rfid_siniiga, l.numero_fuego, l.species, l.category, l.current_status, l.current_weight_kg\nFROM cattle_livestock l\nWHERE (l.rfid_siniiga = $1::text OR l.numero_fuego = $1::text)\n  AND l.tenant_id = $2::int\n  AND EXISTS (\n    SELECT 1 FROM user_companies uc\n    JOIN users u ON u.email = uc.email\n    WHERE u.email = $3::text AND uc.id_company = $2::int AND uc.is_active = true\n  )\nLIMIT 5;\n",
+        "query": "SELECT id, tenant_id, rfid_siniiga, numero_fuego, species, category, current_status, current_weight_kg \nFROM cattle_livestock \nWHERE (rfid_siniiga = $1::text OR numero_fuego = $1::text)\nAND tenant_id = $2::int\nLIMIT 5;",
         "options": {
-          "queryReplacement": "={{ [ $fromAI('identificador', 'El numero de arete SINIIGA o numero de fuego a buscar', 'string'), $fromAI('tenant_id', 'ID del rancho / tenant_id actual del usuario', 'number'), $fromAI('user_email', 'Email verificado del usuario actual del contexto de sesion', 'string') ] }}"
+          "queryReplacement": "={{ [ $fromAI('identificador', 'El numero de arete SINIIGA o numero de fuego a buscar', 'string'), $fromAI('tenant_id', 'ID del rancho / tenant_id actual del usuario', 'number') ] }}"
         }
       },
       "type": "n8n-nodes-base.postgresTool",
@@ -121,7 +121,7 @@
         "descriptionType": "manual",
         "toolDescription": "Registra gastos, compra de insumos o pagos. REQUIERE: tenant_id (del contexto del usuario), category, amount y description.",
         "operation": "executeQuery",
-        "query": "INSERT INTO cattle_expenses (tenant_id, category, amount, description, expense_date)\nSELECT $1::int, $2, $3::numeric, $4, CURRENT_TIMESTAMP\nWHERE EXISTS (\n  SELECT 1 FROM user_companies uc\n  JOIN users u ON u.email = uc.email\n  WHERE u.email = $5::text AND uc.id_company = $1::int AND uc.is_active = true\n)\nRETURNING id, amount;",
+        "query": "INSERT INTO cattle_expenses (tenant_id, category, amount, description, expense_date) \nVALUES ($1::int, $2, $3::numeric, $4, CURRENT_TIMESTAMP) \nRETURNING id, amount;",
         "options": {
           "queryReplacement": "={{ [ $fromAI('tenant_id', 'ID del rancho', 'number'), $fromAI('category', 'Categoria del gasto ej. ALIMENTO', 'string'), $fromAI('amount', 'Monto numerico', 'number'), $fromAI('description', 'Descripcion del gasto', 'string') ] }}"
         }
@@ -210,7 +210,7 @@
     "timeSavedMode": "fixed",
     "timeSavedPerExecution": 3
   },
-  "versionId": "983f6e82-9590-42d5-b4e8-5f530533f9c2",
+  "versionId": "42fbbeeb-51dd-4c30-9eea-b9f64fe5a46e",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"

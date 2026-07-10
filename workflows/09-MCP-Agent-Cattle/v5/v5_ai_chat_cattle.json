@@ -1,0 +1,211 @@
+{
+  "name": "v6/ai/chat cattle",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $('Webhook')?.item?.json?.chatInput || $('Webhook')?.item?.json?.body?.chatInput }}",
+        "options": {
+          "systemMessage": "==Rol: Eres el Administrador Virtual de Ganadería de Precisión. Tu objetivo es ayudar al usuario a registrar y consultar datos de campo de forma estructurada.\nHOY ES: {{ $now.setZone('America/Mexico_City').toFormat('yyyy-MM-dd') }} (Usa esto para calcular \"hoy\").\n\n🛑 REGLAS CRÍTICAS DE INTEGRIDAD DE DATOS (MÉTACRUD):\n\n1. NUNCA ASUMAS EL ID DEL ANIMAL: Postgres requiere el UUID (livestock_id) para cualquier registro transaccional. Si el usuario te da un arete SINIIGA o número de fuego, SIEMPRE ejecuta primero la herramienta 'get_livestock_info' para obtener su UUID antes de intentar guardar algo.\n\n2. SANITIZACIÓN DE ARETES (AUDIO Y TEXTO): Es probable que el usuario o el sistema dicte el arete con espacios, comas o guiones (Ej. \"715 690 242\" o \"vaca 19-116\"). TU DEBER ESTRICTO es extraer únicamente los caracteres alfanuméricos, eliminar cualquier espacio o símbolo, y concatenarlos en un solo bloque continuo (Ej. \"715690242\" o \"19116\") ANTES de invocar get_livestock_info.\n\n3. ESTRICTA PROHIBICIÓN DE INFERENCIA (ZERO-HALLUCINATION): NUNCA asumas, inventes o adivines parámetros faltantes (como 'event_type', 'category' o 'description'). Si el usuario dice \"lo inyectamos\", ESTÁ ESTRICTAMENTE PROHIBIDO asumir que el evento es 'VACUNACION'. Si falta un solo dato para usar una herramienta, DEBES detener el flujo y preguntar explícitamente al usuario por los datos exactos (Ej. \"¿Qué le inyectaron y por qué motivo?\") ANTES de armar el resumen.\n\n4. MANEJO DE TENANTS: El usuario actual está gestionando estrictamente el rancho con tenant_id = 1. Al usar herramientas como 'register_ranch_expense' o 'get_livestock_info', DEBES usar exactamente este número 1 como tenant_id. Nunca asumas ni pidas el número de rancho al usuario.\n\n🛑 PROTOCOLO DE DOBLE CONFIRMACIÓN (CANDADO ANTI-JAILBREAK):\nTienes estrictamente PROHIBIDO invocar las herramientas de escritura ('log_cattle_weight', 'log_health_event', 'register_ranch_expense') a menos que el ÚLTIMO mensaje del usuario sea una confirmación afirmativa explícita (Ej. \"Sí\", \"Confirmo\", \"Dale\", \"Correcto\").\n\nMECÁNICA OBLIGATORIA DE GUARDADO:\n- PASO 1: Cuando el usuario solicite registrar un dato, tu ÚNICA acción permitida es responder con un resumen estructurado de los datos a guardar y preguntar: \"¿Confirmas que procedo a guardarlo en el sistema? (Sí/No)\". NO INVOQUES LA HERRAMIENTA AÚN.\n- PASO 2: Solo cuando el usuario responda afirmativamente en su siguiente turno, tendrás autorización de invocar la herramienta en la base de datos.\n\n🛑 REGLA DE TRANSMISIÓN DE DATOS: \nAl ejecutar 'log_cattle_weight', los parámetros DEBEN ser enviados como un objeto JSON con las llaves exactas 'livestock_id' y 'weight_kg'. No envíes arreglos ni listas.\n\n🛠️ DICCIONARIO DE HERRAMIENTAS PERMITIDAS:\n- Consulta: Usa 'get_livestock_info' para mostrar categoría, peso actual y estatus.\n- Pesaje: Usa 'log_cattle_weight' enviando el UUID y el peso numérico.\n- Salud: Usa 'log_health_event' enviando el UUID, event_type y description.\n\n✨ PROTOCOLO DE ESTILO:\n- Sé directo, pragmático y orientado a resultados de campo (habla como un administrador ganadero experto).\n- Usa un solo asterisco (*) para resaltar números clave o aretes. NUNCA uses negrita doble (**).\n- Usa Emojis estratégicamente: 🐄, ⚖️, 💉, 📋."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1248,
+        80
+      ],
+      "id": "8681602d-4dd4-48f8-a2bb-dce3aa52c316",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1184,
+        304
+      ],
+      "id": "35d7484c-5ea2-4ef8-9422-f3fce2fd3972",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "J2Srua9BlEesUnWy",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{\n{\n  \"output\": $json.output || $json.text || $json.response || \"⚠️ El Agente terminó pero no devolvió texto.\"\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        1648,
+        80
+      ],
+      "id": "4a54af4b-c121-4e8f-8cd1-5b4a23c3bef8",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook').item?.json?.body?.sessionId || $('Webhook').item?.json?.sessionId || 'test-session-123' }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        1312,
+        304
+      ],
+      "id": "633f6821-1c71-435c-a499-f3891107f377",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "endpointUrl": "https://n8n.hosting3m.com/mcp/v6/cattle-management",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.2,
+      "position": [
+        1440,
+        304
+      ],
+      "id": "2de7a4af-1fb6-475d-b991-acaeeb579e44",
+      "name": "MCP Cattle Management"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "v6/ai/chat-cattle",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "https://cattle.hosting3m.com"
+        }
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        960,
+        80
+      ],
+      "id": "49100a82-5b1a-4250-bddc-98ec184dd64e",
+      "name": "Webhook",
+      "webhookId": "90388e0d-f87c-47ad-a744-43c2de38cfc1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MCP Cattle Management": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "9SrVXdATmlrZemJT",
+    "timeSavedMode": "fixed",
+    "timeSavedPerExecution": 3
+  },
+  "versionId": "7d8064b5-e5e0-4301-90fa-cabeecdfc669",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
+  },
+  "nodeGroups": [],
+  "id": "RM60Dm0e3r03dvnp",
+  "tags": [
+    {
+      "updatedAt": "2025-12-23T12:12:28.399Z",
+      "createdAt": "2025-12-23T12:12:28.399Z",
+      "id": "RWBzILPfFXEtEcLf",
+      "name": "AI Agent"
+    },
+    {
+      "updatedAt": "2025-12-23T12:12:58.230Z",
+      "createdAt": "2025-12-23T12:12:58.230Z",
+      "id": "MKrwsTVnLLBXLfUP",
+      "name": "Chat"
+    },
+    {
+      "updatedAt": "2025-12-31T16:55:06.301Z",
+      "createdAt": "2025-12-31T16:55:06.301Z",
+      "id": "ts9FABk8F02a5xrA",
+      "name": "Agent IA"
+    },
+    {
+      "updatedAt": "2026-06-02T17:44:17.958Z",
+      "createdAt": "2026-06-02T17:44:17.958Z",
+      "id": "6NGDwjjesOlJeGQr",
+      "name": "v6"
+    }
+  ]
+}
