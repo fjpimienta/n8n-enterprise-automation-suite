@@ -11,6 +11,7 @@ export interface CompanyContext {
 export interface AuthEnvironmentConfig {
     apiUrl_crud: string;
     apiUrl_token: string;
+    apiUrl_ai: string;
     system_id: string; // <-- ID único de la app (ej. 'cattle_dashboard', 'hotel_app')
 }
 
