@@ -13,8 +13,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   let clonedReq = req;
   const token = authService.getStoredToken();
 
-  // 🛠️ FIX: Validamos usando la configuración inyectada
-  const isApiRequest = req.url.startsWith(envConfig.apiUrl_crud);
+  const protectedApis = [envConfig.apiUrl_crud, envConfig.apiUrl_ai].filter(Boolean);
+  const isApiRequest = protectedApis.some(url => req.url.startsWith(url));
 
   if (token && isApiRequest) {
     clonedReq = req.clone({

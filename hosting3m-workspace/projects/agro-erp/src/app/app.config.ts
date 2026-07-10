@@ -20,7 +20,8 @@ export const appConfig: ApplicationConfig = {
       provide: AUTH_ENV_CONFIG,
       useValue: {
         apiUrl_crud: environment.apiUrl_crud,
-        apiUrl_token: environment.apiUrl_token
+        apiUrl_token: environment.apiUrl_token,
+        apiUrl_ai: environment.apiUrl_ai
       }
     },
 
