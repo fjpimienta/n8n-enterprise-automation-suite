@@ -166,7 +166,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        448,
+        1344,
         192
       ],
       "id": "de696807-1b04-4e78-89d6-a1f860918919",
@@ -181,7 +181,7 @@
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.8,
       "position": [
-        672,
+        1568,
         96
       ],
       "id": "4b55141d-9940-4072-bf50-73f4c2e01138",
@@ -201,7 +201,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        896,
+        1792,
         96
       ],
       "id": "15cc1ad9-3763-4b77-a1bb-bc12206d0be6",
@@ -219,7 +219,7 @@
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
       "position": [
-        1120,
+        2016,
         96
       ],
       "id": "7894f202-fc5f-4d57-9c47-e8bb49de7883",
@@ -243,7 +243,7 @@
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
       "position": [
-        672,
+        1568,
         288
       ],
       "id": "b784f086-8e7a-4f2c-9d6a-70789e74f5c7",
@@ -398,13 +398,13 @@
     {
       "parameters": {
         "sessionIdType": "customKey",
-        "sessionKey": "={{ $('WhatsApp Trigger').last().json.messages[0].from }}_{{ $json.tenant_id }}",
+        "sessionKey": "={{ $('WhatsApp Trigger').last().json.messages[0].from }}",
         "contextWindowLength": 50
       },
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "typeVersion": 1.3,
       "position": [
-        112,
+        1008,
         160
       ],
       "id": "b452a01d-b2c2-4f6b-9455-31dfc433eeac",
@@ -425,7 +425,7 @@
                 "conditions": [
                   {
                     "id": "18f51475-430c-4447-9753-48e02d415494",
-                    "leftValue": "={{ $json.role }}",
+                    "leftValue": "={{ $('Set Role').item.json.role }}",
                     "rightValue": "ADMIN",
                     "operator": {
                       "type": "string",
@@ -448,7 +448,7 @@
                 "conditions": [
                   {
                     "id": "735583d8-e290-47b7-aab6-36238216fd56",
-                    "leftValue": "={{ $json.role }}",
+                    "leftValue": "={{ $('Set Role').item.json.role }}",
                     "rightValue": "ADMIN",
                     "operator": {
                       "type": "string",
@@ -466,7 +466,7 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.4,
       "position": [
-        -240,
+        656,
         192
       ],
       "id": "caed1e4d-523c-4646-b0fa-01afb21a4489",
@@ -486,7 +486,7 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
       "position": [
-        -16,
+        880,
         160
       ],
       "id": "f4fa3130-d3f1-4669-9538-883906ef59a0",
@@ -506,7 +506,7 @@
       "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
       "typeVersion": 1.2,
       "position": [
-        240,
+        1136,
         160
       ],
       "id": "83c47eaa-e8ca-4657-a2f8-6206ddaa0314",
@@ -515,7 +515,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "WITH phone_companies AS (\n  -- Extrae las UPPs únicas vinculadas al número para evitar duplicados\n  SELECT DISTINCT \n    u.phone, \n    c.id_company, \n    c.company_name\n  FROM users u\n  JOIN user_companies uc ON u.email = uc.email\n  JOIN companys c ON uc.id_company = c.id_company\n  WHERE u.phone = $1 \n    AND u.is_active = true \n    AND uc.is_active = true\n)\nSELECT \n  pc.phone,\n  -- Evalúa todas las cuentas del teléfono. Si alguna es ADMIN, otorga ADMIN global.\n  (\n    SELECT CASE WHEN bool_or(role = 'ADMIN') THEN 'ADMIN' ELSE 'EDITOR' END \n    FROM users \n    WHERE phone = pc.phone AND is_active = true\n  ) AS global_role,\n  -- Construye el arreglo limpio para inyectarlo al Agente IA\n  json_agg(\n    json_build_object(\n      'id_company', pc.id_company, \n      'company_name', pc.company_name\n    )\n  ) AS available_tenants\nFROM phone_companies pc\nGROUP BY pc.phone;",
+        "query": "WITH phone_companies AS (\n  SELECT DISTINCT \n    u.phone, \n    u.email,\n    c.id_company, \n    c.company_name\n  FROM users u\n  JOIN user_companies uc ON u.email = uc.email\n  JOIN companys c ON uc.id_company = c.id_company\n  WHERE u.phone = $1 \n    AND u.is_active = true \n    AND uc.is_active = true\n)\nSELECT \n  pc.phone,\n  (\n    SELECT CASE WHEN bool_or(role = 'ADMIN') THEN 'ADMIN' ELSE 'EDITOR' END \n    FROM users \n    WHERE phone = pc.phone AND is_active = true\n  ) AS global_role,\n  json_agg(\n    json_build_object(\n      'id_company', pc.id_company, \n      'company_name', pc.company_name,\n      'email', pc.email\n    )\n  ) AS available_tenants,\n  (\n    SELECT id_company \n    FROM user_tenant_selection \n    WHERE phone = pc.phone\n  ) AS selected_tenant_id\nFROM phone_companies pc\nGROUP BY pc.phone;",
         "options": {
           "queryReplacement": "={{ $('Set Message').item.json.number.toString().slice(-10) }}"
         }
@@ -539,15 +539,15 @@
     {
       "parameters": {
         "promptType": "define",
-        "text": "={{ $json.text }}",
+        "text": "={{ $('Set Prompt Final').item.json.prompt_final }}",
         "options": {
-          "systemMessage": "==Rol: Eres el Administrador Virtual de Ganadería de Precisión. Tu objetivo es ayudar al usuario a registrar y consultar datos de campo de forma estructurada.\nHOY ES: {{ $now.setZone('America/Mexico_City').toFormat('yyyy-MM-dd') }} (Usa esto para calcular \"hoy\").\n\n🛑 REGLAS CRÍTICAS DE INTEGRIDAD DE DATOS (MÉTACRUD):\n\n1. NUNCA ASUMAS EL ID DEL ANIMAL: Postgres requiere el UUID (livestock_id) para cualquier registro transaccional. Si el usuario te da un arete SINIIGA o número de fuego, SIEMPRE ejecuta primero la herramienta 'get_livestock_info' para obtener su UUID antes de intentar guardar algo.\n\n2. SANITIZACIÓN DE ARETES (AUDIO Y TEXTO): Es probable que el usuario o el sistema dicte el arete con espacios, comas o guiones (Ej. \"715 690 242\" o \"vaca 19-116\"). Priorizar el identificador electronic_rfid (bolo ruminal/microchip) sobre el arete SINIIGA/fuego cuando el usuario provea ambos, y documentar que SINIIGA es identificador secundario. TU DEBER ESTRICTO es extraer únicamente los caracteres alfanuméricos, eliminar cualquier espacio o símbolo, y concatenarlos en un solo bloque continuo (Ej. \"715690242\" o \"19116\") ANTES de invocar get_livestock_info.\n\n3. ESTRICTA PROHIBICIÓN DE INFERENCIA (ZERO-HALLUCINATION): NUNCA asumas, inventes o adivines parámetros faltantes (como 'event_type', 'category' o 'description'). Si el usuario dice \"lo inyectamos\", ESTÁ ESTRICTAMENTE PROHIBIDO asumir que el evento es 'VACUNACION'. Si falta un solo dato para usar una herramienta, DEBES detener el flujo y preguntar explícitamente al usuario por los datos exactos (Ej. \"¿Qué le inyectaron y por qué motivo?\") ANTES de armar el resumen.\n\n4. MANEJO DE TENANTS Y DESAMBIGUACIÓN (GATEKEEPER ESTRICTO):\nTienes acceso a este arreglo de UPPs permitidas para el usuario actual: {{ $('Set Role').item.json.available_tenants }}\n\n🛑 REGLA DE EJECUCIÓN CONDICIONAL:\n- PASO A: Revisa cuántas UPPs hay en el arreglo proporcionado.\n- PASO B: Si hay 2 O MÁS UPPs, analiza el historial de la conversación. ¿El usuario ya especificó claramente en cuál rancho/UPP quiere operar?\n  - SI LA RESPUESTA ES NO: TIENES ESTRICTAMENTE PROHIBIDO ejecutar 'get_livestock_info', 'log_cattle_weight' o cualquier otra herramienta. Tu ÚNICA acción permitida es responder al usuario con este formato: \"Tienes acceso a más de una UPP [Menciona los nombres de las UPPs disponibles]. ¿En cuál de ellas deseas realizar esta operación?\".\n  - SI LA RESPUESTA ES SÍ (o si solo tiene 1 UPP asignada): Extrae el 'id_company' correspondiente a la selección del usuario y úsalo obligatoriamente como el parámetro 'tenant_id' en cualquier herramienta que lo requiera (get_livestock_info, register_ranch_expense, log_cattle_weight, y cualquier otra que reciba este parámetro).\n\n🛑 REGLA DE TRANSMISIÓN DE DATOS: \nAl ejecutar 'log_cattle_weight', los parámetros DEBEN ser enviados como un objeto JSON con las llaves exactas 'livestock_id' y 'weight_kg'. No envíes arreglos ni listas.\n\n🛠️ DICCIONARIO DE HERRAMIENTAS PERMITIDAS:\n- Consulta: Usa 'get_livestock_info' para mostrar categoría, peso actual y estatus.\n- Pesaje: Usa 'log_cattle_weight' enviando el UUID y el peso numérico.\n- Salud: Usa 'log_health_event' enviando el UUID, event_type y description.\n- Gasto: Usa 'register_ranch_expense' enviando tenant_id, category, amount y description.\n\n✨ PROTOCOLO DE ESTILO:\n- Sé directo, pragmático y orientado a resultados de campo (habla como un administrador ganadero experto).\n- Usa un solo asterisco (*) para resaltar números clave o aretes. NUNCA uses negrita doble (**).\n- Usa Emojis estratégicamente: 🐄, ⚖️, 💉, 📋."
+          "systemMessage": "==Rol: Eres el Administrador Virtual de Ganadería de Precisión. Tu objetivo es ayudar al usuario a registrar y consultar datos de campo de forma estructurada.\nHOY ES: {{ $now.setZone('America/Mexico_City').toFormat('yyyy-MM-dd') }} (Usa esto para calcular \"hoy\").\n\n🛑 REGLAS CRÍTICAS DE INTEGRIDAD DE DATOS (MÉTACRUD):\n\n1. NUNCA ASUMAS EL ID DEL ANIMAL: Postgres requiere el UUID (livestock_id) para cualquier registro transaccional. Si el usuario te da un arete SINIIGA o número de fuego, SIEMPRE ejecuta primero la herramienta 'get_livestock_info' para obtener su UUID antes de intentar guardar algo.\n\n1.b OBLIGATORIEDAD DE RE-VERIFICACIÓN: Nunca respondas \"no encontrado\" o des datos de un animal basándote en el historial de la conversación o en consultas anteriores. CADA VEZ que el usuario pregunte por un animal (aunque ya se haya consultado antes en esta misma sesión), DEBES ejecutar 'get_livestock_info' de nuevo con el identificador exacto proporcionado en este turno, sin excepción.\n\n2. SANITIZACIÓN DE ARETES (AUDIO Y TEXTO): Es probable que el usuario o el sistema dicte el arete con espacios, comas o guiones (Ej. \"715 690 242\" o \"vaca 19-116\"). Priorizar el identificador electronic_rfid (bolo ruminal/microchip) sobre el arete SINIIGA/fuego cuando el usuario provea ambos, y documentar que SINIIGA es identificador secundario. TU DEBER ESTRICTO es extraer únicamente los caracteres alfanuméricos, eliminar cualquier espacio o símbolo, y concatenarlos en un solo bloque continuo (Ej. \"715690242\" o \"19116\") ANTES de invocar get_livestock_info.\n\n3. ESTRICTA PROHIBICIÓN DE INFERENCIA (ZERO-HALLUCINATION): NUNCA asumas, inventes o adivines parámetros faltantes (como 'event_type', 'category' o 'description'). Si el usuario dice \"lo inyectamos\", ESTÁ ESTRICTAMENTE PROHIBIDO asumir que el evento es 'VACUNACION'. Si falta un solo dato para usar una herramienta, DEBES detener el flujo y preguntar explícitamente al usuario por los datos exactos (Ej. \"¿Qué le inyectaron y por qué motivo?\") ANTES de armar el resumen.\n\n4. MANEJO DE TENANTS Y DESAMBIGUACIÓN (GATEKEEPER ESTRICTO):\nTienes acceso a este arreglo de UPPs permitidas para el usuario actual: {{ $('Set Role').item.json.available_tenants }}\n\nEl email verificado del usuario en esta sesión es: {{ $('Resolver Tenant').item.json.user_email }}\n🛑 SIEMPRE usa este valor EXACTO, tal cual aparece aquí, como el parámetro 'user_email' al invocar cualquier herramienta que lo requiera (get_livestock_info, log_cattle_weight, log_health_event, register_ranch_expense). NUNCA inventes, adivines, ni dejes vacío este campo.\n\n🛑 REGLA DE EJECUCIÓN CONDICIONAL:\n- PASO A: Revisa cuántas UPPs hay en el arreglo proporcionado.\n- PASO B: Si hay 2 O MÁS UPPs, analiza el historial de la conversación. ¿El usuario ya especificó claramente en cuál rancho/UPP quiere operar?\n  - SI LA RESPUESTA ES NO: TIENES ESTRICTAMENTE PROHIBIDO ejecutar 'get_livestock_info', 'log_cattle_weight' o cualquier otra herramienta. Tu ÚNICA acción permitida es responder al usuario con este formato: \"Tienes acceso a más de una UPP [Menciona los nombres de las UPPs disponibles]. ¿En cuál de ellas deseas realizar esta operación?\".\n  - SI LA RESPUESTA ES SÍ (o si solo tiene 1 UPP asignada): Extrae el 'id_company' correspondiente a la selección del usuario y úsalo obligatoriamente como el parámetro 'tenant_id' en cualquier herramienta que lo requiera (get_livestock_info, register_ranch_expense, log_cattle_weight, y cualquier otra que reciba este parámetro).\n\n🛑 REGLA DE TRANSMISIÓN DE DATOS: \nAl ejecutar 'log_cattle_weight', los parámetros DEBEN ser enviados como un objeto JSON con las llaves exactas 'livestock_id' y 'weight_kg'. No envíes arreglos ni listas.\n\n🛠️ DICCIONARIO DE HERRAMIENTAS PERMITIDAS:\n- Consulta: Usa 'get_livestock_info' para mostrar categoría, peso actual y estatus.\n- Pesaje: Usa 'log_cattle_weight' enviando el UUID y el peso numérico.\n- Salud: Usa 'log_health_event' enviando el UUID, event_type y description.\n- Gasto: Usa 'register_ranch_expense' enviando tenant_id, category, amount y description.\n\n✨ PROTOCOLO DE ESTILO:\n- Sé directo, pragmático y orientado a resultados de campo (habla como un administrador ganadero experto).\n- Usa un solo asterisco (*) para resaltar números clave o aretes. NUNCA uses negrita doble (**).\n- Usa Emojis estratégicamente: 🐄, ⚖️, 💉, 📋."
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
       "position": [
-        48,
+        944,
         -64
       ],
       "id": "8bb0e662-274e-48b3-9efa-e51f4ec46fda",
@@ -583,7 +583,7 @@
             {
               "id": "44868a6c-9c03-472a-8fba-515ceb130462",
               "name": "output",
-              "value": "🔒 Acceso denegado. Este canal es exclusivo para operaciones del Rancho San José.",
+              "value": "=={{ \n(() => {\n  let tenants = [];\n  try { tenants = JSON.parse($('Resolver Tenant').item.json.available_tenants || '[]'); } catch(e) {}\n  const match = tenants.find(t => t.id_company === $('Resolver Tenant').item.json.tenant_id);\n  const rancho = match ? match.company_name : 'tu rancho';\n  return `🔒 Acceso denegado. Tu rol actual no tiene permiso para operar en este canal para ${rancho}. Contacta a un administrador.`;\n})()\n}}",
               "type": "string"
             }
           ]
@@ -593,7 +593,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        112,
+        1008,
         336
       ],
       "id": "afb94924-c767-4628-ae58-da42e658e29b",
@@ -673,6 +673,12 @@
               "name": "available_tenants",
               "value": "={{ $json.available_tenants }}",
               "type": "string"
+            },
+            {
+              "id": "c94ad56b-3c0c-45f6-a175-15f22a47b8d8",
+              "name": "selected_tenant_id",
+              "value": "={{ $json.selected_tenant_id || '' }}",
+              "type": "string"
             }
           ]
         },
@@ -689,7 +695,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Node: Resolver Tenant\n// Purpose: Deterministically resolve tenant_id from available_tenants array.\n// Fail-closed: any ambiguity, absence, or malformed data resolves to a\n// non-actionable status (\"ambiguous\" | \"none\"), never a guessed tenant_id.\n\nconst rawTenants = $json.available_tenants;\n\n// Defensive parsing: available_tenants may arrive as a JS array already,\n// or (depending on upstream node) as a JSON string. Never assume shape.\nlet tenants;\nif (Array.isArray(rawTenants)) {\n  tenants = rawTenants;\n} else if (typeof rawTenants === 'string') {\n  try {\n    const parsed = JSON.parse(rawTenants);\n    tenants = Array.isArray(parsed) ? parsed : [];\n  } catch (err) {\n    tenants = [];\n  }\n} else {\n  tenants = [];\n}\n\n// Extra guard: filter out malformed entries missing id_company.\nconst validTenants = tenants.filter(\n  (t) => t && typeof t === 'object' && t.id_company !== undefined && t.id_company !== null\n);\n\nlet tenant_id = null;\nlet tenant_status;\n\nif (validTenants.length === 1) {\n  tenant_id = validTenants[0].id_company;\n  tenant_status = 'resolved';\n} else if (validTenants.length > 1) {\n  tenant_status = 'ambiguous';\n} else {\n  tenant_status = 'none';\n}\n\n// Structured output consumed downstream by Switch Role.\n// tenant_id stays null unless status === 'resolved' — this is the\n// fail-closed contract: downstream nodes must treat null tenant_id\n// as \"do not proceed\" regardless of tenant_status value.\n$input.item.json.tenant_id = tenant_id;\n$input.item.json.tenant_status = tenant_status;\n   \nreturn $input.item;"
+        "jsCode": "// Node: Resolver Tenant\n// Fail-closed con selección por texto del mensaje + preferencia persistida.\n\nfunction normalize(str) {\n  return (str || '')\n    .toString()\n    .normalize('NFD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .toLowerCase()\n    .replace(/\\b(upp|rancho|granja|finca|propiedad)\\b/g, '')\n    .replace(/[^a-z0-9]+/g, ' ')\n    .trim();\n}\n\nconst rawTenants = $json.available_tenants;\nlet tenants;\nif (Array.isArray(rawTenants)) {\n  tenants = rawTenants;\n} else if (typeof rawTenants === 'string') {\n  try {\n    const parsed = JSON.parse(rawTenants);\n    tenants = Array.isArray(parsed) ? parsed : [];\n  } catch (err) {\n    tenants = [];\n  }\n} else {\n  tenants = [];\n}\n\nconst validTenants = tenants.filter(\n  (t) => t && typeof t === 'object' && t.id_company !== undefined && t.id_company !== null\n);\n\nlet tenant_id = null;\nlet tenant_status;\nlet tenant_source = null;\n\nconst messageText = $json.text || '';\nconst normalizedMessage = normalize(messageText);\nconst cachedSelection = $json.selected_tenant_id ? Number($json.selected_tenant_id) : null;\n\nif (validTenants.length === 0) {\n  tenant_status = 'none';\n} else if (validTenants.length === 1) {\n  tenant_id = validTenants[0].id_company;\n  tenant_status = 'resolved';\n  tenant_source = 'single';\n} else {\n  const matches = validTenants.filter((t) => {\n    const name = normalize(t.company_name);\n    return name && normalizedMessage.includes(name);\n  });\n\n  if (matches.length === 1) {\n    tenant_id = matches[0].id_company;\n    tenant_status = 'resolved';\n    tenant_source = 'matched_this_message';\n  } else if (cachedSelection && validTenants.some((t) => t.id_company === cachedSelection)) {\n    tenant_id = cachedSelection;\n    tenant_status = 'resolved';\n    tenant_source = 'cached';\n  } else {\n    tenant_status = 'ambiguous';\n  }\n}\n\n$input.item.json.tenant_id = tenant_id;\n\nconst matchedTenant = validTenants.find(t => t.id_company === tenant_id);\n$input.item.json.user_email = matchedTenant ? matchedTenant.email : '';\n\n$input.item.json.tenant_status = tenant_status;\n$input.item.json.tenant_source = tenant_source;\n$input.item.json.available_tenant_names = validTenants.map((t) => t.company_name);\n\nreturn $input.item;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -712,7 +718,7 @@
           "conditions": [
             {
               "id": "d2a60d21-5092-4846-8df0-ef346c7aa456",
-              "leftValue": "={{ $json.tenant_status }}",
+              "leftValue": "={{ $('Resolver Tenant').item.json.tenant_status }}",
               "rightValue": "resolved",
               "operator": {
                 "type": "string",
@@ -727,7 +733,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -464,
+        -16,
         288
       ],
       "id": "338ed646-ec89-4c13-af06-0eb69faf57a1",
@@ -750,8 +756,8 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        -240,
-        528
+        432,
+        384
       ],
       "id": "c19f02e4-5a6a-40fb-8afb-dabc9c689e96",
       "name": "Set - Mensaje Selección UPP"
@@ -767,8 +773,8 @@
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
       "position": [
-        112,
-        528
+        656,
+        384
       ],
       "id": "641ada85-eec6-416a-9abb-52b30ff98232",
       "name": "Send Message Tenant",
@@ -779,6 +785,133 @@
           "name": "WhatsApp Account"
         }
       }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO user_tenant_selection (phone, id_company, updated_at)\nVALUES ($1, $2, CURRENT_TIMESTAMP)\nON CONFLICT (phone) DO UPDATE SET id_company = EXCLUDED.id_company, updated_at = CURRENT_TIMESTAMP;",
+        "options": {
+          "queryReplacement": "={{ $json.number.toString().slice(-10) }},{{ $json.tenant_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -240,
+        208
+      ],
+      "id": "d45c18be-4777-453d-827c-d43ffd8d0cec",
+      "name": "Persist Tenant Selection",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "798d5c0d-78e1-4371-9423-43376ac19d22",
+              "leftValue": "={{ $json.tenant_source }}",
+              "rightValue": "matched_this_message",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -464,
+        288
+      ],
+      "id": "846dc823-29a1-4191-b163-e3d3f5617929",
+      "name": "IF - Nueva Selección de Tenant"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO pending_user_query (phone, query_text, created_at)\nVALUES ($1, $2, CURRENT_TIMESTAMP)\nON CONFLICT (phone) DO UPDATE SET query_text = EXCLUDED.query_text, created_at = CURRENT_TIMESTAMP;",
+        "options": {
+          "queryReplacement": "={{ $('Set Message').item.json.number.toString().slice(-10) }},{{ $('Set Message').item.json.text }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        208,
+        384
+      ],
+      "id": "c2622e6b-947e-4c73-9c52-b081588f38ed",
+      "name": "Guardar Pregunta Pendiente",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM pending_user_query\nWHERE phone = $1\nRETURNING query_text;",
+        "options": {
+          "queryReplacement": "={{ $('Set Message').item.json.number.toString().slice(-10) }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        208,
+        192
+      ],
+      "id": "0f200946-6b08-44a9-b5c4-fdeb2d8cbf78",
+      "name": "Recuperar Pregunta Pendiente",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "934b037d-ecd2-451a-b9c9-e902299c65ed",
+              "name": "prompt_final",
+              "value": "={{ $json.query_text || $('Set Message').item.json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        432,
+        192
+      ],
+      "id": "b9206e12-df75-43a3-85e7-055f91eb5758",
+      "name": "Set Prompt Final"
     }
   ],
   "pinData": {},
@@ -1035,7 +1168,7 @@
       "main": [
         [
           {
-            "node": "IF - Bloquear Tenant Ambiguo",
+            "node": "IF - Nueva Selección de Tenant",
             "type": "main",
             "index": 0
           }
@@ -1046,14 +1179,14 @@
       "main": [
         [
           {
-            "node": "Switch Role",
+            "node": "Recuperar Pregunta Pendiente",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Set - Mensaje Selección UPP",
+            "node": "Guardar Pregunta Pendiente",
             "type": "main",
             "index": 0
           }
@@ -1065,6 +1198,68 @@
         [
           {
             "node": "Send Message Tenant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist Tenant Selection": {
+      "main": [
+        [
+          {
+            "node": "IF - Bloquear Tenant Ambiguo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Nueva Selección de Tenant": {
+      "main": [
+        [
+          {
+            "node": "Persist Tenant Selection",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "IF - Bloquear Tenant Ambiguo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardar Pregunta Pendiente": {
+      "main": [
+        [
+          {
+            "node": "Set - Mensaje Selección UPP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Recuperar Pregunta Pendiente": {
+      "main": [
+        [
+          {
+            "node": "Set Prompt Final",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Prompt Final": {
+      "main": [
+        [
+          {
+            "node": "Switch Role",
             "type": "main",
             "index": 0
           }
@@ -1082,7 +1277,7 @@
     "availableInMCP": true,
     "timeSavedPerExecution": 5
   },
-  "versionId": "f1035260-f610-469f-901d-f5ac77571e4e",
+  "versionId": "9aa00760-67ee-4f9e-9192-2dc0f97d7385",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
