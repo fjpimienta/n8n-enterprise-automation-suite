@@ -68,7 +68,7 @@
         "projects/agro-erp/src/app/shared/*"
       ],
       "core-auth": [
-        "../core-auth/src/public-api.ts"
+        "projects/core-auth/src/public-api.ts"
       ],
       "core-auth/*": [
         "dist/core-auth/*"
