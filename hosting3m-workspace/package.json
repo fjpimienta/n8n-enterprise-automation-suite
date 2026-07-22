@@ -30,7 +30,8 @@
     "dompurify": "^3.2.4",
     "undici": "^6.19.8",
     "picomatch": "^4.0.4",
-    "vite": "^7.3.2"
+    "vite": "^7.3.2",
+    "piscina": "^5.1.5"
   },
   "dependencies": {
     "@angular/common": "^21.0.0",
