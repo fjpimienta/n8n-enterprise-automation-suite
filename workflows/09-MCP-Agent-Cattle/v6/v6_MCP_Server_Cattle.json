@@ -8,7 +8,7 @@
       "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
       "typeVersion": 2,
       "position": [
-        576,
+        528,
         832
       ],
       "id": "20140a69-ad24-4392-850e-789f2ff32e45",
@@ -28,8 +28,8 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        544,
-        1104
+        208,
+        960
       ],
       "id": "5d209495-6de0-4419-8deb-43efd1f4ba94",
       "name": "get_table_metadata",
@@ -54,8 +54,8 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        800,
-        1104
+        400,
+        1072
       ],
       "id": "a0d3dd3f-0664-4e65-b801-a92684302056",
       "name": "log_cattle_weight",
@@ -79,8 +79,8 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1040,
-        1072
+        640,
+        1104
       ],
       "id": "84d7567d-a46c-4811-9ff3-6b0b573bed48",
       "name": "log_health_event",
@@ -96,16 +96,16 @@
         "descriptionType": "manual",
         "toolDescription": "Busca la información de un animal en la base de datos del rancho actual. REQUIERE: identificador (arete SINIIGA o fuego) y el tenant_id del contexto del usuario. Si devuelve más de un registro, detén el flujo y pide al usuario que aclare a cuál animal se refiere usando la categoría o especie.",
         "operation": "executeQuery",
-        "query": "SELECT l.id, l.tenant_id, l.rfid_siniiga, l.numero_fuego, l.species, l.category, l.current_status, l.current_weight_kg\nFROM cattle_livestock l\nWHERE (l.rfid_siniiga = $1::text OR l.numero_fuego = $1::text)\n  AND l.tenant_id = $2::int\n  AND EXISTS (\n    SELECT 1 FROM user_companies uc\n    JOIN users u ON u.email = uc.email\n    WHERE u.email = $3::text AND uc.id_company = $2::int AND uc.is_active = true\n  )\nLIMIT 5;\n",
+        "query": "SELECT l.id, l.tenant_id, l.rfid_siniiga, l.numero_fuego, l.species, l.category, l.current_status, l.current_weight_kg\nFROM cattle_livestock l\nWHERE (l.rfid_siniiga = $1::text OR l.numero_fuego = $1::text)\n  AND l.tenant_id = $2::int\n  AND EXISTS (\n    SELECT 1 FROM user_companies uc\n    JOIN users u ON u.email = uc.email\n    WHERE u.email = $3::text AND uc.id_company = $2::int AND uc.is_active = true\n  )\nLIMIT 5;",
         "options": {
-          "queryReplacement": "={{ [ $fromAI('identificador', 'El numero de arete SINIIGA o numero de fuego a buscar', 'string'), $fromAI('tenant_id', 'ID del rancho / tenant_id actual del usuario', 'number'), $fromAI('user_email', 'Email verificado del usuario actual del contexto de sesion', 'string') ] }}"
+          "queryReplacement": "={{ [ $fromAI('identificador', 'El numero de arete SINIIGA o numero de fuego a buscar', 'string'), $fromAI('tenant_id', 'ID del rancho / tenant_id actual del usuario', 'number'), $fromAI('user_email', 'Email verificado del usuario, tal como aparece literalmente en las instrucciones del sistema', 'string') ] }}"
         }
       },
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        336,
-        1040
+        864,
+        1072
       ],
       "id": "090fab19-82ec-406c-9246-b466011a7e4c",
       "name": "get_livestock_info",
@@ -129,8 +129,8 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1296,
-        992
+        1088,
+        1008
       ],
       "id": "7ee7280c-51d3-4c11-acf2-69cff0c1039b",
       "name": "register_ranch_expense",
@@ -210,7 +210,7 @@
     "timeSavedMode": "fixed",
     "timeSavedPerExecution": 3
   },
-  "versionId": "983f6e82-9590-42d5-b4e8-5f530533f9c2",
+  "versionId": "c08d4c33-5c82-4dda-9254-0d61eb9a6f11",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
@@ -219,16 +219,10 @@
   "id": "pJ3CEaO70QEiGL0C",
   "tags": [
     {
-      "updatedAt": "2026-06-02T17:44:17.958Z",
-      "createdAt": "2026-06-02T17:44:17.958Z",
-      "id": "6NGDwjjesOlJeGQr",
-      "name": "v6"
-    },
-    {
-      "updatedAt": "2025-12-23T12:12:28.399Z",
-      "createdAt": "2025-12-23T12:12:28.399Z",
-      "id": "RWBzILPfFXEtEcLf",
-      "name": "AI Agent"
+      "updatedAt": "2025-12-31T16:55:06.301Z",
+      "createdAt": "2025-12-31T16:55:06.301Z",
+      "id": "ts9FABk8F02a5xrA",
+      "name": "Agent IA"
     },
     {
       "updatedAt": "2025-12-23T12:12:58.230Z",
@@ -237,10 +231,16 @@
       "name": "Chat"
     },
     {
-      "updatedAt": "2025-12-31T16:55:06.301Z",
-      "createdAt": "2025-12-31T16:55:06.301Z",
-      "id": "ts9FABk8F02a5xrA",
-      "name": "Agent IA"
+      "updatedAt": "2025-12-23T12:12:28.399Z",
+      "createdAt": "2025-12-23T12:12:28.399Z",
+      "id": "RWBzILPfFXEtEcLf",
+      "name": "AI Agent"
+    },
+    {
+      "updatedAt": "2026-06-02T17:44:17.958Z",
+      "createdAt": "2026-06-02T17:44:17.958Z",
+      "id": "6NGDwjjesOlJeGQr",
+      "name": "v6"
     }
   ]
 }
