@@ -34,7 +34,8 @@
             </div>
             <div class="card-body">
                 <apx-chart [series]="getChartOptions().series" [labels]="getChartOptions().labels"
-                    [colors]="getChartOptions().colors" [chart]="{ type: 'donut', height: 250 }">
+                    [colors]="getChartOptions().colors" [chart]="{ type: 'donut', height: 250 }"
+                    [theme]="{ mode: 'dark' }">
                 </apx-chart>
             </div>
         </div>
@@ -64,7 +65,7 @@
             <div class="text-muted">
                 Mostrar
                 <div class="mx-2 d-inline-block">
-                    <select class="form-select form-select-sm" [value]="pageSize()" (change)="changePageSize($event)">
+                    <select class="form-select form-select-sm" [value]="pagination.pageSize()" (change)="pagination.changePageSize($event)">
                         <option value="10">10</option>
                         <option value="25">25</option>
                         <option value="50">50</option>
@@ -107,16 +108,16 @@
 
     <div class="card-footer d-flex align-items-center border-top">
         <p class="m-0 text-muted">
-            Mostrando <span>{{ showingStart() }}</span> a <span>{{ showingEnd() }}</span>
+            Mostrando <span>{{ pagination.showingStart() }}</span> a <span>{{ pagination.showingEnd() }}</span>
             de <span>{{ data().length }}</span> vientres bajo control
         </p>
         <ul class="pagination m-0 ms-auto">
-            <li class="page-item" [class.disabled]="currentPage() === 1">
-                <a class="page-link" (click)="changePage(-1)" style="cursor: pointer;">Ant</a>
+            <li class="page-item" [class.disabled]="pagination.currentPage() === 1">
+                <a class="page-link" (click)="pagination.changePage(-1)" style="cursor: pointer;">Ant</a>
             </li>
-            <li class="page-item active"><a class="page-link">{{ currentPage() }} de {{ totalPages() }}</a></li>
-            <li class="page-item" [class.disabled]="currentPage() === totalPages()">
-                <a class="page-link" (click)="changePage(1)" style="cursor: pointer;">Sig</a>
+            <li class="page-item active"><a class="page-link">{{ pagination.currentPage() }} de {{ pagination.totalPages() }}</a></li>
+            <li class="page-item" [class.disabled]="pagination.currentPage() === pagination.totalPages()">
+                <a class="page-link" (click)="pagination.changePage(1)" style="cursor: pointer;">Sig</a>
             </li>
         </ul>
     </div>

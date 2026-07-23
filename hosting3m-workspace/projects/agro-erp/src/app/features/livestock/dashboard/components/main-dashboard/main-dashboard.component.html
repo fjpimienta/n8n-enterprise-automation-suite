@@ -83,7 +83,11 @@
             <li class="nav-item">
                 <a class="nav-link font-weight-bold" [class.active]="activeSubTab() === 'INVENTARIO'"
                     (click)="setSubTab('INVENTARIO')" style="cursor: pointer;">Inventario Detallado ({{
-                    filteredCattleList().length }})</a>
+                    filteredCattleList().length }})
+                    @if (missingUppCount() > 0) {
+                    <span class="badge bg-warning-lt ms-1">{{ missingUppCount() }} sin UPP</span>
+                    }
+                </a>
             </li>
             <li class="nav-item">
                 <a class="nav-link font-weight-bold" [class.active]="activeSubTab() === 'GASTOS'"
@@ -136,12 +140,27 @@
 
         @if (activeSubTab() === 'INVENTARIO') {
         <div class="card-body border-bottom py-3">
-            <div class="text-muted">Mostrar <div class="mx-2 d-inline-block"><select class="form-select form-select-sm"
-                        [value]="pageSize()" (change)="changePageSize($event)">
-                        <option value="10">10</option>
-                        <option value="25">25</option>
-                        <option value="50">50</option>
-                    </select></div> registros</div>
+            <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+                <div class="text-muted">Mostrar <div class="mx-2 d-inline-block"><select class="form-select form-select-sm"
+                            [value]="pagination.pageSize()" (change)="pagination.changePageSize($event)">
+                            <option value="10">10</option>
+                            <option value="25">25</option>
+                            <option value="50">50</option>
+                        </select></div> registros</div>
+                <div class="input-icon" style="max-width: 320px;">
+                    <span class="input-icon-addon">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
+                            stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+                            stroke-linejoin="round">
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                            <path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" />
+                            <path d="M21 21l-6 -6" />
+                        </svg>
+                    </span>
+                    <input type="text" class="form-control form-control-sm" placeholder="Buscar por arete, fuego o RFID..."
+                        [value]="inventorySearch()" (input)="setInventorySearch($any($event.target).value)">
+                </div>
+            </div>
         </div>
         <div class="table-responsive">
             <table class="table card-table table-vcenter text-nowrap datatable table-hover mb-0">
@@ -166,7 +185,12 @@
                             <div class="font-monospace text-primary font-weight-bold">{{ animal.rfid_siniiga }}</div>
                         </td>
                         <td><strong>{{ animal.numero_fuego || 'S/N' }}</strong></td>
-                        <td>{{ animal.category }}</td>
+                        <td>
+                            {{ animal.category }}
+                            @if (!animal.upp_origen?.trim()) {
+                            <span class="badge bg-warning-lt d-block mt-1">Sin UPP</span>
+                            }
+                        </td>
                         <td><span class="badge"
                                 [class.bg-green-lt]="animal.current_status === 'ACTIVO' || animal.current_status === 'PREÑADA'"
                                 [class.bg-danger-lt]="animal.current_status === 'VACÍA'">{{ animal.current_status
@@ -184,7 +208,7 @@
         @if (activeSubTab() === 'GASTOS') {
         <div class="card-body border-bottom py-3">
             <div class="text-muted">Mostrar <div class="mx-2 d-inline-block"><select class="form-select form-select-sm"
-                        [value]="pageSize()" (change)="changePageSize($event)">
+                        [value]="pagination.pageSize()" (change)="pagination.changePageSize($event)">
                         <option value="10">10</option>
                         <option value="25">25</option>
                         <option value="50">50</option>
@@ -253,7 +277,7 @@
         </div>
         <div class="card-body border-bottom py-3">
             <div class="text-muted">Mostrar <div class="mx-2 d-inline-block"><select class="form-select form-select-sm"
-                        [value]="pageSize()" (change)="changePageSize($event)">
+                        [value]="pagination.pageSize()" (change)="pagination.changePageSize($event)">
                         <option value="10">10</option>
                         <option value="25">25</option>
                         <option value="50">50</option>
@@ -318,14 +342,14 @@
 
         @if (activeSubTab() !== 'RESUMEN' && activeSubTab() !== 'POR_ANIMAL') {
         <div class="card-footer d-flex align-items-center border-top">
-            <p class="m-0 text-muted">Mostrando <span>{{ showingStart() }}</span> a <span>{{ showingEnd() }}</span> de
+            <p class="m-0 text-muted">Mostrando <span>{{ pagination.showingStart() }}</span> a <span>{{ pagination.showingEnd() }}</span> de
                 un total disponible</p>
             <ul class="pagination m-0 ms-auto">
-                <li class="page-item" [class.disabled]="currentPage() === 1"><a class="page-link"
-                        (click)="changePage(-1)" style="cursor: pointer;">Anterior</a></li>
-                <li class="page-item active"><a class="page-link">{{ currentPage() }} de {{ totalPages() }}</a></li>
-                <li class="page-item" [class.disabled]="currentPage() === totalPages()"><a class="page-link"
-                        (click)="changePage(1)" style="cursor: pointer;">Siguiente</a></li>
+                <li class="page-item" [class.disabled]="pagination.currentPage() === 1"><a class="page-link"
+                        (click)="pagination.changePage(-1)" style="cursor: pointer;">Anterior</a></li>
+                <li class="page-item active"><a class="page-link">{{ pagination.currentPage() }} de {{ pagination.totalPages() }}</a></li>
+                <li class="page-item" [class.disabled]="pagination.currentPage() === pagination.totalPages()"><a class="page-link"
+                        (click)="pagination.changePage(1)" style="cursor: pointer;">Siguiente</a></li>
             </ul>
         </div>
         }
