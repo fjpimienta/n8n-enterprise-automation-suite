@@ -1,6 +1,8 @@
-import { Component, input, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, input, computed, ChangeDetectionStrategy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgApexchartsModule } from 'ng-apexcharts';
+import { Livestock } from '../../../models/livestock.model';
+import { ThemeService } from '@core/services/theme.service';
 
 @Component({
   selector: 'app-engorda-dashboard',
@@ -10,8 +12,10 @@ import { NgApexchartsModule } from 'ng-apexcharts';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EngordaDashboardComponent {
+  public themeService = inject(ThemeService);
+
   // Recibimos los datos filtrados por Especie desde el Main Dashboard
-  public cattleData = input<any[]>([]);
+  public cattleData = input<Livestock[]>([]);
 
   // 🚀 Blindaje de negocio: Filtramos estrictamente los destinados a ENGORDA
   public validEngordaData = computed(() => {
@@ -35,7 +39,7 @@ export class EngordaDashboardComponent {
   // 🚀 Configuración Reactiva para la Gráfica de Barras (Distribución de Peso por Especie)
   public weightChartOptions = computed(() => {
     const data = this.validEngordaData();
-    const sorted = [...data].sort((a, b) => b.current_weight_kg - a.current_weight_kg);
+    const sorted = [...data].sort((a, b) => Number(b.current_weight_kg || 0) - Number(a.current_weight_kg || 0));
 
     return {
       series: [{
@@ -43,7 +47,7 @@ export class EngordaDashboardComponent {
         data: sorted.map(a => Number(a.current_weight_kg || 0))
       }],
       xaxis: {
-        categories: sorted.map(a => a.numero_fuego || `...${a.rfid_siniiga.slice(-4)}`),
+        categories: sorted.map(a => a.numero_fuego || `...${(a.rfid_siniiga ?? '').slice(-4)}`),
         labels: { rotate: -45, style: { cssClass: 'text-muted font-monospace' } }
       },
       colors: ['#206bc4']

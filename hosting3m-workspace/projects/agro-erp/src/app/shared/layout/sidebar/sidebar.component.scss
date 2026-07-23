@@ -37,3 +37,15 @@
         width: auto !important;
     }
 }
+
+@media (min-width: 992px) {
+
+    /* Estado colapsado en escritorio: icon-only, sincronizado con .page-wrapper.expanded-content */
+    .navbar-vertical.collapsed {
+        width: 5rem !important;
+    }
+
+    .navbar-vertical.collapsed .nav-link-title {
+        display: none !important;
+    }
+}

@@ -29,8 +29,8 @@
         <div class="card shadow-sm border-0 h-100">
             <div class="card-body text-center d-flex flex-column justify-content-center">
                 <div class="subheader mb-2 text-primary font-weight-bold">ADG Promedio del Lote</div>
-                <div class="h1 mb-0 text-primary" style="font-size: 3rem;">
-                    {{ stats().avgAdg }} <span style="font-size: 1.5rem" class="text-muted">kg/día</span>
+                <div class="h1 mb-0 text-primary">
+                    {{ stats().avgAdg }} <span class="h4 text-muted">kg/día</span>
                 </div>
             </div>
         </div>
@@ -40,8 +40,8 @@
         <div class="card shadow-sm border-0 h-100">
             <div class="card-body text-center d-flex flex-column justify-content-center">
                 <div class="subheader mb-2 text-primary font-weight-bold">Peso Biológico Promedio</div>
-                <div class="h1 mb-0 text-primary" style="font-size: 3rem;">
-                    {{ stats().avgWeight }} <span style="font-size: 1.5rem" class="text-muted">kg</span>
+                <div class="h1 mb-0 text-primary">
+                    {{ stats().avgWeight }} <span class="h4 text-muted">kg</span>
                 </div>
             </div>
         </div>
@@ -57,7 +57,7 @@
             [colors]="weightChartOptions().colors"
             [chart]="{ type: 'bar', height: 320, toolbar: { show: false }, background: 'transparent' }"
             [plotOptions]="{ bar: { borderRadius: 4, horizontal: false, columnWidth: '50%' } }"
-            [dataLabels]="{ enabled: false }" [theme]="{ mode: 'dark' }"> </apx-chart>
+            [dataLabels]="{ enabled: false }" [theme]="{ mode: themeService.currentTheme() }"> </apx-chart>
     </div>
 </div>
 }
