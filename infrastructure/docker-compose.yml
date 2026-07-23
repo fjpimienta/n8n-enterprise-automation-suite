@@ -28,6 +28,12 @@ services:
       - N8N_PORT=${port}
       - N8N_PROTOCOL=https
       - N8N_RUNNERS_ENABLED=false
+      - N8N_RUNNERS_MODE=internal
+      - N8N_CODE_RUNNER_MODE=inline
+      - OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS=false
+      - N8N_RUNNERS_SERVER_ENABLED=false
+      - NODE_OPTIONS=--no-experimental-vm-modules
+      - N8N_SKIP_TASK_RUNNER=true
       - NODE_ENV=production
       - WEBHOOK_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}/
       - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
@@ -40,7 +46,7 @@ services:
       - DB_POSTGRESDB_DATABASE=${n8n_db}
       - DB_POSTGRESDB_USER=${n8n_user}
       - DB_POSTGRESDB_PASSWORD=${n8n_pass}
-      - NODE_FUNCTION_ALLOW_EXTERNAL=jsonwebtoken,pdf-parse
+      - NODE_FUNCTION_ALLOW_EXTERNAL=jsonwebtoken
       - NODE_FUNCTION_ALLOW_BUILTIN=crypto,fs
       - N8N_COMMUNITY_PACKAGES_ALLOW_TOOL_USAGE=true
       - JWT_SECRET=${JWT_SECRET}
@@ -67,7 +73,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1024m
+          memory: 1536m
     logging:
       driver: "json-file"
       options:

@@ -141,11 +141,14 @@ app.post('/generate-token', loginLimiter, async (req, res) => {
 
     // 🚀 CONTRATO FIJO: Formato exacto requerido por el frontend y n8n
     return res.json({
-      token: token,
-      role: companyData.role,
-      id_company: companyData.id_company,
-      company: companyData, // Inyectamos la metadata para el TenantService
-      status: "success"
+      status: "success",
+      message: "Autenticación exitosa",
+      data: {
+        token: token,
+        role: companyData.role,
+        id_company: companyData.id_company,
+        company: companyData
+      }
     });
 
   } catch (err) {
