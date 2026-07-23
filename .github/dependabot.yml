@@ -1,0 +1,17 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/hosting3m-workspace"
+    schedule:
+      interval: "weekly"
+    target-branch: "develop"
+  - package-ecosystem: "npm"
+    directory: "/infrastructure/upload-file/app"
+    schedule:
+      interval: "weekly"
+    target-branch: "develop"
+  - package-ecosystem: "npm"
+    directory: "/microservices/jwt-service"
+    schedule:
+      interval: "weekly"
+    target-branch: "develop"
