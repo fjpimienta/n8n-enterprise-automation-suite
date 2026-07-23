@@ -20,8 +20,8 @@
     <div class="col-md-4">
         <div class="card shadow-sm border-0 h-100">
             <div class="card-body text-center d-flex flex-column justify-content-center">
-                <div class="subheader mb-2">Tasa de Preñez Global</div>
-                <div class="h1 mb-0 text-primary" style="font-size: 3rem;">{{ stats().tasa }}%</div>
+                <div class="subheader mb-2 font-weight-bold">Tasa de Preñez Global</div>
+                <div class="h1 mb-0 text-primary">{{ stats().tasa }}%</div>
                 <small class="text-muted mt-2">{{ stats().prenadas }} de {{ stats().total }} vientres preñados</small>
             </div>
         </div>
@@ -35,7 +35,7 @@
             <div class="card-body">
                 <apx-chart [series]="getChartOptions().series" [labels]="getChartOptions().labels"
                     [colors]="getChartOptions().colors" [chart]="{ type: 'donut', height: 250 }"
-                    [theme]="{ mode: 'dark' }">
+                    [theme]="{ mode: themeService.currentTheme() }">
                 </apx-chart>
             </div>
         </div>

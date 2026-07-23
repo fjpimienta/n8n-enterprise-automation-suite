@@ -8,6 +8,7 @@ import { ReproductiveDashboardComponent } from '../reproductive-dashboard/reprod
 import { EngordaDashboardComponent } from '../engorda-dashboard/engorda-dashboard.component';
 import { ExpenseModalComponent } from '../../../expenses/components/expense-modal/expense-modal.component';
 import { TenantService } from 'core-auth';
+import { ThemeService } from '@core/services/theme.service';
 import { Livestock } from '../../../models/livestock.model';
 import { Expense } from '../../../models/expense.model';
 import { Paginator } from '../../utils/paginator';
@@ -22,6 +23,7 @@ import { Paginator } from '../../utils/paginator';
 export class MainDashboardComponent implements OnInit {
   private cattleApi = inject(CattleApiService);
   private tenantService = inject(TenantService);
+  public themeService = inject(ThemeService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
@@ -336,8 +338,19 @@ export class MainDashboardComponent implements OnInit {
     return rows;
   });
 
+  /** Fila "Sin UPP Asignada" separada del chart: se muestra como tarjeta de alerta en vez de barra,
+   *  ya que su magnitud (mayoría del hato) aplasta visualmente a los UPP operativamente relevantes. */
+  public sinUppSummary = computed(() =>
+    this.uppBalanceSummary().find(row => row.upp === MainDashboardComponent.SIN_UPP)
+  );
+
+  // Filas que sí se grafican en el chart de Balance por UPP (excluye "Sin UPP Asignada")
+  public uppChartDisplayRows = computed(() =>
+    this.uppBalanceSummary().filter(row => row.upp !== MainDashboardComponent.SIN_UPP)
+  );
+
   public uppChartOptions = computed(() => {
-    const rows = this.uppBalanceSummary();
+    const rows = this.uppChartDisplayRows();
     return {
       series: [
         { name: 'Capitalización', data: rows.map(r => Number(r.capitalizacion.toFixed(2))) },

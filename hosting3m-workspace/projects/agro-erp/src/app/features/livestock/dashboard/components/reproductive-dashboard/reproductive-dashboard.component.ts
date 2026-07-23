@@ -1,8 +1,9 @@
-import { Component, input, computed, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, input, computed, ChangeDetectionStrategy, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgApexchartsModule } from 'ng-apexcharts';
 import { Livestock } from '../../../models/livestock.model';
 import { Paginator } from '../../utils/paginator';
+import { ThemeService } from '@core/services/theme.service';
 
 @Component({
   selector: 'app-reproductive-dashboard',
@@ -12,6 +13,7 @@ import { Paginator } from '../../utils/paginator';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ReproductiveDashboardComponent {
+  public themeService = inject(ThemeService);
 
   public cattleData = input<Livestock[]>([]);
 

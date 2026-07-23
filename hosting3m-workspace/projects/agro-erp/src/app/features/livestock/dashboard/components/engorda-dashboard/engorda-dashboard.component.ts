@@ -1,7 +1,8 @@
-import { Component, input, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, input, computed, ChangeDetectionStrategy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgApexchartsModule } from 'ng-apexcharts';
 import { Livestock } from '../../../models/livestock.model';
+import { ThemeService } from '@core/services/theme.service';
 
 @Component({
   selector: 'app-engorda-dashboard',
@@ -11,6 +12,8 @@ import { Livestock } from '../../../models/livestock.model';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class EngordaDashboardComponent {
+  public themeService = inject(ThemeService);
+
   // Recibimos los datos filtrados por Especie desde el Main Dashboard
   public cattleData = input<Livestock[]>([]);
 

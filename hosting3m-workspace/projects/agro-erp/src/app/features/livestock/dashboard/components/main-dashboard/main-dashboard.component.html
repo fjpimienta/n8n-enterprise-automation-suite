@@ -118,12 +118,36 @@
                     @if (uppBalanceSummary().length === 0) {
                     <div class="text-center text-muted py-4">No hay datos de UPP para este periodo.</div>
                     } @else {
+                    @if (sinUppSummary(); as sinUpp) {
+                    <div class="alert alert-warning d-flex align-items-start gap-3 mb-3" role="alert">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon alert-icon" width="24" height="24"
+                            viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                            <path d="M12 9v2m0 4v.01" />
+                            <path
+                                d="M5.07 19H19a2 2 0 0 0 1.75 -2.75L13.75 3.5a2 2 0 0 0 -3.5 0L3.25 16.25A2 2 0 0 0 5.07 19" />
+                        </svg>
+                        <div>
+                            <strong>{{ sinUpp.cabezas }} de {{ filteredCattleList().length }} animales ({{
+                                (sinUpp.cabezas / filteredCattleList().length * 100) | number:'1.0-0' }}%) sin UPP
+                                asignada.</strong>
+                            Capitalización: {{ sinUpp.capitalizacion | currency:'MXN':'symbol-narrow':'1.0-0' }} —
+                            esta cifra no aparece en el balance por rancho de abajo.
+                        </div>
+                    </div>
+                    }
+                    @if (uppChartDisplayRows().length > 0) {
                     <apx-chart [series]="uppChartOptions().series" [xaxis]="uppChartOptions().xaxis"
                         [colors]="uppChartOptions().colors"
                         [chart]="{ type: 'bar', height: 320, toolbar: { show: false }, background: 'transparent' }"
                         [plotOptions]="{ bar: { borderRadius: 4, columnWidth: '55%' } }"
-                        [dataLabels]="{ enabled: false }" [legend]="{ show: true, position: 'top' }">
+                        [dataLabels]="{ enabled: false }" [legend]="{ show: true, position: 'top' }"
+                        [theme]="{ mode: themeService.currentTheme() }">
                     </apx-chart>
+                    } @else {
+                    <div class="text-center text-muted py-4">Todos los animales están sin UPP asignada.</div>
+                    }
                     }
                 </div>
             </div>
@@ -273,7 +297,7 @@
             <apx-chart [series]="animalBalanceChartOptions().series" [xaxis]="animalBalanceChartOptions().xaxis"
                 [chart]="{ type: 'bar', height: 300, toolbar: { show: false }, background: 'transparent' }"
                 [plotOptions]="{ bar: { borderRadius: 4, columnWidth: '50%', colors: { ranges: [{ from: -999999999, to: 0, color: '#d63939' }, { from: 0, to: 999999999, color: '#2fb344' }] } } }"
-                [dataLabels]="{ enabled: false }"> </apx-chart>
+                [dataLabels]="{ enabled: false }" [theme]="{ mode: themeService.currentTheme() }"> </apx-chart>
         </div>
         <div class="card-body border-bottom py-3">
             <div class="text-muted">Mostrar <div class="mx-2 d-inline-block"><select class="form-select form-select-sm"
