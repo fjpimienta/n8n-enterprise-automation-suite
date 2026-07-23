@@ -6,6 +6,7 @@ import { TenantService } from 'core-auth';
 import { SidebarComponent } from '../sidebar/sidebar.component';
 import { HeaderComponent } from '../header/header.component';
 import { AiChatComponent } from 'ui-chat';
+import { LayoutService } from '@shared/services/layout.service';
 
 @Component({
   selector: 'app-main-layout',
@@ -17,6 +18,7 @@ import { AiChatComponent } from 'ui-chat';
 })
 export class MainLayoutComponent implements OnInit {
   private tenantService = inject(TenantService);
+  public layoutService = inject(LayoutService);
 
   public currentTenant = this.tenantService.activeTenant;
   readonly showIosPrompt = signal<boolean>(false);

@@ -1,6 +1,9 @@
-import { Component, input, computed, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, input, computed, ChangeDetectionStrategy, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { NgApexchartsModule } from 'ng-apexcharts';
+import { Livestock } from '../../../models/livestock.model';
+import { Paginator } from '../../utils/paginator';
+import { ThemeService } from '@core/services/theme.service';
 
 @Component({
   selector: 'app-reproductive-dashboard',
@@ -10,8 +13,9 @@ import { NgApexchartsModule } from 'ng-apexcharts';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ReproductiveDashboardComponent {
+  public themeService = inject(ThemeService);
 
-  public cattleData = input<any[]>([]);
+  public cattleData = input<Livestock[]>([]);
 
   // 🚀 Blindaje de datos: Mapeo estricto a la columna 'business_model' de PostgreSQL
   public data = computed(() => this.cattleData().filter(a => a.business_model === 'CRIA'));
@@ -19,41 +23,18 @@ export class ReproductiveDashboardComponent {
   // Controladores de Estado de Interfaz
   public isTableCollapsed = signal(true);
 
-  // 🚀 Sistema de Paginación Reactiva Interno
-  public currentPage = signal(1);
-  public pageSize = signal(10);
-
-  public totalPages = computed(() => Math.ceil(this.data().length / this.pageSize()) || 1);
-
-  public showingStart = computed(() => {
-    if (this.data().length === 0) return 0;
-    return ((this.currentPage() - 1) * this.pageSize()) + 1;
-  });
-
-  public showingEnd = computed(() => Math.min(this.currentPage() * this.pageSize(), this.data().length));
+  // 🚀 Paginación Reutilizable (composable basado en signals, compartido con main-dashboard)
+  public pagination = new Paginator(() => this.data().length);
 
   // Slice de datos en memoria basado en la página seleccionada
   public paginatedData = computed(() => {
-    const startIndex = (this.currentPage() - 1) * this.pageSize();
-    return this.data().slice(startIndex, startIndex + this.pageSize());
+    const startIndex = (this.pagination.currentPage() - 1) * this.pagination.pageSize();
+    return this.data().slice(startIndex, startIndex + this.pagination.pageSize());
   });
 
   public toggleTable() {
     this.isTableCollapsed.update(state => !state);
-    this.currentPage.set(1); // Reset de seguridad al colapsar/expandir
-  }
-
-  public changePageSize(event: Event) {
-    const size = Number((event.target as HTMLSelectElement).value);
-    this.pageSize.set(size);
-    this.currentPage.set(1);
-  }
-
-  public changePage(delta: number) {
-    const newPage = this.currentPage() + delta;
-    if (newPage >= 1 && newPage <= this.totalPages()) {
-      this.currentPage.set(newPage);
-    }
+    this.pagination.reset(); // Reset de seguridad al colapsar/expandir
   }
 
   // Indicadores Clínicos Derivados

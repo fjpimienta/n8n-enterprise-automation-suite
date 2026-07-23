@@ -20,7 +20,7 @@ export class ThemeService {
     // 4. Efecto mágico: Actualiza el HTML automáticamente
     effect(() => {
       const theme = this.currentTheme();
-      document.body.setAttribute('data-bs-theme', theme);
+      document.documentElement.setAttribute('data-bs-theme', theme);
       localStorage.setItem('theme', theme);
     });
   }

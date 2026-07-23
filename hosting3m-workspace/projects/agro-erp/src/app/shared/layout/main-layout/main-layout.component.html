@@ -4,7 +4,7 @@
 
     <app-header></app-header>
 
-    <div class="page-wrapper">
+    <div class="page-wrapper" [class.expanded-content]="layoutService.sidebarCollapsed()">
         <div class="page-body">
             <div class="container-xl pt-4">
                 <router-outlet></router-outlet>

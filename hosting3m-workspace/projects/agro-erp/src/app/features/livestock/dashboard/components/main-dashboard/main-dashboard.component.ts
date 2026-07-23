@@ -8,6 +8,10 @@ import { ReproductiveDashboardComponent } from '../reproductive-dashboard/reprod
 import { EngordaDashboardComponent } from '../engorda-dashboard/engorda-dashboard.component';
 import { ExpenseModalComponent } from '../../../expenses/components/expense-modal/expense-modal.component';
 import { TenantService } from 'core-auth';
+import { ThemeService } from '@core/services/theme.service';
+import { Livestock } from '../../../models/livestock.model';
+import { Expense } from '../../../models/expense.model';
+import { Paginator } from '../../utils/paginator';
 
 @Component({
   selector: 'app-main-dashboard',
@@ -19,13 +23,14 @@ import { TenantService } from 'core-auth';
 export class MainDashboardComponent implements OnInit {
   private cattleApi = inject(CattleApiService);
   private tenantService = inject(TenantService);
+  public themeService = inject(ThemeService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
   public PRECIO_KILO = 65.00;
 
-  public cattleList = signal<any[]>([]);
-  public expensesList = signal<any[]>([]);
+  public cattleList = signal<Livestock[]>([]);
+  public expensesList = signal<Expense[]>([]);
   public isLoading = signal<boolean>(true);
 
   // Navegación y Filtros de Trazabilidad Biológica
@@ -34,9 +39,11 @@ export class MainDashboardComponent implements OnInit {
   public selectedSpecies = signal<string>('TODOS'); // 🚀 Filtro maestro de especie
   public showExpenseModal = signal<boolean>(false);
 
-  // Controladores de Paginación Única
-  public currentPage = signal(1);
-  public pageSize = signal(10);
+  // 🔎 Búsqueda reactiva del tab Inventario Detallado
+  public inventorySearch = signal<string>('');
+
+  // Controlador de Paginación Reutilizable (ver mejora #3: composable basado en signals)
+  public pagination = new Paginator(() => this.currentDataset().length);
 
   // Bridge reactivo: convierte los queryParams del Router en un Signal nativo de Angular
   private queryParams = toSignal(this.route.queryParamMap);
@@ -78,8 +85,8 @@ export class MainDashboardComponent implements OnInit {
       const rawResponse: any = cattleRaw;
 
       // Si n8n regresa el array directo, se asigna. Si viene envuelto en { data: [...] }, se extrae de forma segura.
-      this.cattleList.set(Array.isArray(rawResponse) ? rawResponse : (rawResponse?.data || []));
-      this.expensesList.set(Array.isArray(expensesRaw) ? expensesRaw : []);
+      this.cattleList.set((Array.isArray(rawResponse) ? rawResponse : (rawResponse?.data || [])) as Livestock[]);
+      this.expensesList.set((Array.isArray(expensesRaw) ? expensesRaw : []) as Expense[]);
 
     } catch (error) {
       console.error('Error en el Data Pipeline:', error);
@@ -147,29 +154,41 @@ export class MainDashboardComponent implements OnInit {
     });
   });
 
+  // 🚩 Cuenta de animales sin UPP asignada, para el badge de alerta del inventario
+  public missingUppCount = computed(() =>
+    this.filteredCattleList().filter(a => !a.upp_origen?.trim()).length
+  );
+
+  // 🔎 Inventario filtrado por búsqueda reactiva (rfid_siniiga, numero_fuego o electronic_rfid)
+  public inventorySearchedList = computed(() => {
+    const query = this.inventorySearch().trim().toLowerCase();
+    const list = this.filteredCattleList();
+    if (!query) return list;
+
+    return list.filter(animal =>
+      animal.rfid_siniiga?.toLowerCase().includes(query) ||
+      animal.numero_fuego?.toLowerCase().includes(query) ||
+      animal.electronic_rfid?.toLowerCase().includes(query)
+    );
+  });
+
   private currentDataset = computed(() => {
-    return this.activeSubTab() === 'GASTOS' ? this.filteredExpensesList() : this.filteredCattleList();
+    const tab = this.activeSubTab();
+    if (tab === 'GASTOS') return this.filteredExpensesList();
+    if (tab === 'INVENTARIO') return this.inventorySearchedList();
+    return this.filteredCattleList();
   });
-
-  public totalPages = computed(() => Math.ceil(this.currentDataset().length / this.pageSize()) || 1);
-
-  public showingStart = computed(() => {
-    if (this.currentDataset().length === 0) return 0;
-    return ((this.currentPage() - 1) * this.pageSize()) + 1;
-  });
-
-  public showingEnd = computed(() => Math.min(this.currentPage() * this.pageSize(), this.currentDataset().length));
 
   public paginatedCattleList = computed(() => {
     if (this.activeSubTab() !== 'INVENTARIO') return [];
-    const startIndex = (this.currentPage() - 1) * this.pageSize();
-    return this.filteredCattleList().slice(startIndex, startIndex + this.pageSize());
+    const startIndex = (this.pagination.currentPage() - 1) * this.pagination.pageSize();
+    return this.inventorySearchedList().slice(startIndex, startIndex + this.pagination.pageSize());
   });
 
   public paginatedExpensesList = computed(() => {
     if (this.activeSubTab() !== 'GASTOS') return [];
-    const startIndex = (this.currentPage() - 1) * this.pageSize();
-    return this.filteredExpensesList().slice(startIndex, startIndex + this.pageSize());
+    const startIndex = (this.pagination.currentPage() - 1) * this.pagination.pageSize();
+    return this.filteredExpensesList().slice(startIndex, startIndex + this.pagination.pageSize());
   });
 
   public setTab(tab: 'CRIA' | 'ENGORDA') {
@@ -184,24 +203,17 @@ export class MainDashboardComponent implements OnInit {
 
   public setSubTab(subTab: 'RESUMEN' | 'INVENTARIO' | 'GASTOS' | 'POR_ANIMAL') {
     this.activeSubTab.set(subTab);
-    this.currentPage.set(1);
+    this.pagination.reset();
   }
 
   public setSpecies(species: string) {
     this.selectedSpecies.set(species);
-    this.currentPage.set(1);
+    this.pagination.reset();
   }
 
-  public changePageSize(event: Event) {
-    this.pageSize.set(Number((event.target as HTMLSelectElement).value));
-    this.currentPage.set(1);
-  }
-
-  public changePage(delta: number) {
-    const newPage = this.currentPage() + delta;
-    if (newPage >= 1 && newPage <= this.totalPages()) {
-      this.currentPage.set(newPage);
-    }
+  public setInventorySearch(query: string) {
+    this.inventorySearch.set(query);
+    this.pagination.reset();
   }
 
   public biomasaTotal = computed(() => {
@@ -214,7 +226,9 @@ export class MainDashboardComponent implements OnInit {
 
   /** Ranking de gastos por animal: agrupa filteredExpensesList por livestock_id y cruza con cattleList */
   public animalCostSummary = computed(() => {
-    const expenses = this.filteredExpensesList().filter(e => e.livestock_id);
+    const expenses = this.filteredExpensesList().filter(
+      (e): e is Expense & { livestock_id: string } => !!e.livestock_id
+    );
     const grouped = new Map<string, { total: number; count: number }>();
 
     for (const e of expenses) {
@@ -324,8 +338,19 @@ export class MainDashboardComponent implements OnInit {
     return rows;
   });
 
+  /** Fila "Sin UPP Asignada" separada del chart: se muestra como tarjeta de alerta en vez de barra,
+   *  ya que su magnitud (mayoría del hato) aplasta visualmente a los UPP operativamente relevantes. */
+  public sinUppSummary = computed(() =>
+    this.uppBalanceSummary().find(row => row.upp === MainDashboardComponent.SIN_UPP)
+  );
+
+  // Filas que sí se grafican en el chart de Balance por UPP (excluye "Sin UPP Asignada")
+  public uppChartDisplayRows = computed(() =>
+    this.uppBalanceSummary().filter(row => row.upp !== MainDashboardComponent.SIN_UPP)
+  );
+
   public uppChartOptions = computed(() => {
-    const rows = this.uppBalanceSummary();
+    const rows = this.uppChartDisplayRows();
     return {
       series: [
         { name: 'Capitalización', data: rows.map(r => Number(r.capitalizacion.toFixed(2))) },
