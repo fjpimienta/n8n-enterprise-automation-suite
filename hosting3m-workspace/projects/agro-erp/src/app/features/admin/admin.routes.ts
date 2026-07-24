@@ -17,5 +17,10 @@ export const adminRoutes: Routes = [
         canActivate: [roleGuard(['ADMIN'])],
         loadComponent: () => import('./components/breed-catalog/breed-catalog.component').then(m => m.BreedCatalogComponent)
     },
+    {
+        path: 'etapas-vida',
+        canActivate: [roleGuard(['ADMIN'])],
+        loadComponent: () => import('./components/lifestage-catalog/lifestage-catalog.component').then(m => m.LifestageCatalogComponent)
+    },
     { path: '', redirectTo: 'tenants', pathMatch: 'full' }
 ];
