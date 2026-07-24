@@ -1,0 +1,96 @@
+@if (isOpen()) {
+<div class="modal-backdrop fade show"></div>
+<div class="modal modal-blur fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">
+                    <i class="ti ti-arrow-right me-2"></i>
+                    @if (isReadonly()) {
+                    Detalle de la Transición
+                    } @else {
+                    {{ selectedLifestage() ? 'Actualizar Transición del Catálogo' : 'Alta de Nueva Transición' }}
+                    }
+                </h5>
+                <button type="button" class="btn-close btn-close-white" (click)="onClose.emit()"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">Especie <span class="text-danger">*</span></label>
+                        <select class="form-select shadow-sm" [disabled]="isReadonly()"
+                            [ngModel]="lifestageData().especie" (ngModelChange)="updateField('especie', $event)">
+                            <option value="BOVINO">Bovino</option>
+                            <option value="BUFALO">Búfalo</option>
+                            <option value="BORREGO">Borrego</option>
+                        </select>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">Edad Mínima (meses) <span class="text-danger">*</span></label>
+                        <input type="number" step="0.1" class="form-control shadow-sm" [disabled]="isReadonly()"
+                            [ngModel]="lifestageData().edad_min_meses"
+                            (ngModelChange)="updateField('edad_min_meses', $event)"
+                            placeholder="Orientativo, dispara la revisión">
+                    </div>
+                </div>
+
+                <hr class="my-4">
+                <h6 class="text-muted text-uppercase fw-bold mb-3">Transición de Categoría</h6>
+
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">Categoría Origen <span class="text-danger">*</span></label>
+                        <select class="form-select shadow-sm" [disabled]="isReadonly()"
+                            [ngModel]="lifestageData().categoria_origen" (ngModelChange)="updateField('categoria_origen', $event)">
+                            <option value="" disabled>Selecciona...</option>
+                            @for (cat of categorias; track cat) {
+                            <option [value]="cat">{{ cat }}</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">Categoría Destino <span class="text-danger">*</span></label>
+                        <select class="form-select shadow-sm" [disabled]="isReadonly()"
+                            [ngModel]="lifestageData().categoria_destino" (ngModelChange)="updateField('categoria_destino', $event)">
+                            <option value="" disabled>Selecciona...</option>
+                            @for (cat of categorias; track cat) {
+                            <option [value]="cat">{{ cat }}</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+                <h6 class="text-muted text-uppercase fw-bold mb-3">Regla de Validación</h6>
+
+                <div class="mb-3 form-check form-switch">
+                    <input type="checkbox" class="form-check-input" role="switch" id="requiereValidacionPeso"
+                        [disabled]="isReadonly()"
+                        [ngModel]="lifestageData().requiere_validacion_peso"
+                        (ngModelChange)="updateField('requiere_validacion_peso', $event)">
+                    <label class="form-check-label" for="requiereValidacionPeso">
+                        Requiere validación de peso (además de la edad) para la transición real
+                    </label>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Notas</label>
+                    <textarea class="form-control shadow-sm" rows="2" [disabled]="isReadonly()"
+                        [ngModel]="lifestageData().notas" (ngModelChange)="updateField('notas', $event)"
+                        placeholder="Opcional"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary px-4 shadow-sm" (click)="onClose.emit()">
+                    {{ isReadonly() ? 'Cerrar' : 'Cancelar' }}
+                </button>
+                @if (!isReadonly()) {
+                <button class="btn btn-success px-4 shadow-sm" (click)="onSave.emit()">
+                    <i class="ti ti-device-floppy me-2"></i> Guardar Cambios
+                </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+}

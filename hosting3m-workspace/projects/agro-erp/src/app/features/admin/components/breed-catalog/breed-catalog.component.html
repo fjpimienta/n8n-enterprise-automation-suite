@@ -1,0 +1,101 @@
+<div class="container-fluid p-3 p-md-4 animate__animated animate__fadeIn">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <div class="d-none d-md-block">
+                <span class="bg-green-lt p-2 rounded-3"><i class="ti ti-dna fs-2"></i></span>
+            </div>
+            <div>
+                <h2 class="page-title mb-0">Catálogo de Raza</h2>
+                <div class="text-muted small mt-1">Estándares zootécnicos globales por raza (pesos objetivo, gestación)</div>
+            </div>
+        </div>
+        <div>
+            <button class="btn btn-primary shadow-sm" (click)="openModal()">
+                <i class="ti ti-square-rounded-plus me-2"></i>
+                <span class="d-none d-sm-inline">Nueva Raza</span>
+                <span class="d-inline d-sm-none">Nueva</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-2 mb-3 align-items-center">
+        <div class="col-12 col-md-8">
+            <div class="input-group">
+                <span class="input-group-text bg-white border-end-0">
+                    <i class="ti ti-search text-muted"></i>
+                </span>
+                <input type="text" class="form-control border-start-0"
+                    placeholder="Buscar por grupo o variante de raza..."
+                    [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)">
+            </div>
+        </div>
+        <div class="col-12 col-md-4 text-muted small text-end">
+            {{ filteredBreeds().length }} / {{ breeds().length }} razas
+        </div>
+    </div>
+
+    <div class="row row-cards">
+        @for (breed of filteredBreeds(); track breed.id) {
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="card shadow-sm border-0 h-100 hover-shadow-lg transition-all">
+                <div class="card-body p-3">
+                    <div class="d-flex align-items-center mb-2">
+                        <span class="avatar avatar-md me-3 bg-green-lt text-uppercase fw-bold rounded shadow-sm">
+                            {{ breed.especie.charAt(0) }}
+                        </span>
+                        <div class="flex-fill overflow-hidden">
+                            <div class="font-weight-medium fs-4 text-truncate mb-1">
+                                {{ breed.raza_grupo }}
+                            </div>
+                            @if (breed.raza_variante) {
+                            <div class="text-muted fs-5 text-truncate">{{ breed.raza_variante }}</div>
+                            }
+                        </div>
+                        <div class="ms-2 d-flex flex-column gap-1">
+                            <button class="btn btn-icon btn-outline-secondary btn-sm" (click)="openModal(breed)"
+                                [disabled]="isLoadingDetail()" title="Editar Raza">
+                                <i class="ti ti-edit"></i>
+                            </button>
+                            <button class="btn btn-icon btn-outline-danger btn-sm" (click)="deleteBreed(breed)"
+                                title="Eliminar Raza">
+                                <i class="ti ti-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <span class="badge bg-orange-lt">{{ breed.especie }}</span>
+                        <span class="badge bg-blue-lt ms-1">{{ breed.dias_gestacion_promedio }} días gestación</span>
+                    </div>
+
+                    <div class="row text-muted fs-5">
+                        <div class="col-6">
+                            <i class="ti ti-gender-female me-1"></i> {{ breed.peso_adulto_hembra_kg | number:'1.0-0' }} kg
+                        </div>
+                        <div class="col-6">
+                            <i class="ti ti-gender-male me-1"></i> {{ breed.peso_adulto_macho_kg | number:'1.0-0' }} kg
+                        </div>
+                    </div>
+                </div>
+                <div class="card-progress-bottom" style="background-color: #2fb344;"></div>
+            </div>
+        </div>
+        } @empty {
+        <div class="col-12 text-center py-5">
+            <div class="empty-state">
+                <div class="empty-img"><i class="ti ti-dna-off fs-1 text-muted"></i></div>
+                <p class="empty-title fs-3">No hay razas registradas</p>
+                <p class="empty-subtitle text-muted">Da de alta la primera raza para comenzar a estandarizar el catálogo.</p>
+                <button class="btn btn-primary mt-3" (click)="openModal()">
+                    <i class="ti ti-square-rounded-plus me-2"></i> Nueva Raza
+                </button>
+            </div>
+        </div>
+        }
+    </div>
+</div>
+
+<app-breed-form-modal [isOpen]="isModalOpen()" [selectedBreed]="selectedBreed()" [isReadonly]="isReadOnlyMode()"
+    [(breedData)]="currentBreedData" (onClose)="closeModal()" (onSave)="saveBreed()">
+</app-breed-form-modal>

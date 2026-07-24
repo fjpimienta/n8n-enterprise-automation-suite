@@ -1,0 +1,98 @@
+<div class="container-fluid p-3 p-md-4 animate__animated animate__fadeIn">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <div class="d-none d-md-block">
+                <span class="bg-blue-lt p-2 rounded-3"><i class="ti ti-arrow-right fs-2"></i></span>
+            </div>
+            <div>
+                <h2 class="page-title mb-0">Etapas de Vida</h2>
+                <div class="text-muted small mt-1">Transiciones de categoría por especie (edad orientativa, nunca determinante)</div>
+            </div>
+        </div>
+        <div>
+            <button class="btn btn-primary shadow-sm" (click)="openModal()">
+                <i class="ti ti-square-rounded-plus me-2"></i>
+                <span class="d-none d-sm-inline">Nueva Transición</span>
+                <span class="d-inline d-sm-none">Nueva</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="row g-2 mb-3 align-items-center">
+        <div class="col-12 col-md-8">
+            <div class="input-group">
+                <span class="input-group-text bg-white border-end-0">
+                    <i class="ti ti-search text-muted"></i>
+                </span>
+                <input type="text" class="form-control border-start-0"
+                    placeholder="Buscar por categoría origen o destino..."
+                    [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)">
+            </div>
+        </div>
+        <div class="col-12 col-md-4 text-muted small text-end">
+            {{ filteredLifestages().length }} / {{ lifestages().length }} transiciones
+        </div>
+    </div>
+
+    <div class="row row-cards">
+        @for (lifestage of filteredLifestages(); track lifestage.id) {
+        <div class="col-12 col-md-6 col-xl-4">
+            <div class="card shadow-sm border-0 h-100 hover-shadow-lg transition-all">
+                <div class="card-body p-3">
+                    <div class="d-flex align-items-center mb-2">
+                        <span class="avatar avatar-md me-3 bg-blue-lt text-uppercase fw-bold rounded shadow-sm">
+                            {{ lifestage.especie.charAt(0) }}
+                        </span>
+                        <div class="flex-fill overflow-hidden">
+                            <div class="font-weight-medium fs-4 text-truncate mb-1">
+                                {{ lifestage.categoria_origen }} → {{ lifestage.categoria_destino }}
+                            </div>
+                            <div class="text-muted fs-5 text-truncate">{{ lifestage.edad_min_meses }} meses mínimo</div>
+                        </div>
+                        <div class="ms-2 d-flex flex-column gap-1">
+                            <button class="btn btn-icon btn-outline-secondary btn-sm" (click)="openModal(lifestage)"
+                                [disabled]="isLoadingDetail()" title="Editar Transición">
+                                <i class="ti ti-edit"></i>
+                            </button>
+                            <button class="btn btn-icon btn-outline-danger btn-sm" (click)="deleteLifestage(lifestage)"
+                                title="Eliminar Transición">
+                                <i class="ti ti-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <span class="badge bg-orange-lt">{{ lifestage.especie }}</span>
+                        @if (lifestage.requiere_validacion_peso) {
+                        <span class="badge bg-purple-lt ms-1">Requiere validación de peso</span>
+                        } @else {
+                        <span class="badge bg-secondary-lt ms-1">Solo por edad</span>
+                        }
+                    </div>
+
+                    @if (lifestage.notas) {
+                    <div class="text-muted fs-5 text-truncate">{{ lifestage.notas }}</div>
+                    }
+                </div>
+                <div class="card-progress-bottom" style="background-color: #206bc4;"></div>
+            </div>
+        </div>
+        } @empty {
+        <div class="col-12 text-center py-5">
+            <div class="empty-state">
+                <div class="empty-img"><i class="ti ti-arrow-right fs-1 text-muted"></i></div>
+                <p class="empty-title fs-3">No hay transiciones registradas</p>
+                <p class="empty-subtitle text-muted">Da de alta la primera transición para comenzar a estandarizar el catálogo.</p>
+                <button class="btn btn-primary mt-3" (click)="openModal()">
+                    <i class="ti ti-square-rounded-plus me-2"></i> Nueva Transición
+                </button>
+            </div>
+        </div>
+        }
+    </div>
+</div>
+
+<app-lifestage-form-modal [isOpen]="isModalOpen()" [selectedLifestage]="selectedLifestage()" [isReadonly]="isReadOnlyMode()"
+    [(lifestageData)]="currentLifestageData" (onClose)="closeModal()" (onSave)="saveLifestage()">
+</app-lifestage-form-modal>

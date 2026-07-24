@@ -1,0 +1,105 @@
+@if (isOpen()) {
+<div class="modal-backdrop fade show"></div>
+<div class="modal modal-blur fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">
+                    <i class="ti ti-dna me-2"></i>
+                    @if (isReadonly()) {
+                    Detalle de la Raza
+                    } @else {
+                    {{ selectedBreed() ? 'Actualizar Raza del Catálogo' : 'Alta de Nueva Raza' }}
+                    }
+                </h5>
+                <button type="button" class="btn-close btn-close-white" (click)="onClose.emit()"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">Especie <span class="text-danger">*</span></label>
+                        <select class="form-select shadow-sm" [disabled]="isReadonly()"
+                            [ngModel]="breedData().especie" (ngModelChange)="updateField('especie', $event)">
+                            <option value="BOVINO">Bovino</option>
+                            <option value="BUFALO">Búfalo</option>
+                            <option value="BORREGO">Borrego</option>
+                        </select>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">Días de Gestación Promedio <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control shadow-sm" [disabled]="isReadonly()"
+                            [ngModel]="breedData().dias_gestacion_promedio"
+                            (ngModelChange)="updateField('dias_gestacion_promedio', $event)"
+                            placeholder="Ej. 285">
+                    </div>
+                </div>
+
+                <hr class="my-4">
+                <h6 class="text-muted text-uppercase fw-bold mb-3">Identificación de la Raza</h6>
+
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">Grupo de Raza <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control shadow-sm" [disabled]="isReadonly()"
+                            [ngModel]="breedData().raza_grupo" (ngModelChange)="updateField('raza_grupo', $event)"
+                            placeholder="Ej. Cebú">
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">Variante</label>
+                        <input type="text" class="form-control shadow-sm" [disabled]="isReadonly()"
+                            [ngModel]="breedData().raza_variante" (ngModelChange)="updateField('raza_variante', $event)"
+                            placeholder="Ej. Brahman, Nelore, Puro, Cruza">
+                    </div>
+                </div>
+
+                <hr class="my-4">
+                <h6 class="text-muted text-uppercase fw-bold mb-3">Estándares Zootécnicos</h6>
+
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">Peso Adulto Hembra (kg) <span class="text-danger">*</span></label>
+                        <input type="number" step="0.01" class="form-control shadow-sm" [disabled]="isReadonly()"
+                            [ngModel]="breedData().peso_adulto_hembra_kg"
+                            (ngModelChange)="updateField('peso_adulto_hembra_kg', $event)"
+                            placeholder="Ej. 450.00">
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">Peso Adulto Macho (kg) <span class="text-danger">*</span></label>
+                        <input type="number" step="0.01" class="form-control shadow-sm" [disabled]="isReadonly()"
+                            [ngModel]="breedData().peso_adulto_macho_kg"
+                            (ngModelChange)="updateField('peso_adulto_macho_kg', $event)"
+                            placeholder="Ej. 750.00">
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">% Peso Primer Servicio</label>
+                        <input type="number" step="0.01" class="form-control shadow-sm" [disabled]="isReadonly()"
+                            [ngModel]="breedData().pct_peso_primer_servicio"
+                            (ngModelChange)="updateField('pct_peso_primer_servicio', $event)"
+                            placeholder="Ej. 65.00">
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">Edad Mínima Pubertad (meses)</label>
+                        <input type="number" step="0.1" class="form-control shadow-sm" [disabled]="isReadonly()"
+                            [ngModel]="breedData().edad_min_pubertad_meses"
+                            (ngModelChange)="updateField('edad_min_pubertad_meses', $event)"
+                            placeholder="Orientativo, nunca determinante">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline-secondary px-4 shadow-sm" (click)="onClose.emit()">
+                    {{ isReadonly() ? 'Cerrar' : 'Cancelar' }}
+                </button>
+                @if (!isReadonly()) {
+                <button class="btn btn-success px-4 shadow-sm" (click)="onSave.emit()">
+                    <i class="ti ti-device-floppy me-2"></i> Guardar Cambios
+                </button>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+}
