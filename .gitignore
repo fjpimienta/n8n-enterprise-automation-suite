@@ -27,6 +27,10 @@ n8n_backup/
 local-files/
 sync_dbs.sh
 
+# Excepción: las migraciones versionadas de agro-erp SÍ deben trackearse
+# (no son dumps/backups, son el historial de cambios de esquema del proyecto)
+!hosting3m-workspace/projects/agro-erp/database/migrations/*.sql
+
 # --- Node.js / Microservicios (General) ---
 node_modules/
 npm-debug.log*

@@ -6,6 +6,8 @@ import { environment } from '@env/environment';
 import { Company } from '@core/models/company.model';
 import { User } from '@core/models/user.model';
 import { Guest } from '@core/models/guest.model';
+import { BreedCatalog } from '@core/models/breed-catalog.model';
+import { LifestageCatalog } from '@core/models/lifestage-catalog.model';
 import { TenantService } from 'core-auth';
 
 @Injectable({
@@ -24,6 +26,12 @@ export class AdminService {
   public loadingReservations = signal<boolean>(false);
 
   public reservations = signal<any[]>([]);
+
+  public breeds = signal<BreedCatalog[]>([]);
+  public loadingBreeds = signal<boolean>(false);
+
+  public lifestages = signal<LifestageCatalog[]>([]);
+  public loadingLifestages = signal<boolean>(false);
 
   private getAuthHeaders() {
     const token = localStorage.getItem('authToken');
@@ -193,6 +201,140 @@ export class AdminService {
     };
 
     return this.http.post<ApiResponse<any>>(`${this.apiUrl_crud}/user_companies`, payload, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  /* Breed Catalog (cattle_breed_catalog) — catálogo global de estándares zootécnicos por raza */
+  public loadBreeds() {
+    this.loadingBreeds.set(true);
+
+    const payload = {
+      entity: 'cattle_breed_catalog',
+      table_name: 'cattle_breed_catalog',
+      operation: 'getall',
+      action: 'list',
+      filters: {}
+    };
+
+    this.http.post<ApiResponse<BreedCatalog>>(`${this.apiUrl_crud}/cattle_breed_catalog`, payload, {
+      headers: this.getAuthHeaders()
+    }).subscribe({
+      next: (res) => {
+        const data = Array.isArray(res.data) ? res.data : [];
+        const sortedBreeds = data.sort((a, b) => a.raza_grupo.localeCompare(b.raza_grupo));
+        this.breeds.set(sortedBreeds);
+        this.loadingBreeds.set(false);
+      },
+      error: (err) => {
+        console.error('Error al cargar el catálogo de razas:', err);
+        this.breeds.set([]);
+        this.loadingBreeds.set(false);
+      }
+    });
+  }
+
+  public getBreedById(id: string) {
+    const payload = {
+      entity: 'cattle_breed_catalog',
+      table_name: 'cattle_breed_catalog',
+      operation: 'getone',
+      action: 'getone',
+      filters: { id }
+    };
+    return this.http.post<ApiResponse<BreedCatalog>>(`${this.apiUrl_crud}/cattle_breed_catalog`, payload, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  public saveBreed(breed: Partial<BreedCatalog>, operation: 'insert' | 'update', id?: string) {
+    const payload = {
+      entity: 'cattle_breed_catalog',
+      table_name: 'cattle_breed_catalog',
+      operation,
+      id,
+      fields: breed
+    };
+    return this.http.post<ApiResponse<BreedCatalog>>(`${this.apiUrl_crud}/cattle_breed_catalog`, payload, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  public deleteBreed(id: string) {
+    const payload = {
+      entity: 'cattle_breed_catalog',
+      table_name: 'cattle_breed_catalog',
+      operation: 'delete',
+      id
+    };
+    return this.http.post<ApiResponse<any>>(`${this.apiUrl_crud}/cattle_breed_catalog`, payload, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  /* Lifestage Catalog (cattle_lifestage_catalog) — catálogo global de transiciones de etapa de vida */
+  public loadLifestages() {
+    this.loadingLifestages.set(true);
+
+    const payload = {
+      entity: 'cattle_lifestage_catalog',
+      table_name: 'cattle_lifestage_catalog',
+      operation: 'getall',
+      action: 'list',
+      filters: {}
+    };
+
+    this.http.post<ApiResponse<LifestageCatalog>>(`${this.apiUrl_crud}/cattle_lifestage_catalog`, payload, {
+      headers: this.getAuthHeaders()
+    }).subscribe({
+      next: (res) => {
+        const data = Array.isArray(res.data) ? res.data : [];
+        const sortedLifestages = data.sort((a, b) => a.categoria_origen.localeCompare(b.categoria_origen));
+        this.lifestages.set(sortedLifestages);
+        this.loadingLifestages.set(false);
+      },
+      error: (err) => {
+        console.error('Error al cargar el catálogo de etapas de vida:', err);
+        this.lifestages.set([]);
+        this.loadingLifestages.set(false);
+      }
+    });
+  }
+
+  public getLifestageById(id: string) {
+    const payload = {
+      entity: 'cattle_lifestage_catalog',
+      table_name: 'cattle_lifestage_catalog',
+      operation: 'getone',
+      action: 'getone',
+      filters: { id }
+    };
+    return this.http.post<ApiResponse<LifestageCatalog>>(`${this.apiUrl_crud}/cattle_lifestage_catalog`, payload, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  public saveLifestage(lifestage: Partial<LifestageCatalog>, operation: 'insert' | 'update', id?: string) {
+    const payload = {
+      entity: 'cattle_lifestage_catalog',
+      table_name: 'cattle_lifestage_catalog',
+      operation,
+      id,
+      fields: lifestage
+    };
+    return this.http.post<ApiResponse<LifestageCatalog>>(`${this.apiUrl_crud}/cattle_lifestage_catalog`, payload, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  public deleteLifestage(id: string) {
+    const payload = {
+      entity: 'cattle_lifestage_catalog',
+      table_name: 'cattle_lifestage_catalog',
+      operation: 'delete',
+      id
+    };
+    return this.http.post<ApiResponse<any>>(`${this.apiUrl_crud}/cattle_lifestage_catalog`, payload, {
       headers: this.getAuthHeaders()
     });
   }
