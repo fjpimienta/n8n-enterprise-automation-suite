@@ -1,0 +1,64 @@
+<div class="page-header d-print-none mb-4">
+  <div class="page-pretitle text-uppercase font-weight-bold text-muted">Cumplimiento Normativo</div>
+  <h2 class="page-title font-weight-bold" style="font-size: 1.5rem;">Padrón Ganadero — Unidades de Producción (UPP)
+  </h2>
+</div>
+
+@if (complianceService.error()) {
+<div class="alert alert-danger" role="alert">{{ complianceService.error() }}</div>
+}
+
+<div class="card shadow-sm border-0">
+  <div class="card-body p-0">
+    @if (complianceService.loadingUpp()) {
+    <div class="text-center text-muted py-5">Cargando estado de cumplimiento…</div>
+    } @else if (complianceService.uppList().length === 0) {
+    @if (!complianceService.error()) {
+    <div class="text-center text-muted py-5">No hay unidades de producción registradas.</div>
+    }
+    } @else {
+    <div class="table-responsive">
+      <table class="table card-table table-vcenter text-nowrap datatable table-hover mb-0">
+        <thead>
+          <tr>
+            <th>Rancho</th>
+            <th>Clave UPP</th>
+            <th>Ubicación</th>
+            <th class="text-end">Días sin actualizar</th>
+            <th>Estado</th>
+            <th class="text-end">Cabezas en sistema</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (upp of complianceService.uppList(); track upp.production_unit_id) {
+          <tr>
+            <td>
+              <a [routerLink]="['/cumplimiento/upp', upp.production_unit_id]"
+                class="font-weight-bold text-reset text-decoration-none">{{ upp.ranch_name }}</a>
+              @if (upp.has_surface_inconsistency) {
+              <span class="badge bg-orange-lt d-block mt-1" style="width: fit-content;"
+                title="El documento SENASICA presenta una inconsistencia entre la superficie total declarada y la suma del detalle por concepto.">
+                Inconsistencia de superficie
+              </span>
+              }
+            </td>
+            <td class="font-monospace">{{ upp.upp_code }}</td>
+            <td class="text-muted">{{ upp.municipality_name || 'N/D' }}, {{ upp.state_name || 'N/D' }}</td>
+            <td class="text-end">{{ upp.days_since_update ?? 'N/D' }}</td>
+            <td>
+              <span class="badge" [class.bg-green-lt]="upp.update_status === 'OK'"
+                [class.bg-yellow-lt]="upp.update_status === 'WARNING'"
+                [class.bg-red-lt]="upp.update_status === 'EXPIRED'"
+                [class.bg-secondary-lt]="upp.update_status === 'UNKNOWN'">
+                {{ upp.update_status }}
+              </span>
+            </td>
+            <td class="text-end font-weight-bold">{{ upp.active_head_in_system | number:'1.0-0' }}</td>
+          </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    }
+  </div>
+</div>

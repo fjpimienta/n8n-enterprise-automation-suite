@@ -27,6 +27,11 @@ export const routes: Routes = [
         path: 'admin',
         loadChildren: () => import('./features/admin/admin.routes').then(m => m.adminRoutes)
       },
+      // 📋 Cumplimiento Normativo SENASICA-SINIIGA (solo lectura)
+      {
+        path: 'cumplimiento',
+        loadChildren: () => import('./features/compliance/compliance.routes').then(m => m.complianceRoutes)
+      },
       // Redirección por defecto si entran a la raíz
       { path: '', redirectTo: 'ganaderia/dashboard', pathMatch: 'full' }
     ]

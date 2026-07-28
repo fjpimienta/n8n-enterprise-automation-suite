@@ -1,0 +1,103 @@
+<div class="page-header d-print-none mb-4">
+  <div class="page-pretitle text-uppercase font-weight-bold text-muted">
+    <a routerLink="/cumplimiento/upp" class="text-muted text-decoration-none">← Cumplimiento Normativo</a>
+  </div>
+  <h2 class="page-title font-weight-bold" style="font-size: 1.5rem;">
+    {{ complianceService.uppDetail()?.ranch_name || 'Detalle de Unidad de Producción' }}
+  </h2>
+</div>
+
+@if (complianceService.error()) {
+<div class="alert alert-danger" role="alert">{{ complianceService.error() }}</div>
+}
+
+@if (complianceService.loadingDetail()) {
+<div class="text-center text-muted py-5">Cargando detalle…</div>
+} @else if (complianceService.uppDetail(); as upp) {
+<div class="row row-cards">
+  <div class="col-12 col-lg-6">
+    <div class="card shadow-sm border-0 mb-4">
+      <div class="card-header">
+        <h3 class="card-title">Identificación</h3>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-5 text-muted">Clave UPP</dt>
+          <dd class="col-7 font-monospace">{{ upp.upp_code }}</dd>
+          <dt class="col-5 text-muted">Rancho</dt>
+          <dd class="col-7">{{ upp.ranch_name }}</dd>
+          <dt class="col-5 text-muted">Tenencia</dt>
+          <dd class="col-7">{{ upp.tenure_type || 'N/D' }}</dd>
+          <dt class="col-5 text-muted">Fecha de registro</dt>
+          <dd class="col-7">{{ upp.registration_date ? (upp.registration_date | date:'dd/MM/yyyy') : 'N/D' }}</dd>
+          <dt class="col-5 text-muted">Última actualización</dt>
+          <dd class="col-7">{{ upp.last_update_at ? (upp.last_update_at | date:'dd/MM/yyyy HH:mm') : 'N/D' }}</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+      <div class="card-header">
+        <h3 class="card-title">Ubicación</h3>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-5 text-muted">Estado</dt>
+          <dd class="col-7">{{ upp.state_name || 'N/D' }}</dd>
+          <dt class="col-5 text-muted">Municipio</dt>
+          <dd class="col-7">{{ upp.municipality_name || 'N/D' }}</dd>
+          <dt class="col-5 text-muted">Localidad</dt>
+          <dd class="col-7">{{ upp.locality_name || 'N/D' }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-12 col-lg-6">
+    <div class="card shadow-sm border-0 mb-4">
+      <div class="card-header">
+        <h3 class="card-title">Superficie</h3>
+      </div>
+      <div class="card-body">
+        <dl class="row mb-0">
+          <dt class="col-6 text-muted">Superficie total</dt>
+          <dd class="col-6">{{ upp.total_surface_ha != null ? ((upp.total_surface_ha | number:'1.2-2') + ' ha') :
+            'N/D' }}</dd>
+          <dt class="col-6 text-muted">Superficie parcial (constancia)</dt>
+          <dd class="col-6">{{ upp.is_partial_surface ? 'Sí' : 'No' }}</dd>
+          <dt class="col-6 text-muted">Superficie de pastoreo</dt>
+          <dd class="col-6">
+            @if (upp.hasGrazingSurface) {
+            {{ upp.grazing_surface_ha | number:'1.2-2' }} ha
+            } @else {
+            No disponible
+            }
+          </dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+      <div class="card-header">
+        <h3 class="card-title">Último censo declarado</h3>
+      </div>
+      <div class="card-body">
+        @if (complianceService.uppDetailCensus(); as census) {
+        <dl class="row mb-0">
+          <dt class="col-5 text-muted">Fecha</dt>
+          <dd class="col-7">{{ census.snapshot_date | date:'dd/MM/yyyy' }}</dd>
+          <dt class="col-5 text-muted">Total de cabezas declaradas</dt>
+          <dd class="col-7 font-weight-bold">{{ census.total_head | number:'1.0-0' }}</dd>
+          <dt class="col-5 text-muted">Fuente</dt>
+          <dd class="col-7">{{ census.source }}</dd>
+        </dl>
+        } @else {
+        <div class="text-muted">No hay censo declarado registrado para esta unidad.</div>
+        }
+      </div>
+    </div>
+  </div>
+</div>
+} @else if (!complianceService.error()) {
+<div class="text-center text-muted py-5">No se encontró la unidad de producción solicitada.</div>
+}
