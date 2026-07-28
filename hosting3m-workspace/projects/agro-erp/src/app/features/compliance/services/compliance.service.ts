@@ -9,6 +9,7 @@ import {
   LivestockCensusSnapshot
 } from '../models/agro-registry.model';
 import { UppComplianceStatusView, ProductionUnitView } from '../models/compliance-view.model';
+import { isPhantomRow, stripPhantomRows } from '@core/utils/gateway-empty-row.util';
 
 const STATUS_WEIGHT: Record<string, number> = {
   EXPIRED: 0,
@@ -74,7 +75,8 @@ export class ComplianceService {
           this.error.set(res.message || 'El servidor reportó un error al consultar el estado de cumplimiento de las UPP.');
           this.uppList.set([]);
         } else {
-          const rows = Array.isArray(res.data) ? res.data : [];
+          const rawRows = Array.isArray(res.data) ? res.data : [];
+          const rows = stripPhantomRows(rawRows, 'production_unit_id');
           this.uppList.set(rows.map(row => this.mapUppRow(row)).sort(this.byCriticality));
           this.uppLoaded.set(true);
         }
@@ -108,7 +110,8 @@ export class ComplianceService {
           this.error.set(res.message || 'El servidor reportó un error al consultar la vigencia de las licencias PSG.');
           this.psgList.set([]);
         } else {
-          this.psgList.set(Array.isArray(res.data) ? res.data : []);
+          const rawRows = Array.isArray(res.data) ? res.data : [];
+          this.psgList.set(stripPhantomRows(rawRows, 'psg_license_id'));
           this.psgLoaded.set(true);
         }
         this.loadingPsg.set(false);
@@ -143,7 +146,7 @@ export class ComplianceService {
         }
 
         const raw = Array.isArray(res.data) ? res.data[0] : res.data;
-        if (!raw) {
+        if (isPhantomRow(raw, 'id')) {
           this.loadingDetail.set(false);
           return;
         }
@@ -166,7 +169,8 @@ export class ComplianceService {
         catchError(() => of<ApiResponse<LivestockCensusSnapshot>>({ error: true, operation: 'getall', message: '', data: [] }))
       )
       .subscribe(res => {
-        const rows = !res.error && Array.isArray(res.data) ? res.data : [];
+        const rawRows = !res.error && Array.isArray(res.data) ? res.data : [];
+        const rows = stripPhantomRows(rawRows, 'id');
         const latest = rows.reduce<LivestockCensusSnapshot | null>((mostRecent, row) => {
           if (!mostRecent) return row;
           return new Date(row.snapshot_date) > new Date(mostRecent.snapshot_date) ? row : mostRecent;

@@ -8,6 +8,7 @@ import { User } from '@core/models/user.model';
 import { Guest } from '@core/models/guest.model';
 import { BreedCatalog } from '@core/models/breed-catalog.model';
 import { LifestageCatalog } from '@core/models/lifestage-catalog.model';
+import { stripPhantomRows } from '@core/utils/gateway-empty-row.util';
 import { TenantService } from 'core-auth';
 
 @Injectable({
@@ -221,7 +222,8 @@ export class AdminService {
       headers: this.getAuthHeaders()
     }).subscribe({
       next: (res) => {
-        const data = Array.isArray(res.data) ? res.data : [];
+        const rawData = Array.isArray(res.data) ? res.data : [];
+        const data = stripPhantomRows(rawData, 'id');
         const sortedBreeds = data.sort((a, b) => a.raza_grupo.localeCompare(b.raza_grupo));
         this.breeds.set(sortedBreeds);
         this.loadingBreeds.set(false);

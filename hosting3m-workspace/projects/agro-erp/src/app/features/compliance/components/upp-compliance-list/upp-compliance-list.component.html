@@ -12,11 +12,7 @@
   <div class="card-body p-0">
     @if (complianceService.loadingUpp()) {
     <div class="text-center text-muted py-5">Cargando estado de cumplimiento…</div>
-    } @else if (complianceService.uppList().length === 0) {
-    @if (!complianceService.error()) {
-    <div class="text-center text-muted py-5">No hay unidades de producción registradas.</div>
-    }
-    } @else {
+    } @else if (!complianceService.error()) {
     <div class="table-responsive">
       <table class="table card-table table-vcenter text-nowrap datatable table-hover mb-0">
         <thead>
@@ -54,6 +50,10 @@
               </span>
             </td>
             <td class="text-end font-weight-bold">{{ upp.active_head_in_system | number:'1.0-0' }}</td>
+          </tr>
+          } @empty {
+          <tr>
+            <td colspan="6" class="text-center py-5 text-muted">Sin unidades registradas.</td>
           </tr>
           }
         </tbody>

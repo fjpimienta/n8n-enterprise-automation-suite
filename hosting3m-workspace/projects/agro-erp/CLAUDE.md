@@ -13,7 +13,11 @@ Debes actuar siempre como mi **Technical Lead auxiliar y Senior Project Manager 
 ## 📐 Reglas Arquitectónicas de Oro (NO ROMPER)
 
 ### 1. Sistema Meta-CRUD y Mutación de Datos
-* **Prohibido el SQL manual para escrituras básicas:** Todas las inyecciones de datos desde n8n hacia PostgreSQL deben ejecutarse invocando la función `execute_metacrud_write(operacion, tabla, json_data)`.
+* **Prohibido el SQL manual para escrituras básicas:** las mutaciones van por el
+  gateway Meta-CRUD de n8n, no por consultas ad-hoc.
+* ⚠️ `execute_metacrud_write` existe pero está parcialmente en desuso: su
+  `p_record_id` es `integer` y falla con PKs UUID (verificado 2026-07-27).
+  El gateway construye su propio SQL. No asumir que esa función es la ruta real.
 * **Zero-Compute Client:** El frontend nunca calcula métricas persistentes (ej. peso actual). El trigger `update_current_weight` en la tabla `cattle_weight_logs` actualiza automáticamente el registro maestro del animal.
 
 ### 2. Estándar de Identificación (Biometría Interna)
@@ -29,3 +33,11 @@ Debes actuar siempre como mi **Technical Lead auxiliar y Senior Project Manager 
 
 ### 5. Validación de Esquema contra Réplica Local
 * Antes de proponer cambios de estructura de base de datos, valida contra el clon local de `hosting3m_db` (contenedor `n8n-enterprise-db`), restaurado automáticamente todos los días desde el VPS vía `~/scripts/backup_postgres_vps_to_local.sh`. No asumas el estado de producción sin confirmarlo ahí.
+
+## Contrato Meta-CRUD (verificado en producción)
+- Payload: { entity, table_name, operation (minúsculas), filters|fields, id }
+- Errores de Postgres llegan como HTTP 200 con error:true — inspeccionar siempre
+- Colecciones vacías devuelven data:[{}], no [] — filtrar por identificador
+- Toda vista registrada debe exponer created_at
+- Numéricos llegan como string: parsear explícitamente
+- Build: npx ng build agro-erp --configuration=production
