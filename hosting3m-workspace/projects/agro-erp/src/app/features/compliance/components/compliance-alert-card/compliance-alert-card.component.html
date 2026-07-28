@@ -1,0 +1,40 @@
+@if (complianceService.loadingUpp() || complianceService.loadingPsg()) {
+<div class="card shadow-sm border-0 mb-4">
+  <div class="card-body text-muted">Verificando cumplimiento normativo…</div>
+</div>
+} @else {
+<div class="card shadow-sm border-0 mb-4" [class.bg-red-lt]="totalAttentionCount() > 0"
+  [class.bg-green-lt]="totalAttentionCount() === 0">
+  <div class="card-body d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+    <div class="d-flex align-items-center gap-3">
+      <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-lg" width="32" height="32" viewBox="0 0 24 24"
+        stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+        @if (totalAttentionCount() > 0) {
+        <path d="M12 9v2m0 4v.01" />
+        <path
+          d="M5.07 19H19a2 2 0 0 0 1.75 -2.75L13.75 3.5a2 2 0 0 0 -3.5 0L3.25 16.25A2 2 0 0 0 5.07 19" />
+        } @else {
+        <path d="M5 12l5 5l10 -10" />
+        }
+      </svg>
+      <div>
+        @if (totalAttentionCount() > 0) {
+        <div class="font-weight-bold">
+          {{ complianceService.expiredUppCount() + complianceService.warningUppCount() }} UPP requieren atención
+          normativa
+          @if (complianceService.expiredPsgCount() > 0) {
+          · {{ complianceService.expiredPsgCount() }} PSG vencidas
+          }
+        </div>
+        <div class="text-muted small">Padrón ganadero SENASICA-SINIIGA sin actualizar a tiempo.</div>
+        } @else {
+        <div class="font-weight-bold">Cumplimiento normativo al día</div>
+        <div class="text-muted small">No hay UPP ni licencias PSG que requieran atención.</div>
+        }
+      </div>
+    </div>
+    <a routerLink="/cumplimiento/upp" class="btn btn-outline-secondary btn-sm text-nowrap">Ver detalle</a>
+  </div>
+</div>
+}
