@@ -66,7 +66,7 @@
     "hono": "^4.12.21",
     "jsdom": "^27.4.0",
     "ng-packagr": "^22.0.1",
-    "postcss": "^8.5.6",
+    "postcss": "^8.5.25",
     "tailwindcss": "^3.4.19",
     "typescript": "~5.9.2",
     "vitest": "^4.1.10"
