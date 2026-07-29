@@ -58,7 +58,7 @@
     "@angular/build": "21.2.19",
     "@angular/cli": "21.2.16",
     "@angular/compiler-cli": "21.2.18",
-    "@hono/node-server": "^2.0.3",
+    "@hono/node-server": "^2.0.12",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/express": "^5.0.6",
     "@types/node": "^26.1.2",
