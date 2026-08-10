@@ -1,0 +1,25 @@
+tipo,rfid_siniiga,numero_fuego,fierro,edad_declarada,diagnostico_texto,resultado_normalizado,cria_rfid,cria_sexo,cria_edad_declarada,fecha_palpacion,confianza,revisar,notas
+VACA,2715700535,,R,08 años,Preñada 05 meses,GESTANTE_CONFIRMADA,,,,02/08/2026,ALTA,,Sin cria
+NOVILLONA,0722090640,,R,02 años,Preñada 03 meses,GESTANTE_CONFIRMADA,,,,02/08/2026,ALTA,,"Quemado 03 en libreta (Pedro no maneja numero de fuego, dato descartado). Posible corrección de categoría: arete previamente en sistema como NOVILLO/VACÍA."
+VACA,2717447832,,R,07 años,Vacia UNE IF15,VACIA,,,,02/08/2026,ALTA,,"Codigo dual UNE + IF15 - prevalece UNE, confirmado por el cliente"
+NOVILLONA,0721391909,,R,02 años,Preñada 01 mes y medio,GESTANTE_CONFIRMADA,,,,02/08/2026,MEDIA,SI,"Mes y medio ~45 dias - aproximado. Quemado 62 (descartado). Posible corrección de categoría."
+NOVILLONA,2718676065,,R,02 años,Preñada 03 meses,GESTANTE_CONFIRMADA,,,,02/08/2026,ALTA,,"Posible corrección de categoría."
+NOVILLONA,0720053283,,R,02 años,Preñada 03 meses,GESTANTE_CONFIRMADA,,,,02/08/2026,ALTA,,"Posible corrección de categoría."
+NOVILLONA,0722090696,,R,02 años,Preñada 03 meses y medio,GESTANTE_CONFIRMADA,,,,02/08/2026,MEDIA,SI,"3.5 meses aproximado. Quemado 24 (descartado). Posible corrección de categoría."
+NOVILLONA,0723039517,,R,01 año y medio,Preñada 03 meses,GESTANTE_CONFIRMADA,,,,02/08/2026,ALTA,,"Quemado 37 (descartado)"
+NOVILLONA,2718676070,,R,02 años,Preñada 03 meses,GESTANTE_CONFIRMADA,,,,02/08/2026,ALTA,,"Posible corrección de categoría."
+NOVILLONA,0723039581,,R,01 año y medio,Preñada 02 meses,GESTANTE_CONFIRMADA,,,,02/08/2026,ALTA,,"Quemado 84 (descartado)"
+NOVILLONA,0721391917,,R,02 años,Preñada 03 meses,GESTANTE_CONFIRMADA,,,,02/08/2026,ALTA,,"Quemado 64 (descartado)"
+NOVILLONA,0722090699,,R,02 años,Vacia UNE IF15,VACIA,,,,02/08/2026,ALTA,,"Codigo dual UNE + IF15 - prevalece UNE. Quemado 50 (descartado). No confundir con 0723090699."
+VACA,2717494646,,R,04 años,Preñada 03 meses,GESTANTE_CONFIRMADA,,,,02/08/2026,ALTA,,
+NOVILLONA,0722090618,,R,02 años,Preñada 02 meses,GESTANTE_CONFIRMADA,,,,02/08/2026,ALTA,,"Quemado 22 (descartado). Posible corrección de categoría."
+NOVILLONA,2718918034,,R,02 años,Preñada 01 mes,GESTANTE_CONFIRMADA,,,,02/08/2026,ALTA,,"Posible corrección de categoría."
+NOVILLONA,0723039575,,R,02 años,Preñada 03 meses,GESTANTE_CONFIRMADA,,,,02/08/2026,ALTA,,"Quemado 80 (descartado). Posible corrección de categoría."
+NOVILLONA,2718918033,,R,02 años,Vacia UNE,VACIA,,,,02/08/2026,ALTA,,"Posible corrección de categoría."
+NOVILLONA,0722090559,,R,02 años,Preñada 03 meses,GESTANTE_CONFIRMADA,,,,02/08/2026,ALTA,,"Posible corrección de categoría."
+NOVILLONA,0722090736,,R,01 año y medio,Preñada 04 meses,GESTANTE_CONFIRMADA,,,,02/08/2026,ALTA,,
+NOVILLONA,2718026328,,R,01 año y medio,Vacia UNE ESTATICA,VACIA,,,,02/08/2026,ALTA,,
+NOVILLONA,2718026336,,R,01 año y medio,Vacia UNE ESTATICA,VACIA,,,,02/08/2026,MEDIA,SI,"Edad poco legible en el original"
+NOVILLONA,2718026331,,R,01 año y medio,Vacia UNE,VACIA,,,,02/08/2026,ALTA,,
+VACA,2716583610,,R,04 años,Preñada 04 meses,GESTANTE_CONFIRMADA,,,,02/08/2026,ALTA,,
+VACA,2716030126,,R,08 años,Preñada 03 meses,GESTANTE_CONFIRMADA,,,,02/08/2026,ALTA,,

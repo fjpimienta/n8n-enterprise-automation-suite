@@ -1,0 +1,21 @@
+tipo,rfid_siniiga,numero_fuego,fierro,edad_declarada,diagnostico_texto,resultado_normalizado,cria_rfid,cria_sexo,cria_edad_declarada,fecha_palpacion,confianza,revisar,notas
+SEMENTAL,2718322064,2064,R,05 años,,,,,,,ALTA,,Raza Bill Master
+VACA,2717726640,6640,R,09 años,Vacia UNE IF15,VACIA,2719138681,MACHO,03 meses,02/08/2026,ALTA,,"Codigo dual UNE + IF15 en la misma linea - contradictorio segun definicion del cliente (UNE=sin actividad, IF15=foliculo). Confirmar diagnostico real con veterinario. | Confirmado por el cliente 2026-08: cuando UNE aparece junto con lectura de foliculo, prevalece UNE (vacia). El foliculo queda registrado como desarrollo ovarico presente, sin cambiar el estado reproductivo."
+VACA,0721391944,1944,R,02 años,Vacia UNE ESTATICA,VACIA,2719138676,MACHO,05 meses,02/08/2026,ALTA,,
+VACA,2716583573,3573,R,04 años,Vacia UNE IF15,VACIA,2719138672,HEMBRA,05 meses,02/08/2026,ALTA,,"Mismo codigo dual UNE + IF15 - confirmar con veterinario | Confirmado por el cliente 2026-08: cuando UNE aparece junto con lectura de foliculo, prevalece UNE (vacia). El foliculo queda registrado como desarrollo ovarico presente, sin cambiar el estado reproductivo."
+VACA,2716583575,3575,R,03 años,Vacia UNE ESTATICA,VACIA,2719138678,MACHO,03 meses,02/08/2026,ALTA,,Notebook escribe Valia en vez de Vacia - probable error de escritura
+VACA,0720053286,3286,R,02 años,Vacia UNE ESTATICA,VACIA,2719138683,HEMBRA,05 meses,02/08/2026,ALTA,,
+VACA,0718436808,6808,R,02 años,Preñada 03 meses,GESTANTE_CONFIRMADA,2719138686,HEMBRA,05 meses,02/08/2026,ALTA,,
+VACA,0721391805,1805,R,02 años,Preñada 03 meses,GESTANTE_CONFIRMADA,2719138674,HEMBRA,05 meses,02/08/2026,ALTA,,
+VACA,2719127748,7748,R,07 años,Vacia UNE DF15,VACIA,2719138677,HEMBRA,04 meses,02/08/2026,ALTA,,"Codigo dual UNE + DF15 - contradictorio, confirmar con veterinario | Confirmado por el cliente 2026-08: cuando UNE aparece junto con lectura de foliculo, prevalece UNE (vacia). El foliculo queda registrado como desarrollo ovarico presente, sin cambiar el estado reproductivo."
+VACA,2719127749,7749,R,06 años,Preñada 07 meses,GESTANTE_CONFIRMADA,,,,02/08/2026,ALTA,,Sin cria al pie
+VACA,0721391808,1808,R,02 años,Preñada 03 meses,GESTANTE_CONFIRMADA,2719138680,MACHO,05 meses,02/08/2026,ALTA,,
+VACA,0719128620,8620,R,02 años,Preñada 02 meses,GESTANTE_CONFIRMADA,2719138675,MACHO,05 meses,02/08/2026,ALTA,,
+VACA,0722090566,0566,R,02 años,Preñada mes y medio,GESTANTE_CONFIRMADA,2719138688,MACHO,04 meses,02/08/2026,MEDIA,SI,"Mes y medio ~45 dias - aproximado, no es cifra exacta del veterinario"
+VACA,0721391817,1817,R,02 años,Vacia UNE DF15,VACIA,2719138684,MACHO,03 meses,02/08/2026,ALTA,,"Codigo dual UNE + DF15 - confirmar con veterinario | Confirmado por el cliente 2026-08: cuando UNE aparece junto con lectura de foliculo, prevalece UNE (vacia). El foliculo queda registrado como desarrollo ovarico presente, sin cambiar el estado reproductivo."
+VACA,0718436815,6815,R,02 años,DCL1 probable,PROBABLE_GESTANTE,2719138682,HEMBRA,04 meses,02/08/2026,ALTA,,"DCL1 = Derecho Cuerpo Luteo estado 1, confirmado por cliente"
+VACA,0720661240,1240,R,02 años,Vacia UNE ESTATICA,VACIA,2719138685,MACHO,04 meses,02/08/2026,ALTA,,
+VACA,0720053331,3331,R,02 años,Preñada mes y medio,GESTANTE_CONFIRMADA,2719138679,HEMBRA,03 meses,02/08/2026,MEDIA,SI,"Mes y medio ~45 dias - aproximado. Arete cria escrito como 27913 en el original, faltaria un digito - se asume 271913 por consistencia con el resto del lote, verificar"
+VACA,0720053313,3313,R,02 años,Vacia UNE IF15,VACIA,2719138687,HEMBRA,04 meses,02/08/2026,ALTA,,"Codigo dual UNE + IF15 - confirmar con veterinario | Confirmado por el cliente 2026-08: cuando UNE aparece junto con lectura de foliculo, prevalece UNE (vacia). El foliculo queda registrado como desarrollo ovarico presente, sin cambiar el estado reproductivo."
+VACA,0721391943,1943,R,02 años,Preñada 02 meses,REVISAR,,,,,BAJA,SI,"PENDIENTE: arete 0721391943 ya existe en el sistema como NOVILLO (280kg, VACIA) - posible reasignacion de arete o error de transcripcion. NO cargar hasta confirmar con el cliente. fecha_palpacion removida a proposito para que el script la excluya."
+VACA,0721391939,1939,R,02 años,Preñada 01 mes,GESTANTE_CONFIRMADA,2719138673,HEMBRA,05 meses,02/08/2026,ALTA,,
