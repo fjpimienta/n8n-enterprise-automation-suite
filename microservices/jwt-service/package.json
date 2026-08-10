@@ -14,5 +14,8 @@
     "jsonwebtoken": "^9.0.0",
     "pg": "^8.22.0",
     "qs": "^6.15.3"
+  },
+  "overrides": {
+    "ip-address": "^10.2.1"
   }
 }
