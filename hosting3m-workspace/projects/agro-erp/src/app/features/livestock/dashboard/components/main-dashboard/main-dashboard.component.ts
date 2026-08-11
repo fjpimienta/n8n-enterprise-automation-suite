@@ -35,7 +35,6 @@ export class MainDashboardComponent implements OnInit {
   public isLoading = signal<boolean>(true);
 
   // Navegación y Filtros de Trazabilidad Biológica
-  public activeTab = signal<'CRIA' | 'ENGORDA'>('CRIA');
   public activeSubTab = signal<'RESUMEN' | 'INVENTARIO' | 'GASTOS' | 'POR_ANIMAL'>('RESUMEN');
   public selectedSpecies = signal<string>('TODOS'); // 🚀 Filtro maestro de especie
   public showExpenseModal = signal<boolean>(false);
@@ -46,8 +45,15 @@ export class MainDashboardComponent implements OnInit {
   // Controlador de Paginación Reutilizable (ver mejora #3: composable basado en signals)
   public pagination = new Paginator(() => this.currentDataset().length);
 
-  // Bridge reactivo: convierte los queryParams del Router en un Signal nativo de Angular
-  private queryParams = toSignal(this.route.queryParamMap);
+  // Bridge reactivo: convierte los queryParams del Router en un Signal nativo de Angular.
+  // initialValue evita `undefined` en el primer render (antes de que ActivatedRoute emita).
+  private queryParams = toSignal(this.route.queryParamMap, { initialValue: this.route.snapshot.queryParamMap });
+
+  // 🔗 Fuente única de verdad: el módulo activo se deriva de la URL (?tab=), nunca se escribe
+  // directamente. setTab() solo navega; este computed reacciona al cambio de queryParams.
+  public activeTab = computed<'CRIA' | 'ENGORDA'>(() =>
+    this.queryParams().get('tab')?.toUpperCase() === 'ENGORDA' ? 'ENGORDA' : 'CRIA'
+  );
 
   constructor() {
     /**
@@ -63,6 +69,14 @@ export class MainDashboardComponent implements OnInit {
         this.loadDashboardData();
       }
     }, { allowSignalWrites: true }); // Permite que la escritura de isLoading y listas ocurra en cascada
+
+    // 🔄 EFECTO REACTIVO: al cambiar de módulo (CRIA/ENGORDA) resetea la sub-pestaña activa
+    // y la paginación, para no dejar al usuario en una página de tabla vacía tras el cambio.
+    effect(() => {
+      this.activeTab();
+      this.activeSubTab.set('RESUMEN');
+      this.pagination.reset();
+    }, { allowSignalWrites: true });
   }
 
   ngOnInit() {
@@ -193,8 +207,8 @@ export class MainDashboardComponent implements OnInit {
   });
 
   public setTab(tab: 'CRIA' | 'ENGORDA') {
-    // Navega actualizando solo el query param 'tab'. El EFECTO 1 en el constructor
-    // escucha el cambio y propaga la actualización a activeTab, activeSubTab y currentPage.
+    // Solo navega — activeTab es un computed derivado de la URL, se recalcula solo.
+    // El effect del constructor reacciona a ese cambio y resetea subTab/paginación.
     this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { tab: tab.toLowerCase() },
