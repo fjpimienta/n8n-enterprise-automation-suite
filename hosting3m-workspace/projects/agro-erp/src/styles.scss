@@ -10,3 +10,8 @@ body,
     background-color: var(--tblr-card-bg, #ffffff) !important;
     color: inherit;
 }
+
+/* Tabler default thead th is 0.625rem (10px), too small against 0.875rem (14px) td content on dense tables */
+.table thead th {
+    font-size: 0.75rem !important;
+}
