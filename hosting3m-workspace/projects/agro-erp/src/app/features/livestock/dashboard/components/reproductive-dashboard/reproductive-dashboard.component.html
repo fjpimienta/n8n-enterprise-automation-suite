@@ -61,7 +61,18 @@
 
     @if (!isTableCollapsed()) {
     <div class="card-body border-bottom py-3">
-        <div class="d-flex align-items-center">
+        <div class="row g-2 mb-3">
+            <div class="col-auto">
+                <span class="badge bg-secondary-lt">{{ diagnosisSummary().sinDiagnostico }} Sin Diagnóstico</span>
+            </div>
+            <div class="col-auto">
+                <span class="badge bg-green-lt">{{ diagnosisSummary().prenadas }} Preñadas</span>
+            </div>
+            <div class="col-auto">
+                <span class="badge bg-danger-lt">{{ diagnosisSummary().vacias }} Vacías</span>
+            </div>
+        </div>
+        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
             <div class="text-muted">
                 Mostrar
                 <div class="mx-2 d-inline-block">
@@ -73,6 +84,19 @@
                 </div>
                 registros clínicos
             </div>
+            <div class="input-icon" style="max-width: 320px;">
+                <span class="input-icon-addon">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
+                        stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" />
+                        <path d="M21 21l-6 -6" />
+                    </svg>
+                </span>
+                <input type="text" class="form-control form-control-sm" placeholder="Buscar por arete o número de fuego..."
+                    [value]="searchQuery()" (input)="setSearch($any($event.target).value)">
+            </div>
         </div>
     </div>
 
@@ -80,10 +104,30 @@
         <table class="table table-vcenter table-hover mb-0">
             <thead>
                 <tr>
-                    <th>Arete (SINIIGA)</th>
-                    <th>Estado</th>
-                    <th>Días Gestación</th>
-                    <th>Condición Uterina</th>
+                    <th style="cursor: pointer;" (click)="setSort('rfid_siniiga')">
+                        Arete (SINIIGA)
+                        @if (sortColumn() === 'rfid_siniiga') {
+                        <span class="text-muted">{{ sortDirection() === 'asc' ? '▲' : '▼' }}</span>
+                        }
+                    </th>
+                    <th style="cursor: pointer;" (click)="setSort('last_palpation_result')">
+                        Estado
+                        @if (sortColumn() === 'last_palpation_result') {
+                        <span class="text-muted">{{ sortDirection() === 'asc' ? '▲' : '▼' }}</span>
+                        }
+                    </th>
+                    <th style="cursor: pointer;" (click)="setSort('current_gestation_days')">
+                        Días Gestación
+                        @if (sortColumn() === 'current_gestation_days') {
+                        <span class="text-muted">{{ sortDirection() === 'asc' ? '▲' : '▼' }}</span>
+                        }
+                    </th>
+                    <th style="cursor: pointer;" (click)="setSort('condicion_utero')">
+                        Condición Uterina
+                        @if (sortColumn() === 'condicion_utero') {
+                        <span class="text-muted">{{ sortDirection() === 'asc' ? '▲' : '▼' }}</span>
+                        }
+                    </th>
                 </tr>
             </thead>
             <tbody>
@@ -93,13 +137,21 @@
                         <div class="font-monospace text-primary font-weight-bold">{{ animal.rfid_siniiga }}</div>
                     </td>
                     <td>
+                        @if (!animal.last_palpation_result) {
+                        <span class="badge bg-secondary-lt">Sin Diagnóstico</span>
+                        } @else {
                         <span class="badge" [class.bg-green-lt]="animal.last_palpation_result === 'PREÑADA'"
                             [class.bg-danger-lt]="animal.last_palpation_result === 'VACIA'">
-                            {{ animal.last_palpation_result || 'N/A' }}
+                            {{ animal.last_palpation_result }}
                         </span>
+                        }
                     </td>
                     <td>{{ animal.current_gestation_days || 0 }} días</td>
                     <td class="text-muted">{{ animal.condicion_utero || 'N/A' }}</td>
+                </tr>
+                } @empty {
+                <tr>
+                    <td colspan="4" class="text-center py-5 text-muted">Sin resultados para la búsqueda actual.</td>
                 </tr>
                 }
             </tbody>
@@ -109,7 +161,7 @@
     <div class="card-footer d-flex align-items-center border-top">
         <p class="m-0 text-muted">
             Mostrando <span>{{ pagination.showingStart() }}</span> a <span>{{ pagination.showingEnd() }}</span>
-            de <span>{{ data().length }}</span> vientres bajo control
+            de <span>{{ processedData().length }}</span> vientres bajo control
         </p>
         <ul class="pagination m-0 ms-auto">
             <li class="page-item" [class.disabled]="pagination.currentPage() === 1">
