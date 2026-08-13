@@ -21,7 +21,8 @@ export const appConfig: ApplicationConfig = {
       useValue: {
         apiUrl_crud: environment.apiUrl_crud,
         apiUrl_token: environment.apiUrl_token,
-        apiUrl_ai: environment.apiUrl_ai
+        apiUrl_ai: environment.apiUrl_ai,
+        apiUrl_upload: environment.apiUrl_upload
       }
     },
 

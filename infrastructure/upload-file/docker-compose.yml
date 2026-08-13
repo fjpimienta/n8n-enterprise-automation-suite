@@ -7,3 +7,10 @@ services:
       - "127.0.0.1:3005:3000"
     volumes:
       - ./app/uploads:/app/uploads
+    environment:
+      # MUST match the exact same values already set in n8n-jwt-service's
+      # environment -- these are shared secrets across both containers,
+      # not new ones. Copy them from jwt-service's env, do not generate
+      # new values here.
+      - JWT_SECRET=${JWT_SECRET}
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
