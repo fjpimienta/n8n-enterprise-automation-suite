@@ -21,7 +21,8 @@ export const appConfig: ApplicationConfig = {
       useValue: {
         apiUrl_crud: environment.apiUrl_crud,
         apiUrl_token: environment.apiUrl_token,
-        system_id: 'hotel_dashboard'
+        system_id: 'hotel_dashboard',
+        apiUrl_upload: environment.apiUrl_upload
       }
     },
 

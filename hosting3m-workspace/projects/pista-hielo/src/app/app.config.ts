@@ -33,7 +33,8 @@ export const appConfig: ApplicationConfig = {
       useValue: {
         apiUrl_crud: environment.apiUrl_crud,
         apiUrl_token: environment.apiUrl_token,
-        system_id: environment.system_id
+        system_id: environment.system_id,
+        apiUrl_upload: environment.apiUrl_upload
       }
     },
     AiService,
