@@ -13,8 +13,11 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   let clonedReq = req;
   const token = authService.getStoredToken();
 
-  const protectedApis = [envConfig.apiUrl_crud, envConfig.apiUrl_ai].filter(Boolean);
-  const isApiRequest = protectedApis.some(url => req.url.startsWith(url));
+  // apiUrl_upload added: without it, requests to the upload service never
+  // receive the Authorization header, since the service now requires
+  // authentication (JWT or internal secret) on both upload and read.
+  const protectedApis = [envConfig.apiUrl_crud, envConfig.apiUrl_ai, envConfig.apiUrl_upload].filter(Boolean);
+  const isApiRequest = protectedApis.some(url => req.url.startsWith(url!));
 
   if (token && isApiRequest) {
     clonedReq = req.clone({

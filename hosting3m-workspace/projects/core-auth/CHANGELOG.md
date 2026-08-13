@@ -5,6 +5,15 @@ All notable changes to the `core-auth` library will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.0.2] - 2026-08-12
+### ✨ Added
+- `apiUrl_upload` (optional) added to `AuthEnvironmentConfig`, so `authInterceptor` can also attach the JWT to requests aimed at the upload-file service. Added as part of hardening `upload-file` from a fully public, unauthenticated file host to a service requiring either a user JWT or the shared internal-service secret on every request (agro-erp compliance_documents work).
+- `apiUrl_upload` added to the `protectedApis` array checked by `authInterceptor`.
+
+### 🔒 Notes
+- Additive, non-breaking change: `apiUrl_upload` is optional, so consuming apps that don't provide it (e.g. `hotel_app`) are unaffected and continue to compile/run without changes.
+- Apps that DO need authenticated uploads (starting with `agro-erp`) must add `apiUrl_upload` to their `AUTH_ENV_CONFIG` provider value and rebuild (`ng build core-auth` + rebuild the consuming app) for the interceptor to start attaching the token to upload-file requests.
+
 ## [0.0.1] - 2026-06-04
 ### 🚀 Initial Release
 First release of the authentication and multi-tenant management module for the Hosting3M Ecosystem[cite: 26]. 

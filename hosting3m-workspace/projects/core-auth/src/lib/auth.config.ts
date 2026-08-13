@@ -12,6 +12,7 @@ export interface AuthEnvironmentConfig {
     apiUrl_crud: string;
     apiUrl_token: string;
     apiUrl_ai: string;
+    apiUrl_upload?: string; // <-- Optional: only required by apps that upload files (e.g. compliance documents). Additive, non-breaking for existing consumers.
     system_id: string; // <-- ID único de la app (ej. 'cattle_dashboard', 'hotel_app')
 }
 
