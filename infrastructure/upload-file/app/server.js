@@ -71,22 +71,33 @@ app.get('/', apiLimiter, (req, res) => { //[cite: 1]
 });
 
 // Aplicación de rate limiting en la ruta protegida de subida de archivos
-app.post('/upload', apiLimiter, requireAuth, upload.single('file'), (req, res) => { //[cite: 1]
-    if (!req.file) return res.status(400).json({ error: 'No file uploaded' }); //[cite: 1]
+app.post('/upload', apiLimiter, requireAuth, upload.single('file'), (req, res) => {
+    if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
 
-    const filePath = path.join('./uploads', req.file.filename); //[cite: 1]
-    const fileBuffer = fs.readFileSync(filePath); //[cite: 1]
-    const sha256Hash = crypto.createHash('sha256').update(fileBuffer).digest('hex'); //[cite: 1]
+    // 1. Definir la ruta raíz autorizada de manera absoluta
+    const UPLOAD_DIR = path.resolve(process.cwd(), 'uploads');
+
+    // 2. Construir y normalizar la ruta del archivo solicitado
+    const filePath = path.resolve(UPLOAD_DIR, req.file.filename);
+
+    // 3. Boundary Check: Validación estricta requerida por CodeQL
+    if (!filePath.startsWith(UPLOAD_DIR)) {
+        return res.status(403).json({ error: 'Forbidden: Path Traversal detected' });
+    }
+
+    // 4. Ejecución segura de lectura en disco
+    const fileBuffer = fs.readFileSync(filePath);
+    const sha256Hash = crypto.createHash('sha256').update(fileBuffer).digest('hex');
 
     res.json({
-        status: 'SUCCESS', //[cite: 1]
-        filename: req.file.filename, //[cite: 1]
-        original_name: req.file.originalname, //[cite: 1]
-        mime_type: req.file.mimetype, //[cite: 1]
-        size_bytes: req.file.size, //[cite: 1]
-        sha256_hash: sha256Hash, //[cite: 1]
-        uploaded_by: req.auth.type === 'user' ? req.auth.user : 'internal-service', //[cite: 1]
-        url: `https://upload.hosting3m.com/uploads/${req.file.filename}` //[cite: 1]
+        status: 'SUCCESS',
+        filename: req.file.filename,
+        original_name: req.file.originalname,
+        mime_type: req.file.mimetype,
+        size_bytes: req.file.size,
+        sha256_hash: sha256Hash,
+        uploaded_by: req.auth.type === 'user' ? req.auth.user : 'internal-service',
+        url: `https://upload.hosting3m.com/uploads/${req.file.filename}`
     });
 });
 
