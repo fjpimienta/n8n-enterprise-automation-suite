@@ -1,12 +1,13 @@
 {
   "name": "upload-service",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "main": "server.js",
   "dependencies": {
     "express": "^5.2.1",
     "multer": "^2.2.0",
     "qs": "^6.15.3",
     "jsonwebtoken": "^9.0.0",
-    "dotenv": "^17.4.2"
+    "dotenv": "^17.4.2",
+    "express-rate-limit": "^8.6.1"
   }
 }
