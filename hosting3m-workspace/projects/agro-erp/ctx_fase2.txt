@@ -1,0 +1,1257 @@
+=== CLAUDE.md ===
+# 🤖 Project Context & AI Master Instructions (CLAUDE.md)
+
+## 📌 Identidad del Proyecto
+**Nombre:** Hosting3M Automation Suite - Agro ERP
+**Versión Actual:** v1.10.0 (Movement & Compliance-Document Subsystem, File Storage Security)
+**Dominio:** ERP Agropecuario, Agricultura de Precisión, Trazabilidad Biométrica, Normativa SENASICA-SINIIGA y Movilización Interestatal REEMO.
+
+## 👤 Rol del Asistente de IA (Persona)
+Debes actuar siempre como mi **Technical Lead auxiliar y Senior Project Manager (PMP)** con más de 20 años de experiencia, certificado por el PMI y especializado en el SDLC.
+* **Estilo de Comunicación:** Profesional, estructurado, pragmático y orientado a resultados.
+* **Enfoque Técnico:** Reducción de deuda técnica, entrega de valor (MVP) y escalabilidad.
+* **Antes de afirmar el estado de producción, verificar contra el clon local o contra el VPS directamente.** Este proyecto ya tuvo tres diagnósticos erróneos por confiar en `schema.sql` y `crud_models_seed.sql` desactualizados (la tercera vez confirmada 2026-08-14). Ver regla 7.
+
+## 📐 Reglas Arquitectónicas de Oro (NO ROMPER)
+
+### 1. Sistema Meta-CRUD y Mutación de Datos
+* **Prohibido el SQL manual para escrituras básicas:** las mutaciones van por el gateway Meta-CRUD de n8n, no por consultas ad-hoc.
+* ⚠️ `execute_metacrud_write` existe pero está parcialmente en desuso: su `p_record_id` es `integer` y falla con PKs UUID (verificado 2026-07-27, `invalid input syntax for type uuid`). Además usa `WHERE id = %L` hardcodeado, ignorando `crud_models.primary_key` — por eso nunca pudo actualizar `companys` (PK `id_company`). El gateway real construye su propio SQL en un nodo Build Query dentro del workflow `06-dynamic-crud-engine`; no asumir que `execute_metacrud_write` es la ruta real de escritura.
+* **Zero-Compute Client:** El frontend nunca calcula métricas persistentes (ej. peso actual). El trigger `update_current_weight` en la tabla `cattle_weight_logs` actualiza automáticamente el registro maestro del animal.
+
+### 2. Estándar de Identificación (Biometría Interna)
+* ⚠️ **`electronic_rfid` está documentado como llave operativa primaria, pero NO lo es en la práctica.** Verificado en producción el 2026-07-29: **262 de 270 animales (97%) no tienen bolo ruminal**. `sp_procesar_salida_ganado` se invoca por `electronic_rfid`, así que solo 8 animales pueden procesarse hoy por el flujo oficial de salida. Hasta que el cliente decida colocar bolos al hato completo, el arete SINIIGA (`rfid_siniiga`) es la identificación que realmente cubre al hato.
+* **El arete SINIIGA bovino es de 10 dígitos** (`EE + 4 + 4`, `EE` = código INEGI del estado: 07 Chiapas, 27 Tabasco). Confirmado contra tres fuentes independientes del cliente (libretas de campo, hoja de cálculo de movimientos, estructura física del arete). `fn_has_official_ear_tag()` valida este formato exacto — no aceptar longitudes distintas sin confirmación explícita.
+* **El número a fuego (`numero_fuego`) no está capturado de manera uniforme.** La Bendición lo tiene al 100%; UPP 54 lo tiene al 0%. No asumir que existe al diseñar features que dependan de él (ordenamiento, búsqueda).
+* ⚠️ **Los tres identificadores (fuego, arete SINIIGA, chip) ahora tienen historial automático** (`cattle_identifier_history`, migración 047, nuevo en v1.10.0): cualquier `UPDATE` a `numero_fuego`, `rfid_siniiga` o `electronic_rfid` en `cattle_livestock` queda registrado solo, vía trigger — nunca depender de que un script lo registre a mano. Motivo por default: `CAPTURE_CORRECTION`. Si un flujo conoce el motivo real (pérdida, reposición, arete suelto reasignado), puede enriquecerlo con `SET LOCAL app.identifier_change_reason = '...'` inmediatamente antes del `UPDATE` — opcional, nunca obligatorio.
+
+### 3. Integridad Normativa en Procedimientos Almacenados
+* La venta y salida de animales debe ejecutarse exclusivamente a través de `sp_procesar_salida_ganado`. El gateway n8n lo expone como el modelo Meta-CRUD `salida_ganado` (ID 46, únicamente `INSERT`) — nunca como escritura directa a `cattle_livestock`.
+* ⚠️ **Los 60 días de vigencia TB/BR NO son una regla universal.** Corresponden exclusivamente a la Prueba de Lote. Un hato con dictamen de Hato Libre vigente (`herd_free_certificates`, 12-24 meses de vigencia) se exime de esa ventana. `sp_procesar_salida_ganado` (corregido en migración 024) consulta ambos caminos antes de rechazar.
+* ⚠️ **El arete oficial es requisito de movilización, no solo TB/BR.** La NOM-001-SAG/GAN-2015 exige el arete SINIIGA para cualquier traslado. `sp_procesar_salida_ganado` valida `fn_has_official_ear_tag()` además de la normativa sanitaria.
+* Cada venta exitosa queda auditada en `historico_movimientos` (`tipo_movimiento = VENTA`) y limpia `upp_origen` y `production_unit_id` del animal. `REVERSION` es un tipo de movimiento válido (migración 025) para compensar una operación errónea sin borrar el registro original — la tabla es append-only, nunca se elimina una fila de auditoría.
+
+### 4. Registro Normativo SENASICA-SINIIGA (v1.9.0)
+* Un tenant (`companys`) puede sostener **N unidades de producción** (`production_units`, UPP). La equivalencia "una empresa = un predio" ya no aplica.
+* El **productor** (`livestock_producers`) se replica por tenant a propósito — la misma persona en dos tenants son dos filas, nunca un registro global compartido. Su CURP/RFC se cifran con pgcrypto vía `sp_upsert_producer_pii()`; la tabla cruda nunca expone PII en Meta-CRUD.
+* El **fierro de propiedad** (`brand_registrations`) es independiente de la UPP donde el animal está parado. Confirmado con datos reales: hay ganado de un titular pastando en la unidad del otro. El tenant es *dónde está*; el fierro es *de quién es*. La cría hereda el fierro de la madre automáticamente (`fn_inherit_brand_from_mother`, `fn_apply_birth_brand_inheritance`).
+* Toda superficie declarada (`production_units.surface_matrix`) se transcribe **verbatim** del documento oficial de SENASICA, nunca normalizada ni corregida. Los documentos reales contienen inconsistencias (ej. total declarado ≠ suma de conceptos); eso se expone como bandera revisable (`has_surface_inconsistency`), no como error de captura.
+* El quemado (número a fuego) puede repetirse por error de captura — es un hecho confirmado por el cliente, no una excepción teórica. Se trata como alerta (`vw_duplicate_fire_numbers`), nunca como restricción `UNIQUE` que bloquee la operación real.
+
+### 5. Motor de Movimientos SENASICA-REEMO (nuevo en v1.10.0)
+* `cattle_movement_rules` **dejó de ser borrador** (migraciones 042, 044, 048): 16 filas confirmadas contra reglas de negocio reales del cliente (audio grabado + 4 documentos REEMO/CZM/permiso reales), no ya "creada pero no ejecutada".
+* ⚠️ **`PSG → UPP` está permanentemente prohibido, confirmado y aplicado.** Un animal que entra a un PSG solo puede moverse a otro PSG (propio o de tercero) o salir a rastro/exportación — nunca de vuelta a una UPP.
+* Los requisitos dependen de **si el movimiento es interestatal** (`is_interstate`), no solo del par origen/destino — el mismo par UPP→UPP tiene requisitos completamente distintos según cruce o no una frontera estatal.
+* ⚠️ **`requires_valid_psg` y `requires_health_tests` NO son lo mismo**, aunque hoy tengan los mismos valores en las filas confirmadas: el primero es la vigencia de la licencia del PSG (`psg_facilities.psg_license_id -> psg_licenses.expires_at`); el segundo es el estatus sanitario TB/BR del animal. Coinciden hoy por casualidad de los datos, no por diseño — no verificado independientemente contra un caso real donde diverjan.
+* ⚠️ **`requires_gbg_certificate`** (renombrado de `requires_oirsa_certificate`): constancia de tratamiento contra gusano barrenador, requisito DINESA vigente desde diciembre 2025 en Chiapas/Tabasco (zonas de máximo riesgo SENASICA), verificado de forma independiente, no solo por dicho del cliente.
+* **`is_confirmed = false` sigue siendo el default fail-closed en 14 de las 16 filas** — no asumir que el enforcement está activo. `rule_id` en `cattle_movement_events` es una referencia almacenada, todavía no consultada por ninguna lógica de validación. Falta una sola respuesta del cliente (`requires_destination_ack`) para poder activar la mayoría.
+* Un movimiento tiene exactamente un origen (UPP o PSG) y exactamente un destino (UPP, PSG, o tercero externo) — `chk_origin_exclusive`/`chk_destination_exclusive`. Aislamiento multi-tenant fail-closed vía triggers `BEFORE INSERT/UPDATE`, no RLS (ver regla 6 sobre `n8n_user`).
+
+### 6. Stateful Context Injection (Agentes de IA)
+* Los agentes LLM tienen prohibido inferir parámetros de la base de datos (Zero-Hallucination). Cualquier herramienta de escritura o consulta requiere inyección silenciosa del `tenant_id`.
+* Anti-Jailbreak: Cualquier inserción exige un protocolo "Human-in-the-Loop" previo.
+* ⚠️ **Hallazgo sin resolver (SEC-001, cerrado como falso positivo el 2026-07-27, pero revisar si cambia el escenario):** un usuario con `id_company` distinto en el JWT pudo leer y modificar un registro de otro tenant al que tenía acceso legítimo vía `user_companies`. Confirmar siempre `user_companies` antes de asumir fuga; no es automático que un `id_company` en el JWT limite el alcance real.
+
+### 7. Validación de Esquema contra Réplica Local
+* Antes de proponer cambios de estructura de base de datos, valida contra el clon local de `hosting3m_db` (contenedor `n8n-enterprise-db`), restaurado automáticamente todos los días desde el VPS vía `~/scripts/backup_postgres_vps_to_local.sh`. No asumas el estado de producción sin confirmarlo ahí.
+* `schema.sql` y `crud_models_seed.sql` versionados en el repo **se han desactualizado respecto a producción tres veces** (última confirmación 2026-08-14: cero coincidencias para ningún objeto de las migraciones 042-049). No los uses como única fuente para diagnósticos — contrasta con `\d`, `pg_get_functiondef` o consultas directas antes de afirmar un hallazgo.
+
+### 8. Manejo de Secretos y Credenciales (nuevo en v1.10.0)
+* ⚠️ **Incidente real (2026-08-13):** el valor real de `INTERNAL_SECRET` (compartido entre `n8n-jwt-service` y `upload-file`) se pegó en texto plano dos veces durante una sesión de trabajo, incluyendo en el servidor de producción. Se instruyó rotación; **no confirmada como completada** al corte de este documento.
+* **Nunca pegar valores reales de secretos** (tokens, API keys, contraseñas, `INTERNAL_SECRET`, `JWT_SECRET`) en chats de trabajo, logs compartidos, o cualquier canal no cifrado — ni siquiera para "verificar que coincide". Usar comandos que confirmen igualdad sin exponer el valor (ej. comparar hashes, o simplemente confirmar "sí coincide"/"no coincide") o redactar con `****` cuando haga falta mostrar algo.
+* Si un secreto se expone accidentalmente, **tratarlo como comprometido de inmediato** y rotarlo en todos los servicios que lo comparten y en todos los ambientes (local y producción) antes de continuar cualquier otro trabajo — no lo dejes como pendiente de baja prioridad.
+* `upload-file` (`infrastructure/upload-file`) reutiliza `JWT_SECRET`/`INTERNAL_SECRET` de `n8n-jwt-service` para autenticar subida y lectura de archivos — ambos servicios deben rotarse juntos, nunca uno sin el otro.
+
+## Contrato Meta-CRUD (verificado en producción)
+- Payload: `{ entity, table_name, operation (minúsculas), filters|fields, id }`
+- Errores de Postgres llegan como HTTP 200 con `error:true` — inspeccionar siempre, nunca confiar solo en el status HTTP
+- Colecciones vacías devuelven `data:[{}]`, no `[]` — filtrar por identificador antes de contar o renderizar
+- **Toda tabla o vista registrada en `crud_models` debe exponer `created_at`** — el gateway lo usa para el `ORDER BY` por defecto de `getall`; omitirlo produce `column ... created_at does not exist` en runtime, no en despliegue
+- Numéricos llegan como string: parsear explícitamente, nunca comparar/ordenar como texto
+- Build: `npx ng build agro-erp --configuration=production`
+
+## Deuda técnica activa (ver `docs/DOCS_DELTA_v1.9.0_FINAL.md`, `docs/DATABASE_SCHEMA_DELTA_v1.10.0.md` y `docs/INVENTARIO_COMPLETITUD.md` para detalle completo)
+
+**Urgente:**
+- ⚠️ **Rotación de `INTERNAL_SECRET` no confirmada** tras la exposición del 2026-08-13 (ver regla 8). Verificar en ambos servicios (`n8n-jwt-service`, `upload-file`) y ambos ambientes (espejo local, VPS) antes de tratar el subsistema de archivos como seguro.
+
+**Pendiente de respuesta del cliente:**
+- `cattle_movement_rules`: 14 de 16 filas con valores reales ya capturados pero `is_confirmed = false`, a la espera de una sola confirmación (`requires_destination_ack`).
+- Alta de tenant/UPP/PSG para Juan Carlos (nuevo titular, primo de Alejandro y Pedro, tenant propio confirmado sin sociedad).
+- Confirmación de Pedro sobre 8 registros NOVILLO→NOVILLONA (corrección mecánica) y 2 conflictos de arete reales (fuegos 1943/1811).
+- Lista final corregida del archivo `TRATAMIENTO_LOTE_ROJO_VACIO_AGO_2026.xlsx`.
+
+**Sin bloquear operación hoy:**
+- `n8n_user` es superusuario de PostgreSQL: toda la seguridad depende de la whitelist de `crud_models`, sin segunda línea de defensa en base de datos (RLS inaplicable mientras esto no cambie)
+- 97% del hato sin bolo ruminal — decisión de negocio pendiente sobre si `electronic_rfid` sigue siendo la llave operativa objetivo
+- Solo 5 de 270 animales pasan hoy la validación completa de movilidad (arete + TB/BR/hato libre) — cifra que puede ser artefacto de falta de dictámenes cargados, no de la situación sanitaria real
+- `n8n-jwt-service`: `/verify-token` recibe `internal_secret` del nodo n8n `Verify Token` pero nunca lo valida (solo `/generate-token` lo revisa) — inconsistencia de diseño, no regresión de seguridad
+- `requires_valid_psg` vs. `requires_health_tests`: documentado que son conceptos distintos, pero no verificado independientemente contra un documento real si de hecho pueden divergir
+
+
+=== README.md ===
+# 🌾 Agro ERP Suite (Ganadería & Agricultura Digital)
+
+### 🚜 Sistema de Trazabilidad Biométrica, Meta-CRUD, Telemetría Agrícola y Movilización REEMO
+
+## 📝 Descripción
+
+**agro-erp** es el sistema de planificación de recursos empresariales de grado industrial dentro de la Hosting3M Automation Suite. Está diseñado para modernizar la gestión agropecuaria mediante la trazabilidad biométrica inmutable, telemetría, gobernanza de datos en tiempo real y cumplimiento normativo SENASICA-SINIIGA para movilización de ganado.
+
+Desarrollada como una **Angular 21 SPA** estructurada por dominios (*Feature-Driven*), interactúa con un motor analítico en PostgreSQL a través de la capa Meta-CRUD de **n8n**. Toda la lógica de mutación de datos está encapsulada en el servidor (PL/pgSQL), eliminando la carga computacional en el cliente y operando bajo estricta "Soberanía de Datos" — incluyendo el almacenamiento de archivos, servido por un microservicio propio (`upload-file`) en vez de depender de terceros.
+
+---
+
+## 🚀 Key Features (v1.10.0)
+
+### 1. 🚚 Motor de Movimientos SENASICA-REEMO
+* **Reglas de movimiento confirmadas:** el catálogo de reglas UPP↔PSG, creado como borrador meses atrás, ya está poblado con reglas de negocio reales del cliente (audio grabado + documentos REEMO/CZM/permiso reales). `PSG → UPP` queda permanentemente prohibido; los requisitos varían según el movimiento sea local o interestatal.
+* **Bitácora real de movimientos:** cada traslado queda registrado con origen, destino, folio REEMO, y aislamiento multi-tenant fail-closed — un movimiento entre tenants distintos se rechaza automáticamente.
+* **Cadena documental de cumplimiento:** guía de tránsito, Certificado Zoosanitario, constancia de gusano barrenador (GBG), permiso de internación estatal y carta de cesión de derechos, todos enlazados al movimiento que respaldan.
+* **Historial automático de identificadores:** cualquier cambio de arete, número a fuego o chip queda registrado solo, sin depender de que un script se acuerde de hacerlo.
+
+### 2. 🔐 Almacenamiento de Archivos Endurecido ("Sovereign Media Service")
+* El microservicio propio de archivos (`upload-file`) pasó de ser completamente público a exigir autenticación JWT o secreto interno, reutilizando la infraestructura de `core-auth`/`jwt-service` ya existente — sin inventar un mecanismo de seguridad paralelo.
+* Nombres de archivo aleatorios (antes predecibles), hash SHA-256 calculado en servidor, y credenciales fuera del control de versiones.
+
+---
+
+## 🚀 Key Features (v1.9.0)
+
+### 1. 🏛️ Registro Normativo SENASICA-SINIIGA
+* **Multi-UPP por tenant:** un rancho (`companys`) puede sostener múltiples unidades de producción registradas ante SENASICA — la equivalencia "una empresa = un predio" ya no aplica.
+* **Propiedad independiente de ubicación:** el fierro de marca (`brand_registrations`) es un catálogo global, independiente de en qué UPP esté parado el animal — modela la realidad real del padrón (ganado de un titular pastando en tierra del otro).
+* **Dictámenes de hato libre:** exención de la ventana de 60 días de pruebas TB/BR para hatos con certificado vigente de hasta 24 meses.
+* **Linaje materno y herencia de fierro:** la cría hereda automáticamente el fierro de la madre al registrar un parto.
+
+---
+
+## 🚀 Key Features (v1.8.0)
+
+### 1. 🐾 Trazabilidad Multi-Especie y Biométrica (RFID / Bolo Ruminal)
+* **Identidad Resiliente:** El sistema está diseñado en torno al uso de **Bolos Ruminales y Microchips Subcutáneos** (`electronic_rfid`) como estándar de retención física. Los aretes plásticos tradicionales (SINIIGA) se mantienen únicamente como metadato normativo secundario debido a su alta tasa de pérdida en campo.
+* **Soporte Universal:** Aislamiento de biomasa y KPIs de capitalización para hatos mixtos (Bovinos, Búfalos, Borregos) mediante la columna física `species`.
+
+### 2. 🧠 Server-Side Business Intelligence (BI) y Meta-CRUD transaccional
+* **Dynamic Gateway:** La función `execute_metacrud_write` orquesta todas las inyecciones de datos (INSERT/UPDATE) desde n8n de forma dinámica, validando permisos contra la tabla `crud_models`.
+* **Reglas Sanitarias Estrictas:** El procedimiento `sp_procesar_salida_ganado` bloquea ventas si el animal no cuenta con pruebas de Tuberculosis o Brucelosis vigentes (menos de 60 días de antigüedad).
+* **Auditoría de Movimientos:** Cada venta, baja o traslado queda registrado de forma inmutable en `historico_movimientos`, preservando el `upp_origen` (rancho/centro de costos) del animal al momento del evento.
+* **Sincronización de Biomasa:** Triggers en base de datos (`update_current_weight`) automatizan la actualización de la biomasa actual del animal cada vez que se registra un pesaje.
+
+### 3. 🏢 Escalabilidad Multi-Dominio (Context Switcher)
+* **Aislamiento de Negocios:** Capacidad nativa para gestionar simultáneamente Ranchos Ganaderos y Plantaciones desde una misma sesión mediante un selector reactivo, aislando el DOM y el estado en memoria.
+
+### 4. 🤖 Inteligencia Artificial Contextual & Anti-Jailbreak
+* **Desambiguación Contextual:** Inyección silenciosa del `tenant_id`. Protocolo estricto *Human-in-the-Loop* que requiere confirmación explícita para el Agente IA durante la fase de recolección de datos operativos de 12 meses.
+
+---
+
+## 🚀 Key Features (v1.7.0)
+
+### 1. 🏢 Escalabilidad Multi-Dominio (Context Switcher)
+* **Aislamiento de Negocios:** Capacidad nativa para gestionar simultáneamente Ranchos Ganaderos y Plantaciones (ej. Palma Africana) desde una misma sesión mediante un selector reactivo, aislando el DOM y el estado en memoria.
+* **Lazy Loading:** Enrutamiento inteligente que solo descarga los módulos necesarios para la vertical operativa seleccionada.
+
+### 2. 🚁 Arquitectura Híbrida para Telemetría (IoT & Drones)
+* **Ingesta Flexible (JSONB):** Capacidad para absorber reportes de vuelo de aspersión agrícola, variables de clima y uso de agroquímicos sin romper esquemas relacionales.
+* **Server-Side BI:** Delegación de cálculos pesados de rendimiento (litros por hectárea, OPEX) a Vistas Materializadas en PostgreSQL.
+
+### 3. 🐾 Trazabilidad Multi-Especie y Biométrica
+* **Identidad Resiliente:** Soporte nativo para lectura de Chip RFID (subcutáneo/ruminal) y Número a Fuego.
+* **Filtrado Reactivo (Signals):** Interfaz ultra-rápida basada en `computed` signals que recalcula el valor del hato y ganancias de peso al instante.
+
+### 4. 🤖 Inteligencia Artificial Contextual & Anti-Jailbreak
+* **WhatsApp & Web Field Agents:** Desambiguación contextual dinámica inyectando silenciosamente el `tenant_id`. Protocolo estricto *Human-in-the-Loop* que requiere confirmación explícita para registrar información en la base de datos de producción.
+
+---
+
+## 🏗️ Arquitectura Técnica
+
+El proyecto está optimizado para entornos rurales de baja conectividad garantizando un rendimiento extremo:
+* **Framework:** Angular 21 (Standalone Components, Signals).
+* **Styling:** Tabler UI + SCSS dinámico (`theme-cattle` / `theme-palm`).
+* **Communication:** REST API via n8n Meta-CRUD & Webhooks.
+* **Data Processing:** PostgreSQL 15+ (Views & JSONB GIN Indexes).
+* **File Storage:** Microservicio propio (`upload-file`, Node/Express) autenticado vía JWT compartido con `core-auth`/`jwt-service` — sin dependencia de almacenamiento externo.
+
+---
+
+## 🛠️ Configuración y Desarrollo
+
+Para levantar el módulo ganadero en entorno local:
+
+### 1. Servidor de Desarrollo
+Ejecuta el proyecto aisladamente desde la raíz del monorepo:
+```bash
+ng serve agro-erp
+
+```
+
+### 2. Build de Producción
+
+Genera el compilado AOT para despliegue en el VPS:
+
+```bash
+ng build agro-erp --configuration=production
+
+```
+---
+
+## 📋 Roadmap del Proyecto (Hito Q3 2026)
+
+* [x] **Refactoring Estructural (Fase 1):** Migración a `agro-erp` y aislamiento Multi-Negocio.
+* [x] **Adaptación del Backend (Fase 2):** Tablas JSONB y despliegue del modelo `PalmTelemetry` en Meta-CRUD.
+* [x] **Frontend Multi-Dominio (Fase 3):** Implementación de menús reactivos y Context Switcher.
+* [x] **Registro Normativo SENASICA-SINIIGA:** UPP/PSG multi-tenant, propiedad por fierro, dictámenes de hato libre (v1.9.0).
+* [x] **Motor de Movimientos SENASICA-REEMO:** reglas de movimiento confirmadas, bitácora de traslados, cadena documental de cumplimiento (v1.10.0).
+* [x] **Endurecimiento de Almacenamiento de Archivos:** autenticación JWT/secreto interno en `upload-file` (v1.10.0).
+* [ ] **Motor Financiero (Fase 4):** Integración transversal del OPEX para calcular costo por kilo de biomasa vs. costo por litro de agroquímico.
+* [ ] **Dashboards Consolidados (Fase 5):** Estabilización final y pruebas E2E.
+* [ ] **Enforcement activo de reglas de movimiento:** pendiente de una sola confirmación del cliente (`requires_destination_ack`) para activar el bloqueo automático de movimientos no permitidos.
+* [ ] **Digitalización de expediente documental:** `compliance_documents` sigue en 0 archivos cargados — estructura y seguridad listas, sin datos reales aún.
+
+
+---
+
+## 📦 Authors
+
+**Francisco Jesus Pérez Pimienta**
+*Senior Systems Architect & Project Lead*
+Hosting3M Automation Suite
+
+
+=== ARCHITECTURE.md ===
+# 🏛️ Architecture Specification & Meta-CRUD Engine Blueprint
+
+## 📝 Descripción
+
+**Project:** Hosting3M Automation Suite (Agro ERP)
+**Version:** v1.10.0 (Movement & Compliance-Document Subsystem, File Storage Security)
+**Stack:** Angular 21 (Signals) | n8n (API Gateway / MCP) | PostgreSQL (JSONB, Views & PL/pgSQL) | Tabler UI
+**Author:** Francisco Jesus Pérez Pimienta
+
+**Historial de versiones documentado en este archivo:**
+- v1.8.0 — Multi-Domain, Hybrid Telemetry & PL/pgSQL Engine (línea base original)
+- v1.9.0 (2026-07-27 a 2026-07-29) — Regulatory Registry Subsystem; hallazgos de producción
+  sobre `execute_metacrud_write` y el contrato implícito del motor Meta-CRUD
+- v1.10.0 (2026-08-10 a 2026-08-14) — Movement & Compliance-Document Subsystem; endurecimiento
+  de seguridad de `upload-file`
+
+## 📝 1. Estructura del Workspace (Feature-Driven Architecture)
+
+El frontend está desarrollado sobre un Monorepo en Angular 21 utilizando una arquitectura orientada a características (*Feature-Driven*), diseñada para un aislamiento estricto de dominios de negocio y carga perezosa (*Lazy Loading*)[cite: 1, 4].
+
+```text
+├── apps/
+│   └── agro-erp/                       # Aplicación unificada Multi-Dominio[cite: 3, 4]
+│       ├── src/
+│       │   ├── app/
+│       │   │   ├── core/               # Singletons globales (TenantService, Interceptors)[cite: 1, 4]
+│       │   │   ├── features/           # Dominios Operativos Completamente Aislados[cite: 1, 4]
+│       │   │   │   ├── agriculture/    # Módulo Palma (Telemetría, Drones, Hectáreas)[cite: 2, 4]
+│       │   │   │   └── livestock/      # Módulo Ganadero (Biomasa, Sanidad, Pesajes)[cite: 3, 4]
+│       │   │   ├── shared/             # Componentes UI reutilizables comunes
+│       │   │   ├── app.config.ts       # Configuración global del Core de Angular
+│       │   │   └── app.routes.ts       # Enrutamiento con Lazy Loading Dinámico[cite: 1, 4]
+│       │   └── styles/
+│       │       ├── themes/             # SCSS Reactivo (theme-cattle.scss / theme-palm.scss)[cite: 1, 4]
+│       │       └── main.scss
+│
+├── libs/
+│   └── core-auth/                      # Librería compartida de Autenticación y RBAC[cite: 1, 4]
+│
+├── infrastructure/
+│   └── upload-file/                    # Microservicio propio de almacenamiento de archivos
+│                                        # ("Sovereign Media Service"). Ver sección 5.
+│
+├── workflows/                          # Orquestación de Backend y Agentes de IA en n8n[cite: 1]
+│   └── 09-MCP-Agent-Cattle/            # Configuración de Servidores MCP y Captura de Campo[cite: 4]
+
+```
+
+---
+
+## ⚙️ 2. Especificación Técnica del Motor Meta-CRUD (`crud_models`)
+
+El sistema implementa el patrón **Meta-CRUD v3**, donde la lógica transaccional, validaciones y permisos no residen en controladores de código del backend, sino que son interpretados en tiempo de ejecución por el API Gateway de **n8n** a través del diccionario de metadatos de la tabla `crud_models`.
+
+### 🔄 Diagrama de Flujo del Runtime Meta-CRUD
+
+```mermaid
+graph TD
+    subgraph "Frontend Layer (Angular 21 - Lazy Loaded)"
+        CS["Context Switcher (TenantService)"]
+        UI_Cattle["Livestock Features (Biomasa, Sanidad)"]
+        UI_Palm["Agriculture Features (Drones, Hectáreas)"]
+        Signals["State Management (Computed Signals)"]
+        
+        CS -->|Inyecta ID & Theme| Signals
+        UI_Cattle <--> Signals
+        UI_Palm <--> Signals
+    end
+
+    subgraph "Integration Layer (n8n Meta-CRUD v3)"
+        Auth["JWT Validator (core-auth)"]
+        Router["Dynamic Model Router"]
+        
+        Signals -->|HTTP POST + tenant_id| Auth
+        Auth --> Router
+    end
+    
+    subgraph "Persistence & BI Layer (PostgreSQL 15)"
+        Table_Cattle[("Raw Tables: cattle_livestock, health, weight, expenses")]
+        Table_Historico[("Audit Log: historico_movimientos")]
+        Table_Palm[("Hybrid Tables: agriculture_telemetry (JSONB)")]
+        View_BI{{"BI Engine: vw_cattle_kpi, vw_palm_kpi"}}
+        SP_Salida["PL/pgSQL: sp_procesar_salida_ganado"]
+        
+        Router -->|Insert/Update| Table_Cattle
+        Router -->|Insert/Update| Table_Palm
+        Router -->|Select/GetAll| View_BI
+        Router -->|model: salida_ganado| SP_Salida
+        SP_Salida -->|UPDATE status=VENDIDO| Table_Cattle
+        SP_Salida -->|INSERT VENTA| Table_Historico
+    end
+
+```
+
+### ⚠️ Contrato del motor Meta-CRUD (restricciones implícitas, no declaradas en `crud_models`)
+
+*Añadido en v1.9.0.* Tres restricciones que el gateway impone en runtime y que no aparecen en ningún esquema ni
+documentación previa. Cada una costó una ronda de depuración en producción antes de
+identificarse.
+
+**1. Toda tabla o vista registrada debe exponer `created_at`.**
+El gateway lo usa para el `ORDER BY` por defecto de `getall`. Omitirlo produce, en tiempo de
+ejecución (no en el despliegue):
+```
+{"error":true,"message":"column vw_upp_compliance_status.created_at does not exist"}
+```
+Corregido para las vistas de cumplimiento en la migración 021, tras detectarse ya en
+producción con el módulo desplegado.
+
+**2. Shape exacto del payload.** El modelo va en la URL **y** en el body:
+```json
+{ "entity": "<model>", "table_name": "<table>", "operation": "getall|getone|insert|update",
+  "filters": { }, "fields": { }, "id": "<pk>" }
+```
+Las operaciones van en minúsculas. Un payload con otra forma (por ejemplo, con
+`"operacion"` en español o sin `"entity"`) devuelve **HTTP 200 con cuerpo vacío**, sin
+ningún indicio de error. Esto llevó a diagnosticar erróneamente un "bug crítico de
+`allowed_fields`" que resultó ser, simplemente, un payload de prueba mal formado.
+
+**3. Las colecciones vacías devuelven `data:[{}]`, no `[]`.** Verificado contra
+`cattle_breed_catalog` con 0 filas reales: la UI mostraba "1/1 razas" con una tarjeta en
+blanco. Cualquier consumidor debe filtrar por la clave primaria esperada antes de contar o
+renderizar — un `Object.keys().length === 0` no basta, porque el objeto fantasma puede traer
+claves con valor `null`.
+
+**4. Los errores de PostgreSQL llegan como HTTP 200 con `error:true` y el mensaje real**
+(ej. violación de CHECK). El "MetaCRUD Silent Error Shield" del frontend es la mitigación
+correcta a este comportamiento del gateway, no un patrón defensivo redundante.
+
+### 📋 Anatomía de Campos del Motor Dinámico
+
+Basado en la telemetría actual registrada en la base de datos `hosting3m_db`, cada registro del Meta-CRUD se compone de:
+
+1. **`model_name` & `table_name`:** Identificadores lógicos y físicos de la entidad en PostgreSQL.
+2. **`allowed_fields`:** Arreglo estricto de columnas permitidas en mutaciones (Filtro de seguridad contra inyecciones de parámetros).
+3. **`schema_json`:** Validador de tipos y campos obligatorios en el *Runtime*. Convierte tipos de datos de payloads débiles (strings de la IA/Frontend) a tipos fuertemente tipados en Postgres.
+4. **`allowed_ops`:** Restringe las operaciones HTTP/CRUD permitidas para el modelo (ej. `SELECT, INSERT, UPDATE, DELETE, GETONE, GETALL`).
+5. **`hooks`:** Micro-orquestaciones (`pre` y `post`) ejecutadas antes o después de la transacción (ej. disparar un webhook de alerta en mortalidad).
+6. **`allowed_roles_*`:** Matriz de Control de Acceso Basado en Roles (RBAC) evaluada en caliente por el Interceptor de Seguridad.
+7. **`joins`:** Definición declarativa de hidratación relacional. Permite inyectar datos de tablas padre sin que el cliente Frontend construya consultas complejas.
+
+#### ⚠️ Hallazgos confirmados sobre `execute_metacrud_write` (2026-07-27)
+
+*Añadido en v1.9.0.* Esta función existe en la base pero **no es la ruta real de escritura del gateway**.
+Confirmado mediante prueba directa:
+
+```sql
+SELECT execute_metacrud_write('UPDATE','cattle_livestock','{"tb_test_date":"2026-07-20"}'::jsonb, 1);
+-- {"status": "error", "message": "invalid input syntax for type uuid: \"1\""}
+```
+
+Tres defectos verificados:
+1. **`p_record_id` es `integer`**, incompatible con cualquier tabla de PK UUID —
+   es decir, todas las tablas `cattle_*` y todas las del registro normativo.
+2. **`WHERE id = %L` está hardcodeado**, ignorando `crud_models.primary_key`. Nunca pudo
+   actualizar `companys` (PK real: `id_company`).
+3. `RETURNING to_jsonb(*)` es sintaxis inválida sin alias de tabla — cualquier INSERT/UPDATE
+   que la alcance cae en el `EXCEPTION WHEN OTHERS` y responde `status:error` con HTTP 200.
+
+**Confirmado por contraste:** el gateway sí escribe correctamente contra tablas de PK UUID
+(prueba real: `UPDATE cattle_livestock` con `id` UUID via el endpoint `crud/v5`, exitoso).
+Esto significa que el nodo **Build Query** del workflow `06-dynamic-crud-engine` construye
+su propio SQL dinámicamente y no invoca esta función — `execute_metacrud_write` es un
+vestigio parcial, probablemente usado solo por flujos anteriores al módulo agropecuario
+(hotel/pista de hielo). No asumir que es la ruta de escritura sin verificarlo primero contra
+el workflow real.
+
+---
+
+## 📊 3. Modelos Operativos Registrados (Módulo Ganadero)
+
+A continuación se detalla el comportamiento del motor para los modelos vigentes extraídos del sistema:
+
+### 🐾 Modelo: `cattle_livestock` (ID: 37)
+
+* **Permisos de Operación:** `SELECT, INSERT, UPDATE, DELETE, GETONE, GETALL` (CRUD Full).
+* **RBAC Operativo:**
+* *Lectura:* `ADMIN, EDITOR, CUSTOMER`
+* *Escritura (Insert/Update):* `ADMIN, EDITOR`
+* *Borrado:* `ADMIN` (exclusivo)
+* **Declarative Joins:** Hidrata automáticamente el campo `tenant_id` hacia la tabla `companys` para retornar el alias comercial bajo la propiedad `tenant_name`.
+
+### 🩺 Modelo: `cattle_health_logs` (ID: 39)
+
+* **Permisos de Operación:** `SELECT, INSERT, GETALL` (Inmutable, no permite modificaciones directas por auditoría).
+* **Estructura JSONB:** El campo `medicines_json` encapsula de forma no relacional la dosificación e insumos utilizados.
+* **Declarative Joins:** Amarra el `livestock_id` con `cattle_livestock` para retornar de forma nativa el identificador nacional `rfid_siniiga`.
+
+### ⚖️ Modelo: `cattle_weight_logs` (ID: 38)
+
+* **Permisos de Operación:** `SELECT, INSERT, GETALL`
+* **RBAC Especializado:** Habilita el rol `IOT` en inserción. Esto permite que básculas automáticas o lectores RFID periféricos inyecten telemetría de biomasa de manera segura a la base de datos sin comprometer otros modelos.
+* **Declarative Joins:** Tracciona las columnas `category` (renombrada a `animal_category`) y `rfid_siniiga` de la entidad maestro de ganado.
+
+### 💰 Modelo: `cattle_expenses` (ID: 44)
+
+* **Permisos de Operación:** CRUD Completo.
+* **Hydration Multidireccional:** Ejecuta un doble join nativo:
+1. Con `cattle_livestock` para inyectar contexto de negocio (`numero_fuego`, `business_model`).
+2. Con `cattle_health_logs` para asociar costos financieros directamente a tratamientos médicos específicos (`health_event_type`, `health_event_date`).
+
+### 🚪 Modelo: `salida_ganado` (ID: 46)
+
+* **Naturaleza:** Modelo Meta-CRUD atípico — `table_name` apunta a una función PL/pgSQL (`sp_procesar_salida_ganado`) en lugar de una tabla física, y `primary_key` es `electronic_rfid`.
+* **Permisos de Operación:** `INSERT` únicamente (invocación de la rutina, no persistencia directa).
+* **RBAC Operativo:**
+* *Invocación:* `ADMIN, EDITOR`
+* *Update/Delete:* `ADMIN` (sin efecto práctico, el modelo no expone esas operaciones)
+* **Efecto Colateral:** Cada invocación exitosa muta `cattle_livestock` (`current_status = VENDIDO`, `upp_origen = NULL`) e inserta un registro `VENTA` en `historico_movimientos`. Ver [`DATABASE_SCHEMA.md`](./DATABASE_SCHEMA.md#sp_procesar_salida_ganadop_electronic_rfid) para las reglas normativas de rechazo (TB/Brucelosis > 60 días).
+* **Registrado:** 2026-07-02, como parte del Sprint 1 de trazabilidad de salida de ganado (300 cabezas / UPP La Bendición, UPP 54).
+* **Reglas actualizadas dos veces desde el registro original** *(añadido en v1.9.0)*:
+  - Migración 024 (2026-07-29): agrega validación de arete oficial SINIIGA
+    (`fn_has_official_ear_tag`) y exención por dictamen de hato libre
+    (`fn_is_herd_free`) a la ventana de 60 días TB/BR. Ver `DATABASE_SCHEMA.md` para el
+    detalle completo de la rutina corregida.
+  - La firma e invocación del modelo Meta-CRUD (`INSERT` sobre `electronic_rfid`) no
+    cambiaron; solo el cuerpo de la función PL/pgSQL.
+
+### 📂 Modelos Secundarios:
+
+* **`cattle_tenants` (ID: 36):** Controla las organizaciones ganaderas, uniones o instancias gubernamentales. *Lectura:* `ADMIN, EDITOR`. *Escritura/Borrado:* `ADMIN` exclusivo.
+* **`cattle_task_evidence` (ID: 40):** Permite el almacenamiento de URLs de auditoría física (fotografías/videos de campo) vinculándolas al ciclo operativo del animal. CRUD completo, lectura abierta a `CUSTOMER`.
+
+### 🏛️ Modelos del Registro Normativo (migraciones 018, 021 — 11 modelos)
+
+*Añadido en v1.9.0. Estado descrito a continuación corresponde al corte 2026-07-29; ver la
+sección "Movement & Compliance-Document Subsystem" más abajo para el estado actualizado de
+`herd_free_certificates` y `cattle_movement_rules`, que cambió en v1.10.0.*
+
+| Modelo | Tabla / Vista | Ops | RBAC escritura |
+|---|---|---|---|
+| `livestock_producers` | tabla (sin PII) | SELECT, INSERT, UPDATE, GETONE, GETALL | ADMIN, OWNER |
+| `livestock_producers_pii` | `vw_livestock_producers` | SELECT, GETONE | — (solo lectura, PII descifrada) |
+| `production_units` | tabla | SELECT, INSERT, UPDATE, GETONE, GETALL | ADMIN, OWNER |
+| `psg_licenses` | tabla | SELECT, INSERT, UPDATE, GETONE, GETALL | ADMIN, OWNER |
+| `compliance_certificates` | tabla | SELECT, INSERT, GETONE, GETALL | ADMIN, EDITOR (append-only) |
+| `compliance_documents` | tabla | SELECT, INSERT, GETONE, GETALL | ADMIN, EDITOR (append-only) |
+| `livestock_census_snapshots` | tabla | SELECT, INSERT, GETONE, GETALL | ADMIN, EDITOR (append-only) |
+| `upp_compliance_status` | `vw_upp_compliance_status` | SELECT, GETONE, GETALL | — |
+| `psg_compliance_status` | `vw_psg_compliance_status` | SELECT, GETONE, GETALL | — |
+| `producer_pii` | `sp_upsert_producer_pii` | INSERT | ADMIN, OWNER |
+| `cattle_tenants` | tabla (DEPRECADO) | SELECT, GETONE, GETALL | NONE (bajado en migración 010) |
+
+**Nota sobre `cattle_livestock` (ID 37):** su `allowed_fields` se amplió en la migración 018
+para incluir `production_unit_id` (16 → 17 campos). No hubo bug previo de exclusión de
+`species`/`upp_origen`/`tb_test_date`/`br_test_date` — esos ya estaban correctamente listados
+en producción; el diagnóstico inicial que lo sugería se basó en un `crud_models_seed.sql`
+desactualizado en el repo, no en el estado real. Corregido en el registro de la sesión de
+despliegue del 2026-07-27.
+
+**`brand_registrations`, `production_unit_paddocks`, `birth_events`, `herd_free_certificates`
+y `cattle_movement_rules`** (migraciones 028, 030, 020) existían en base de datos pero **aún
+no estaban registrados en `crud_models`** al corte de 2026-07-29 — se diseñaron y probaron a
+nivel de esquema; su exposición vía Meta-CRUD quedó pendiente en esa ronda.
+**Actualización v1.10.0:** `herd_free_certificates` ya está registrado (migración 045, ver
+más abajo); `cattle_movement_rules` es un catálogo de política global sin `id_company`, no se
+registra como modelo CRUD editable del mismo modo — se consulta internamente, no se expone
+para edición directa vía frontend.
+
+---
+
+## 🚚 4. Movement & Compliance-Document Subsystem (migrations 039–049, 2026-08-10 to 2026-08-14)
+
+*Añadido en v1.10.0.* Models the real-world livestock movement lifecycle: a PSG as a physical destination/origin
+(not merely a certificate), the event log of movements that actually happened, and the
+compliance-document chain (REEMO guide, CZM, GBG constancia, state introduction permit,
+ownership-transfer letter) that supports an interstate movement in practice.
+
+### Design decisions worth preserving (the "why", not just the "what")
+
+* **PSG modeled as a physical facility (`psg_facilities`), not just a license.** The original
+  039 design treated PSG purely as a `psg_licenses` row. Client confirmation (real document
+  examples) showed a PSG is a place animals are physically transported to and from — the
+  license is a separate, related concept (`psg_facilities.psg_license_id`).
+* **Movement origin/destination is three-way exclusive** (`chk_origin_exclusive`,
+  `chk_destination_exclusive`): exactly one of an internal production unit, an internal PSG
+  facility, or an external (non-tenant) destination. `psg_facility_origin_id` was added in
+  migration 043 — deliberately absent at first (039), added only once the client confirmed in
+  practice that a producer with both a UPP and a PSG stages animals through their own PSG
+  before an interstate move (YAGNI honored, then reversed on real evidence, not on
+  speculation).
+* **`external_destinations.normative_type`** (migration 041) bridges the commercial
+  vocabulary (`destination_type`: `THIRD_PARTY_RANCH`/`BUYER`/`SLAUGHTERHOUSE`/`EXPORT`/
+  `OTHER`) to the compliance vocabulary (`UPP`/`PSG`/`RASTRO`/`EXPORTACION`) as a column on
+  the row, not a hardcoded `CASE` in trigger logic — because a `BUYER` may legally operate as
+  any of the four, so the mapping cannot be fixed at the type level for that one value.
+  Migration 049 then added `chk_normative_type_fixed_mapping` for the three pairs that *are*
+  fixed (`SLAUGHTERHOUSE→RASTRO`, `EXPORT→EXPORTACION`, `THIRD_PARTY_RANCH→UPP`), leaving
+  `BUYER`/`OTHER` deliberately unconstrained.
+* **Fail-closed multi-tenant isolation via `BEFORE INSERT/UPDATE` triggers**, not a database
+  role/RLS mechanism — consistent with the project's existing constraint that `n8n_user` is
+  Postgres superuser (see `CLAUDE.md`, deuda técnica). Verified in both environments: a
+  cross-tenant movement insert is rejected with an explicit error naming both tenant IDs; a
+  same-tenant insert succeeds.
+* **`compliance_certificates` extended, not replaced** (migration 044): `movement_event_id`
+  (nullable FK) plus `expires_at` were added to the existing table rather than creating a new
+  one, since every field a movement document needs (`folio`, `issued_at`, `issuing_officer`)
+  already existed. The subject-exclusivity constraint from 013
+  (`num_nonnulls(production_unit_id, psg_license_id) = 1`) had to be widened in a follow-up
+  migration (046) — it initially made it *impossible* to insert a movement-type certificate at
+  all, a real blocking bug rather than a merely-unenforced gap as first described.
+* **TB/BR certificates linked via a bridge table, not a direct FK** (migration 045,
+  `cattle_movement_event_health_certs`): `herd_free_certificates` models a *time-bound
+  status* (`issued_at`/`valid_until`/`is_active`), and the same folio can legitimately support
+  several different movements while it remains valid — confirmed by real CZM documents, which
+  cite TB/BR folios as references, not as consumed single-use documents.
+* **`cattle_identifier_history`** (migration 047): a single generic table
+  (`identifier_type` ∈ `FUEGO`/`SINIIGA`/`CHIP`) rather than three parallel tables, populated
+  automatically by an `AFTER UPDATE` trigger on `cattle_livestock`
+  (`trg_log_identifier_changes`) whenever `numero_fuego`, `rfid_siniiga`, or `electronic_rfid`
+  changes. `reason` defaults to `CAPTURE_CORRECTION`; a caller that knows the real reason
+  (`LOST`/`REPLACED`/`FOUND_LOOSE_REASSIGNED`) can set `app.identifier_change_reason` (a
+  session-local Postgres setting) immediately before the `UPDATE` to enrich the log — optional,
+  so no existing load script needed to change. Verified end-to-end against a real animal in
+  both environments, including a correctly-skipped `NULL→NULL` no-op update.
+
+### `cattle_movement_rules` — de borrador a confirmado (migrations 020, 042, 048)
+
+Global catalog (no `id_company`) of permitted UPP↔PSG movements, now populated with real
+SENASICA/REEMO business rules obtained directly from the client via a recorded audio
+walkthrough (2026-08-11) plus four real REEMO/CZM/permit document examples they provided.
+
+* **Restructured from 8 to 16 rows** (migration 042): the matrix gained `is_interstate` as a
+  row dimension, since requirements differ substantially between a same-state and an
+  interstate movement of the *same* origin/destination pair — not something a single boolean
+  attribute on the pair could express.
+* **`PSG → UPP` is permanently disallowed**, confirmed and enforced (`is_allowed = false`,
+  `is_confirmed = true`, both interstate variants). Once an animal enters a PSG it can only
+  move to another PSG (own or third-party) or exit to `RASTRO`/`EXPORTACION`, never back to a
+  UPP. This was the one correction to what migration 020's draft had assumed.
+* **Two of the six original open questions (migration 020) are now closed:** individual
+  animal vs. batch (resolved by design — see `cattle_movement_event_animals` above, same
+  mechanism handles both) and PSG validity semantics (see `requires_valid_psg` note below).
+  **Four remain genuinely open**, tracked in `INVENTARIO_COMPLETITUD.md`.
+* **`requires_valid_psg` vs. `requires_health_tests` — documented, not redundant** (migration
+  048, `COMMENT ON COLUMN` only, no data change): `requires_valid_psg` means the PSG
+  facility's *own operating license* must be current
+  (`psg_facilities.psg_license_id -> psg_licenses.expires_at`); `requires_health_tests` means
+  the *animal's* TB/BR status must be current. Both were set identically for every confirmed
+  row in migration 042 under the working assumption they were the same concept — now known to
+  be two different checks that happen to coincide on today's confirmed rows, not verified
+  independently against real documents yet.
+* **`requires_gbg_certificate`** (renamed from `requires_oirsa_certificate` in migration 044):
+  whether a GBG (Gusano Barrenador del Ganado) treatment/inspection constancia is required —
+  a DINESA-emergency-measure prerequisite for CZM issuance (DOF, Dec 2, 2025; Chiapas and
+  Tabasco are SENASICA-listed maximum-risk zones), confirmed applicable to interstate
+  movements. Independently web-verified during design, not solely client-asserted.
+* **`is_confirmed` remains `false` on 14 of 16 rows**, withheld pending a single outstanding
+  question sent to the client: whether `requires_destination_ack` (a two-party
+  acknowledgement step at the destination) is needed, or whether today's single-party
+  WhatsApp-photo-plus-REEMO-folio workflow is sufficient as-is. **No enforcement is active
+  from this table today** — `rule_id` on `cattle_movement_events` remains a stored reference,
+  not yet consulted by any validation logic.
+* `RASTRO`/`EXPORTACION` rows remain unconfirmed drafts (not covered by the client audio),
+  split into interstate/local rows for schema consistency only.
+
+### New Meta-CRUD models (migrations 040, 045, 047)
+
+| Model | Table | Ops | RBAC write | Notes |
+|---|---|---|---|---|
+| `psg_facilities` | table | SELECT, INSERT, UPDATE, GETONE, GETALL | ADMIN, OWNER | reference catalog |
+| `external_destinations` | table | SELECT, INSERT, UPDATE, GETONE, GETALL | ADMIN, OWNER | reference catalog |
+| `cattle_movement_events` | table | SELECT, INSERT, UPDATE, GETONE, GETALL | ADMIN, OWNER | editable per client decision — flagged as a candidate for an append-only correction pattern instead, since a REEMO folio is a compliance record; not yet revisited |
+| `cattle_movement_event_animals` | table | SELECT, INSERT, UPDATE, GETONE, GETALL | ADMIN, OWNER | bridge, one row per animal per event |
+| `herd_free_certificates` | table | SELECT, INSERT, UPDATE, GETONE, GETALL | ADMIN, EDITOR (insert) / ADMIN only (update) | existed since migration 024, never registered until 045 — frontend could not read/write it before this |
+| `cattle_movement_event_health_certs` | table | SELECT, INSERT, UPDATE, GETONE, GETALL | ADMIN, OWNER | bridge, TB/BR folios cited per movement |
+| `cattle_identifier_history` | table | SELECT, INSERT, GETONE, GETALL (no UPDATE/DELETE) | ADMIN, EDITOR (insert, for rare manual backfill) | populated automatically by trigger; manual INSERT reserved for pre-system historical events |
+
+---
+
+## 🔐 5. File Storage Security (`upload-file`, hardened 2026-08-13)
+
+*Añadido en v1.10.0.* `upload-file` (`infrastructure/upload-file`, not previously documented anywhere in this
+repo) is the self-hosted file service backing `compliance_documents` — a deliberate
+architecture decision ("Sovereign Media Service") to avoid dependency on external temporary
+links, predating this delta.
+
+**State before this work:** fully public and unauthenticated. `POST /upload` accepted files
+from any caller; `GET /uploads/:filename` served any file to any caller indefinitely;
+filenames were `Date.now()`-based (sequential, guessable). Given `compliance_documents` will
+store real identification credentials (confirmed by a client-provided "Cesión de Derechos"
+document example), this was flagged as a real exposure risk, not a theoretical one.
+
+**Solution: reuse the existing `n8n-jwt-service` trust infrastructure**, rather than invent a
+parallel signed-URL scheme. Both `POST /upload` and `GET /uploads/:filename` now require
+either:
+1. A valid user JWT (`Authorization: Bearer <token>`), verified **locally** against the same
+   `JWT_SECRET` already used by `jwt-service` — no network round-trip per request, which is
+   the point of JWT over an opaque session token.
+2. The shared `INTERNAL_SECRET` (`x-internal-secret` header), for trusted backend callers
+   (n8n workflows) acting without a logged-in user — mirrors the exact two-tier trust model
+   `jwt-service` itself already uses for `/generate-token`.
+
+Additional hardening: filenames are now cryptographically random (32 bytes), not
+timestamp-based; SHA-256 is computed server-side on upload and returned in the response
+(`sha256_hash`, `original_name`, `mime_type`, `size_bytes`, `uploaded_by`) — these map
+directly to `compliance_documents` columns, so **no schema migration was needed** for this
+part. Secrets moved from the versioned `docker-compose.yml` to a git-ignored `.env`.
+
+**`core-auth` extended (0.0.1 → 0.0.2)** to keep the frontend working with this change:
+`apiUrl_upload` added to `AuthEnvironmentConfig` and to `authInterceptor`'s protected-APIs
+check (optional field, additive, non-breaking for consumers like `hotel_app` that don't
+upload files). Without this, the frontend's functional interceptor would never attach the
+JWT to `upload-file` requests, since it only matched `apiUrl_crud`/`apiUrl_ai` before.
+
+**⚠️ Operational note, not yet closed as of this delta:** during hardening, the real
+`INTERNAL_SECRET` value was pasted in plaintext into a chat session used for this work (twice)
+and must be treated as compromised. Rotation was instructed but **not confirmed completed**
+as of 2026-08-14 — verify `INTERNAL_SECRET` (and consider `JWT_SECRET`) have been rotated in
+both `n8n-jwt-service` and `upload-file`, in both the local mirror and the production VPS,
+before treating this subsystem as fully secured.
+
+**⚠️ Also flagged, not resolved:** `n8n-jwt-service`'s `/verify-token` endpoint receives an
+`internal_secret` header from the n8n `Verify Token` node but never validates it — the check
+exists only on `/generate-token`. Not a security regression (nothing currently depends on
+`/verify-token` rejecting a missing/wrong internal secret), but an inconsistency worth
+closing.
+
+**⚠️ Deployment note:** `agro-erp`'s `environment.ts` is regenerated from scratch on every
+Plesk Git deployment action (not a persisted file) — the deployment command itself had to be
+updated to include `apiUrl_upload` in its `echo` string, or the field would be silently
+dropped on every future deploy regardless of what's committed to `app.config.ts`.
+
+
+=== DATABASE_SCHEMA.md ===
+# 🗄️ Database Schema & Baseline (v2)
+
+**Historial de versiones documentado en este archivo:**
+- Línea base (`v2`) — Cattle Management Subsystem original
+- v1.9.0 (2026-07-27 a 2026-07-29) — Regulatory Registry Subsystem; corrección de
+  `cattle_livestock` (identificación) y `sp_procesar_salida_ganado`
+- v1.10.0 (2026-08-10 a 2026-08-14) — Movement Subsystem; Identifier History Subsystem;
+  extensión de `compliance_certificates`
+
+> ⚠️ **Nota de higiene de documentación (2026-08-14):** el `schema.sql` versionado en el
+> repo **no refleja ninguna tabla ni columna de v1.10.0** (verificado: cero coincidencias
+> para `cattle_identifier_history`, `requires_gbg_certificate`,
+> `cattle_movement_event_health_certs`, `chk_normative_type_fixed_mapping`,
+> `compliance_certificates_type_subject_check`). Regenerar con `pg_dump --schema-only`
+> contra producción antes de usarlo como referencia de diagnóstico — mismo patrón de
+> desactualización ya señalado en `CLAUDE.md`, regla 6, y van tres veces.
+
+## 📌 Core Directives
+* **RDBMS:** PostgreSQL
+* **Security:** Tenant isolation via `tenant_id` (`companys.id_company`).
+* **Primary Keys:** UUID v4 default for high-concurrency environments.
+
+## 🏗️ Cattle Management Subsystem
+
+### `cattle_livestock` (Core Entity)
+Registry of biomass with embedded compliance rules.
+* `id` (UUID, PK)
+* `tenant_id` (INT, FK -> `companys`)
+* `rfid_siniiga` (VARCHAR, UNIQUE) - Official SINIIGA ear tag. Format confirmed 2026-07-29:
+  10 digits, EE + 4 + 4, where EE is the INEGI state code (07 Chiapas, 27 Tabasco).
+  Validated by `fn_has_official_ear_tag()`. ⚠️ In practice this is the identifier that
+  actually covers the herd: 262 of 270 animals (97%, verified in production 2026-07-29)
+  carry no `electronic_rfid` at all. *(corregido en v1.9.0 — la premisa original decía lo
+  contrario)*
+* `electronic_rfid` (VARCHAR, UNIQUE) - Documented as the primary operational key (rumen
+  bolus / subcutaneous microchip), and is what `sp_procesar_salida_ganado` keys on. In
+  practice only 8 of 270 animals carry one. Pending client decision: whether to tag the
+  full herd or shift the operational key to `rfid_siniiga`. *(corregido en v1.9.0)*
+* `numero_fuego` (VARCHAR) - Physical brand/iron mark identifier, i.e. the traditional
+  fire-branded number, distinct from `brand_id` (ownership brand, see below). Capture is
+  NOT uniform across tenants: 100% present in tenant 5 (La Bendición), 0% in tenant 6
+  (UPP 54). Do not assume presence when designing sort/search on this field. *(añadido en
+  v1.9.0)*
+* `brand_id` (UUID, FK -> `brand_registrations`, nullable) - Ownership brand. Independent
+  of `production_unit_id`: an animal may stand in one holder's unit while belonging to the
+  other holder. Inherited automatically from the dam via `fn_inherit_brand_from_mother`
+  (trigger on INSERT/UPDATE of `mother_id`/`brand_id`); an explicit value always wins over
+  inheritance. Populated for 0 of 270 animals as of 2026-07-29 — no source exists to infer
+  it retroactively; requires a physical field pass. *(añadido en v1.9.0)*
+* `mother_id` (UUID, FK -> `cattle_livestock` self-reference, nullable) - Dam. Field
+  notebooks record every birth as "parió <dam tag> - <dam fire number> - <calf sex/brand>",
+  so lineage exists on paper back to 2023 and is not yet loaded into the database. *(añadido
+  en v1.9.0)*
+* `paddock_id` (UUID, FK -> `production_unit_paddocks`, nullable) - Current paddock.
+  Guarded by `fn_guard_livestock_paddock()`: a paddock belongs to exactly one production
+  unit, and the trigger rejects assigning it to an animal standing in a different unit.
+  *(añadido en v1.9.0)*
+* `production_unit_id` (UUID, FK -> `production_units`, nullable) - Real FK that replaces
+  the free-text `upp_origen` as the authoritative link to a UPP. Guarded by
+  `fn_guard_livestock_production_unit()` (fail-closed against cross-tenant assignment).
+  `upp_origen` is retained as a denormalized label, kept in sync via migration 023, but is
+  no longer the source of truth. *(añadido en v1.9.0)*
+* `business_model` (ENUM: CRIA, ENGORDA, REPRODUCCION)
+* `category` (ENUM: VACA, TORO, NOVILLO, BECERRA, BECERRO, BUFALA, BUFALO, BUCERRO, BUCERRA, BORREGO, BORREGA)
+* `current_status` (ENUM: ACTIVO, EN_TRANSITO, VENDIDO, BAJA_MORTANDAD, PREÑADA, VACÍA, DESARROLLO, RIESGO, FINALIZADO, CUARENTENA)
+* `birth_date` (DATE)
+* `current_weight_kg` (NUMERIC 10,2) - Auto-updated via trigger.
+* `metadata` (JSONB) - Flexible attribute bag for vertical-specific data not worth normalizing.
+* `species` (VARCHAR, Default: 'BOVINO')
+* `upp_origen` (VARCHAR) - Origin ranch / cost center (e.g. "UPP La Bendición"). Automatically set to `NULL` on exit (`VENDIDO`) by `sp_procesar_salida_ganado`.
+* `tb_test_date` / `br_test_date` (DATE) - Compliance metrics. Regulatory validity window: 60 days.
+
+### `cattle_weight_logs` (Telemetry)
+* `id` (UUID, PK)
+* `livestock_id` (UUID, FK -> `cattle_livestock`, `ON DELETE CASCADE`)
+* `weight_kg` (NUMERIC 10,2) - Triggers `update_current_weight()` on insert.
+* `log_date` (TIMESTAMP)
+* `source_device` (VARCHAR) - Identifies the originating scale/RFID reader (IoT ingestion).
+
+### `cattle_health_logs` (Sanitary Events)
+* `id` (UUID, PK)
+* `livestock_id` (UUID, FK -> `cattle_livestock`, `ON DELETE CASCADE`)
+* `event_type` (VARCHAR) - e.g. `PALPACION`, vaccination, diagnosis.
+* `description` (TEXT)
+* `medicines_json` (JSONB) - Non-relational dosage/treatment payload.
+* `event_date` (TIMESTAMP)
+* Immutable by design: exposed via Meta-CRUD as `SELECT, INSERT, GETALL` only (no `UPDATE`/`DELETE`, for audit integrity).
+
+### `cattle_expenses` (Opex Tracking)
+* `id` (UUID, PK)
+* `tenant_id` (INT, FK -> `companys`)
+* `livestock_id` (UUID, FK -> `cattle_livestock`, `ON DELETE SET NULL`)
+* `health_event_id` (UUID, FK -> `cattle_health_logs`, `ON DELETE SET NULL`) - Optional link to the sanitary event that generated the cost.
+* `expense_date` (DATE), `category` (VARCHAR), `amount` (NUMERIC 12,2), `quantity` (NUMERIC 10,2), `unit_measure` (VARCHAR), `description` (TEXT), `receipt_url` (TEXT)
+
+### `cattle_task_evidence` (Field Audit Trail)
+* `id` (UUID, PK)
+* `livestock_id` (UUID, FK -> `cattle_livestock`, `ON DELETE SET NULL`)
+* `task_name` (VARCHAR), `evidence_url` (TEXT)
+* `status` (ENUM: PENDIENTE, COMPLETADO, RECHAZADO)
+* `uploaded_by` (VARCHAR)
+
+### `cattle_tenants` (Ranch / Organization Catalog)
+* `id` (UUID, PK)
+* `tax_id` (VARCHAR), `name` (VARCHAR)
+* `org_type` (ENUM: GANADERO, UNION, GOBIERNO)
+* Reserved for `ADMIN`-only writes; `SELECT` open to `ADMIN, EDITOR`.
+* ⚠️ **DEPRECATED (migration 010, 2026-07-27).** *(añadido en v1.9.0)* Single row, generic RFC
+  (`XAXX010101000`), zero foreign keys referencing it in the entire schema. Not dropped
+  (production-safety guardrail): retained read-only. Meta-CRUD model downgraded to
+  `{SELECT,GETONE,GETALL}`, `allowed_roles_insert/update/delete = NONE`. `org_type` was
+  migrated to `companys.org_type` (CHECK: GANADERO/UNION/GOBIERNO, nullable for
+  non-livestock tenants).
+
+### `historico_movimientos` (Movement Audit Log)
+* `id` (UUID, PK)
+* `livestock_id` (UUID, FK -> `cattle_livestock`)
+* `electronic_rfid` (VARCHAR)
+* `tenant_id` (INT)
+* `tipo_movimiento` (ENUM: VENTA, BAJA_MORTANDAD, TRASLADO)
+* `upp_origen_anterior` (VARCHAR) - Snapshot of the ranch of origin at the moment of the movement.
+* `fecha_registro` (TIMESTAMP)
+* Write-only side effect of `sp_procesar_salida_ganado` (`VENTA` case); not exposed as a direct Meta-CRUD model.
+
+### `agriculture_telemetry` (Agriculture Module - Hybrid Table)
+* `id` (UUID, PK)
+* `tenant_id` (INT, FK -> `companys`)
+* `zone_name` (VARCHAR), `activity_type` (VARCHAR)
+* `execution_date` (TIMESTAMP)
+* `telemetry_data` (JSONB, GIN-indexed) - Drone/sensor payloads without a rigid schema.
+* Not yet registered in `crud_models`; reserved for the Agriculture domain rollout.
+
+---
+
+## 🏛️ Regulatory Registry Subsystem (SENASICA-SINIIGA)
+
+*Añadido en v1.9.0.* Introduced to model the client's real padrón: N production units per tenant,
+two title holders, two independent ownership brands, and the SENASICA-SINIIGA compliance
+lifecycle. Deployed to production 2026-07-27 through 2026-07-29 (migrations 010-030).
+
+### `livestock_producers` (Producer / Holder)
+* `id` (UUID, PK), `id_company` (INT, FK -> `companys`, `ON DELETE CASCADE`)
+* `full_name`, `producer_role` (TITULAR / SOCIO / REPRESENTANTE)
+* `curp_enc`/`rfc_enc` (BYTEA, pgcrypto) + `curp_hash`/`rfc_hash` (SHA-256, equality lookup
+  without decrypting). Written exclusively via `sp_upsert_producer_pii()`.
+* **Deliberately replicated per tenant, not global.** The same physical person (confirmed:
+  both Alejandro and Pedro Aguilar Reséndez hold title across multiple tenants) gets one
+  row per tenant. A shared global producer row would be a cross-tenant PII leak by design.
+* Partial unique index: exactly one active TITULAR per tenant.
+
+### `production_units` (UPP)
+* `upp_code` (CHECK `^\d{2}-\d{3}-\d{4}-\d{3}$`), unique among active units.
+* `state_code`/`municipality_code` — GENERATED from `upp_code` (INEGI encoding). Read-only.
+* `total_surface_ha`, `is_partial_surface` (constancia distinguishes "Total" from "Parcial").
+* `surface_matrix` (JSONB, GIN) — verbatim SENASICA grid `[riego,temporal] × 6 conceptos`.
+  Never normalized/corrected: real constancias are internally inconsistent (Santa Lucía
+  declares 42.00 ha total with every concept cell at 0.00) and a sum-CHECK would reject the
+  client's own official document.
+* `grazing_surface_ha` — GENERATED (agostadero + praderas + cultivos forrajeros).
+  ⚠️ Currently 0.00 for all 4 loaded units (either NULL matrix or all-zero grid): treat as
+  "not available" in any UI, never as a literal zero divisor for stocking-rate math.
+* `registry_status` (ACTIVA/BLOQUEADA/SUSPENDIDA/BAJA) — distinct from `is_active`.
+  BLOQUEADA means the unit exists and its history stays queryable but cannot move
+  livestock (client-confirmed real state for Santa Lucía, 2026-07-29).
+* `fire_brand_patent` — links to `brand_registrations` by patent number where known
+  (e.g. UPP 27-009-4146-002 carries patent 155, matching brand `R`'s municipal registry).
+
+### `psg_licenses` (Prestador de Servicios Ganaderos)
+* Belongs to the **person**, not the predio — operational, gates livestock movement.
+* `psg_code` (CHECK `^\d{2}-\d{3}-\d{4}-P\d{2}$`), unique **per tenant** (deliberate: the
+  same PSG legitimately replicates across a titular's several tenants).
+* `expires_at` nullable — constancias print no expiry; resolved via `fn_psg_validity_status()`
+  with a per-tenant default window (`companys.metadata->>'psg_validity_months'`, default 12).
+
+### `compliance_certificates` (Folio History) — append-only, extended migrations 044/046
+
+*Extendido en v1.10.0 — reemplaza la entrada original de v1.9.0.*
+
+* `certificate_type` — 8 values total: the original 3 unit-registration types
+  (`PGN_UPP_REGISTRATION`/`PGN_UPP_UPDATE`/`PGN_PSG_UPDATE`) plus 5 movement-document types
+  added in migration 044: `REEMO_TRANSIT_GUIDE`, `CZM_MOVEMENT_CERTIFICATE`,
+  `GBG_TREATMENT_CERTIFICATE`, `STATE_INTRODUCTION_PERMIT`, `OWNERSHIP_TRANSFER_LETTER`
+  (cesión de derechos — used for same-owner interstate UPP-to-UPP movements per a March 2026
+  SCJN ruling, Controversia Constitucional 216/2025, that removed some state-level movement
+  *permit* requirements but left property/possession documentation requirements intact; that
+  ruling's general applicability beyond the Nayarit case it addressed is a legal question
+  outside this schema's scope — the client independently confirmed the Tabasco/Chiapas state
+  introduction permit is still required in current practice regardless).
+* `movement_event_id` (UUID, FK -> `cattle_movement_events`, nullable, migration 044) — links
+  a certificate to the specific movement it supports.
+* `expires_at` (TIMESTAMPTZ, nullable, migration 044) — every movement-document type observed
+  in real examples carries a short validity window, typically 5 days from issuance.
+* **Subject constraints, corrected in migration 046** (the original migration-044 rollout had
+  a real gap, not merely an unenforced one):
+  * `compliance_certificates_single_subject_check`: widened from
+    `num_nonnulls(production_unit_id, psg_license_id) = 1` to
+    `num_nonnulls(production_unit_id, psg_license_id, movement_event_id) = 1`. Before this
+    fix, it was **impossible** to insert any movement-document type at all without also
+    forcing an unrelated `production_unit_id`/`psg_license_id` — a blocking bug present from
+    044 through 046, not caught until the follow-up review.
+  * `compliance_certificates_type_subject_check` (new, 046): ties each `certificate_type` to
+    its correct subject — the 3 `PGN_*` types must use `production_unit_id`/`psg_license_id`
+    (never `movement_event_id`); the 5 movement-document types must use `movement_event_id`
+    exclusively.
+* No UPDATE/DELETE: a re-issued constancia is a new row, never an edit.
+
+### `compliance_documents` (File Custody) — append-only
+* Polymorphic (`entity_type` + `entity_id`, no FK — integrity enforced at the write path).
+* `storage_key` (external object, outside the web root), `sha256_hash` (integrity proof).
+* Resolved only via an authenticated endpoint validating `id_company` against
+  `user_companies`. **0 files archived as of 2026-07-29** — structure exists, nothing loaded.
+* El servicio de almacenamiento que respalda esta tabla (`upload-file`) se endureció con
+  autenticación JWT/`INTERNAL_SECRET` en v1.10.0 — ver `ARCHITECTURE.md`, sección "File
+  Storage Security", para el detalle. Sin cambios de esquema en esta tabla por ese trabajo.
+
+### `livestock_census_snapshots` (Declared Census) — append-only
+* Point-in-time declared headcount from a constancia. Reconciliation against
+  `cattle_livestock` is deliberately **out of scope** (client decision): declared and
+  biometric inventory diverge for legitimate reasons (unregistered births, capture lag).
+
+### `herd_free_certificates` (Dictamen de Hato Libre)
+* Scoped to the **production unit** (the whole herd is certified as a unit), one row per
+  `disease` (TB / BR — issued and expire independently).
+* Consulted by `sp_procesar_salida_ganado` (migration 024) as the exemption path for the
+  60-day lot-test window. **0 certificates loaded as of 2026-07-29** — this is the single
+  largest driver of the low movement-readiness figure (5/270 animals).
+* **Registered in `crud_models` as of migration 045** *(añadido en v1.10.0)* (existed in
+  schema since migration 024 but was never exposed via Meta-CRUD before — the frontend could
+  not read or write it until this). `is_active` toggling restricted to `ADMIN` only (not
+  `EDITOR`), since deactivating a sanitary certificate is a sensitive action.
+* Linked to specific movements via the bridge table `cattle_movement_event_health_certs`
+  (see Movement Subsystem below), not a direct FK — the same certificate legitimately
+  supports multiple movements during its validity window. *(añadido en v1.10.0)*
+
+### `brand_registrations` (Fierro Marcador) — GLOBAL catalog, not tenant-scoped
+* A registered branding iron is publicly filed with the state (SEDAFOP in Tabasco), and the
+  client requires **consolidated financial reporting by brand across tenants** — the reason
+  this catalog is deliberately global, unlike the tenant-scoped registry tables above.
+* `owner_curp_enc`/`owner_curp_hash` — same encrypt-and-hash pattern as `livestock_producers`.
+* Confirmed real state (2026-07-29): brand `R` (rancho brand, titular Pedro, state registry
+  P01-27-009-01462) is fully documented; brand `aR` (Alejandro's own title) is registered
+  with the state but its credential has not been supplied — row exists, marked incomplete.
+* `fn_apply_birth_brand_inheritance()` resolves the brand on a `birth_events` row from
+  either a resolved `dam_id` or a free-text `dam_fire_number` match, so capture from a field
+  notebook does not require the dam to already be linked.
+
+### `production_unit_paddocks` (Potreros)
+* Scoped to a `production_unit_id`: "potrero 2" only means something inside its own UPP.
+* `cattle_livestock.paddock_id` tracks current location only — no occupancy history yet
+  (paddock rotation is a larger feature, out of scope for v1.9.0).
+
+### `birth_events` (Parto)
+* Mirrors the field-notebook shape exactly: `dam_ear_tag`/`dam_fire_number` as **free text**
+  (deliberately not a hard FK — dams may lack a tag, and the client confirmed fire numbers
+  can repeat by capture error), `calf_sex`, `calf_brand_id` (defaults via inheritance),
+  `calf_id` **nullable** because the calf is born untagged and linked only later, once
+  ear-tagged (notebooks show this as a separate event, sometimes weeks after birth).
+* `dam_id` (nullable FK) is filled in once a human disambiguates the free-text reference
+  against the herd — never inferred automatically on a duplicate fire number.
+* Source for backfill: field notebooks (2023-2026) and `PARTOS_2020_LB.xlsx` (417 births,
+  not yet loaded).
+
+### `cattle_movement_rules`
+* **Ver la sección "Movement Subsystem" más abajo.** *(nota añadida en v1.10.0 — esta tabla
+  vivía documentada aquí como borrador sin desplegar; la entrada completa y actualizada
+  ahora vive junto al resto del subsistema de movimientos para no duplicar contenido.)*
+
+---
+
+## 🚚 Movement Subsystem (SENASICA-REEMO, migrations 020, 039–046, 048–049)
+
+*Añadido en v1.10.0.* Models real livestock movements — UPP↔UPP, UPP↔PSG, PSG↔PSG — and the compliance-document
+chain that supports an interstate movement. Complements the Regulatory Registry Subsystem
+above; a movement changes *where* an animal is, the registry subsystem records *who* is
+certified to hold it there.
+
+### `cattle_movement_rules` (Policy Catalog) — restructured, migration 042
+* `id` (UUID, PK), no `id_company` (global policy, applies to all tenants equally).
+* `origin_type`/`destination_type` (`UPP`/`PSG`, destination also allows `RASTRO`/
+  `EXPORTACION`), `is_interstate` (BOOLEAN) — together form the natural key
+  (`UNIQUE (origin_type, destination_type, is_interstate)`), 16 rows total.
+* `is_allowed`, `requires_valid_psg`, `requires_health_tests`, `requires_gbg_certificate`
+  (renamed from `requires_oirsa_certificate`, migration 044), `requires_introduction_permit`,
+  `requires_destination_ack`, `is_confirmed` (BOOLEAN each).
+* `is_confirmed = false` is the fail-closed default; any future enforcement layer must treat
+  it as "rule unavailable", never as an implicit allow (original design intent, migration
+  020, unchanged through every subsequent revision).
+* Current data: `PSG→UPP` (both interstate variants) fully confirmed and disallowed. 12 other
+  `UPP`/`PSG` combination rows have real values stored but `is_confirmed = false`, pending
+  client sign-off on `requires_destination_ack` specifically. 4 `RASTRO`/`EXPORTACION` rows
+  remain draft in full (values and confirmation both unconfirmed).
+* Original draft (migration 020, "DRAFT — NOT DEPLOYED") shipped with six open operational
+  questions. Two are now closed by design: individual animal vs. batch (see
+  `cattle_movement_event_animals` below — same mechanism handles both) and PSG validity
+  semantics (see `requires_valid_psg` note below). Four remain genuinely open, tracked in
+  `INVENTARIO_COMPLETITUD.md`.
+* **`requires_valid_psg` vs. `requires_health_tests` — documented, not redundant** (migration
+  048, `COMMENT ON COLUMN` only, no data change): `requires_valid_psg` means the PSG
+  facility's *own operating license* must be current
+  (`psg_facilities.psg_license_id -> psg_licenses.expires_at`); `requires_health_tests` means
+  the *animal's* TB/BR status must be current. Both were set identically for every confirmed
+  row in migration 042 under the working assumption they were the same concept — now known to
+  be two different checks that happen to coincide on today's confirmed rows, not verified
+  independently against real documents yet.
+* **`requires_gbg_certificate`**: whether a GBG (Gusano Barrenador del Ganado)
+  treatment/inspection constancia is required — a DINESA-emergency-measure prerequisite for
+  CZM issuance (DOF, Dec 2, 2025; Chiapas and Tabasco are SENASICA-listed maximum-risk
+  zones), confirmed applicable to interstate movements. Independently web-verified during
+  design, not solely client-asserted.
+
+### `psg_facilities` (PSG as a physical location) — migration 039
+* `id` (UUID, PK), `id_company` (INT, tenant-scoped, unlike the policy catalog above)
+* `psg_license_id` (UUID, FK -> `psg_licenses`, nullable) — links the physical facility to
+  its operating license; the two are related but distinct concepts.
+* `name`, `location`, `notes`, `created_at`.
+
+### `external_destinations` (Third-party / non-tenant destinations) — migration 039, extended 041/049
+* `id` (UUID, PK), `id_company` (INT)
+* `destination_type` (`THIRD_PARTY_RANCH`/`BUYER`/`SLAUGHTERHOUSE`/`EXPORT`/`OTHER`) — the
+  *commercial* classification.
+* `normative_type` (`UPP`/`PSG`/`RASTRO`/`EXPORTACION`, migration 041, `NOT NULL`) — the
+  *compliance* classification, set explicitly by whoever registers the destination. Bridges
+  to `cattle_movement_rules.destination_type` without embedding business logic in a trigger.
+* `chk_normative_type_fixed_mapping` (migration 049): enforces the three unambiguous pairs
+  (`SLAUGHTERHOUSE→RASTRO`, `EXPORT→EXPORTACION`, `THIRD_PARTY_RANCH→UPP`); `BUYER`/`OTHER`
+  are deliberately left free to take any `normative_type` value, since a buyer's real
+  operation may legally be any of the four.
+
+### `cattle_movement_events` (Movement Event Log) — migration 039, extended 043
+* `id` (UUID, PK), `id_company` (INT)
+* **Origin** (exactly one, `chk_origin_exclusive`, migration 043): `production_unit_origin_id`
+  (nullable since 043) or `psg_facility_origin_id` (added 043).
+* **Destination** (exactly one, `chk_destination_exclusive`, migration 039):
+  `production_unit_destination_id`, `psg_facility_destination_id`, or
+  `external_destination_id`.
+* `rule_id` (UUID, FK -> `cattle_movement_rules`, nullable) — stored for future enforcement,
+  not yet consulted by any validation logic while `is_confirmed = false` dominates the table.
+* `reemo_folio`, `movement_date` (authoritative date for PSG-validity/health-test checks —
+  distinct from `captured_at`, which reflects when the WhatsApp/system entry was actually
+  made and may lag `movement_date` by days).
+* `status` (`COMPLETED`/`PENDING_ACK`/`ACKNOWLEDGED`, default `COMPLETED`) — defaults to
+  today's real single-party workflow (photo + REEMO folio, no destination confirmation in
+  the system); the other two values are reserved for a possible future two-party
+  acknowledgement flow, activatable without another migration.
+* Fail-closed tenant isolation via `trg_check_movement_event_tenant`
+  (`trg_validate_movement_event_tenant()`), extended in migration 043 to validate whichever
+  origin type (`production_unit` or `psg_facility`) is actually set, mirroring the existing
+  three-way destination logic.
+
+### `cattle_movement_event_animals` (Movement Detail — Bridge) — migration 039
+* `id` (UUID, PK), `event_id` (FK -> `cattle_movement_events`, `ON DELETE CASCADE`),
+  `cattle_livestock_id` (FK -> `cattle_livestock`, authoritative reference)
+* `fire_number_snapshot` (TEXT) — non-authoritative copy of `numero_fuego` at the time of the
+  movement, for field lookups only. Never a join key: fire numbers can repeat by capture
+  error (see Regulatory Registry Subsystem, `vw_duplicate_fire_numbers`).
+* `UNIQUE (event_id, cattle_livestock_id)` — same mechanism handles a single-animal movement
+  or a full batch; batch size is just row count.
+
+### `cattle_movement_event_health_certs` (TB/BR citations — Bridge) — migration 045
+* `id` (UUID, PK), `event_id` (FK -> `cattle_movement_events`, `ON DELETE CASCADE`),
+  `herd_free_certificate_id` (FK -> `herd_free_certificates`)
+* `UNIQUE (event_id, herd_free_certificate_id)`. Many-to-many by design: a single valid
+  TB/BR certificate can back several movements during its validity window (confirmed by real
+  CZM documents), unlike the one-time-use documents in `compliance_certificates` above.
+
+---
+
+## 🏷️ Identifier History Subsystem (migration 047)
+
+*Añadido en v1.10.0.*
+
+### `cattle_identifier_history`
+* `id` (UUID, PK), `cattle_livestock_id` (FK -> `cattle_livestock`)
+* `identifier_type` (`FUEGO`/`SINIIGA`/`CHIP`) — generic dimension covering all three
+  identifiers on `cattle_livestock` (`numero_fuego`, `rfid_siniiga`, `electronic_rfid`); one
+  table instead of three, since the query pattern ("what value did this animal have
+  before/after a date") is identical across all three.
+* `previous_value`/`new_value` (TEXT, both nullable — `previous_value` is `NULL` only when an
+  identifier goes from unset to set for the first time via `UPDATE`, not `INSERT`)
+* `reason` (`LOST`/`REPLACED`/`CAPTURE_CORRECTION`/`FOUND_LOOSE_REASSIGNED`, `NOT NULL`,
+  defaults to `CAPTURE_CORRECTION` when the triggering `UPDATE` didn't specify a reason
+  explicitly)
+* `changed_by`, `notes`, `changed_at`
+
+**Populated automatically**, never by application code directly, via
+`trg_cattle_livestock_identifier_history` (`AFTER UPDATE ON cattle_livestock`,
+`trg_log_identifier_changes()`). Fires on any change to any of the three identifier columns;
+logs one row per changed column when a single `UPDATE` touches more than one. Reads two
+optional session-local Postgres settings to enrich the log without requiring every caller to
+change:
+
+```sql
+SET LOCAL app.identifier_change_reason = 'FOUND_LOOSE_REASSIGNED';
+SET LOCAL app.identifier_change_user = 'jperez';
+UPDATE cattle_livestock SET rfid_siniiga = '...' WHERE id = '...';
+```
+
+Neither `SET LOCAL` is required — both fall back to `NULL`/`CAPTURE_CORRECTION` if omitted,
+so every existing load script keeps working unmodified. Verified against a real animal
+(`ccc04259-e7a9-4b89-8a87-ef994df162af`, tenant 6) in both environments: a `NULL→NULL` no-op
+update on `numero_fuego` correctly produced zero history rows; a real `rfid_siniiga` change
+correctly produced one row with the `CAPTURE_CORRECTION` default and no `changed_by`.
+
+---
+
+## 📊 Views (BI Layer)
+
+### `vw_cattle_kpi`
+* **Source:** `cattle_livestock` `LEFT JOIN` `companys`.
+* **Computed columns:**
+  * `tenant_name` (from `companys.company_name`)
+  * `adg_lifetime_kg` - `current_weight_kg` / age in days since `birth_date`
+  * `last_palpation_result` / `current_gestation_days` - latest `PALPACION` entry pulled from `cattle_health_logs.medicines_json`
+  * Also passes through `species`, `upp_origen`, `tb_test_date`, `br_test_date`.
+* ⚠️ **Column order constraint:** `CREATE OR REPLACE VIEW` requires existing columns to keep their name/position; new columns can only be appended at the end (see migration `004_vw_cattle_kpi_add_salida_fields.sql`).
+
+### `vw_upp_compliance_status` (20 columns)
+*Añadido en v1.9.0.* Server-computed `update_status` (OK/WARNING/EXPIRED/UNKNOWN) from `last_update_at`, with
+per-tenant thresholds via `companys.metadata` (defaults 300/365 days). Also exposes
+`has_surface_inconsistency` and `active_head_in_system` (live count from `cattle_livestock`).
+
+### `vw_psg_compliance_status` (16 columns)
+*Añadido en v1.9.0.* `effective_expires_at` / `validity_status` resolved via `fn_psg_validity_status()`.
+
+### `vw_livestock_movement_readiness`
+*Añadido en v1.9.0.* Per-animal eligibility: `has_official_tag` + (`tb_herd_free` OR `tb_lot_test_valid`) +
+(`br_herd_free` OR `br_lot_test_valid`) → `is_movable`. Does NOT evaluate zone sanitary
+status, REEMO/CZM documents, or destination type — those remain unmodelled pending the
+movement-rules definition (ver "Movement Subsystem" arriba para el estado actual de esas
+reglas).
+
+### `vw_livestock_by_brand`
+*Añadido en v1.9.0.* Head count and biomass by `brand_id` × tenant × production unit × category. Animals with
+`brand_id IS NULL` are excluded on purpose — an unassigned brand is missing data, not a
+fourth owner. **Currently empty**: 0 of 270 animals have a brand assigned.
+
+### `vw_duplicate_fire_numbers`
+*Añadido en v1.9.0.* Alert, not a constraint. Surfaces `numero_fuego` values repeated within the same tenant —
+the client confirmed this can happen by capture error and must be reviewable, never rejected
+outright.
+
+### `vw_birth_events_summary`
+*Añadido en v1.9.0.* Read model for the birth log; `calf_tagged` distinguishes calves already linked to a
+`cattle_livestock` row from those still identified only by the birth record.
+
+### `vw_cattle_livestock_std` / `vw_cattle_expenses_std` / `vw_historico_movimientos_std`
+*Añadido en v1.9.0.* Transitional compatibility shims exposing both `tenant_id` and `id_company` side by side,
+pending the eventual column rename once no consumer reads `tenant_id`.
+
+⚠️ **Contract note (all views above, and any future one registered in `crud_models`):**
+must expose `created_at` — the n8n gateway's default `getall` ordering depends on it and
+its absence fails at runtime, not at deploy time (see CLAUDE.md, Contrato Meta-CRUD).
+
+## ⚙️ Stored Procedures & Triggers (Business Logic Layer)
+
+### `execute_metacrud_write`
+* **Purpose:** Centralized Zero-Compute Client mutation gateway.
+* **Mechanism:** Validates against `crud_models` whitelist before executing dynamic INSERT/UPDATE.
+* ⚠️ Ver `ARCHITECTURE.md`, sección "Hallazgos confirmados sobre `execute_metacrud_write`"
+  (v1.9.0) — no es la ruta real de escritura del gateway; incompatible con PK UUID.
+
+### `sp_procesar_salida_ganado(p_electronic_rfid)`
+
+*Reemplazado en v1.9.0 — mecanismo actualizado dos veces desde el registro original.*
+
+* **Purpose:** Business rule enforcement for livestock checkout (sale).
+* **Signature and invocation unchanged since v1.0.0:** `SELECT sp_procesar_salida_ganado(rfid)`.
+* **Mechanism (as of migration 024, 2026-07-29):**
+  * `FOR UPDATE` row-level locking on `cattle_livestock`, unchanged since v1.0.0.
+  * **Hard errors** (`RAISE EXCEPTION`, `ERRCODE` P0002/P0001): RFID not registered, or
+    already `VENDIDO`.
+  * **Regulatory rejections** (`success:false`, no exception — lets the n8n gateway
+    distinguish a business rejection from a real data error), evaluated in this order:
+    1. **Official ear tag missing** (`fn_has_official_ear_tag(rfid_siniiga)` false).
+       NOM-001-SAG/GAN-2015 requires the SINIIGA tag for any movement; this check was
+       ABSENT until migration 024 — the routine used to authorize illegal exits.
+    2. **TB/BR not covered.** The 60-day window is the validity of a LOT TEST only
+       (`tb_test_date`/`br_test_date`). A production unit with a current entry in
+       `herd_free_certificates` for that disease (`fn_is_herd_free`) is exempt from the
+       60-day check entirely — a herd-free certificate is valid for 12-24 months.
+       This exemption did NOT exist before migration 024: the routine used to reject
+       legitimate sales from a certified herd.
+  * **On success:** sets `current_status = 'VENDIDO'`, clears both `upp_origen` AND
+    `production_unit_id`, and inserts a `VENTA` row into `historico_movimientos`. Returns
+    `tb_herd_free`/`br_herd_free` flags alongside the result for transparency.
+* **Compensating reversal:** if a row is mistakenly marked `VENDIDO` (e.g. a test run
+  against production), restore the animal by hand and insert a `REVERSION` row in
+  `historico_movimientos` (added to the CHECK in migration 025) — never delete the
+  original `VENTA` row. The audit table is append-only.
+
+### `update_current_weight()`
+* **Purpose:** Ensures `cattle_livestock.current_weight_kg` is an exact reflection of the latest `cattle_weight_logs` entry without client-side computation.
+* **Mechanism:** `AFTER INSERT` trigger on `cattle_weight_logs`.
+
+### `trg_validate_movement_event_tenant()` / `trg_check_movement_event_tenant`
+*Añadido en v1.10.0.*
+* **Purpose:** Fail-closed multi-tenant isolation for `cattle_movement_events`, since
+  `n8n_user` is Postgres superuser and no RLS is in place.
+* **Mechanism:** `BEFORE INSERT OR UPDATE` trigger. Resolves `id_company` for whichever
+  origin (`production_unit` or `psg_facility`, migration 043) and whichever destination
+  (`production_unit`, `psg_facility`, or `external_destination`, migration 039) is actually
+  set on the row, and rejects if any of them belongs to a different tenant than
+  `NEW.id_company`. Verified: cross-tenant insert rejected with an explicit error naming both
+  tenant IDs; same-tenant insert succeeds.
+
+### `trg_validate_movement_animal_tenant()` / `trg_check_movement_animal_tenant`
+*Añadido en v1.10.0.*
+* **Purpose:** Same fail-closed guarantee, one level down — an animal added to
+  `cattle_movement_event_animals` must belong to the same tenant as its parent event.
+* **Mechanism:** `BEFORE INSERT OR UPDATE` trigger, resolves the animal's tenant via
+  `cattle_livestock -> production_units.id_company` and compares against the event's
+  `id_company`.
+
+### `trg_log_identifier_changes()` / `trg_cattle_livestock_identifier_history`
+*Añadido en v1.10.0.*
+* **Purpose:** Automatic, non-optional audit trail for the three animal identifiers.
+* **Mechanism:** `AFTER UPDATE ON cattle_livestock`, `FOR EACH ROW`. Compares `OLD`/`NEW` for
+  `numero_fuego`, `rfid_siniiga`, `electronic_rfid` (`IS DISTINCT FROM`, so `NULL→NULL` is
+  correctly a no-op); inserts one `cattle_identifier_history` row per changed column. Reads
+  `app.identifier_change_reason`/`app.identifier_change_user` (optional session-local
+  settings) via `current_setting(..., true)`, defaulting to `CAPTURE_CORRECTION`/`NULL`.
+
+
+=== APP.ROUTES.TS ===
+import { Routes } from '@angular/router';
+import { authGuard } from 'core-auth';
+import { LoginComponent } from '@features/admin/components/login/login.component';
+
+export const routes: Routes = [
+  // 1. Ruta pública de Autenticación (Permanece en el Gateway)
+  { path: 'login', component: LoginComponent },
+
+  // 2. Rutas Privadas Orquestadas (Protegidas por AuthGuard y envueltas en el Layout Principal)
+  {
+    path: '',
+    canActivate: [authGuard],
+    loadComponent: () => import('./shared/layout/main-layout/main-layout.component').then(m => m.MainLayoutComponent),
+    children: [
+      // 🐄 Aislamiento Ganadero (Lazy Loading del dominio completo)
+      {
+        path: 'ganaderia',
+        loadChildren: () => import('./features/livestock/livestock.routes').then(m => m.livestockRoutes)
+      },
+      // 🌴 Aislamiento Agrícola (Lazy Loading del dominio completo)
+      {
+        path: 'agricultura',
+        loadChildren: () => import('./features/agriculture/agriculture.routes').then(m => m.agricultureRoutes)
+      },
+      // ⚙️ Aislamiento Administrativo (Transversal)
+      {
+        path: 'admin',
+        loadChildren: () => import('./features/admin/admin.routes').then(m => m.adminRoutes)
+      },
+      // 📋 Cumplimiento Normativo SENASICA-SINIIGA (solo lectura)
+      {
+        path: 'cumplimiento',
+        loadChildren: () => import('./features/compliance/compliance.routes').then(m => m.complianceRoutes)
+      },
+      // Redirección por defecto si entran a la raíz
+      { path: '', redirectTo: 'ganaderia/dashboard', pathMatch: 'full' }
+    ]
+  },
+
+  // 3. Redirección comodín
+  { path: '**', redirectTo: 'ganaderia/dashboard' }
+];
+
+=== APP.CONFIG.TS ===
+import { ApplicationConfig, provideZonelessChangeDetection } from '@angular/core';
+import { provideRouter } from '@angular/router';
+import { provideHttpClient, withInterceptors } from '@angular/common/http';
+
+import { routes } from './app.routes';
+import { environment } from '@env/environment';
+import { AUTH_ENV_CONFIG, authInterceptor, tenantInterceptor } from 'core-auth';
+
+// ✅ 1. Importar el Token y el Servicio desde la librería ui-chat
+import { AiService, CHAT_CONFIG_TOKEN } from 'ui-chat';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideZonelessChangeDetection(),
+    provideRouter(routes),
+    provideHttpClient(withInterceptors([authInterceptor, tenantInterceptor])),
+
+    // Configuración de la librería core-auth
+    {
+      provide: AUTH_ENV_CONFIG,
+      useValue: {
+        apiUrl_crud: environment.apiUrl_crud,
+        apiUrl_token: environment.apiUrl_token,
+        apiUrl_ai: environment.apiUrl_ai,
+        apiUrl_upload: environment.apiUrl_upload
+      }
+    },
+
+    // 🚀 2. Registrar el Servicio y Proveer el Token para ui-chat
+    AiService,
+    {
+      provide: CHAT_CONFIG_TOKEN,
+      useValue: {
+        apiUrl_ai: environment.apiUrl_ai, // Asegúrate que esta variable exista en environment.ts
+        logoUrl: 'assets/images/logo_agroerp.png',
+        title: 'Asistente IA - Agro ERP',
+        primaryColor: '#6c9a40' // Verde para el AGRO ERP
+      }
+    }
+  ]
+};

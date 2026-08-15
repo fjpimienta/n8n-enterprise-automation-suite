@@ -3,6 +3,93 @@
 Todos los cambios notables en el proyecto **n8n Enterprise Automation Suite** serán documentados en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/), y este proyecto se adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.10.0] - 2026-08-14
+
+### 🚀 Motor de Movimientos SENASICA-REEMO y Cumplimiento Documental
+
+Convierte el catálogo de reglas de movimiento (`cattle_movement_rules`, creado en migración
+020, nunca ejecutado) en un subsistema completo y confirmado contra reglas de negocio reales
+del cliente (audio grabado, 2026-08-11, más cuatro ejemplos de documentos REEMO/CZM/permiso
+reales), junto con el registro de eventos de movimiento, la cadena documental de cumplimiento
+que los respalda, y el historial automático de identificadores del animal.
+
+#### 🐄 Registro de eventos de movimiento
+* **`cattle_movement_events` / `cattle_movement_event_animals`:** bitácora real de
+  movilizaciones, con origen y destino cada uno estrictamente uno de UPP interna, PSG interna
+  o destino externo (`CHECK` de exclusividad de tres vías). Un mismo evento cubre tanto un
+  animal individual como un lote completo — mismo mecanismo, solo cambia el número de filas
+  en la tabla de detalle.
+* **`psg_facilities`:** un PSG pasa a modelarse como una ubicación física real (a donde se
+  transporta ganado), no solo como una licencia — confirmado con documentos reales del
+  cliente.
+* **Aislamiento multi-tenant fail-closed** vía triggers `BEFORE INSERT/UPDATE`, verificado en
+  local y producción: un movimiento entre tenants distintos se rechaza explícitamente; uno
+  dentro del mismo tenant se acepta.
+
+#### 📜 Matriz de reglas confirmada (16 filas, antes 8 en borrador)
+* **`PSG → UPP` queda permanentemente prohibido** — un animal que entra a un PSG nunca puede
+  volver a una UPP, solo a otro PSG o salir a rastro/exportación. Confirmado y aplicado de
+  inmediato (`is_confirmed = true`).
+* Los requisitos ahora dependen de si el movimiento es interestatal (`is_interstate`), no
+  solo del par origen/destino — un mismo par UPP→UPP tiene requisitos completamente distintos
+  según cruce o no una frontera estatal.
+* 14 de las 16 filas quedan con los valores reales ya capturados pero `is_confirmed = false`,
+  a la espera de una única confirmación pendiente del cliente (`requires_destination_ack`) —
+  el enforcement real sigue inactivo hasta que llegue esa respuesta.
+
+#### 📄 Cadena documental real (`compliance_certificates` extendido)
+* 5 tipos de documento nuevos: guía de tránsito REEMO, Certificado Zoosanitario de
+  Movilización, constancia de tratamiento GBG (gusano barrenador — requisito DINESA vigente
+  desde diciembre 2025, verificado independientemente contra fuentes oficiales), permiso de
+  internación estatal, y carta de cesión de derechos.
+* **Corrección de un bug real detectado en revisión posterior:** el constraint original de
+  "sujeto único" hacía imposible insertar cualquier documento de movimiento sin forzar
+  también una UPP/PSG no relacionada — no era solo una regla sin aplicar, bloqueaba la
+  inserción por completo. Corregido con dos constraints (sujeto ampliado a tres opciones +
+  emparejamiento tipo-de-documento↔sujeto correcto).
+* **TB/BR enlazado vía tabla puente**, no FK directo: el mismo folio de hato libre puede
+  respaldar varios movimientos mientras siga vigente, confirmado por los documentos CZM
+  reales que citan folios TB/BR como referencia, no como documento de un solo uso.
+
+#### 🏷️ Historial automático de identificadores
+* **`cattle_identifier_history`:** registra automáticamente cualquier cambio a los tres
+  identificadores del animal (fuego, arete SINIIGA, chip RFID) vía trigger — nada se pierde
+  sin importar qué script haga el cambio. El motivo por default es corrección de captura;
+  scripts que conozcan el motivo real (pérdida, reposición, arete suelto reasignado) pueden
+  enriquecerlo sin que el resto del sistema tenga que cambiar.
+* `herd_free_certificates` **registrada en `crud_models`** por primera vez desde su creación
+  (migración 024) — el frontend no podía leerla ni escribirla hasta ahora.
+
+#### 🔐 Seguridad — `upload-file`
+* El microservicio de almacenamiento de archivos que respalda `compliance_documents`
+  (`upload-file`, no documentado previamente) era completamente público y sin autenticación.
+  Dado que va a almacenar credenciales de identificación reales, se endureció reutilizando la
+  infraestructura JWT/`INTERNAL_SECRET` ya existente en `n8n-jwt-service` — mismo modelo de
+  confianza de dos niveles, sin inventar un mecanismo paralelo.
+* Nombres de archivo ahora criptográficamente aleatorios (antes basados en timestamp);
+  SHA-256 calculado en servidor; secretos movidos fuera del `docker-compose.yml` versionado.
+* **`core-auth` 0.0.1 → 0.0.2:** `apiUrl_upload` agregado a `AuthEnvironmentConfig` para que
+  el interceptor funcional adjunte el JWT también hacia `upload-file` — campo opcional,
+  aditivo, sin romper apps consumidoras que no suben archivos.
+* ⚠️ **Pendiente operativo:** el valor real de `INTERNAL_SECRET` se expuso en texto plano
+  durante el trabajo de endurecimiento y debe tratarse como comprometido. Rotación
+  instruida, **no confirmada como completada**.
+
+### 🗄️ Migraciones incluidas
+`020` (aplicada por primera vez), `039`–`049`. Todas aplicadas y verificadas contra el clon
+local y el VPS de producción, con respaldo previo a cada aplicación en producción.
+
+### 📌 Pendientes que quedan abiertos
+* Confirmación de `requires_destination_ack` (cliente).
+* Alta de tenant/UPP/PSG para Juan Carlos (nuevo titular, primo de Alejandro y Pedro).
+* Confirmación de dos grupos de registros de Pedro (8 correcciones NOVILLO→NOVILLONA, 2
+  conflictos de arete reales).
+* Lista final corregida del archivo `TRATAMIENTO_LOTE_ROJO_VACIO_AGO_2026.xlsx`.
+* Rotación confirmada de `INTERNAL_SECRET`/`JWT_SECRET` en ambos ambientes.
+* Inconsistencia en `jwt-service`: `/verify-token` no valida `internal_secret` pese a
+  recibirlo.
+
+
 ## [1.8.1] - 2026-07-08
 
 ### 📚 Sincronización de Documentación y Validación de Esquema
