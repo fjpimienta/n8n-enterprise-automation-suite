@@ -1,22 +1,26 @@
-# Guía de Contribución
+# Propuesta de adición a CONTRIBUTING.md — Manejo de Secretos
 
-¡Gracias por el interés en contribuir a este proyecto! Para mantener un orden, por favor sigue estas indicaciones:
-
-## ¿Cómo puedo ayudar?
-- **Reportando errores:** Si encuentras un bug, abre un "Issue" detallando el problema.
-- **Sugiriendo mejoras:** Si tienes una idea para una nueva función, cuéntanos en los "Issues".
-- **Enviando código:** Si quieres arreglar algo tú mismo, envía un "Pull Request".
-
-## Pasos para enviar un Pull Request
-1. Haz un **Fork** del repositorio.
-2. Crea una rama para tu mejora (`git checkout -b mejora-nombre`).
-3. Realiza tus cambios y haz un **Commit**.
-4. Sube tus cambios a tu repositorio (`git push origin mejora-nombre`).
-5. Abre un **Pull Request** hacia nuestra rama principal.
-
-## Requisitos
-- El código debe ser claro y fácil de leer.
-- Por favor, respeta el Código de Conducta del proyecto.
+*No es un reemplazo del archivo completo — es una sección para agregar al final del
+`CONTRIBUTING.md` existente, si la aprueban. Nace directo del incidente real de
+`INTERNAL_SECRET` expuesto en una sesión de trabajo el 2026-08-13 (ver
+`agro-erp/CLAUDE.md`, regla 8).*
 
 ---
-¡Toda ayuda es bienvenida!
+
+## Manejo de Secretos y Credenciales
+
+- **Nunca compartas valores reales** de tokens, API keys, contraseñas o secretos
+  compartidos (`INTERNAL_SECRET`, `JWT_SECRET`, etc.) en Issues, Pull Requests, chats de
+  trabajo, o cualquier canal no cifrado — ni siquiera para "confirmar que coincide". Usa
+  `****` o confirma con un sí/no en su lugar.
+- **Los secretos van en `.env`, nunca en `docker-compose.yml` ni en ningún archivo
+  versionado.** Verifica que `.env` esté en `.gitignore` antes de tu primer commit en
+  cualquier servicio nuevo.
+- Si un secreto se expone por accidente (commit, chat, log), **trátalo como comprometido
+  de inmediato** y avisa para rotarlo en todos los servicios y ambientes donde se use —
+  no lo dejes como pendiente de baja prioridad.
+
+---
+
+¿Se agrega tal cual al `CONTRIBUTING.md`, se ajusta el tono, o prefieres no tocar ese
+archivo por ahora?

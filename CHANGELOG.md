@@ -2,6 +2,53 @@
 
 Todos los cambios notables en esta suite de automatización serán documentados en este archivo. El sistema se adhiere estrictamente a **Semantic Versioning** para la gestión de dependencias entre microservicios, flujos de n8n y frontends.
 
+> ⚠️ **Nota de versionado (2026-08-14):** las versiones de este changelog (suite completa)
+> y las versiones internas documentadas en `hosting3m-workspace/projects/agro-erp/CLAUDE.md`
+> y `README.md` (módulo agro-erp) son **esquemas independientes que casualmente comparten
+> números** — no asumir que "v1.7.0" aquí es lo mismo que "v1.7.0" en agro-erp. Ver la
+> entrada `[1.7.0]` de este archivo para el mapeo exacto.
+
+---
+
+## [1.7.0] - 2026-08-14
+
+### 🚚 Agro ERP: Motor de Movimientos SENASICA-REEMO & Endurecimiento de Almacenamiento
+
+> **Alcance de esta entrada:** cubre únicamente el módulo `agro-erp` y la infraestructura
+> compartida que se tocó junto con él (`core-auth`, `upload-file`). **No cubre** cambios que
+> puedan haber ocurrido en el mismo periodo en otros módulos de la suite (hotel, pista de
+> hielo, orquestador social, etc.) — si los hubo, agregar una sección aparte antes de dar
+> esta entrada por completa.
+>
+> Corresponde a las versiones internas **v1.9.0 a v1.10.0** del módulo agro-erp (ver su
+> propio `README.md`/`CLAUDE.md` para el detalle técnico completo, migraciones 010–049).
+
+#### 🏛️ Registro Normativo SENASICA-SINIIGA (equivalente interno: agro-erp v1.9.0)
+* Multi-UPP por tenant, propiedad por fierro independiente de ubicación física, dictámenes
+  de hato libre con exención de la ventana de 60 días TB/BR, linaje materno con herencia
+  automática de fierro.
+
+#### 🐄 Motor de Movimientos SENASICA-REEMO (equivalente interno: agro-erp v1.10.0)
+* Reglas de movimiento UPP↔PSG confirmadas contra reglas de negocio reales del cliente
+  (16 filas, antes borrador sin desplegar). `PSG → UPP` permanentemente prohibido.
+* Bitácora de eventos de movimiento con aislamiento multi-tenant fail-closed.
+* Cadena documental de cumplimiento (guía REEMO, Certificado Zoosanitario, constancia GBG,
+  permiso de internación estatal, cesión de derechos) enlazada a cada movimiento.
+* Historial automático de identificadores del animal (arete, fuego, chip) vía trigger.
+
+#### 🔐 Endurecimiento de `upload-file` (infraestructura compartida de la suite)
+* El microservicio de almacenamiento propio (`upload-service`/`upload-file`, lanzado
+  originalmente en `[0.9.0]` como parte de "Sovereign Media Service") pasó de ser
+  público y sin autenticación a exigir JWT o secreto interno compartido, reutilizando la
+  infraestructura de `jwt-service` ya existente en toda la suite.
+* `@hosting3m/core-auth` extendido (`apiUrl_upload`) para que el interceptor funcional ya
+  existente proteja también las peticiones hacia este servicio — cambio aditivo, no rompe
+  a los consumidores que no suben archivos (hotel, pista de hielo).
+* ⚠️ **Incidente operativo:** el secreto compartido (`INTERNAL_SECRET`) se expuso en texto
+  plano durante el trabajo de endurecimiento. Rotación instruida, pendiente de confirmación
+  al cierre de esta entrada — ver `agro-erp/CLAUDE.md`, regla 8, para el detalle y el
+  procedimiento correcto de manejo de secretos hacia adelante.
+
 ---
 
 ## [1.6.0] - 2026-06-18
