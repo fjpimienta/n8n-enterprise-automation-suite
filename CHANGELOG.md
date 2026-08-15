@@ -2,26 +2,31 @@
 
 Todos los cambios notables en esta suite de automatización serán documentados en este archivo. El sistema se adhiere estrictamente a **Semantic Versioning** para la gestión de dependencias entre microservicios, flujos de n8n y frontends.
 
-> ⚠️ **Nota de versionado (2026-08-14):** las versiones de este changelog (suite completa)
-> y las versiones internas documentadas en `hosting3m-workspace/projects/agro-erp/CLAUDE.md`
-> y `README.md` (módulo agro-erp) son **esquemas independientes que casualmente comparten
-> números** — no asumir que "v1.7.0" aquí es lo mismo que "v1.7.0" en agro-erp. Ver la
-> entrada `[1.7.0]` de este archivo para el mapeo exacto.
+> 📌 **Convención de versionado (vigente desde 2026-08-14):** este changelog usa **CalVer
+> por fecha** (`[AAAA-MM-DD]`) para releases de la suite completa — nunca un número tipo
+> SemVer. Cada módulo mantiene su propio SemVer independiente en su propia documentación
+> (ej. `agro-erp/README.md` dice "v1.10.0", `core-auth/package.json` dice "0.0.2") — esos
+> números **no** aparecen como encabezado de entrada aquí, solo se referencian en el cuerpo
+> de la entrada correspondiente cuando aplica. Antes de esta fecha, este archivo usaba
+> números SemVer propios (`[1.6.0]`, `[1.5.0]`, etc.) que por coincidencia compartían cifras
+> con las versiones internas de algunos módulos sin tener relación real con ellas — ver
+> `[1.6.0]` hacia abajo para el último ejemplo de ese esquema anterior, ya retirado.
 
 ---
 
-## [1.7.0] - 2026-08-14
+## [2026-08-14]
 
 ### 🚚 Agro ERP: Motor de Movimientos SENASICA-REEMO & Endurecimiento de Almacenamiento
 
 > **Alcance de esta entrada:** cubre únicamente el módulo `agro-erp` y la infraestructura
-> compartida que se tocó junto con él (`core-auth`, `upload-file`). **No cubre** cambios que
-> puedan haber ocurrido en el mismo periodo en otros módulos de la suite (hotel, pista de
-> hielo, orquestador social, etc.) — si los hubo, agregar una sección aparte antes de dar
-> esta entrada por completa.
+> compartida que se tocó junto con él (`core-auth`, `upload-file`, `jwt-service`). **No
+> cubre** cambios que puedan haber ocurrido en el mismo periodo en otros módulos de la suite
+> (hotel, pista de hielo, orquestador social, etc.) — si los hubo, agregar una sección
+> aparte antes de dar esta entrada por completa.
 >
-> Corresponde a las versiones internas **v1.9.0 a v1.10.0** del módulo agro-erp (ver su
-> propio `README.md`/`CLAUDE.md` para el detalle técnico completo, migraciones 010–049).
+> Corresponde a las versiones internas `agro-erp` **v1.9.0 → v1.10.0** (ver
+> `agro-erp/README.md`/`CLAUDE.md` para el detalle técnico, migraciones 010–049) y
+> `core-auth` **0.0.1 → 0.0.2**.
 
 #### 🏛️ Registro Normativo SENASICA-SINIIGA (equivalente interno: agro-erp v1.9.0)
 * Multi-UPP por tenant, propiedad por fierro independiente de ubicación física, dictámenes
@@ -48,6 +53,41 @@ Todos los cambios notables en esta suite de automatización serán documentados 
   plano durante el trabajo de endurecimiento. Rotación instruida, pendiente de confirmación
   al cierre de esta entrada — ver `agro-erp/CLAUDE.md`, regla 8, para el detalle y el
   procedimiento correcto de manejo de secretos hacia adelante.
+
+---
+
+## [2026-08-15]
+
+### 🔐 jwt-service: cierre de brecha en `/verify-token` y rotación de secretos
+
+> **Alcance de esta entrada:** `jwt-service` y `upload-file` (infraestructura compartida).
+> Continuación directa de la entrada `[2026-08-14]` — separada por fecha real, no por
+> tamaño del cambio, siguiendo la convención fijada arriba.
+
+* **`/verify-token` ahora valida `internal_secret`.** El nodo n8n `Verify Token` ya mandaba
+  este header desde antes; el endpoint lo recibía y lo ignoraba por completo. Cualquier
+  llamador con cualquier JWT válido podía antes preguntar "¿es válido este token?" sin
+  restricción sobre quién preguntaba. Ahora exige el mismo secreto interno que ya usan
+  `/generate-token` y `upload-file`.
+* **Corregido un bug de "fail open" no relacionado, encontrado al revisar el archivo.**
+  `/generate-token` comparaba `internal_secret !== INTERNAL_SECRET` sin verificar antes que
+  la variable de entorno existiera — si `INTERNAL_SECRET` no estuviera configurada,
+  `undefined !== undefined` es `false`, y la validación pasaría en silencio para cualquier
+  llamador que simplemente omitiera el campo. Sin evidencia de que se haya explotado nunca
+  (la variable ha estado configurada en ambos ambientes todo este tiempo), pero sin ninguna
+  red de seguridad ante un despliegue mal configurado en el futuro. Se agregó el mismo
+  chequeo de arranque fail-closed que ya tenía `upload-file`.
+* **`INTERNAL_SECRET` rotado por segunda vez.** La rotación confirmada en `[2026-08-14]`
+  resultó incompleta: cubrió producción, pero el `.env.local` del espejo local seguía con
+  el valor ya comprometido. Rotado correctamente esta vez en ambos servicios y ambos
+  ambientes, verificado con una prueba funcional que nunca requiere copiar el secreto a
+  ningún lado — genera un JWT de prueba y lee las variables directo de `process.env` dentro
+  del propio contenedor.
+* **Corrección de higiene en `.gitignore`:** la regla `*.bak-*` agregada durante este
+  trabajo se había concatenado sin salto de línea a la regla anterior, reduciendo su
+  alcance real a `infrastructure/n8n_data/executions/*.bak-*` en vez de aplicar a todo el
+  repositorio. Un archivo `.bak` de esta misma sesión estuvo a punto de subirse por
+  accidente antes de detectarlo.
 
 ---
 
