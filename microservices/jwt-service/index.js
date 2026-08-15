@@ -37,6 +37,17 @@ const verifyLimiter = rateLimit({
 const JWT_SECRET = process.env.JWT_SECRET;
 const INTERNAL_SECRET = process.env.INTERNAL_SECRET;
 
+// Fail-closed startup guard. Without this, a missing INTERNAL_SECRET env var
+// makes `internal_secret !== INTERNAL_SECRET` compare undefined against
+// undefined -- which is FALSE, meaning the check silently passes and
+// /generate-token would accept any caller that omits internal_secret
+// entirely. Refuse to start rather than run in that state. Mirrors the
+// same guard already added to upload-file/server.js.
+if (!JWT_SECRET || !INTERNAL_SECRET) {
+  console.error('FATAL: JWT_SECRET and/or INTERNAL_SECRET environment variables are not set. Refusing to start.');
+  process.exit(1);
+}
+
 const { Pool } = require('pg');
 
 console.log("Intentando conectar a DB con:");
@@ -158,7 +169,17 @@ app.post('/generate-token', loginLimiter, async (req, res) => {
 });
 
 // ENDPOINT DE VERIFICACIÓN
+// Now requires the same internal_secret header the n8n "Verify Token" node
+// already sends (it was being sent and silently ignored before this fix --
+// see INVENTARIO_COMPLETITUD.md, "jwt-service inconsistencia en
+// /verify-token"). This restricts who can ask "is this JWT valid?" to
+// trusted internal callers, not just anyone holding any JWT.
 app.post('/verify-token', verifyLimiter, (req, res) => {
+  const internalSecret = req.headers['internal_secret'];
+  if (internalSecret !== INTERNAL_SECRET) {
+    return res.status(403).json({ valid: false, error: 'Unauthorized: invalid internal secret' });
+  }
+
   const authHeader = req.headers.authorization;
   if (!authHeader) return res.status(401).json({ valid: false, error: 'No token provided' });
 
