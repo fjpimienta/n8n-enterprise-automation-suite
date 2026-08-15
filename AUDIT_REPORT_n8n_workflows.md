@@ -3,6 +3,27 @@
 **Auditor:** n8n Workflow Auditor  
 **Alcance:** Flujos v3/v4 en producción
 
+> ⚠️ **Nota posterior (2026-08-15) — no editar el cuerpo de este reporte, solo leer junto con
+> esta nota.** Dos limitaciones descubiertas después del cierre de esta auditoría:
+>
+> 1. **Cobertura de versión.** Este reporte audita `01-auth-jwt-gateway/v3` (`v3_GeneraToken`,
+>    `v3_SW ValidaToken`). La producción actual corre `v4` (`v4/genera-token`,
+>    `v4/GeneraToken`) — no auditado aquí.
+> 2. **El hallazgo "🟢 OK" de `v3_SW ValidaToken.json` sobre `$env["INTERNAL_SECRET"]`
+>    (línea 50 de este reporte, "Bien diseñado como servicio interno") solo verificó que el
+>    workflow *mandara* el secreto sin hardcodearlo — cierto entonces y ahora. No verificó
+>    si el servicio receptor (`jwt-service`) realmente lo *validaba*. Se descubrió el
+>    2026-08-15 que `/verify-token` recibía `internal_secret` y lo ignoraba por completo
+>    desde su implementación original — cualquier llamador con cualquier JWT válido podía
+>    usar ese endpoint sin restricción. Corregido esa misma fecha; ver
+>    `agro-erp/INVENTARIO_COMPLETITUD.md` y `agro-erp/CLAUDE.md` (regla 8) para el detalle
+>    completo, incluyendo dos hallazgos adicionales encontrados al corregirlo (un bug de
+>    "fail open" en `/generate-token`, y una rotación de secreto que resultó incompleta en
+>    el primer intento).
+>
+> El resto de este reporte (flujos 02-07) no se ha reverificado contra este hallazgo y se
+> mantiene como registro histórico de su fecha de auditoría original.
+
 ---
 
 ## 📊 Resumen Ejecutivo
