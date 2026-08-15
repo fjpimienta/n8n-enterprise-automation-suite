@@ -102,3 +102,4 @@ infrastructure/certs/fea/csd.key
 # --- n8n Binary Data & Executions (Datos volátiles) ---
 infrastructure/n8n_data/binaryData/
 infrastructure/n8n_data/executions/
+*.bak-*
