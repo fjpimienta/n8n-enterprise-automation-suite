@@ -85,17 +85,23 @@ ERP agroindustrial evolucionado a una arquitectura Multi-Dominio para la gestió
 * **Registro Normativo SENASICA-SINIIGA:** múltiples unidades de producción (UPP) por tenant, propiedad por fierro independiente de la ubicación física del animal, dictámenes de hato libre.
 * **Motor de Movimientos SENASICA-REEMO:** reglas de movimiento UPP↔PSG confirmadas contra reglas de negocio reales del cliente, bitácora de traslados con aislamiento multi-tenant fail-closed, y cadena documental de cumplimiento (guía REEMO, Certificado Zoosanitario, constancia de gusano barrenador, permiso de internación estatal).
 
-### 🛡️ 14. Core Auth Library (`@hosting3m/core-auth`)
+### 🤖 14. MCP Field Agent (Cattle)
+Agente IA agropecuario especializado, blindado con directivas Zero-Hallucination y protocolo Anti-Jailbreak (Human-in-the-Loop). Documentado previamente solo en la tabla técnica de abajo; añadido aquí para que la lista de prosa quede alineada con ella. Ver `workflows/09-MCP-Agent-Cattle/v6/README.md`.
+
+### 🛡️ 15. Core Auth Library (`@hosting3m/core-auth`)
 *Actualizado 2026-08-14 (v0.0.1 → v0.0.2).*
 
-Librería central de seguridad para todo el monorepo. Gestiona el ciclo de vida del JWT, Interceptors, Guards y provee el **Context Switcher Defensivo** para el enrutamiento y la inyección reactiva de temas visuales entre Unidades de Negocio. Extendida con `apiUrl_upload` (campo opcional en `AUTH_ENV_CONFIG`) para que el interceptor funcional proteja también las peticiones hacia el Media Server (módulo 15) — cambio aditivo, no afecta a las apps que no suben archivos.
+Librería central de seguridad para todo el monorepo. Gestiona el ciclo de vida del JWT, Interceptors, Guards y provee el **Context Switcher Defensivo** para el enrutamiento y la inyección reactiva de temas visuales entre Unidades de Negocio. Extendida con `apiUrl_upload` (campo opcional en `AUTH_ENV_CONFIG`) para que el interceptor funcional proteja también las peticiones hacia el Media Server — cambio aditivo, no afecta a las apps que no suben archivos.
 
-### 📁 15. Media Server / Upload Service (`upload-file`)
-*Endurecido 2026-08-13 — antes sin autenticación desde su lanzamiento en `[0.9.0]`.*
-
-Microservicio propio (Node.js/Express) para alojamiento persistente de archivos, parte de la estrategia "Sovereign Media" de la suite. Ahora exige un JWT válido o el secreto interno compartido (`INTERNAL_SECRET`) en toda subida y lectura, reutilizando la misma infraestructura de confianza del Auth Gateway (módulo 1) en vez de un mecanismo paralelo. Nombres de archivo aleatorios (antes predecibles) y hash SHA-256 calculado en servidor.
-
-*(Módulo 15 previamente marcado como "eliminado por consolidación de la numeración" en versiones anteriores de este README — reactivado aquí para documentar el Media Server explícitamente, dado el trabajo de seguridad de 2026-08. Si esa numeración se reorganiza formalmente, actualizar también la tabla de documentación técnica más abajo.)*
+**Sobre el Media Server (`upload-file`), protegido por esta librería:** endurecido 2026-08-13
+(antes sin autenticación desde su lanzamiento en `[0.9.0]`) y reforzado el 2026-08-15 con
+rate limiting, sanitización de extensión de archivo y protección contra path traversal
+(detectada por análisis estático CodeQL). Exige JWT válido o el secreto interno compartido
+(`INTERNAL_SECRET`, rotado el 2026-08-15 tras un incidente de exposición) en toda subida y
+lectura — mismo mecanismo de confianza que ya usa el Auth Gateway (módulo 1), sin un
+mecanismo paralelo. El Media Server no tiene número de módulo propio en la tabla técnica —
+es infraestructura compartida, no un proyecto con README independiente — de ahí que su
+documentación viva aquí, junto a la librería que lo protege.
 
 ---
 
