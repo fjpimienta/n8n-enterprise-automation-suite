@@ -145,6 +145,22 @@ dos hallazgos más serios que el original, cerrados en el mismo cambio:
   alcance a solo `infrastructure/n8n_data/executions/*.bak-*` en vez de aplicar a todo el
   repo — un archivo `.bak` de esta misma sesión estuvo a punto de subirse por accidente.
 
+### `n8n` como tercer consumidor de `INTERNAL_SECRET` — hallazgo posterior a la rotación
+
+Tras rotar `INTERNAL_SECRET` en `jwt-service` y `upload-file` (arriba), el login del frontend
+empezó a fallar con `401`/`403` en `v4/genera-token`. Causa: **el propio contenedor de `n8n`
+también lee `INTERNAL_SECRET`** desde el mismo `infrastructure/.env` (vía `$env[...]` dentro
+del workflow `GenerateToken`), pero nunca se reinició durante la rotación — deliberadamente
+se evitó tocarlo para no repetir el error `429` de Docker Hub al reconstruirlo. Un contenedor
+no relee su `.env` solo; necesita reiniciarse (no reconstruirse) para tomar un valor nuevo.
+Resuelto con `docker compose up -d n8n` (sin `--build`, usa la imagen ya en caché, sin
+descargar nada) y confirmado con el login real desde el navegador.
+
+**Lección para la próxima rotación de cualquier secreto compartido:** identificar primero
+*todos* los consumidores reales antes de rotar, no asumir que son solo los servicios cuyo
+código se tocó en la sesión. `INTERNAL_SECRET` termina teniendo 3 consumidores
+(`jwt-service`, `upload-file`, `n8n`), no 2.
+
 ---
 
 ## Inventario original — corte 2026-07-29

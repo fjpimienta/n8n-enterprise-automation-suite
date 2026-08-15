@@ -125,11 +125,10 @@ documentación viva aquí, junto a la librería que lo protege.
 | `14`|**MCP Field Agent**|Agente IA agropecuario con Zero-Hallucination.|`n8n` `MCP` `OpenAI`|[📖 Docs](workflows/09-MCP-Agent-Cattle/v6/README.md)|
 | `15`|**Core Auth Lib**|Núcleo Auth y Context Switcher Defensivo. Protege también el Media Server (`apiUrl_upload`).|`Angular 21` `RxJS`|[📖 Docs](hosting3m-workspace/projects/core-auth/README.md)|
 
-> ⚠️ Nota: la numeración de esta tabla (`14` MCP Field Agent, `15` Core Auth Lib) no
-> coincide con la numeración de la lista de módulos arriba (`14` Core Auth, `15` Media
-> Server) — inconsistencia heredada de versiones anteriores de este documento, no
-> introducida en esta actualización. Vale la pena unificarla en algún momento; no se tocó
-> aquí para no adivinar cuál de las dos numeraciones es la que se quiere conservar.
+> ✅ Nota (corregida 2026-08-15): la numeración de esta tabla (`14` MCP Field Agent, `15`
+> Core Auth Lib) antes no coincidía con la lista de prosa de módulos arriba (Core Auth
+> aparecía como 14 en un lado y 15 en el otro; MCP Field Agent faltaba en la prosa). Ambas
+> secciones ya están alineadas — ver la lista de módulos arriba para la versión corregida.
 
 ---
 
