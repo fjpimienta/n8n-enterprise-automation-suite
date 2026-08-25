@@ -20,9 +20,10 @@
             <th>Rancho</th>
             <th>Clave UPP</th>
             <th>Ubicación</th>
+            <th>Fecha de actualización</th>
             <th class="text-end">Días sin actualizar</th>
             <th>Estado</th>
-            <th class="text-end">Cabezas en sistema</th>
+            <th class="text-end">Cabezas activas</th>
           </tr>
         </thead>
         <tbody>
@@ -40,6 +41,7 @@
             </td>
             <td class="font-monospace">{{ upp.upp_code }}</td>
             <td class="text-muted">{{ upp.municipality_name || 'N/D' }}, {{ upp.state_name || 'N/D' }}</td>
+            <td class="text-muted">{{ upp.last_update_at ? (upp.last_update_at | date:'dd/MM/yyyy') : 'N/D' }}</td>
             <td class="text-end">{{ upp.days_since_update ?? 'N/D' }}</td>
             <td>
               <span class="badge" [class.bg-green-lt]="upp.update_status === 'OK'"
@@ -53,7 +55,7 @@
           </tr>
           } @empty {
           <tr>
-            <td colspan="6" class="text-center py-5 text-muted">Sin unidades registradas.</td>
+            <td colspan="7" class="text-center py-5 text-muted">Sin unidades registradas.</td>
           </tr>
           }
         </tbody>
