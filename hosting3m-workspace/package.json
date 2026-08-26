@@ -36,7 +36,7 @@
     "@hono/node-server": "^2.0.12"
   },
   "dependencies": {
-    "@angular/common": "21.2.19",
+    "@angular/common": "21.2.21",
     "@angular/compiler": "21.2.21",
     "@angular/core": "21.2.19",
     "@angular/forms": "21.2.19",
