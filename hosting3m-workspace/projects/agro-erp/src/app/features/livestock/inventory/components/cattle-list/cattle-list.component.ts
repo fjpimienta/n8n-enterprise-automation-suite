@@ -2,7 +2,6 @@ import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CattleDetailModalComponent } from '../cattle-detail-modal/cattle-detail-modal.component';
-import { CattleApiService } from '@core/services/cattle-api.service';
 import { TenantService } from 'core-auth';
 import { CattleDataService } from '@core/services/cattle-data.service';
 
@@ -22,11 +21,10 @@ export class CattleListComponent implements OnInit {
   // 2. Exponemos los signals globales directamente hacia el HTML (.html)
   public cattleList = this.cattleDataService.cattleList;
   public isLoading = this.cattleDataService.isLoading;
-  private cattleApi = inject(CattleApiService);
   public tenantService = inject(TenantService);
 
-  // Signals para manejar el estado reactivo
-  public totalHeads = signal<number>(0);
+  // Derivado del signal global — evita una segunda fuente de verdad desincronizada
+  public totalHeads = computed(() => this.cattleList().length);
 
   // Búsqueda por arete y orden de columnas (evita que el orden "salte" tras cada guardado,
   // ya que la vista vw_cattle_kpi no garantiza un orden estable entre lecturas)
@@ -67,20 +65,10 @@ export class CattleListComponent implements OnInit {
   public selectedAnimal: any = null;
 
   async ngOnInit() {
-    await this.loadCattle();
-  }
-
-  public async loadCattle() {
-    this.isLoading.set(true);
-    try {
-      const data = await this.cattleApi.getAllLivestock();
-      this.cattleList.set(data);
-      this.totalHeads.set(data.length);
-    } catch (error) {
-      console.error('Error cargando inventario:', error);
-    } finally {
-      this.isLoading.set(false);
-    }
+    // Delega en el servicio compartido (misma fuente que main-dashboard, adg-alerts, etc.)
+    // en vez de hacer un fetch propio: evita dos escrituras concurrentes al mismo signal
+    // global y garantiza que todas las vistas muestren siempre el mismo dato.
+    await this.cattleDataService.loadCattleData();
   }
 
   public toggleSort(column: SortableColumn) {
@@ -104,7 +92,7 @@ export class CattleListComponent implements OnInit {
   public onModalClose(saved: boolean) {
     this.isModalOpen = false;
     if (saved) {
-      this.loadCattle();
+      this.cattleDataService.loadCattleData();
     }
   }
 }
