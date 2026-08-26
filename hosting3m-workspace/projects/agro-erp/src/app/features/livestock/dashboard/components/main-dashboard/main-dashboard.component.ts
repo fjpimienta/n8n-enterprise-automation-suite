@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { CattleApiService } from '@core/services/cattle-api.service';
+import { CattleDataService } from '@core/services/cattle-data.service';
 import { NgApexchartsModule } from 'ng-apexcharts';
 import { ReproductiveDashboardComponent } from '../reproductive-dashboard/reproductive-dashboard.component';
 import { EngordaDashboardComponent } from '../engorda-dashboard/engorda-dashboard.component';
@@ -10,7 +11,6 @@ import { ExpenseModalComponent } from '../../../expenses/components/expense-moda
 import { ComplianceAlertCardComponent } from '../../../../compliance/components/compliance-alert-card/compliance-alert-card.component';
 import { TenantService } from 'core-auth';
 import { ThemeService } from '@core/services/theme.service';
-import { Livestock } from '../../../models/livestock.model';
 import { Expense } from '../../../models/expense.model';
 import { Paginator } from '../../utils/paginator';
 
@@ -23,6 +23,7 @@ import { Paginator } from '../../utils/paginator';
 })
 export class MainDashboardComponent implements OnInit {
   private cattleApi = inject(CattleApiService);
+  private cattleDataService = inject(CattleDataService);
   private tenantService = inject(TenantService);
   public themeService = inject(ThemeService);
   private router = inject(Router);
@@ -30,7 +31,9 @@ export class MainDashboardComponent implements OnInit {
 
   public PRECIO_KILO = 65.00;
 
-  public cattleList = signal<Livestock[]>([]);
+  // Misma fuente que cattle-list, adg-alerts, etc. — evita que el dashboard muestre
+  // una copia del hato desincronizada del resto de la app.
+  public cattleList = this.cattleDataService.cattleList;
   public expensesList = signal<Expense[]>([]);
   public isLoading = signal<boolean>(true);
 
@@ -85,24 +88,12 @@ export class MainDashboardComponent implements OnInit {
   }
 
   async loadDashboardData() {
+    // El ganado ya se refresca vía CattleDataService (su propio effect reacciona al
+    // cambio de tenant); aquí solo se cargan los gastos, que no forman parte de esa fuente.
     this.isLoading.set(true);
     try {
-      const [cattleRaw, expensesRaw] = await Promise.all([
-        this.cattleApi.getAllLivestock(),
-        this.cattleApi.getExpenses()
-      ]);
-
-      // 🎯 DIAGNÓSTICO: Monitoreo del pipeline en consola
-      // console.log('🚀 [DataPipeline] Respuesta de n8n:', cattleRaw);
-
-      // 🛡️ SOLUCIÓN AL ERROR TS2339:
-      // Castor intermedio a 'any' para evadir la restricción estricta del compilador sobre el objeto/arreglo
-      const rawResponse: any = cattleRaw;
-
-      // Si n8n regresa el array directo, se asigna. Si viene envuelto en { data: [...] }, se extrae de forma segura.
-      this.cattleList.set((Array.isArray(rawResponse) ? rawResponse : (rawResponse?.data || [])) as Livestock[]);
+      const expensesRaw = await this.cattleApi.getExpenses();
       this.expensesList.set((Array.isArray(expensesRaw) ? expensesRaw : []) as Expense[]);
-
     } catch (error) {
       console.error('Error en el Data Pipeline:', error);
     } finally {
