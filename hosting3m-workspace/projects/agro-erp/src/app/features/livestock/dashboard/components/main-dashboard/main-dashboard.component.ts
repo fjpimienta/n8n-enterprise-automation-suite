@@ -9,6 +9,8 @@ import { ReproductiveDashboardComponent } from '../reproductive-dashboard/reprod
 import { EngordaDashboardComponent } from '../engorda-dashboard/engorda-dashboard.component';
 import { ExpenseModalComponent } from '../../../expenses/components/expense-modal/expense-modal.component';
 import { ComplianceAlertCardComponent } from '../../../../compliance/components/compliance-alert-card/compliance-alert-card.component';
+import { MetadataDetailModalComponent } from '@shared/components/metadata-detail-modal/metadata-detail-modal.component';
+import { hasDisplayableMetadata } from '@shared/utils/metadata-view.util';
 import { TenantService } from 'core-auth';
 import { ThemeService } from '@core/services/theme.service';
 import { Expense } from '../../../models/expense.model';
@@ -17,7 +19,7 @@ import { Paginator } from '../../utils/paginator';
 @Component({
   selector: 'app-main-dashboard',
   standalone: true,
-  imports: [CommonModule, NgApexchartsModule, ReproductiveDashboardComponent, EngordaDashboardComponent, ExpenseModalComponent, ComplianceAlertCardComponent],
+  imports: [CommonModule, NgApexchartsModule, ReproductiveDashboardComponent, EngordaDashboardComponent, ExpenseModalComponent, ComplianceAlertCardComponent, MetadataDetailModalComponent],
   templateUrl: './main-dashboard.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -44,6 +46,21 @@ export class MainDashboardComponent implements OnInit {
 
   // 🔎 Búsqueda reactiva del tab Inventario Detallado
   public inventorySearch = signal<string>('');
+
+  // Modal de detalle de metadata (JSONB variable por animal — sin shape fijo)
+  public metadataAnimal = signal<any | null>(null);
+
+  public animalHasMetadata(animal: any): boolean {
+    return hasDisplayableMetadata(animal?.metadata);
+  }
+
+  public openMetadata(animal: any) {
+    this.metadataAnimal.set(animal);
+  }
+
+  public closeMetadata() {
+    this.metadataAnimal.set(null);
+  }
 
   // Controlador de Paginación Reutilizable (ver mejora #3: composable basado en signals)
   public pagination = new Paginator(() => this.currentDataset().length);

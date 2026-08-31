@@ -1,0 +1,43 @@
+<div class="modal modal-blur fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1"
+    role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content shadow-lg border-0">
+
+            <div class="modal-header bg-light">
+                <h5 class="modal-title font-weight-bold text-dark">
+                    <span class="status-dot status-blue me-2"></span> {{ title }}
+                </h5>
+                <button type="button" class="btn-close" (click)="close.emit()" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body p-4">
+                @if (nodes().length === 0) {
+                <div class="text-muted text-center py-3">Sin información adicional registrada para este animal.</div>
+                } @else {
+                <ng-container *ngTemplateOutlet="nodeList; context: { $implicit: nodes() }"></ng-container>
+                }
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="close.emit()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<ng-template #nodeList let-items>
+    <ul class="list-unstyled mb-0">
+        @for (node of items; track $index) {
+        <li class="mb-2">
+            <span class="fw-bold text-muted">{{ node.label }}:</span>
+            @if (node.children) {
+            <div class="ps-3 mt-1 border-start ms-1">
+                <ng-container *ngTemplateOutlet="nodeList; context: { $implicit: node.children }"></ng-container>
+            </div>
+            } @else {
+            <span class="ms-1 text-dark">{{ node.value }}</span>
+            }
+        </li>
+        }
+    </ul>
+</ng-template>

@@ -196,9 +196,11 @@
                         <th>Arete SINIIGA</th>
                         <th>Nº Fuego</th>
                         <th>Categoría</th>
+                        <th>Lote</th>
                         <th>Estado Actual</th>
                         <th>Peso Registrado</th>
                         <th>ADG Histórico</th>
+                        <th class="text-end">Detalle</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -217,6 +219,13 @@
                             <span class="badge bg-warning-lt d-block mt-1">Sin UPP</span>
                             }
                         </td>
+                        <td>
+                            @if (animal.lot_name) {
+                            {{ animal.lot_name }}
+                            } @else {
+                            <span class="badge bg-secondary-lt">Sin lote</span>
+                            }
+                        </td>
                         <td><span class="badge"
                                 [class.bg-green-lt]="animal.current_status === 'ACTIVO' || animal.current_status === 'PREÑADA'"
                                 [class.bg-danger-lt]="animal.current_status === 'VACÍA'">{{ animal.current_status
@@ -224,6 +233,14 @@
                         <td><span class="font-weight-bold">{{ animal.current_weight_kg | number:'1.2-2' }} kg</span>
                         </td>
                         <td class="text-muted">{{ animal.adg_lifetime_kg || '0.00' }} kg/día</td>
+                        <td class="text-end">
+                            @if (animalHasMetadata(animal)) {
+                            <button class="btn btn-sm btn-ghost-secondary" (click)="openMetadata(animal)"
+                                title="Ver detalle (metadata) del animal">
+                                <i class="ti ti-info-circle"></i>
+                            </button>
+                            }
+                        </td>
                     </tr>
                     }
                 </tbody>
@@ -385,4 +402,10 @@
 @if (showExpenseModal()) {
 <app-expense-modal (onClose)="showExpenseModal.set(false)"
     (onSaveSuccess)="showExpenseModal.set(false); loadDashboardData()"></app-expense-modal>
+}
+
+@if (metadataAnimal(); as animal) {
+<app-metadata-detail-modal [metadata]="animal.metadata" [title]="'Detalle — ' + animal.rfid_siniiga"
+    (close)="closeMetadata()">
+</app-metadata-detail-modal>
 }
