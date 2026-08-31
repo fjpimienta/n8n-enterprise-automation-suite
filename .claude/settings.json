@@ -1,0 +1,50 @@
+{
+  "permissions": {
+    "defaultMode": "default",
+    "deny": [
+      "Bash(rm -rf*)",
+      "Bash(git push*--force*)",
+      "Bash(git push*-f*)",
+      "Bash(*DROP TABLE*)",
+      "Bash(*DROP DATABASE*)",
+      "Bash(*TRUNCATE*)",
+      "Bash(*DELETE FROM*)",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/secrets/**)",
+      "Read(**/*_SECRET*)"
+    ],
+    "ask": [
+      "Bash(psql*)",
+      "Bash(mysql*)",
+      "Bash(docker compose*)",
+      "Bash(docker exec*)",
+      "Bash(git push*)",
+      "Bash(git reset*)",
+      "Bash(git rebase*)",
+      "Bash(./deploy.sh*)",
+      "Bash(./restore_docker_n8n.sh*)",
+      "Bash(./restore_n8n.sh*)",
+      "Bash(npm publish*)",
+      "Write(**/AUTH_ENV_CONFIG*)",
+      "Write(**/migrations/**)"
+    ],
+    "allow": [
+      "Read(./**)",
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(npm run:*)",
+      "Bash(npm test:*)",
+      "Bash(ng build:*)",
+      "Bash(ng serve:*)",
+      "Bash(ng test:*)",
+      "Bash(./backup_docker_n8n.sh)",
+      "Bash(./backup_n8n.sh)"
+    ]
+  }
+}
