@@ -1,35 +1,47 @@
-# 🏛️ CLAUDE.md - AdminHotel Governance & Technical Baseline
+# 🏛️ CLAUDE.md - AdminHotel Dashboard
 
-## 👤 User Profile & Roles
-- **Lead Architect:** Francisco Jesus Pérez Pimienta (Senior Systems Architect & Project Lead).
-- **Claude's Operating Mode:** Assistant Technical Lead & Senior PMO Agent.
-- **Language Guardrail:** Accept prompts, business rules, and instructions in Spanish. ALWAYS generate code, TypeScript interfaces, variables, internal documentation, and git artifacts strictly in English.
+## Scope of This File
+This file only covers what's specific to `dashboard` or adds to the suite root
+`CLAUDE.md`. Suite-wide rules (production safety, multi-tenant isolation, the Meta-CRUD
+error pattern, secrets handling, Conventional Commits) live in the root `CLAUDE.md` and
+already apply here — don't assume they're off just because they're not repeated below.
 
-## 🛡️ Critical Risk Management (Guardrails)
-- **PRODUCTION ENVIRONMENT SAFETY:** Absolute restriction. NEVER execute drop, delete, or structural purge commands against production databases or deployment VPS.
-- **Data Sovereignty:** All architectures must align with the self-hosted, multi-tenant framework of the Hosting3M Automation Suite.
-- **MetaCRUD Resilience Shield:** When interacting with n8n API webhooks via HTTP, ensure responses with `HTTP 200 OK` containing an internal flag `error: true` are caught, parsed, and thrown as clean exceptions to the UI boundary layer to avoid ghost states.
-- **Timezone Armor:** NEVER use native `toISOString()` for checkout/checkin date calculations. Always use local time evaluators (`getFullYear()`, `getMonth()`, etc.) to protect UTC-6 (CDMX/Mérida) operations from skipping days after 18:00 hrs.
+Architecture overview, tech stack, and data-flow diagram: @ARCHITECTURE.md
 
-## 💻 Tech Stack & Architectural Constraints
-- **Frontend Core:** Angular v21.0.0 utilizing Standalone Components and Distributed Child Routes (`/mantenimiento`, `/finanzas`, `/inventario`).
-- **State Management:** Strict reactive pattern using Angular Signals (`signal`, `computed`, `effect`). Avoid traditional RxJS subscribe/unsubscribe loops for local state.
-- **Styling Architecture:** Tailwind CSS (with native CSS variables in `:root` for seamless Dark Mode) and Tabler UI.
-- **Backend/API Gateway:** n8n Enterprise Automation Suite (Dynamic Meta-CRUD engine).
-- **Database Engine:** PostgreSQL (Relational + JSONB Hybrid persistence).
+## Guardrails Specific to Dashboard
 
-## 🔧 Build & Development Commands
-Always use these exact scripts within the development shell:
+- **Timezone Armor:** NEVER use native `toISOString()` for checkin/checkout date
+  calculations. Always use local time evaluators (`getFullYear()`, `getMonth()`, etc.) —
+  operations run on UTC-6 (CDMX/Mérida), and `toISOString()` silently skips a day after
+  18:00 hrs local time. This already caused a real bug (see CHANGELOG v0.11.0).
+- **MetaCRUD Silent Error Shield — implementation location:** `BookingService`
+  intercepts `HTTP 200 OK` responses carrying `error: true` and throws them as real
+  exceptions at the UI boundary. The pattern itself is suite-wide (root `CLAUDE.md`); this
+  is where it's actually implemented in this app.
+
+## Verified Pitfalls (pulled forward from CHANGELOG.md — don't repeat these)
+
+- **Payload root-level ID (v0.11.0):** the update ID for `INSERT`/`UPDATE` requests must
+  sit at the **root** of the REST payload, not nested inside a sub-object. Nesting it
+  caused schema collisions and HTTP 500s that surfaced as CORS errors in the browser,
+  which is misleading — the real cause was payload shape, not CORS config.
+- **Walk-in Decoupling (v0.11.0):** if a room has a future reservation (e.g. in 3 days),
+  the system must let staff check in a walk-in guest **today** without overwriting the
+  future reservation's ID. This broke once in `room-detail-modal` — the walk-in flow and
+  the future-reservation flow must stay decoupled.
+
+## Build & Development Commands
+Always use these exact scripts:
 - **Install dependencies:** `npm install`
-- **Build Core Libraries (Prerequisite):** `ng build ui-pdf-export` && `ng build ui-chat`
-- **Run Local Dev Server:** `ng serve dashboard`
-- **Production Build Artifact:** `ng build dashboard --configuration=production`
+- **Build core libraries (prerequisite, in this order):** `ng build ui-pdf-export && ng build ui-chat`
+- **Run local dev server:** `ng serve dashboard`
+- **Production build:** `ng build dashboard --configuration=production`
 
-## 📝 Code Style & Patterns Checklist
-- **Computed Reactivity:** Totalizations or balances (e.g., in `ReportService`) must never be calculated in the HTML templates. Use `readonly total = computed(() => ...)`.
-- **Async Critical Path:** Prioritize rendering the `Room Rack (Grid)` first. Defer secondary lookups (Reservations, Users, Guests) using asynchronous loading patterns to secure fast Time-to-Interactive (TTI).
-- **Polymorphic UI:** Form modals (like `AssetFormModal`) must detect contextual scope to switch gracefully between Global (Warehouse) and Local (Room assignment) logic.
-
-## 🏷️ Source Control Standards
-- **Conventional Commits:** Suggest git messages strictly following the template: `<type>(<scope>): <short imperative description in english>`.
-- **Allowed Types:** `feat` (new features), `fix` (bug fixes), `refactor` (code restructuring), `security` (shields/validation updates), `docs` (readme/changelog).
+## Code Style — Patterns Specific to This App
+- **Computed Reactivity:** totals/balances (e.g. in `ReportService`) are never calculated
+  in templates — use `readonly total = computed(() => ...)`.
+- **Async Critical Path:** `Room Rack (Grid)` renders first; defer secondary lookups
+  (Reservations, Users, Guests) to protect Time-to-Interactive.
+- **Polymorphic UI:** form modals like `AssetFormModal` detect contextual scope to switch
+  between Global (Warehouse) and Local (Room assignment) logic — don't fork them into
+  separate components.
