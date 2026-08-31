@@ -64,9 +64,9 @@
                         <i class="ti ti-arrows-sort ms-1 text-muted opacity-50"></i>
                         }
                     </th>
-                    <th class="cursor-pointer user-select-none" (click)="toggleSort('tenant_name')">
-                        Socio Dueño
-                        @if (sortColumn() === 'tenant_name') {
+                    <th class="cursor-pointer user-select-none" (click)="toggleSort('lot_name')">
+                        Lote
+                        @if (sortColumn() === 'lot_name') {
                         <i class="ti ms-1" [class.ti-sort-ascending]="sortDirection() === 'asc'"
                             [class.ti-sort-descending]="sortDirection() === 'desc'"></i>
                         } @else {
@@ -174,8 +174,13 @@
                         </div>
                         }
                     </td>
-                    <td class="text-muted">{{ animal.tenant_name || tenantService.activeTenant()?.company_name || 'Sin
-                        Asignar' }}</td>
+                    <td>
+                        @if (animal.lot_name) {
+                        {{ animal.lot_name }}
+                        } @else {
+                        <span class="badge bg-secondary-lt">Sin lote</span>
+                        }
+                    </td>
                     <td><span class="badge bg-secondary-lt">{{ animal.category }}</span></td>
                     <td>
                         <span class="badge" [class.bg-blue-lt]="animal.business_model === 'CRIA'"
@@ -187,6 +192,12 @@
                     <td class="text-muted">{{ animal.current_status }}</td>
 
                     <td class="text-end">
+                        @if (animalHasMetadata(animal)) {
+                        <button class="btn btn-sm btn-ghost-secondary me-1" (click)="openMetadata(animal)"
+                            title="Ver detalle (metadata) del animal">
+                            <i class="ti ti-info-circle"></i>
+                        </button>
+                        }
                         <button class="btn btn-sm btn-ghost-primary me-1"
                             (click)="openModal('EDITAR', animal.rfid_siniiga, animal.id, animal)"
                             title="Editar ficha del animal">
@@ -224,4 +235,10 @@
 <app-cattle-detail-modal [actionType]="modalAction" [selectedRfid]="selectedRfid" [livestockId]="selectedId"
     [selectedAnimal]="selectedAnimal" (close)="onModalClose($event)">
 </app-cattle-detail-modal>
+}
+
+@if (metadataAnimal(); as animal) {
+<app-metadata-detail-modal [metadata]="animal.metadata" [title]="'Detalle — ' + animal.rfid_siniiga"
+    (close)="closeMetadata()">
+</app-metadata-detail-modal>
 }

@@ -2,15 +2,17 @@ import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CattleDetailModalComponent } from '../cattle-detail-modal/cattle-detail-modal.component';
+import { MetadataDetailModalComponent } from '@shared/components/metadata-detail-modal/metadata-detail-modal.component';
+import { hasDisplayableMetadata } from '@shared/utils/metadata-view.util';
 import { TenantService } from 'core-auth';
 import { CattleDataService } from '@core/services/cattle-data.service';
 
-type SortableColumn = 'rfid_siniiga' | 'tenant_name' | 'category' | 'business_model' | 'current_weight_kg' | 'current_status';
+type SortableColumn = 'rfid_siniiga' | 'lot_name' | 'category' | 'business_model' | 'current_weight_kg' | 'current_status';
 
 @Component({
   selector: 'app-cattle-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, CattleDetailModalComponent],
+  imports: [CommonModule, FormsModule, CattleDetailModalComponent, MetadataDetailModalComponent],
   templateUrl: './cattle-list.component.html',
   styleUrl: './cattle-list.component.scss',
 })
@@ -56,6 +58,21 @@ export class CattleListComponent implements OnInit {
       return direction === 'asc' ? comparison : -comparison;
     });
   });
+
+  // Modal de detalle de metadata (JSONB variable por animal — sin shape fijo)
+  public metadataAnimal = signal<any | null>(null);
+
+  public animalHasMetadata(animal: any): boolean {
+    return hasDisplayableMetadata(animal?.metadata);
+  }
+
+  public openMetadata(animal: any) {
+    this.metadataAnimal.set(animal);
+  }
+
+  public closeMetadata() {
+    this.metadataAnimal.set(null);
+  }
 
   // Variables para el Modal
   public isModalOpen = false;
