@@ -16,6 +16,46 @@ export class ReportService {
   public loadingReports = signal<boolean>(false);
   public adminService = inject(AdminService);
 
+  /**
+   * Categorías que representan devolución de financiamiento (tandas, aportaciones de
+   * socios que se amortizan). NO son gasto operativo: ese dinero entró como capital
+   * y se paga de vuelta, así que no debe castigar la Utilidad Operativa.
+   *
+   * ⚠️ Hoy estas filas viven en hotel_expenses con category='Caja Chica', por lo que
+   * el marcador confiable es la descripción. Fix definitivo: re-etiquetar esas filas
+   * con category='Financiamiento' (o moverlas a hotel_capital_repayments) y quitar
+   * la heurística de descripción de abajo.
+   */
+  private static readonly FINANCING_CATEGORIES = new Set(['Financiamiento', 'Amortización de Capital']);
+
+  /**
+   * IDs históricos de hotel_expenses que son amortización de la aportación de capital
+   * de la socia dueña ("Tanda") pero que viven con category='Caja Chica'. Se marcan
+   * explícitamente para que el histórico cuadre. Al re-etiquetarlos a
+   * category='Financiamiento' se puede vaciar este Set.
+   */
+  private static readonly FINANCING_EXPENSE_IDS = new Set<string>([
+    '128', '158', '188', '244', '280', '313', '353', '365', // tanda: amortización aportación socia dueña
+  ]);
+
+  /** True si el gasto es amortización de financiamiento / aportación de capital (no operativo). */
+  private isFinancingExpense(e: any): boolean {
+    if (ReportService.FINANCING_EXPENSE_IDS.has(String(e?.id))) return true;
+
+    const category = String(e?.category || '').trim();
+    if (ReportService.FINANCING_CATEGORIES.has(category)) return true;
+
+    const desc = String(e?.description || '')
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // sin acentos
+      .toLowerCase().trim();
+    return desc === 'tanda'
+      || desc.startsWith('tanda ') || desc.startsWith('tanda-')
+      || desc.includes('amortizacion de capital')
+      || desc.includes('devolucion de capital')
+      || desc.includes('aportacion de socio')
+      || desc.includes('aportacion socio');
+  }
+
   /** * Calcula el reporte unificado con Filtros Avanzados */
   calculateDailyReport(
     bookings: any[],
@@ -76,8 +116,10 @@ export class ReportService {
       total_sales: 0,
       paid_in: 0,
       pending: 0,
-      total_expenses: 0,
-      balance: 0,
+      total_expenses: 0,        // TODOS los gastos aprobados (operativos + financiamiento)
+      operating_expenses: 0,    // gasto operativo real (sin tandas / amortización de capital)
+      financing_expenses: 0,    // amortización de financiamiento (tandas) — no toca la utilidad
+      balance: 0,               // Utilidad Operativa = paid_in - operating_expenses
       transactions: filteredBookings,
       expenseTransactions: filteredExpenses,
       periodLabel: this.getPeriodLabel(filter)
@@ -97,10 +139,17 @@ export class ReportService {
     });
 
     filteredExpenses.forEach(e => {
-      stats.total_expenses += parseFloat(e.amount || 0);
+      const amount = Number(e.amount) || 0;
+      stats.total_expenses += amount;
+      if (this.isFinancingExpense(e)) {
+        stats.financing_expenses += amount;
+      } else {
+        stats.operating_expenses += amount;
+      }
     });
 
-    stats.balance = stats.paid_in - stats.total_expenses;
+    // Utilidad Operativa: NO descuenta amortización de financiamiento (tandas / capital de socios).
+    stats.balance = stats.paid_in - stats.operating_expenses;
     return stats;
   }
 
@@ -246,6 +295,68 @@ export class ReportService {
     } catch (error) {
       console.error('Error cargando capital', error);
       return 0; // Fallback
+    }
+  }
+
+  /**
+   * Trae TODAS las filas de una tabla para el tenant activo, SIN filtro de fecha.
+   * El gateway Meta-CRUD soporta 'getall' sin 'date_range' (igual que getCapitalTotal).
+   */
+  private async fetchAllRows(table: string): Promise<any[]> {
+    try {
+      const payload = {
+        operation: 'getall',
+        table_name: table,
+        fields: { id_company: this.tenantService.activeTenantId() }
+      };
+      const res: any = await lastValueFrom(
+        this.http.post(`${this.apiUrl_crud}/${table}`, payload, { headers: this.adminService.getAuthHeaders() })
+      );
+      const rows = Array.isArray(res?.data) ? res.data : [];
+      // Meta-CRUD devuelve [{}] para colecciones vacías: descartamos filas sin id.
+      return rows.filter((r: any) => r && r.id != null);
+    } catch (e) {
+      console.error(`Error fetching all rows for ${table}`, e);
+      return [];
+    }
+  }
+
+  /**
+   * Saldo Real en Banco = histórico global absoluto, SIN filtros de fecha:
+   *   (todos los ingresos cobrados, no cancelados)
+   * - (todos los gastos aprobados)
+   * + (todo el capital inyectado)
+   *
+   * Se consume una sola vez al inicializar la vista; su valor NO cambia
+   * cuando el usuario mueve el filtro temporal (Día/Semana/Mes/Año).
+   *
+   * Nota de eficiencia: el gateway Meta-CRUD sólo expone 'getall', no
+   * agregaciones server-side, así que sumamos en cliente sobre el histórico
+   * completo. Si a futuro la API acepta SUM(), sustituir estas 3 lecturas.
+   */
+  async getHistoricalGlobalBalance(): Promise<number> {
+    try {
+      const [bookings, expenses, injectedCapital] = await Promise.all([
+        this.fetchAllRows('hotel_bookings'),
+        this.fetchAllRows('hotel_expenses'),
+        this.getCapitalTotal()
+      ]);
+
+      const paidIncome = bookings.reduce((sum: number, b: any) => {
+        const isCancelled = String(b.status || '').trim().toLowerCase() === 'cancelled';
+        const isPaid = String(b.payment_status || '').trim().toLowerCase() === 'paid';
+        return sum + (isPaid && !isCancelled ? (Number(b.total_amount) || 0) : 0);
+      }, 0);
+
+      const approvedExpenses = expenses.reduce((sum: number, e: any) => {
+        const isApproved = String(e.status || '').trim().toUpperCase() === 'APPROVED';
+        return sum + (isApproved ? (Number(e.amount) || 0) : 0);
+      }, 0);
+
+      return paidIncome - approvedExpenses + injectedCapital;
+    } catch (error) {
+      console.error('Error calculando el saldo bancario histórico global', error);
+      return 0;
     }
   }
 }
