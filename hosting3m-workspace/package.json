@@ -60,7 +60,7 @@
   "devDependencies": {
     "@angular/build": "21.2.19",
     "@angular/cli": "21.2.21",
-    "@angular/compiler-cli": "21.2.21",
+    "@angular/compiler-cli": "21.2.22",
     "@hono/node-server": "^2.0.12",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/express": "^5.0.6",
