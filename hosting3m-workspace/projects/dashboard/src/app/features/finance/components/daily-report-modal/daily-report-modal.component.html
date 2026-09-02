@@ -156,7 +156,7 @@
       </div>
       } @else {
       <div class="col-12 mb-2">
-        <div class="row row-cols-1 row-cols-md-3 row-cols-xl-5 g-3">
+        <div class="row row-cols-1 row-cols-md-3 row-cols-xl-6 g-3">
 
           <div class="col">
             <div class="card card-sm border-0 shadow-sm p-3 bg-success-lt h-100">
@@ -187,7 +187,7 @@
               <div class="d-flex align-items-center">
                 <span class="bg-primary text-white avatar me-3"><i class="ti ti-scale"></i></span>
                 <div class="me-auto">
-                  <div class="text-primary text-uppercase fw-bold small">Utilidad Neta</div>
+                  <div class="text-primary text-uppercase fw-bold small">Utilidad Operativa</div>
                   <div class="h2 fw-bold text-primary mb-0">${{ reportData().balance | number:'1.2-2' }}</div>
                 </div>
               </div>
@@ -205,6 +205,23 @@
               </div>
             </div>
           </div>
+
+          @if (capitalInjectedTotal() > 0) {
+          <div class="col">
+            <div class="card card-sm border-0 shadow-sm p-3 bg-secondary-lt h-100">
+              <div class="d-flex align-items-center">
+                <span class="bg-secondary text-white avatar me-3"><i class="ti ti-users"></i></span>
+                <div class="me-auto">
+                  <div class="text-secondary text-uppercase fw-bold small">Aportación Tanda (Capital)</div>
+                  <div class="h2 fw-bold text-secondary mb-0">${{ capitalInjectedTotal() | number:'1.2-2' }}</div>
+                  <div class="text-muted" style="font-size: 0.7rem;">
+                    Amortizado: ${{ reportData().financing_expenses | number:'1.2-2' }} · No afecta la utilidad operativa
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          }
 
           <div class="col">
             <div class="card bg-dark text-white border-0 shadow-sm h-100">
