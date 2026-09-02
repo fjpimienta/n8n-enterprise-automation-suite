@@ -10,10 +10,10 @@
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.6.1",
+    "express-rate-limit": "^8.7.0",
     "jsonwebtoken": "^9.0.0",
     "pg": "^8.22.0",
-    "qs": "^6.15.3"
+    "qs": "^6.16.0"
   },
   "overrides": {
     "ip-address": "^10.2.1"

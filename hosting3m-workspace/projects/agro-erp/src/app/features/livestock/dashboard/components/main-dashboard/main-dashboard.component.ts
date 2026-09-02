@@ -177,9 +177,11 @@ export class MainDashboardComponent implements OnInit {
     });
   });
 
-  // 🚩 Cuenta de animales sin UPP asignada, para el badge de alerta del inventario
+  // 🚩 Cuenta de animales sin UPP asignada, para el badge de alerta del inventario.
+  // Se evalúa contra `production_unit_id` (FK real), no contra `upp_origen` (texto libre
+  // que solo está poblado en parte del hato y daba falsos "sin UPP").
   public missingUppCount = computed(() =>
-    this.filteredCattleList().filter(a => !a.upp_origen?.trim()).length
+    this.filteredCattleList().filter(a => !a.production_unit_id).length
   );
 
   // 🔎 Inventario filtrado por búsqueda reactiva (rfid_siniiga, numero_fuego o electronic_rfid)

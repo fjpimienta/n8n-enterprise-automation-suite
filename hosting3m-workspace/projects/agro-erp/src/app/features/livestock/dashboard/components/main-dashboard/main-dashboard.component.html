@@ -215,7 +215,7 @@
                         <td><strong>{{ animal.numero_fuego || 'S/N' }}</strong></td>
                         <td>
                             {{ animal.category }}
-                            @if (!animal.upp_origen?.trim()) {
+                            @if (!animal.production_unit_id) {
                             <span class="badge bg-warning-lt d-block mt-1">Sin UPP</span>
                             }
                         </td>
