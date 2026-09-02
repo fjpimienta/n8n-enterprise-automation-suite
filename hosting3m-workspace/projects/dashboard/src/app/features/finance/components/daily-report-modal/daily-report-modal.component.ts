@@ -45,9 +45,14 @@ export class DailyReportModalComponent implements OnInit {
   expandedIncomeGroups = signal<Set<string>>(new Set());
   expandedExpenseGroups = signal<Set<string>>(new Set());
 
-  // 👇 AÑADE ESTAS DOS LÍNEAS AQUÍ 👇
-  capitalTotal = signal<number>(0);
-  saldoBancarioReal = computed(() => this.reportData().balance + this.capitalTotal());
+  // Saldo Real en Banco: histórico global, INDEPENDIENTE del filtro de fecha de la vista.
+  // Se carga una sola vez en ngOnInit y no se recalcula al cambiar de periodo.
+  globalBankBalance = signal<number>(0);
+  saldoBancarioReal = computed<number>(() => this.globalBankBalance());
+
+  // Capital total aportado por socios (hotel_capital_injections). Carga única.
+  // NO se calcula sumando gastos: es el monto inyectado, referencia para el card.
+  capitalInjectedTotal = signal<number>(0);
 
   // --- INTERCEPTORES DE FILTROS ---
   onIncomeRoomFilterChange(val: string) {
@@ -249,13 +254,21 @@ export class DailyReportModalComponent implements OnInit {
   ngOnInit() {
     if (this.bookingService.rooms().length === 0) this.bookingService.loadRooms();
     this.loadData();
-    this.loadCapital(); // 👈 AÑADE ESTA LÍNEA
+    this.loadFinancingContext();
   }
 
-  // 👇 AÑADE ESTE MÉTODO JUSTO DEBAJO DE ngOnInit 👇
-  async loadCapital() {
-    const total = await this.reportService.getCapitalTotal();
-    this.capitalTotal.set(total);
+  /**
+   * Carga única (independiente de currentFilter()): el saldo bancario histórico
+   * y el capital total aportado por socios. Quedan fijos aunque el usuario
+   * cambie a "Semana", "Mes" o "Año". Sólo loadData() reacciona a los filtros.
+   */
+  private async loadFinancingContext(): Promise<void> {
+    const [balance, capital] = await Promise.all([
+      this.reportService.getHistoricalGlobalBalance(),
+      this.reportService.getCapitalTotal(),
+    ]);
+    this.globalBankBalance.set(balance);
+    this.capitalInjectedTotal.set(capital);
   }
 
   async loadData() {
@@ -371,9 +384,10 @@ export class DailyReportModalComponent implements OnInit {
       footerText: [
         `Ingresos Cobrados: $${stats.paid_in.toFixed(2)}`,
         `Ingresos Pendientes: $${stats.pending.toFixed(2)}`,
-        `Gastos Totales: $${stats.total_expenses.toFixed(2)}`,
+        `Gastos Operativos: $${stats.operating_expenses.toFixed(2)}`,
+        `Amortización Tanda (financiamiento): $${stats.financing_expenses.toFixed(2)}`,
         `==================================`,
-        `UTILIDAD NETA: $${stats.balance.toFixed(2)}`
+        `UTILIDAD OPERATIVA: $${stats.balance.toFixed(2)}`
       ]
     };
     this.pdfService.generate(pdfConfig);
