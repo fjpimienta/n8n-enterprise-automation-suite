@@ -11,6 +11,7 @@ import { ExpenseModalComponent } from '../../../expenses/components/expense-moda
 import { ComplianceAlertCardComponent } from '../../../../compliance/components/compliance-alert-card/compliance-alert-card.component';
 import { MetadataDetailModalComponent } from '@shared/components/metadata-detail-modal/metadata-detail-modal.component';
 import { hasDisplayableMetadata } from '@shared/utils/metadata-view.util';
+import { HERD_STATUS_FILTER_OPTIONS, HerdStatusFilter, filterByHerdStatus } from '@shared/utils/herd-status.util';
 import { TenantService } from 'core-auth';
 import { ThemeService } from '@core/services/theme.service';
 import { Expense } from '../../../models/expense.model';
@@ -46,6 +47,11 @@ export class MainDashboardComponent implements OnInit {
 
   // 🔎 Búsqueda reactiva del tab Inventario Detallado
   public inventorySearch = signal<string>('');
+
+  // 🐄 Filtro de estado de vida (venta/mortandad). Default: solo hato vivo.
+  // Mismo criterio que el Censo Biológico (cattle-list) vía @shared/utils/herd-status.util.
+  public readonly herdStatusOptions = HERD_STATUS_FILTER_OPTIONS;
+  public herdStatusFilter = signal<HerdStatusFilter>('ACTIVOS');
 
   // Modal de detalle de metadata (JSONB variable por animal — sin shape fijo)
   public metadataAnimal = signal<any | null>(null);
@@ -140,8 +146,9 @@ export class MainDashboardComponent implements OnInit {
     return Array.from(speciesSet);
   });
 
-  // 🚀 Filtrado Jerárquico: Módulo (Tab) + Especie (Selector) con sanitización
-  public filteredCattleList = computed(() => {
+  // 🚀 Filtrado Jerárquico: Módulo (Tab) + Especie (Selector) con sanitización.
+  // No aplica el filtro de estado de vida — ese se superpone en `filteredCattleList`.
+  private scopedCattleList = computed(() => {
     const currentTab = this.activeTab();
     const currentSpecies = this.selectedSpecies();
 
@@ -157,6 +164,18 @@ export class MainDashboardComponent implements OnInit {
       return matchesTab && matchesSpecies;
     });
   });
+
+  // Lista base de todas las vistas de KPI/inventario: módulo + especie + estado de vida.
+  // Por defecto (`ACTIVOS`) excluye VENDIDO y BAJA_MORTANDAD; el toggle del tab Inventario
+  // permite auditarlos ("Todos" / "Solo bajas y ventas") sin ocultarlos de forma permanente.
+  public filteredCattleList = computed(() =>
+    filterByHerdStatus(this.scopedCattleList(), this.herdStatusFilter())
+  );
+
+  // Card "Cabezas Totales Activas": siempre el hato vivo, sin importar el toggle de auditoría.
+  public activeHeadCount = computed(() =>
+    filterByHerdStatus(this.scopedCattleList(), 'ACTIVOS').length
+  );
 
   // Filtrado de Gastos por Módulo y Especie vinculada
   public filteredExpensesList = computed(() => {
@@ -238,6 +257,11 @@ export class MainDashboardComponent implements OnInit {
 
   public setInventorySearch(query: string) {
     this.inventorySearch.set(query);
+    this.pagination.reset();
+  }
+
+  public setHerdStatusFilter(value: HerdStatusFilter) {
+    this.herdStatusFilter.set(value);
     this.pagination.reset();
   }
 

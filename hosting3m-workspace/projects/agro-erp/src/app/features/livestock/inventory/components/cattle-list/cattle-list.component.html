@@ -29,9 +29,19 @@
 </div>
 
 <div class="card shadow-sm border-0">
-    <div class="card-header bg-white border-bottom-0 d-flex justify-content-between align-items-center">
+    <div class="card-header bg-white border-bottom-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
         <h3 class="card-title text-dark font-weight-bold mb-0">Total de Cabezas: {{ totalHeads() }}</h3>
-        <div class="text-muted text-sm">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <div class="d-flex align-items-center gap-1">
+                <span class="text-muted small text-nowrap">Estado:</span>
+                <select class="form-select form-select-sm w-auto" [ngModel]="herdStatusFilter()"
+                    (ngModelChange)="herdStatusFilter.set($event)">
+                    @for (opt of herdStatusOptions; track opt.value) {
+                    <option [value]="opt.value">{{ opt.label }}</option>
+                    }
+                </select>
+            </div>
+            <div class="text-muted text-sm">
             <div class="input-icon">
                 <input type="text" class="form-control form-control-rounded"
                     placeholder="Buscar por Arete, Fuego o Chip RFID..." [ngModel]="searchQuery()"
@@ -49,6 +59,7 @@
             @if (searchQuery()) {
             <div class="small mt-1">{{ filteredCattleList().length }} / {{ totalHeads() }} resultados</div>
             }
+            </div>
         </div>
     </div>
     <div class="table-responsive">
@@ -136,8 +147,13 @@
                             <path d="M3 3l18 18" />
                         </svg>
                         <div class="mt-2">
-                            {{ searchQuery() ? 'Ningún animal coincide con la búsqueda.' : 'No hay cabezas de ganado
-                            registradas en este rancho.' }}
+                            @if (searchQuery()) {
+                            Ningún animal coincide con la búsqueda.
+                            } @else if (herdStatusFilter() === 'BAJAS') {
+                            No hay animales vendidos ni dados de baja en este rancho.
+                            } @else {
+                            No hay cabezas de ganado registradas en este rancho.
+                            }
                         </div>
                     </td>
                 </tr>

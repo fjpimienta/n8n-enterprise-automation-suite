@@ -6,6 +6,7 @@ import { MetadataDetailModalComponent } from '@shared/components/metadata-detail
 import { hasDisplayableMetadata } from '@shared/utils/metadata-view.util';
 import { TenantService } from 'core-auth';
 import { CattleDataService } from '@core/services/cattle-data.service';
+import { HERD_STATUS_FILTER_OPTIONS, HerdStatusFilter, filterByHerdStatus } from '@shared/utils/herd-status.util';
 
 type SortableColumn = 'rfid_siniiga' | 'lot_name' | 'category' | 'business_model' | 'current_weight_kg' | 'current_status';
 
@@ -25,8 +26,17 @@ export class CattleListComponent implements OnInit {
   public isLoading = this.cattleDataService.isLoading;
   public tenantService = inject(TenantService);
 
-  // Derivado del signal global — evita una segunda fuente de verdad desincronizada
-  public totalHeads = computed(() => this.cattleList().length);
+  // Filtro de estado de vida (venta/mortandad). Default: solo hato vivo.
+  // Criterio compartido con main-dashboard vía @shared/utils/herd-status.util.
+  public readonly herdStatusOptions = HERD_STATUS_FILTER_OPTIONS;
+  public herdStatusFilter = signal<HerdStatusFilter>('ACTIVOS');
+
+  private statusFilteredList = computed(() =>
+    filterByHerdStatus(this.cattleList(), this.herdStatusFilter())
+  );
+
+  // "Total de Cabezas" refleja el alcance del filtro de estado activo (no el conteo bruto de filas).
+  public totalHeads = computed(() => this.statusFilteredList().length);
 
   // Búsqueda por arete y orden de columnas (evita que el orden "salte" tras cada guardado,
   // ya que la vista vw_cattle_kpi no garantiza un orden estable entre lecturas)
@@ -40,7 +50,7 @@ export class CattleListComponent implements OnInit {
     const column = this.sortColumn();
     const direction = this.sortDirection();
 
-    const source = this.cattleList();
+    const source = this.statusFilteredList();
     const filtered = !q ? source : source.filter(animal =>
       animal.rfid_siniiga?.toLowerCase().includes(q) ||
       animal.numero_fuego?.toLowerCase().includes(q) ||
