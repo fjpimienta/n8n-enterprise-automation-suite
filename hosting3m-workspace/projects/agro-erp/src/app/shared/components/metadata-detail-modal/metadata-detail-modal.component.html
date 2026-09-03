@@ -3,8 +3,8 @@
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content shadow-lg border-0">
 
-            <div class="modal-header bg-light">
-                <h5 class="modal-title font-weight-bold text-dark">
+            <div class="modal-header">
+                <h5 class="modal-title font-weight-bold text-body">
                     <span class="status-dot status-blue me-2"></span> {{ title }}
                 </h5>
                 <button type="button" class="btn-close" (click)="close.emit()" aria-label="Cerrar"></button>
@@ -29,13 +29,13 @@
     <ul class="list-unstyled mb-0">
         @for (node of items; track $index) {
         <li class="mb-2">
-            <span class="fw-bold text-muted">{{ node.label }}:</span>
+            <span class="fw-bold text-body-secondary">{{ node.label }}:</span>
             @if (node.children) {
             <div class="ps-3 mt-1 border-start ms-1">
                 <ng-container *ngTemplateOutlet="nodeList; context: { $implicit: node.children }"></ng-container>
             </div>
             } @else {
-            <span class="ms-1 text-dark">{{ node.value }}</span>
+            <span class="ms-1 text-body">{{ node.value }}</span>
             }
         </li>
         }

@@ -7,6 +7,7 @@ import { hasDisplayableMetadata } from '@shared/utils/metadata-view.util';
 import { TenantService } from 'core-auth';
 import { CattleDataService } from '@core/services/cattle-data.service';
 import { HERD_STATUS_FILTER_OPTIONS, HerdStatusFilter, filterByHerdStatus } from '@shared/utils/herd-status.util';
+import { SPECIES_FILTER_ALL, deriveAvailableSpecies, filterBySpecies } from '@shared/utils/species.util';
 
 type SortableColumn = 'rfid_siniiga' | 'lot_name' | 'category' | 'business_model' | 'current_weight_kg' | 'current_status';
 
@@ -35,8 +36,19 @@ export class CattleListComponent implements OnInit {
     filterByHerdStatus(this.cattleList(), this.herdStatusFilter())
   );
 
-  // "Total de Cabezas" refleja el alcance del filtro de estado activo (no el conteo bruto de filas).
-  public totalHeads = computed(() => this.statusFilteredList().length);
+  // Filtro "Filtrar Especie": mismas especies dinámicas que el dashboard, vía @shared/utils/species.util.
+  // Se compone SOBRE el conjunto ya filtrado por estado de vida, no lo reemplaza.
+  public speciesFilter = signal<string>(SPECIES_FILTER_ALL);
+  public readonly speciesFilterAll = SPECIES_FILTER_ALL;
+  public availableSpecies = computed(() => deriveAvailableSpecies(this.cattleList()));
+
+  private speciesFilteredList = computed(() =>
+    filterBySpecies(this.statusFilteredList(), this.speciesFilter())
+  );
+
+  // "Total de Cabezas" refleja el alcance de los filtros activos (estado de vida + especie),
+  // no el conteo bruto de filas.
+  public totalHeads = computed(() => this.speciesFilteredList().length);
 
   // Búsqueda por arete y orden de columnas (evita que el orden "salte" tras cada guardado,
   // ya que la vista vw_cattle_kpi no garantiza un orden estable entre lecturas)
@@ -50,7 +62,7 @@ export class CattleListComponent implements OnInit {
     const column = this.sortColumn();
     const direction = this.sortDirection();
 
-    const source = this.statusFilteredList();
+    const source = this.speciesFilteredList();
     const filtered = !q ? source : source.filter(animal =>
       animal.rfid_siniiga?.toLowerCase().includes(q) ||
       animal.numero_fuego?.toLowerCase().includes(q) ||

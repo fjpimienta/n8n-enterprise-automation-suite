@@ -12,6 +12,7 @@ import { ComplianceAlertCardComponent } from '../../../../compliance/components/
 import { MetadataDetailModalComponent } from '@shared/components/metadata-detail-modal/metadata-detail-modal.component';
 import { hasDisplayableMetadata } from '@shared/utils/metadata-view.util';
 import { HERD_STATUS_FILTER_OPTIONS, HerdStatusFilter, filterByHerdStatus } from '@shared/utils/herd-status.util';
+import { SPECIES_FILTER_ALL, deriveAvailableSpecies, getAnimalSpecies } from '@shared/utils/species.util';
 import { TenantService } from 'core-auth';
 import { ThemeService } from '@core/services/theme.service';
 import { Expense } from '../../../models/expense.model';
@@ -42,7 +43,7 @@ export class MainDashboardComponent implements OnInit {
 
   // Navegación y Filtros de Trazabilidad Biológica
   public activeSubTab = signal<'RESUMEN' | 'INVENTARIO' | 'GASTOS' | 'POR_ANIMAL'>('RESUMEN');
-  public selectedSpecies = signal<string>('TODOS'); // 🚀 Filtro maestro de especie
+  public selectedSpecies = signal<string>(SPECIES_FILTER_ALL); // 🚀 Filtro maestro de especie
   public showExpenseModal = signal<boolean>(false);
 
   // 🔎 Búsqueda reactiva del tab Inventario Detallado
@@ -124,27 +125,9 @@ export class MainDashboardComponent implements OnInit {
     }
   }
 
-  // 🚀 Extracción dinámica de especies existentes en el hato para los selectores de la UI
-  public availableSpecies = computed(() => {
-    const list = this.cattleList();
-    // 🛡️ BLINDAJE: Si no es un array, devuelve array vacío inmediatamente
-    if (!Array.isArray(list)) {
-      console.warn('⚠️ [availableSpecies] Se recibió un tipo no iterable:', list);
-      return [];
-    }
-
-    const speciesSet = new Set<string>(
-      list.map(animal => { // Aquí ya no fallará
-        if (animal.species) return animal.species;
-        if (animal.metadata) {
-          const meta = typeof animal.metadata === 'string' ? JSON.parse(animal.metadata) : animal.metadata;
-          return meta.species;
-        }
-        return null;
-      }).filter(Boolean)
-    );
-    return Array.from(speciesSet);
-  });
+  // 🚀 Extracción dinámica de especies existentes en el hato para los selectores de la UI.
+  // Fuente compartida con el "Censo Biológico Activo" (cattle-list) vía @shared/utils/species.util.
+  public availableSpecies = computed(() => deriveAvailableSpecies(this.cattleList()));
 
   // 🚀 Filtrado Jerárquico: Módulo (Tab) + Especie (Selector) con sanitización.
   // No aplica el filtro de estado de vida — ese se superpone en `filteredCattleList`.
@@ -156,10 +139,7 @@ export class MainDashboardComponent implements OnInit {
       if (!animal.business_model) return false;
 
       const matchesTab = animal.business_model.trim() === currentTab;
-
-      // Extrae la especie de forma segura desde la raíz o metadata
-      const animalSpecies = animal.species || (animal.metadata ? (typeof animal.metadata === 'string' ? JSON.parse(animal.metadata).species : animal.metadata.species) : null);
-      const matchesSpecies = currentSpecies === 'TODOS' || animalSpecies === currentSpecies;
+      const matchesSpecies = currentSpecies === SPECIES_FILTER_ALL || getAnimalSpecies(animal) === currentSpecies;
 
       return matchesTab && matchesSpecies;
     });
@@ -188,7 +168,7 @@ export class MainDashboardComponent implements OnInit {
         const animal = this.cattleList().find(a => a.id === expense.livestock_id);
         if (animal) {
           const matchesTab = animal.business_model === currentTab;
-          const matchesSpecies = currentSpecies === 'TODOS' || animal.species === currentSpecies;
+          const matchesSpecies = currentSpecies === SPECIES_FILTER_ALL || getAnimalSpecies(animal) === currentSpecies;
           return matchesTab && matchesSpecies;
         }
       }
