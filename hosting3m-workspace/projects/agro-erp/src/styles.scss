@@ -15,3 +15,15 @@ body,
 .table thead th {
     font-size: 0.75rem !important;
 }
+
+/*
+ * Tabler beta20 (CDN) ships a legacy `.text-muted` rule near the end of its
+ * bundle that hard-codes `--tblr-muted-rgb` (#667382) with no dark-theme
+ * override, so muted text collapses to ~3.3:1 contrast on the dark surface
+ * (fails WCAG AA). Re-point the utility to the theme-aware secondary-color
+ * token so it tracks `data-bs-theme` and stays >=4.5:1 in both themes.
+ * No color is hard-coded here — only a semantic token is referenced.
+ */
+.text-muted {
+    color: var(--tblr-secondary-color) !important;
+}

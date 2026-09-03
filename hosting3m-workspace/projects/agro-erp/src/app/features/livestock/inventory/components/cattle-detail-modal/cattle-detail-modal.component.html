@@ -3,8 +3,8 @@
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="modal-content shadow-lg border-0">
 
-            <div class="modal-header bg-light">
-                <h5 class="modal-title font-weight-bold text-dark">
+            <div class="modal-header">
+                <h5 class="modal-title font-weight-bold text-body">
                     @switch (actionType) {
                     @case ('ALTA') { <span class="status-dot status-blue me-2"></span> Nuevo Registro (SINIIGA) }
                     @case ('SALUD') { <span class="status-dot status-orange me-2"></span> Evento Sanitario / Reproductivo }
@@ -109,7 +109,7 @@
                 <form [formGroup]="saludForm">
                     <div class="mb-3">
                         <label class="form-label">Arete Afectado</label>
-                        <input type="text" class="form-control font-monospace bg-light" formControlName="rfid_siniiga"
+                        <input type="text" class="form-control font-monospace bg-body-secondary" formControlName="rfid_siniiga"
                             readonly>
                     </div>
                     <div class="row">
@@ -259,7 +259,7 @@
                 <form [formGroup]="pesoForm">
                     <div class="mb-3">
                         <label class="form-label">Arete a Pesar</label>
-                        <input type="text" class="form-control font-monospace bg-light" formControlName="rfid_siniiga"
+                        <input type="text" class="form-control font-monospace bg-body-secondary" formControlName="rfid_siniiga"
                             readonly>
                     </div>
                     <div class="mb-3">
@@ -319,7 +319,7 @@
                 } @else {
                 <div class="table-responsive" style="max-height: 280px; overflow-y: auto;">
                     <table class="table table-sm table-vcenter">
-                        <thead class="bg-light">
+                        <thead class="bg-body-tertiary">
                             <tr>
                                 <th>Fecha</th>
                                 <th>Categoría</th>
@@ -363,7 +363,7 @@
                 @case ('SALIDA') {
                 <div class="mb-3">
                     <label class="form-label">RFID Electrónico (Bolo Ruminal)</label>
-                    <input type="text" class="form-control font-monospace bg-light"
+                    <input type="text" class="form-control font-monospace bg-body-secondary"
                         [value]="selectedAnimal?.electronic_rfid" readonly>
                 </div>
                 <div class="row mb-3">
@@ -376,8 +376,8 @@
                         <div class="fw-bold">{{ selectedAnimal?.current_status }}</div>
                     </div>
                 </div>
-                <div class="card bg-light border-0 p-3 mb-3">
-                    <div class="text-muted small mb-2">Vigencia normativa (referencia — la validación final la hace el servidor)</div>
+                <div class="card bg-body-secondary border-0 p-3 mb-3">
+                    <div class="text-body-secondary small mb-2">Vigencia normativa (referencia — la validación final la hace el servidor)</div>
                     <div class="d-flex justify-content-between">
                         <span>Prueba TB:</span>
                         <span [class.text-danger]="!selectedAnimal?.tb_test_date || diasDesde(selectedAnimal.tb_test_date)! > 60"
@@ -401,7 +401,7 @@
                 }
             </div>
 
-            <div class="modal-footer bg-light">
+            <div class="modal-footer">
                 <a href="javascript:void(0)" class="btn btn-link link-secondary me-auto"
                     (click)="closeModal()">Cerrar</a>
 

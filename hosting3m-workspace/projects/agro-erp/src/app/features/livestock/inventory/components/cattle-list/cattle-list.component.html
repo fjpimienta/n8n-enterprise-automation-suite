@@ -29,9 +29,19 @@
 </div>
 
 <div class="card shadow-sm border-0">
-    <div class="card-header bg-white border-bottom-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
-        <h3 class="card-title text-dark font-weight-bold mb-0">Total de Cabezas: {{ totalHeads() }}</h3>
+    <div class="card-header border-bottom-0 d-flex flex-wrap justify-content-between align-items-center gap-2">
+        <h3 class="card-title text-body font-weight-bold mb-0">Total de Cabezas: {{ totalHeads() }}</h3>
         <div class="d-flex flex-wrap align-items-center gap-2">
+            <div class="d-flex align-items-center gap-1">
+                <span class="text-muted small text-nowrap">Filtrar Especie:</span>
+                <select class="form-select form-select-sm w-auto font-weight-bold border-primary text-primary"
+                    [ngModel]="speciesFilter()" (ngModelChange)="speciesFilter.set($event)">
+                    <option [value]="speciesFilterAll">Ver Todo el Hato</option>
+                    @for (species of availableSpecies(); track species) {
+                    <option [value]="species">{{ species }}</option>
+                    }
+                </select>
+            </div>
             <div class="d-flex align-items-center gap-1">
                 <span class="text-muted small text-nowrap">Estado:</span>
                 <select class="form-select form-select-sm w-auto" [ngModel]="herdStatusFilter()"
@@ -64,7 +74,7 @@
     </div>
     <div class="table-responsive">
         <table class="table card-table table-vcenter text-nowrap">
-            <thead class="bg-light">
+            <thead class="bg-body-tertiary">
                 <tr>
                     <th class="cursor-pointer user-select-none" (click)="toggleSort('rfid_siniiga')">
                         Arete (RFID)
@@ -149,6 +159,8 @@
                         <div class="mt-2">
                             @if (searchQuery()) {
                             Ningún animal coincide con la búsqueda.
+                            } @else if (speciesFilter() !== speciesFilterAll) {
+                            No hay cabezas de la especie «{{ speciesFilter() }}» con el estado seleccionado.
                             } @else if (herdStatusFilter() === 'BAJAS') {
                             No hay animales vendidos ni dados de baja en este rancho.
                             } @else {
