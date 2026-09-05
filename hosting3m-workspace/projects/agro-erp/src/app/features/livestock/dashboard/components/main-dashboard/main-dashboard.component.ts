@@ -13,6 +13,7 @@ import { MetadataDetailModalComponent } from '@shared/components/metadata-detail
 import { hasDisplayableMetadata } from '@shared/utils/metadata-view.util';
 import { HERD_STATUS_FILTER_OPTIONS, HerdStatusFilter, filterByHerdStatus } from '@shared/utils/herd-status.util';
 import { SPECIES_FILTER_ALL, deriveAvailableSpecies, getAnimalSpecies } from '@shared/utils/species.util';
+import { LOT_FILTER_ALL, deriveAvailableLots, getAnimalLot } from '@shared/utils/lot.util';
 import { TenantService } from 'core-auth';
 import { ThemeService } from '@core/services/theme.service';
 import { Expense } from '../../../models/expense.model';
@@ -44,6 +45,7 @@ export class MainDashboardComponent implements OnInit {
   // Navegación y Filtros de Trazabilidad Biológica
   public activeSubTab = signal<'RESUMEN' | 'INVENTARIO' | 'GASTOS' | 'POR_ANIMAL'>('RESUMEN');
   public selectedSpecies = signal<string>(SPECIES_FILTER_ALL); // 🚀 Filtro maestro de especie
+  public selectedLot = signal<string>(LOT_FILTER_ALL); // 🚀 Filtro de lote, combinable (AND) con especie
   public showExpenseModal = signal<boolean>(false);
 
   // 🔎 Búsqueda reactiva del tab Inventario Detallado
@@ -129,19 +131,25 @@ export class MainDashboardComponent implements OnInit {
   // Fuente compartida con el "Censo Biológico Activo" (cattle-list) vía @shared/utils/species.util.
   public availableSpecies = computed(() => deriveAvailableSpecies(this.cattleList()));
 
-  // 🚀 Filtrado Jerárquico: Módulo (Tab) + Especie (Selector) con sanitización.
+  // 🚀 Extracción dinámica de lotes existentes en el hato. Fuente compartida con el
+  // "Censo Biológico Activo" (cattle-list) vía @shared/utils/lot.util.
+  public availableLots = computed(() => deriveAvailableLots(this.cattleList()));
+
+  // 🚀 Filtrado Jerárquico: Módulo (Tab) + Especie + Lote (Selectores, combinables por AND) con sanitización.
   // No aplica el filtro de estado de vida — ese se superpone en `filteredCattleList`.
   private scopedCattleList = computed(() => {
     const currentTab = this.activeTab();
     const currentSpecies = this.selectedSpecies();
+    const currentLot = this.selectedLot();
 
     return this.cattleList().filter(animal => {
       if (!animal.business_model) return false;
 
       const matchesTab = animal.business_model.trim() === currentTab;
       const matchesSpecies = currentSpecies === SPECIES_FILTER_ALL || getAnimalSpecies(animal) === currentSpecies;
+      const matchesLot = currentLot === LOT_FILTER_ALL || getAnimalLot(animal) === currentLot;
 
-      return matchesTab && matchesSpecies;
+      return matchesTab && matchesSpecies && matchesLot;
     });
   });
 
@@ -161,15 +169,17 @@ export class MainDashboardComponent implements OnInit {
   public filteredExpensesList = computed(() => {
     const currentTab = this.activeTab();
     const currentSpecies = this.selectedSpecies();
+    const currentLot = this.selectedLot();
 
     return this.expensesList().filter(expense => {
-      // Cruzar con la tabla de ganado si el gasto tiene un livestock_id para saber su especie
+      // Cruzar con la tabla de ganado si el gasto tiene un livestock_id para saber su especie/lote
       if (expense.livestock_id) {
         const animal = this.cattleList().find(a => a.id === expense.livestock_id);
         if (animal) {
           const matchesTab = animal.business_model === currentTab;
           const matchesSpecies = currentSpecies === SPECIES_FILTER_ALL || getAnimalSpecies(animal) === currentSpecies;
-          return matchesTab && matchesSpecies;
+          const matchesLot = currentLot === LOT_FILTER_ALL || getAnimalLot(animal) === currentLot;
+          return matchesTab && matchesSpecies && matchesLot;
         }
       }
       return !expense.business_model || expense.business_model === currentTab;
@@ -232,6 +242,11 @@ export class MainDashboardComponent implements OnInit {
 
   public setSpecies(species: string) {
     this.selectedSpecies.set(species);
+    this.pagination.reset();
+  }
+
+  public setLot(lot: string) {
+    this.selectedLot.set(lot);
     this.pagination.reset();
   }
 
@@ -312,9 +327,13 @@ export class MainDashboardComponent implements OnInit {
   private static readonly GASTOS_GENERALES = 'Gastos Generales';
 
   /**
-   * Balance por UPP: cruza capitalización del hato (agrupado por upp_origen) contra los gastos
-   * vinculados a esos mismos animales. Los gastos sin livestock_id (o cuyo animal no tiene UPP
-   * asignada) no pueden atribuirse a una UPP real y se agrupan aparte en "Gastos Generales".
+   * Balance por UPP: cruza capitalización del hato (agrupado por `production_unit_id`, mostrando
+   * el `upp_code` oficial vía `vw_cattle_kpi`) contra los gastos vinculados a esos mismos animales.
+   * Se agrupa por `production_unit_id` — no por `upp_origen` (texto libre legacy, con huecos NULL
+   * en registros históricos que no reflejan la asignación real) — porque es el campo relacional
+   * real, validado por el trigger `fn_guard_livestock_production_unit`. Los gastos sin livestock_id
+   * (o cuyo animal no tiene UPP asignada) no pueden atribuirse a una UPP real y se agrupan aparte
+   * en "Gastos Generales".
    */
   public uppBalanceSummary = computed(() => {
     const cattle = this.filteredCattleList();
@@ -323,7 +342,7 @@ export class MainDashboardComponent implements OnInit {
     const grouped = new Map<string, { capitalizacion: number; cabezas: number; gasto: number }>();
 
     for (const animal of cattle) {
-      const upp = (animal.upp_origen && String(animal.upp_origen).trim()) || MainDashboardComponent.SIN_UPP;
+      const upp = (animal.production_unit_id && String(animal.upp_code ?? '').trim()) || MainDashboardComponent.SIN_UPP;
       const entry = grouped.get(upp) ?? { capitalizacion: 0, cabezas: 0, gasto: 0 };
       entry.capitalizacion += Number(animal.current_weight_kg || 0) * this.PRECIO_KILO;
       entry.cabezas += 1;
@@ -333,7 +352,7 @@ export class MainDashboardComponent implements OnInit {
     let gastosGenerales = 0;
     for (const expense of expenses) {
       const animal = expense.livestock_id ? cattle.find(a => a.id === expense.livestock_id) : null;
-      const upp = animal?.upp_origen && String(animal.upp_origen).trim();
+      const upp = animal?.production_unit_id && String(animal.upp_code ?? '').trim();
 
       if (upp) {
         const entry = grouped.get(upp) ?? { capitalizacion: 0, cabezas: 0, gasto: 0 };
