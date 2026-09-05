@@ -8,6 +8,7 @@ import { TenantService } from 'core-auth';
 import { CattleDataService } from '@core/services/cattle-data.service';
 import { HERD_STATUS_FILTER_OPTIONS, HerdStatusFilter, filterByHerdStatus } from '@shared/utils/herd-status.util';
 import { SPECIES_FILTER_ALL, deriveAvailableSpecies, filterBySpecies } from '@shared/utils/species.util';
+import { LOT_FILTER_ALL, deriveAvailableLots, filterByLot } from '@shared/utils/lot.util';
 
 type SortableColumn = 'rfid_siniiga' | 'lot_name' | 'category' | 'business_model' | 'current_weight_kg' | 'current_status';
 
@@ -46,9 +47,19 @@ export class CattleListComponent implements OnInit {
     filterBySpecies(this.statusFilteredList(), this.speciesFilter())
   );
 
-  // "Total de Cabezas" refleja el alcance de los filtros activos (estado de vida + especie),
+  // Filtro "Filtrar Lote": mismos lotes dinámicos que el dashboard, vía @shared/utils/lot.util.
+  // Combinable (AND) con especie: se compone SOBRE el conjunto ya filtrado por estado + especie.
+  public lotFilter = signal<string>(LOT_FILTER_ALL);
+  public readonly lotFilterAll = LOT_FILTER_ALL;
+  public availableLots = computed(() => deriveAvailableLots(this.cattleList()));
+
+  private lotFilteredList = computed(() =>
+    filterByLot(this.speciesFilteredList(), this.lotFilter())
+  );
+
+  // "Total de Cabezas" refleja el alcance de los filtros activos (estado de vida + especie + lote),
   // no el conteo bruto de filas.
-  public totalHeads = computed(() => this.speciesFilteredList().length);
+  public totalHeads = computed(() => this.lotFilteredList().length);
 
   // Búsqueda por arete y orden de columnas (evita que el orden "salte" tras cada guardado,
   // ya que la vista vw_cattle_kpi no garantiza un orden estable entre lecturas)
@@ -62,7 +73,7 @@ export class CattleListComponent implements OnInit {
     const column = this.sortColumn();
     const direction = this.sortDirection();
 
-    const source = this.speciesFilteredList();
+    const source = this.lotFilteredList();
     const filtered = !q ? source : source.filter(animal =>
       animal.rfid_siniiga?.toLowerCase().includes(q) ||
       animal.numero_fuego?.toLowerCase().includes(q) ||
