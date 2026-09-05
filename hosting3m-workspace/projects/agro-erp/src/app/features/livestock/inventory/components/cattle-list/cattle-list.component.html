@@ -43,6 +43,16 @@
                 </select>
             </div>
             <div class="d-flex align-items-center gap-1">
+                <span class="text-muted small text-nowrap">Filtrar Lote:</span>
+                <select class="form-select form-select-sm w-auto font-weight-bold border-primary text-primary"
+                    [ngModel]="lotFilter()" (ngModelChange)="lotFilter.set($event)">
+                    <option [value]="lotFilterAll">Ver Todos los Lotes</option>
+                    @for (lot of availableLots(); track lot) {
+                    <option [value]="lot">{{ lot }}</option>
+                    }
+                </select>
+            </div>
+            <div class="d-flex align-items-center gap-1">
                 <span class="text-muted small text-nowrap">Estado:</span>
                 <select class="form-select form-select-sm w-auto" [ngModel]="herdStatusFilter()"
                     (ngModelChange)="herdStatusFilter.set($event)">
@@ -159,6 +169,8 @@
                         <div class="mt-2">
                             @if (searchQuery()) {
                             Ningún animal coincide con la búsqueda.
+                            } @else if (lotFilter() !== lotFilterAll) {
+                            No hay cabezas del lote «{{ lotFilter() }}» con los filtros seleccionados.
                             } @else if (speciesFilter() !== speciesFilterAll) {
                             No hay cabezas de la especie «{{ speciesFilter() }}» con el estado seleccionado.
                             } @else if (herdStatusFilter() === 'BAJAS') {
