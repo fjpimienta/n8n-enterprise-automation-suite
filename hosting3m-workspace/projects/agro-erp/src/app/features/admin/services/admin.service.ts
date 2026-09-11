@@ -8,8 +8,9 @@ import { User } from '@core/models/user.model';
 import { Guest } from '@core/models/guest.model';
 import { BreedCatalog } from '@core/models/breed-catalog.model';
 import { LifestageCatalog } from '@core/models/lifestage-catalog.model';
+import { PendingAuthorization } from '@core/models/pending-authorization.model';
 import { stripPhantomRows } from '@core/utils/gateway-empty-row.util';
-import { TenantService } from 'core-auth';
+import { TenantService, AuthService } from 'core-auth';
 
 @Injectable({
   providedIn: 'root',
@@ -18,6 +19,7 @@ export class AdminService {
   private http = inject(HttpClient);
   private apiUrl_crud = environment.apiUrl_crud;
   private tenantService = inject(TenantService);
+  private authService = inject(AuthService);
   public loadingUsers = signal<boolean>(false);
   public loadingGuests = signal<boolean>(false);
   public users = signal<User[]>([]);
@@ -33,6 +35,11 @@ export class AdminService {
 
   public lifestages = signal<LifestageCatalog[]>([]);
   public loadingLifestages = signal<boolean>(false);
+
+  public pendingAuthorizations = signal<PendingAuthorization[]>([]);
+  public authorizationHistory = signal<PendingAuthorization[]>([]);
+  public loadingAuthorizations = signal<boolean>(false);
+  public authorizationError = signal<string | null>(null);
 
   private getAuthHeaders() {
     const token = localStorage.getItem('authToken');
@@ -350,6 +357,87 @@ export class AdminService {
   /* Genera un email ficticio único si es necesario */
   public generateDummyEmail(): string {
     return `no-email-${Date.now()}@hosting3m.com`;
+  }
+
+  /**
+   * Autorizaciones Pendientes (mortandad/venta). Fail-closed: sin tenant activo resuelto,
+   * no se llama al gateway y ambas listas quedan vacías — nunca se asume el tenant.
+   *
+   * El modelo `pending_authorizations` no expone `created_at`, así que el `getall` del
+   * gateway (su ORDER BY por defecto es literalmente `created_at`) rompe sin `sort_by`
+   * explícito — se envía siempre `sort_by: 'fecha_solicitud'`.
+   *
+   * El gateway tampoco soporta un operador "distinto de" en los filtros (solo
+   * `_gte/_lte/_gt/_lt` o igualdad), así que no se puede pedir `estado != 'PENDIENTE'` en
+   * el servidor: se trae todo el tenant en una sola llamada y se separa aquí.
+   */
+  public loadAuthorizations(): void {
+    const idCompany = this.tenantService.activeTenantId();
+    if (!idCompany) {
+      this.pendingAuthorizations.set([]);
+      this.authorizationHistory.set([]);
+      return;
+    }
+
+    this.loadingAuthorizations.set(true);
+    this.authorizationError.set(null);
+
+    const payload = {
+      entity: 'pending_authorizations',
+      table_name: 'pending_authorizations',
+      operation: 'getall',
+      filters: { id_company: idCompany },
+      sort_by: 'fecha_solicitud'
+    };
+
+    this.http.post<ApiResponse<PendingAuthorization>>(`${this.apiUrl_crud}/pending_authorizations`, payload, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      catchError(() => {
+        this.authorizationError.set('No se pudo conectar con el servicio de autorizaciones.');
+        return of<ApiResponse<PendingAuthorization>>({ error: true, operation: 'getall', message: '', data: [] });
+      })
+    ).subscribe(res => {
+      if (res.error) {
+        this.authorizationError.set(res.message || 'El servidor reportó un error al consultar las autorizaciones.');
+        this.pendingAuthorizations.set([]);
+        this.authorizationHistory.set([]);
+      } else {
+        const rows = stripPhantomRows(Array.isArray(res.data) ? res.data : [], 'id');
+
+        const pending = rows.filter(r => r.estado === 'PENDIENTE');
+        const history = rows
+          .filter(r => r.estado !== 'PENDIENTE')
+          .sort((a, b) => new Date(b.fecha_resolucion ?? 0).getTime() - new Date(a.fecha_resolucion ?? 0).getTime());
+
+        this.pendingAuthorizations.set(pending);
+        this.authorizationHistory.set(history);
+      }
+      this.loadingAuthorizations.set(false);
+    });
+  }
+
+  /**
+   * Invoca `sp_resolver_autorizacion` vía el modelo Meta-CRUD `resolver_autorizacion`
+   * (operation: call_sp). `resuelto_por_email` se resuelve internamente desde el usuario
+   * autenticado — nunca se recibe como parámetro del caller.
+   */
+  public resolveAuthorization(requestId: string, decision: 'APROBADO' | 'RECHAZADO', notas?: string) {
+    const payload = {
+      entity: 'resolver_autorizacion',
+      table_name: 'sp_resolver_autorizacion',
+      operation: 'call_sp',
+      fields: {
+        request_id: requestId,
+        decision,
+        resuelto_por_email: this.authService.currentUser()?.email,
+        notas: notas || undefined
+      }
+    };
+
+    return this.http.post<ApiResponse<any>>(`${this.apiUrl_crud}/resolver_autorizacion`, payload, {
+      headers: this.getAuthHeaders()
+    });
   }
 
 }
