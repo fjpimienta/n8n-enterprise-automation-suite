@@ -1,0 +1,182 @@
+<div class="container-fluid p-3 p-md-4 animate__animated animate__fadeIn">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <div class="d-none d-md-block">
+                <span class="bg-red-lt p-2 rounded-3"><i class="ti ti-shield-check fs-2"></i></span>
+            </div>
+            <div>
+                <h2 class="page-title mb-0">Autorizaciones Pendientes</h2>
+                <div class="text-muted small mt-1">Bajas irreversibles (mortandad / venta) a la espera de aprobación</div>
+            </div>
+        </div>
+        <div>
+            <button class="btn btn-outline-secondary shadow-sm" (click)="refresh()" [disabled]="adminService.loadingAuthorizations()">
+                <i class="ti ti-refresh me-2"></i> Actualizar
+            </button>
+        </div>
+    </div>
+
+    @if (adminService.authorizationError()) {
+    <div class="alert alert-danger" role="alert">{{ adminService.authorizationError() }}</div>
+    }
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header border-bottom-0 pb-0" style="position: relative; z-index: 1;">
+            <ul class="nav nav-tabs card-header-tabs">
+                <li class="nav-item">
+                    <a class="nav-link font-weight-bold" [class.active]="activeTab() === 'PENDIENTES'"
+                        (click)="setTab('PENDIENTES')" style="cursor: pointer;">
+                        Pendientes ({{ pendingRows().length }})
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link font-weight-bold" [class.active]="activeTab() === 'HISTORIAL'"
+                        (click)="setTab('HISTORIAL')" style="cursor: pointer;">
+                        Historial ({{ historyRows().length }})
+                    </a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="card-body p-0">
+            @if (adminService.loadingAuthorizations()) {
+            <div class="text-center text-muted py-5">
+                <div class="spinner-border text-secondary mb-2" role="status"></div>
+                <div>Cargando autorizaciones...</div>
+            </div>
+            } @else {
+
+            @if (activeTab() === 'PENDIENTES') {
+            <div class="table-responsive">
+                <table class="table card-table table-vcenter text-nowrap datatable table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Identificador</th>
+                            <th>Categoría/Especie</th>
+                            <th>Evento</th>
+                            <th>Detalle</th>
+                            <th>Solicitado por</th>
+                            <th>Fecha solicitud</th>
+                            <th>Vence en</th>
+                            <th class="w-1"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (item of pendingRows(); track item.row.id) {
+                        <tr>
+                            <td class="font-monospace">{{ identifierFor(item.row) }}</td>
+                            <td class="text-muted">{{ categorySpeciesFor(item.row) }}</td>
+                            <td>{{ tipoEventoLabel(item.row.tipo_evento) }}</td>
+                            <td class="text-muted">
+                                @if (item.row.tipo_evento === 'BAJA_MORTANDAD') {
+                                <div>{{ item.row.payload.causa_mortandad || '—' }}</div>
+                                @if (item.row.payload.descripcion) {
+                                <div class="small">{{ item.row.payload.descripcion }}</div>
+                                }
+                                }
+                            </td>
+                            <td class="text-muted">{{ item.row.solicitado_por_email }}</td>
+                            <td class="text-muted">{{ item.row.fecha_solicitud | date:'short' }}</td>
+                            <td>
+                                <span class="badge" [ngClass]="severityBadgeClass(item.severity)">
+                                    {{ item.countdownLabel }}
+                                </span>
+                            </td>
+                            <td>
+                                <div class="d-flex gap-1">
+                                    <button class="btn btn-success btn-sm" (click)="openConfirm(item.row, 'APROBADO')">
+                                        <i class="ti ti-check"></i> Aprobar
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" (click)="openConfirm(item.row, 'RECHAZADO')">
+                                        <i class="ti ti-x"></i> Rechazar
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        } @empty {
+                        <tr>
+                            <td colspan="8" class="text-center py-5">
+                                <div class="empty-state">
+                                    <div class="empty-img"><i class="ti ti-shield-check fs-1 text-muted"></i></div>
+                                    <p class="empty-title fs-3">No hay autorizaciones pendientes</p>
+                                    <p class="empty-subtitle text-muted">Las nuevas solicitudes de baja aparecerán aquí.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            }
+
+            @if (activeTab() === 'HISTORIAL') {
+            <div class="table-responsive">
+                <table class="table card-table table-vcenter text-nowrap datatable table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Identificador</th>
+                            <th>Categoría/Especie</th>
+                            <th>Evento</th>
+                            <th>Detalle</th>
+                            <th>Solicitado por</th>
+                            <th>Estado</th>
+                            <th>Resuelto por</th>
+                            <th>Fecha resolución</th>
+                            <th>Notas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (row of historyRows(); track row.id) {
+                        <tr>
+                            <td class="font-monospace">{{ identifierFor(row) }}</td>
+                            <td class="text-muted">{{ categorySpeciesFor(row) }}</td>
+                            <td>{{ tipoEventoLabel(row.tipo_evento) }}</td>
+                            <td class="text-muted">
+                                @if (row.tipo_evento === 'BAJA_MORTANDAD') {
+                                <div>{{ row.payload.causa_mortandad || '—' }}</div>
+                                @if (row.payload.descripcion) {
+                                <div class="small">{{ row.payload.descripcion }}</div>
+                                }
+                                }
+                            </td>
+                            <td class="text-muted">{{ row.solicitado_por_email }}</td>
+                            <td><span class="badge" [ngClass]="estadoBadgeClass(row.estado)">{{ row.estado }}</span></td>
+                            <td class="text-muted">{{ row.resuelto_por_email || '—' }}</td>
+                            <td class="text-muted">{{ row.fecha_resolucion ? (row.fecha_resolucion | date:'short') : '—' }}</td>
+                            <td class="text-muted">{{ row.notas_resolucion || '—' }}</td>
+                        </tr>
+                        } @empty {
+                        <tr>
+                            <td colspan="9" class="text-center py-5">
+                                <div class="empty-state">
+                                    <div class="empty-img"><i class="ti ti-history fs-1 text-muted"></i></div>
+                                    <p class="empty-title fs-3">Sin historial todavía</p>
+                                    <p class="empty-subtitle text-muted">Las autorizaciones resueltas o vencidas aparecerán aquí.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            }
+
+            }
+        </div>
+    </div>
+</div>
+
+@if (confirmContext(); as ctx) {
+<app-confirm-action-modal
+    [title]="ctx.decision === 'APROBADO' ? 'Aprobar autorización' : 'Rechazar autorización'"
+    [message]="ctx.decision === 'APROBADO'
+        ? '¿Confirmas aprobar esta solicitud de ' + tipoEventoLabel(ctx.row.tipo_evento).toLowerCase() + '? Esta acción es irreversible.'
+        : '¿Confirmas rechazar esta solicitud de ' + tipoEventoLabel(ctx.row.tipo_evento).toLowerCase() + '? Esta acción es irreversible.'"
+    [confirmLabel]="ctx.decision === 'APROBADO' ? 'Aprobar' : 'Rechazar'"
+    [variant]="ctx.decision === 'APROBADO' ? 'primary' : 'danger'"
+    [notesLabel]="ctx.decision === 'APROBADO' ? 'Notas (opcional)' : 'Motivo del rechazo (opcional)'"
+    (confirm)="onConfirm($event)"
+    (cancel)="closeConfirm()">
+</app-confirm-action-modal>
+}

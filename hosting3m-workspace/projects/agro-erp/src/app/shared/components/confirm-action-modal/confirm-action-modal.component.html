@@ -1,0 +1,35 @@
+<div class="modal modal-blur fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1"
+    role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content shadow-lg border-0">
+
+            <div class="modal-header">
+                <h5 class="modal-title font-weight-bold text-body">
+                    <span class="status-dot" [class.status-red]="variant === 'danger'"
+                        [class.status-yellow]="variant === 'warning'" [class.status-blue]="variant === 'primary'"
+                        class="me-2"></span> {{ title }}
+                </h5>
+                <button type="button" class="btn-close" (click)="onCancel()" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body p-4">
+                <p class="text-body mb-3">{{ message }}</p>
+
+                @if (notesLabel) {
+                <div class="mb-0">
+                    <label class="form-label">{{ notesLabel }}</label>
+                    <textarea class="form-control" rows="3" [ngModel]="notas()"
+                        (ngModelChange)="notas.set($event)"></textarea>
+                </div>
+                }
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="onCancel()">{{ cancelLabel }}</button>
+                <button type="button" class="btn" [class.btn-danger]="variant === 'danger'"
+                    [class.btn-warning]="variant === 'warning'" [class.btn-primary]="variant === 'primary'"
+                    (click)="onConfirm()">{{ confirmLabel }}</button>
+            </div>
+        </div>
+    </div>
+</div>
