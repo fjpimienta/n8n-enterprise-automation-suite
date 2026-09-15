@@ -2,8 +2,10 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 const bcrypt = require('bcrypt');
-require('dotenv').config();
+const crypto = require('crypto');
 const rateLimit = require('express-rate-limit');
+const { Pool } = require('pg');
+require('dotenv').config();
 
 const app = express();
 
@@ -37,18 +39,10 @@ const verifyLimiter = rateLimit({
 const JWT_SECRET = process.env.JWT_SECRET;
 const INTERNAL_SECRET = process.env.INTERNAL_SECRET;
 
-// Fail-closed startup guard. Without this, a missing INTERNAL_SECRET env var
-// makes `internal_secret !== INTERNAL_SECRET` compare undefined against
-// undefined -- which is FALSE, meaning the check silently passes and
-// /generate-token would accept any caller that omits internal_secret
-// entirely. Refuse to start rather than run in that state. Mirrors the
-// same guard already added to upload-file/server.js.
 if (!JWT_SECRET || !INTERNAL_SECRET) {
   console.error('FATAL: JWT_SECRET and/or INTERNAL_SECRET environment variables are not set. Refusing to start.');
   process.exit(1);
 }
-
-const { Pool } = require('pg');
 
 console.log("Intentando conectar a DB con:");
 console.log("Host:", process.env.n8n_host);
@@ -67,12 +61,25 @@ const pool = new Pool({
   connectionTimeoutMillis: 2000,
 });
 
+// Captura defensiva de errores en el pool para evitar caídas de sockets e interrupción de servicio
+pool.on('error', (err) => {
+  console.error('Unexpected error on idle PostgreSQL client', err);
+});
+
 // ENDPOINT DE GENERACIÓN
 app.post('/generate-token', loginLimiter, async (req, res) => {
   const { user, pass, system_id, id_company, internal_secret } = req.body;
 
   if (internal_secret !== INTERNAL_SECRET) {
     return res.status(403).json({ error: 'Unauthorized' });
+  }
+
+  // Guard Clause: Validación defensiva de parámetros requeridos
+  if (!user || typeof user !== 'string' || !pass || typeof pass !== 'string') {
+    return res.status(400).json({ 
+      status: 'error', 
+      message: 'Usuario y contraseña son requeridos y deben ser válidos.' 
+    });
   }
 
   try {
@@ -96,14 +103,15 @@ app.post('/generate-token', loginLimiter, async (req, res) => {
     }
 
     const { password: dbHash, names } = result.rows[0];
-    const crypto = require('crypto');
-    const inputHash = crypto.createHash('sha256').update(pass).digest('hex');
     let isMatch = false;
 
-    if (dbHash && dbHash.startsWith('$2')) {
+    // Verificación segura evitando valores null en el hash de la base de datos
+    if (dbHash && typeof dbHash === 'string' && dbHash.startsWith('$2')) {
       isMatch = await bcrypt.compare(pass, dbHash);
     }
-    if (!isMatch) {
+    
+    if (!isMatch && dbHash) {
+      const inputHash = crypto.createHash('sha256').update(pass).digest('hex');
       isMatch = (inputHash === dbHash);
     }
 
@@ -118,8 +126,8 @@ app.post('/generate-token', loginLimiter, async (req, res) => {
       industry: row.industry
     }));
 
-    // 🚀 PASO A: El usuario NO ha enviado un rancho, y tiene MÁS DE 1 asignado
-    if (authorizedCompanies.length > 1 && !id_company) {
+    // El usuario NO ha enviado una empresa y tiene MÁS DE 1 asignada
+    if (authorizedCompanies.length > 1 && (id_company === undefined || id_company === null || id_company === '')) {
       return res.json({
         status: "select_company",
         message: "Múltiples empresas detectadas",
@@ -129,8 +137,10 @@ app.post('/generate-token', loginLimiter, async (req, res) => {
       });
     }
 
-    // PASO B: El usuario ya seleccionó un rancho, o solo tiene 1 rancho disponible
-    const selectedCompanyId = id_company ? Number(id_company) : authorizedCompanies[0].id_company;
+    // El usuario seleccionó una empresa o solo tiene 1 disponible
+    const selectedCompanyId = (id_company !== undefined && id_company !== null && id_company !== '') 
+      ? Number(id_company) 
+      : authorizedCompanies[0].id_company;
 
     const companyData = authorizedCompanies.find(c => c.id_company === selectedCompanyId);
 
@@ -150,7 +160,6 @@ app.post('/generate-token', loginLimiter, async (req, res) => {
       { expiresIn: '8h' }
     );
 
-    // 🚀 CONTRATO FIJO: Formato exacto requerido por el frontend y n8n
     return res.json({
       status: "success",
       message: "Autenticación exitosa",
@@ -163,17 +172,12 @@ app.post('/generate-token', loginLimiter, async (req, res) => {
     });
 
   } catch (err) {
-    console.error(err);
+    console.error('Error interno en /generate-token:', err);
     res.status(500).json({ status: 'error', message: 'Database error' });
   }
 });
 
 // ENDPOINT DE VERIFICACIÓN
-// Now requires the same internal_secret header the n8n "Verify Token" node
-// already sends (it was being sent and silently ignored before this fix --
-// see INVENTARIO_COMPLETITUD.md, "jwt-service inconsistencia en
-// /verify-token"). This restricts who can ask "is this JWT valid?" to
-// trusted internal callers, not just anyone holding any JWT.
 app.post('/verify-token', verifyLimiter, (req, res) => {
   const internalSecret = req.headers['internal_secret'];
   if (internalSecret !== INTERNAL_SECRET) {

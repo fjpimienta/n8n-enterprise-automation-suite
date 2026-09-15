@@ -27,3 +27,15 @@ body,
 .text-muted {
     color: var(--tblr-secondary-color) !important;
 }
+
+/*
+ * Same beta20 defect, different variable: `.table thead th` is styled with
+ * `color: var(--tblr-secondary)`, which beta20 also hard-codes to #667382
+ * with no `[data-bs-theme=dark]` override — table headers collapse to
+ * ~3.2:1 against the dark header background (#151f2c), reading as
+ * effectively invisible in dark mode. Same fix as .text-muted above:
+ * re-point to the theme-aware secondary-color token.
+ */
+.table thead th {
+    color: var(--tblr-secondary-color) !important;
+}
