@@ -10,6 +10,21 @@ Desarrollada como una **Angular 21 SPA** estructurada por dominios (*Feature-Dri
 
 ---
 
+## 🚀 Key Features (v1.11.0)
+
+### 1. 🔒 Autorización Asíncrona para Bajas Irreversibles
+* **Mortandad y venta (vía Agente IA) requieren aprobación humana diferida:** el reporte se captura de inmediato (WhatsApp/Chat), pero el cambio de estado del animal espera la aprobación explícita de un ADMIN/dueño desde el panel Web — vigencia hasta medianoche del día de la solicitud, sin importar la hora exacta en que se solicitó.
+* **Notificación automática por correo** a los ADMIN del tenant correspondiente, con enlace directo al panel de aprobación.
+* **Panel Web dedicado** (`/admin/autorizaciones`) con pestañas de Pendientes e Historial, trazabilidad completa de quién reportó y quién autorizó.
+* **Marcado automático de crías en riesgo:** si el animal fallecido tiene crías dependientes sin destetar, quedan señaladas para revisión humana, sin decisiones automáticas sobre su destete o descarte.
+
+### 2. 🧬 Catálogos Globales de Parametrización Zootécnica
+* **Catálogo de Razas** (pesos objetivo, % de peso para primer servicio, gestación promedio) y **Catálogo de Etapas de Vida** (transiciones de categoría con validación dual edad+peso), poblados con datos validados directamente con el cliente.
+* **Principio rector:** la edad es un disparador de revisión, nunca el criterio determinante por sí solo — toda transición reproductiva real cruza edad y peso antes de promover una categoría.
+* Rama de reproductor macho (`Becerro Torete`) separada de la rama de engorda (`Novillo`), corrigiendo una transición previa biológicamente incorrecta que permitía a un macho castrado convertirse en toro reproductor.
+
+---
+
 ## 🚀 Key Features (v1.10.0)
 
 ### 1. 🚚 Motor de Movimientos SENASICA-REEMO
@@ -78,7 +93,7 @@ Desarrollada como una **Angular 21 SPA** estructurada por dominios (*Feature-Dri
 El proyecto está optimizado para entornos rurales de baja conectividad garantizando un rendimiento extremo:
 * **Framework:** Angular 21 (Standalone Components, Signals).
 * **Styling:** Tabler UI + SCSS dinámico (`theme-cattle` / `theme-palm`).
-* **Communication:** REST API via n8n Meta-CRUD & Webhooks.
+* **Communication:** REST API via n8n Meta-CRUD (workflow `v6/crud`) & Webhooks.
 * **Data Processing:** PostgreSQL 15+ (Views & JSONB GIN Indexes).
 * **File Storage:** Microservicio propio (`upload-file`, Node/Express) autenticado vía JWT compartido con `core-auth`/`jwt-service` — sin dependencia de almacenamiento externo.
 
@@ -113,10 +128,13 @@ ng build agro-erp --configuration=production
 * [x] **Registro Normativo SENASICA-SINIIGA:** UPP/PSG multi-tenant, propiedad por fierro, dictámenes de hato libre (v1.9.0).
 * [x] **Motor de Movimientos SENASICA-REEMO:** reglas de movimiento confirmadas, bitácora de traslados, cadena documental de cumplimiento (v1.10.0).
 * [x] **Endurecimiento de Almacenamiento de Archivos:** autenticación JWT/secreto interno en `upload-file` (v1.10.0).
+* [x] **Catálogos Globales de Parametrización:** razas y etapas de vida, validados con el cliente (v1.11.0).
+* [x] **Subsistema de Autorización Asíncrona:** mortandad y venta vía Agente IA requieren aprobación humana diferida, con notificación por correo y expiración diaria automática (v1.11.0).
 * [ ] **Motor Financiero (Fase 4):** Integración transversal del OPEX para calcular costo por kilo de biomasa vs. costo por litro de agroquímico.
 * [ ] **Dashboards Consolidados (Fase 5):** Estabilización final y pruebas E2E.
 * [ ] **Enforcement activo de reglas de movimiento:** pendiente de una sola confirmación del cliente (`requires_destination_ack`) para activar el bloqueo automático de movimientos no permitidos.
 * [ ] **Digitalización de expediente documental:** `compliance_documents` sigue en 0 archivos cargados — estructura y seguridad listas, sin datos reales aún.
+* [ ] **Confirmación de edad de madurez reproductiva para `BECERRO_TORETE`:** pendiente respuesta específica del cliente para machos destinados a semental (hoy en 16 meses como placeholder).
 
 
 ---

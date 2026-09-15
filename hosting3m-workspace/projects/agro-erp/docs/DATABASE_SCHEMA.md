@@ -6,6 +6,10 @@
   `cattle_livestock` (identificación) y `sp_procesar_salida_ganado`
 - v1.10.0 (2026-08-10 a 2026-08-14) — Movement Subsystem; Identifier History Subsystem;
   extensión de `compliance_certificates`
+- v1.11.0 (2026-07-23 a 2026-09-11) — Global Parametrization Catalogs; Mortality & Async
+  Authorization Subsystem; documentación retroactiva de `weaning_events` y comportamiento
+  completo de `sp_register_birth_event` (ya existían en producción, sin documentar); corrección
+  de `cattle_livestock.category` (no es un ENUM real de Postgres)
 
 > ⚠️ **Nota de higiene de documentación (2026-08-14):** el `schema.sql` versionado en el
 > repo **no refleja ninguna tabla ni columna de v1.10.0** (verificado: cero coincidencias
@@ -13,7 +17,7 @@
 > `cattle_movement_event_health_certs`, `chk_normative_type_fixed_mapping`,
 > `compliance_certificates_type_subject_check`). Regenerar con `pg_dump --schema-only`
 > contra producción antes de usarlo como referencia de diagnóstico — mismo patrón de
-> desactualización ya señalado en `CLAUDE.md`, regla 6, y van tres veces.
+> desactualización ya señalado en `CLAUDE.md`, regla 7, y van tres veces.
 
 ## 📌 Core Directives
 * **RDBMS:** PostgreSQL
@@ -49,8 +53,10 @@ Registry of biomass with embedded compliance rules.
   it retroactively; requires a physical field pass. *(añadido en v1.9.0)*
 * `mother_id` (UUID, FK -> `cattle_livestock` self-reference, nullable) - Dam. Field
   notebooks record every birth as "parió <dam tag> - <dam fire number> - <calf sex/brand>",
-  so lineage exists on paper back to 2023 and is not yet loaded into the database. *(añadido
-  en v1.9.0)*
+  so lineage exists on paper back to 2023 and is not yet loaded into the database. Populated
+  automatically going forward by `sp_register_birth_event` when the dam is resolved. Also the
+  reference used by `sp_procesar_baja_mortandad` (v1.11.0) to find and flag dependent calves
+  when a dam dies. *(añadido en v1.9.0, uso extendido en v1.11.0)*
 * `paddock_id` (UUID, FK -> `production_unit_paddocks`, nullable) - Current paddock.
   Guarded by `fn_guard_livestock_paddock()`: a paddock belongs to exactly one production
   unit, and the trigger rejects assigning it to an animal standing in a different unit.
@@ -61,13 +67,20 @@ Registry of biomass with embedded compliance rules.
   `upp_origen` is retained as a denormalized label, kept in sync via migration 023, but is
   no longer the source of truth. *(añadido en v1.9.0)*
 * `business_model` (ENUM: CRIA, ENGORDA, REPRODUCCION)
-* `category` (ENUM: VACA, TORO, NOVILLO, BECERRA, BECERRO, BUFALA, BUFALO, BUCERRO, BUCERRA, BORREGO, BORREGA)
+* `category` (VARCHAR + CHECK constraint — **no es un ENUM real de Postgres**, confirmado
+  vía `pg_type` el 2026-09-09, corrigiendo la documentación previa que lo listaba como
+  ENUM): VACA, TORO, NOVILLO, NOVILLONA, BECERRA, BECERRO, BECERRO_TORETE *(añadido en
+  v1.11.0, ver más abajo)*, BUFALA, BUFALO, BUCERRO, BUCERRA, BORREGO, BORREGA, CABALLO,
+  YEGUA, POTRO, POTRANCA, CABALLO_CASTRADO. Alterable vía
+  `ALTER TABLE ... DROP/ADD CONSTRAINT` (no `ALTER TYPE`, precisamente porque no es un
+  ENUM). El CHECK es global a toda la plataforma multi-tenant — incluye categorías equinas
+  no usadas por este cliente, compartidas con otro tenant de la suite.
 * `current_status` (ENUM: ACTIVO, EN_TRANSITO, VENDIDO, BAJA_MORTANDAD, PREÑADA, VACÍA, DESARROLLO, RIESGO, FINALIZADO, CUARENTENA)
 * `birth_date` (DATE)
 * `current_weight_kg` (NUMERIC 10,2) - Auto-updated via trigger.
 * `metadata` (JSONB) - Flexible attribute bag for vertical-specific data not worth normalizing.
 * `species` (VARCHAR, Default: 'BOVINO')
-* `upp_origen` (VARCHAR) - Origin ranch / cost center (e.g. "UPP La Bendición"). Automatically set to `NULL` on exit (`VENDIDO`) by `sp_procesar_salida_ganado`.
+* `upp_origen` (VARCHAR) - Origin ranch / cost center (e.g. "UPP La Bendición"). Automatically set to `NULL` on exit (`VENDIDO`) by `sp_procesar_salida_ganado`. ⚠️ **`sp_procesar_baja_mortandad` (v1.11.0) deliberadamente NO limpia este campo** — a diferencia de venta, se conserva para permitir análisis de mortalidad por lote/UPP.
 * `tb_test_date` / `br_test_date` (DATE) - Compliance metrics. Regulatory validity window: 60 days.
 
 ### `cattle_weight_logs` (Telemetry)
@@ -75,7 +88,7 @@ Registry of biomass with embedded compliance rules.
 * `livestock_id` (UUID, FK -> `cattle_livestock`, `ON DELETE CASCADE`)
 * `weight_kg` (NUMERIC 10,2) - Triggers `update_current_weight()` on insert.
 * `log_date` (TIMESTAMP)
-* `source_device` (VARCHAR) - Identifies the originating scale/RFID reader (IoT ingestion).
+* `source_device` (VARCHAR) - Identifies the originating scale/RFID reader (IoT ingestion). Values observed in practice include `'AI_Agent'`, `'BIRTH_EVENT'` and `'WEANING_EVENT'` (both *añadido en v1.11.0* documentation, see Birth/Weaning Subsystems below) in addition to physical device identifiers.
 
 ### `cattle_health_logs` (Sanitary Events)
 * `id` (UUID, PK)
@@ -120,7 +133,11 @@ Registry of biomass with embedded compliance rules.
 * `tipo_movimiento` (ENUM: VENTA, BAJA_MORTANDAD, TRASLADO)
 * `upp_origen_anterior` (VARCHAR) - Snapshot of the ranch of origin at the moment of the movement.
 * `fecha_registro` (TIMESTAMP)
-* Write-only side effect of `sp_procesar_salida_ganado` (`VENTA` case); not exposed as a direct Meta-CRUD model.
+* `notes` (TEXT) — *(añadido en v1.11.0)* usado por `sp_procesar_baja_mortandad` para
+  resumir causa y descripción; el detalle rico vive en `mortality_events` (ver más abajo).
+* Write-only side effect of `sp_procesar_salida_ganado` (`VENTA` case) y de
+  `sp_procesar_baja_mortandad` (`BAJA_MORTANDAD` case, *añadido en v1.11.0*); not exposed as
+  a direct Meta-CRUD model.
 
 ### `agriculture_telemetry` (Agriculture Module - Hybrid Table)
 * `id` (UUID, PK)
@@ -129,6 +146,64 @@ Registry of biomass with embedded compliance rules.
 * `execution_date` (TIMESTAMP)
 * `telemetry_data` (JSONB, GIN-indexed) - Drone/sensor payloads without a rigid schema.
 * Not yet registered in `crud_models`; reserved for the Agriculture domain rollout.
+
+---
+
+## 🧬 Global Parametrization Catalogs (v1.11.0)
+
+*Añadido 2026-07-23 en adelante.* Catálogos globales (sin `tenant_id`) de estándares
+zootécnicos, poblados progresivamente con datos validados directamente con el cliente vía
+un documento de validación formal.
+
+**Principio rector, aplica a todo el subsistema:** la edad es un disparador de revisión,
+nunca el criterio determinante de una transición de categoría por sí sola — el sistema debe
+cruzar edad + peso real antes de promover un animal, nunca promover solo por edad.
+
+### `cattle_breed_catalog`
+* `id` (UUID, PK), `especie` (VARCHAR, CHECK: BOVINO/BUFALO/BORREGO)
+* `raza_grupo`/`raza_variante` (VARCHAR, `raza_variante` nullable — no todas las razas
+  tienen subdivisión). `UNIQUE (especie, raza_grupo, raza_variante)` +
+  `UNIQUE (especie, raza_grupo) WHERE raza_variante IS NULL`.
+* `peso_adulto_hembra_kg`/`peso_adulto_macho_kg` (NUMERIC, CHECK > 0)
+* `pct_peso_primer_servicio` (NUMERIC, default 65.00 — ajustado a 70.00 tras validación
+  real del cliente)
+* `edad_min_pubertad_meses` (NUMERIC, nullable) — **orientativo, nunca determinante por sí
+  solo**.
+* `dias_gestacion_promedio` (INTEGER)
+* `created_at` (TIMESTAMP)
+* ⚠️ **Procedencia de datos mixta, sin columna que lo distinga todavía:** las filas
+  `CEBU/Brahman Rojo`, `CEBU/Nelore`, `DROUGHTMASTER/Puro`, `DROUGHTMASTER/Cruza` fueron
+  primero pobladas con valores de captura preliminar (lista recuperada de una imagen,
+  2026-08-11, pesos de captura aleatoria) y **corregidas** el 2026-09 con los valores del
+  documento de validación formal firmado por el cliente (rangos de peso → punto medio, %
+  primer servicio, edad). La fila `Otras / Sin especificar` es un fallback explícito para
+  razas no listadas. No existe columna `fuente_dato`/`confianza` para distinguir
+  programáticamente cuáles filas están validadas y cuáles no — deuda técnica abierta, ver
+  `CLAUDE.md`.
+
+### `cattle_lifestage_catalog`
+* `id` (UUID, PK), `especie` (VARCHAR, CHECK: BOVINO/BUFALO/BORREGO/EQUIDO)
+* `categoria_origen`/`categoria_destino` (VARCHAR, CHECK contra la misma lista de valores
+  válidos de `cattle_livestock.category` — duplicado intencional del CHECK, no una FK, ya
+  que `category` no es un tipo enumerado real referenciable)
+* `edad_min_meses` (NUMERIC, CHECK > 0) — mínimo orientativo de revisión, no un disparador
+  automático de promoción.
+* `requiere_validacion_peso` (BOOLEAN, default `true`) — si `true`, la transición real
+  además requiere que el peso del animal alcance `pct_peso_primer_servicio` de
+  `cattle_breed_catalog` para su raza. `Becerra→Novillona` y `Becerro→Novillo` son `false`
+  (dependen solo de destete); `Novillona→Vaca` y `BecerroTorete→Toro` son `true`.
+* `notas` (TEXT, nullable), `created_at` (TIMESTAMP)
+* `UNIQUE (especie, categoria_origen, categoria_destino)`,
+  `CHECK (categoria_origen <> categoria_destino)`.
+* **Rama macho corregida (2026-09):** la transición original `NOVILLO → TORO` era
+  biológicamente incorrecta — un Novillo (macho castrado, destinado a engorda) nunca se
+  convierte en reproductor. Eliminada y reemplazada por dos filas: `BECERRO →
+  BECERRO_TORETE` (designación del ganadero en destete, no depende de peso) y
+  `BECERRO_TORETE → TORO` (edad placeholder 16 meses, ⚠️ pendiente confirmación específica
+  para machos — ver `CLAUDE.md`, deuda técnica).
+* Valores confirmados con el cliente (especie BOVINO; Búfalo/Borrego quedan sin filas
+  todavía — este cliente solo maneja Bovino en la práctica): destete 5 meses, etapa
+  reproductiva (femenina) 16 meses.
 
 ---
 
@@ -259,6 +334,8 @@ lifecycle. Deployed to production 2026-07-27 through 2026-07-29 (migrations 010-
   against the herd — never inferred automatically on a duplicate fire number.
 * Source for backfill: field notebooks (2023-2026) and `PARTOS_2020_LB.xlsx` (417 births,
   not yet loaded).
+* Ver la sección "Birth Subsystem" más abajo (*añadido en v1.11.0*) para el comportamiento
+  completo de `sp_register_birth_event`, previamente indocumentado.
 
 ### `cattle_movement_rules`
 * **Ver la sección "Movement Subsystem" más abajo.** *(nota añadida en v1.10.0 — esta tabla
@@ -403,6 +480,113 @@ correctly produced one row with the `CAPTURE_CORRECTION` default and no `changed
 
 ---
 
+## ⚰️ Mortality & Async Authorization Subsystem (v1.11.0)
+
+*Añadido 2026-09.* Ver `ARCHITECTURE.md`, sección "Async Authorization Subsystem", para las
+decisiones de diseño completas (el "por qué"). Esta sección cubre el DDL.
+
+### `mortality_events` (detalle rico, no forzado append-only por trigger — convención)
+* `id` (UUID, PK), `id_company` (INT, FK -> `companys`)
+* `livestock_id` (UUID, FK -> `cattle_livestock`, `ON DELETE CASCADE`)
+* `death_date` (DATE, default `CURRENT_DATE`)
+* `causa_mortandad` (VARCHAR, CHECK: ENFERMEDAD/ACCIDENTE/DEPREDACIÓN/DESCONOCIDA/NATURAL)
+* `descripcion` (TEXT, nullable)
+* `reported_by_email`/`authorized_by_email` (VARCHAR, ambos NOT NULL — deliberadamente
+  distintos: quien reporta el evento no es necesariamente quien autoriza la baja)
+* `created_at`
+
+### `pending_authorizations` (genérica, reutilizable por tipo de evento)
+* `id` (UUID, PK), `id_company` (INT, FK -> `companys`)
+* `livestock_id` (UUID, FK -> `cattle_livestock`, `ON DELETE CASCADE`)
+* `tipo_evento` (VARCHAR, CHECK: BAJA_MORTANDAD/VENTA)
+* `payload` (JSONB, default `{}`) — parámetros exactos que necesita el SP real al aprobar;
+  deliberadamente flexible en vez de columnas fijas por tipo de evento, dado que
+  mortandad y venta requieren datos distintos.
+* `solicitado_por_email` (VARCHAR NOT NULL), `fecha_solicitud` (TIMESTAMP, default now())
+* `estado` (VARCHAR, CHECK: PENDIENTE/APROBADO/RECHAZADO/EXPIRADO, default PENDIENTE)
+* `resuelto_por_email`/`fecha_resolucion`/`notas_resolucion` (nullable, poblados al resolver)
+* `notified_at` (TIMESTAMP, nullable) — evita reenviar el correo de notificación en cada
+  ciclo del Cron de sondeo (cada 5 min).
+* No hay `UNIQUE` a nivel de constraint sobre `(livestock_id, tipo_evento, estado)`, pero
+  `sp_solicitar_autorizacion` reutiliza una solicitud `PENDIENTE` existente del mismo
+  animal+tipo en vez de duplicar, a nivel de lógica de aplicación.
+
+### `sp_procesar_baja_mortandad(p_electronic_rfid, p_rfid_siniiga, p_numero_fuego, p_tenant_id, p_causa_mortandad, p_fecha_evento, p_descripcion, p_reportado_por_email, p_autorizado_por_email)`
+* Mismo patrón de desambiguación multi-identificador que `sp_procesar_salida_ganado`
+  (acepta `electronic_rfid`/`rfid_siniiga`/`numero_fuego`, `FOR UPDATE`, rechaza ambigüedad
+  con `ERRCODE P0004`, error duro si no hay match con `P0002`).
+* Rechaza (error duro) si el animal ya está `VENDIDO` o `BAJA_MORTANDAD`. Sin regla
+  especial para `PREÑADA` (confirmado explícitamente por el cliente — no bloquea).
+* Al éxito: `current_status = 'BAJA_MORTANDAD'`. **`upp_origen` se conserva** (a diferencia
+  de venta, que lo limpia) — decisión de negocio: útil para análisis de mortalidad por
+  lote/UPP.
+* **Marca automáticamente crías dependientes para revisión:** cualquier cría con
+  `mother_id` = el animal, `current_status = 'ACTIVO'`, y sin fila en `weaning_events`, pasa
+  a `current_status = 'RIESGO'`. Retorna el array de UUIDs afectados en el resultado JSONB.
+* Inserta en `mortality_events` (detalle) y en `historico_movimientos`
+  (`tipo_movimiento = 'BAJA_MORTANDAD'`, resumen en `notes`).
+
+### `sp_solicitar_autorizacion(p_electronic_rfid, p_rfid_siniiga, p_numero_fuego, p_tenant_id, p_tipo_evento, p_payload, p_solicitado_por_email)`
+* Valida animal e identificador con el mismo patrón que los SPs anteriores. No muta
+  `cattle_livestock` en ningún caso — solo crea o reutiliza la fila en
+  `pending_authorizations`.
+* Rechaza (error duro) si el animal ya está `VENDIDO` o `BAJA_MORTANDAD`.
+
+### `sp_resolver_autorizacion(p_request_id, p_decision, p_resuelto_por_email, p_notas)`
+* Ver `ARCHITECTURE.md` para el diseño del despachador (whitelist fija por `tipo_evento`,
+  sin SQL dinámico).
+* Valida vigencia (`fecha_solicitud::date < CURRENT_DATE` → auto-expira la solicitud y
+  rechaza con `ERRCODE P0012`) y estado (`estado <> 'PENDIENTE'` → rechaza con
+  `ERRCODE P0011`, evita doble resolución) antes de despachar.
+* Registrado en `crud_models` con `sp_requires_tenant = false` — no recibe `tenant_id` como
+  parámetro; la validación de tenant ya ocurrió al crear la solicitud original en
+  `sp_solicitar_autorizacion`.
+
+---
+
+## 🐄 Weaning Subsystem — previamente indocumentado, tabla/función ya existentes en producción
+
+*Corrección de gap de documentación, detectado 2026-09.* `weaning_events` y
+`sp_register_weaning_event` ya existían en producción y no estaban en ninguna versión
+anterior de este archivo — no son nuevos de v1.11.0, solo su documentación lo es.
+
+### `weaning_events`
+* `id` (UUID, PK), `id_company` (INT), `livestock_id` (UUID, FK, `ON DELETE CASCADE`)
+* `weaning_date` (DATE), `weaning_method` (VARCHAR, CHECK: NATURAL/INDUCED/EARLY, default
+  NATURAL)
+* `weight_log_id` (UUID, FK -> `cattle_weight_logs`, nullable) — si se captura peso al
+  momento del destete, queda enlazado.
+* `reported_by_email` (VARCHAR NOT NULL), `notes`, `created_at`
+* `UNIQUE (livestock_id)` — un animal se desteta una sola vez.
+* Consultada por `sp_procesar_baja_mortandad` (v1.11.0) para decidir si una cría cuenta como
+  "activa sin destetar" y debe marcarse en `RIESGO` al morir su madre.
+
+### `sp_register_weaning_event(p_id_company, p_livestock_id, p_weaning_date, p_weaning_method, p_reported_by_email, p_weight_kg, p_notes)`
+* Rechaza si `category` no está en (BECERRO, BECERRA, BUCERRO, BUCERRA, POTRO, POTRANCA,
+  BORREGO, BORREGA) o si `current_status <> 'ACTIVO'`, o si ya existe un destete previo
+  para el animal.
+* Inserta opcionalmente en `cattle_weight_logs` (`source_device = 'WEANING_EVENT'`) si se
+  proporciona peso.
+* Retorna `(weaning_event_id, weight_log_id)`.
+
+## 🐄 Birth Subsystem — `sp_register_birth_event`, comportamiento previamente indocumentado
+
+* Ya documentada la tabla `birth_events` (v1.9.0); el comportamiento del SP no estaba
+  descrito hasta ahora.
+* Asigna categoría automáticamente por especie+sexo (`BOVINO_MACHO → BECERRO`,
+  `BOVINO_HEMBRA → BECERRA`, equivalentes para BUFALO/BORREGO/EQUIDO).
+* **Si la madre estaba `PREÑADA`, la pasa automáticamente a `VACÍA`** al registrar el parto
+  — parte del ciclo reproductivo ya automatizado, más allá de lo que se documentó en
+  v1.9.0/v1.10.0.
+* Resuelve ubicación (lote/unidad de producción) con prioridad: lote explícito del payload
+  > lote heredado de la madre > lo que llegue explícito en los parámetros de unidad/potrero.
+* Inserta opcionalmente en `cattle_weight_logs` (`source_device = 'BIRTH_EVENT'`) si se
+  proporciona peso al nacer.
+* Inserta en `birth_events` con `source = 'MOBILE_APP'` para altas capturadas por este
+  camino (distinto de `'FIELD_NOTEBOOK'`/`'SPREADSHEET_IMPORT'` usados en backfill histórico).
+
+---
+
 ## 📊 Views (BI Layer)
 
 ### `vw_cattle_kpi`
@@ -487,6 +671,10 @@ its absence fails at runtime, not at deploy time (see CLAUDE.md, Contrato Meta-C
   against production), restore the animal by hand and insert a `REVERSION` row in
   `historico_movimientos` (added to the CHECK in migration 025) — never delete the
   original `VENTA` row. The audit table is append-only.
+* ⚠️ **Segundo camino de invocación desde v1.11.0:** una venta iniciada por el Agente IA ya
+  no llama a este SP directamente — pasa primero por `sp_solicitar_autorizacion`
+  (`tipo_evento = 'VENTA'`), y este SP solo se ejecuta al aprobarse, vía el despachador
+  `sp_resolver_autorizacion`. Firma e invocación sin cambios; el segundo camino es aditivo.
 
 ### `update_current_weight()`
 * **Purpose:** Ensures `cattle_livestock.current_weight_kg` is an exact reflection of the latest `cattle_weight_logs` entry without client-side computation.

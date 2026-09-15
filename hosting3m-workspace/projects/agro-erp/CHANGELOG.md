@@ -3,6 +3,86 @@
 Todos los cambios notables en el proyecto **n8n Enterprise Automation Suite** serán documentados en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/), y este proyecto se adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.11.0] - 2026-09-11
+
+### 🔒 Subsistema de Autorización Asíncrona
+
+Introduce un mecanismo de aprobación humana diferida para dos eventos irreversibles —
+baja por mortandad y baja por venta iniciada desde el Agente IA — separando la captura del
+reporte (WhatsApp/Chat) de la ejecución real del cambio de estado, que ahora requiere
+aprobación explícita de un ADMIN/dueño del tenant desde el panel Web.
+
+#### 🗄️ Base de datos
+* **`pending_authorizations` (genérica) + `mortality_events` (detalle rico):** el animal
+  no cambia de `current_status` al solicitar, solo al aprobarse. `payload` JSONB flexible
+  por tipo de evento en vez de columnas fijas.
+* **`sp_solicitar_autorizacion` / `sp_resolver_autorizacion`:** despachador con whitelist
+  explícita por `tipo_evento` (sin SQL dinámico) que invoca `sp_procesar_baja_mortandad` o
+  `sp_procesar_salida_ganado` según corresponda, solo al aprobar.
+* **`sp_procesar_baja_mortandad` (nuevo):** mismo patrón de desambiguación
+  multi-identificador que `sp_procesar_salida_ganado`. A diferencia de venta, **conserva**
+  `upp_origen` (útil para análisis de mortalidad por lote). Marca automáticamente crías
+  activas y sin destetar como `RIESGO` cuando muere la madre.
+* **Vigencia hasta medianoche del día de solicitud**, no una ventana móvil de 24h —
+  confirmado con el cliente. Revalidada tanto por un Cron diario (00:05,
+  `America/Mexico_City`) como por el propio `sp_resolver_autorizacion` al momento de
+  aprobar.
+* **Corregido bug real de gateway:** el nodo Build Query del workflow `v6/crud` inyectaba
+  `tenant_id` en el `WHERE` de cualquier `GETALL`, sin verificar si la tabla lo tenía —
+  rompía el listado de los nuevos catálogos globales (`column ... tenant_id does not
+  exist`). Corregido condicionando la inyección a `allowed_fields`. Agregada columna
+  `sp_requires_tenant` a `crud_models` para procedimientos `call_sp` que no reciben
+  `tenant_id` como parámetro.
+
+#### 🧬 Catálogos Globales de Parametrización
+* **`cattle_breed_catalog` / `cattle_lifestage_catalog` (nuevas, sin `tenant_id`):**
+  pesos objetivo por raza, % de peso para primer servicio, y transiciones de categoría con
+  validación dual edad+peso — la edad nunca es el único criterio de promoción.
+* Datos de razas poblados en dos rondas: captura preliminar (lista de imagen, pesos
+  aleatorios) corregida posteriormente con el documento de validación formal firmado por
+  el cliente.
+* **Corregida transición biológicamente inválida:** `NOVILLO → TORO` implicaba que un
+  macho castrado pudiera convertirse en reproductor. Reemplazada por
+  `BECERRO → BECERRO_TORETE → TORO` (rama separada para machos destinados a semental).
+
+#### 🤖 Agente IA (WhatsApp / Chat Web)
+* Nuevas herramientas MCP `log_mortality_event` y `request_livestock_sale`: ya no
+  ejecutan el cambio de estado directamente, crean una solicitud de autorización. El
+  Agente informa al usuario que la solicitud quedó pendiente de aprobación, nunca que el
+  animal ya fue dado de baja.
+* Candado Anti-Jailbreak (confirmación explícita antes de invocar herramientas de
+  escritura) extendido a ambas herramientas nuevas en los dos *system prompts* (Chat Web y
+  WhatsApp) — el de WhatsApp no lo tenía replicado explícitamente y quedó alineado con
+  Chat Web en esta versión.
+
+#### 🖥️ Frontend
+* **Nueva pantalla `/admin/autorizaciones`:** pestañas Pendientes (con cuenta regresiva a
+  medianoche y botones Aprobar/Rechazar con modal de confirmación) e Historial (solo
+  lectura, badges por estado).
+* **Nuevas pantallas de catálogos** (`/admin/catalogos/razas`, etapas de vida) siguiendo
+  el mismo patrón que `tenant-list`.
+
+#### 📚 Documentación
+* **Corregido:** `cattle_livestock.category` estaba documentado como ENUM real de
+  Postgres — es `VARCHAR` + `CHECK constraint`, confirmado vía `pg_type`. Afecta cómo se
+  agregan valores nuevos (`ALTER TABLE ... DROP/ADD CONSTRAINT`, no `ALTER TYPE`).
+* **Documentados por primera vez** (existían en producción sin documentación previa):
+  `weaning_events`, `sp_register_weaning_event`, y el comportamiento completo de
+  `sp_register_birth_event` (incluyendo el cambio automático de estatus de la madre de
+  `PREÑADA` a `VACÍA` al registrar el parto).
+* Confirmado: el workflow del gateway Meta-CRUD documentado previamente como
+  `06-dynamic-crud-engine` es el mismo workflow actualmente nombrado `v6/crud` — solo
+  renombrado, no una migración de infraestructura.
+
+### 📌 Pendientes que quedan abiertos
+* Edad de madurez reproductiva de `BECERRO_TORETE → TORO` — actualmente 16 meses como
+  placeholder, sin confirmación específica del cliente para machos.
+* `cattle_breed_catalog` sin columna que distinga programáticamente filas validadas de
+  filas de captura preliminar.
+* Confirmación de `requires_destination_ack` (cliente) — sin cambios desde v1.10.0.
+* Rotación confirmada de `INTERNAL_SECRET`/`JWT_SECRET` en ambos ambientes — sin cambios
+  desde v1.10.0.
+
 ## [1.10.0] - 2026-08-14
 
 ### 🚀 Motor de Movimientos SENASICA-REEMO y Cumplimiento Documental
