@@ -3,7 +3,7 @@
 ## 📝 Descripción
 
 **Project:** Hosting3M Automation Suite (Agro ERP)
-**Version:** v1.10.0 (Movement & Compliance-Document Subsystem, File Storage Security)
+**Version:** v1.11.0 (Async Authorization Subsystem, Global Parametrization Catalogs)
 **Stack:** Angular 21 (Signals) | n8n (API Gateway / MCP) | PostgreSQL (JSONB, Views & PL/pgSQL) | Tabler UI
 **Author:** Francisco Jesus Pérez Pimienta
 
@@ -13,6 +13,9 @@
   sobre `execute_metacrud_write` y el contrato implícito del motor Meta-CRUD
 - v1.10.0 (2026-08-10 a 2026-08-14) — Movement & Compliance-Document Subsystem; endurecimiento
   de seguridad de `upload-file`
+- v1.11.0 (2026-07-23 a 2026-09-11) — Global Parametrization Catalogs; Async Authorization
+  Subsystem para `BAJA_MORTANDAD` y `VENTA` iniciada por Agente IA; correcciones al gateway
+  Meta-CRUD para tablas globales
 
 ## 📝 1. Estructura del Workspace (Feature-Driven Architecture)
 
@@ -26,7 +29,8 @@ El frontend está desarrollado sobre un Monorepo en Angular 21 utilizando una ar
 │       │   │   ├── core/               # Singletons globales (TenantService, Interceptors)[cite: 1, 4]
 │       │   │   ├── features/           # Dominios Operativos Completamente Aislados[cite: 1, 4]
 │       │   │   │   ├── agriculture/    # Módulo Palma (Telemetría, Drones, Hectáreas)[cite: 2, 4]
-│       │   │   │   └── livestock/      # Módulo Ganadero (Biomasa, Sanidad, Pesajes)[cite: 3, 4]
+│       │   │   │   ├── livestock/      # Módulo Ganadero (Biomasa, Sanidad, Pesajes)[cite: 3, 4]
+│       │   │   │   └── admin/          # Catálogos globales, Autorizaciones Pendientes (v1.11.0)
 │       │   │   ├── shared/             # Componentes UI reutilizables comunes
 │       │   │   ├── app.config.ts       # Configuración global del Core de Angular
 │       │   │   └── app.routes.ts       # Enrutamiento con Lazy Loading Dinámico[cite: 1, 4]
@@ -50,7 +54,7 @@ El frontend está desarrollado sobre un Monorepo en Angular 21 utilizando una ar
 
 ## ⚙️ 2. Especificación Técnica del Motor Meta-CRUD (`crud_models`)
 
-El sistema implementa el patrón **Meta-CRUD v3**, donde la lógica transaccional, validaciones y permisos no residen en controladores de código del backend, sino que son interpretados en tiempo de ejecución por el API Gateway de **n8n** a través del diccionario de metadatos de la tabla `crud_models`.
+El sistema implementa el patrón **Meta-CRUD v3**, donde la lógica transaccional, validaciones y permisos no residen en controladores de código del backend, sino que son interpretados en tiempo de ejecución por el API Gateway de **n8n** (workflow **`v6/crud`**, renombrado desde `06-dynamic-crud-engine` — mismo workflow, confirmado 2026-09-11) a través del diccionario de metadatos de la tabla `crud_models`.
 
 ### 🔄 Diagrama de Flujo del Runtime Meta-CRUD
 
@@ -60,41 +64,55 @@ graph TD
         CS["Context Switcher (TenantService)"]
         UI_Cattle["Livestock Features (Biomasa, Sanidad)"]
         UI_Palm["Agriculture Features (Drones, Hectáreas)"]
+        UI_Admin["Admin Features (Catálogos, Autorizaciones)"]
         Signals["State Management (Computed Signals)"]
-        
+
         CS -->|Inyecta ID & Theme| Signals
         UI_Cattle <--> Signals
         UI_Palm <--> Signals
+        UI_Admin <--> Signals
     end
 
-    subgraph "Integration Layer (n8n Meta-CRUD v3)"
+    subgraph "Integration Layer (n8n Meta-CRUD v3 — workflow v6/crud)"
         Auth["JWT Validator (core-auth)"]
-        Router["Dynamic Model Router"]
-        
+        Router["Dynamic Model Router (Build Query)"]
+
         Signals -->|HTTP POST + tenant_id| Auth
         Auth --> Router
     end
-    
+
     subgraph "Persistence & BI Layer (PostgreSQL 15)"
         Table_Cattle[("Raw Tables: cattle_livestock, health, weight, expenses")]
         Table_Historico[("Audit Log: historico_movimientos")]
         Table_Palm[("Hybrid Tables: agriculture_telemetry (JSONB)")]
+        Table_Auth[("pending_authorizations, mortality_events")]
+        Table_Catalog[("cattle_breed_catalog, cattle_lifestage_catalog (global)")]
         View_BI{{"BI Engine: vw_cattle_kpi, vw_palm_kpi"}}
         SP_Salida["PL/pgSQL: sp_procesar_salida_ganado"]
-        
+        SP_Mortandad["PL/pgSQL: sp_procesar_baja_mortandad"]
+        SP_Auth["PL/pgSQL: sp_solicitar_autorizacion / sp_resolver_autorizacion"]
+
         Router -->|Insert/Update| Table_Cattle
         Router -->|Insert/Update| Table_Palm
+        Router -->|Select/GetAll, sin filtro tenant| Table_Catalog
         Router -->|Select/GetAll| View_BI
         Router -->|model: salida_ganado| SP_Salida
+        Router -->|model: baja_mortandad| SP_Mortandad
+        Router -->|model: solicitar_autorizacion / resolver_autorizacion| SP_Auth
         SP_Salida -->|UPDATE status=VENDIDO| Table_Cattle
         SP_Salida -->|INSERT VENTA| Table_Historico
+        SP_Mortandad -->|UPDATE status=BAJA_MORTANDAD| Table_Cattle
+        SP_Mortandad -->|INSERT| Table_Auth
+        SP_Auth -->|estado PENDIENTE| Table_Auth
+        SP_Auth -->|al aprobar, despacha a| SP_Salida
+        SP_Auth -->|al aprobar, despacha a| SP_Mortandad
     end
 
 ```
 
 ### ⚠️ Contrato del motor Meta-CRUD (restricciones implícitas, no declaradas en `crud_models`)
 
-*Añadido en v1.9.0.* Tres restricciones que el gateway impone en runtime y que no aparecen en ningún esquema ni
+*Añadido en v1.9.0, extendido en v1.11.0.* Restricciones que el gateway impone en runtime y que no aparecen en ningún esquema ni
 documentación previa. Cada una costó una ronda de depuración en producción antes de
 identificarse.
 
@@ -127,6 +145,20 @@ claves con valor `null`.
 (ej. violación de CHECK). El "MetaCRUD Silent Error Shield" del frontend es la mitigación
 correcta a este comportamiento del gateway, no un patrón defensivo redundante.
 
+**5. `tenant_id` solo se inyecta si el modelo lo declara.** *Añadido en v1.11.0.* El nodo
+Build Query agregaba `WHERE tabla.tenant_id = $1` a **cualquier** `GETALL`, sin verificar si
+la tabla tenía esa columna — descubierto al desplegar `cattle_breed_catalog` (primer
+catálogo global del proyecto), que fallaba con
+`column cattle_breed_catalog.tenant_id does not exist`. Corregido condicionando la
+inyección a `config.allowed_fields.includes('tenant_id')`. Cualquier tabla global futura
+(sin `tenant_id`) depende de este fix.
+
+**6. `sp_requires_tenant` en `crud_models`.** *Añadido en v1.11.0.* Columna BOOLEAN, default
+`true`, que el gateway consulta antes de exigir el header `x-tenant-id` en una invocación
+`call_sp`. Necesaria para procedimientos como `sp_resolver_autorizacion`, que no reciben
+`tenant_id` como parámetro (la validación de tenant ya ocurrió al crear la solicitud
+original).
+
 ### 📋 Anatomía de Campos del Motor Dinámico
 
 Basado en la telemetría actual registrada en la base de datos `hosting3m_db`, cada registro del Meta-CRUD se compone de:
@@ -138,6 +170,7 @@ Basado en la telemetría actual registrada en la base de datos `hosting3m_db`, c
 5. **`hooks`:** Micro-orquestaciones (`pre` y `post`) ejecutadas antes o después de la transacción (ej. disparar un webhook de alerta en mortalidad).
 6. **`allowed_roles_*`:** Matriz de Control de Acceso Basado en Roles (RBAC) evaluada en caliente por el Interceptor de Seguridad.
 7. **`joins`:** Definición declarativa de hidratación relacional. Permite inyectar datos de tablas padre sin que el cliente Frontend construya consultas complejas.
+8. **`sp_requires_tenant`** *(añadido en v1.11.0)*: BOOLEAN, default `true`. Solo relevante para modelos `call_sp` — ver contrato punto 6 arriba.
 
 #### ⚠️ Hallazgos confirmados sobre `execute_metacrud_write` (2026-07-27)
 
@@ -159,7 +192,7 @@ Tres defectos verificados:
 
 **Confirmado por contraste:** el gateway sí escribe correctamente contra tablas de PK UUID
 (prueba real: `UPDATE cattle_livestock` con `id` UUID via el endpoint `crud/v5`, exitoso).
-Esto significa que el nodo **Build Query** del workflow `06-dynamic-crud-engine` construye
+Esto significa que el nodo **Build Query** del workflow **`v6/crud`** construye
 su propio SQL dinámicamente y no invoca esta función — `execute_metacrud_write` es un
 vestigio parcial, probablemente usado solo por flujos anteriores al módulo agropecuario
 (hotel/pista de hielo). No asumir que es la ruta de escritura sin verificarlo primero contra
@@ -215,6 +248,10 @@ A continuación se detalla el comportamiento del motor para los modelos vigentes
     detalle completo de la rutina corregida.
   - La firma e invocación del modelo Meta-CRUD (`INSERT` sobre `electronic_rfid`) no
     cambiaron; solo el cuerpo de la función PL/pgSQL.
+* ⚠️ **Segundo camino de invocación desde v1.11.0** (ver sección 6 abajo): una venta
+  iniciada por el Agente IA ya no llama a este SP directamente — pasa primero por
+  `sp_solicitar_autorizacion`, y solo se ejecuta al aprobarse. Este modelo (`salida_ganado`)
+  sigue existiendo sin cambios para la captura directa en el panel Web.
 
 ### 📂 Modelos Secundarios:
 
@@ -368,7 +405,80 @@ walkthrough (2026-08-11) plus four real REEMO/CZM/permit document examples they 
 
 ---
 
-## 🔐 5. File Storage Security (`upload-file`, hardened 2026-08-13)
+## 🔒 5. Async Authorization Subsystem (2026-07-23 a 2026-09-11)
+
+*Añadido en v1.11.0.* Modela dos eventos irreversibles — baja por mortandad y baja por
+venta iniciada desde el Agente IA — como una solicitud pendiente de aprobación humana,
+separada en el tiempo de la captura original. Complementa (no reemplaza) el flujo de venta
+directa por panel Web (`salida_ganado`, sección 3) y el Movement Subsystem (sección 4): un
+movimiento de salida por venta puede originarse aquí o directo, según el canal de captura.
+
+### Design decisions worth preserving
+
+* **El animal no cambia de estado al solicitar, solo al aprobar.** `pending_authorizations`
+  guarda el payload completo (JSONB) de la solicitud; `cattle_livestock.current_status`
+  permanece intacto hasta que `sp_resolver_autorizacion` invoca el SP real correspondiente.
+  Se consideró marcar el animal con un estado intermedio (`RIESGO` u otro) mientras se
+  espera — se descartó a propósito para no inventar un valor nuevo en el CHECK de
+  `current_status` sin necesidad real.
+* **Despachador con whitelist fija, no SQL dinámico.** `sp_resolver_autorizacion` resuelve
+  qué SP invocar (`sp_procesar_baja_mortandad` o `sp_procesar_salida_ganado`) vía
+  `IF tipo_evento = ... ELSIF ...`, mismo principio de seguridad que la whitelist de
+  funciones invocables en Build Query (`call_sp`) — un tipo de evento nuevo requiere tocar
+  este SP explícitamente.
+* **Vigencia hasta medianoche, no ventana móvil de 24h.** Confirmado con el cliente: una
+  solicitud del día se cancela al iniciar el día siguiente, sin importar la hora exacta de
+  creación. Un Cron diario (00:05, zona horaria confirmada vía `GENERIC_TIMEZONE` del
+  contenedor n8n) marca `EXPIRADO`. `sp_resolver_autorizacion` también revalida la fecha en
+  el momento de aprobar (`fecha_solicitud::date < CURRENT_DATE`), por si el Cron aún no ha
+  corrido cuando alguien intenta aprobar una solicitud ya vencida.
+* **Notificación por correo desacoplada de la creación de la solicitud**, vía sondeo (Cron
+  cada 5 minutos sobre `notified_at IS NULL`), no un trigger de base de datos ni un webhook
+  síncrono — evita depender de `pg_net`/extensiones adicionales no instaladas.
+* **Solo `sp_solicitar_autorizacion` valida el animal e identificador** (mismo patrón de
+  desambiguación multi-identificador que `sp_procesar_salida_ganado`: acepta
+  `electronic_rfid`/`rfid_siniiga`/`numero_fuego`, rechaza con error explícito si hay más de
+  un match). `sp_resolver_autorizacion` no vuelve a tocar la tabla `cattle_livestock`
+  directamente — delega por completo en el SP real correspondiente.
+* **`mortality_events` con dos campos de email deliberadamente distintos**
+  (`reported_by_email`/`authorized_by_email`) — quien reporta una muerte en campo no es
+  necesariamente quien tiene autoridad para dar de baja el animal del sistema.
+* **Marcado automático de crías dependientes.** Al aprobarse una `BAJA_MORTANDAD`,
+  `sp_procesar_baja_mortandad` identifica crías con `mother_id` = el animal fallecido,
+  `current_status = 'ACTIVO'` y sin fila en `weaning_events`, y las pasa a `RIESGO` — señal
+  de "requiere revisión humana", nunca una decisión automática de destete o descarte.
+
+### Pantalla Web: `/admin/autorizaciones`
+
+* Protegida con `roleGuard(['ADMIN'])`, mismo patrón que `/admin/tenants` y los catálogos
+  globales (sección de Meta-CRUD arriba).
+* Dos pestañas: **Pendientes** (con cuenta regresiva a medianoche, botones Aprobar/Rechazar
+  con modal de confirmación) e **Historial** (solo lectura, badges por estado).
+* Consume el gateway `v6/crud` directamente — `pending_authorizations` expone `SELECT,
+  GETALL, GETONE` con un `join` declarativo hacia `cattle_livestock` (categoría/especie
+  embebidos, sin llamada adicional); la resolución (Aprobar/Rechazar) invoca el modelo
+  `resolver_autorizacion` (`call_sp`).
+
+Ver `DATABASE_SCHEMA.md`, sección "Mortality & Async Authorization Subsystem", para el DDL
+completo de `pending_authorizations` y `mortality_events`.
+
+---
+
+## 🔒 Modelos del Subsistema de Autorización Asíncrona y Catálogos Globales (v1.11.0)
+
+| Modelo | Tabla / Función | Ops | RBAC | Notas |
+|---|---|---|---|---|
+| `cattle_breed_catalog` | tabla (global, sin tenant_id) | SELECT,INSERT,UPDATE,DELETE,GETONE,GETALL | ADMIN exclusivo | pesos objetivo por raza |
+| `cattle_lifestage_catalog` | tabla (global, sin tenant_id) | SELECT,INSERT,UPDATE,DELETE,GETONE,GETALL | ADMIN exclusivo | transiciones de categoría, `requiere_validacion_peso` |
+| `mortality_events` | tabla | SELECT,INSERT,GETALL,GETONE | ADMIN,EDITOR select/insert; ADMIN update/delete | detalle rico, análogo a `birth_events`/`weaning_events` |
+| `baja_mortandad` | función `sp_procesar_baja_mortandad` | INSERT únicamente | ADMIN | modelo atípico, mismo patrón que `salida_ganado` |
+| `pending_authorizations` | tabla | SELECT,GETALL,GETONE (sin INSERT/UPDATE directo) | ADMIN exclusivo | escritura solo vía los 2 SPs siguientes; `joins` hacia `cattle_livestock` |
+| `solicitar_autorizacion` | función `sp_solicitar_autorizacion` | INSERT únicamente | ADMIN,EDITOR | crea la solicitud, no muta `cattle_livestock` |
+| `resolver_autorizacion` | función `sp_resolver_autorizacion` | INSERT únicamente | ADMIN | `sp_requires_tenant = false`; despachador |
+
+---
+
+## 🔐 6. File Storage Security (`upload-file`, hardened 2026-08-13)
 
 *Añadido en v1.10.0.* `upload-file` (`infrastructure/upload-file`, not previously documented anywhere in this
 repo) is the self-hosted file service backing `compliance_documents` — a deliberate
