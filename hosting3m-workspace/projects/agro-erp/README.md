@@ -134,7 +134,10 @@ ng build agro-erp --configuration=production
 * [ ] **Dashboards Consolidados (Fase 5):** Estabilización final y pruebas E2E.
 * [ ] **Enforcement activo de reglas de movimiento:** pendiente de una sola confirmación del cliente (`requires_destination_ack`) para activar el bloqueo automático de movimientos no permitidos.
 * [ ] **Digitalización de expediente documental:** `compliance_documents` sigue en 0 archivos cargados — estructura y seguridad listas, sin datos reales aún.
-* [ ] **Confirmación de edad de madurez reproductiva para `BECERRO_TORETE`:** pendiente respuesta específica del cliente para machos destinados a semental (hoy en 16 meses como placeholder).
+* [x] **Confirmación de edad de madurez reproductiva para `BECERRO_TORETE`:** confirmada con el cliente (16 meses) el 2026-09-15.
+* [x] **Herramienta de alta de nacimiento por Agente IA (`register_birth_event`):** validada en producción por Chat Web y WhatsApp, evento rutinario sin confirmación previa (v1.11.0).
+* [ ] **Resolución de nombre de UPP en texto libre:** el Agente IA no distingue una UPP específica por nombre cuando un tenant tiene varias unidades de producción reales — solo reconoce el tenant completo.
+* [ ] **Reporte de mortandad/venta para animales sin identificador físico:** hoy no es posible reportar la baja de un animal recién nacido antes de ser aretado.
 
 
 ---

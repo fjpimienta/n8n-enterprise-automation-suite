@@ -3,7 +3,7 @@
 ## 📝 Descripción
 
 **Project:** Hosting3M Automation Suite (Agro ERP)
-**Version:** v1.11.0 (Async Authorization Subsystem, Global Parametrization Catalogs)
+**Version:** v1.11.1 (Async Authorization Subsystem, Global Parametrization Catalogs, Birth Event MCP Tool)
 **Stack:** Angular 21 (Signals) | n8n (API Gateway / MCP) | PostgreSQL (JSONB, Views & PL/pgSQL) | Tabler UI
 **Author:** Francisco Jesus Pérez Pimienta
 
@@ -16,6 +16,10 @@
 - v1.11.0 (2026-07-23 a 2026-09-11) — Global Parametrization Catalogs; Async Authorization
   Subsystem para `BAJA_MORTANDAD` y `VENTA` iniciada por Agente IA; correcciones al gateway
   Meta-CRUD para tablas globales
+- v1.11.1 (2026-09-16) — Herramienta MCP `register_birth_event` validada en producción;
+  fixes de tipado UUID y de payload de autorización; confirmación de edad de madurez
+  `BECERRO_TORETE`; hallazgos de resolución de UPP y de reporte de mortandad sin
+  identificador
 
 ## 📝 1. Estructura del Workspace (Feature-Driven Architecture)
 
@@ -475,6 +479,29 @@ completo de `pending_authorizations` y `mortality_events`.
 | `pending_authorizations` | tabla | SELECT,GETALL,GETONE (sin INSERT/UPDATE directo) | ADMIN exclusivo | escritura solo vía los 2 SPs siguientes; `joins` hacia `cattle_livestock` |
 | `solicitar_autorizacion` | función `sp_solicitar_autorizacion` | INSERT únicamente | ADMIN,EDITOR | crea la solicitud, no muta `cattle_livestock` |
 | `resolver_autorizacion` | función `sp_resolver_autorizacion` | INSERT únicamente | ADMIN | `sp_requires_tenant = false`; despachador |
+
+*(la fila anterior cierra la tabla del subsistema de autorización; `register_birth_event`, tabla siguiente, no pasa por `pending_authorizations` — es evento rutinario, sin autorización diferida)*
+
+### Herramienta MCP `register_birth_event` — validada en producción 2026-09-16
+
+| Modelo | Función | Ops | RBAC | Notas |
+|---|---|---|---|---|
+| `register_birth_event` | `sp_register_birth_event` (versión de 13 parámetros) | tool MCP, sin registro directo en `crud_models` (invocada vía nodo `postgresTool` en `v6/MCP Server Cattle`, no vía el gateway REST `v6/crud`) | filtrado por rol en el propio prompt del Agente | ver `DATABASE_SCHEMA.md`, sección Birth Subsystem, para las dos versiones sobrecargadas del SP y la lógica de resolución de ubicación |
+
+**Validación end-to-end confirmada (2026-09-16):** Chat Web y WhatsApp, incluyendo caso de
+madre sin ubicación asignada y madre con estatus distinto a `PREÑADA`. Dos limitaciones de
+diseño confirmadas durante la prueba (no bloqueantes hoy, ver `CLAUDE.md` Regla 11):
+resolución de nombre de UPP por texto libre cuando el tenant tiene varias UPPs reales, y
+reporte de mortandad para animales sin identificador físico.
+
+**Nota operativa sobre pruebas de tools MCP con panel "Test":** el panel de prueba de
+un nodo `postgresTool` ejecuta contra la base de la credencial configurada en el nodo,
+sin distinguir si el n8n desde el que se abre es la instancia local o la de producción.
+Como ambas instancias comparten la misma credencial de Postgres en este proyecto, una
+prueba lanzada "por error" desde la pestaña equivocada del navegador escribe en
+producción igual que cualquier otra invocación real — confirmado por incidente real
+durante el desarrollo de esta herramienta, revertido manualmente sin dejar rastro. Mitigado
+en adelante con un tenant ficticio dedicado a pruebas (ver `CLAUDE.md`, Regla 11).
 
 ---
 
