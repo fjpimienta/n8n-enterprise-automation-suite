@@ -430,7 +430,13 @@ export class AdminService {
       fields: {
         request_id: requestId,
         decision,
-        resuelto_por_email: this.authService.currentUser()?.email,
+        // El JWT real emitido por jwt-service (/generate-token) trae el correo bajo el
+        // claim `user`, no `email` — la interfaz UserPayload de core-auth no coincide con
+        // el shape real del token (verificado en microservices/jwt-service/index.js), así
+        // que `.email` siempre resuelve a undefined y JSON.stringify elimina la clave del
+        // payload de red por completo. Se lee el claim real directo; se conserva `.email`
+        // como fallback por si ese desajuste se corrige más adelante en core-auth.
+        resuelto_por_email: (this.authService.currentUser() as any)?.user ?? this.authService.currentUser()?.email,
         notas: notas || undefined
       }
     };
