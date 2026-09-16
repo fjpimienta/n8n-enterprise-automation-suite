@@ -578,12 +578,53 @@ anterior de este archivo — no son nuevos de v1.11.0, solo su documentación lo
 * **Si la madre estaba `PREÑADA`, la pasa automáticamente a `VACÍA`** al registrar el parto
   — parte del ciclo reproductivo ya automatizado, más allá de lo que se documentó en
   v1.9.0/v1.10.0.
-* Resuelve ubicación (lote/unidad de producción) con prioridad: lote explícito del payload
-  > lote heredado de la madre > lo que llegue explícito en los parámetros de unidad/potrero.
 * Inserta opcionalmente en `cattle_weight_logs` (`source_device = 'BIRTH_EVENT'`) si se
   proporciona peso al nacer.
 * Inserta en `birth_events` con `source = 'MOBILE_APP'` para altas capturadas por este
   camino (distinto de `'FIELD_NOTEBOOK'`/`'SPREADSHEET_IMPORT'` usados en backfill histórico).
+
+### ⚠️ Dos versiones sobrecargadas en producción, confirmado vía `pg_get_functiondef` (2026-09-16)
+
+`sp_register_birth_event` existe en **dos firmas simultáneas**:
+
+* **Versión de 12 parámetros** (sin `p_lot_id`): resuelve ubicación solo con
+  `COALESCE(v_dam_production_unit, p_production_unit_id)` — lote heredado de la madre o
+  nada.
+* **Versión de 13 parámetros** (con `p_lot_id uuid DEFAULT NULL`, la vigente para la tool
+  MCP `register_birth_event`, ver más abajo): agrega la tabla **`production_unit_lots`**
+  (`id`, `id_company`, `production_unit_id`, previamente indocumentada — no confundir con
+  `production_unit_paddocks`, que es un concepto distinto: potrero físico vs. lote
+  administrativo). Si `p_lot_id` viene poblado, se valida que exista y pertenezca al
+  tenant (`RAISE EXCEPTION ... P0002` si no), y **de ahí se deriva `production_unit_id`
+  automáticamente** — no hace falta mandar ambos.
+* **Prioridad de ubicación real (versión de 13 parámetros):**
+  `v_final_lot_id := COALESCE(p_lot_id, v_dam_lot_id)`
+  `v_final_production_unit := COALESCE(v_explicit_lot_unit, v_dam_production_unit, p_production_unit_id)`
+  — es decir: lote explícito del payload (si se manda) determina la UPP por encima de
+  cualquier otra fuente; si no hay lote explícito, se hereda lo que tenga la madre; si la
+  madre tampoco tiene nada, se usa `p_production_unit_id` tal cual.
+* `production_unit_lots` está vacía en producción al 2026-09-16 (0 filas para todos los
+  tenants existentes) — en la práctica, hoy `p_lot_id` siempre debe omitirse/ir `NULL`.
+
+### Herramienta MCP `register_birth_event` (Agente IA, v1.11.0+)
+
+* Expone la versión de 13 parámetros al Agente conversacional (WhatsApp/Chat Web). Acepta
+  a la madre por `dam_id` (UUID, si ya se resolvió vía `get_livestock_info`) o por
+  `dam_ear_tag`/`dam_fire_number` (texto libre) — no exige resolución previa a UUID, a
+  diferencia de la mayoría de las demás tools.
+* **Evento rutinario, sin protocolo de confirmación previa** (a diferencia de mortandad y
+  venta) — coherente con la clasificación de eventos confirmada por el cliente: solo
+  "Baja por muerte" y "Baja por venta" requieren autorización/confirmación.
+* Probada de punta a punta en producción (Chat Web y WhatsApp, 2026-09-16), incluyendo el
+  caso de madre sin ubicación asignada (el Agente pregunta explícitamente por la UPP, no
+  la asume) y el caso de madre con estatus distinto a `PREÑADA` (el SP informa que no
+  modificó su estatus, sin tratarlo como error).
+* ⚠️ Ver `CLAUDE.md`, Regla 11, para dos limitaciones confirmadas en pruebas reales: (1) el
+  Agente no resuelve un nombre de UPP mencionado en texto libre contra
+  `production_units.ranch_name` cuando el tenant tiene varias UPPs — solo reconoce nombres
+  de tenant; y (2) un animal recién nacido sin identificador físico asignado no puede
+  después reportarse por mortandad/venta, ya que esos flujos no aceptan el `livestock_id`
+  interno como identificador.
 
 ---
 
