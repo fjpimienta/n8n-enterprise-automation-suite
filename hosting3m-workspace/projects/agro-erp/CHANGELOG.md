@@ -3,6 +3,53 @@
 Todos los cambios notables en el proyecto **n8n Enterprise Automation Suite** serán documentados en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/), y este proyecto se adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.11.1] - 2026-09-16
+
+### 🐄 Herramienta MCP de Alta de Nacimiento — validada en producción
+
+* **`register_birth_event` (Agente IA)** conectada y probada de punta a punta por Chat Web
+  y WhatsApp, con datos reales. Evento rutinario, sin protocolo de confirmación previa —
+  consistente con la clasificación confirmada por el cliente (solo "Baja por muerte" y
+  "Baja por venta" requieren autorización).
+* Documentado por primera vez: `sp_register_birth_event` existe en **dos versiones
+  sobrecargadas** en producción; la vigente (13 parámetros) introduce `p_lot_id`, que
+  referencia la tabla `production_unit_lots` — previamente indocumentada, actualmente sin
+  datos cargados.
+
+### 🐛 Fixes
+
+* **`register_birth_event` (nodo n8n):** los campos `query` y `options.queryReplacement`
+  del nodo quedaron invertidos durante la construcción inicial — corregido.
+* **`register_birth_event` (nodo n8n):** parámetros UUID opcionales (`dam_id`, `lot_id`,
+  `production_unit_id`, `paddock_id`) fallaban con `invalid input syntax for type uuid`
+  cuando el panel de prueba (o el propio modelo) mandaba string vacío en vez de omitir el
+  campo. Corregido con una función `empty()` que normaliza `""`/`undefined` a `null` antes
+  de castear.
+* **Panel Web `/admin/autorizaciones`:** el payload de Aprobar/Rechazar no incluía
+  `resuelto_por_email`, requerido por `sp_resolver_autorizacion` — el botón fallaba con
+  "Se requiere email de quien reporta y de quien autoriza la baja". Corregido para leerlo
+  del usuario autenticado.
+
+### 🔍 Hallazgos confirmados en pruebas reales (no bloqueantes, documentados como deuda)
+
+* El Agente IA no resuelve un nombre de UPP mencionado en texto libre contra
+  `production_units.ranch_name` — su vocabulario trata "UPP" como sinónimo del tenant
+  completo. Sin impacto en clientes actuales (ninguno tiene aún más de una UPP real
+  cargada), pero es una limitación de diseño, no solo de datos.
+* Un animal sin ningún identificador físico (arete/fuego/chip) — por ejemplo, una cría
+  recién nacida antes de ser aretada — no puede reportarse por mortandad ni venta hoy, ya
+  que `sp_solicitar_autorizacion` no acepta el `livestock_id` interno como identificador.
+* Confirmado (y corregido operativamente, no en código): el panel de prueba de un nodo
+  `postgresTool` en n8n ejecuta contra la base real configurada en su credencial, sin
+  distinguir si la instancia de n8n abierta es local o de producción. Adoptada una
+  estrategia de tenant ficticio dedicado a pruebas conversacionales del Agente IA (ver
+  `CLAUDE.md`, Regla 11) para no repetir el incidente.
+
+### ✅ Confirmaciones del cliente
+
+* Edad de madurez reproductiva `BECERRO_TORETE → TORO`: **16 meses**, confirmado por
+  Alejandro el 2026-09-15. El valor placeholder insertado originalmente resultó correcto.
+
 ## [1.11.0] - 2026-09-11
 
 ### 🔒 Subsistema de Autorización Asíncrona
