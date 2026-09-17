@@ -6,6 +6,7 @@ import { MetadataDetailModalComponent } from '@shared/components/metadata-detail
 import { hasDisplayableMetadata } from '@shared/utils/metadata-view.util';
 import { TenantService } from 'core-auth';
 import { CattleDataService } from '@core/services/cattle-data.service';
+import { CattleApiService } from '@core/services/cattle-api.service';
 import { HERD_STATUS_FILTER_OPTIONS, HerdStatusFilter, filterByHerdStatus } from '@shared/utils/herd-status.util';
 import { SPECIES_FILTER_ALL, deriveAvailableSpecies, filterBySpecies } from '@shared/utils/species.util';
 import { LOT_FILTER_ALL, deriveAvailableLots, filterByLot } from '@shared/utils/lot.util';
@@ -22,6 +23,7 @@ type SortableColumn = 'rfid_siniiga' | 'lot_name' | 'category' | 'business_model
 export class CattleListComponent implements OnInit {
   // 1. Inyectamos el servicio de datos globales que ya tiene el effect integrado
   private cattleDataService = inject(CattleDataService);
+  private cattleApi = inject(CattleApiService);
 
   // 2. Exponemos los signals globales directamente hacia el HTML (.html)
   public cattleList = this.cattleDataService.cattleList;
@@ -92,6 +94,29 @@ export class CattleListComponent implements OnInit {
     });
   });
 
+  // Lote histórico: capa exclusiva de esta pantalla, NO vive en CattleDataService/cattleList
+  // (ese servicio es compartido con main-dashboard/adg-alerts). vw_cattle_lot_history trae el
+  // último lote capturado por sp_procesar_salida_ganado en historico_movimientos.lot_origen_anterior,
+  // justo antes de que la venta limpie lot_id. Fallback solo cuando lot_name viene vacío y el
+  // animal ya no está ACTIVO — nunca se usa como si fuera la ubicación actual.
+  private lotHistory = signal<Map<string, string>>(new Map());
+
+  public historicalLotFor(animal: any): string | null {
+    if (!animal || animal.lot_name || animal.current_status === 'ACTIVO') return null;
+    return this.lotHistory().get(animal.id) ?? null;
+  }
+
+  private async loadLotHistory() {
+    const rows = await this.cattleApi.getCattleLotHistory();
+    const map = new Map<string, string>();
+    for (const row of rows) {
+      if (row?.livestock_id && row?.lot_origen_anterior) {
+        map.set(row.livestock_id, row.lot_origen_anterior);
+      }
+    }
+    this.lotHistory.set(map);
+  }
+
   // Modal de detalle de metadata (JSONB variable por animal — sin shape fijo)
   public metadataAnimal = signal<any | null>(null);
 
@@ -118,7 +143,11 @@ export class CattleListComponent implements OnInit {
     // Delega en el servicio compartido (misma fuente que main-dashboard, adg-alerts, etc.)
     // en vez de hacer un fetch propio: evita dos escrituras concurrentes al mismo signal
     // global y garantiza que todas las vistas muestren siempre el mismo dato.
-    await this.cattleDataService.loadCattleData();
+    // El lote histórico, en cambio, es una consulta propia de esta pantalla (ver lotHistory).
+    await Promise.all([
+      this.cattleDataService.loadCattleData(),
+      this.loadLotHistory()
+    ]);
   }
 
   public toggleSort(column: SortableColumn) {
@@ -143,6 +172,7 @@ export class CattleListComponent implements OnInit {
     this.isModalOpen = false;
     if (saved) {
       this.cattleDataService.loadCattleData();
+      this.loadLotHistory();
     }
   }
 }

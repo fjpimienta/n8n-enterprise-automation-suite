@@ -217,6 +217,10 @@
                     <td>
                         @if (animal.lot_name) {
                         {{ animal.lot_name }}
+                        } @else if (historicalLotFor(animal); as histLot) {
+                        <span class="fst-italic text-muted" title="Lote al momento de la baja (dato histórico, no su ubicación actual)">
+                            <i class="ti ti-history me-1"></i>{{ histLot }}
+                        </span>
                         } @else {
                         <span class="badge bg-secondary-lt">Sin lote</span>
                         }
