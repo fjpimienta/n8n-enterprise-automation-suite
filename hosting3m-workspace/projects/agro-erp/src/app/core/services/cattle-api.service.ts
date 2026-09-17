@@ -192,6 +192,37 @@ export class CattleApiService {
     }
 
     /**
+     * 8. Obtener el lote histórico más reciente por animal (vw_cattle_lot_history) — el lote
+     * capturado por sp_procesar_salida_ganado en historico_movimientos.lot_origen_anterior
+     * justo antes de limpiar lot_id en una venta. Modelo de solo lectura (allowed_ops sin
+     * INSERT/UPDATE/DELETE); el gateway no soporta filtrar por lista de IDs, así que se trae
+     * todo el tenant y el match contra los animales visibles se hace en el componente.
+     */
+    public async getCattleLotHistory(): Promise<any[]> {
+        const idRanchoActivo = this.tenantService.activeTenantId();
+        if (!idRanchoActivo) {
+            this.logger.warn('🚫 No se puede solicitar el lote histórico sin un rancho activo.');
+            return [];
+        }
+
+        try {
+            const res: any = await lastValueFrom(
+                this.http.post(`${this.apiUrl_crud}/cattle_lot_history`, {
+                    operation: 'getall',
+                    tenant_id: Number(idRanchoActivo)
+                })
+            );
+
+            if (res && Array.isArray(res.data)) return res.data;
+            if (res?.data && Array.isArray(res.data.data)) return res.data.data;
+            return [];
+        } catch (error) {
+            this.logger.warn('No se pudo cargar el lote histórico:', error);
+            return [];
+        }
+    }
+
+    /**
      * 6. Obtener historial de Gastos Operativos (Aislamiento de Datos por n8n/SQL)
      */
     public async getExpenses(): Promise<any[]> {
