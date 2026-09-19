@@ -3,6 +3,50 @@
 Todos los cambios notables en el proyecto **n8n Enterprise Automation Suite** serán documentados en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/), y este proyecto se adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.12.0] - 2026-09-19
+
+### 🐄 Reporte de eventos para animales sin identificador físico
+
+* Nueva herramienta MCP `find_calf_by_dam`: busca crías sin arete/fuego/chip nacidas de
+  una madre dada en los últimos 90 días, para poder reportar mortandad o venta de animales
+  recién nacidos aún sin identificador — resuelve la limitación #2 señalada en v1.11.1.
+* **`livestock_id` propagado de punta a punta** en la cadena de autorización asíncrona:
+  agregado a `sp_solicitar_autorizacion` (8vo parámetro) y a `sp_procesar_baja_mortandad`
+  (10mo parámetro, `p_livestock_id DEFAULT NULL`) como alternativa a los 3 identificadores
+  físicos.
+* **Corregido bug real:** `sp_resolver_autorizacion` creaba la solicitud con `livestock_id`
+  resuelto correctamente, pero no lo reenviaba a `sp_procesar_baja_mortandad` /
+  `sp_procesar_salida_ganado` al aprobar — el SP real fallaba con `ERRCODE P0002` pese a
+  tener el UUID correcto guardado. Corregido reenviando `v_request.livestock_id` en ambas
+  invocaciones del despachador.
+* Documentación retroactiva del overload de 4 parámetros de `sp_procesar_salida_ganado`
+  (existía en producción desde v1.9.0, nunca documentado) y corrección de la firma
+  documentada de `sp_solicitar_autorizacion` (le faltaba `p_livestock_id`, ya presente en
+  producción antes de esta versión).
+
+### 🔍 Hallazgo de seguridad — aislamiento multi-tenant en el Agente IA
+
+* Durante las pruebas de `find_calf_by_dam`, el Agente IA envió `tenant_id: 5` (empresa
+  real) en vez de `tenant_id: 3` (tenant de pruebas) al invocar la herramienta, pese a que
+  el workflow de WhatsApp ya había resuelto correctamente el tenant en contexto — el LLM
+  lo ignoró al construir esa llamada específica. Sin efecto real (sin match en BD para ese
+  tenant), pero confirma que `tenant_id` vía `$fromAI()` en una tool MCP no es un límite de
+  confianza garantizado, solo prompt-enforced.
+* **Mitigado** colocando el valor literal del tenant justo antes del diccionario de
+  herramientas en ambos system prompts (WhatsApp y Chat Web) — más efectivo que la regla
+  general de tenant ya existente.
+* Mismo riesgo confirmado también en el panel "Chat" interno del editor de n8n (no solo en
+  el panel "Test" de un nodo individual): cualquier prueba del Agente IA debe hacerse por el
+  canal real (WhatsApp o Chat Web app).
+* ⚠️ No es una garantía arquitectónica — `v6/MCP Server Cattle` corre aislado, sin acceso al
+  contexto de sesión del workflow que lo invoca. Deuda técnica abierta, ver `CLAUDE.md`.
+
+### ✅ Validado en producción
+
+* Tenant 3 ("Pista de Hielo"), 2026-09-18/19: mortandad ✅ (cría sin identificador →
+  `BAJA_MORTANDAD`) y venta ✅ (cría sin identificador → `APROBADO`,
+  `sp_procesar_salida_ganado` ejecutado sin error).
+
 ## [1.11.1] - 2026-09-16
 
 ### 🐄 Herramienta MCP de Alta de Nacimiento — validada en producción

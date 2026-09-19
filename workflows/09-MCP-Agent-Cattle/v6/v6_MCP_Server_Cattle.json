@@ -8,7 +8,7 @@
       "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
       "typeVersion": 2,
       "position": [
-        528,
+        496,
         832
       ],
       "id": "20140a69-ad24-4392-850e-789f2ff32e45",
@@ -28,8 +28,8 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        208,
-        960
+        -64,
+        880
       ],
       "id": "5d209495-6de0-4419-8deb-43efd1f4ba94",
       "name": "get_table_metadata",
@@ -43,9 +43,9 @@
     {
       "parameters": {
         "descriptionType": "manual",
-        "toolDescription": "Registra el peso actual de un animal. REQUIERE obligatoriamente: livestock_id y weight_kg. Solo ejecuta esto si ya confirmaste el UUID y el peso con el usuario.",
+        "toolDescription": "Registra el peso actual de un animal. REQUIERE obligatoriamente: livestock_id (UUID, resuélvelo primero vía get_livestock_info si el usuario solo te dio un arete/fuego) y weight_kg. Evento rutinario — no requiere confirmación previa del usuario, ejecuta en cuanto tengas ambos datos.",
         "operation": "executeQuery",
-        "query": "INSERT INTO cattle_weight_logs (livestock_id, weight_kg, log_date, source_device)\nSELECT $1::uuid, $2::numeric, CURRENT_TIMESTAMP, 'AI_Agent'\nWHERE EXISTS (\n  SELECT 1 FROM cattle_livestock l\n  JOIN user_companies uc ON uc.id_company = l.tenant_id\n  JOIN users u ON u.email = uc.email\n  WHERE l.id = $1::uuid\n    AND u.email = $3::text\n    AND u.role = 'ADMIN'\n    AND uc.is_active = true\n)\nRETURNING id, weight_kg, log_date;",
+        "query": "INSERT INTO cattle_weight_logs (livestock_id, weight_kg, log_date, source_device)\nSELECT $1::uuid, $2::numeric, CURRENT_TIMESTAMP, 'AI_Agent'\nWHERE EXISTS (\n  SELECT 1 FROM cattle_livestock l\n  JOIN user_companies uc ON uc.id_company = l.tenant_id\n  JOIN users u ON u.email = uc.email\n  WHERE l.id = $1::uuid\n    AND u.email = $3::text\n    AND uc.is_active = true\n)\nRETURNING id, weight_kg, log_date;\n",
         "options": {
           "queryBatching": "transaction",
           "queryReplacement": "={{ [ $fromAI('livestock_id', 'UUID del animal', 'string'), $fromAI('weight_kg', 'Peso numerico en kg', 'number'), $fromAI('user_email', 'Email verificado del usuario actual del contexto de sesion', 'string') ] }}"
@@ -54,8 +54,8 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        400,
-        1072
+        -64,
+        1024
       ],
       "id": "a0d3dd3f-0664-4e65-b801-a92684302056",
       "name": "log_cattle_weight",
@@ -69,9 +69,9 @@
     {
       "parameters": {
         "descriptionType": "manual",
-        "toolDescription": "Registra eventos de salud, vacunación o enfermedad. REQUIERE: livestock_id, event_type y description.",
+        "toolDescription": "Registra eventos de salud, vacunación o enfermedad. REQUIERE: livestock_id (UUID, resuélvelo primero vía get_livestock_info si hace falta), event_type y description. Evento rutinario — no requiere confirmación previa del usuario, ejecuta en cuanto tengas los tres datos completos. Regla Zero-Hallucination: si falta cualquiera de estos datos, pregunta explícitamente, nunca los inventes.",
         "operation": "executeQuery",
-        "query": "INSERT INTO cattle_health_logs (livestock_id, event_type, description, event_date)\nSELECT $1::uuid, $2, $3, CURRENT_TIMESTAMP\nWHERE EXISTS (\n  SELECT 1 FROM cattle_livestock l\n  JOIN user_companies uc ON uc.id_company = l.tenant_id\n  JOIN users u ON u.email = uc.email\n  WHERE l.id = $1::uuid\n    AND u.email = $4::text\n    AND u.role = 'ADMIN'\n    AND uc.is_active = true\n)\nRETURNING id, event_type;",
+        "query": "INSERT INTO cattle_health_logs (livestock_id, event_type, description, event_date)\nSELECT $1::uuid, $2, $3, CURRENT_TIMESTAMP\nWHERE EXISTS (\n  SELECT 1 FROM cattle_livestock l\n  JOIN user_companies uc ON uc.id_company = l.tenant_id\n  JOIN users u ON u.email = uc.email\n  WHERE l.id = $1::uuid\n    AND u.email = $4::text\n    AND uc.is_active = true\n)\nRETURNING id, event_type;",
         "options": {
           "queryReplacement": "={{ [ $fromAI('livestock_id', 'UUID del animal', 'string'), $fromAI('event_type', 'Tipo de evento ej. VACUNACION o ENFERMEDAD', 'string'), $fromAI('description', 'Detalles del evento', 'string'), $fromAI('user_email', 'Email verificado del usuario actual del contexto de sesion', 'string') ] }}"
         }
@@ -79,7 +79,7 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        640,
+        48,
         1104
       ],
       "id": "84d7567d-a46c-4811-9ff3-6b0b573bed48",
@@ -94,18 +94,18 @@
     {
       "parameters": {
         "descriptionType": "manual",
-        "toolDescription": "Busca la información de un animal en la base de datos del rancho actual. REQUIERE: identificador (arete SINIIGA o fuego) y el tenant_id del contexto del usuario. Si devuelve más de un registro, detén el flujo y pide al usuario que aclare a cuál animal se refiere usando la categoría o especie.",
+        "toolDescription": "Busca la información de un animal en la base de datos del rancho actual. REQUIERE: identificador (arete SINIIGA, número de fuego, o RFID/electronic_rfid — cualquiera de los tres) y el tenant_id del contexto del usuario. Si devuelve más de un registro, detén el flujo y pide al usuario que aclare a cuál animal se refiere usando la categoría o especie.",
         "operation": "executeQuery",
-        "query": "SELECT l.id, l.tenant_id, l.rfid_siniiga, l.numero_fuego, l.species, l.category, l.current_status, l.current_weight_kg\nFROM cattle_livestock l\nWHERE (l.rfid_siniiga = $1::text OR l.numero_fuego = $1::text)\n  AND l.tenant_id = $2::int\n  AND EXISTS (\n    SELECT 1 FROM user_companies uc\n    JOIN users u ON u.email = uc.email\n    WHERE u.email = $3::text AND uc.id_company = $2::int AND uc.is_active = true\n  )\nLIMIT 5;",
+        "query": "SELECT l.id, l.tenant_id, l.rfid_siniiga, l.numero_fuego, l.electronic_rfid, l.species, l.category, l.current_status, l.current_weight_kg\nFROM cattle_livestock l\nWHERE (l.rfid_siniiga = $1::text OR l.numero_fuego = $1::text OR l.electronic_rfid = $1::text)\n  AND l.tenant_id = $2::int\n  AND EXISTS (\n    SELECT 1 FROM user_companies uc\n    JOIN users u ON u.email = uc.email\n    WHERE u.email = $3::text AND uc.id_company = $2::int AND uc.is_active = true\n  )\nLIMIT 5;",
         "options": {
-          "queryReplacement": "={{ [ $fromAI('identificador', 'El numero de arete SINIIGA o numero de fuego a buscar', 'string'), $fromAI('tenant_id', 'ID del rancho / tenant_id actual del usuario', 'number'), $fromAI('user_email', 'Email verificado del usuario, tal como aparece literalmente en las instrucciones del sistema', 'string') ] }}"
+          "queryReplacement": "={{ [ $fromAI('identificador', 'El identificador del animal (arete SINIIGA o número de fuego o RFID/electronic_rfid — chip o bolo ruminal). Usa el valor que el usuario haya proporcionado', 'string'), $fromAI('tenant_id', 'ID del rancho / tenant_id actual del usuario', 'number'), $fromAI('user_email', 'Email verificado del usuario, tal como aparece literalmente en las instrucciones del sistema', 'string') ] }}"
         }
       },
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        864,
-        1072
+        192,
+        1104
       ],
       "id": "090fab19-82ec-406c-9246-b466011a7e4c",
       "name": "get_livestock_info",
@@ -119,7 +119,7 @@
     {
       "parameters": {
         "descriptionType": "manual",
-        "toolDescription": "Registra gastos, compra de insumos o pagos. REQUIERE: tenant_id (del contexto del usuario), category, amount y description.",
+        "toolDescription": "Registra gastos, compra de insumos o pagos. REQUIERE: tenant_id (del contexto del usuario), category, amount y description. Evento rutinario — no requiere confirmación previa del usuario, ejecuta en cuanto tengas los datos completos.",
         "operation": "executeQuery",
         "query": "INSERT INTO cattle_expenses (tenant_id, category, amount, description, expense_date)\nSELECT $1::int, $2, $3::numeric, $4, CURRENT_TIMESTAMP\nWHERE EXISTS (\n  SELECT 1 FROM user_companies uc\n  JOIN users u ON u.email = uc.email\n  WHERE u.email = $5::text AND uc.id_company = $1::int AND uc.is_active = true\n)\nRETURNING id, amount;",
         "options": {
@@ -129,11 +129,136 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1088,
-        1008
+        352,
+        1104
       ],
       "id": "7ee7280c-51d3-4c11-acf2-69cff0c1039b",
       "name": "register_ranch_expense",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Registers a weaning event for a specific animal. Requires the animal's internal\nlivestock_id (UUID), which must be resolved FIRST via get_livestock_info before\ncalling this tool — do not call this tool with a RFID, SINIIGA tag, or fire number,\nonly with the UUID returned by get_livestock_info. Also requires tenant_id and\nuser_email from the current session context, same as the other tools.\n\nIf the user mentions a weight at the moment of weaning, pass it in weight_kg and it\nwill be recorded as part of this same event. If no weight is mentioned, do not guess\none — omit weight_kg entirely, the event will still be recorded without weight.\n\nDo not assume weaning_method if the user doesn't specify it; ask, or omit it and it\nwill default to NATURAL.",
+        "operation": "executeQuery",
+        "query": " SELECT * FROM sp_register_weaning_event(\n    p_id_company        := $1,\n    p_livestock_id       := $2::uuid,\n    p_weaning_date       := $3::date,\n    p_weaning_method     := COALESCE($4, 'NATURAL'),\n    p_reported_by_email  := $5,\n    p_weight_kg          := $6::numeric,\n    p_notes              := $7\n);",
+        "options": {
+          "queryReplacement": "={{ [ $fromAI('tenant_id', 'ID del rancho / tenant_id actual del usuario, tal como aparece en el contexto de sesión', 'number'), $fromAI('livestock_id', 'The internal UUID of the animal, obtained from a prior get_livestock_info call. Never a RFID, SINIIGA tag, or fire number.', 'string'), $fromAI('weaning_date', 'The date the weaning occurred, in YYYY-MM-DD format. If the user says \\\"today\\\" or \\\"hoy\\\", use the current date.', 'string'), $fromAI('weaning_method', 'The weaning method: NATURAL, INDUCED, or EARLY. Omit if the user does not specify.', 'string'), $fromAI('user_email', 'Email verificado del usuario, tal como aparece literalmente en las instrucciones del sistema', 'string'), $fromAI('weight_kg', 'The animal weight in kilograms at the moment of weaning, if the user mentioned one. Omit entirely if no weight was mentioned — do not guess a value.', 'number'), $fromAI('notes', 'Any additional free-text notes the user provided about this weaning event.', 'string') ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        512,
+        1104
+      ],
+      "id": "0e9c97a3-5444-42bd-8aa6-8d393bee0ad4",
+      "name": "log_weaning_event",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Registers a REQUEST for a livestock mortality (death) event — this does NOT immediately finalize the death record. It creates a pending authorization that an ADMIN/owner must approve from the web panel before the animal's status changes. Requires the animal's identifier — accepts electronic_rfid, rfid_siniiga, or numero_fuego (whichever the user provided; the underlying procedure resolves the identifier itself and rejects ambiguous matches). Also requires tenant_id and user_email from the current session context, same as the other tools.\n\n🛑 CONFIRM BEFORE EXECUTING: Never call this tool in the same turn the user first mentions a death. Repeat back the animal identifier, cause of death, and date, and only call this tool after the user gives an explicit affirmative confirmation in the immediately following turn — same protocol as log_health_event and register_ranch_expense.\n\ncausa_mortandad MUST be exactly one of: ENFERMEDAD, ACCIDENTE, DEPREDACIÓN, DESCONOCIDA, NATURAL. If the user's description doesn't clearly map to one of these, ask them to choose — do not guess.\n\nAfter calling this tool successfully, tell the user their report was submitted for authorization and that an ADMIN/owner of the ranch must approve it THE SAME DAY (before midnight) or it will expire automatically — do NOT tell the user the animal has been marked as dead, since that only happens once approved.",
+        "operation": "executeQuery",
+        "query": "SELECT * FROM sp_solicitar_autorizacion(\n    p_electronic_rfid      := $1,\n    p_rfid_siniiga         := $2,\n    p_numero_fuego         := $3,\n    p_tenant_id            := $4::int,\n    p_tipo_evento          := 'BAJA_MORTANDAD',\n    p_payload              := $5::jsonb,\n    p_livestock_id         := $6::uuid,\n    p_solicitado_por_email := $7\n);",
+        "options": {
+          "queryReplacement": "=={{ (() => {\n  const empty = (v) => (v === '' || v === undefined) ? null : v;\n  const causa = $fromAI('causa_mortandad', 'Cause of death — must be exactly one of: ENFERMEDAD, ACCIDENTE, DEPREDACIÓN, DESCONOCIDA, NATURAL', 'string');\n  const fecha = $fromAI('fecha_evento', 'Date of death in YYYY-MM-DD format. If the user says \"today\" or \"hoy\", use the current date.', 'string');\n  const desc  = $fromAI('descripcion', 'Free-text details about the death, if the user provided any. Omit if none given.', 'string');\n  return [\n    $fromAI('electronic_rfid', 'Electronic RFID / chip identifier, if the user provided this one specifically. Omit if not mentioned.', 'string'),\n    $fromAI('rfid_siniiga', 'SINIIGA ear tag number, if the user provided this one specifically. Omit if not mentioned.', 'string'),\n    $fromAI('numero_fuego', 'Fire brand / internal management number, if the user provided this one specifically. Omit if not mentioned.', 'string'),\n    $fromAI('tenant_id', 'ID del rancho / tenant_id actual del usuario, tal como aparece en el contexto de sesión', 'number'),\n    JSON.stringify({ causa_mortandad: causa, fecha_evento: fecha, descripcion: desc }),\n    empty($fromAI('livestock_id', 'UUID of the animal, ONLY if obtained from a prior find_calf_by_dam call (never ask the user to say this out loud). Omit if using electronic_rfid/rfid_siniiga/numero_fuego instead.', 'string')),\n    $fromAI('user_email', 'Email verificado del usuario, tal como aparece literalmente en las instrucciones del sistema', 'string')\n  ];\n})() }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        672,
+        1104
+      ],
+      "id": "e797a42c-173c-429b-8243-10471f4aab0e",
+      "name": "log_mortality_event",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Registers a REQUEST to sell/check-out (dar de baja por venta) a live animal — this does NOT immediately finalize the sale. It creates a pending authorization that an ADMIN/owner must approve from the web panel before the animal's status changes to VENDIDO. Requires the animal's identifier — accepts electronic_rfid, rfid_siniiga, or numero_fuego. Also requires tenant_id and user_email from the current session context.\n\n🛑 CONFIRM BEFORE EXECUTING: Never call this tool in the same turn the user first mentions a sale. Repeat back the animal identifier and only call this tool after the user gives an explicit affirmative confirmation in the immediately following turn — same protocol as log_mortality_event.\n\nAfter calling this tool successfully, tell the user their sale request was submitted for authorization and that an ADMIN/owner of the ranch must approve it THE SAME DAY (before midnight) or it will expire automatically — do NOT tell the user the animal has been sold, since the actual TB/Brucelosis compliance check and status change only happen once approved.",
+        "operation": "executeQuery",
+        "query": "SELECT * FROM sp_solicitar_autorizacion(\n    p_electronic_rfid      := $1,\n    p_rfid_siniiga         := $2,\n    p_numero_fuego         := $3,\n    p_tenant_id            := $4::int,\n    p_tipo_evento          := 'VENTA',\n    p_livestock_id         := $5::uuid,\n    p_solicitado_por_email := $6\n);",
+        "options": {
+          "queryReplacement": "=={{ (() => {\n  const empty = (v) => (v === '' || v === undefined) ? null : v;\n  return [\n    $fromAI('electronic_rfid', 'Electronic RFID / chip identifier, if the user provided this one specifically. Omit if not mentioned.', 'string'),\n    $fromAI('rfid_siniiga', 'SINIIGA ear tag number, if the user provided this one specifically. Omit if not mentioned.', 'string'),\n    $fromAI('numero_fuego', 'Fire brand / internal management number, if the user provided this one specifically. Omit if not mentioned.', 'string'),\n    $fromAI('tenant_id', 'ID del rancho / tenant_id actual del usuario, tal como aparece en el contexto de sesión', 'number'),\n    empty($fromAI('livestock_id', 'UUID of the animal, ONLY if obtained from a prior find_calf_by_dam call (never ask the user to say this out loud). Omit if using electronic_rfid/rfid_siniiga/numero_fuego instead.', 'string')),\n    $fromAI('user_email', 'Email verificado del usuario, tal como aparece literalmente en las instrucciones del sistema', 'string')\n  ];\n})() }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        832,
+        1104
+      ],
+      "id": "744e036f-e9ae-48ec-bd8b-eba13784986c",
+      "name": "request_livestock_sale",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Location is usually inherited automatically from the dam (production_unit_id, lot_id, paddock_id) if she already has one assigned — you do NOT need to ask the user for these unless the dam has no location on file (in which case, ask for production_unit_id specifically) or the user explicitly wants to override it. lot_id is rarely used in this system today — omit it unless the user specifically mentions a lot.",
+        "operation": "executeQuery",
+        "query": "SELECT * FROM sp_register_birth_event(\n    p_id_company          := $1::int,\n    p_calf_sex            := $2,\n    p_species             := $3,\n    p_dam_id              := $4::uuid,\n    p_dam_ear_tag         := $5,\n    p_dam_fire_number     := $6,\n    p_birth_date          := $7::date,\n    p_lot_id              := $8::uuid,\n    p_production_unit_id  := $9::uuid,\n    p_paddock_id          := $10::uuid,\n    p_birth_weight_kg     := $11::numeric,\n    p_notes               := $12,\n    p_reported_by_email   := $13\n);",
+        "options": {
+          "queryReplacement": "={{ (() => {\n  const empty = (v) => (v === '' || v === undefined) ? null : v;\n  const species = $fromAI('species', \"Animal species: BOVINO, BUFALO, BORREGO, or EQUIDO. Defaults to BOVINO if the user doesn't specify.\", 'string') || 'BOVINO';\n  return [\n    $fromAI('tenant_id', 'ID del rancho / tenant_id actual del usuario, tal como aparece en el contexto de sesión', 'number'),\n    $fromAI('calf_sex', 'MACHO or HEMBRA — must be exactly one of these two values, ask the user if unclear, never guess', 'string'),\n    species,\n    empty($fromAI('dam_id', 'UUID of the dam, ONLY if already resolved via a prior get_livestock_info call. Omit entirely if not resolved.', 'string')),\n    empty($fromAI('dam_ear_tag', 'SINIIGA ear tag of the dam, as free text, if she could not be resolved to a UUID. Omit if dam_id was provided instead.', 'string')),\n    empty($fromAI('dam_fire_number', 'Fire brand number of the dam, as free text, alternative to dam_ear_tag. Omit if dam_id or dam_ear_tag was already provided.', 'string')),\n    $fromAI('birth_date', 'Date of birth in YYYY-MM-DD format. If the user says \"today\"/\"hoy\", use the current date.', 'string'),\n    empty($fromAI('lot_id', 'UUID of the lot, ONLY if already known/resolved. Omit if not known — do NOT ask the user for this, it is rarely used.', 'string')),\n    empty($fromAI('production_unit_id', 'UUID of the production unit (UPP), ONLY if already known/resolved (e.g. from a prior lookup). Omit if not known.', 'string')),\n    empty($fromAI('paddock_id', 'UUID of the paddock (potrero), if the user specified one. Omit if not mentioned.', 'string')),\n    $fromAI('birth_weight_kg', 'Birth weight in kilograms, if the user mentioned one. Omit entirely if not mentioned.', 'number'),\n    empty($fromAI('notes', 'Any additional free-text notes about the birth, if provided.', 'string')),\n    $fromAI('user_email', 'Email verificado del usuario, tal como aparece literalmente en las instrucciones del sistema', 'string')\n  ];\n})() }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        992,
+        1104
+      ],
+      "id": "b39a6678-589d-4853-869c-d33f08e6525a",
+      "name": "register_birth_event",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Finds calves without any physical identifier (no ear tag, fire brand, or chip) born from a specific dam in the last 90 days — used when the user wants to report mortality/sale for a newborn that hasn't been tagged yet, since they can't give you a UUID by voice. Identify the dam by electronic_rfid, rfid_siniiga, or numero_fuego (whichever the user mentioned).\n\nIf this returns exactly ONE calf, use its \"id\" field as the livestock_id parameter when calling log_mortality_event or request_livestock_sale — do NOT ask the user to repeat it, you already have it from this tool's response.\n\nIf this returns MULTIPLE calves, list them to the user (sex, birth date, weight) and ask them to pick one before proceeding — never guess which one they mean.\n\nIf this returns ZERO calves, tell the user no untagged calf was found for that dam in the last 90 days — the animal might already have an identifier (try get_livestock_info instead) or be older than 90 days.",
+        "operation": "executeQuery",
+        "query": "SELECT cl.id, cl.category, cl.current_status, be.birth_date, be.calf_sex, cl.current_weight_kg\nFROM cattle_livestock cl\nJOIN birth_events be ON be.calf_id = cl.id\nWHERE cl.tenant_id = $1\n  AND be.dam_id = (\n      SELECT id FROM cattle_livestock\n      WHERE (\n          ($2::varchar IS NOT NULL AND electronic_rfid = $2)\n          OR ($3::varchar IS NOT NULL AND rfid_siniiga = $3)\n          OR ($4::varchar IS NOT NULL AND numero_fuego = $4)\n      )\n      AND tenant_id = $1\n      LIMIT 1\n  )\n  AND cl.rfid_siniiga IS NULL\n  AND cl.numero_fuego IS NULL\n  AND cl.electronic_rfid IS NULL\n  AND be.birth_date >= (CURRENT_DATE - INTERVAL '90 days')\nORDER BY be.birth_date DESC;",
+        "options": {
+          "queryReplacement": "={{ [\n  $fromAI('tenant_id', 'The EXACT numeric tenant/company id (id_company) for the current authenticated user, taken directly from the system context — NEVER guess, infer, or use a default. It must be identical to the tenant_id used in every other tool call in this same turn.', 'number'),\n  $fromAI('dam_electronic_rfid', 'Dam electronic RFID/microchip identifier (bolo ruminal/chip), ONLY if the user explicitly said RFID/chip. Omit otherwise.', 'string'),\n  $fromAI('dam_rfid_siniiga', 'Dam official SINIIGA ear tag: a 9-10 digit numeric code (e.g. 715690242, 9999999999). If the user gives a bare number identifying the dam without saying which identifier type it is, treat it as rfid_siniiga — this is the default interpretation for a plain number.', 'string'),\n  $fromAI('dam_numero_fuego', 'Dam fire-brand number (número de fuego / marca de hierro). Use this ONLY if the user explicitly says \"número de fuego\" or \"fuego\", or gives a short alphanumeric brand code (e.g. 19-116). NEVER use this field for a bare 9-10 digit number — that goes in dam_rfid_siniiga instead.', 'string')\n] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        1040,
+        864
+      ],
+      "id": "e57dbed8-8183-4c23-a2ba-40c35b53cbc8",
+      "name": "find_calf_by_dam",
       "credentials": {
         "postgres": {
           "id": "BQrod4uGVzM1nvLw",
@@ -198,6 +323,61 @@
           }
         ]
       ]
+    },
+    "log_weaning_event": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "log_mortality_event": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "request_livestock_sale": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "register_birth_event": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "find_calf_by_dam": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -210,7 +390,7 @@
     "timeSavedMode": "fixed",
     "timeSavedPerExecution": 3
   },
-  "versionId": "c08d4c33-5c82-4dda-9254-0d61eb9a6f11",
+  "versionId": "dda47ed1-bc62-45ad-8800-edab6a46013b",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
@@ -219,16 +399,10 @@
   "id": "pJ3CEaO70QEiGL0C",
   "tags": [
     {
-      "updatedAt": "2025-12-31T16:55:06.301Z",
-      "createdAt": "2025-12-31T16:55:06.301Z",
-      "id": "ts9FABk8F02a5xrA",
-      "name": "Agent IA"
-    },
-    {
-      "updatedAt": "2025-12-23T12:12:58.230Z",
-      "createdAt": "2025-12-23T12:12:58.230Z",
-      "id": "MKrwsTVnLLBXLfUP",
-      "name": "Chat"
+      "updatedAt": "2026-06-02T17:44:17.958Z",
+      "createdAt": "2026-06-02T17:44:17.958Z",
+      "id": "6NGDwjjesOlJeGQr",
+      "name": "v6"
     },
     {
       "updatedAt": "2025-12-23T12:12:28.399Z",
@@ -237,10 +411,16 @@
       "name": "AI Agent"
     },
     {
-      "updatedAt": "2026-06-02T17:44:17.958Z",
-      "createdAt": "2026-06-02T17:44:17.958Z",
-      "id": "6NGDwjjesOlJeGQr",
-      "name": "v6"
+      "updatedAt": "2025-12-23T12:12:58.230Z",
+      "createdAt": "2025-12-23T12:12:58.230Z",
+      "id": "MKrwsTVnLLBXLfUP",
+      "name": "Chat"
+    },
+    {
+      "updatedAt": "2025-12-31T16:55:06.301Z",
+      "createdAt": "2025-12-31T16:55:06.301Z",
+      "id": "ts9FABk8F02a5xrA",
+      "name": "Agent IA"
     }
   ]
 }

@@ -10,6 +10,17 @@
   Authorization Subsystem; documentación retroactiva de `weaning_events` y comportamiento
   completo de `sp_register_birth_event` (ya existían en producción, sin documentar); corrección
   de `cattle_livestock.category` (no es un ENUM real de Postgres)
+- v1.11.1 (2026-09-16) — *[entrada retroactiva, nunca agregada a este archivo]* Herramienta
+  MCP `register_birth_event` validada en producción — ver `ARCHITECTURE.md` para el detalle
+  completo de esta versión.
+- v1.12.0 (2026-09-18 a 2026-09-19) — Reporte de mortandad/venta para animales sin
+  identificador físico (`find_calf_by_dam`, `livestock_id` agregado a
+  `sp_solicitar_autorizacion` / `sp_procesar_baja_mortandad` / `sp_procesar_salida_ganado` /
+  `sp_resolver_autorizacion`); documentación retroactiva del overload de 4 parámetros de
+  `sp_procesar_salida_ganado` (existía en producción desde v1.9.0, nunca documentado);
+  corrección de `sp_solicitar_autorizacion` en este archivo (la firma documentada estaba
+  desactualizada — ya tenía `livestock_id` en producción antes de esta versión); hallazgo y
+  corrección de un caso real de incumplimiento de aislamiento multi-tenant en el Agente IA
 
 > ⚠️ **Nota de higiene de documentación (2026-08-14):** el `schema.sql` versionado en el
 > repo **no refleja ninguna tabla ni columna de v1.10.0** (verificado: cero coincidencias
@@ -480,7 +491,7 @@ correctly produced one row with the `CAPTURE_CORRECTION` default and no `changed
 
 ---
 
-## ⚰️ Mortality & Async Authorization Subsystem (v1.11.0)
+## ⚰️ Mortality & Async Authorization Subsystem (v1.11.0 – v1.12.0)
 
 *Añadido 2026-09.* Ver `ARCHITECTURE.md`, sección "Async Authorization Subsystem", para las
 decisiones de diseño completas (el "por qué"). Esta sección cubre el DDL.
@@ -511,10 +522,16 @@ decisiones de diseño completas (el "por qué"). Esta sección cubre el DDL.
   `sp_solicitar_autorizacion` reutiliza una solicitud `PENDIENTE` existente del mismo
   animal+tipo en vez de duplicar, a nivel de lógica de aplicación.
 
-### `sp_procesar_baja_mortandad(p_electronic_rfid, p_rfid_siniiga, p_numero_fuego, p_tenant_id, p_causa_mortandad, p_fecha_evento, p_descripcion, p_reportado_por_email, p_autorizado_por_email)`
+### `sp_procesar_baja_mortandad(p_electronic_rfid, p_rfid_siniiga, p_numero_fuego, p_tenant_id, p_causa_mortandad, p_fecha_evento, p_descripcion, p_reportado_por_email, p_autorizado_por_email, p_livestock_id)`
 * Mismo patrón de desambiguación multi-identificador que `sp_procesar_salida_ganado`
   (acepta `electronic_rfid`/`rfid_siniiga`/`numero_fuego`, `FOR UPDATE`, rechaza ambigüedad
   con `ERRCODE P0004`, error duro si no hay match con `P0002`).
+* **`p_livestock_id uuid DEFAULT NULL`** *(añadido en v1.12.0, 10º parámetro, no rompe
+  llamadas existentes)*: cuando viene informado, resuelve el animal directo por UUID
+  (validando `tenant_id`) en lugar de por los 3 identificadores físicos — necesario para
+  animales recién nacidos sin arete/fuego/chip asignado. Si `p_livestock_id` es `NULL`, el
+  comportamiento es idéntico al de antes de v1.12.0. Ver la sección "Reporte de eventos para
+  animales sin identificador físico" más abajo.
 * Rechaza (error duro) si el animal ya está `VENDIDO` o `BAJA_MORTANDAD`. Sin regla
   especial para `PREÑADA` (confirmado explícitamente por el cliente — no bloquea).
 * Al éxito: `current_status = 'BAJA_MORTANDAD'`. **`upp_origen` se conserva** (a diferencia
@@ -524,23 +541,94 @@ decisiones de diseño completas (el "por qué"). Esta sección cubre el DDL.
   `mother_id` = el animal, `current_status = 'ACTIVO'`, y sin fila en `weaning_events`, pasa
   a `current_status = 'RIESGO'`. Retorna el array de UUIDs afectados en el resultado JSONB.
 * Inserta en `mortality_events` (detalle) y en `historico_movimientos`
-  (`tipo_movimiento = 'BAJA_MORTANDAD'`, resumen en `notes`).
+  (`tipo_movimiento = 'BAJA_MORTANDAD'`, resumen en `notes`) — `v_audit_identifier` cae a
+  `livestock_id::varchar` cuando no hay identificador físico *(v1.12.0)*.
 
-### `sp_solicitar_autorizacion(p_electronic_rfid, p_rfid_siniiga, p_numero_fuego, p_tenant_id, p_tipo_evento, p_payload, p_solicitado_por_email)`
-* Valida animal e identificador con el mismo patrón que los SPs anteriores. No muta
-  `cattle_livestock` en ningún caso — solo crea o reutiliza la fila en
+### `sp_solicitar_autorizacion(p_electronic_rfid, p_rfid_siniiga, p_numero_fuego, p_livestock_id, p_tenant_id, p_tipo_evento, p_payload, p_solicitado_por_email)`
+* ⚠️ **Corrección de documentación (v1.12.0):** la firma listada aquí en versiones previas
+  de este archivo (7 parámetros, sin `p_livestock_id`) estaba desactualizada — el parámetro
+  `p_livestock_id uuid DEFAULT NULL` ya existía en producción antes de v1.12.0. Confirmado
+  vía `pg_get_function_identity_arguments` (dos overloads coexisten: uno de 7 parámetros
+  legacy y uno de 8 con `p_livestock_id`).
+* Valida animal e identificador con el mismo patrón que los SPs anteriores — ahora también
+  acepta `p_livestock_id` como identificador alternativo (el `pending_authorizations.
+  livestock_id` resultante se usa después para despachar sin depender de arete/fuego/chip).
+  No muta `cattle_livestock` en ningún caso — solo crea o reutiliza la fila en
   `pending_authorizations`.
 * Rechaza (error duro) si el animal ya está `VENDIDO` o `BAJA_MORTANDAD`.
 
 ### `sp_resolver_autorizacion(p_request_id, p_decision, p_resuelto_por_email, p_notas)`
 * Ver `ARCHITECTURE.md` para el diseño del despachador (whitelist fija por `tipo_evento`,
   sin SQL dinámico).
+* **Desde v1.12.0, reenvía `v_request.livestock_id` a ambos SPs despachados**
+  (`p_livestock_id := v_request.livestock_id` en las llamadas a
+  `sp_procesar_baja_mortandad` y `sp_procesar_salida_ganado`). Antes de este fix, la
+  solicitud se creaba correctamente con `livestock_id` resuelto pero el despachador nunca lo
+  propagaba — un animal sin identificador físico llegaba a aprobación y el SP real fallaba
+  con `ERRCODE P0002` ("Ningún animal coincide con el identificador proporcionado"), pese a
+  que la solicitud sí tenía el UUID correcto guardado. Bug real detectado y corregido en
+  pruebas de producción (2026-09-18/19), no solo teórico.
 * Valida vigencia (`fecha_solicitud::date < CURRENT_DATE` → auto-expira la solicitud y
   rechaza con `ERRCODE P0012`) y estado (`estado <> 'PENDIENTE'` → rechaza con
   `ERRCODE P0011`, evita doble resolución) antes de despachar.
 * Registrado en `crud_models` con `sp_requires_tenant = false` — no recibe `tenant_id` como
   parámetro; la validación de tenant ya ocurrió al crear la solicitud original en
   `sp_solicitar_autorizacion`.
+
+---
+
+### Reporte de eventos para animales sin identificador físico (v1.12.0)
+
+*Añadido 2026-09-18/19.* Resuelve la limitación #2 señalada en v1.11.1 (Birth Subsystem,
+más abajo): una cría recién nacida sin arete/fuego/chip no podía reportarse por mortandad ni
+venta, porque `sp_solicitar_autorizacion` (y, hasta este fix, los SPs de despacho) solo
+aceptaban los 3 identificadores físicos.
+
+**Herramienta MCP `find_calf_by_dam`** (`v6/MCP Server Cattle`):
+* Busca crías **sin ningún identificador físico** (`rfid_siniiga`, `numero_fuego`,
+  `electronic_rfid` los 3 `NULL`) nacidas de una madre específica en los últimos 90 días.
+  Madre identificada por `electronic_rfid`/`rfid_siniiga`/`numero_fuego` (texto libre, mismo
+  patrón que `register_birth_event`).
+* No filtra por `current_status` de la madre ni de la cría — una cría ya `BAJA_MORTANDAD`
+  sigue apareciendo en los resultados (comportamiento verificado, no un bug: el filtro solo
+  mira ausencia de identificador + ventana de fecha).
+* Si regresa exactamente un resultado, el Agente usa su `id` como `livestock_id` sin pedir
+  confirmación al usuario (el usuario no puede dictar un UUID por voz/texto). Si regresa
+  varios, el Agente debe desambiguar listando sexo/fecha/peso — **verificado en producción
+  que esto funciona correctamente** tras el fix de tenant_id (ver abajo).
+
+**Flujo completo:** `find_calf_by_dam` (resuelve `livestock_id`) → `log_mortality_event` /
+`request_livestock_sale` (pasan `livestock_id` a `sp_solicitar_autorizacion`) →
+`pending_authorizations.livestock_id` poblado, con `electronic_rfid`/`rfid_siniiga`/
+`numero_fuego` vacíos en el `payload` → aprobación vía `/admin/autorizaciones` →
+`sp_resolver_autorizacion` reenvía `livestock_id` → `sp_procesar_baja_mortandad` /
+`sp_procesar_salida_ganado` resuelven el animal por UUID directo.
+
+**⚠️ Hallazgo real durante las pruebas — el `tenant_id` de una llamada MCP no es un límite
+de confianza garantizado.** El Agente IA, al invocar `find_calf_by_dam`, en una ejecución
+envió `tenant_id: 5` (una empresa real, "UPP La Bendición") en vez de `tenant_id: 3`
+(tenant de pruebas), **pese a que la resolución de tenant en el workflow de WhatsApp ya
+había determinado correctamente `tenant_id = 3`** para esa conversación — el LLM ignoró el
+valor correcto al construir los parámetros de esa herramienta específica. Sin match en la
+BD, la llamada no tuvo efecto (no se filtró ni escribió nada en tenant 5), pero el patrón es
+real: cualquier parámetro `tenant_id` que dependa de `$fromAI()` en una tool MCP puede, en
+principio, ser sustituido por el LLM.
+* **Mitigación aplicada:** se agregó una línea con el valor **literal** del tenant
+  (`{{ $('Resolver Tenant').item.json.tenant_id }}` / `{{ $('Validar Token').item.json.data.
+  id_company }}`) justo antes del diccionario de herramientas en ambos system prompts
+  (WhatsApp y Chat Web) — la proximidad al punto de decisión del LLM resultó ser más
+  efectiva que reforzar la regla general de tenant (Regla 4), que ya existía y no fue
+  suficiente por sí sola.
+* **No es una garantía arquitectónica**, solo un refuerzo de prompt — `v6/MCP Server Cattle`
+  corre como workflow MCP separado, sin acceso directo al contexto de sesión del workflow
+  que lo invoca, así que no hay forma simple de inyectar `tenant_id` por expresión de n8n en
+  vez de depender del LLM. Queda como deuda técnica de arquitectura, ver `CLAUDE.md`.
+
+**Probado end-to-end en producción (2026-09-18/19), tenant 3 ("Pista de Hielo"):**
+mortandad ✅ (madre `9999999999`, cría `aab8e413-f94b-40ef-afdb-5577b091703f` →
+`BAJA_MORTANDAD`, `mortality_events` insertado correctamente) y venta ✅ (cría
+`4d8dbcb3-f73c-4cff-b5e3-72eac8cca738` → `APROBADO`, `sp_procesar_salida_ganado`
+ejecutado sin error).
 
 ---
 
@@ -619,12 +707,15 @@ anterior de este archivo — no son nuevos de v1.11.0, solo su documentación lo
   caso de madre sin ubicación asignada (el Agente pregunta explícitamente por la UPP, no
   la asume) y el caso de madre con estatus distinto a `PREÑADA` (el SP informa que no
   modificó su estatus, sin tratarlo como error).
-* ⚠️ Ver `CLAUDE.md`, Regla 11, para dos limitaciones confirmadas en pruebas reales: (1) el
-  Agente no resuelve un nombre de UPP mencionado en texto libre contra
+* ⚠️ Ver `CLAUDE.md`, Regla 11, para una limitación confirmada en pruebas reales que sigue
+  abierta: el Agente no resuelve un nombre de UPP mencionado en texto libre contra
   `production_units.ranch_name` cuando el tenant tiene varias UPPs — solo reconoce nombres
-  de tenant; y (2) un animal recién nacido sin identificador físico asignado no puede
-  después reportarse por mortandad/venta, ya que esos flujos no aceptan el `livestock_id`
-  interno como identificador.
+  de tenant.
+* ✅ **Resuelto en v1.12.0** (antes listada aquí como limitación #2): un animal recién
+  nacido sin identificador físico asignado ahora **sí** puede reportarse por mortandad/venta,
+  vía la herramienta MCP `find_calf_by_dam` + el parámetro `livestock_id` agregado a toda la
+  cadena de autorización asíncrona. Ver "Reporte de eventos para animales sin identificador
+  físico" arriba.
 
 ---
 
@@ -684,12 +775,33 @@ its absence fails at runtime, not at deploy time (see CLAUDE.md, Contrato Meta-C
 * ⚠️ Ver `ARCHITECTURE.md`, sección "Hallazgos confirmados sobre `execute_metacrud_write`"
   (v1.9.0) — no es la ruta real de escritura del gateway; incompatible con PK UUID.
 
-### `sp_procesar_salida_ganado(p_electronic_rfid)`
+### `sp_procesar_salida_ganado(p_electronic_rfid)` — overload legacy de 1 parámetro
 
 *Reemplazado en v1.9.0 — mecanismo actualizado dos veces desde el registro original.*
 
 * **Purpose:** Business rule enforcement for livestock checkout (sale).
 * **Signature and invocation unchanged since v1.0.0:** `SELECT sp_procesar_salida_ganado(rfid)`.
+
+### `sp_procesar_salida_ganado(p_electronic_rfid, p_tenant_id, p_rfid_siniiga, p_numero_fuego, p_livestock_id)` — overload de 4/5 parámetros
+
+⚠️ **Gap de documentación retroactivo, cerrado en v1.12.0:** este overload existe en
+producción desde v1.9.0 (es el que realmente invoca el gateway Meta-CRUD vía
+`spConfigByModel` en el nodo Build Query) y nunca se documentó por separado del overload
+legacy de arriba — ambos coexisten como funciones distintas en Postgres (sobrecarga por
+firma), no una sola función con parámetros opcionales agregados con el tiempo.
+
+* Mismo patrón de desambiguación multi-identificador y mismas reglas normativas
+  (arete oficial, TB/BR con exención por hato libre, exención completa para `species =
+  'EQUIDO'`) que el resto de esta sección describe para el mecanismo general.
+* **`p_livestock_id uuid DEFAULT NULL`** *(añadido en v1.12.0, 5º parámetro)*: mismo
+  patrón que en `sp_procesar_baja_mortandad` — si viene informado, resuelve el animal
+  directo por UUID en vez de por los 3 identificadores físicos. Necesario para venta de
+  animales sin arete todavía asignado, aunque en la práctica la validación de arete oficial
+  SINIIGA sigue aplicando después de resolver el animal (un animal sin arete físico
+  legítimamente no puede venderse per la NOM-001-SAG/GAN-2015, salvo `EQUIDO`) — este
+  parámetro resuelve el *lookup*, no exime del requisito legal.
+* Ver "Reporte de eventos para animales sin identificador físico" arriba para el flujo
+  completo de venta de animales sin arete.
 * **Mechanism (as of migration 024, 2026-07-29):**
   * `FOR UPDATE` row-level locking on `cattle_livestock`, unchanged since v1.0.0.
   * **Hard errors** (`RAISE EXCEPTION`, `ERRCODE` P0002/P0001): RFID not registered, or
@@ -705,6 +817,11 @@ its absence fails at runtime, not at deploy time (see CLAUDE.md, Contrato Meta-C
        60-day check entirely — a herd-free certificate is valid for 12-24 months.
        This exemption did NOT exist before migration 024: the routine used to reject
        legitimate sales from a certified herd.
+    * ⚠️ **`species = 'EQUIDO'` exemption, added same session, previously undocumented
+      here:** both checks above (official ear tag and TB/BR) are skipped entirely when
+      `v_species = 'EQUIDO'` — horses legitimately carry no SINIIGA tag under Mexican
+      regulation. Fixed live in production during a real client transaction (a mare sale),
+      not caught until then because this SP's rules were written cattle-first.
   * **On success:** sets `current_status = 'VENDIDO'`, clears both `upp_origen` AND
     `production_unit_id`, and inserts a `VENTA` row into `historico_movimientos`. Returns
     `tb_herd_free`/`br_herd_free` flags alongside the result for transparency.

@@ -3,7 +3,7 @@
 ## 📝 Descripción
 
 **Project:** Hosting3M Automation Suite (Agro ERP)
-**Version:** v1.11.1 (Async Authorization Subsystem, Global Parametrization Catalogs, Birth Event MCP Tool)
+**Version:** v1.12.0 (Untagged-Animal Event Reporting, Async Authorization Subsystem, Global Parametrization Catalogs, Birth Event MCP Tool)
 **Stack:** Angular 21 (Signals) | n8n (API Gateway / MCP) | PostgreSQL (JSONB, Views & PL/pgSQL) | Tabler UI
 **Author:** Francisco Jesus Pérez Pimienta
 
@@ -20,6 +20,12 @@
   fixes de tipado UUID y de payload de autorización; confirmación de edad de madurez
   `BECERRO_TORETE`; hallazgos de resolución de UPP y de reporte de mortandad sin
   identificador
+- v1.12.0 (2026-09-18 a 2026-09-19) — Reporte de mortandad/venta para animales sin
+  identificador físico (`find_calf_by_dam`, `livestock_id` end-to-end en toda la cadena de
+  autorización asíncrona); hallazgo y corrección de un caso real de incumplimiento de
+  aislamiento multi-tenant en el Agente IA (tenant_id ignorado pese a estar correctamente
+  resuelto en contexto); documentación retroactiva del overload de 4 parámetros de
+  `sp_procesar_salida_ganado`
 
 ## 📝 1. Estructura del Workspace (Feature-Driven Architecture)
 
@@ -451,6 +457,22 @@ movimiento de salida por venta puede originarse aquí o directo, según el canal
   `sp_procesar_baja_mortandad` identifica crías con `mother_id` = el animal fallecido,
   `current_status = 'ACTIVO'` y sin fila en `weaning_events`, y las pasa a `RIESGO` — señal
   de "requiere revisión humana", nunca una decisión automática de destete o descarte.
+* **Animales sin identificador físico resueltos por UUID, no por arete** *(v1.12.0)*: la
+  cadena completa (`sp_solicitar_autorizacion` → `pending_authorizations.livestock_id` →
+  `sp_resolver_autorizacion` → `sp_procesar_baja_mortandad`/`sp_procesar_salida_ganado`)
+  acepta `livestock_id` como alternativa a los 3 identificadores físicos. Habilitado por la
+  tool MCP `find_calf_by_dam`, que busca crías sin arete/fuego/chip por madre + ventana de
+  90 días. Ver `DATABASE_SCHEMA.md` para el detalle SQL completo.
+* **`tenant_id` en llamadas MCP no es un límite de confianza garantizado — solo
+  prompt-enforced** *(hallazgo v1.12.0)*: durante las pruebas de `find_calf_by_dam`, el
+  Agente envió `tenant_id` de una empresa real (5) en vez del tenant correcto de la
+  conversación (3), pese a que la resolución de tenant del workflow ya lo tenía correcto en
+  contexto — el LLM lo ignoró al construir esa llamada específica. Mitigado reforzando el
+  prompt (valor literal del tenant justo antes del diccionario de herramientas, no solo en
+  la regla general), pero sigue siendo una garantía de prompt, no de arquitectura — el
+  workflow MCP server corre aislado, sin acceso directo al contexto de sesión del workflow
+  que lo invoca, así que no hay forma simple de inyectarlo por expresión de n8n en su lugar.
+  Deuda técnica de arquitectura abierta, ver `CLAUDE.md`.
 
 ### Pantalla Web: `/admin/autorizaciones`
 
@@ -477,7 +499,7 @@ completo de `pending_authorizations` y `mortality_events`.
 | `mortality_events` | tabla | SELECT,INSERT,GETALL,GETONE | ADMIN,EDITOR select/insert; ADMIN update/delete | detalle rico, análogo a `birth_events`/`weaning_events` |
 | `baja_mortandad` | función `sp_procesar_baja_mortandad` | INSERT únicamente | ADMIN | modelo atípico, mismo patrón que `salida_ganado` |
 | `pending_authorizations` | tabla | SELECT,GETALL,GETONE (sin INSERT/UPDATE directo) | ADMIN exclusivo | escritura solo vía los 2 SPs siguientes; `joins` hacia `cattle_livestock` |
-| `solicitar_autorizacion` | función `sp_solicitar_autorizacion` | INSERT únicamente | ADMIN,EDITOR | crea la solicitud, no muta `cattle_livestock` |
+| `solicitar_autorizacion` | función `sp_solicitar_autorizacion` | INSERT únicamente | ADMIN,EDITOR | crea la solicitud, no muta `cattle_livestock`; acepta `livestock_id` como identificador alternativo desde v1.12.0 |
 | `resolver_autorizacion` | función `sp_resolver_autorizacion` | INSERT únicamente | ADMIN | `sp_requires_tenant = false`; despachador |
 
 *(la fila anterior cierra la tabla del subsistema de autorización; `register_birth_event`, tabla siguiente, no pasa por `pending_authorizations` — es evento rutinario, sin autorización diferida)*
@@ -489,10 +511,23 @@ completo de `pending_authorizations` y `mortality_events`.
 | `register_birth_event` | `sp_register_birth_event` (versión de 13 parámetros) | tool MCP, sin registro directo en `crud_models` (invocada vía nodo `postgresTool` en `v6/MCP Server Cattle`, no vía el gateway REST `v6/crud`) | filtrado por rol en el propio prompt del Agente | ver `DATABASE_SCHEMA.md`, sección Birth Subsystem, para las dos versiones sobrecargadas del SP y la lógica de resolución de ubicación |
 
 **Validación end-to-end confirmada (2026-09-16):** Chat Web y WhatsApp, incluyendo caso de
-madre sin ubicación asignada y madre con estatus distinto a `PREÑADA`. Dos limitaciones de
-diseño confirmadas durante la prueba (no bloqueantes hoy, ver `CLAUDE.md` Regla 11):
-resolución de nombre de UPP por texto libre cuando el tenant tiene varias UPPs reales, y
-reporte de mortandad para animales sin identificador físico.
+madre sin ubicación asignada y madre con estatus distinto a `PREÑADA`. Una limitación de
+diseño confirmada durante la prueba sigue abierta (ver `CLAUDE.md` Regla 11): resolución de
+nombre de UPP por texto libre cuando el tenant tiene varias UPPs reales. La segunda
+limitación identificada entonces (reporte de mortandad para animales sin identificador
+físico) **quedó resuelta en v1.12.0** — ver tabla siguiente.
+
+### Herramienta MCP `find_calf_by_dam` — validada en producción 2026-09-18/19
+
+| Modelo | Función | Ops | RBAC | Notas |
+|---|---|---|---|---|
+| `find_calf_by_dam` | query directa (`executeQuery`, no invoca un SP) sobre `cattle_livestock`/`birth_events` | tool MCP, mismo patrón de registro que `register_birth_event` (sin `crud_models`) | filtrado por rol en el propio prompt del Agente | busca crías sin `rfid_siniiga`/`numero_fuego`/`electronic_rfid` (los 3 `NULL`) nacidas de una madre dada en los últimos 90 días; su resultado alimenta `livestock_id` en `log_mortality_event`/`request_livestock_sale` |
+
+**Validación end-to-end confirmada (2026-09-18/19):** WhatsApp, tenant 3 ("Pista de
+Hielo"), ambos flujos (mortandad y venta) probados con crías reales sin identificador. Ver
+`DATABASE_SCHEMA.md`, sección "Reporte de eventos para animales sin identificador físico",
+para el detalle completo, incluyendo el hallazgo de aislamiento multi-tenant encontrado y
+corregido durante estas pruebas.
 
 **Nota operativa sobre pruebas de tools MCP con panel "Test":** el panel de prueba de
 un nodo `postgresTool` ejecuta contra la base de la credencial configurada en el nodo,
@@ -502,6 +537,15 @@ prueba lanzada "por error" desde la pestaña equivocada del navegador escribe en
 producción igual que cualquier otra invocación real — confirmado por incidente real
 durante el desarrollo de esta herramienta, revertido manualmente sin dejar rastro. Mitigado
 en adelante con un tenant ficticio dedicado a pruebas (ver `CLAUDE.md`, Regla 11).
+
+**Mismo riesgo confirmado en el panel "Chat" interno de n8n** *(v1.12.0)*: al depurar
+`find_calf_by_dam`, una ejecución lanzada desde el panel de Chat del editor de n8n
+(distinto del panel "Test" de un nodo individual) resultó en un `tenant_id` de una empresa
+real (5) en la llamada a la herramienta — no porque el panel esté ligado a otra base de
+datos, sino porque no pasa por el flujo real de resolución de tenant (`Resolver Tenant`/
+`Validar Token`) del canal de producción (WhatsApp/Chat Web). Cualquier prueba de un Agente
+IA debe hacerse por el canal real (WhatsApp o la app Chat Web), nunca desde el panel de
+Chat interno del editor de n8n, precisamente por esta razón.
 
 ---
 
