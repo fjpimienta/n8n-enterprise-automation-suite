@@ -31,7 +31,7 @@
       "typeVersion": 3.4,
       "position": [
         -1584,
-        384
+        288
       ],
       "id": "fbe5dcd2-be1b-4865-8448-5069c3307be0",
       "name": "Message"
@@ -46,7 +46,7 @@
       "typeVersion": 1.1,
       "position": [
         -2256,
-        192
+        96
       ],
       "id": "5535af90-66ab-41eb-b55d-c25d30965c1b",
       "name": "GetUrlAudio",
@@ -69,7 +69,7 @@
       "typeVersion": 1.8,
       "position": [
         -1808,
-        192
+        96
       ],
       "id": "e9daae41-a6ca-4d11-961c-dd47ee90eb1f",
       "name": "Transcribe",
@@ -92,7 +92,7 @@
       "typeVersion": 4.2,
       "position": [
         -2032,
-        192
+        96
       ],
       "id": "4c1c86ce-840a-4da4-b139-0d8d98e9d627",
       "name": "Download",
@@ -133,7 +133,7 @@
       "typeVersion": 3.4,
       "position": [
         -1584,
-        192
+        96
       ],
       "id": "e0cd6816-0d2a-4a83-b2d2-be0418e48252",
       "name": "MessageAudio"
@@ -166,8 +166,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1344,
-        192
+        1120,
+        48
       ],
       "id": "de696807-1b04-4e78-89d6-a1f860918919",
       "name": "If"
@@ -181,8 +181,8 @@
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 1.8,
       "position": [
-        1568,
-        96
+        1344,
+        -48
       ],
       "id": "4b55141d-9940-4072-bf50-73f4c2e01138",
       "name": "GenerateAudio",
@@ -201,8 +201,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1792,
-        96
+        1568,
+        -48
       ],
       "id": "15cc1ad9-3763-4b77-a1bb-bc12206d0be6",
       "name": "ConvertAudio"
@@ -219,8 +219,8 @@
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
       "position": [
-        2016,
-        96
+        1792,
+        -48
       ],
       "id": "7894f202-fc5f-4d57-9c47-e8bb49de7883",
       "name": "SendAudio",
@@ -243,8 +243,8 @@
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
       "position": [
-        1568,
-        288
+        1344,
+        144
       ],
       "id": "b784f086-8e7a-4f2c-9d6a-70789e74f5c7",
       "name": "SendText",
@@ -274,7 +274,7 @@
       "typeVersion": 3.4,
       "position": [
         -2256,
-        528
+        432
       ],
       "id": "ae8fc008-fe46-425e-b734-4cec94d6f739",
       "name": "Edit Fields"
@@ -291,7 +291,7 @@
       "typeVersion": 1.1,
       "position": [
         -2032,
-        528
+        432
       ],
       "id": "eb8e6e95-bda2-40a0-96e9-52ff394d763e",
       "name": "Send message",
@@ -390,7 +390,7 @@
       "typeVersion": 3.3,
       "position": [
         -2480,
-        368
+        272
       ],
       "id": "3669d5e0-d7e5-4935-a7ec-be2d50221786",
       "name": "Switch Type"
@@ -404,73 +404,11 @@
       "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
       "typeVersion": 1.3,
       "position": [
-        1008,
+        784,
         160
       ],
       "id": "b452a01d-b2c2-4f6b-9455-31dfc433eeac",
       "name": "Simple Memory"
-    },
-    {
-      "parameters": {
-        "rules": {
-          "values": [
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 3
-                },
-                "conditions": [
-                  {
-                    "id": "18f51475-430c-4447-9753-48e02d415494",
-                    "leftValue": "={{ $('Set Role').item.json.role }}",
-                    "rightValue": "ADMIN",
-                    "operator": {
-                      "type": "string",
-                      "operation": "equals",
-                      "name": "filter.operator.equals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              }
-            },
-            {
-              "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict",
-                  "version": 3
-                },
-                "conditions": [
-                  {
-                    "id": "735583d8-e290-47b7-aab6-36238216fd56",
-                    "leftValue": "={{ $('Set Role').item.json.role }}",
-                    "rightValue": "ADMIN",
-                    "operator": {
-                      "type": "string",
-                      "operation": "notEquals"
-                    }
-                  }
-                ],
-                "combinator": "and"
-              }
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.switch",
-      "typeVersion": 3.4,
-      "position": [
-        656,
-        192
-      ],
-      "id": "caed1e4d-523c-4646-b0fa-01afb21a4489",
-      "name": "Switch Role"
     },
     {
       "parameters": {
@@ -486,7 +424,7 @@
       "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
       "typeVersion": 1.3,
       "position": [
-        880,
+        656,
         160
       ],
       "id": "f4fa3130-d3f1-4669-9538-883906ef59a0",
@@ -506,7 +444,7 @@
       "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
       "typeVersion": 1.2,
       "position": [
-        1136,
+        912,
         160
       ],
       "id": "83c47eaa-e8ca-4657-a2f8-6206ddaa0314",
@@ -524,7 +462,7 @@
       "typeVersion": 2.6,
       "position": [
         -1136,
-        288
+        192
       ],
       "id": "e33ca6b7-6b0c-4373-a101-713121226fc0",
       "name": "Get User Role",
@@ -541,13 +479,13 @@
         "promptType": "define",
         "text": "={{ $('Set Prompt Final').item.json.prompt_final }}",
         "options": {
-          "systemMessage": "==Rol: Eres el Administrador Virtual de Ganadería de Precisión. Tu objetivo es ayudar al usuario a registrar y consultar datos de campo de forma estructurada.\nHOY ES: {{ $now.setZone('America/Mexico_City').toFormat('yyyy-MM-dd') }} (Usa esto para calcular \"hoy\").\n\n🛑 REGLAS CRÍTICAS DE INTEGRIDAD DE DATOS (MÉTACRUD):\n\n1. NUNCA ASUMAS EL ID DEL ANIMAL: Postgres requiere el UUID (livestock_id) para cualquier registro transaccional. Si el usuario te da un arete SINIIGA o número de fuego, SIEMPRE ejecuta primero la herramienta 'get_livestock_info' para obtener su UUID antes de intentar guardar algo.\n\n1.b OBLIGATORIEDAD DE RE-VERIFICACIÓN: Nunca respondas \"no encontrado\" o des datos de un animal basándote en el historial de la conversación o en consultas anteriores. CADA VEZ que el usuario pregunte por un animal (aunque ya se haya consultado antes en esta misma sesión), DEBES ejecutar 'get_livestock_info' de nuevo con el identificador exacto proporcionado en este turno, sin excepción.\n\n2. SANITIZACIÓN DE ARETES (AUDIO Y TEXTO): Es probable que el usuario o el sistema dicte el arete con espacios, comas o guiones (Ej. \"715 690 242\" o \"vaca 19-116\"). Priorizar el identificador electronic_rfid (bolo ruminal/microchip) sobre el arete SINIIGA/fuego cuando el usuario provea ambos, y documentar que SINIIGA es identificador secundario. TU DEBER ESTRICTO es extraer únicamente los caracteres alfanuméricos, eliminar cualquier espacio o símbolo, y concatenarlos en un solo bloque continuo (Ej. \"715690242\" o \"19116\") ANTES de invocar get_livestock_info.\n\n3. ESTRICTA PROHIBICIÓN DE INFERENCIA (ZERO-HALLUCINATION): NUNCA asumas, inventes o adivines parámetros faltantes (como 'event_type', 'category' o 'description'). Si el usuario dice \"lo inyectamos\", ESTÁ ESTRICTAMENTE PROHIBIDO asumir que el evento es 'VACUNACION'. Si falta un solo dato para usar una herramienta, DEBES detener el flujo y preguntar explícitamente al usuario por los datos exactos (Ej. \"¿Qué le inyectaron y por qué motivo?\") ANTES de armar el resumen.\n\n4. MANEJO DE TENANTS Y DESAMBIGUACIÓN (GATEKEEPER ESTRICTO):\nTienes acceso a este arreglo de UPPs permitidas para el usuario actual: {{ $('Set Role').item.json.available_tenants }}\n\nEl email verificado del usuario en esta sesión es: {{ $('Resolver Tenant').item.json.user_email }}\n🛑 SIEMPRE usa este valor EXACTO, tal cual aparece aquí, como el parámetro 'user_email' al invocar cualquier herramienta que lo requiera (get_livestock_info, log_cattle_weight, log_health_event, register_ranch_expense). NUNCA inventes, adivines, ni dejes vacío este campo.\n\n🛑 REGLA DE EJECUCIÓN CONDICIONAL:\n- PASO A: Revisa cuántas UPPs hay en el arreglo proporcionado.\n- PASO B: Si hay 2 O MÁS UPPs, analiza el historial de la conversación. ¿El usuario ya especificó claramente en cuál rancho/UPP quiere operar?\n  - SI LA RESPUESTA ES NO: TIENES ESTRICTAMENTE PROHIBIDO ejecutar 'get_livestock_info', 'log_cattle_weight' o cualquier otra herramienta. Tu ÚNICA acción permitida es responder al usuario con este formato: \"Tienes acceso a más de una UPP [Menciona los nombres de las UPPs disponibles]. ¿En cuál de ellas deseas realizar esta operación?\".\n  - SI LA RESPUESTA ES SÍ (o si solo tiene 1 UPP asignada): Extrae el 'id_company' correspondiente a la selección del usuario y úsalo obligatoriamente como el parámetro 'tenant_id' en cualquier herramienta que lo requiera (get_livestock_info, register_ranch_expense, log_cattle_weight, y cualquier otra que reciba este parámetro).\n\n🛑 REGLA DE TRANSMISIÓN DE DATOS: \nAl ejecutar 'log_cattle_weight', los parámetros DEBEN ser enviados como un objeto JSON con las llaves exactas 'livestock_id' y 'weight_kg'. No envíes arreglos ni listas.\n\n🛠️ DICCIONARIO DE HERRAMIENTAS PERMITIDAS:\n- Consulta: Usa 'get_livestock_info' para mostrar categoría, peso actual y estatus.\n- Pesaje: Usa 'log_cattle_weight' enviando el UUID y el peso numérico.\n- Salud: Usa 'log_health_event' enviando el UUID, event_type y description.\n- Gasto: Usa 'register_ranch_expense' enviando tenant_id, category, amount y description.\n\n✨ PROTOCOLO DE ESTILO:\n- Sé directo, pragmático y orientado a resultados de campo (habla como un administrador ganadero experto).\n- Usa un solo asterisco (*) para resaltar números clave o aretes. NUNCA uses negrita doble (**).\n- Usa Emojis estratégicamente: 🐄, ⚖️, 💉, 📋."
+          "systemMessage": "==Rol: Eres el Administrador Virtual de Ganadería de Precisión. Tu objetivo es ayudar al usuario a registrar y consultar datos de campo de forma estructurada.\nHOY ES: {{ $now.setZone('America/Mexico_City').toFormat('yyyy-MM-dd') }} (Usa esto para calcular \"hoy\").\n\n🛑 REGLAS CRÍTICAS DE INTEGRIDAD DE DATOS (MÉTACRUD):\n\n1. NUNCA ASUMAS EL ID DEL ANIMAL: Postgres requiere el UUID (livestock_id) para cualquier registro transaccional. Si el usuario te da un arete SINIIGA o número de fuego, SIEMPRE ejecuta primero la herramienta 'get_livestock_info' para obtener su UUID antes de intentar guardar algo — excepto en 'register_birth_event', que acepta la identificación de la madre como texto libre (arete o fuego), ver el diccionario más abajo.\n\n1.b OBLIGATORIEDAD DE RE-VERIFICACIÓN: Nunca respondas \"no encontrado\" o des datos de un animal basándote en el historial de la conversación o en consultas anteriores. CADA VEZ que el usuario pregunte por un animal (aunque ya se haya consultado antes en esta misma sesión), DEBES ejecutar 'get_livestock_info' de nuevo con el identificador exacto proporcionado en este turno, sin excepción.\n\n2. SANITIZACIÓN DE ARETES (AUDIO Y TEXTO): Es probable que el usuario o el sistema dicte el arete con espacios, comas o guiones (Ej. \"715 690 242\" o \"vaca 19-116\"). Priorizar el identificador electronic_rfid (bolo ruminal/microchip) sobre el arete SINIIGA/fuego cuando el usuario provea ambos, y documentar que SINIIGA es identificador secundario. TU DEBER ESTRICTO es extraer únicamente los caracteres alfanuméricos, eliminar cualquier espacio o símbolo, y concatenarlos en un solo bloque continuo (Ej. \"715690242\" o \"19116\") ANTES de invocar get_livestock_info.\n\n3. ESTRICTA PROHIBICIÓN DE INFERENCIA (ZERO-HALLUCINATION): NUNCA asumas, inventes o adivines parámetros faltantes (como 'event_type', 'category' o 'description'). Si el usuario dice \"lo inyectamos\", ESTÁ ESTRICTAMENTE PROHIBIDO asumir que el evento es 'VACUNACION'. Si falta un solo dato para usar una herramienta, DEBES detener el flujo y preguntar explícitamente al usuario por los datos exactos (Ej. \"¿Qué le inyectaron y por qué motivo?\") ANTES de armar el resumen. Esto aplica también a 'lot_id'/'production_unit_id' en 'register_birth_event': nunca los asumas, siempre pregunta a qué lote/UPP/PSG pertenece el registro si no se ha dicho ya en la conversación.\n\n4. MANEJO DE TENANTS Y DESAMBIGUACIÓN (GATEKEEPER ESTRICTO):\nTienes acceso a este arreglo de UPPs permitidas para el usuario actual: {{ $('Set Role').item.json.available_tenants }}\n\nEl email verificado del usuario en esta sesión es: {{ $('Resolver Tenant').item.json.user_email }}\n🛑 SIEMPRE usa este valor EXACTO, tal cual aparece aquí, como el parámetro 'user_email' al invocar cualquier herramienta que lo requiera (get_livestock_info, log_cattle_weight, log_health_event, register_ranch_expense, log_weaning_event, register_birth_event, log_mortality_event, request_livestock_sale). NUNCA inventes, adivines, ni dejes vacío este campo.\n\n🛑 REGLA DE EJECUCIÓN CONDICIONAL:\n- PASO A: Revisa cuántas UPPs hay en el arreglo proporcionado.\n- PASO B: Si hay 2 O MÁS UPPs, analiza el historial de la conversación. ¿El usuario ya especificó claramente en cuál rancho/UPP quiere operar?\n  - SI LA RESPUESTA ES NO: TIENES ESTRICTAMENTE PROHIBIDO ejecutar 'get_livestock_info', 'log_cattle_weight' o cualquier otra herramienta. Tu ÚNICA acción permitida es responder al usuario con este formato: \"Tienes acceso a más de una UPP [Menciona los nombres de las UPPs disponibles]. ¿En cuál de ellas deseas realizar esta operación?\".\n  - SI LA RESPUESTA ES SÍ (o si solo tiene 1 UPP asignada): Extrae el 'id_company' correspondiente a la selección del usuario y úsalo obligatoriamente como el parámetro 'tenant_id' en cualquier herramienta que lo requiera (get_livestock_info, register_ranch_expense, log_cattle_weight, y cualquier otra que reciba este parámetro).\nPara CUALQUIER herramienta que reciba el parámetro tenant_id (incluyendo, sin excepción: get_livestock_info, log_cattle_weight, log_health_event, register_ranch_expense, log_weaning_event, register_birth_event, log_mortality_event, request_livestock_sale, find_calf_by_dam), DEBES usar exactamente este número como tenant_id. NUNCA lo inventes, adivines, ni uses un valor de un tenant distinto al de esta sesión, aunque la herramienta no aparezca en esta lista en el futuro — la regla aplica a toda herramienta que acepte tenant_id.\n\n🛑 PROTOCOLO DE CONFIRMACIÓN (solo para bajas irreversibles):\nSolo dos herramientas requieren confirmación explícita antes de ejecutarse: 'log_mortality_event' y 'request_livestock_sale'. Tienes estrictamente PROHIBIDO invocarlas a menos que el ÚLTIMO mensaje del usuario sea una confirmación afirmativa explícita (Ej. \"Sí\", \"Confirmo\", \"Dale\", \"Correcto\"). El resto de las herramientas de escritura ('log_cattle_weight', 'log_health_event', 'register_ranch_expense', 'log_weaning_event', 'register_birth_event') son eventos rutinarios y se ejecutan directamente en cuanto tengas todos los datos requeridos — no pidas confirmación para estas, sería fricción innecesaria por WhatsApp.\n\nMECÁNICA OBLIGATORIA PARA MORTANDAD Y VENTA:\n- PASO 1: Cuando el usuario solicite reportar una mortandad o venta, tu ÚNICA acción permitida es responder con un resumen estructurado de los datos y preguntar: \"¿Confirmas que procedo a enviar esta solicitud para autorización? (Sí/No)\". NO INVOQUES LA HERRAMIENTA AÚN. Aclara que esto queda como solicitud pendiente de aprobación de un ADMIN, no como un registro inmediato.\n- PASO 2: Solo cuando el usuario responda afirmativamente en su siguiente turno, tendrás autorización de invocar la herramienta.\n\n🛑 REGLA DE TRANSMISIÓN DE DATOS:\nAl ejecutar 'log_cattle_weight', los parámetros DEBEN ser enviados como un objeto JSON con las llaves exactas 'livestock_id' y 'weight_kg'. No envíes arreglos ni listas.\n\n🛑 VALOR EXACTO A USAR AHORA: El tenant_id que debes enviar en TODAS las llamadas a herramientas de este turno es: {{ $('Resolver Tenant').item.json.tenant_id }}. Es el ÚNICO valor válido — sin importar cuántas otras empresas veas en available_tenants, NUNCA uses otro tenant_id salvo que el usuario haya cambiado de UPP explícitamente en este mismo turno.\n\n🛠️ DICCIONARIO DE HERRAMIENTAS PERMITIDAS:\n- Consulta: Usa 'get_livestock_info' para mostrar categoría, peso actual y estatus.\n- Pesaje: Usa 'log_cattle_weight' enviando el UUID y el peso numérico. Rutinario, sin confirmación.\n- Salud: Usa 'log_health_event' enviando el UUID, event_type y description. Rutinario, sin confirmación.\n- Gasto: Usa 'register_ranch_expense' enviando tenant_id, category, amount y description. Rutinario, sin confirmación.\n- Destete: Usa 'log_weaning_event' para registrar el destete de una cría. Solo aplica a BECERRO, BECERRA, BUCERRO, BUCERRA, POTRO, POTRANCA, BORREGO o BORREGA con estatus ACTIVO, y solo una vez por animal. Si get_livestock_info muestra una categoría o estatus distinto, no invoques esta herramienta — informa al usuario por qué no aplica. Rutinario, sin confirmación.\n- Nacimiento: Usa 'register_birth_event' para registrar una cría recién nacida. Acepta a la madre por UUID (si ya la resolviste) o por arete/fuego en texto libre. SIEMPRE pregunta explícitamente el lote/UPP/PSG si no se ha mencionado ya en la conversación — nunca lo asumas. Rutinario, sin confirmación.\n- Búsqueda de cría sin identificador: Usa 'find_calf_by_dam' cuando el usuario quiera reportar la muerte o venta de una cría recién nacida que aún no tiene arete/fuego/chip. Pídele el identificador de la madre, invoca esta herramienta, y si regresa exactamente un resultado, usa su \"id\" como livestock_id al invocar log_mortality_event o request_livestock_sale — nunca le pidas al usuario que dicte un UUID. Si regresa varios, pregúntale cuál es (menciona sexo, fecha de nacimiento y peso de cada opción).\n- Mortandad: Usa 'log_mortality_event' para SOLICITAR la baja de un animal por muerte. Es una SOLICITUD, no una baja inmediata — un administrador debe autorizarla el mismo día. causa_mortandad debe ser exactamente uno de: ENFERMEDAD, ACCIDENTE, DEPREDACIÓN, DESCONOCIDA, NATURAL — si el usuario no lo deja claro, pregúntale, nunca lo adivines. REQUIERE CONFIRMACIÓN previa.\n- Venta: Usa 'request_livestock_sale' para solicitar la baja por venta de un animal. Es una SOLICITUD, no una venta inmediata — un administrador debe autorizarla el mismo día. REQUIERE CONFIRMACIÓN previa.\n\n✨ PROTOCOLO DE ESTILO:\n- Sé directo, pragmático y orientado a resultados de campo (habla como un administrador ganadero experto).\n- Usa un solo asterisco (*) para resaltar números clave o aretes. NUNCA uses negrita doble (**).\n- Usa Emojis estratégicamente: 🐄, ⚖️, 💉, 📋."
         }
       },
       "type": "@n8n/n8n-nodes-langchain.agent",
       "typeVersion": 3.1,
       "position": [
-        944,
+        720,
         -64
       ],
       "id": "8bb0e662-274e-48b3-9efa-e51f4ec46fda",
@@ -564,7 +502,7 @@
       "typeVersion": 1,
       "position": [
         -2704,
-        384
+        288
       ],
       "id": "946c5b45-14e7-4974-867d-7f28e8856113",
       "name": "WhatsApp Trigger",
@@ -575,29 +513,6 @@
           "name": "WhatsApp OAuth"
         }
       }
-    },
-    {
-      "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "44868a6c-9c03-472a-8fba-515ceb130462",
-              "name": "output",
-              "value": "=={{ \n(() => {\n  let tenants = [];\n  try { tenants = JSON.parse($('Resolver Tenant').item.json.available_tenants || '[]'); } catch(e) {}\n  const match = tenants.find(t => t.id_company === $('Resolver Tenant').item.json.tenant_id);\n  const rancho = match ? match.company_name : 'tu rancho';\n  return `🔒 Acceso denegado. Tu rol actual no tiene permiso para operar en este canal para ${rancho}. Contacta a un administrador.`;\n})()\n}}",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
-      },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
-      "position": [
-        1008,
-        336
-      ],
-      "id": "afb94924-c767-4628-ae58-da42e658e29b",
-      "name": "Set Output"
     },
     {
       "parameters": {
@@ -629,7 +544,7 @@
       "typeVersion": 3.4,
       "position": [
         -1360,
-        288
+        192
       ],
       "id": "c303b47d-125a-4988-92bb-67e6e7e82d47",
       "name": "Set Message"
@@ -688,7 +603,7 @@
       "typeVersion": 3.4,
       "position": [
         -912,
-        288
+        192
       ],
       "id": "f21ba439-c27c-4170-8a4a-d703101f1685",
       "name": "Set Role"
@@ -701,7 +616,7 @@
       "typeVersion": 2,
       "position": [
         -688,
-        288
+        192
       ],
       "id": "7b80b240-af1c-48d0-bf0e-25c104226a87",
       "name": "Resolver Tenant"
@@ -734,7 +649,7 @@
       "typeVersion": 2.3,
       "position": [
         -16,
-        288
+        192
       ],
       "id": "338ed646-ec89-4c13-af06-0eb69faf57a1",
       "name": "IF - Bloquear Tenant Ambiguo"
@@ -757,7 +672,7 @@
       "typeVersion": 3.4,
       "position": [
         432,
-        384
+        336
       ],
       "id": "c19f02e4-5a6a-40fb-8afb-dabc9c689e96",
       "name": "Set - Mensaje Selección UPP"
@@ -773,8 +688,8 @@
       "type": "n8n-nodes-base.whatsApp",
       "typeVersion": 1.1,
       "position": [
-        656,
-        384
+        784,
+        336
       ],
       "id": "641ada85-eec6-416a-9abb-52b30ff98232",
       "name": "Send Message Tenant",
@@ -798,7 +713,7 @@
       "typeVersion": 2.6,
       "position": [
         -240,
-        208
+        112
       ],
       "id": "d45c18be-4777-453d-827c-d43ffd8d0cec",
       "name": "Persist Tenant Selection",
@@ -838,7 +753,7 @@
       "typeVersion": 2.3,
       "position": [
         -464,
-        288
+        192
       ],
       "id": "846dc823-29a1-4191-b163-e3d3f5617929",
       "name": "IF - Nueva Selección de Tenant"
@@ -855,7 +770,7 @@
       "typeVersion": 2.6,
       "position": [
         208,
-        384
+        336
       ],
       "id": "c2622e6b-947e-4c73-9c52-b081588f38ed",
       "name": "Guardar Pregunta Pendiente",
@@ -878,7 +793,7 @@
       "typeVersion": 2.6,
       "position": [
         208,
-        192
+        48
       ],
       "id": "0f200946-6b08-44a9-b5c4-fdeb2d8cbf78",
       "name": "Recuperar Pregunta Pendiente",
@@ -908,7 +823,7 @@
       "typeVersion": 3.4,
       "position": [
         432,
-        192
+        48
       ],
       "id": "b9206e12-df75-43a3-85e7-055f91eb5758",
       "name": "Set Prompt Final"
@@ -1058,24 +973,6 @@
         ]
       ]
     },
-    "Switch Role": {
-      "main": [
-        [
-          {
-            "node": "AI Agent",
-            "type": "main",
-            "index": 0
-          }
-        ],
-        [
-          {
-            "node": "Set Output",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "OpenAI Chat Model1": {
       "ai_languageModel": [
         [
@@ -1125,17 +1022,6 @@
         [
           {
             "node": "Switch Type",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Set Output": {
-      "main": [
-        [
-          {
-            "node": "If",
             "type": "main",
             "index": 0
           }
@@ -1259,7 +1145,7 @@
       "main": [
         [
           {
-            "node": "Switch Role",
+            "node": "AI Agent",
             "type": "main",
             "index": 0
           }
@@ -1277,7 +1163,7 @@
     "availableInMCP": true,
     "timeSavedPerExecution": 5
   },
-  "versionId": "9aa00760-67ee-4f9e-9192-2dc0f97d7385",
+  "versionId": "13e8dfa8-cc38-4ea9-80c6-bfbe1de772e5",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"

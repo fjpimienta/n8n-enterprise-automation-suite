@@ -1,0 +1,228 @@
+{
+  "name": "v6/infra-whatsapp-trigger-resync",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 */2 * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        -96
+      ],
+      "id": "22f44a79-73f6-4e16-9891-28d1cb33071a",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://n8n.hosting3m.com/api/v1/workflows/lqgFIeTbSdPRT8zz",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "n8nApi",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        224,
+        -96
+      ],
+      "id": "d8fedc78-80c0-4e3f-93cd-9138b338f419",
+      "name": "Get Workflow Status",
+      "credentials": {
+        "n8nApi": {
+          "id": "STjgoKz9UbrswSmE",
+          "name": "n8n account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "774741c4-a01b-4153-96d2-b0b7ef289e6c",
+              "leftValue": "={{ $json.active }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        -96
+      ],
+      "id": "e91be997-a9dc-4c62-8401-7dd59e54f80b",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.hosting3m.com/api/v1/workflows/lqgFIeTbSdPRT8zz/deactivate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "n8nApi",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        672,
+        -96
+      ],
+      "id": "0b70d9cb-5c63-433c-9a2e-ea69ce28574e",
+      "name": "Deactivate Workflow",
+      "credentials": {
+        "n8nApi": {
+          "id": "STjgoKz9UbrswSmE",
+          "name": "n8n account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "amount": 3
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        896,
+        -96
+      ],
+      "id": "232741c9-9fd8-4dbe-975e-ec6815bf5e95",
+      "name": "Wait Before Resync",
+      "webhookId": "ce82b6bb-87cb-4156-83e8-22b82348965b"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://n8n.hosting3m.com/api/v1/workflows/lqgFIeTbSdPRT8zz/activate",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "n8nApi",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        1120,
+        -96
+      ],
+      "id": "808d9cf6-45ea-4273-a33f-e38e00f6e194",
+      "name": "Reactivate Workflow",
+      "credentials": {
+        "n8nApi": {
+          "id": "STjgoKz9UbrswSmE",
+          "name": "n8n account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Workflow Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Workflow Status": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Deactivate Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deactivate Workflow": {
+      "main": [
+        [
+          {
+            "node": "Wait Before Resync",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Before Resync": {
+      "main": [
+        [
+          {
+            "node": "Reactivate Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "9SrVXdATmlrZemJT",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "321d86d3-0404-4660-80f1-a0db4d9a9957",
+  "meta": {
+    "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
+  },
+  "nodeGroups": [],
+  "id": "uYqT5Z9gCs5SolwI",
+  "tags": [
+    {
+      "updatedAt": "2026-09-18T23:49:21.406Z",
+      "createdAt": "2026-09-18T23:49:21.406Z",
+      "id": "0EQOMTmr0JWgQIad",
+      "name": "infra"
+    },
+    {
+      "updatedAt": "2026-09-18T23:49:30.272Z",
+      "createdAt": "2026-09-18T23:49:30.272Z",
+      "id": "QdI4eiCxQ02hcy7H",
+      "name": "watchdog"
+    }
+  ]
+}

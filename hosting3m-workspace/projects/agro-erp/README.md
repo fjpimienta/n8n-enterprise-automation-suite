@@ -10,6 +10,19 @@ Desarrollada como una **Angular 21 SPA** estructurada por dominios (*Feature-Dri
 
 ---
 
+## 🚀 Key Features (v1.12.0)
+
+### 1. 🐄 Reporte de Mortandad/Venta para Animales sin Identificador Físico
+* **Nueva herramienta MCP `find_calf_by_dam`:** localiza crías sin arete/fuego/chip nacidas de una madre dada en los últimos 90 días — resuelve el caso real de una cría recién nacida que muere o se vende antes de ser aretada, algo imposible de reportar hasta esta versión.
+* **`livestock_id` (UUID interno) propagado de punta a punta** por toda la cadena de autorización asíncrona (`sp_solicitar_autorizacion` → `pending_authorizations` → `sp_resolver_autorizacion` → `sp_procesar_baja_mortandad`/`sp_procesar_salida_ganado`) como alternativa a los tres identificadores físicos.
+* Probado end-to-end en producción (tenant de pruebas dedicado), ambos flujos — mortandad y venta — con crías reales sin identificador.
+
+### 2. 🔍 Hallazgo y Mitigación de Aislamiento Multi-Tenant en el Agente IA
+* Confirmado en pruebas reales: el `tenant_id` inyectado en una llamada a una tool MCP puede ser ignorado por el LLM al construir los parámetros, pese a estar correctamente resuelto en el contexto de la conversación — sin efecto real en la prueba que lo detectó, pero confirma que no es una garantía arquitectónica, solo *prompt-enforced*.
+* **Mitigado** reforzando ambos system prompts (WhatsApp y Chat Web) con el valor literal del tenant justo antes del diccionario de herramientas. Sigue como deuda técnica de arquitectura — ver Roadmap.
+
+---
+
 ## 🚀 Key Features (v1.11.0)
 
 ### 1. 🔒 Autorización Asíncrona para Bajas Irreversibles
@@ -46,6 +59,7 @@ Desarrollada como una **Angular 21 SPA** estructurada por dominios (*Feature-Dri
 * **Propiedad independiente de ubicación:** el fierro de marca (`brand_registrations`) es un catálogo global, independiente de en qué UPP esté parado el animal — modela la realidad real del padrón (ganado de un titular pastando en tierra del otro).
 * **Dictámenes de hato libre:** exención de la ventana de 60 días de pruebas TB/BR para hatos con certificado vigente de hasta 24 meses.
 * **Linaje materno y herencia de fierro:** la cría hereda automáticamente el fierro de la madre al registrar un parto.
+* ⚠️ **Esta versión también corrigió dos afirmaciones de las secciones "v1.8.0" de abajo**, verificadas contra producción el 2026-07-29 y el 2026-07-27 respectivamente — ver las notas de corrección insertadas ahí. `CHANGELOG.md` no tiene todavía una entrada `[1.9.0]` propia; pendiente agregarla.
 
 ---
 
@@ -53,10 +67,12 @@ Desarrollada como una **Angular 21 SPA** estructurada por dominios (*Feature-Dri
 
 ### 1. 🐾 Trazabilidad Multi-Especie y Biométrica (RFID / Bolo Ruminal)
 * **Identidad Resiliente:** El sistema está diseñado en torno al uso de **Bolos Ruminales y Microchips Subcutáneos** (`electronic_rfid`) como estándar de retención física. Los aretes plásticos tradicionales (SINIIGA) se mantienen únicamente como metadato normativo secundario debido a su alta tasa de pérdida en campo.
+  > ⚠️ **Corregido en v1.9.0 (verificado en producción 2026-07-29):** en la práctica es al revés — 262 de 270 animales (97%) no tienen bolo ruminal ni chip. El arete SINIIGA (`rfid_siniiga`) es hoy la identificación que realmente cubre al hato; `electronic_rfid` solo cubre 8 animales. Ver `CLAUDE.md`, Regla 2, y `DATABASE_SCHEMA.md`.
 * **Soporte Universal:** Aislamiento de biomasa y KPIs de capitalización para hatos mixtos (Bovinos, Búfalos, Borregos) mediante la columna física `species`.
 
 ### 2. 🧠 Server-Side Business Intelligence (BI) y Meta-CRUD transaccional
 * **Dynamic Gateway:** La función `execute_metacrud_write` orquesta todas las inyecciones de datos (INSERT/UPDATE) desde n8n de forma dinámica, validando permisos contra la tabla `crud_models`.
+  > ⚠️ **Corregido en v1.9.0 (verificado en producción 2026-07-27):** `execute_metacrud_write` existe en la base pero **no es la ruta real de escritura** del gateway — su `p_record_id` es `integer` (incompatible con PKs UUID) y su `WHERE id = %L` está hardcodeado, ignorando `crud_models.primary_key`. El gateway real construye su propio SQL en el nodo Build Query del workflow `v6/crud`. Ver `ARCHITECTURE.md`, sección "Hallazgos confirmados sobre `execute_metacrud_write`", y `CLAUDE.md`, Regla 1.
 * **Reglas Sanitarias Estrictas:** El procedimiento `sp_procesar_salida_ganado` bloquea ventas si el animal no cuenta con pruebas de Tuberculosis o Brucelosis vigentes (menos de 60 días de antigüedad).
 * **Auditoría de Movimientos:** Cada venta, baja o traslado queda registrado de forma inmutable en `historico_movimientos`, preservando el `upp_origen` (rancho/centro de costos) del animal al momento del evento.
 * **Sincronización de Biomasa:** Triggers en base de datos (`update_current_weight`) automatizan la actualización de la biomasa actual del animal cada vez que se registra un pesaje.
@@ -137,7 +153,8 @@ ng build agro-erp --configuration=production
 * [x] **Confirmación de edad de madurez reproductiva para `BECERRO_TORETE`:** confirmada con el cliente (16 meses) el 2026-09-15.
 * [x] **Herramienta de alta de nacimiento por Agente IA (`register_birth_event`):** validada en producción por Chat Web y WhatsApp, evento rutinario sin confirmación previa (v1.11.0).
 * [ ] **Resolución de nombre de UPP en texto libre:** el Agente IA no distingue una UPP específica por nombre cuando un tenant tiene varias unidades de producción reales — solo reconoce el tenant completo.
-* [ ] **Reporte de mortandad/venta para animales sin identificador físico:** hoy no es posible reportar la baja de un animal recién nacido antes de ser aretado.
+* [x] **Reporte de mortandad/venta para animales sin identificador físico:** resuelto en v1.12.0 vía la herramienta MCP `find_calf_by_dam` y la propagación de `livestock_id` en toda la cadena de autorización asíncrona.
+* [ ] **Garantía arquitectónica de `tenant_id` en tools MCP:** hoy la inyección correcta del tenant en llamadas a herramientas del Agente IA depende solo del refuerzo de prompt, no de un mecanismo verificable a nivel de arquitectura (hallazgo v1.12.0).
 
 
 ---
