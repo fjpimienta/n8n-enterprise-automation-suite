@@ -812,7 +812,7 @@
             {
               "id": "934b037d-ecd2-451a-b9c9-e902299c65ed",
               "name": "prompt_final",
-              "value": "={{ $json.query_text || $('Set Message').item.json.text }}",
+              "value": "={{ ($json.query_text || $('Set Message').item.json.text).replace(/\\d(?:\\s+\\d){2,}/g, (m) => m.replace(/\\s+/g, '')) }}\n",
               "type": "string"
             }
           ]
@@ -1163,7 +1163,7 @@
     "availableInMCP": true,
     "timeSavedPerExecution": 5
   },
-  "versionId": "13e8dfa8-cc38-4ea9-80c6-bfbe1de772e5",
+  "versionId": "65d1121c-2815-4593-9e6c-6d6349c7b3ce",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
