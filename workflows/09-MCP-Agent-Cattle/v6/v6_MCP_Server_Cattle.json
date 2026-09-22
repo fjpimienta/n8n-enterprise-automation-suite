@@ -390,7 +390,7 @@
     "timeSavedMode": "fixed",
     "timeSavedPerExecution": 3
   },
-  "versionId": "dda47ed1-bc62-45ad-8800-edab6a46013b",
+  "versionId": "3319127d-5750-4b08-ad15-bd2c65a07d54",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
@@ -399,16 +399,10 @@
   "id": "pJ3CEaO70QEiGL0C",
   "tags": [
     {
-      "updatedAt": "2026-06-02T17:44:17.958Z",
-      "createdAt": "2026-06-02T17:44:17.958Z",
-      "id": "6NGDwjjesOlJeGQr",
-      "name": "v6"
-    },
-    {
-      "updatedAt": "2025-12-23T12:12:28.399Z",
-      "createdAt": "2025-12-23T12:12:28.399Z",
-      "id": "RWBzILPfFXEtEcLf",
-      "name": "AI Agent"
+      "updatedAt": "2025-12-31T16:55:06.301Z",
+      "createdAt": "2025-12-31T16:55:06.301Z",
+      "id": "ts9FABk8F02a5xrA",
+      "name": "Agent IA"
     },
     {
       "updatedAt": "2025-12-23T12:12:58.230Z",
@@ -417,10 +411,16 @@
       "name": "Chat"
     },
     {
-      "updatedAt": "2025-12-31T16:55:06.301Z",
-      "createdAt": "2025-12-31T16:55:06.301Z",
-      "id": "ts9FABk8F02a5xrA",
-      "name": "Agent IA"
+      "updatedAt": "2025-12-23T12:12:28.399Z",
+      "createdAt": "2025-12-23T12:12:28.399Z",
+      "id": "RWBzILPfFXEtEcLf",
+      "name": "AI Agent"
+    },
+    {
+      "updatedAt": "2026-06-02T17:44:17.958Z",
+      "createdAt": "2026-06-02T17:44:17.958Z",
+      "id": "6NGDwjjesOlJeGQr",
+      "name": "v6"
     }
   ]
 }
