@@ -3,7 +3,7 @@
 ## 📝 Descripción
 
 **Project:** Hosting3M Automation Suite (Agro ERP)
-**Version:** v1.12.0 (Untagged-Animal Event Reporting, Async Authorization Subsystem, Global Parametrization Catalogs, Birth Event MCP Tool)
+**Version:** v1.13.0 (WhatsApp Voice-Input Digit Sanitization Fix, Cattle Event Audit View)
 **Stack:** Angular 21 (Signals) | n8n (API Gateway / MCP) | PostgreSQL (JSONB, Views & PL/pgSQL) | Tabler UI
 **Author:** Francisco Jesus Pérez Pimienta
 
@@ -26,6 +26,10 @@
   aislamiento multi-tenant en el Agente IA (tenant_id ignorado pese a estar correctamente
   resuelto en contexto); documentación retroactiva del overload de 4 parámetros de
   `sp_procesar_salida_ganado`
+- v1.13.0 (2026-09-22) — Fix de pérdida de dígitos en identificadores dictados por voz vía
+  WhatsApp (sanitización determinista movida del LLM a código, nodo `Set Prompt Final`);
+  nueva vista de auditoría `vw_cattle_event_log` (peso/salud/nacimiento combinados) expuesta
+  como modelo Meta-CRUD de solo lectura, consumida por una nueva pestaña en `main-dashboard`
 
 ## 📝 1. Estructura del Workspace (Feature-Driven Architecture)
 
@@ -601,3 +605,51 @@ closing.
 Plesk Git deployment action (not a persisted file) — the deployment command itself had to be
 updated to include `apiUrl_upload` in its `echo` string, or the field would be silently
 dropped on every future deploy regardless of what's committed to `app.config.ts`.
+
+
+---
+
+## 🎙️ 7. WhatsApp Voice-Input Digit Sanitization & Cattle Event Audit View (2026-09-22)
+
+*Added in v1.13.0.* Two related pieces of work from the same session: a production bug fix
+in the WhatsApp Agent's voice-input handling, and a new read-only audit view born directly
+from that bug's discovery.
+
+### Design decisions worth preserving
+
+* **Digit-reassembly is not a task to delegate to the LLM.** Whisper transcribes spoken
+  digit sequences one digit at a time, separated by spaces (`"9 9 9 9 8 8 8 8 7 7"`). The
+  original `systemMessage` for the WhatsApp Agent (Regla 2, "SANITIZACIÓN DE ARETES")
+  instructed the model to manually strip spaces and reassemble the identifier before calling
+  `get_livestock_info` — confirmed in production (execution #699966) to drop a digit under
+  this instruction (`"9999888877"` → `"999988877"`), a token-counting/reassembly task the
+  model is structurally unreliable at, independent of model size. **Fix:** sanitization moved
+  to a deterministic regex (`\d(?:\s+\d){2,}` → collapsed) in the `Set Prompt Final` node of
+  `v6/WhatsApp Agent Cattle`, upstream of the Agent — the LLM never sees the spaced-out form.
+  Text input (typed, not dictated) never had this bug, since it arrives already contiguous.
+* **The system prompt was simplified, not just supplemented**, once sanitization moved
+  upstream — Regla 2 now tells the model the identifier already arrives clean and instructs
+  it not to re-clean or reinterpret it, rather than layering a second (redundant, and
+  previously the buggy one) cleaning instruction on top of the code-level fix.
+* **The audit view exists because of this bug, not despite it.** `vw_cattle_event_log`
+  (migration 060, `CREATE OR REPLACE VIEW`, idempotent) was built as a direct response to
+  needing a way to manually verify that voice-reported events (weight, health, birth) landed
+  correctly in the database — a general-purpose QA mechanism for the WhatsApp Agent's
+  writes, not a one-off verification script for this incident alone.
+* **Read-only, no new write path.** The view is a `UNION`-style projection over
+  `cattle_weight_logs`, `cattle_health_logs`, and `birth_events` keyed by `livestock_id`,
+  tagged with `event_type` (`PESO`/`SALUD`/`NACIMIENTO`) and `tenant_id`. Registered in
+  `crud_models` with `allowed_ops = {SELECT,GETALL,GETONE}` only — consistent with how other
+  audit-style views in this project (`vw_cattle_kpi`, `vw_cattle_lot_history`) are exposed.
+
+### New Meta-CRUD model
+
+| Model | Table/View | Ops | RBAC | Notes |
+|---|---|---|---|---|
+| `cattle_event_log` | `vw_cattle_event_log` (view, migration 060) | SELECT, GETONE, GETALL (no write) | read access per existing dashboard role gates | combines weight/health/birth by `livestock_id`; consumed by the new "Cattle Event Log" tab in `main-dashboard` (`agro-erp`) |
+
+**Verification (2026-09-22):** applied and verified against both LOCAL and PRODUCTION
+(`n8n-enterprise-db`, `hosting3m_db` — same single Postgres instance shared with n8n, per
+Regla 7 de `CLAUDE.md`). Migration applied via the standard runbook: pre-migration
+`pg_dump -Fc` backup, `md5sum` integrity check after `scp` transfer, container/database
+confirmed via `docker ps`/`\dt` before touching production.

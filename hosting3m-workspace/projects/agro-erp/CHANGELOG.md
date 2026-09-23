@@ -3,6 +3,46 @@
 Todos los cambios notables en el proyecto **n8n Enterprise Automation Suite** serán documentados en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/), y este proyecto se adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.13.0] - 2026-09-22
+
+### 🎙️ Corrección de Sanitización de Identificadores Dictados por Voz
+
+* **Bug real confirmado en producción (execution #699966):** Whisper transcribe folios y
+  aretes dictados por voz dígito por dígito con espacios (`"9 9 9 9 8 8 8 8 7 7"`). El
+  `systemMessage` del Agente IA (WhatsApp) delegaba en el propio LLM (`gpt-4o-mini`) la
+  reconstrucción manual del identificador antes de invocar `get_livestock_info` — el modelo
+  perdió un dígito al reensamblar (`"999988877"` en vez de `"9999888877"`), devolviendo
+  "animal no encontrado" pese a que el animal existía. Texto escrito nunca tuvo el bug,
+  porque llega ya contiguo (sin espacios que reconstruir).
+* **Corregido:** sanitización movida a código determinista (expresión regular
+  `\d(?:\s+\d){2,}`) en el nodo `Set Prompt Final` del workflow `v6/WhatsApp Agent Cattle`
+  — colapsa 3+ dígitos sueltos consecutivos en un bloque contiguo antes de que el texto
+  llegue al Agente IA. El `systemMessage` (Regla 2, "SANITIZACIÓN DE ARETES") se simplificó
+  para asumir que el identificador ya llega limpio, en vez de pedirle al LLM que lo re-limpie.
+
+### 📋 Vista de Auditoría de Eventos de Ganado
+
+#### 🗄️ Base de datos
+* **`vw_cattle_event_log` (nueva, migración 060, idempotente):** combina
+  `cattle_weight_logs`, `cattle_health_logs` y `birth_events` por `livestock_id`, con
+  `event_type` (`PESO`/`SALUD`/`NACIMIENTO`) y `tenant_id` explícito para filtrado.
+* Registrada en `crud_models` (`model_name = 'cattle_event_log'`,
+  `allowed_ops = {SELECT,GETALL,GETONE}`, sin escritura).
+
+#### 🖥️ Frontend
+* **Nueva pestaña "Cattle Event Log"** dentro de `main-dashboard` (app `agro-erp`), de solo
+  lectura, para auditoría manual de los 3 tipos de evento capturados por el Agente IA de
+  WhatsApp — nace directamente del hallazgo de pérdida de dígitos de esta misma versión,
+  como mecanismo de QA continuo.
+
+### ✅ Validado en producción
+
+* Tenant 3 ("Pista de Hielo"), 2026-09-22: folio de prueba dictado por voz resuelto
+  correctamente tras el fix de sanitización; los 3 tipos de evento (peso, vacuna,
+  nacimiento) registrados y verificados vía `vw_cattle_event_log`.
+* Migración 060 aplicada en LOCAL y PRODUCCIÓN con backup previo (`pg_dump -Fc`) y
+  verificación de checksum (`md5sum`) tras la transferencia del archivo al servidor.
+  
 ## [1.12.0] - 2026-09-19
 
 ### 🐄 Reporte de eventos para animales sin identificador físico
