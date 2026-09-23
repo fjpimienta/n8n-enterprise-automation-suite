@@ -10,6 +10,20 @@ Desarrollada como una **Angular 21 SPA** estructurada por dominios (*Feature-Dri
 
 ---
 
+## 🚀 Key Features (v1.13.0)
+
+### 1. 🎙️ Corrección de Sanitización de Identificadores Dictados por Voz
+* **Bug real en producción:** Whisper transcribe folios/aretes dictados por voz dígito por dígito con espacios (ej. `"9 9 9 9 8 8 8 8 7 7"`). El Agente IA (WhatsApp) delegaba en el propio LLM la reconstrucción del identificador antes de consultar la base — una tarea de conteo/reensamblaje en la que el modelo falló en producción, perdiendo un dígito y devolviendo "animal no encontrado" pese a existir.
+* **Fix:** la sanitización se movió a código determinista (expresión regular) en el nodo `Set Prompt Final` del workflow `v6/WhatsApp Agent Cattle`, antes de que el texto llegue al Agente IA — ya no depende de que el LLM cuente y reensamble dígitos correctamente.
+* Verificado en producción con el mismo folio de prueba tras el fix, tenant de pruebas dedicado ("Pista de Hielo").
+
+### 2. 📋 Vista de Auditoría de Eventos de Ganado
+* **Nueva vista de solo lectura `vw_cattle_event_log`** (migración 060): combina peso, salud/vacunación y nacimiento en una sola bitácora por animal, filtrable por tenant.
+* **Nueva pestaña "Cattle Event Log"** en `main-dashboard`, de solo lectura, para que cualquier admin pueda auditar manualmente los eventos capturados por el Agente IA de WhatsApp sin entrar a la base de datos.
+* Nace directamente del hallazgo de pérdida de dígitos de esta misma versión, como mecanismo de QA continuo — no solo para ese incidente puntual.
+
+---
+
 ## 🚀 Key Features (v1.12.0)
 
 ### 1. 🐄 Reporte de Mortandad/Venta para Animales sin Identificador Físico
@@ -155,6 +169,8 @@ ng build agro-erp --configuration=production
 * [ ] **Resolución de nombre de UPP en texto libre:** el Agente IA no distingue una UPP específica por nombre cuando un tenant tiene varias unidades de producción reales — solo reconoce el tenant completo.
 * [x] **Reporte de mortandad/venta para animales sin identificador físico:** resuelto en v1.12.0 vía la herramienta MCP `find_calf_by_dam` y la propagación de `livestock_id` en toda la cadena de autorización asíncrona.
 * [ ] **Garantía arquitectónica de `tenant_id` en tools MCP:** hoy la inyección correcta del tenant en llamadas a herramientas del Agente IA depende solo del refuerzo de prompt, no de un mecanismo verificable a nivel de arquitectura (hallazgo v1.12.0).
+- [x] **Corrección de sanitización de identificadores dictados por voz:** pérdida de dígitos en folios/aretes transcritos por Whisper, corregida moviendo la limpieza a código determinista antes del Agente IA (v1.13.0).
+- [x] **Vista de auditoría de eventos de ganado:** `vw_cattle_event_log` (peso, salud, nacimiento) expuesta en una nueva pestaña de solo lectura en `main-dashboard` (v1.13.0).
 
 
 ---

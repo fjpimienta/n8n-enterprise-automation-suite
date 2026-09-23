@@ -21,6 +21,12 @@
   corrección de `sp_solicitar_autorizacion` en este archivo (la firma documentada estaba
   desactualizada — ya tenía `livestock_id` en producción antes de esta versión); hallazgo y
   corrección de un caso real de incumplimiento de aislamiento multi-tenant en el Agente IA
+- v1.13.0 (2026-09-22) — Nueva vista `vw_cattle_event_log` (migración 060) que combina
+  `cattle_weight_logs`/`cattle_health_logs`/`birth_events` por animal, para auditoría
+  manual de eventos capturados por el Agente IA de WhatsApp; sin cambios de esquema en las
+  3 tablas fuente. Ver `ARCHITECTURE.md` y `CLAUDE.md` para el fix de sanitización de
+  identificadores dictados por voz de esta misma versión (sin impacto en este archivo, es
+  un cambio de n8n, no de base de datos).
 
 > ⚠️ **Nota de higiene de documentación (2026-08-14):** el `schema.sql` versionado en el
 > repo **no refleja ninguna tabla ni columna de v1.10.0** (verificado: cero coincidencias
@@ -768,6 +774,32 @@ must expose `created_at` — the n8n gateway's default `getall` ordering depends
 its absence fails at runtime, not at deploy time (see CLAUDE.md, Contrato Meta-CRUD).
 
 ## ⚙️ Stored Procedures & Triggers (Business Logic Layer)
+
+
+### `vw_cattle_event_log`
+*Añadido en v1.13.0, migración 060 (`CREATE OR REPLACE VIEW`, idempotente).*
+* **Source:** `UNION ALL` de `cattle_weight_logs`, `cattle_health_logs` y `birth_events`,
+  cada rama proyectada a una forma común:
+  * `livestock_id`, `tenant_id`, `event_type` (`'PESO'`/`'SALUD'`/`'NACIMIENTO'`, literal por
+    rama), `event_date` (`log_date`/`event_date`/`birth_date` según la rama), `created_at`.
+  * `detail` (JSONB) — payload específico por tipo: peso en kg para `PESO`;
+    `event_type`/`description`/`medicines_json` para `SALUD`; sexo, fecha de nacimiento y
+    peso de la cría para `NACIMIENTO`.
+* **`tenant_id` expuesto explícitamente** (no vía join) para que el gateway pueda filtrar
+  por tenant directamente sobre la vista, mismo patrón que `vw_cattle_kpi`.
+* **Registrada en `crud_models`** como `cattle_event_log`, `allowed_ops = {SELECT, GETALL,
+  GETONE}` — sin `INSERT`/`UPDATE`/`DELETE`, es puramente de lectura/auditoría.
+* **Propósito:** verificación humana de que los eventos reportados por voz/texto al Agente
+  IA de WhatsApp (peso, vacunación/salud, nacimiento) quedaron registrados correctamente —
+  nace directamente del hallazgo de pérdida de dígitos en identificadores dictados por voz
+  de esta misma versión (ver `CLAUDE.md`, Regla 11, y `ARCHITECTURE.md`, sección 7), como
+  mecanismo de QA continuo, no solo para ese incidente puntual.
+* **Consumida por:** nueva pestaña "Cattle Event Log" en `main-dashboard` (app `agro-erp`),
+  de solo lectura.
+* Cumple el contrato de `created_at` señalado arriba (todas las tablas fuente ya lo tienen).
+* **Verificado en LOCAL y PRODUCCIÓN el 2026-09-22** (`n8n-enterprise-db`/`hosting3m_db`),
+  con backup previo y checksum de integridad tras transferir el archivo de migración —
+  runbook estándar, ver `CLAUDE.md`.
 
 ### `execute_metacrud_write`
 * **Purpose:** Centralized Zero-Compute Client mutation gateway.
