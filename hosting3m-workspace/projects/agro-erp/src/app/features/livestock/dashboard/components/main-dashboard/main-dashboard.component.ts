@@ -7,6 +7,7 @@ import { CattleDataService } from '@core/services/cattle-data.service';
 import { NgApexchartsModule } from 'ng-apexcharts';
 import { ReproductiveDashboardComponent } from '../reproductive-dashboard/reproductive-dashboard.component';
 import { EngordaDashboardComponent } from '../engorda-dashboard/engorda-dashboard.component';
+import { CattleEventLogComponent } from '../cattle-event-log/cattle-event-log.component';
 import { ExpenseModalComponent } from '../../../expenses/components/expense-modal/expense-modal.component';
 import { ComplianceAlertCardComponent } from '../../../../compliance/components/compliance-alert-card/compliance-alert-card.component';
 import { MetadataDetailModalComponent } from '@shared/components/metadata-detail-modal/metadata-detail-modal.component';
@@ -22,7 +23,7 @@ import { Paginator } from '../../utils/paginator';
 @Component({
   selector: 'app-main-dashboard',
   standalone: true,
-  imports: [CommonModule, NgApexchartsModule, ReproductiveDashboardComponent, EngordaDashboardComponent, ExpenseModalComponent, ComplianceAlertCardComponent, MetadataDetailModalComponent],
+  imports: [CommonModule, NgApexchartsModule, ReproductiveDashboardComponent, EngordaDashboardComponent, ExpenseModalComponent, ComplianceAlertCardComponent, MetadataDetailModalComponent, CattleEventLogComponent],
   templateUrl: './main-dashboard.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -43,7 +44,7 @@ export class MainDashboardComponent implements OnInit {
   public isLoading = signal<boolean>(true);
 
   // Navegación y Filtros de Trazabilidad Biológica
-  public activeSubTab = signal<'RESUMEN' | 'INVENTARIO' | 'GASTOS' | 'POR_ANIMAL'>('RESUMEN');
+  public activeSubTab = signal<'RESUMEN' | 'INVENTARIO' | 'GASTOS' | 'POR_ANIMAL' | 'EVENT_LOG'>('RESUMEN');
   public selectedSpecies = signal<string>(SPECIES_FILTER_ALL); // 🚀 Filtro maestro de especie
   public selectedLot = signal<string>(LOT_FILTER_ALL); // 🚀 Filtro de lote, combinable (AND) con especie
   public showExpenseModal = signal<boolean>(false);
@@ -235,7 +236,7 @@ export class MainDashboardComponent implements OnInit {
     });
   }
 
-  public setSubTab(subTab: 'RESUMEN' | 'INVENTARIO' | 'GASTOS' | 'POR_ANIMAL') {
+  public setSubTab(subTab: 'RESUMEN' | 'INVENTARIO' | 'GASTOS' | 'POR_ANIMAL' | 'EVENT_LOG') {
     this.activeSubTab.set(subTab);
     this.pagination.reset();
   }
