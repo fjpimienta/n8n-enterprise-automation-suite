@@ -113,6 +113,10 @@
                     Costo por Animal ({{ animalCostSummary().length }})
                 </a>
             </li>
+            <li class="nav-item">
+                <a class="nav-link font-weight-bold" [class.active]="activeSubTab() === 'EVENT_LOG'"
+                    (click)="setSubTab('EVENT_LOG')" style="cursor: pointer;">Cattle Event Log</a>
+            </li>
         </ul>
     </div>
 
@@ -403,7 +407,11 @@
         }
         }
 
-        @if (activeSubTab() !== 'RESUMEN' && activeSubTab() !== 'POR_ANIMAL') {
+        @if (activeSubTab() === 'EVENT_LOG') {
+        <app-cattle-event-log [cattleData]="filteredCattleList()"></app-cattle-event-log>
+        }
+
+        @if (activeSubTab() !== 'RESUMEN' && activeSubTab() !== 'POR_ANIMAL' && activeSubTab() !== 'EVENT_LOG') {
         <div class="card-footer d-flex align-items-center border-top">
             <p class="m-0 text-muted">Mostrando <span>{{ pagination.showingStart() }}</span> a <span>{{ pagination.showingEnd() }}</span> de
                 un total disponible</p>

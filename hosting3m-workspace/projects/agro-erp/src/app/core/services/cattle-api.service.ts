@@ -4,6 +4,7 @@ import { lastValueFrom, firstValueFrom } from 'rxjs';
 import { environment } from '@env/environment';
 import { TenantService } from 'core-auth';
 import { LoggerService } from './logger.service';
+import { CattleEventLogRow } from '@features/livestock/models/cattle-event-log.model';
 
 @Injectable({ providedIn: 'root' })
 export class CattleApiService {
@@ -254,5 +255,35 @@ export class CattleApiService {
             this.logger.warn('No se pudieron cargar los gastos del Tenant:', error);
             return [];
         }
+    }
+
+    /**
+     * 9. Obtener la bitácora combinada de eventos de un animal (peso, salud, nacimiento)
+     * — vista de solo lectura `cattle_event_log` (vw_cattle_event_log, migración 060).
+     * A diferencia del resto de métodos de este servicio, NO atrapa el error ni el `res.error`
+     * del gateway — los deja propagar para que el componente pueda distinguir un estado de
+     * error explícito de un resultado vacío (MetaCRUD Silent Error Shield, mismo patrón que
+     * `authorization-list.component.ts`).
+     */
+    public async getCattleEventLog(): Promise<CattleEventLogRow[]> {
+        const idRanchoActivo = this.tenantService.activeTenantId();
+        if (!idRanchoActivo) {
+            throw new Error('No hay un rancho activo: no se puede solicitar la bitácora de eventos.');
+        }
+
+        const res: any = await lastValueFrom(
+            this.http.post(`${this.apiUrl_crud}/cattle_event_log`, {
+                operation: 'getall',
+                tenant_id: Number(idRanchoActivo)
+            })
+        );
+
+        if (res && res.error) {
+            throw new Error(res.message || 'El servidor reportó un error al cargar la bitácora de eventos.');
+        }
+
+        if (Array.isArray(res.data)) return res.data;
+        if (res?.data && Array.isArray(res.data.data)) return res.data.data;
+        return [];
     }
 }
