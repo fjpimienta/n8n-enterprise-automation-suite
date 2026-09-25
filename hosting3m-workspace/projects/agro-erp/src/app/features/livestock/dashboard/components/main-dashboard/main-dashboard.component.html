@@ -408,7 +408,7 @@
         }
 
         @if (activeSubTab() === 'EVENT_LOG') {
-        <app-cattle-event-log [cattleData]="filteredCattleList()"></app-cattle-event-log>
+        <app-cattle-event-log [cattleData]="cattleList()"></app-cattle-event-log>
         }
 
         @if (activeSubTab() !== 'RESUMEN' && activeSubTab() !== 'POR_ANIMAL' && activeSubTab() !== 'EVENT_LOG') {

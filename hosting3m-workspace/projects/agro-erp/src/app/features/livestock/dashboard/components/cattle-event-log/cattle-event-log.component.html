@@ -34,6 +34,30 @@
                 [value]="searchQuery()" (input)="setSearch($any($event.target).value)">
         </div>
     </div>
+    <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2 mt-2">
+        <div class="d-flex align-items-center gap-1">
+            <span class="text-muted small text-nowrap">Desde:</span>
+            <input type="date" class="form-control form-control-sm w-auto" [value]="dateFrom()"
+                (change)="setDateFrom($any($event.target).value)">
+            <span class="text-muted small text-nowrap">Hasta:</span>
+            <input type="date" class="form-control form-control-sm w-auto" [value]="dateTo()"
+                (change)="setDateTo($any($event.target).value)">
+        </div>
+        <div class="d-flex align-items-center gap-1">
+            <span class="text-muted small text-nowrap">Agrupar por:</span>
+            <select class="form-select form-select-sm w-auto" [value]="groupBy()"
+                (change)="setGroupBy($any($event.target).value)">
+                <option value="NONE">Ninguno</option>
+                <option value="ANIMAL">Animal</option>
+                <option value="EVENT_TYPE">Tipo de Evento</option>
+            </select>
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1"
+            [disabled]="sortedEntries().length === 0" (click)="exportCsv()">
+            <i class="ti ti-download"></i>
+            Exportar CSV
+        </button>
+    </div>
 </div>
 
 @if (isLoading()) {
@@ -63,13 +87,34 @@
     <table class="table card-table table-vcenter text-nowrap datatable table-hover mb-0">
         <thead>
             <tr>
-                <th>Arete SINIIGA</th>
-                <th>Nº Fuego</th>
-                <th>Tipo de Evento</th>
-                <th>Fecha</th>
+                <th style="cursor: pointer;" (click)="setSort('rfidSiniiga')">
+                    Arete SINIIGA
+                    @if (sortColumn() === 'rfidSiniiga') {
+                    <i class="ti" [class.ti-arrow-up]="sortDirection() === 'asc'" [class.ti-arrow-down]="sortDirection() === 'desc'"></i>
+                    }
+                </th>
+                <th style="cursor: pointer;" (click)="setSort('numeroFuego')">
+                    Nº Fuego
+                    @if (sortColumn() === 'numeroFuego') {
+                    <i class="ti" [class.ti-arrow-up]="sortDirection() === 'asc'" [class.ti-arrow-down]="sortDirection() === 'desc'"></i>
+                    }
+                </th>
+                <th style="cursor: pointer;" (click)="setSort('eventType')">
+                    Tipo de Evento
+                    @if (sortColumn() === 'eventType') {
+                    <i class="ti" [class.ti-arrow-up]="sortDirection() === 'asc'" [class.ti-arrow-down]="sortDirection() === 'desc'"></i>
+                    }
+                </th>
+                <th style="cursor: pointer;" (click)="setSort('eventDate')">
+                    Fecha
+                    @if (sortColumn() === 'eventDate') {
+                    <i class="ti" [class.ti-arrow-up]="sortDirection() === 'asc'" [class.ti-arrow-down]="sortDirection() === 'desc'"></i>
+                    }
+                </th>
                 <th>Detalle</th>
             </tr>
         </thead>
+        @if (groupBy() === 'NONE') {
         <tbody>
             @for (entry of paginatedEntries(); track entry.id) {
             <tr>
@@ -115,6 +160,61 @@
             </tr>
             }
         </tbody>
+        } @else {
+        @for (group of groupedPageEntries(); track group.key) {
+        <tbody>
+            <tr class="bg-body-tertiary">
+                <td colspan="5">
+                    <strong>{{ group.key }}</strong>
+                    <span class="text-muted ms-2">({{ group.entries.length }} {{ group.entries.length === 1 ? 'registro' : 'registros' }})</span>
+                </td>
+            </tr>
+            @for (entry of group.entries; track entry.id) {
+            <tr>
+                <td>
+                    <div class="font-monospace text-primary font-weight-bold">{{ entry.rfidSiniiga }}</div>
+                </td>
+                <td><strong>{{ entry.numeroFuego }}</strong></td>
+                <td>
+                    <span class="badge"
+                        [class.bg-blue-lt]="entry.eventType === 'PESO'"
+                        [class.bg-red-lt]="entry.eventType === 'SALUD'"
+                        [class.bg-purple-lt]="entry.eventType === 'PARTO'"
+                        [class.bg-green-lt]="entry.eventType === 'NACIMIENTO'">
+                        {{ eventTypeLabel[entry.eventType] }}
+                    </span>
+                </td>
+                <td><span class="text-muted">{{ entry.eventDate | date:'dd/MM/yyyy HH:mm' }}</span></td>
+                <td class="text-wrap" style="max-width: 420px; white-space: normal !important;">
+                    @switch (entry.eventType) {
+                    @case ('PESO') {
+                    <span class="font-weight-bold">{{ entry.weightKg | number:'1.2-2' }} kg</span>
+                    }
+                    @case ('SALUD') {
+                    <span class="badge bg-secondary-lt me-1">{{ entry.healthEventType || 'Sin tipo' }}</span>
+                    <span>{{ entry.description || 'Sin descripción registrada.' }}</span>
+                    }
+                    @case ('PARTO') {
+                    <span>Dio a luz una cría {{ entry.calfSex === 'MACHO' ? 'macho' : 'hembra' }}
+                        @if (entry.calfWeightKg !== null) {
+                        , peso al nacer {{ entry.calfWeightKg | number:'1.2-2' }} kg
+                        }.
+                    </span>
+                    }
+                    @case ('NACIMIENTO') {
+                    <span>Cría {{ entry.calfSex === 'MACHO' ? 'macho' : 'hembra' }}
+                        @if (entry.calfWeightKg !== null) {
+                        , peso al nacer {{ entry.calfWeightKg | number:'1.2-2' }} kg
+                        }.
+                    </span>
+                    }
+                    }
+                </td>
+            </tr>
+            }
+        </tbody>
+        }
+        }
     </table>
 </div>
 <div class="card-footer d-flex align-items-center border-top">
