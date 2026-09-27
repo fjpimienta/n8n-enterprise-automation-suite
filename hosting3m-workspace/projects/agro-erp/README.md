@@ -10,6 +10,34 @@ Desarrollada como una **Angular 21 SPA** estructurada por dominios (*Feature-Dri
 
 ---
 
+## 🚀 Key Features (v1.14.0)
+
+### 1. 💉 Vacunación Estructurada en el Agente IA
+* **Bug real corregido:** toda vacunación reportada por WhatsApp o Chat Web caía en el
+  evento genérico de salud sin datos estructurados, porque la tool dedicada
+  (`log_vaccination_event`) ya existía en el servidor MCP pero nunca apareció en el
+  diccionario de herramientas del Agente IA.
+* **Fix:** ambos canales ahora enrutan vacunación a `log_vaccination_event` — vacuna,
+  dosis, unidad y fecha de refuerzo quedan estructurados, no en texto libre. Corregido de
+  paso un bug de fecha (medianoche en vez de hora real).
+
+### 2. 🛡️ Endurecimiento Zero-Hallucination
+* Tres reglas nuevas en el *System Prompt* de ambos canales, tras observar en pruebas
+  reales tres formas distintas en que el Agente IA podía fallar sin decírselo al usuario:
+  confirmar un registro sin haber llamado a ninguna herramienta, inventar una razón de
+  negocio para disfrazar un error técnico real, e inventarse una política de "ya se hizo
+  antes" para negarse a registrar un evento legítimo.
+
+### 3. 🔍 Auditoría de Herramientas MCP (hallazgo, corrección pendiente)
+* Al auditar los workflows completos se confirmó que el servidor MCP del módulo ganadero
+  expone **15 herramientas, no 11** — 4 de ellas (conteo de hato, alta de animal comprado,
+  suplementos y palpaciones) están conectadas pero **invisibles para el LLM**, porque
+  ningún *System Prompt* las menciona: el mismo patrón de fondo que causó el bug de
+  vacunación de esta misma versión. Documentado como deuda técnica; corrección programada
+  para la siguiente versión.
+
+---
+
 ## 🚀 Key Features (v1.13.0)
 
 ### 1. 🎙️ Corrección de Sanitización de Identificadores Dictados por Voz
@@ -171,7 +199,8 @@ ng build agro-erp --configuration=production
 * [ ] **Garantía arquitectónica de `tenant_id` en tools MCP:** hoy la inyección correcta del tenant en llamadas a herramientas del Agente IA depende solo del refuerzo de prompt, no de un mecanismo verificable a nivel de arquitectura (hallazgo v1.12.0).
 - [x] **Corrección de sanitización de identificadores dictados por voz:** pérdida de dígitos en folios/aretes transcritos por Whisper, corregida moviendo la limpieza a código determinista antes del Agente IA (v1.13.0).
 - [x] **Vista de auditoría de eventos de ganado:** `vw_cattle_event_log` (peso, salud, nacimiento) expuesta en una nueva pestaña de solo lectura en `main-dashboard` (v1.13.0).
-
+- [x] **Vacunación estructurada del Agente IA:** `log_vaccination_event` correctamente enrutada en ambos canales, con Zero-Hallucination reforzado (v1.14.0).
+- [ ] **Visibilidad completa de herramientas MCP para el Agente IA:** `count_livestock`, `register_livestock_purchase`, `log_supplement_event` y `log_palpation_event` siguen ausentes del diccionario de herramientas de ambos System Prompts — hallazgo v1.14.0, corrección pendiente.
 
 ---
 
