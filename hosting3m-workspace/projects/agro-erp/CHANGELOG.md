@@ -3,6 +3,43 @@
 Todos los cambios notables en el proyecto **n8n Enterprise Automation Suite** serán documentados en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/), y este proyecto se adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.14.1] - 2026-09-27
+
+### 🔓 Cierre del hallazgo v1.14.0: diccionario de herramientas completado
+
+* Las 4 tools que quedaron pendientes en v1.14.0 (`count_livestock`, `register_livestock_purchase`,
+  `log_supplement_event`, `log_palpation_event`) ya están en el diccionario de herramientas de ambos
+  `systemMessage` (`v6_ai_chat_cattle`, `v6_WhatsApp_Agent_Cattle`).
+* ✅ Verificado por Web Chat, LOCAL y producción. ⚠️ **WhatsApp sin verificar** (sin teléfono de
+  pruebas disponible al momento de este commit) — el cambio de prompt es idéntico en ambos archivos.
+
+### 🐛 Bugs reales en `count_livestock`, encontrados en su primera prueba real
+
+* **Bug 1:** `current_status`, al omitirse, no aplicaba ningún filtro pese a que la `toolDescription`
+  prometía un default de `ACTIVO` — "¿cuántas vacas tengo?" devolvía vacas en cualquier estado,
+  incluida una en `BAJA_MORTANDAD`.
+* **Intento de fix incorrecto (revertido en el mismo turno):** forzar el default a `'ACTIVO'` literal
+  dejó la misma pregunta en 0 resultados — en este esquema una VACA adulta normalmente vive en
+  `PREÑADA`/`VACÍA`, no `ACTIVO` puro (confirmado contra el CHECK constraint real: 11 valores
+  posibles; uso real: 317 `ACTIVO`, 145 `VACÍA`, 110 `PREÑADA`, 4 `BAJA_MORTANDAD`, 4 `VENDIDO`,
+  1 `RIESGO`).
+* **Fix correcto:** exclusión explícita de los 3 estados terminales (`VENDIDO`, `FINALIZADO`,
+  `BAJA_DEPURACION_DATOS`) en vez de un default positivo — decisión de negocio confirmada: todo lo
+  demás, incluido `BAJA_MORTANDAD` mientras la baja no se apruebe, cuenta como "lo tengo".
+* Verificado en LOCAL y PRODUCCIÓN.
+
+### 🔍 Hallazgo sin resolver: inconsistencia dashboard vs. Agente IA
+
+* Para el mismo tenant de pruebas, el dashboard (filtro "Estado: Activos") reporta 9 cabezas activas
+  y `count_livestock` reporta 11 — la diferencia son 2 animales en `BAJA_MORTANDAD`. Decisión del
+  cliente: ambos deben ser consistentes. Pendiente revisar el frontend y alinear su criterio con el
+  de `count_livestock`.
+
+### 📌 Pendientes que quedan abiertos
+
+* Verificar por WhatsApp las 4 tools agregadas al diccionario (solo confirmado por Web Chat).
+* Alinear el criterio de "activo" del dashboard (`main-dashboard`) con el de `count_livestock`.
+
 ## [1.14.0] - 2026-09-26
 
 ### 💉 Vacunación Estructurada en el Agente IA

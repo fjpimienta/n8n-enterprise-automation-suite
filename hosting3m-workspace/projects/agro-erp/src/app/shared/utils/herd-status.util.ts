@@ -1,18 +1,21 @@
 /**
  * Criterio único de "hato activo" para el módulo de ganadería.
  *
- * Un animal deja de contar como parte del hato vivo solo cuando fue vendido
- * (`sp_procesar_salida_ganado`) o dado de baja por mortandad. Cualquier otro
- * `current_status` (ACTIVO, PREÑADA, VACÍA, DESARROLLO, RIESGO, CUARENTENA,
- * EN_TRANSITO, FINALIZADO, …) sigue siendo hato activo a efectos de conteo y
- * de la vista por defecto de inventario.
+ * Alineado 2026-09-27 con el criterio de la tool `count_livestock` del Agente IA
+ * (MCP Server Cattle, v6): un animal deja de contar como hato vivo solo al llegar
+ * a un estado terminal — vendido, finalizado o dado de baja por depuración de
+ * datos. Cualquier otro `current_status` (ACTIVO, PREÑADA, VACÍA, DESARROLLO,
+ * RIESGO, CUARENTENA, EN_TRANSITO, BAJA_MORTANDAD, …) sigue siendo hato activo a
+ * efectos de conteo y de la vista por defecto de inventario — incluye
+ * BAJA_MORTANDAD porque es una baja pendiente de aprobación, no una salida
+ * confirmada del hato (misma decisión de negocio que count_livestock).
  *
  * El historial de venta/baja no se oculta de forma permanente: las pantallas
  * exponen un selector (`HERD_STATUS_FILTER_OPTIONS`) para auditarlo cuando haga falta.
  */
 
 /** Estados que sacan al animal del hato vivo. Comparación normalizada a MAYÚSCULAS. */
-export const INACTIVE_HERD_STATUSES: readonly string[] = ['VENDIDO', 'BAJA_MORTANDAD'];
+export const INACTIVE_HERD_STATUSES: readonly string[] = ['VENDIDO', 'FINALIZADO', 'BAJA_DEPURACION_DATOS'];
 
 /** Opciones del selector "Estado" visible en las tablas de inventario. */
 export type HerdStatusFilter = 'ACTIVOS' | 'TODOS' | 'BAJAS';
