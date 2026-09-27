@@ -3,6 +3,76 @@
 Todos los cambios notables en el proyecto **n8n Enterprise Automation Suite** serán documentados en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/), y este proyecto se adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.14.0] - 2026-09-26
+
+### 💉 Vacunación Estructurada en el Agente IA
+
+* **Bug real confirmado en producción:** toda vacunación reportada por WhatsApp o Chat Web
+  caía en `log_health_event` con `event_type = 'VACUNACION'` y `medicines_json = {}` — la
+  tool dedicada `log_vaccination_event` ya existía en el MCP Server (su propia
+  `toolDescription` incluso advertía "NO uses `log_health_event` para vacunación"), pero
+  nunca apareció en el diccionario de herramientas de ningún `systemMessage`, así que el
+  LLM no sabía que existía y jamás la invocaba.
+* **Corregido:** ambos `systemMessage` (`v6_ai_chat_cattle`, `v6_WhatsApp_Agent_Cattle`)
+  ahora enrutan vacunación explícitamente a `log_vaccination_event` — vacuna, dosis, unidad
+  y fecha de refuerzo quedan en `medicines_json` estructurado.
+* **Bug de `event_date` corregido en la misma tool:** usaba `COALESCE(application_date,
+  CURRENT_DATE)` — sin fecha explícita, el evento quedaba a medianoche, descuadrando el
+  orden cronológico de `vw_cattle_event_log` frente a otros eventos del mismo día. Cambiado
+  a `COALESCE(application_date::timestamp, CURRENT_TIMESTAMP)`.
+
+### 🛡️ Endurecimiento Zero-Hallucination (Reglas 4bis/5/6)
+
+* **Tres patrones de alucinación distintos, confirmados en pruebas reales** contra el
+  tenant ficticio (`id_company = 3`, "Pista de Hielo", arete `71569901`):
+  1. Falso éxito sin invocar ninguna herramienta ("ya registré la vacunación", solo memoria
+     conversacional).
+  2. Excusa de negocio inventada sobre un error técnico real (`livestock_id` vacío →
+     `invalid input syntax for type uuid`; el agente respondió que "el animal está VACÍA" —
+     regla inexistente en el prompt).
+  3. Rechazo de negocio inventado sin ningún error de por medio ("no se puede hacer otra
+     llamada para el mismo evento inmediato").
+* **Mitigado** con tres reglas nuevas en ambos `systemMessage`: Regla 4bis (propagación
+  obligatoria del `id` de `get_livestock_info` a `livestock_id`, prohibido enviarlo vacío),
+  Regla 5 (prohibición de excusas de negocio inventadas ante un error técnico real) y Regla
+  6 (prohibición de rechazos inventados en herramientas rutinarias — cada evento reportado
+  es un registro nuevo, sin límite de repeticiones).
+* ⚠️ Mitigación de prompt sobre un modelo estocástico (`gpt-4o-mini`) — no garantiza que no
+  aparezca un cuarto patrón de alucinación distinto.
+
+### 🔍 Auditoría de Herramientas MCP — 4 tools reales, invisibles para el LLM (hallazgo, NO corregido en esta versión)
+
+* Al releer los 3 workflows completos (no solo fragmentos de nodo) para documentar el fix
+  de vacunación, se confirmó que el servidor MCP expone **15 herramientas, no 11** como se
+  creía: además de `log_vaccination_event`, existen `log_supplement_event`,
+  `log_palpation_event`, `count_livestock` y `register_livestock_purchase` — las últimas 4
+  sin documentar hasta ahora.
+* **Mismo bug de fondo que el de vacunación, sin corregir todavía:** las 4 tools están
+  correctamente conectadas al servidor MCP pero **ninguna aparece en el diccionario de
+  herramientas de ningún `systemMessage`**. Un usuario que reporte un suplemento o una
+  palpación hoy probablemente cae en `log_health_event` genérico (sin `medicines_json`, sin
+  actualizar `current_status` en el caso de palpación); una pregunta de conteo de hato
+  probablemente no se responde con datos reales.
+* **`log_supplement_event` y `log_palpation_event` tienen el mismo bug de `event_date`**
+  que tenía `log_vaccination_event` antes de esta corrección — sin corregir.
+* Decisión explícita de esta sesión: documentar el hallazgo sin tocar los workflows
+  todavía — ver `workflows/09-MCP-Agent-Cattle/v6/README.md`, punto 8bis, para el detalle
+  completo.
+
+### ✅ Validado
+
+* Confirmado leyendo los 3 JSON completos de los workflows el 2026-09-26: el fix de
+  vacunación y las reglas 4bis/5/6 ya están desplegados en ambos canales.
+
+### 📌 Pendientes que quedan abiertos
+
+* Agregar `count_livestock`, `register_livestock_purchase`, `log_supplement_event` y
+  `log_palpation_event` al diccionario de herramientas de ambos `systemMessage`.
+* Corregir `event_date` en `log_supplement_event` y `log_palpation_event`.
+* Inconsistencia sin resolver en el animal de pruebas (`71569901`): `current_status =
+  'VACÍA'` con última palpación registrada `'PREÑADA'` — no pudo originarse en
+  `log_palpation_event` (sincroniza ambos campos en la misma transacción).
+  
 ## [1.13.0] - 2026-09-22
 
 ### 🎙️ Corrección de Sanitización de Identificadores Dictados por Voz
