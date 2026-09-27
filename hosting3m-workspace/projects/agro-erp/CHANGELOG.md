@@ -28,17 +28,19 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
   demás, incluido `BAJA_MORTANDAD` mientras la baja no se apruebe, cuenta como "lo tengo".
 * Verificado en LOCAL y PRODUCCIÓN.
 
-### 🔍 Hallazgo sin resolver: inconsistencia dashboard vs. Agente IA
+### ✅ Hallazgo resuelto: inconsistencia dashboard vs. Agente IA
 
-* Para el mismo tenant de pruebas, el dashboard (filtro "Estado: Activos") reporta 9 cabezas activas
-  y `count_livestock` reporta 11 — la diferencia son 2 animales en `BAJA_MORTANDAD`. Decisión del
-  cliente: ambos deben ser consistentes. Pendiente revisar el frontend y alinear su criterio con el
-  de `count_livestock`.
+* Para el mismo tenant de pruebas, el dashboard (filtro "Estado: Activos") reportaba 9 cabezas activas
+  y `count_livestock` reportaba 11 — la diferencia eran 2 animales en `BAJA_MORTANDAD`. Decisión del
+  cliente: ambos deben ser consistentes. Corregido alineando `herd-status.util.ts` al mismo criterio
+  de exclusión de `count_livestock` (`VENDIDO`, `FINALIZADO`, `BAJA_DEPURACION_DATOS`). Verificado en
+  LOCAL y producción — dashboard y Agente IA coinciden. Confirmado sin efectos secundarios: 0 animales
+  reales en `FINALIZADO`/`BAJA_DEPURACION_DATOS` en cualquier tenant de producción.
 
-### 📌 Pendientes que quedan abiertos
+### 📌 Pendiente que queda abierto
 
-* Verificar por WhatsApp las 4 tools agregadas al diccionario (solo confirmado por Web Chat).
-* Alinear el criterio de "activo" del dashboard (`main-dashboard`) con el de `count_livestock`.
+* Verificar por WhatsApp las 4 tools agregadas al diccionario (solo confirmado por Web Chat, sin
+  teléfono de pruebas disponible).
 
 ## [1.14.0] - 2026-09-26
 
