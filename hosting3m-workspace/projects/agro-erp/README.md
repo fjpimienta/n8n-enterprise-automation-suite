@@ -10,6 +10,19 @@ Desarrollada como una **Angular 21 SPA** estructurada por dominios (*Feature-Dri
 
 ---
 
+## 🚀 Key Features (v1.14.1)
+
+### 1. 🔓 Diccionario de Herramientas del Agente IA Completado
+* Las 4 tools que quedaron invisibles para el LLM en v1.14.0 (`count_livestock`, `register_livestock_purchase`, `log_supplement_event`, `log_palpation_event`) ya están en el diccionario de ambos canales. Verificado por Web Chat; WhatsApp pendiente de prueba.
+
+### 2. 🐛 Bugs reales de `count_livestock`, corregidos
+* Su primera prueba real reveló que el default de `current_status` no funcionaba como documentado, y un primer intento de arreglo (fijarlo a `ACTIVO`) resultó peor — una vaca adulta normalmente no vive en ese estado en este esquema. Corregido con una exclusión explícita de los estados que sí significan "ya no lo tengo" (vendido, finalizado, depurado), en vez de un único valor por default.
+
+### 3. 🔍 Inconsistencia detectada (pendiente)
+* El dashboard y el Agente IA reportan cifras distintas de "cabezas activas" para el mismo tenant — decisión confirmada de que deben ser consistentes; falta revisar el criterio exacto del frontend.
+
+---
+
 ## 🚀 Key Features (v1.14.0)
 
 ### 1. 💉 Vacunación Estructurada en el Agente IA
@@ -200,7 +213,9 @@ ng build agro-erp --configuration=production
 - [x] **Corrección de sanitización de identificadores dictados por voz:** pérdida de dígitos en folios/aretes transcritos por Whisper, corregida moviendo la limpieza a código determinista antes del Agente IA (v1.13.0).
 - [x] **Vista de auditoría de eventos de ganado:** `vw_cattle_event_log` (peso, salud, nacimiento) expuesta en una nueva pestaña de solo lectura en `main-dashboard` (v1.13.0).
 - [x] **Vacunación estructurada del Agente IA:** `log_vaccination_event` correctamente enrutada en ambos canales, con Zero-Hallucination reforzado (v1.14.0).
-- [ ] **Visibilidad completa de herramientas MCP para el Agente IA:** `count_livestock`, `register_livestock_purchase`, `log_supplement_event` y `log_palpation_event` siguen ausentes del diccionario de herramientas de ambos System Prompts — hallazgo v1.14.0, corrección pendiente.
+- [x] **Bug de `event_date` en `log_supplement_event`/`log_palpation_event`:** corregido — usan `CURRENT_TIMESTAMP` en vez de `CURRENT_DATE`, mismo fix ya aplicado en `log_vaccination_event` (v1.14.0, 2026-09-27).
+- [x] **Visibilidad completa de herramientas MCP para el Agente IA:** `count_livestock`, `register_livestock_purchase`, `log_supplement_event` y `log_palpation_event` agregadas al diccionario de ambos System Prompts, verificado por Web Chat (v1.14.1, 2026-09-27). WhatsApp pendiente de prueba.
+- [ ] **Consistencia dashboard vs. Agente IA en conteo de "activos":** el dashboard y `count_livestock` reportan cifras distintas para el mismo tenant (diferencia: animales en BAJA_MORTANDAD) — hallazgo v1.14.1, corrección pendiente.
 
 ---
 
