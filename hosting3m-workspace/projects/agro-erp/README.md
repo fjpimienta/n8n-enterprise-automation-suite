@@ -215,7 +215,7 @@ ng build agro-erp --configuration=production
 - [x] **Vacunación estructurada del Agente IA:** `log_vaccination_event` correctamente enrutada en ambos canales, con Zero-Hallucination reforzado (v1.14.0).
 - [x] **Bug de `event_date` en `log_supplement_event`/`log_palpation_event`:** corregido — usan `CURRENT_TIMESTAMP` en vez de `CURRENT_DATE`, mismo fix ya aplicado en `log_vaccination_event` (v1.14.0, 2026-09-27).
 - [x] **Visibilidad completa de herramientas MCP para el Agente IA:** `count_livestock`, `register_livestock_purchase`, `log_supplement_event` y `log_palpation_event` agregadas al diccionario de ambos System Prompts, verificado por Web Chat (v1.14.1, 2026-09-27). WhatsApp pendiente de prueba.
-- [ ] **Consistencia dashboard vs. Agente IA en conteo de "activos":** el dashboard y `count_livestock` reportan cifras distintas para el mismo tenant (diferencia: animales en BAJA_MORTANDAD) — hallazgo v1.14.1, corrección pendiente.
+- [x] **Consistencia dashboard vs. Agente IA en conteo de "activos":** resuelto — `herd-status.util.ts` alineado con el criterio de `count_livestock` (excluye solo `VENDIDO`/`FINALIZADO`/`BAJA_DEPURACION_DATOS`, ya no `BAJA_MORTANDAD`). Verificado en LOCAL y producción: dashboard y Agente IA coinciden para el mismo tenant. Confirmado además que ningún tenant en producción tiene animales reales en `FINALIZADO` o `BAJA_DEPURACION_DATOS` — el cambio de criterio no alteró ningún conteo existente (v1.14.1, 2026-09-27).
 
 ---
 
