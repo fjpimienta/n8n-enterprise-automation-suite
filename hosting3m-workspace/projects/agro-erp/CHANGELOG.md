@@ -3,6 +3,42 @@
 Todos los cambios notables en el proyecto **n8n Enterprise Automation Suite** serán documentados en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/), y este proyecto se adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.15.0] - 2026-09-28
+
+### 🐂 Módulo de Reproducción en el Dashboard
+
+* La base de datos ya manejaba el modelo de negocio `REPRODUCCION`, pero `main-dashboard` solo
+  ofrecía las vistas de Cría y Engorda — los animales de reproducción no tenían un tablero propio.
+* **Nuevo tipo `BusinessModel`** (`'CRIA' | 'ENGORDA' | 'REPRODUCCION'`) en `livestock.model.ts`,
+  usado por `Livestock.business_model`, `activeTab` y `setTab()` — fuente única del tipo.
+* **Nueva pestaña "Módulo de Reproducción"** en `main-dashboard`, con deep link `?tab=reproduccion`
+  (cualquier otro valor sigue cayendo en `CRIA` por default).
+* **Nuevo componente `ReproduccionDashboardComponent`** (standalone, OnPush, misma estructura que
+  Engorda): filtra estrictamente `business_model === 'REPRODUCCION'`, muestra cabezas del hato
+  reproductor, peso promedio y hembras con diagnóstico `PREÑADA`, más una gráfica de composición del
+  hato por categoría.
+* ⚠️ **Nombres parecidos:** `ReproductiveDashboardComponent` (existente) es el tablero de **Cría**, no
+  el de Reproducción — renombrarlo a `CriaDashboardComponent` queda como refactor pendiente.
+
+### 📋 Cattle Event Log: cobertura de las 15 herramientas MCP
+
+* `vw_cattle_event_log` solo cubría `PESO`, `SALUD`, `PARTO` y `NACIMIENTO` — tres tools de escritura
+  del Agente IA no dejaban rastro en la bitácora: `register_livestock_purchase`, `log_weaning_event`
+  y `log_mortality_event`/`request_livestock_sale`.
+* Tres ramas `UNION ALL` nuevas en la vista para `COMPRA`, `DESTETE`, `SOLICITUD_BAJA` y
+  `SOLICITUD_VENTA`, reutilizando `health_event_type` para el estado de la solicitud
+  (`PENDIENTE`/`APROBADO`/`RECHAZADO`/`EXPIRADO`) y `medicines_json` para el payload crudo — mismo
+  patrón de reutilización de columnas de la rama `SALUD`, sin cambiar la forma de la vista.
+* Frontend: `CattleEventType`, etiquetas, filtros, badges y detalle extendidos a los 4 tipos nuevos.
+  Los gastos (`register_ranch_expense`) quedan fuera a propósito — viven en "Historial de Gastos".
+* ⚠️ **El cambio a la vista se aplicó directo en Postgres, sin migración versionada en el repo.**
+
+### 📌 Pendientes que quedan abiertos
+
+* El formulario de alta/edición (`cattle-detail-modal`) todavía no ofrece `REPRODUCCION` en el
+  selector de modelo de negocio — no se puede asignar un animal a ese modelo desde la UI.
+* Versionar como migración el cambio de `vw_cattle_event_log` de esta versión.
+
 ## [1.14.1] - 2026-09-27
 
 ### 🔓 Cierre del hallazgo v1.14.0: diccionario de herramientas completado
@@ -10,8 +46,8 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 * Las 4 tools que quedaron pendientes en v1.14.0 (`count_livestock`, `register_livestock_purchase`,
   `log_supplement_event`, `log_palpation_event`) ya están en el diccionario de herramientas de ambos
   `systemMessage` (`v6_ai_chat_cattle`, `v6_WhatsApp_Agent_Cattle`).
-* ✅ Verificado por Web Chat, LOCAL y producción. ⚠️ **WhatsApp sin verificar** (sin teléfono de
-  pruebas disponible al momento de este commit) — el cambio de prompt es idéntico en ambos archivos.
+* ✅ Verificado en LOCAL y producción por **ambos canales, Web Chat y WhatsApp** (WhatsApp
+  confirmado el 2026-09-27, después del corte inicial de esta versión).
 
 ### 🐛 Bugs reales en `count_livestock`, encontrados en su primera prueba real
 
@@ -37,10 +73,9 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
   LOCAL y producción — dashboard y Agente IA coinciden. Confirmado sin efectos secundarios: 0 animales
   reales en `FINALIZADO`/`BAJA_DEPURACION_DATOS` en cualquier tenant de producción.
 
-### 📌 Pendiente que queda abierto
+### 📌 Pendientes
 
-* Verificar por WhatsApp las 4 tools agregadas al diccionario (solo confirmado por Web Chat, sin
-  teléfono de pruebas disponible).
+* Ninguno — v1.14.1 queda cerrada.
 
 ## [1.14.0] - 2026-09-26
 
