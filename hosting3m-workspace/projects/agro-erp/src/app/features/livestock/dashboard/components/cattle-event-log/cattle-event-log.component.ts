@@ -26,7 +26,11 @@ const EVENT_TYPE_LABEL: Record<CattleEventType, string> = {
   PESO: 'Registro de Peso',
   SALUD: 'Evento Sanitario',
   PARTO: 'Parto (madre)',
-  NACIMIENTO: 'Nacimiento (cría)'
+  NACIMIENTO: 'Nacimiento (cría)',
+  COMPRA: 'Compra',
+  DESTETE: 'Destete',
+  SOLICITUD_BAJA: 'Solicitud de Baja (Mortandad)',
+  SOLICITUD_VENTA: 'Solicitud de Venta'
 };
 
 type SortColumn = 'rfidSiniiga' | 'numeroFuego' | 'eventType' | 'eventDate';
@@ -279,6 +283,13 @@ export class CattleEventLogComponent {
           entry.calfSex === 'MACHO' ? 'Macho' : 'Hembra',
           entry.calfWeightKg !== null ? `${entry.calfWeightKg.toFixed(2)} kg al nacer` : null
         ].filter(Boolean).join(', ');
+      case 'COMPRA':
+        return [entry.weightKg !== null ? `${entry.weightKg.toFixed(2)} kg` : null, entry.description].filter(Boolean).join(' — ');
+      case 'DESTETE':
+        return [entry.healthEventType, entry.weightKg !== null ? `${entry.weightKg.toFixed(2)} kg` : null, entry.description].filter(Boolean).join(' — ');
+      case 'SOLICITUD_BAJA':
+      case 'SOLICITUD_VENTA':
+        return [entry.healthEventType, entry.description].filter(Boolean).join(' — ');
       default:
         return '';
     }
