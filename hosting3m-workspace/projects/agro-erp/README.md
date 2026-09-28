@@ -10,16 +10,27 @@ Desarrollada como una **Angular 21 SPA** estructurada por dominios (*Feature-Dri
 
 ---
 
+## 🚀 Key Features (v1.15.0)
+
+### 1. 🐂 Módulo de Reproducción en el Dashboard
+* **Nueva pestaña "Módulo de Reproducción"** en `main-dashboard`, junto a Cría y Engorda — el modelo de negocio `REPRODUCCION` ya existía en la base de datos pero no tenía vista propia.
+* Tablero dedicado con cabezas del hato reproductor, peso promedio, hembras diagnosticadas preñadas y composición del hato por categoría. Accesible también por enlace directo (`?tab=reproduccion`).
+
+### 2. 📋 Cattle Event Log con cobertura completa del Agente IA
+* La bitácora de auditoría ahora incluye compras, destetes y solicitudes de baja/venta (con su estado de autorización) — antes, tres herramientas de escritura del Agente IA no dejaban rastro visible en ella.
+
+---
+
 ## 🚀 Key Features (v1.14.1)
 
 ### 1. 🔓 Diccionario de Herramientas del Agente IA Completado
-* Las 4 tools que quedaron invisibles para el LLM en v1.14.0 (`count_livestock`, `register_livestock_purchase`, `log_supplement_event`, `log_palpation_event`) ya están en el diccionario de ambos canales. Verificado por Web Chat; WhatsApp pendiente de prueba.
+* Las 4 tools que quedaron invisibles para el LLM en v1.14.0 (`count_livestock`, `register_livestock_purchase`, `log_supplement_event`, `log_palpation_event`) ya están en el diccionario de ambos canales. Verificado por Web Chat y WhatsApp.
 
 ### 2. 🐛 Bugs reales de `count_livestock`, corregidos
 * Su primera prueba real reveló que el default de `current_status` no funcionaba como documentado, y un primer intento de arreglo (fijarlo a `ACTIVO`) resultó peor — una vaca adulta normalmente no vive en ese estado en este esquema. Corregido con una exclusión explícita de los estados que sí significan "ya no lo tengo" (vendido, finalizado, depurado), en vez de un único valor por default.
 
-### 3. 🔍 Inconsistencia detectada (pendiente)
-* El dashboard y el Agente IA reportan cifras distintas de "cabezas activas" para el mismo tenant — decisión confirmada de que deben ser consistentes; falta revisar el criterio exacto del frontend.
+### 3. ✅ Consistencia dashboard vs. Agente IA
+* El dashboard y el Agente IA reportaban cifras distintas de "cabezas activas" para el mismo tenant. Resuelto alineando el criterio del dashboard con el de `count_livestock` — ambos coinciden, verificado en LOCAL y producción.
 
 ---
 
@@ -214,8 +225,11 @@ ng build agro-erp --configuration=production
 - [x] **Vista de auditoría de eventos de ganado:** `vw_cattle_event_log` (peso, salud, nacimiento) expuesta en una nueva pestaña de solo lectura en `main-dashboard` (v1.13.0).
 - [x] **Vacunación estructurada del Agente IA:** `log_vaccination_event` correctamente enrutada en ambos canales, con Zero-Hallucination reforzado (v1.14.0).
 - [x] **Bug de `event_date` en `log_supplement_event`/`log_palpation_event`:** corregido — usan `CURRENT_TIMESTAMP` en vez de `CURRENT_DATE`, mismo fix ya aplicado en `log_vaccination_event` (v1.14.0, 2026-09-27).
-- [x] **Visibilidad completa de herramientas MCP para el Agente IA:** `count_livestock`, `register_livestock_purchase`, `log_supplement_event` y `log_palpation_event` agregadas al diccionario de ambos System Prompts, verificado por Web Chat (v1.14.1, 2026-09-27). WhatsApp pendiente de prueba.
+- [x] **Visibilidad completa de herramientas MCP para el Agente IA:** `count_livestock`, `register_livestock_purchase`, `log_supplement_event` y `log_palpation_event` agregadas al diccionario de ambos System Prompts, verificado por Web Chat y WhatsApp (v1.14.1, 2026-09-27).
 - [x] **Consistencia dashboard vs. Agente IA en conteo de "activos":** resuelto — `herd-status.util.ts` alineado con el criterio de `count_livestock` (excluye solo `VENDIDO`/`FINALIZADO`/`BAJA_DEPURACION_DATOS`, ya no `BAJA_MORTANDAD`). Verificado en LOCAL y producción: dashboard y Agente IA coinciden para el mismo tenant. Confirmado además que ningún tenant en producción tiene animales reales en `FINALIZADO` o `BAJA_DEPURACION_DATOS` — el cambio de criterio no alteró ningún conteo existente (v1.14.1, 2026-09-27).
+- [x] **Módulo de Reproducción en el dashboard:** pestaña y tablero dedicados para el modelo de negocio `REPRODUCCION` (v1.15.0, 2026-09-28).
+- [x] **Cattle Event Log con cobertura de las 15 tools MCP:** compras, destetes y solicitudes de baja/venta visibles en la bitácora (v1.15.0, 2026-09-28).
+- [ ] **Asignar `REPRODUCCION` desde la UI:** el formulario de alta/edición de ganado solo ofrece Cría y Engorda.
 
 ---
 

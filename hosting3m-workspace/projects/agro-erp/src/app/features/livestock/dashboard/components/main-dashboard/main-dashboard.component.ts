@@ -7,6 +7,7 @@ import { CattleDataService } from '@core/services/cattle-data.service';
 import { NgApexchartsModule } from 'ng-apexcharts';
 import { ReproductiveDashboardComponent } from '../reproductive-dashboard/reproductive-dashboard.component';
 import { EngordaDashboardComponent } from '../engorda-dashboard/engorda-dashboard.component';
+import { ReproduccionDashboardComponent } from '../reproduccion-dashboard/reproduccion-dashboard.component';
 import { CattleEventLogComponent } from '../cattle-event-log/cattle-event-log.component';
 import { ExpenseModalComponent } from '../../../expenses/components/expense-modal/expense-modal.component';
 import { ComplianceAlertCardComponent } from '../../../../compliance/components/compliance-alert-card/compliance-alert-card.component';
@@ -18,12 +19,13 @@ import { LOT_FILTER_ALL, deriveAvailableLots, getAnimalLot } from '@shared/utils
 import { TenantService } from 'core-auth';
 import { ThemeService } from '@core/services/theme.service';
 import { Expense } from '../../../models/expense.model';
+import { BusinessModel } from '../../../models/livestock.model';
 import { Paginator } from '../../utils/paginator';
 
 @Component({
   selector: 'app-main-dashboard',
   standalone: true,
-  imports: [CommonModule, NgApexchartsModule, ReproductiveDashboardComponent, EngordaDashboardComponent, ExpenseModalComponent, ComplianceAlertCardComponent, MetadataDetailModalComponent, CattleEventLogComponent],
+  imports: [CommonModule, NgApexchartsModule, ReproductiveDashboardComponent, EngordaDashboardComponent, ReproduccionDashboardComponent, ExpenseModalComponent, ComplianceAlertCardComponent, MetadataDetailModalComponent, CattleEventLogComponent],
   templateUrl: './main-dashboard.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -81,9 +83,10 @@ export class MainDashboardComponent implements OnInit {
 
   // 🔗 Fuente única de verdad: el módulo activo se deriva de la URL (?tab=), nunca se escribe
   // directamente. setTab() solo navega; este computed reacciona al cambio de queryParams.
-  public activeTab = computed<'CRIA' | 'ENGORDA'>(() =>
-    this.queryParams().get('tab')?.toUpperCase() === 'ENGORDA' ? 'ENGORDA' : 'CRIA'
-  );
+  public activeTab = computed<BusinessModel>(() => {
+    const tab = this.queryParams().get('tab')?.toUpperCase();
+    return tab === 'ENGORDA' || tab === 'REPRODUCCION' ? tab : 'CRIA';
+  });
 
   constructor() {
     /**
@@ -100,7 +103,7 @@ export class MainDashboardComponent implements OnInit {
       }
     }, { allowSignalWrites: true }); // Permite que la escritura de isLoading y listas ocurra en cascada
 
-    // 🔄 EFECTO REACTIVO: al cambiar de módulo (CRIA/ENGORDA) resetea la sub-pestaña activa
+    // 🔄 EFECTO REACTIVO: al cambiar de módulo (CRIA/ENGORDA/REPRODUCCION) resetea la sub-pestaña activa
     // y la paginación, para no dejar al usuario en una página de tabla vacía tras el cambio.
     effect(() => {
       this.activeTab();
@@ -226,7 +229,7 @@ export class MainDashboardComponent implements OnInit {
     return this.filteredExpensesList().slice(startIndex, startIndex + this.pagination.pageSize());
   });
 
-  public setTab(tab: 'CRIA' | 'ENGORDA') {
+  public setTab(tab: BusinessModel) {
     // Solo navega — activeTab es un computed derivado de la URL, se recalcula solo.
     // El effect del constructor reacciona a ese cambio y resetea subTab/paginación.
     this.router.navigate([], {
