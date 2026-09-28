@@ -1,6 +1,8 @@
+export type BusinessModel = 'CRIA' | 'ENGORDA' | 'REPRODUCCION';
+
 export interface Livestock {
   id: string;
-  business_model: 'CRIA' | 'ENGORDA';
+  business_model: BusinessModel;
   species?: string;
   category?: string;
   current_status?: string;
