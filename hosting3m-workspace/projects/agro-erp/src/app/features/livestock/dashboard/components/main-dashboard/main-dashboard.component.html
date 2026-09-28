@@ -38,6 +38,10 @@
                     <input type="radio" class="btn-check" name="btn-radio-tab" id="tab-engorda" autocomplete="off"
                         [checked]="activeTab() === 'ENGORDA'" (click)="setTab('ENGORDA')">
                     <label for="tab-engorda" class="btn btn-outline-primary font-weight-bold">Módulo de Engorda</label>
+
+                    <input type="radio" class="btn-check" name="btn-radio-tab" id="tab-reproduccion" autocomplete="off"
+                        [checked]="activeTab() === 'REPRODUCCION'" (click)="setTab('REPRODUCCION')">
+                    <label for="tab-reproduccion" class="btn btn-outline-primary font-weight-bold">Módulo de Reproducción</label>
                 </div>
 
                 <button class="btn btn-primary font-weight-bold d-flex align-items-center justify-content-center"
@@ -175,6 +179,10 @@
 
             @if (activeTab() === 'ENGORDA') {
             <app-engorda-dashboard [cattleData]="filteredCattleList()"></app-engorda-dashboard>
+            }
+
+            @if (activeTab() === 'REPRODUCCION') {
+            <app-reproduccion-dashboard [cattleData]="filteredCattleList()"></app-reproduccion-dashboard>
             }
         </div>
         }
