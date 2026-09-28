@@ -1,4 +1,4 @@
-export type CattleEventType = 'PESO' | 'SALUD' | 'PARTO' | 'NACIMIENTO';
+export type CattleEventType = 'PESO' | 'SALUD' | 'PARTO' | 'NACIMIENTO' | 'COMPRA' | 'DESTETE' | 'SOLICITUD_BAJA' | 'SOLICITUD_VENTA';
 
 /**
  * Raw row shape returned by the Meta-CRUD gateway for the `cattle_event_log` model
