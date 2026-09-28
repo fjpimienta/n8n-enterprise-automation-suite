@@ -19,6 +19,10 @@
                 <option value="SALUD">Sanitario</option>
                 <option value="PARTO">Parto (madre)</option>
                 <option value="NACIMIENTO">Nacimiento (cría)</option>
+                <option value="COMPRA">Compra</option>
+                <option value="DESTETE">Destete</option>
+                <option value="SOLICITUD_BAJA">Solicitud de Baja</option>
+                <option value="SOLICITUD_VENTA">Solicitud de Venta</option>
             </select>
         </div>
         <div class="input-icon" style="max-width: 320px;">
@@ -80,7 +84,7 @@
 } @else if (filteredEntries().length === 0) {
 <div class="text-center text-muted py-5">
     <i class="ti ti-clipboard-off fs-2 d-block mb-2"></i>
-    No hay eventos de peso, salud o nacimiento registrados para el hato visible en este periodo.
+    No hay eventos registrados para el hato visible en este periodo.
 </div>
 } @else {
 <div class="table-responsive">
@@ -127,7 +131,11 @@
                         [class.bg-blue-lt]="entry.eventType === 'PESO'"
                         [class.bg-red-lt]="entry.eventType === 'SALUD'"
                         [class.bg-purple-lt]="entry.eventType === 'PARTO'"
-                        [class.bg-green-lt]="entry.eventType === 'NACIMIENTO'">
+                        [class.bg-green-lt]="entry.eventType === 'NACIMIENTO'"
+                        [class.bg-orange-lt]="entry.eventType === 'COMPRA'"
+                        [class.bg-cyan-lt]="entry.eventType === 'DESTETE'"
+                        [class.bg-danger-lt]="entry.eventType === 'SOLICITUD_BAJA'"
+                        [class.bg-yellow-lt]="entry.eventType === 'SOLICITUD_VENTA'">
                         {{ eventTypeLabel[entry.eventType] }}
                     </span>
                 </td>
@@ -154,6 +162,37 @@
                         , peso al nacer {{ entry.calfWeightKg | number:'1.2-2' }} kg
                         }.
                     </span>
+                    }
+                    @case ('COMPRA') {
+                    @if (entry.weightKg !== null) {
+                    <span class="font-weight-bold">{{ entry.weightKg | number:'1.2-2' }} kg</span> —
+                    }
+                    <span>{{ entry.description || 'Sin datos de compra registrados.' }}</span>
+                    }
+                    @case ('DESTETE') {
+                    <span class="badge bg-secondary-lt me-1">{{ entry.healthEventType || 'NATURAL' }}</span>
+                    @if (entry.weightKg !== null) {
+                    <span class="font-weight-bold">{{ entry.weightKg | number:'1.2-2' }} kg</span>
+                    }
+                    <span>{{ entry.description }}</span>
+                    }
+                    @case ('SOLICITUD_BAJA') {
+                    <span class="badge me-1"
+                        [class.bg-yellow-lt]="entry.healthEventType === 'PENDIENTE'"
+                        [class.bg-success-lt]="entry.healthEventType === 'APROBADO'"
+                        [class.bg-danger-lt]="entry.healthEventType === 'RECHAZADO' || entry.healthEventType === 'EXPIRADO'">
+                        {{ entry.healthEventType }}
+                    </span>
+                    <span>{{ entry.description }}</span>
+                    }
+                    @case ('SOLICITUD_VENTA') {
+                    <span class="badge me-1"
+                        [class.bg-yellow-lt]="entry.healthEventType === 'PENDIENTE'"
+                        [class.bg-success-lt]="entry.healthEventType === 'APROBADO'"
+                        [class.bg-danger-lt]="entry.healthEventType === 'RECHAZADO' || entry.healthEventType === 'EXPIRADO'">
+                        {{ entry.healthEventType }}
+                    </span>
+                    <span>{{ entry.description }}</span>
                     }
                     }
                 </td>
@@ -180,7 +219,11 @@
                         [class.bg-blue-lt]="entry.eventType === 'PESO'"
                         [class.bg-red-lt]="entry.eventType === 'SALUD'"
                         [class.bg-purple-lt]="entry.eventType === 'PARTO'"
-                        [class.bg-green-lt]="entry.eventType === 'NACIMIENTO'">
+                        [class.bg-green-lt]="entry.eventType === 'NACIMIENTO'"
+                        [class.bg-orange-lt]="entry.eventType === 'COMPRA'"
+                        [class.bg-cyan-lt]="entry.eventType === 'DESTETE'"
+                        [class.bg-danger-lt]="entry.eventType === 'SOLICITUD_BAJA'"
+                        [class.bg-yellow-lt]="entry.eventType === 'SOLICITUD_VENTA'">
                         {{ eventTypeLabel[entry.eventType] }}
                     </span>
                 </td>
@@ -207,6 +250,37 @@
                         , peso al nacer {{ entry.calfWeightKg | number:'1.2-2' }} kg
                         }.
                     </span>
+                    }
+                    @case ('COMPRA') {
+                    @if (entry.weightKg !== null) {
+                    <span class="font-weight-bold">{{ entry.weightKg | number:'1.2-2' }} kg</span> —
+                    }
+                    <span>{{ entry.description || 'Sin datos de compra registrados.' }}</span>
+                    }
+                    @case ('DESTETE') {
+                    <span class="badge bg-secondary-lt me-1">{{ entry.healthEventType || 'NATURAL' }}</span>
+                    @if (entry.weightKg !== null) {
+                    <span class="font-weight-bold">{{ entry.weightKg | number:'1.2-2' }} kg</span>
+                    }
+                    <span>{{ entry.description }}</span>
+                    }
+                    @case ('SOLICITUD_BAJA') {
+                    <span class="badge me-1"
+                        [class.bg-yellow-lt]="entry.healthEventType === 'PENDIENTE'"
+                        [class.bg-success-lt]="entry.healthEventType === 'APROBADO'"
+                        [class.bg-danger-lt]="entry.healthEventType === 'RECHAZADO' || entry.healthEventType === 'EXPIRADO'">
+                        {{ entry.healthEventType }}
+                    </span>
+                    <span>{{ entry.description }}</span>
+                    }
+                    @case ('SOLICITUD_VENTA') {
+                    <span class="badge me-1"
+                        [class.bg-yellow-lt]="entry.healthEventType === 'PENDIENTE'"
+                        [class.bg-success-lt]="entry.healthEventType === 'APROBADO'"
+                        [class.bg-danger-lt]="entry.healthEventType === 'RECHAZADO' || entry.healthEventType === 'EXPIRADO'">
+                        {{ entry.healthEventType }}
+                    </span>
+                    <span>{{ entry.description }}</span>
                     }
                     }
                 </td>
