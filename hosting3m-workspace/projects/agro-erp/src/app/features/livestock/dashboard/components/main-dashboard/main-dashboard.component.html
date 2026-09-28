@@ -1,14 +1,14 @@
 <div class="page-header d-print-none mb-4">
     <div class="row g-2 align-items-center">
-        <div class="col-12 col-md">
+        <div class="col-12 mb-3">
             <div class="page-pretitle text-uppercase font-weight-bold text-muted">Resumen Ejecutivo</div>
             <h2 class="page-title font-weight-bold">Capitalización y Rendimiento</h2>
         </div>
 
-        <div class="col-12 col-md-auto ms-md-auto d-print-none mt-2 mt-md-0">
-            <div class="d-flex flex-column flex-sm-row gap-2 align-items-sm-center">
+        <div class="col-12 d-print-none">
+            <div class="d-flex flex-wrap gap-3 align-items-center">
 
-                <div class="d-flex align-items-center gap-2">
+                <div class="col-12 col-sm-auto d-flex align-items-center gap-2">
                     <span class="text-muted small font-weight-bold text-nowrap">Filtrar Especie:</span>
                     <select class="form-select font-weight-bold border-primary text-primary" [value]="selectedSpecies()"
                         (change)="setSpecies($any($event.target).value)">
@@ -19,7 +19,7 @@
                     </select>
                 </div>
 
-                <div class="d-flex align-items-center gap-2">
+                <div class="col-12 col-sm-auto d-flex align-items-center gap-2">
                     <span class="text-muted small font-weight-bold text-nowrap">Filtrar Lote:</span>
                     <select class="form-select font-weight-bold border-primary text-primary" [value]="selectedLot()"
                         (change)="setLot($any($event.target).value)">
@@ -30,21 +30,21 @@
                     </select>
                 </div>
 
-                <div class="btn-group" role="group">
+                <div class="col-12 col-sm-auto d-flex flex-wrap gap-2" role="radiogroup" aria-label="Módulo de negocio">
                     <input type="radio" class="btn-check" name="btn-radio-tab" id="tab-cria" autocomplete="off"
                         [checked]="activeTab() === 'CRIA'" (click)="setTab('CRIA')">
-                    <label for="tab-cria" class="btn btn-outline-primary font-weight-bold">Módulo de Cría</label>
+                    <label for="tab-cria" class="btn btn-outline-primary font-weight-bold flex-grow-1 flex-sm-grow-0">Módulo de Cría</label>
 
                     <input type="radio" class="btn-check" name="btn-radio-tab" id="tab-engorda" autocomplete="off"
                         [checked]="activeTab() === 'ENGORDA'" (click)="setTab('ENGORDA')">
-                    <label for="tab-engorda" class="btn btn-outline-primary font-weight-bold">Módulo de Engorda</label>
+                    <label for="tab-engorda" class="btn btn-outline-primary font-weight-bold flex-grow-1 flex-sm-grow-0">Módulo de Engorda</label>
 
                     <input type="radio" class="btn-check" name="btn-radio-tab" id="tab-reproduccion" autocomplete="off"
                         [checked]="activeTab() === 'REPRODUCCION'" (click)="setTab('REPRODUCCION')">
-                    <label for="tab-reproduccion" class="btn btn-outline-primary font-weight-bold">Módulo de Reproducción</label>
+                    <label for="tab-reproduccion" class="btn btn-outline-primary font-weight-bold flex-grow-1 flex-sm-grow-0">Módulo de Reproducción</label>
                 </div>
 
-                <button class="btn btn-primary font-weight-bold d-flex align-items-center justify-content-center"
+                <button class="col-12 col-sm-auto btn btn-primary font-weight-bold d-flex align-items-center justify-content-center"
                     (click)="showExpenseModal.set(true)">
                     <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
                         stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
