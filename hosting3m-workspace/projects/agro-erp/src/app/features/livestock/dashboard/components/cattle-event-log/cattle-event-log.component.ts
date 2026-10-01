@@ -20,6 +20,8 @@ interface EventLogEntry {
   description: string | null;
   calfSex: string | null;
   calfWeightKg: number | null;
+  calfCategory: string | null;
+  damIdentifier: string | null;
 }
 
 const EVENT_TYPE_LABEL: Record<CattleEventType, string> = {
@@ -139,7 +141,9 @@ export class CattleEventLogComponent {
         healthEventType: row.health_event_type ?? null,
         description: row.description ?? null,
         calfSex: row.calf_sex ?? null,
-        calfWeightKg: row.calf_weight_kg != null ? Number(row.calf_weight_kg) : null
+        calfWeightKg: row.calf_weight_kg != null ? Number(row.calf_weight_kg) : null,
+        calfCategory: row.calf_category || null,
+        damIdentifier: row.dam_identifier || null
       }))
       .sort((a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime());
   });
@@ -277,8 +281,14 @@ export class CattleEventLogComponent {
         return entry.weightKg !== null ? `${entry.weightKg.toFixed(2)} kg` : '';
       case 'SALUD':
         return [entry.healthEventType, entry.description].filter(Boolean).join(' — ');
-      case 'PARTO':
       case 'NACIMIENTO':
+        return [
+          `Nació ${entry.calfSex === 'MACHO' ? 'macho' : 'hembra'}`,
+          `categoría ${entry.calfCategory || 'N/D'}`,
+          `madre ${entry.damIdentifier || 'N/D'}`,
+          entry.calfWeightKg !== null ? `peso al nacer ${entry.calfWeightKg.toFixed(2)} kg` : null
+        ].filter(Boolean).join(', ');
+      case 'PARTO':
         return [
           entry.calfSex === 'MACHO' ? 'Macho' : 'Hembra',
           entry.calfWeightKg !== null ? `${entry.calfWeightKg.toFixed(2)} kg al nacer` : null

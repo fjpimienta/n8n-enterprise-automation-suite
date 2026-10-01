@@ -157,7 +157,9 @@
                     </span>
                     }
                     @case ('NACIMIENTO') {
-                    <span>Cría {{ entry.calfSex === 'MACHO' ? 'macho' : 'hembra' }}
+                    <span>Nació {{ entry.calfSex === 'MACHO' ? 'macho' : 'hembra' }},
+                        categoría {{ entry.calfCategory || 'N/D' }},
+                        madre <span class="font-monospace">{{ entry.damIdentifier || 'N/D' }}</span>
                         @if (entry.calfWeightKg !== null) {
                         , peso al nacer {{ entry.calfWeightKg | number:'1.2-2' }} kg
                         }.
@@ -245,7 +247,9 @@
                     </span>
                     }
                     @case ('NACIMIENTO') {
-                    <span>Cría {{ entry.calfSex === 'MACHO' ? 'macho' : 'hembra' }}
+                    <span>Nació {{ entry.calfSex === 'MACHO' ? 'macho' : 'hembra' }},
+                        categoría {{ entry.calfCategory || 'N/D' }},
+                        madre <span class="font-monospace">{{ entry.damIdentifier || 'N/D' }}</span>
                         @if (entry.calfWeightKg !== null) {
                         , peso al nacer {{ entry.calfWeightKg | number:'1.2-2' }} kg
                         }.
