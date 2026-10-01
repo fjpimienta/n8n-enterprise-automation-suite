@@ -3,6 +3,31 @@
 Todos los cambios notables en el proyecto **n8n Enterprise Automation Suite** serán documentados en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/), y este proyecto se adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [Unreleased]
+
+### 🐛 "Cattle Event Log" ignoraba el módulo seleccionado (Cría / Engorda / Reproducción)
+
+La pestaña "Cattle Event Log" de `main-dashboard` mostraba exactamente las mismas filas sin
+importar el módulo activo, mientras Inventario y los KPIs sí cambiaban (ej. tenant 3: 16 → 0 → 2
+cabezas). No era un bug de backend: `vw_cattle_event_log` ya trae `livestock_id` por fila, y el
+componente recibía a propósito el hato completo del tenant (`cattleList()`) desde `624b918`, que
+lo desacopló de `filteredCattleList()` para que animales vendidos/muertos no perdieran su historial.
+
+**Fix (solo frontend, sin cambios de vista ni de gateway):**
+* Nuevo computed `eventLogCattleList` en `main-dashboard`: filtra `cattleList()` **solo por
+  módulo** (`business_model === activeTab`). Deliberadamente **sin** especie/lote y **sin**
+  `herdStatusFilter` — un animal vendido o muerto conserva su historial dentro de su módulo (no se
+  reabre lo corregido en `624b918`).
+* Nuevo input `moduleCattleData` en `CattleEventLogComponent`; las filas se filtran por
+  `livestock_id` contra ese subconjunto. `cattleData` (hato completo) se mantiene como la compuerta
+  de aislamiento multi-tenant — el filtro de módulo es de alcance, no de seguridad.
+* Animales sin `business_model`: mismo criterio que `scopedCattleList` en el resto de la página
+  (excluidos). Verificado 2026-10-01: 0 animales sin `business_model` en los tenants 3, 5 y 6.
+
+⚠️ **Limitación conocida (aceptada):** el módulo usado es el `business_model` **actual** del animal,
+no el que tenía al momento del evento — no existe historial de módulo. Una cría nacida en CRIA y
+movida después a ENGORDA muestra su nacimiento (y todo su historial) bajo ENGORDA.
+
 ## [1.15.1] - 2026-09-30
 
 ### 🐛 Bug real: el Agente IA sumaba mal el resultado de `count_livestock`
