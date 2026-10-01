@@ -48,7 +48,7 @@
     "apexcharts": "^6.10.0",
     "bootstrap": "^5.3.8",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.6.2",
+    "express-rate-limit": "^8.7.0",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
     "jwt-decode": "^4.0.0",
