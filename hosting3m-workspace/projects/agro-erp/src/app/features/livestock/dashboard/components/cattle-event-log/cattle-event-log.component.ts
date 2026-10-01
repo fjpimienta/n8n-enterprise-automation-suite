@@ -62,6 +62,14 @@ export class CattleEventLogComponent {
   // su historial de eventos. Ver `entries` más abajo para la capa real de aislamiento multi-tenant.
   public cattleData = input<Livestock[]>([]);
 
+  // Subconjunto de `cattleData` del módulo activo (CRIA/ENGORDA/REPRODUCCION), sin filtro de
+  // estado de vida — vendidos/muertos conservan su historial dentro de su módulo. Limitación
+  // conocida: es el `business_model` ACTUAL del animal, no el que tenía al momento del evento
+  // (no hay historial de módulo); una cría nacida en CRIA y movida a ENGORDA muestra su
+  // nacimiento bajo ENGORDA. Es filtro de alcance, no de aislamiento: `cattleData` sigue siendo
+  // la compuerta multi-tenant.
+  public moduleCattleData = input<Livestock[]>([]);
+
   public readonly eventTypeLabel = EVENT_TYPE_LABEL;
 
   public isLoading = signal<boolean>(false);
@@ -127,9 +135,10 @@ export class CattleEventLogComponent {
    */
   public entries = computed<EventLogEntry[]>(() => {
     const validIds = new Set(this.cattleData().map(a => a.id));
+    const moduleIds = new Set(this.moduleCattleData().map(a => a.id));
 
     return this.rawRows()
-      .filter(row => validIds.has(row.livestock_id))
+      .filter(row => validIds.has(row.livestock_id) && moduleIds.has(row.livestock_id))
       .map(row => ({
         id: row.id,
         livestockId: row.livestock_id,

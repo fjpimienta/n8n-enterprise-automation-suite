@@ -164,6 +164,16 @@ export class MainDashboardComponent implements OnInit {
     filterByHerdStatus(this.scopedCattleList(), this.herdStatusFilter())
   );
 
+  // Alcance del Cattle Event Log: SOLO módulo (tab). Deliberadamente sin especie/lote y sin
+  // herdStatusFilter — un animal vendido/muerto conserva su historial dentro de su módulo (ver
+  // 624b918). Mismo criterio que scopedCattleList para animales sin business_model: excluidos.
+  public eventLogCattleList = computed(() => {
+    const currentTab = this.activeTab();
+    return this.cattleList().filter(animal =>
+      !!animal.business_model && animal.business_model.trim() === currentTab
+    );
+  });
+
   // Card "Cabezas Totales Activas": siempre el hato vivo, sin importar el toggle de auditoría.
   public activeHeadCount = computed(() =>
     filterByHerdStatus(this.scopedCattleList(), 'ACTIVOS').length
