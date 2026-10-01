@@ -102,6 +102,21 @@ Al probar `count_livestock` por primera vez por el canal real (recién visible t
 
 ✅ **Inconsistencia detectada durante la misma verificación, resuelta el mismo día:** el dashboard (`main-dashboard`, filtro "Estado: Activos") reportó **9** cabezas activas para el tenant de pruebas, mientras que `count_livestock` sin filtro reportó **11** — la diferencia eran los 2 animales en `BAJA_MORTANDAD` (1 becerro, 1 vaca), que el Agente IA cuenta como "los tengo" pero el dashboard excluía. **Decisión del cliente (2026-09-27): la respuesta del Agente IA y el dashboard deben ser consistentes.** Corregido en `@shared/utils/herd-status.util.ts` (`INACTIVE_HERD_STATUSES`), reemplazando `['VENDIDO', 'BAJA_MORTANDAD']` por `['VENDIDO', 'FINALIZADO', 'BAJA_DEPURACION_DATOS']` — mismo criterio que `count_livestock`. Efecto secundario esperado (`FINALIZADO`/`BAJA_DEPURACION_DATOS` pasan a excluirse por primera vez) verificado sin impacto: **0 animales reales** en esos dos estados en ningún tenant de producción. Verificado en LOCAL y PRODUCCIÓN.
 
+### 8quater. Bug real: el LLM sumaba mal el total de `count_livestock` (2026-09-30) — corregido
+
+Encontrado en la primera prueba real tras el fix de v1.14.1: "¿cuántos animales
+tengo en total?" respondió **9** en vez de **12**. La query estaba bien — el log
+de ejecución de n8n mostró las 7 filas correctas (3 BECERRA ACTIVO, 4 BECERRO
+ACTIVO, 1 BECERRO BAJA_MORTANDAD, 1 BECERRO RIESGO, 1 VACA BAJA_MORTANDAD,
+1 VACA PREÑADA, 1 VACA VACÍA — suma real 12). El LLM sumó solo 4 de las 7 filas
+(3+4+1+1=9), omitiendo las 3 filas de `VACA` de la suma aunque sí las describió
+correctamente aparte — un error de aritmética del modelo, no de datos.
+
+**Fix:** la query ahora expone `grand_total` (vía `SUM(COUNT(*)) OVER ()`), el
+total real ya calculado en SQL, idéntico en cada fila. El `toolDescription` instruye
+usar ese valor tal cual, nunca sumar a mano. Verificado en LOCAL y producción:
+12 total, desglose completo correcto.
+
 ### 9. Bug de `event_date` — corregido en las 3 tools que lo tenían
 El bug (`COALESCE(fecha, CURRENT_DATE)` en vez de `CURRENT_TIMESTAMP`, que descuadraba el orden cronológico de `vw_cattle_event_log` frente a otros eventos del mismo día) se corrigió y verificó en LOCAL y PRODUCCIÓN en `log_vaccination_event` el 2026-09-25/26, y en `log_supplement_event`/`log_palpation_event` el 2026-09-27. Las 3 tools que escriben `event_date` en `cattle_health_logs` usan hoy el mismo patrón correcto (`COALESCE(fecha::timestamp, CURRENT_TIMESTAMP)`). Sin pendientes en este punto.
 

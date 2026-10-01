@@ -27,4 +27,10 @@ export interface CattleEventLogRow {
   calf_weight_kg?: string | number | null;
   source_device?: string | null;
   created_at: string;
+  /** Migration 062 — populated only on NACIMIENTO rows (calf's cattle_livestock.category). */
+  calf_category?: string | null;
+  /** Migration 062 — populated only on NACIMIENTO rows: dam's rfid_siniiga/numero_fuego, falling
+   *  back to birth_events.dam_ear_tag/dam_fire_number when dam_id is not linked. Null if the
+   *  birth has no dam reference at all (allowed for BORREGO). */
+  dam_identifier?: string | null;
 }
