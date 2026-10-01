@@ -3,6 +3,36 @@
 Todos los cambios notables en el proyecto **n8n Enterprise Automation Suite** serán documentados en este archivo.
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/), y este proyecto se adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [1.15.1] - 2026-09-30
+
+### 🐛 Bug real: el Agente IA sumaba mal el resultado de `count_livestock`
+
+`count_livestock` devuelve una fila por combinación categoría+estatus (ej. 7 filas
+para 12 animales reales). Al preguntar "¿cuántos animales en total?", el LLM debía
+sumar el campo `total` de todas las filas — y en la práctica se "perdía" algunas:
+en una prueba real devolvió **9** en vez de **12**, omitiendo silenciosamente las
+3 filas de categoría `VACA` de la suma (aunque sí las describió correctamente en el
+desglose). No es un bug de SQL ni de datos — la query ya traía el desglose correcto,
+verificado fila por fila contra el dashboard. Es un error de aritmética del modelo
+sobre datos tabulares, no corregible con más instrucciones de prompt.
+
+**Fix:** se quita al LLM la necesidad de sumar. La query ahora calcula el total real
+con una función de ventana (`SUM(COUNT(*)) OVER ()`) y lo entrega como columna
+`grand_total`, idéntica en cada fila. El `toolDescription` se actualizó para
+instruir explícitamente: usar `grand_total` tal cual, nunca sumar `total` a mano
+ni omitir filas. De paso se corrigió una línea de documentación desactualizada del
+mismo `toolDescription` que aún prometía "default ACTIVO" (superada por el fix de
+v1.14.1, exclusión de `VENDIDO`/`FINALIZADO`/`BAJA_DEPURACION_DATOS`).
+
+Verificado en LOCAL y producción: "¿cuántos animales tengo en total?" → 12,
+desglose completo y correcto por categoría/estatus, coincide con el dashboard.
+
+⚠️ Patrón a vigilar: cualquier otra tool MCP que agrupe filas y espere que el LLM
+sume manualmente un total está expuesta al mismo tipo de error. Ninguna otra tool
+del servidor hace esto hoy (todas las demás son de una sola fila por operación),
+pero aplica el mismo criterio (calcular el total en SQL, nunca en el prompt) si se
+agrega una en el futuro.
+
 ## [1.15.0] - 2026-09-28
 
 ### 🐂 Módulo de Reproducción en el Dashboard
