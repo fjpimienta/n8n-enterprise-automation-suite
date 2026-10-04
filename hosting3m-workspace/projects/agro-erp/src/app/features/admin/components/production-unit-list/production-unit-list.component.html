@@ -1,14 +1,20 @@
 <div class="container-fluid p-3 p-md-4 animate__animated animate__fadeIn">
 
+    <ol class="breadcrumb breadcrumb-arrows mb-3" aria-label="Ruta de navegación">
+        <li class="breadcrumb-item"><a routerLink="/admin/tenants">Empresas</a></li>
+        <li class="breadcrumb-item">{{ activeTenant()?.company_name }}</li>
+        <li class="breadcrumb-item active" aria-current="page">UPP oficiales</li>
+    </ol>
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div class="d-flex align-items-center gap-3">
             <a class="btn btn-icon btn-outline-secondary" routerLink="/admin/tenants" title="Volver a empresas">
                 <i class="ti ti-arrow-left"></i>
             </a>
             <div>
-                <h2 class="page-title mb-0">Unidades de Producción (UPP)</h2>
+                <h2 class="page-title mb-0">UPP oficiales de {{ activeTenant()?.company_name }}</h2>
                 <div class="text-muted small mt-1">
-                    {{ activeTenant()?.company_name }} · Padrones SINIIGA registrados
+                    Unidades de Producción Pecuaria registradas ante SENASICA-SINIIGA para esta empresa
                 </div>
             </div>
         </div>

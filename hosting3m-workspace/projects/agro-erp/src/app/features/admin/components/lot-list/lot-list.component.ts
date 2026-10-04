@@ -40,6 +40,7 @@ export class LotListComponent {
   ));
 
   tenantId = computed(() => this.params()?.tenantId ?? null);
+  activeTenant = this.tenantService.activeTenant;
   canEdit = computed(() => canManageLots(this.tenantService.activeTenant()?.role));
 
   unit = signal<ProductionUnitSummary | null>(null);

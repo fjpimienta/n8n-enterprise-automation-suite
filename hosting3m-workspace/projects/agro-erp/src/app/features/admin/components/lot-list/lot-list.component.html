@@ -1,16 +1,28 @@
 <div class="container-fluid p-3 p-md-4 animate__animated animate__fadeIn">
 
+    <ol class="breadcrumb breadcrumb-arrows mb-3" aria-label="Ruta de navegación">
+        <li class="breadcrumb-item"><a routerLink="/admin/tenants">Empresas</a></li>
+        <li class="breadcrumb-item">
+            <a [routerLink]="['/admin/tenants', tenantId(), 'production-units']">{{ activeTenant()?.company_name }}</a>
+        </li>
+        @if (unit()) {
+        <li class="breadcrumb-item">UPP {{ unit()!.uppCode }} · {{ unit()!.ranchName }}</li>
+        }
+        <li class="breadcrumb-item active" aria-current="page">Lotes</li>
+    </ol>
+
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div class="d-flex align-items-center gap-3">
             <a class="btn btn-icon btn-outline-secondary" [routerLink]="['/admin/tenants', tenantId(), 'production-units']"
-                title="Volver a UPP">
+                title="Volver a UPP oficiales">
                 <i class="ti ti-arrow-left"></i>
             </a>
             <div>
                 <h2 class="page-title mb-0">Lotes{{ unit() ? ' · ' + unit()!.ranchName : '' }}</h2>
                 @if (unit()) {
                 <div class="text-muted small mt-1">
-                    UPP {{ unit()!.uppCode }} · {{ activeCount() }} activos / {{ lots().length }} totales
+                    Empresa {{ activeTenant()?.company_name }} · UPP {{ unit()!.uppCode }} ·
+                    {{ activeCount() }} activos / {{ lots().length }} totales
                 </div>
                 }
             </div>
