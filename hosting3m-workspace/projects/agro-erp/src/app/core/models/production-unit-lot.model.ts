@@ -63,6 +63,15 @@ export interface ProductionUnitSummary {
   registryStatus: string | null;
 }
 
+/** Editable identification fields of an official UPP (`production_units`). */
+export interface UpdateProductionUnitPayload {
+  ranchName: string;
+  uppCode: string;
+  stateName?: string | null;
+  municipalityName?: string | null;
+  localityName?: string | null;
+}
+
 /** Case-insensitive key matching the `upper(lot_name)` expression of `uq_lot_name_per_unit`. */
 export function lotNameKey(name: string | null | undefined): string {
   return (name ?? '').trim().toUpperCase();

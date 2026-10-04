@@ -6,6 +6,7 @@ import { TenantService } from 'core-auth';
 import { CattleApiService } from '@core/services/cattle-api.service';
 import {
   DuplicateLotNameError,
+  DuplicateUppCodeError,
   ProductionUnitLotService,
   TenantContextError,
 } from './production-unit-lot.service';
@@ -145,5 +146,44 @@ describe('ProductionUnitLotService', () => {
       message: 'duplicate key value violates unique constraint "uq_lot_name_per_unit"',
     };
     await expect(service.reactivateLot('lot-1')).rejects.toBeInstanceOf(DuplicateLotNameError);
+  });
+
+  describe('updateProductionUnit', () => {
+    const edit = { ranchName: ' Rancho Nuevo ', uppCode: '27-009-4146-002', stateName: 'Tabasco', municipalityName: '', localityName: null };
+
+    it('refuses to update a UPP owned by another tenant', async () => {
+      gateway.responses['production_units:getone'] = { error: false, data: { id: UPP, id_company: 6, is_active: true } };
+      await expect(service.updateProductionUnit(UPP, edit)).rejects.toBeInstanceOf(TenantContextError);
+      expect(gateway.callsFor('production_units', 'update').length).toBe(0);
+    });
+
+    it('rejects a malformed UPP code before calling the gateway', async () => {
+      gateway.responses['production_units:getone'] = { error: false, data: { id: UPP, id_company: 3, is_active: true } };
+      await expect(service.updateProductionUnit(UPP, { ...edit, uppCode: '27-9-4146-2' })).rejects.toThrow(/EE-MMM-NNNN-SSS/);
+      expect(gateway.callsFor('production_units', 'update').length).toBe(0);
+    });
+
+    it('sends only the editable identification fields, trimmed, with blanks as null', async () => {
+      gateway.responses['production_units:getone'] = { error: false, data: { id: UPP, id_company: 3, is_active: true } };
+      await service.updateProductionUnit(UPP, edit);
+      const [update] = gateway.callsFor('production_units', 'update');
+      expect(update.body.id).toBe(UPP);
+      expect(update.body.fields).toEqual({
+        ranch_name: 'Rancho Nuevo',
+        upp_code: '27-009-4146-002',
+        state_name: 'Tabasco',
+        municipality_name: null,
+        locality_name: null,
+      });
+    });
+
+    it('maps the global active-code unique index to DuplicateUppCodeError', async () => {
+      gateway.responses['production_units:getone'] = { error: false, data: { id: UPP, id_company: 3, is_active: true } };
+      gateway.responses['production_units:update'] = {
+        error: true,
+        message: 'duplicate key value violates unique constraint "uq_production_units_active_code"',
+      };
+      await expect(service.updateProductionUnit(UPP, edit)).rejects.toBeInstanceOf(DuplicateUppCodeError);
+    });
   });
 });
