@@ -32,7 +32,13 @@ const EVENT_TYPE_LABEL: Record<CattleEventType, string> = {
   COMPRA: 'Compra',
   DESTETE: 'Destete',
   SOLICITUD_BAJA: 'Solicitud de Baja (Mortandad)',
-  SOLICITUD_VENTA: 'Solicitud de Venta'
+  SOLICITUD_VENTA: 'Solicitud de Venta',
+  // Migración 063: el detalle legible ya viene armado en `description` desde la vista.
+  REPRODUCCION: 'Reproducción',
+  DESPARASITACION: 'Desparasitación',
+  CASTRACION: 'Castración',
+  TRASLADO: 'Traslado',
+  CAMBIO_ARETE: 'Cambio de Arete'
 };
 
 type SortColumn = 'rfidSiniiga' | 'numeroFuego' | 'eventType' | 'eventDate';
@@ -310,7 +316,8 @@ export class CattleEventLogComponent {
       case 'SOLICITUD_VENTA':
         return [entry.healthEventType, entry.description].filter(Boolean).join(' — ');
       default:
-        return '';
+        // REPRODUCCION / DESPARASITACION / CASTRACION / TRASLADO / CAMBIO_ARETE (migración 063).
+        return entry.description ?? '';
     }
   }
 }
