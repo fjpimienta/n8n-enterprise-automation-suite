@@ -1,0 +1,80 @@
+@if (isOpen()) {
+<div class="modal-backdrop fade show"></div>
+<div class="modal modal-blur fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">
+                    <i class="ti ti-layout-grid me-2"></i>
+                    {{ selectedLot() ? 'Editar Lote' : 'Nuevo Lote' }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" [disabled]="isSubmitting()"
+                    (click)="onClose.emit()"></button>
+            </div>
+            <div class="modal-body p-4">
+                @if (errorMessage()) {
+                <div class="alert alert-danger" role="alert">
+                    <i class="ti ti-alert-triangle me-2"></i> {{ errorMessage() }}
+                </div>
+                }
+
+                <div class="row">
+                    <div class="col-12 col-md-6 mb-3">
+                        <label class="form-label fw-bold">Nombre del Lote <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control shadow-sm" maxlength="100" [disabled]="isSubmitting()"
+                            [ngModel]="lotData().lotName" (ngModelChange)="updateField('lotName', $event)"
+                            placeholder="Ej. Potrero 1, Corral de engorda">
+                        <small class="form-hint">Único dentro de la UPP entre lotes activos (sin distinguir mayúsculas).</small>
+                    </div>
+                    <div class="col-12 col-md-6 mb-3">
+                        <label class="form-label fw-bold">Tipo de Tenencia <span class="text-danger">*</span></label>
+                        <select class="form-select shadow-sm" [disabled]="isSubmitting()"
+                            [ngModel]="lotData().tenureType" (ngModelChange)="updateTenure($event)">
+                            @for (option of tenureOptions; track option.value) {
+                            <option [value]="option.value">{{ option.label }}</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                @if (isLessorEnabled()) {
+                <div class="row">
+                    <div class="col-12 mb-3">
+                        <label class="form-label fw-bold">Arrendador <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control shadow-sm" maxlength="255" [disabled]="isSubmitting()"
+                            [ngModel]="lotData().lessorName" (ngModelChange)="updateField('lessorName', $event)"
+                            placeholder="Nombre de quien renta la parcela">
+                    </div>
+                </div>
+                }
+
+                <hr class="my-4">
+                <h6 class="text-muted text-uppercase fw-bold mb-3">Información Adicional</h6>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Ubicación</label>
+                    <textarea class="form-control shadow-sm" rows="2" [disabled]="isSubmitting()"
+                        [ngModel]="lotData().locationNotes" (ngModelChange)="updateField('locationNotes', $event)"
+                        placeholder="Referencias de acceso o colindancias"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Notas</label>
+                    <textarea class="form-control shadow-sm" rows="2" [disabled]="isSubmitting()"
+                        [ngModel]="lotData().notes" (ngModelChange)="updateField('notes', $event)"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-link link-secondary" [disabled]="isSubmitting()"
+                    (click)="onClose.emit()">Cancelar</button>
+                <button type="button" class="btn btn-primary ms-auto" [disabled]="isSubmitting()" (click)="onSave.emit()">
+                    @if (isSubmitting()) {
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span> Guardando...
+                    } @else {
+                    <i class="ti ti-device-floppy me-2"></i> {{ selectedLot() ? 'Guardar Cambios' : 'Crear Lote' }}
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+}

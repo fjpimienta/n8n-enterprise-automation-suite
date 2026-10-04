@@ -8,7 +8,8 @@
  * `production_unit_id` que el animal (`fn_guard_livestock_lot`, migración 050), y
  * `lot_name` es único por `production_unit_id` (índice `uq_lot_name_per_unit`).
  *
- * El frontend nunca consulta `production_unit_lots` directamente: `vw_cattle_kpi`
+ * El módulo de ganadería no consulta `production_unit_lots` directamente (solo el
+ * admin de Lotes, `ProductionUnitLotService`, lo hace): `vw_cattle_kpi`
  * (la vista real que consume la app, migración 056) ya trae `lot_name` aplanado
  * en cada registro de `Livestock`, igual que `species` — por eso el selector
  * "Filtrar Lote" se deriva de los datos ya cargados, sin nuevo endpoint. Como
