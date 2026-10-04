@@ -1,11 +1,22 @@
 import { Routes } from '@angular/router';
 import { roleGuard } from 'core-auth';
+import { activeTenantRouteGuard } from './guards/active-tenant-route.guard';
 
 export const adminRoutes: Routes = [
     {
         path: 'tenants',
         canActivate: [roleGuard(['ADMIN'])],
         loadComponent: () => import('./components/tenant-list/tenant-list.component').then(m => m.TenantListComponent)
+    },
+    {
+        path: 'tenants/:tenantId/production-units',
+        canActivate: [roleGuard(['ADMIN']), activeTenantRouteGuard],
+        loadComponent: () => import('./components/production-unit-list/production-unit-list.component').then(m => m.ProductionUnitListComponent)
+    },
+    {
+        path: 'tenants/:tenantId/production-units/:uppId/lots',
+        canActivate: [roleGuard(['ADMIN']), activeTenantRouteGuard],
+        loadComponent: () => import('./components/lot-list/lot-list.component').then(m => m.LotListComponent)
     },
     {
         path: 'personal',

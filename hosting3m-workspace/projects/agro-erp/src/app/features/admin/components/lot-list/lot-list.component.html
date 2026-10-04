@@ -1,0 +1,194 @@
+<div class="container-fluid p-3 p-md-4 animate__animated animate__fadeIn">
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <a class="btn btn-icon btn-outline-secondary" [routerLink]="['/admin/tenants', tenantId(), 'production-units']"
+                title="Volver a UPP">
+                <i class="ti ti-arrow-left"></i>
+            </a>
+            <div>
+                <h2 class="page-title mb-0">Lotes{{ unit() ? ' · ' + unit()!.ranchName : '' }}</h2>
+                @if (unit()) {
+                <div class="text-muted small mt-1">
+                    UPP {{ unit()!.uppCode }} · {{ activeCount() }} activos / {{ lots().length }} totales
+                </div>
+                }
+            </div>
+        </div>
+        @if (canEdit() && unit()?.isActive) {
+        <div>
+            <button class="btn btn-primary shadow-sm" (click)="openModal()">
+                <i class="ti ti-square-rounded-plus me-2"></i>
+                <span class="d-none d-sm-inline">Nuevo Lote</span>
+                <span class="d-inline d-sm-none">Nuevo</span>
+            </button>
+        </div>
+        }
+    </div>
+
+    @if (loadError()) {
+    <div class="alert alert-danger" role="alert">
+        <i class="ti ti-alert-triangle me-2"></i> {{ loadError() }}
+    </div>
+    }
+
+    @if (actionError()) {
+    <div class="alert alert-warning alert-dismissible" role="alert">
+        <i class="ti ti-alert-circle me-2"></i> {{ actionError() }}
+        <button type="button" class="btn-close" (click)="actionError.set(null)"></button>
+    </div>
+    }
+
+    @if (unit() && !unit()!.isActive) {
+    <div class="alert alert-secondary" role="alert">
+        <i class="ti ti-info-circle me-2"></i> Esta UPP está inactiva: no se pueden crear lotes nuevos.
+    </div>
+    }
+
+    @if (!canEdit()) {
+    <div class="alert alert-info" role="alert">
+        <i class="ti ti-lock me-2"></i> Solo lectura: tu rol en esta empresa no permite modificar lotes.
+    </div>
+    }
+
+    @if (isLoading()) {
+    <div class="text-center py-5 text-muted">
+        <div class="spinner-border spinner-border-sm me-2" role="status"></div> Cargando lotes...
+    </div>
+    } @else if (unit()) {
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-vcenter card-table">
+                <thead>
+                    <tr>
+                        <th>Nombre</th>
+                        <th>Tenencia</th>
+                        <th>Arrendador</th>
+                        <th class="text-end">Animales asignados</th>
+                        <th>Estado</th>
+                        @if (canEdit()) {
+                        <th class="w-1">Acciones</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (lot of lots(); track lot.id) {
+                    <tr [class.text-muted]="!lot.isActive">
+                        <td>
+                            <div class="fw-medium">{{ lot.lotName }}</div>
+                            @if (lot.locationNotes) {
+                            <div class="small text-muted text-truncate" style="max-width: 18rem;">{{ lot.locationNotes }}</div>
+                            }
+                        </td>
+                        <td>{{ tenureLabel(lot.tenureType) }}</td>
+                        <td>{{ lot.lessorName || '—' }}</td>
+                        <td class="text-end">
+                            @if (lot.assignedLivestockCount === null) {
+                            <span class="text-muted" title="Otro lote de esta UPP comparte el nombre; no es posible atribuir los animales con precisión.">—</span>
+                            } @else {
+                            {{ lot.assignedLivestockCount }}
+                            }
+                        </td>
+                        <td>
+                            @if (lot.isActive) {
+                            <span class="badge bg-green-lt">Activo</span>
+                            } @else {
+                            <span class="badge bg-secondary-lt">Inactivo</span>
+                            }
+                        </td>
+                        @if (canEdit()) {
+                        <td>
+                            <div class="btn-list flex-nowrap">
+                                <button class="btn btn-icon btn-outline-secondary btn-sm" title="Editar"
+                                    [disabled]="busyLotId() === lot.id" (click)="openModal(lot)">
+                                    <i class="ti ti-edit"></i>
+                                </button>
+                                @if (lot.isActive) {
+                                <button class="btn btn-icon btn-outline-danger btn-sm" title="Desactivar"
+                                    [disabled]="busyLotId() === lot.id" (click)="requestDeactivate(lot)">
+                                    <i class="ti ti-archive"></i>
+                                </button>
+                                } @else {
+                                <button class="btn btn-icon btn-outline-success btn-sm" title="Reactivar"
+                                    [disabled]="busyLotId() === lot.id" (click)="reactivate(lot)">
+                                    @if (busyLotId() === lot.id) {
+                                    <span class="spinner-border spinner-border-sm" role="status"></span>
+                                    } @else {
+                                    <i class="ti ti-refresh"></i>
+                                    }
+                                </button>
+                                }
+                            </div>
+                        </td>
+                        }
+                    </tr>
+                    } @empty {
+                    <tr>
+                        <td [attr.colspan]="canEdit() ? 6 : 5" class="text-center py-5">
+                            <i class="ti ti-layout-grid fs-1 text-muted d-block mb-2"></i>
+                            <span class="text-muted">Esta UPP aún no tiene lotes registrados.</span>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="text-muted small mt-2">
+        <i class="ti ti-info-circle me-1"></i>
+        El conteo incluye animales vivos (excluye vendidos, finalizados y bajas por depuración).
+    </div>
+    }
+</div>
+
+<app-lot-form-modal [isOpen]="isModalOpen()" [selectedLot]="selectedLot()" [isSubmitting]="isSubmitting()"
+    [errorMessage]="formError()" [(lotData)]="formData" (onClose)="closeModal()" (onSave)="saveLot()">
+</app-lot-form-modal>
+
+@if (lotToDeactivate(); as lot) {
+<div class="modal-backdrop fade show"></div>
+<div class="modal modal-blur fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-status bg-danger"></div>
+            <div class="modal-body text-center py-4">
+                <i class="ti ti-alert-triangle text-danger fs-1 mb-2 d-block"></i>
+                <h3>¿Desactivar "{{ lot.lotName }}"?</h3>
+                @if (lot.assignedLivestockCount === null) {
+                <div class="text-muted">
+                    No fue posible determinar cuántos animales tiene asignados este lote. Los animales que lo
+                    tengan asignado lo conservarán, pero aparecerá como inactivo. ¿Deseas continuar?
+                </div>
+                } @else if ((lot.assignedLivestockCount ?? 0) > 0) {
+                <div class="text-muted">
+                    Este lote tiene <strong>{{ lot.assignedLivestockCount }}</strong> animales asignados.
+                    Al desactivarlo, esos animales seguirán vinculados a un lote inactivo hasta que se les asigne otro.
+                    ¿Deseas continuar?
+                </div>
+                } @else {
+                <div class="text-muted">
+                    Este lote no tiene animales asignados. Su nombre quedará disponible para un lote nuevo.
+                </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <div class="w-100">
+                    <div class="row">
+                        <div class="col">
+                            <button class="btn w-100" [disabled]="busyLotId()" (click)="cancelDeactivate()">Cancelar</button>
+                        </div>
+                        <div class="col">
+                            <button class="btn btn-danger w-100" [disabled]="busyLotId()" (click)="confirmDeactivate()">
+                                @if (busyLotId()) {
+                                <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                                }
+                                Desactivar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+}
