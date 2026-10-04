@@ -5,6 +5,32 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### ✨ Cattle Event Log: Reproducción, Desparasitación, Castración, Traslado y Cambio de Arete
+
+La Bitácora (`vw_cattle_event_log`) no incluía los eventos de las tablas nuevas
+`cattle_breeding_events`, `cattle_deworming_events` y `cattle_castration_events`, ni los movimientos
+`TRASLADO`/`CAMBIO_ARETE` de `historico_movimientos`.
+
+**Migración 063** (`CREATE OR REPLACE VIEW`, aplicada y verificada en LOCAL y PRODUCCIÓN el
+2026-10-04): cuatro ramas `UNION ALL` al final de la vista, sin cambiar columnas ni las 8 ramas
+existentes (0 filas previas modificadas en ambos ambientes).
+
+| `event_type` | Fuente | Fecha | Detalle (`description`) |
+|---|---|---|---|
+| `REPRODUCCION` | `cattle_breeding_events` | `breeding_date` | método — semental — parto estimado — notas |
+| `DESPARASITACION` | `cattle_deworming_events` | `application_date` | producto — dosis — refuerzo — notas |
+| `CASTRACION` | `cattle_castration_events` | `castration_date` | categoría anterior → nueva — método — notas |
+| `TRASLADO` / `CAMBIO_ARETE` | `historico_movimientos` | `fecha_registro` | origen (`lot_origen_anterior`/`upp_origen_anterior`) — notas |
+
+* **Anulaciones:** los eventos de las tres tablas nuevas anulados en `event_voids` (mismo tenant) no
+  aparecen. Verificado: la castración anulada del tenant de pruebas no se muestra.
+* **Fuera de alcance a propósito:** `VENTA`/`BAJA_MORTANDAD`/`REVERSION` de `historico_movimientos`
+  (posible duplicidad con las filas `Solicitud de Baja/Venta`, decisión de producto pendiente).
+* **Frontend:** los 5 tipos nuevos en `CattleEventType`, etiquetas, filtro por tipo, colores de badge
+  y detalle en tabla y CSV.
+* ⚠️ `CAMBIO_ARETE` cubre cualquier identificador (SINIIGA, fuego o chip); el tipo viene en el
+  detalle. La fila aparece bajo el arete SINIIGA actual del animal.
+
 ### ✨ Edición de UPP oficial (`production_units`)
 
 No existía pantalla para corregir los datos de identificación de una UPP oficial (solo lectura en
