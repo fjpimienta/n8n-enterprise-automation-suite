@@ -5,6 +5,7 @@ import { CattleApiService } from '@core/services/cattle-api.service';
 import { Livestock } from '../../../models/livestock.model';
 import { CattleEventLogRow, CattleEventType } from '../../../models/cattle-event-log.model';
 import { Paginator } from '../../utils/paginator';
+import { LOT_FILTER_ALL, deriveAvailableLots, getAnimalLot } from '@shared/utils/lot.util';
 
 /** Fila normalizada para el timeline — numéricos ya parseados (nunca comparados como texto,
  *  Contrato Meta-CRUD) y los tres identificadores de auditoría resueltos a texto legible. */
@@ -22,6 +23,8 @@ interface EventLogEntry {
   calfWeightKg: number | null;
   calfCategory: string | null;
   damIdentifier: string | null;
+  /** Lote ACTUAL del animal (vw_cattle_kpi.lot_name vía `moduleCattleData`), no el del momento del evento. */
+  lotName: string | null;
 }
 
 const EVENT_TYPE_LABEL: Record<CattleEventType, string> = {
@@ -43,9 +46,13 @@ const EVENT_TYPE_LABEL: Record<CattleEventType, string> = {
 
 type SortColumn = 'rfidSiniiga' | 'numeroFuego' | 'eventType' | 'eventDate';
 type SortDirection = 'asc' | 'desc';
-type GroupByMode = 'NONE' | 'ANIMAL' | 'EVENT_TYPE';
+type GroupByMode = 'NONE' | 'ANIMAL' | 'EVENT_TYPE' | 'LOT';
 
-/** Bloque de filas ya agrupadas para el render por grupos (Animal / Tipo de Evento). */
+/** Centinela del filtro de lote para animales sin lote asignado (no colisiona con un `lot_name` real). */
+const LOT_FILTER_NONE = '__SIN_LOTE__';
+const NO_LOT_LABEL = 'Sin lote';
+
+/** Bloque de filas ya agrupadas para el render por grupos (Animal / Tipo de Evento / Lote). */
 interface EventLogGroup {
   key: string;
   entries: EventLogEntry[];
@@ -83,6 +90,15 @@ export class CattleEventLogComponent {
   private rawRows = signal<CattleEventLogRow[]>([]);
 
   public eventTypeFilter = signal<'TODOS' | CattleEventType>('TODOS');
+
+  // 🏷️ Filtro por lote ACTUAL del animal (no el lote al momento de cada evento — no hay historial
+  // de lote por evento), igual que el resto de columnas de estado del animal. Misma fuente que el
+  // "Filtrar Lote" de Inventario (@shared/utils/lot.util, `lot_name` de vw_cattle_kpi), sin endpoint
+  // nuevo. Las opciones se derivan del módulo activo: un lote sin animales en él no daría filas.
+  public readonly lotFilterAll = LOT_FILTER_ALL;
+  public readonly lotFilterNone = LOT_FILTER_NONE;
+  public lotFilter = signal<string>(LOT_FILTER_ALL);
+  public availableLots = computed(() => deriveAvailableLots(this.moduleCattleData()));
   public searchQuery = signal<string>('');
 
   // 📅 Filtro de rango de fechas (inputs type="date", combinados con AND — mismo patrón que
@@ -141,10 +157,10 @@ export class CattleEventLogComponent {
    */
   public entries = computed<EventLogEntry[]>(() => {
     const validIds = new Set(this.cattleData().map(a => a.id));
-    const moduleIds = new Set(this.moduleCattleData().map(a => a.id));
+    const moduleLots = new Map(this.moduleCattleData().map(a => [a.id, getAnimalLot(a)] as const));
 
     return this.rawRows()
-      .filter(row => validIds.has(row.livestock_id) && moduleIds.has(row.livestock_id))
+      .filter(row => validIds.has(row.livestock_id) && moduleLots.has(row.livestock_id))
       .map(row => ({
         id: row.id,
         livestockId: row.livestock_id,
@@ -158,13 +174,15 @@ export class CattleEventLogComponent {
         calfSex: row.calf_sex ?? null,
         calfWeightKg: row.calf_weight_kg != null ? Number(row.calf_weight_kg) : null,
         calfCategory: row.calf_category || null,
-        damIdentifier: row.dam_identifier || null
+        damIdentifier: row.dam_identifier || null,
+        lotName: moduleLots.get(row.livestock_id) ?? null
       }))
       .sort((a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime());
   });
 
   public filteredEntries = computed<EventLogEntry[]>(() => {
     const type = this.eventTypeFilter();
+    const lot = this.lotFilter();
     const query = this.searchQuery().trim().toLowerCase();
     // Límite inclusivo: "hasta" cubre el día completo (23:59:59.999), no solo su medianoche.
     const fromMs = this.dateFrom() ? new Date(`${this.dateFrom()}T00:00:00`).getTime() : null;
@@ -172,13 +190,15 @@ export class CattleEventLogComponent {
 
     return this.entries().filter(entry => {
       const matchesType = type === 'TODOS' || entry.eventType === type;
+      const matchesLot = lot === LOT_FILTER_ALL ||
+        (lot === LOT_FILTER_NONE ? entry.lotName === null : entry.lotName === lot);
       const matchesQuery = !query ||
         entry.rfidSiniiga.toLowerCase().includes(query) ||
         entry.numeroFuego.toLowerCase().includes(query);
       const entryMs = new Date(entry.eventDate).getTime();
       const matchesDateFrom = fromMs === null || entryMs >= fromMs;
       const matchesDateTo = toMs === null || entryMs <= toMs;
-      return matchesType && matchesQuery && matchesDateFrom && matchesDateTo;
+      return matchesType && matchesLot && matchesQuery && matchesDateFrom && matchesDateTo;
     });
   });
 
@@ -221,7 +241,9 @@ export class CattleEventLogComponent {
     for (const entry of this.paginatedEntries()) {
       const key = mode === 'ANIMAL'
         ? `${entry.rfidSiniiga} / ${entry.numeroFuego}`
-        : this.eventTypeLabel[entry.eventType];
+        : mode === 'LOT'
+          ? `Lote: ${entry.lotName ?? NO_LOT_LABEL}`
+          : this.eventTypeLabel[entry.eventType];
       const bucket = groups.get(key);
       if (bucket) {
         bucket.push(entry);
@@ -235,6 +257,11 @@ export class CattleEventLogComponent {
 
   public setEventTypeFilter(value: string): void {
     this.eventTypeFilter.set(value as 'TODOS' | CattleEventType);
+    this.pagination.reset();
+  }
+
+  public setLotFilter(value: string): void {
+    this.lotFilter.set(value);
     this.pagination.reset();
   }
 

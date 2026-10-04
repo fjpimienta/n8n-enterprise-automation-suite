@@ -5,6 +5,24 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### ✨ Cattle Event Log: filtro y agrupación por Lote
+
+La Bitácora no permitía filtrar ni agrupar por lote. Nuevo selector **Lote** (Todos / Sin lote /
+lotes del módulo activo) y nueva opción **Agrupar por → Lote** (`Lote: <nombre>` / `Lote: Sin lote`).
+La exportación CSV respeta el filtro, igual que el de tipo de evento.
+
+* **Lote ACTUAL del animal**, no el lote en el que estaba al momento de cada evento: un animal
+  trasladado muestra todo su historial bajo su lote de hoy. Mismo criterio que las demás columnas de
+  estado del animal (categoría, módulo).
+* **Sin cambios de base de datos (sin migración 064):** el lote actual ya llega al componente vía
+  `vw_cattle_kpi.lot_name` (`cattle_livestock.lot_id → production_unit_lots`), cruzado por
+  `livestock_id`. Misma fuente que "Filtrar Lote" de Inventario (`@shared/utils/lot.util`).
+* Las opciones del selector se derivan de los animales del módulo activo; los animales sin lote
+  aparecen bajo "Sin lote" y quedan fuera al elegir un lote específico.
+* ⚠️ Filtro por **nombre** de lote, igual que Inventario: el nombre es único por UPP, no por tenant.
+  Hoy ningún tenant repite nombre de lote entre UPPs (verificado 2026-10-04); si ocurre, ambos lotes
+  se mezclarían en la Bitácora.
+
 ### ✨ Cattle Event Log: Reproducción, Desparasitación, Castración, Traslado y Cambio de Arete
 
 La Bitácora (`vw_cattle_event_log`) no incluía los eventos de las tablas nuevas
