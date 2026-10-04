@@ -6,6 +6,7 @@ import { lastValueFrom } from 'rxjs';
 import { AdminService } from '@features/admin/services/admin.service';
 import { UppFormModalComponent } from '../upp-form-modal/upp-form-modal.component';
 import { AuthService, TenantService, TenantContext } from 'core-auth';
+import { isPhantomRow } from '@core/utils/gateway-empty-row.util';
 
 @Component({
   selector: 'app-tenant-list',
@@ -53,8 +54,14 @@ export class TenantListComponent {
       this.isLoadingDetail.set(true);
       this.isReadOnlyMode.set(!this.canEdit(tenant));
       try {
-        const res = await lastValueFrom(this.adminService.getCompanyById(tenant.id_company));
-        const fullCompany = res.data?.[0] ?? tenant;
+        const res: any = await lastValueFrom(this.adminService.getCompanyById(tenant.id_company));
+        // The gateway's getone returns `data` as a single object, not an array. Never fall back
+        // to the cached TenantContext: it has no metadata, and saving from it would overwrite
+        // the company's whole metadata JSONB with only the fields edited in this session.
+        const fullCompany = Array.isArray(res?.data) ? res.data[0] : res?.data;
+        if (res?.error || isPhantomRow(fullCompany, 'id_company')) {
+          throw new Error(res?.message || 'Empresa no encontrada.');
+        }
         this.selectedUpp.set(fullCompany);
         this.currentUppData.set({ ...fullCompany, metadata: { ...fullCompany.metadata } });
         this.isModalOpen.set(true);
@@ -89,9 +96,17 @@ export class TenantListComponent {
     }
 
     try {
-      const res = await lastValueFrom(
-        this.adminService.saveCompany(data, operation, this.selectedUpp()?.id_company)
+      // Only real `companys` columns edited by the modal; never TenantContext-only keys (role, business_type).
+      const fields = {
+        company_name: data.company_name,
+        ...(operation === 'insert' ? { industry: data.industry } : {}),
+        metadata: data.metadata ?? {}
+      };
+      const res: any = await lastValueFrom(
+        this.adminService.saveCompany(fields, operation, this.selectedUpp()?.id_company)
       );
+      // Postgres errors arrive as HTTP 200 with `error: true`.
+      if (res?.error) throw new Error(res.message);
 
       if (operation === 'insert') {
         const created = res.data?.[0];
@@ -113,11 +128,27 @@ export class TenantListComponent {
         }
       }
 
+      if (operation === 'update') {
+        this.syncTenantName(this.selectedUpp().id_company, data.company_name);
+      }
+
       alert(operation === 'insert' ? '✅ Empresa registrada correctamente' : '✅ Empresa actualizada correctamente');
       this.closeModal();
     } catch (error) {
       console.error('[Agro-ERP] Error al guardar la empresa:', error);
       alert('❌ Error al guardar el registro en la base de datos.');
+    }
+  }
+
+  /** Cards and the tenant selector read the cached login context; keep the renamed company in sync. */
+  private syncTenantName(idCompany: number, companyName: string) {
+    const rename = (t: TenantContext) =>
+      Number(t.id_company) === Number(idCompany) ? { ...t, company_name: companyName } : t;
+
+    this.tenantService.setAvailableTenants(this.tenantService.availableTenants().map(rename));
+    const active = this.tenantService.activeTenant();
+    if (active && Number(active.id_company) === Number(idCompany)) {
+      this.tenantService.setActiveTenant(rename(active));
     }
   }
 

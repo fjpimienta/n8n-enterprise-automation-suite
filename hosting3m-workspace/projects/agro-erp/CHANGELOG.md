@@ -5,6 +5,27 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🐛 Empresas: el modal "no guardaba" y cada guardado podía borrar la metadata
+
+El `update` de `companys` sí llegaba a la base (`error:false`), pero:
+* **Lectura rota:** `getone` del gateway devuelve `data` como **objeto** (`rows[0]` en `Normalize
+  Data`), y `openModal` leía `res.data?.[0]` → siempre `undefined` → caía al `TenantContext` de
+  localStorage (sin `metadata`). Al reabrir, el modal se veía vacío aunque el dato estuviera guardado.
+* **Pérdida de datos latente:** como el modal arrancaba con `metadata: {}`, cada guardado reemplazaba
+  el JSONB completo con solo lo capturado en esa sesión (clave UPP, productor, RFC… se perdían).
+* `saveUpp` ignoraba `error:true` (HTTP 200) y enviaba llaves que no son columnas (`role`).
+* La tarjeta y el selector no reflejaban el nombre nuevo (leen el contexto cacheado del login).
+
+**Fix:** se desempaqueta `data` como objeto o arreglo; si no hay registro, se muestra error en vez de
+abrir con datos parciales (fail-closed); se envían solo `company_name`/`metadata` (+ `industry` en
+alta); se valida `error:true`; y tras actualizar se sincroniza el nombre en `availableTenants` y en el
+tenant activo.
+
+⚠️ **Hallazgo, sin cambiar aquí:** el modal guarda `curp` y `rfc` en texto plano dentro de
+`companys.metadata`, mientras que la Regla 4 de `CLAUDE.md` establece que la PII del productor se cifra
+vía `sp_upsert_producer_pii()` (`livestock_producers`). Pendiente decidir si estos campos deben salir
+del modal o redirigirse a ese SP.
+
 ### 🧭 "Empresa" vs. "UPP oficial": un término = un concepto
 
 La pantalla `admin/tenants` y el menú llamaban "UPP" a la **empresa** (`companys`), y la nueva
