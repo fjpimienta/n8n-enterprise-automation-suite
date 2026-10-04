@@ -19,7 +19,7 @@ export class TenantListComponent {
   public tenantService = inject(TenantService);
   private authService = inject(AuthService);
 
-  // Solo las UPP a las que el usuario tiene acceso (resueltas en el login multi-tenant)
+  // Solo las empresas a las que el usuario tiene acceso (resueltas en el login multi-tenant)
   tenants = this.tenantService.availableTenants;
 
   searchQuery = signal<string>('');
@@ -59,8 +59,8 @@ export class TenantListComponent {
         this.currentUppData.set({ ...fullCompany, metadata: { ...fullCompany.metadata } });
         this.isModalOpen.set(true);
       } catch (error) {
-        console.error('[Agro-ERP] Error al cargar detalle de UPP:', error);
-        alert('❌ No se pudo cargar la información de la UPP.');
+        console.error('[Agro-ERP] Error al cargar detalle de la empresa:', error);
+        alert('❌ No se pudo cargar la información de la empresa.');
       } finally {
         this.isLoadingDetail.set(false);
       }
@@ -113,10 +113,10 @@ export class TenantListComponent {
         }
       }
 
-      alert(operation === 'insert' ? '✅ UPP registrada correctamente' : '✅ UPP actualizada correctamente');
+      alert(operation === 'insert' ? '✅ Empresa registrada correctamente' : '✅ Empresa actualizada correctamente');
       this.closeModal();
     } catch (error) {
-      console.error('[Agro-ERP] Error al guardar la UPP:', error);
+      console.error('[Agro-ERP] Error al guardar la empresa:', error);
       alert('❌ Error al guardar el registro en la base de datos.');
     }
   }

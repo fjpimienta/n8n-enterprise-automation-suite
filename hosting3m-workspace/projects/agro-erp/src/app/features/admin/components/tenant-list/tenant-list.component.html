@@ -6,14 +6,14 @@
                 <span class="bg-green-lt p-2 rounded-3"><i class="ti ti-building-warehouse fs-2"></i></span>
             </div>
             <div>
-                <h2 class="page-title mb-0">Unidades de Producción Pecuaria</h2>
-                <div class="text-muted small mt-1">Ranchos y padrones SINIIGA a los que tienes acceso</div>
+                <h2 class="page-title mb-0">Empresas</h2>
+                <div class="text-muted small mt-1">Empresas (ranchos) a las que tienes acceso. Cada una agrupa sus UPP oficiales SENASICA y sus lotes.</div>
             </div>
         </div>
         <div>
             <button class="btn btn-primary shadow-sm" (click)="openModal()">
                 <i class="ti ti-square-rounded-plus me-2"></i>
-                <span class="d-none d-sm-inline">Nueva UPP</span>
+                <span class="d-none d-sm-inline">Nueva Empresa</span>
                 <span class="d-inline d-sm-none">Nueva</span>
             </button>
         </div>
@@ -31,7 +31,7 @@
             </div>
         </div>
         <div class="col-12 col-md-4 text-muted small text-end">
-            {{ filteredTenants().length }} / {{ tenants().length }} UPP
+            {{ filteredTenants().length }} / {{ tenants().length }} empresas
         </div>
     </div>
 
@@ -69,29 +69,29 @@
                     <div class="ms-3 d-flex flex-column gap-1">
                         @if (canEdit(tenant)) {
                         <button class="btn btn-icon btn-outline-secondary btn-sm" (click)="openModal(tenant)"
-                            [disabled]="isLoadingDetail()" title="Editar UPP">
+                            [disabled]="isLoadingDetail()" title="Editar empresa">
                             <i class="ti ti-edit"></i>
                         </button>
                         } @else {
                         <button class="btn btn-icon btn-outline-secondary btn-sm" (click)="openModal(tenant)"
-                            [disabled]="isLoadingDetail()" title="Ver UPP">
+                            [disabled]="isLoadingDetail()" title="Ver empresa">
                             <i class="ti ti-eye"></i>
-                        </button>
-                        }
-                        @if (isActiveTenant(tenant)) {
-                        <a class="btn btn-icon btn-outline-primary btn-sm"
-                            [routerLink]="['/admin/tenants', tenant.id_company, 'production-units']"
-                            title="UPP y Lotes">
-                            <i class="ti ti-layout-grid"></i>
-                        </a>
-                        } @else {
-                        <button class="btn btn-icon btn-outline-secondary btn-sm" disabled
-                            title="Selecciona esta empresa como activa para administrar sus UPP y lotes">
-                            <i class="ti ti-layout-grid"></i>
                         </button>
                         }
                     </div>
 
+                </div>
+                <div class="card-footer bg-transparent border-top py-2 px-3">
+                    @if (isActiveTenant(tenant)) {
+                    <a class="btn btn-primary btn-sm w-100"
+                        [routerLink]="['/admin/tenants', tenant.id_company, 'production-units']">
+                        <i class="ti ti-layout-grid me-2"></i> UPP oficiales y Lotes
+                    </a>
+                    } @else {
+                    <div class="text-muted small text-center">
+                        <i class="ti ti-lock me-1"></i> Selecciona esta empresa arriba para ver sus UPP oficiales y lotes
+                    </div>
+                    }
                 </div>
                 <div class="card-progress-bottom"
                     [style.background-color]="tenant.role === 'ADMIN' ? '#2fb344' : '#4299e1'"></div>
@@ -101,10 +101,10 @@
         <div class="col-12 text-center py-5">
             <div class="empty-state">
                 <div class="empty-img"><i class="ti ti-building-off fs-1 text-muted"></i></div>
-                <p class="empty-title fs-3">No tienes UPP registradas</p>
+                <p class="empty-title fs-3">No tienes empresas registradas</p>
                 <p class="empty-subtitle text-muted">Da de alta tu primer rancho para comenzar a operar.</p>
                 <button class="btn btn-primary mt-3" (click)="openModal()">
-                    <i class="ti ti-square-rounded-plus me-2"></i> Nueva UPP
+                    <i class="ti ti-square-rounded-plus me-2"></i> Nueva Empresa
                 </button>
             </div>
         </div>
