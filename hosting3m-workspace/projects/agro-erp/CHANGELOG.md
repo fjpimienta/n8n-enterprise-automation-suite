@@ -5,6 +5,21 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### ✨ Edición de UPP oficial (`production_units`)
+
+No existía pantalla para corregir los datos de identificación de una UPP oficial (solo lectura en
+Cumplimiento Normativo). Nuevo botón **Editar** en cada tarjeta de `admin/tenants/:tenantId/production-units`.
+
+* **Editables:** nombre del rancho, clave UPP, estado, municipio y localidad.
+* **No editables a propósito:** `state_code`/`municipality_code` (columnas `GENERATED ALWAYS` a partir
+  de `upp_code`) y superficie (`surface_matrix`, se transcribe verbatim del documento SENASICA — Regla 4).
+* Clave UPP validada con el mismo regex que `production_units_upp_code_format_check`.
+* `uq_production_units_active_code` es **global entre tenants**: no se puede prevalidar en cliente, así
+  que la violación se muestra con un mensaje que no revela a qué empresa pertenece la clave.
+* Mismas protecciones que lotes: solo empresa activa, re-lectura con `getone` acotado por tenant antes
+  del `update` (el gateway filtra `update` solo por PK) y validación de `error:true`.
+* Escritura limitada a rol de tenant `ADMIN`/`OWNER` (`crud_models` de `production_units`).
+
 ### 🐛 Empresas: el modal "no guardaba" y cada guardado podía borrar la metadata
 
 El `update` de `companys` sí llegaba a la base (`error:false`), pero:
