@@ -78,6 +78,18 @@
                             <i class="ti ti-eye"></i>
                         </button>
                         }
+                        @if (isActiveTenant(tenant)) {
+                        <a class="btn btn-icon btn-outline-primary btn-sm"
+                            [routerLink]="['/admin/tenants', tenant.id_company, 'production-units']"
+                            title="UPP y Lotes">
+                            <i class="ti ti-layout-grid"></i>
+                        </a>
+                        } @else {
+                        <button class="btn btn-icon btn-outline-secondary btn-sm" disabled
+                            title="Selecciona esta empresa como activa para administrar sus UPP y lotes">
+                            <i class="ti ti-layout-grid"></i>
+                        </button>
+                        }
                     </div>
 
                 </div>

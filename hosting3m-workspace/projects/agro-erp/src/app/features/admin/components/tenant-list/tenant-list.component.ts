@@ -1,6 +1,7 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { lastValueFrom } from 'rxjs';
 import { AdminService } from '@features/admin/services/admin.service';
 import { UppFormModalComponent } from '../upp-form-modal/upp-form-modal.component';
@@ -9,7 +10,7 @@ import { AuthService, TenantService, TenantContext } from 'core-auth';
 @Component({
   selector: 'app-tenant-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, UppFormModalComponent],
+  imports: [CommonModule, FormsModule, RouterLink, UppFormModalComponent],
   templateUrl: './tenant-list.component.html',
   styleUrl: './tenant-list.component.scss',
 })
@@ -36,6 +37,15 @@ export class TenantListComponent {
 
   canEdit(tenant: TenantContext): boolean {
     return tenant.role === 'ADMIN';
+  }
+
+  /**
+   * UPP/lot management is only reachable for the active tenant: the tenant interceptor
+   * always sends the active tenant as `x-tenant-id`, so any other card would show the
+   * wrong tenant's data. Switching tenants stays an explicit action of the tenant selector.
+   */
+  isActiveTenant(tenant: TenantContext): boolean {
+    return Number(tenant.id_company) === Number(this.tenantService.activeTenantId());
   }
 
   async openModal(tenant: TenantContext | null = null) {
