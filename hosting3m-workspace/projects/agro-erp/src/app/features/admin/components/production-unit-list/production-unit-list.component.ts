@@ -7,6 +7,11 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { TenantService } from 'core-auth';
 import { ProductionUnitSummary } from '@core/models/production-unit-lot.model';
 import { ProductionUnitLotService } from '@features/admin/services/production-unit-lot.service';
+import { canManageProductionUnits } from '@features/admin/guards/active-tenant-route.guard';
+import {
+  ProductionUnitFormModalComponent,
+  ProductionUnitFormState,
+} from '../production-unit-form-modal/production-unit-form-modal.component';
 
 /**
  * UPPs (`production_units`) of the ACTIVE tenant — entry point to each UPP's lots.
@@ -16,7 +21,7 @@ import { ProductionUnitLotService } from '@features/admin/services/production-un
 @Component({
   selector: 'app-production-unit-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, ProductionUnitFormModalComponent],
   templateUrl: './production-unit-list.component.html',
 })
 export class ProductionUnitListComponent {
@@ -29,11 +34,19 @@ export class ProductionUnitListComponent {
   tenantId = toSignal(this.route.paramMap.pipe(map(p => p.get('tenantId'))));
 
   activeTenant = this.tenantService.activeTenant;
+  canEdit = computed(() => canManageProductionUnits(this.tenantService.activeTenant()?.role));
 
   units = signal<ProductionUnitSummary[]>([]);
   isLoading = signal<boolean>(false);
   loadError = signal<string | null>(null);
   searchQuery = signal<string>('');
+
+  // Edit modal
+  isModalOpen = signal<boolean>(false);
+  selectedUnit = signal<ProductionUnitSummary | null>(null);
+  formData = signal<ProductionUnitFormState>(this.emptyForm());
+  isSubmitting = signal<boolean>(false);
+  formError = signal<string | null>(null);
 
   filteredUnits = computed(() => {
     const q = this.searchQuery().toLowerCase();
@@ -65,5 +78,54 @@ export class ProductionUnitListComponent {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  openEdit(unit: ProductionUnitSummary) {
+    if (!this.canEdit()) return;
+    this.selectedUnit.set(unit);
+    this.formData.set({
+      ranchName: unit.ranchName,
+      uppCode: unit.uppCode,
+      stateName: unit.stateName ?? '',
+      municipalityName: unit.municipalityName ?? '',
+      localityName: unit.localityName ?? ''
+    });
+    this.formError.set(null);
+    this.isModalOpen.set(true);
+  }
+
+  closeModal() {
+    if (this.isSubmitting()) return;
+    this.isModalOpen.set(false);
+    this.selectedUnit.set(null);
+  }
+
+  async saveUnit() {
+    const unit = this.selectedUnit();
+    if (!unit || !this.canEdit()) return;
+
+    const data = this.formData();
+    if (!data.ranchName.trim()) {
+      this.formError.set('El nombre del rancho es obligatorio.');
+      return;
+    }
+
+    this.isSubmitting.set(true);
+    this.formError.set(null);
+    try {
+      await this.lotService.updateProductionUnit(unit.id, data);
+      this.isModalOpen.set(false);
+      this.selectedUnit.set(null);
+      await this.load();
+    } catch (error: any) {
+      console.error('[Agro-ERP] Error al guardar la UPP oficial:', error);
+      this.formError.set(error?.message || 'No se pudo guardar la UPP oficial.');
+    } finally {
+      this.isSubmitting.set(false);
+    }
+  }
+
+  private emptyForm(): ProductionUnitFormState {
+    return { ranchName: '', uppCode: '', stateName: '', municipalityName: '', localityName: '' };
   }
 }

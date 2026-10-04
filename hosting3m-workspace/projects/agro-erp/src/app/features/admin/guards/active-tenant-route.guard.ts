@@ -2,11 +2,19 @@ import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { TenantService } from 'core-auth';
 
-/** Tenant roles allowed to write lots — mirrors `crud_models.allowed_roles_insert/update` ('ADMIN,OWNER'). */
-const LOT_WRITE_ROLES = new Set(['ADMIN', 'OWNER']);
+/**
+ * Tenant roles allowed to write lots and official UPPs — mirrors
+ * `crud_models.allowed_roles_insert/update` ('ADMIN,OWNER') of both
+ * `production_unit_lots` and `production_units`.
+ */
+const REGISTRY_WRITE_ROLES = new Set(['ADMIN', 'OWNER']);
 
 export function canManageLots(role: string | null | undefined): boolean {
-  return LOT_WRITE_ROLES.has((role ?? '').toUpperCase());
+  return REGISTRY_WRITE_ROLES.has((role ?? '').toUpperCase());
+}
+
+export function canManageProductionUnits(role: string | null | undefined): boolean {
+  return REGISTRY_WRITE_ROLES.has((role ?? '').toUpperCase());
 }
 
 /**

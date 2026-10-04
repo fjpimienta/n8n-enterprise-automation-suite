@@ -72,10 +72,15 @@
                         </div>
                     </div>
 
-                    <div class="ms-3">
+                    <div class="ms-3 d-flex flex-column gap-1">
                         <a class="btn btn-outline-primary btn-sm" [routerLink]="[unit.id, 'lots']" title="Administrar lotes">
                             <i class="ti ti-layout-grid me-1"></i> Lotes
                         </a>
+                        @if (canEdit()) {
+                        <button class="btn btn-outline-secondary btn-sm" (click)="openEdit(unit)" title="Editar UPP oficial">
+                            <i class="ti ti-edit me-1"></i> Editar
+                        </button>
+                        }
                     </div>
                 </div>
                 <div class="card-progress-bottom" [style.background-color]="unit.isActive ? '#2fb344' : '#9aa0ac'"></div>
@@ -93,3 +98,8 @@
     </div>
     }
 </div>
+
+<app-production-unit-form-modal [isOpen]="isModalOpen()" [selectedUnit]="selectedUnit()"
+    [isSubmitting]="isSubmitting()" [errorMessage]="formError()" [(unitData)]="formData"
+    (onClose)="closeModal()" (onSave)="saveUnit()">
+</app-production-unit-form-modal>

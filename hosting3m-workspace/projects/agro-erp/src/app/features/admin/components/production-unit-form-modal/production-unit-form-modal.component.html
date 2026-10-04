@@ -1,0 +1,82 @@
+@if (isOpen()) {
+<div class="modal-backdrop fade show"></div>
+<div class="modal modal-blur fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header bg-dark text-white">
+                <h5 class="modal-title">
+                    <i class="ti ti-building-warehouse me-2"></i>
+                    Editar UPP oficial{{ selectedUnit() ? ' · ' + selectedUnit()!.uppCode : '' }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" [disabled]="isSubmitting()"
+                    (click)="onClose.emit()"></button>
+            </div>
+            <div class="modal-body p-4">
+                @if (errorMessage()) {
+                <div class="alert alert-danger" role="alert">
+                    <i class="ti ti-alert-triangle me-2"></i> {{ errorMessage() }}
+                </div>
+                }
+
+                <div class="alert alert-info small" role="alert">
+                    <i class="ti ti-info-circle me-2"></i>
+                    Captura los datos tal como aparecen en la constancia SENASICA-SINIIGA. Los códigos INEGI de estado y
+                    municipio se calculan automáticamente a partir de la clave UPP.
+                </div>
+
+                <div class="row">
+                    <div class="col-12 col-md-7 mb-3">
+                        <label class="form-label fw-bold">Nombre del Rancho <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control shadow-sm" maxlength="255" [disabled]="isSubmitting()"
+                            [ngModel]="unitData().ranchName" (ngModelChange)="updateField('ranchName', $event)"
+                            placeholder="Ej. El Puyacatengo">
+                    </div>
+                    <div class="col-12 col-md-5 mb-3">
+                        <label class="form-label fw-bold">Clave UPP <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control shadow-sm font-monospace" maxlength="20"
+                            [disabled]="isSubmitting()"
+                            [ngModel]="unitData().uppCode" (ngModelChange)="updateField('uppCode', $event)"
+                            placeholder="27-009-4146-002">
+                        <small class="form-hint">Formato EE-MMM-NNNN-SSS (estado-municipio-folio-consecutivo).</small>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+                <h6 class="text-muted text-uppercase fw-bold mb-3">Ubicación</h6>
+
+                <div class="row">
+                    <div class="col-12 col-md-4 mb-3">
+                        <label class="form-label fw-bold">Estado</label>
+                        <input type="text" class="form-control shadow-sm" maxlength="100" [disabled]="isSubmitting()"
+                            [ngModel]="unitData().stateName" (ngModelChange)="updateField('stateName', $event)"
+                            placeholder="Ej. Tabasco">
+                    </div>
+                    <div class="col-12 col-md-4 mb-3">
+                        <label class="form-label fw-bold">Municipio</label>
+                        <input type="text" class="form-control shadow-sm" maxlength="255" [disabled]="isSubmitting()"
+                            [ngModel]="unitData().municipalityName"
+                            (ngModelChange)="updateField('municipalityName', $event)" placeholder="Ej. Jalapa">
+                    </div>
+                    <div class="col-12 col-md-4 mb-3">
+                        <label class="form-label fw-bold">Localidad</label>
+                        <input type="text" class="form-control shadow-sm" maxlength="255" [disabled]="isSubmitting()"
+                            [ngModel]="unitData().localityName" (ngModelChange)="updateField('localityName', $event)"
+                            placeholder="Ej. R/A Puyacatengo Sur">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-link link-secondary" [disabled]="isSubmitting()"
+                    (click)="onClose.emit()">Cancelar</button>
+                <button type="button" class="btn btn-primary ms-auto" [disabled]="isSubmitting()" (click)="onSave.emit()">
+                    @if (isSubmitting()) {
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span> Guardando...
+                    } @else {
+                    <i class="ti ti-device-floppy me-2"></i> Guardar Cambios
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+}
