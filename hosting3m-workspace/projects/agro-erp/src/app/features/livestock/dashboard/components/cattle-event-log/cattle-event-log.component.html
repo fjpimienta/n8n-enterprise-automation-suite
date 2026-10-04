@@ -23,6 +23,11 @@
                 <option value="DESTETE">Destete</option>
                 <option value="SOLICITUD_BAJA">Solicitud de Baja</option>
                 <option value="SOLICITUD_VENTA">Solicitud de Venta</option>
+                <option value="REPRODUCCION">Reproducción</option>
+                <option value="DESPARASITACION">Desparasitación</option>
+                <option value="CASTRACION">Castración</option>
+                <option value="TRASLADO">Traslado</option>
+                <option value="CAMBIO_ARETE">Cambio de Arete</option>
             </select>
         </div>
         <div class="input-icon" style="max-width: 320px;">
@@ -135,7 +140,12 @@
                         [class.bg-orange-lt]="entry.eventType === 'COMPRA'"
                         [class.bg-cyan-lt]="entry.eventType === 'DESTETE'"
                         [class.bg-danger-lt]="entry.eventType === 'SOLICITUD_BAJA'"
-                        [class.bg-yellow-lt]="entry.eventType === 'SOLICITUD_VENTA'">
+                        [class.bg-yellow-lt]="entry.eventType === 'SOLICITUD_VENTA'"
+                        [class.bg-pink-lt]="entry.eventType === 'REPRODUCCION'"
+                        [class.bg-lime-lt]="entry.eventType === 'DESPARASITACION'"
+                        [class.bg-teal-lt]="entry.eventType === 'CASTRACION'"
+                        [class.bg-indigo-lt]="entry.eventType === 'TRASLADO'"
+                        [class.bg-azure-lt]="entry.eventType === 'CAMBIO_ARETE'">
                         {{ eventTypeLabel[entry.eventType] }}
                     </span>
                 </td>
@@ -194,6 +204,9 @@
                         [class.bg-danger-lt]="entry.healthEventType === 'RECHAZADO' || entry.healthEventType === 'EXPIRADO'">
                         {{ entry.healthEventType }}
                     </span>
+                    <span>{{ entry.description }}</span>
+                    }
+                    @default {
                     <span>{{ entry.description }}</span>
                     }
                     }
@@ -225,7 +238,12 @@
                         [class.bg-orange-lt]="entry.eventType === 'COMPRA'"
                         [class.bg-cyan-lt]="entry.eventType === 'DESTETE'"
                         [class.bg-danger-lt]="entry.eventType === 'SOLICITUD_BAJA'"
-                        [class.bg-yellow-lt]="entry.eventType === 'SOLICITUD_VENTA'">
+                        [class.bg-yellow-lt]="entry.eventType === 'SOLICITUD_VENTA'"
+                        [class.bg-pink-lt]="entry.eventType === 'REPRODUCCION'"
+                        [class.bg-lime-lt]="entry.eventType === 'DESPARASITACION'"
+                        [class.bg-teal-lt]="entry.eventType === 'CASTRACION'"
+                        [class.bg-indigo-lt]="entry.eventType === 'TRASLADO'"
+                        [class.bg-azure-lt]="entry.eventType === 'CAMBIO_ARETE'">
                         {{ eventTypeLabel[entry.eventType] }}
                     </span>
                 </td>
@@ -284,6 +302,9 @@
                         [class.bg-danger-lt]="entry.healthEventType === 'RECHAZADO' || entry.healthEventType === 'EXPIRADO'">
                         {{ entry.healthEventType }}
                     </span>
+                    <span>{{ entry.description }}</span>
+                    }
+                    @default {
                     <span>{{ entry.description }}</span>
                     }
                     }
