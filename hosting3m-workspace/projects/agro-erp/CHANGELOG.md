@@ -5,6 +5,23 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🧭 "Empresa" vs. "UPP oficial": un término = un concepto
+
+La pantalla `admin/tenants` y el menú llamaban "UPP" a la **empresa** (`companys`), y la nueva
+pantalla de lotes llama "UPP" al **registro oficial SENASICA** (`production_units`). Al entrar a la
+empresa "UPP 54" aparecía otra "UPP" ("EL PUYACATENGO", clave `27-009-4146-002`), lo que se
+percibía como un cambio de nombre inesperado.
+
+* `admin/tenants`, su modal de alta/edición y la entrada del menú ahora dicen **Empresas** /
+  **Nueva Empresa**. "UPP" queda reservado para las UPP oficiales (`production_units`).
+* Breadcrumb en las pantallas nuevas: `Empresas › <empresa> › UPP <clave> · <rancho> › Lotes`.
+* Botón con texto **"UPP oficiales y Lotes"** en el pie de la tarjeta de la empresa activa (antes
+  un ícono sin etiqueta, poco descubrible en modo oscuro).
+
+Fuera de alcance, pendientes de validar con el cliente: "Personal UPP" en el menú, el campo
+"Clave UPP" del modal de empresa (metadata SINIIGA), y el nombre de la empresa "UPP 54" (dato capturado
+por el cliente). El Agente IA sigue tratando "UPP" como sinónimo de empresa (Regla 11 de `CLAUDE.md`).
+
 ### ✨ Módulo de administración de Lotes por UPP (`production_unit_lots`)
 
 Hasta ahora los lotes solo se podían crear/consultar directo en base de datos. Nuevo flujo en

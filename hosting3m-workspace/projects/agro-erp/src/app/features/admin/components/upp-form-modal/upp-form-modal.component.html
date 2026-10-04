@@ -7,9 +7,9 @@
                 <h5 class="modal-title">
                     <i class="ti ti-building-warehouse me-2"></i>
                     @if (isReadonly()) {
-                    Detalle de la UPP
+                    Detalle de la Empresa
                     } @else {
-                    {{ selectedUpp() ? 'Actualizar Unidad de Producción Pecuaria' : 'Alta de Nueva UPP' }}
+                    {{ selectedUpp() ? 'Actualizar Empresa' : 'Alta de Nueva Empresa' }}
                     }
                 </h5>
                 <button type="button" class="btn-close btn-close-white" (click)="onClose.emit()"></button>
