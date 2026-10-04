@@ -5,6 +5,42 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### ✨ Módulo de administración de Lotes por UPP (`production_unit_lots`)
+
+Hasta ahora los lotes solo se podían crear/consultar directo en base de datos. Nuevo flujo en
+`admin/tenants` → **UPP y Lotes** (solo para la empresa activa):
+
+* `admin/tenants/:tenantId/production-units` — UPPs (`production_units`) del tenant activo.
+* `admin/tenants/:tenantId/production-units/:uppId/lots` — tabla de lotes (nombre, tenencia,
+  arrendador, animales asignados, estado) con alta, edición, desactivación y reactivación.
+
+**Reglas aplicadas (solo frontend, sin cambios de esquema, vista ni gateway):**
+* **Fail-closed multi-tenant:** `activeTenantRouteGuard` rechaza cualquier `:tenantId` distinto
+  del tenant activo (nunca cambia de tenant implícitamente); la UPP de la URL se revalida con un
+  `getone` acotado por tenant; toda fila devuelta se descarta si su `id_company` no coincide; y
+  **antes de cada `update` se re-lee el lote con `getone` acotado por tenant** (ver hallazgo abajo).
+* **Sin DELETE físico:** "eliminar" es `is_active = false`; el modelo Meta-CRUD tampoco expone DELETE.
+* `lessor_name` solo se captura con tenencia `RENTADA` y se envía `null` en cualquier otro caso
+  (incluido al cambiar de `RENTADA` a otra tenencia) — respeta `production_unit_lots_lessor_only_if_rented_check`.
+* Unicidad de `lot_name` validada en cliente (case-insensitive, solo entre lotes activos, igual
+  que `uq_lot_name_per_unit`); la violación del índice que llegue del gateway (`error:true`) se
+  muestra como mensaje claro, incluido al reactivar un lote cuyo nombre ya usa otro lote activo.
+* Escritura limitada a rol de tenant `ADMIN`/`OWNER` (mismo criterio que `crud_models.allowed_roles_insert/update`).
+
+⚠️ **Limitaciones conocidas (aceptadas, requieren cambio de BD fuera de este alcance):**
+* `cattle_livestock.lot_id` no está expuesto por ningún modelo Meta-CRUD ni por `vw_cattle_kpi`.
+  El conteo de animales por lote se deriva de `vw_cattle_kpi` por (`production_unit_id`,
+  `upper(lot_name)`) excluyendo estados terminales — exacto mientras el nombre sea único en la
+  UPP; si dos lotes comparten nombre (uno inactivo) se muestra "—" en vez de un número dudoso.
+* Desactivar un lote **no** limpia `lot_id` de sus animales: siguen vinculados al lote inactivo
+  (no quedan "sin lote"). El diálogo de confirmación lo advierte así, con el conteo real.
+
+🔴 **Hallazgo de seguridad (gateway, no corregido aquí):** en el `Build Query` de `v6/CRUD`
+(verificado en la instancia LOCAL de n8n, 2026-10-03; pendiente confirmar en PRODUCCIÓN), `update`
+filtra **solo por llave primaria** y agrega el tenant del header al `SET`, no al `WHERE`. Un tenant
+que conozca el id de un registro ajeno puede modificarlo **y reasignarlo a su propio tenant**.
+Aplica a todo modelo con `UPDATE` y columna `tenant_id`/`id_company`. Ver `CLAUDE.md` → Deuda técnica.
+
 ### 🐛 "Cattle Event Log" ignoraba el módulo seleccionado (Cría / Engorda / Reproducción)
 
 La pestaña "Cattle Event Log" de `main-dashboard` mostraba exactamente las mismas filas sin
