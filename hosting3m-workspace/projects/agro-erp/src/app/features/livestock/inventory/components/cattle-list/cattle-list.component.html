@@ -61,27 +61,15 @@
                     }
                 </select>
             </div>
-            <div class="text-muted text-sm">
-            <div class="input-icon">
-                <input type="text" class="form-control form-control-rounded"
-                    placeholder="Buscar por Arete, Fuego o Chip RFID..." [ngModel]="searchQuery()"
-                    (ngModelChange)="searchQuery.set($event)">
-                <span class="input-icon-addon">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
-                        stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                        <path d="M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0" />
-                        <path d="M21 21l-6 -6" />
-                    </svg>
-                </span>
-            </div>
-            @if (searchQuery()) {
-            <div class="small mt-1">{{ filteredCattleList().length }} / {{ totalHeads() }} resultados</div>
-            }
-            </div>
         </div>
     </div>
+    <app-table-toolbar [pagedTable]="cattleTable" searchPlaceholder="Buscar por Arete, Fuego o Chip RFID...">
+    </app-table-toolbar>
+    @if (cattleTable.searchQuery()) {
+    <div class="card-body border-bottom py-1">
+        <div class="small text-muted">{{ cattleTable.totalItems() }} / {{ totalHeads() }} resultados</div>
+    </div>
+    }
     <div class="table-responsive">
         <table class="table card-table table-vcenter text-nowrap">
             <thead class="bg-body-tertiary">
@@ -151,7 +139,7 @@
                         <div class="mt-2">Sincronizando con Ledger Criptográfico...</div>
                     </td>
                 </tr>
-                } @else if (filteredCattleList().length === 0) {
+                } @else if (cattleTable.totalItems() === 0) {
                 <tr>
                     <td colspan="7" class="text-center py-5 text-muted">
                         <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-database-off"
@@ -167,7 +155,7 @@
                             <path d="M3 3l18 18" />
                         </svg>
                         <div class="mt-2">
-                            @if (searchQuery()) {
+                            @if (cattleTable.searchQuery()) {
                             Ningún animal coincide con la búsqueda.
                             } @else if (lotFilter() !== lotFilterAll) {
                             No hay cabezas del lote «{{ lotFilter() }}» con los filtros seleccionados.
@@ -182,7 +170,7 @@
                     </td>
                 </tr>
                 } @else {
-                @for (animal of filteredCattleList(); track animal.id) {
+                @for (animal of cattleTable.paginatedRows(); track animal.id) {
                 <tr>
                     <td>
                         <div class="font-monospace font-weight-bold fs-3"
@@ -275,6 +263,7 @@
             </tbody>
         </table>
     </div>
+    <app-table-footer [pagedTable]="cattleTable"></app-table-footer>
 </div>
 
 @if (isModalOpen) {

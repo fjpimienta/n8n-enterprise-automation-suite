@@ -1,0 +1,31 @@
+<div class="card-footer d-flex flex-column flex-md-row align-items-md-center gap-2 border-top">
+    <p class="m-0 text-muted">
+        Mostrando <span>{{ pagedTable().showingStart() }}</span> a <span>{{ pagedTable().showingEnd() }}</span>
+        de <span>{{ pagedTable().totalItems() }}</span>
+    </p>
+
+    @if (pagedTable().showPager()) {
+    <div class="d-flex align-items-center gap-2 ms-md-auto">
+        <div class="d-flex align-items-center gap-1">
+            <span class="text-muted small text-nowrap">Mostrar</span>
+            <select class="form-select form-select-sm" [value]="pagedTable().pageSize()"
+                (change)="pagedTable().changePageSize($event)">
+                @for (size of pagedTable().pageSizeOptions; track size) {
+                <option [value]="size">{{ size }}</option>
+                }
+            </select>
+        </div>
+        <ul class="pagination m-0">
+            <li class="page-item" [class.disabled]="pagedTable().effectivePage() === 1">
+                <a class="page-link" (click)="pagedTable().changePage(-1)" style="cursor: pointer;">Anterior</a>
+            </li>
+            <li class="page-item active">
+                <a class="page-link">{{ pagedTable().effectivePage() }} de {{ pagedTable().totalPages() }}</a>
+            </li>
+            <li class="page-item" [class.disabled]="pagedTable().effectivePage() === pagedTable().totalPages()">
+                <a class="page-link" (click)="pagedTable().changePage(1)" style="cursor: pointer;">Siguiente</a>
+            </li>
+        </ul>
+    </div>
+    }
+</div>

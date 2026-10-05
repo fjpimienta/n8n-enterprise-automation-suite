@@ -12,6 +12,9 @@ import { CattleEventLogComponent } from '../cattle-event-log/cattle-event-log.co
 import { ExpenseModalComponent } from '../../../expenses/components/expense-modal/expense-modal.component';
 import { ComplianceAlertCardComponent } from '../../../../compliance/components/compliance-alert-card/compliance-alert-card.component';
 import { MetadataDetailModalComponent } from '@shared/components/metadata-detail-modal/metadata-detail-modal.component';
+import { TableToolbarComponent } from '@shared/components/table-toolbar/table-toolbar.component';
+import { TableFooterComponent } from '@shared/components/table-footer/table-footer.component';
+import { PagedTable } from '@shared/utils/paged-table.util';
 import { hasDisplayableMetadata } from '@shared/utils/metadata-view.util';
 import { withoutFinancialMetadata } from '@shared/utils/financial-metadata.util';
 import { HERD_STATUS_FILTER_OPTIONS, HerdStatusFilter, filterByHerdStatus } from '@shared/utils/herd-status.util';
@@ -26,7 +29,7 @@ import { Paginator } from '../../utils/paginator';
 @Component({
   selector: 'app-main-dashboard',
   standalone: true,
-  imports: [CommonModule, NgApexchartsModule, ReproductiveDashboardComponent, EngordaDashboardComponent, ReproduccionDashboardComponent, ExpenseModalComponent, ComplianceAlertCardComponent, MetadataDetailModalComponent, CattleEventLogComponent],
+  imports: [CommonModule, NgApexchartsModule, ReproductiveDashboardComponent, EngordaDashboardComponent, ReproduccionDashboardComponent, ExpenseModalComponent, ComplianceAlertCardComponent, MetadataDetailModalComponent, CattleEventLogComponent, TableToolbarComponent, TableFooterComponent],
   templateUrl: './main-dashboard.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -325,6 +328,65 @@ export class MainDashboardComponent implements OnInit {
     })
   );
 
+  // 🔑 Clave de reinicio compartida por las tablas paginadas de este componente: cualquier
+  // cambio de módulo/especie/lote/rancho activo debe regresar a la página 1. PagedTable la
+  // combina internamente con su propio `searchQuery` — no hace falta llamar `reset()` a mano
+  // en ningún setter, a diferencia del `Paginator` legacy.
+  private operationalPanelResetKey = computed(() => ({
+    tab: this.activeTab(),
+    species: this.selectedSpecies(),
+    lot: this.selectedLot(),
+    tenant: this.tenantService.activeTenantId()
+  }));
+
+  public pesoPromedioTable = new PagedTable(
+    () => this.averageWeightByLotAndCategory(),
+    () => this.operationalPanelResetKey(),
+    { search: { fields: row => [row.lot, row.category] } }
+  );
+
+  // Filtro estructurado "Falta" — select, no texto libre, por eso vive aparte del buscador de
+  // PagedTable y se filtra ANTES de entrar a la tabla paginada (mismo patrón que especie/lote).
+  public identificacionFaltaFilter = signal<'TODOS' | 'SINIIGA' | 'RFID'>('TODOS');
+
+  private identificacionFiltrada = computed(() => {
+    const filter = this.identificacionFaltaFilter();
+    if (filter === 'TODOS') return this.animalsMissingIdentifier();
+    return this.animalsMissingIdentifier().filter(a => {
+      if (filter === 'SINIIGA') return !a.rfid_siniiga || a.rfid_siniiga === 'S/N';
+      return !a.electronic_rfid; // filter === 'RFID'
+    });
+  });
+
+  public identificacionTable = new PagedTable(
+    () => this.identificacionFiltrada(),
+    () => ({ ...this.operationalPanelResetKey(), falta: this.identificacionFaltaFilter() }),
+    { search: { fields: row => [row.rfid_siniiga, row.numero_fuego] } }
+  );
+
+  public setIdentificacionFaltaFilter(value: string): void {
+    this.identificacionFaltaFilter.set(value as 'TODOS' | 'SINIIGA' | 'RFID');
+  }
+
+  // Filtro estructurado "Estado" — mismo patrón que "Falta" arriba.
+  public atencionEstadoFilter = signal<'TODOS' | 'RIESGO' | 'CUARENTENA' | 'EN_TRANSITO'>('TODOS');
+
+  private atencionFiltrada = computed(() => {
+    const filter = this.atencionEstadoFilter();
+    const list = this.animalsNeedingAttention();
+    return filter === 'TODOS' ? list : list.filter(a => (a.current_status || '').toUpperCase() === filter);
+  });
+
+  public atencionTable = new PagedTable(
+    () => this.atencionFiltrada(),
+    () => ({ ...this.operationalPanelResetKey(), estado: this.atencionEstadoFilter() }),
+    { search: { fields: row => [row.rfid_siniiga, row.numero_fuego, row.lot_name] } }
+  );
+
+  public setAtencionEstadoFilter(value: string): void {
+    this.atencionEstadoFilter.set(value as 'TODOS' | 'RIESGO' | 'CUARENTENA' | 'EN_TRANSITO');
+  }
+
   // 🔎 Inventario filtrado por búsqueda reactiva (rfid_siniiga, numero_fuego o electronic_rfid)
   public inventorySearchedList = computed(() => {
     const query = this.inventorySearch().trim().toLowerCase();
@@ -442,6 +504,12 @@ export class MainDashboardComponent implements OnInit {
 
   public totalAnimalCosts = computed(() =>
     this.animalCostSummary().reduce((sum, row) => sum + row.total, 0)
+  );
+
+  public porAnimalTable = new PagedTable(
+    () => this.animalCostSummary(),
+    () => this.operationalPanelResetKey(),
+    { search: { fields: row => [row.rfid, row.numero_fuego, row.category] } }
   );
 
   /** Top 10 animales con más gasto registrado: balance (valor estimado - gasto) para detectar rendimiento negativo */

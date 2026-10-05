@@ -251,122 +251,138 @@
                 <div class="card-header border-bottom-0 pb-0">
                     <h3 class="card-title">Peso Promedio por Lote y Categoría</h3>
                 </div>
-                <div class="card-body">
-                    @if (averageWeightByLotAndCategory().length === 0) {
-                    <div class="text-center text-muted py-3">Sin animales en este periodo.</div>
-                    } @else {
-                    <div class="table-responsive">
-                        <table class="table table-vcenter card-table mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Lote</th>
-                                    <th>Categoría</th>
-                                    <th class="text-end">Con peso</th>
-                                    <th class="text-end">Peso Promedio</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @for (row of averageWeightByLotAndCategory(); track row.lot + '__' + row.category) {
-                                <tr>
-                                    <td><span class="badge bg-blue-lt">{{ row.lot }}</span></td>
-                                    <td><span class="badge bg-secondary-lt">{{ row.category }}</span></td>
-                                    <td class="text-end text-muted">{{ row.weighedCount }} de {{ row.totalCount }}</td>
-                                    <td class="text-end font-weight-bold">
-                                        @if (row.avgWeight === null) {
-                                        —
-                                        } @else {
-                                        {{ row.avgWeight | number:'1.1-1' }} kg
-                                        }
-                                    </td>
-                                </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                    }
+                <app-table-toolbar [pagedTable]="pesoPromedioTable" searchPlaceholder="Buscar por lote o categoría...">
+                </app-table-toolbar>
+                @if (pesoPromedioTable.totalItems() === 0) {
+                <div class="text-center text-muted py-3">Sin resultados.</div>
+                } @else {
+                <div class="table-responsive">
+                    <table class="table table-vcenter card-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Lote</th>
+                                <th>Categoría</th>
+                                <th class="text-end">Con peso</th>
+                                <th class="text-end">Peso Promedio</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (row of pesoPromedioTable.paginatedRows(); track row.lot + '__' + row.category) {
+                            <tr>
+                                <td><span class="badge bg-blue-lt">{{ row.lot }}</span></td>
+                                <td><span class="badge bg-secondary-lt">{{ row.category }}</span></td>
+                                <td class="text-end text-muted">{{ row.weighedCount }} de {{ row.totalCount }}</td>
+                                <td class="text-end font-weight-bold">
+                                    @if (row.avgWeight === null) {
+                                    —
+                                    } @else {
+                                    {{ row.avgWeight | number:'1.1-1' }} kg
+                                    }
+                                </td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
                 </div>
+                }
+                <app-table-footer [pagedTable]="pesoPromedioTable"></app-table-footer>
             </div>
 
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header border-bottom-0 pb-0">
                     <h3 class="card-title">Identificación Incompleta</h3>
                 </div>
-                <div class="card-body">
-                    @if (animalsMissingIdentifier().length === 0) {
-                    <div class="text-center text-muted py-3">Todos los animales tienen arete SINIIGA y RFID
-                        registrados.</div>
-                    } @else {
-                    <div class="table-responsive">
-                        <table class="table table-vcenter card-table mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Arete SINIIGA</th>
-                                    <th>Nº Fuego</th>
-                                    <th>Lote</th>
-                                    <th>Falta</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @for (animal of animalsMissingIdentifier(); track animal.id) {
-                                <tr>
-                                    <td class="font-monospace text-primary font-weight-bold">{{
-                                        (!animal.rfid_siniiga || animal.rfid_siniiga === 'S/N') ? 'Sin arete' :
-                                        animal.rfid_siniiga }}</td>
-                                    <td>{{ animal.numero_fuego || 'S/N' }}</td>
-                                    <td>{{ animal.lot_name || 'Sin lote' }}</td>
-                                    <td>
-                                        @if (!animal.rfid_siniiga || animal.rfid_siniiga === 'S/N') {
-                                        <span class="badge bg-danger-lt me-1">SINIIGA</span>
-                                        }
-                                        @if (!animal.electronic_rfid) {
-                                        <span class="badge bg-warning-lt">RFID</span>
-                                        }
-                                    </td>
-                                </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                    }
+                <app-table-toolbar [pagedTable]="identificacionTable" searchPlaceholder="Buscar por arete o fuego...">
+                    <select class="form-select form-select-sm w-auto" [value]="identificacionFaltaFilter()"
+                        (change)="setIdentificacionFaltaFilter($any($event.target).value)">
+                        <option value="TODOS">Falta: Todos</option>
+                        <option value="SINIIGA">Falta: Solo SINIIGA</option>
+                        <option value="RFID">Falta: Solo RFID</option>
+                    </select>
+                </app-table-toolbar>
+                @if (identificacionTable.totalItems() === 0) {
+                <div class="text-center text-muted py-3">Todos los animales tienen arete SINIIGA y RFID
+                    registrados.</div>
+                } @else {
+                <div class="table-responsive">
+                    <table class="table table-vcenter card-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Arete SINIIGA</th>
+                                <th>Nº Fuego</th>
+                                <th>Lote</th>
+                                <th>Falta</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (animal of identificacionTable.paginatedRows(); track animal.id) {
+                            <tr>
+                                <td class="font-monospace text-primary font-weight-bold">{{
+                                    (!animal.rfid_siniiga || animal.rfid_siniiga === 'S/N') ? 'Sin arete' :
+                                    animal.rfid_siniiga }}</td>
+                                <td>{{ animal.numero_fuego || 'S/N' }}</td>
+                                <td>{{ animal.lot_name || 'Sin lote' }}</td>
+                                <td>
+                                    @if (!animal.rfid_siniiga || animal.rfid_siniiga === 'S/N') {
+                                    <span class="badge bg-danger-lt me-1">SINIIGA</span>
+                                    }
+                                    @if (!animal.electronic_rfid) {
+                                    <span class="badge bg-warning-lt">RFID</span>
+                                    }
+                                </td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
                 </div>
+                }
+                <app-table-footer [pagedTable]="identificacionTable"></app-table-footer>
             </div>
 
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header border-bottom-0 pb-0">
                     <h3 class="card-title">Animales que Requieren Atención</h3>
                 </div>
-                <div class="card-body">
-                    @if (animalsNeedingAttention().length === 0) {
-                    <div class="text-center text-muted py-3">Ningún animal en Riesgo, Cuarentena o En Tránsito en este
-                        periodo.</div>
-                    } @else {
-                    <div class="table-responsive">
-                        <table class="table table-vcenter card-table mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Arete SINIIGA</th>
-                                    <th>Nº Fuego</th>
-                                    <th>Categoría</th>
-                                    <th>Lote</th>
-                                    <th>Estado</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @for (animal of animalsNeedingAttention(); track animal.id) {
-                                <tr>
-                                    <td class="font-monospace text-primary font-weight-bold">{{ animal.rfid_siniiga }}
-                                    </td>
-                                    <td>{{ animal.numero_fuego || 'S/N' }}</td>
-                                    <td>{{ animal.category }}</td>
-                                    <td>{{ animal.lot_name || 'Sin lote' }}</td>
-                                    <td><span class="badge bg-danger-lt">{{ animal.current_status }}</span></td>
-                                </tr>
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                    }
+                <app-table-toolbar [pagedTable]="atencionTable" searchPlaceholder="Buscar por arete, fuego o lote...">
+                    <select class="form-select form-select-sm w-auto" [value]="atencionEstadoFilter()"
+                        (change)="setAtencionEstadoFilter($any($event.target).value)">
+                        <option value="TODOS">Estado: Todos</option>
+                        <option value="RIESGO">Riesgo</option>
+                        <option value="CUARENTENA">Cuarentena</option>
+                        <option value="EN_TRANSITO">En Tránsito</option>
+                    </select>
+                </app-table-toolbar>
+                @if (atencionTable.totalItems() === 0) {
+                <div class="text-center text-muted py-3">Ningún animal en Riesgo, Cuarentena o En Tránsito en este
+                    periodo.</div>
+                } @else {
+                <div class="table-responsive">
+                    <table class="table table-vcenter card-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Arete SINIIGA</th>
+                                <th>Nº Fuego</th>
+                                <th>Categoría</th>
+                                <th>Lote</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (animal of atencionTable.paginatedRows(); track animal.id) {
+                            <tr>
+                                <td class="font-monospace text-primary font-weight-bold">{{ animal.rfid_siniiga }}
+                                </td>
+                                <td>{{ animal.numero_fuego || 'S/N' }}</td>
+                                <td>{{ animal.category }}</td>
+                                <td>{{ animal.lot_name || 'Sin lote' }}</td>
+                                <td><span class="badge bg-danger-lt">{{ animal.current_status }}</span></td>
+                            </tr>
+                            }
+                        </tbody>
+                    </table>
                 </div>
+                }
+                <app-table-footer [pagedTable]="atencionTable"></app-table-footer>
             </div>
             }
 
@@ -547,14 +563,8 @@
                 [plotOptions]="{ bar: { borderRadius: 4, columnWidth: '50%', colors: { ranges: [{ from: -999999999, to: 0, color: '#d63939' }, { from: 0, to: 999999999, color: '#2fb344' }] } } }"
                 [dataLabels]="{ enabled: false }" [theme]="{ mode: themeService.currentTheme() }"> </apx-chart>
         </div>
-        <div class="card-body border-bottom py-3">
-            <div class="text-muted">Mostrar <div class="mx-2 d-inline-block"><select class="form-select form-select-sm"
-                        [value]="pagination.pageSize()" (change)="pagination.changePageSize($event)">
-                        <option value="10">10</option>
-                        <option value="25">25</option>
-                        <option value="50">50</option>
-                    </select></div> Costos por Animal</div>
-        </div>
+        <app-table-toolbar [pagedTable]="porAnimalTable" searchPlaceholder="Buscar por arete, fuego o categoría...">
+        </app-table-toolbar>
         <div class="table-responsive">
             <table class="table card-table table-vcenter text-nowrap datatable table-hover mb-0">
                 <thead>
@@ -572,7 +582,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @for (row of animalCostSummary(); track row.livestockId; let i = $index) {
+                    @for (row of porAnimalTable.paginatedRows(); track row.livestockId; let i = $index) {
                     <tr>
                         <td class="text-muted">{{ i + 1 }}</td>
                         <td class="font-monospace font-weight-bold text-primary">{{ row.rfid }}</td>
@@ -609,6 +619,7 @@
                 </tfoot>
             </table>
         </div>
+        <app-table-footer [pagedTable]="porAnimalTable"></app-table-footer>
         }
         }
 
