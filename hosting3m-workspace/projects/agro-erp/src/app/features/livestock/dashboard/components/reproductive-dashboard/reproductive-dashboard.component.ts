@@ -93,21 +93,24 @@ export class ReproductiveDashboardComponent {
     this.pagination.reset();
   }
 
-  // Indicadores Clínicos Derivados
+  // Indicadores Clínicos Derivados — denominador correcto: SOLO vientres con diagnóstico
+  // (PREÑADA o VACIA). Antes usaba `data().length` (todas las CRIA: machos, becerros, hembras
+  // sin palpar), lo que inflaba el denominador y hacía que "Sin Diagnóstico" se contara
+  // silenciosamente como "Vacía" — ej. "0 de 147 vientres" con el donut en 100% Vacías cuando en
+  // realidad casi nada tenía palpación registrada. `tasa: null` significa "sin datos para
+  // calcular", distinto de una tasa real de 0%.
   public stats = computed(() => {
-    const list = this.data();
-    const total = list.length;
-    const prenadas = list.filter(a => a.last_palpation_result === 'PREÑADA').length;
+    const { prenadas, vacias } = this.diagnosisSummary();
+    const diagnosticadas = prenadas + vacias;
     return {
-      total,
+      total: diagnosticadas,
       prenadas,
-      tasa: total > 0 ? ((prenadas / total) * 100).toFixed(1) : '0.0'
+      tasa: diagnosticadas > 0 ? ((prenadas / diagnosticadas) * 100).toFixed(1) : null
     };
   });
 
   public getChartOptions = computed(() => {
-    const prenadas = this.stats().prenadas;
-    const vacias = this.stats().total - prenadas;
+    const { prenadas, vacias } = this.diagnosisSummary();
     return {
       series: [prenadas, vacias],
       labels: ['Preñadas', 'Vacías'],

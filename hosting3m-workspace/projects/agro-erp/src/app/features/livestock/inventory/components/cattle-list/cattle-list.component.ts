@@ -30,6 +30,13 @@ export class CattleListComponent implements OnInit {
   public isLoading = this.cattleDataService.isLoading;
   public tenantService = inject(TenantService);
 
+  // 🔒 COSTOS (gastos por animal) es financiero — ADMIN-only, mismo criterio y misma fuente de
+  // rol que main-dashboard.component.ts (`tenantService.activeTenant()?.role`, no `roleGuard`/JWT,
+  // que queda congelado a la empresa del login y no refleja un cambio de rancho en vivo).
+  public isAdminForActiveTenant = computed(() =>
+    (this.tenantService.activeTenant()?.role || '').toUpperCase() === 'ADMIN'
+  );
+
   // Filtro de estado de vida (venta/mortandad). Default: solo hato vivo.
   // Criterio compartido con main-dashboard vía @shared/utils/herd-status.util.
   public readonly herdStatusOptions = HERD_STATUS_FILTER_OPTIONS;
@@ -160,6 +167,9 @@ export class CattleListComponent implements OnInit {
   }
 
   public openModal(action: 'ALTA' | 'SALUD' | 'PESO' | 'EDITAR' | 'COSTOS' | 'SALIDA', rfid: string = '', id: string = '', animal: any = null) {
+    // Defensa en profundidad: aunque el botón "Costos" esté oculto en el template, bloquea abrir
+    // el modal financiero por consola/binding forzado para un rol no-ADMIN.
+    if (action === 'COSTOS' && !this.isAdminForActiveTenant()) return;
     this.modalAction = action;
     this.selectedRfid = rfid;
     this.selectedId = id;
