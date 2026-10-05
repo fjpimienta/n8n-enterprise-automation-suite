@@ -5,6 +5,34 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🔒 "Ver detalle" (metadata) ocultaba todo menos lo financiero — ahora también oculta lo financiero para no-ADMIN
+
+Follow-up al ciclo de visibilidad financiera: `cattle_livestock.metadata` (JSONB sin shape
+fijo) contiene, para algunos animales, `purchase_price`, `seller_name`, `purchase_date`,
+`nota_venta` y `venta_registrada_solo_en_libreta` — confirmado contra el contenido real de
+LOCAL (29 claves distintas en total) y contra la única herramienta MCP que escribe aquí
+(`register_livestock_purchase`; las dos últimas vienen de los scripts de carga histórica, no
+del Agente IA). El modal "Ver detalle" en `main-dashboard` y `cattle-list` pasaba
+`animal.metadata` tal cual a `<app-metadata-detail-modal>`, sin ningún filtro por rol — un
+EDITOR podía ver el precio de compra y el vendedor de cualquier animal.
+
+**Fix:** nueva lista compartida `FINANCIAL_METADATA_KEYS` (`shared/utils/financial-metadata.util.ts`)
+y `withoutFinancialMetadata()`, que devuelve una copia de la metadata sin esas 5 claves.
+`main-dashboard.component.ts`/`cattle-list.component.ts` agregan `getDisplayMetadata(animal)`
+(ADMIN recibe `animal.metadata` íntegro; no-ADMIN recibe la copia filtrada) y lo usan tanto en
+el binding `[metadata]` del modal como en `animalHasMetadata()` — si tras filtrar no queda nada
+mostrable, el ícono de "Detalle" se oculta igual que ya pasaba con las claves puramente
+técnicas. Deliberadamente NO se incluyen `notes`/`source` en la lista: son genéricos, se usan
+también para contenido no financiero, y ocultarlos perdería información legítima.
+
+⚠️ **Riesgo residual, NO cerrado por este fix:** el dato financiero sigue viajando completo en
+la respuesta HTTP de `vw_cattle_kpi` — el gateway no filtra columnas ni claves de `metadata`
+(`Build Query`'s `buildSelectFields()` siempre hace `SELECT *`, confirmado). Este fix solo evita
+que la UI lo renderice; cualquiera con las herramientas de desarrollador del navegador abiertas
+sigue viendo la respuesta cruda completa. El cierre real es una vista en PostgreSQL que excluya
+estas claves de `metadata` antes de que el gateway las devuelva — **Fase 1, no implementada
+aquí.**
+
 ### 🐛 Tasa de Preñez Global inflaba el denominador con animales sin diagnóstico
 
 `reproductive-dashboard.component.ts` (módulo CRIA) mostraba cosas como "0 de 147 vientres" con el

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { CattleDetailModalComponent } from '../cattle-detail-modal/cattle-detail-modal.component';
 import { MetadataDetailModalComponent } from '@shared/components/metadata-detail-modal/metadata-detail-modal.component';
 import { hasDisplayableMetadata } from '@shared/utils/metadata-view.util';
+import { withoutFinancialMetadata } from '@shared/utils/financial-metadata.util';
 import { TenantService } from 'core-auth';
 import { CattleDataService } from '@core/services/cattle-data.service';
 import { CattleApiService } from '@core/services/cattle-api.service';
@@ -127,8 +128,15 @@ export class CattleListComponent implements OnInit {
   // Modal de detalle de metadata (JSONB variable por animal — sin shape fijo)
   public metadataAnimal = signal<any | null>(null);
 
+  // 🔒 no-ADMIN nunca ve claves financieras del JSONB (purchase_price, seller_name, etc. —
+  // ver financial-metadata.util.ts). Si tras quitarlas no queda nada mostrable, el ícono de
+  // "Detalle" se oculta para ese rol, igual que ya pasaba con las claves puramente técnicas.
   public animalHasMetadata(animal: any): boolean {
-    return hasDisplayableMetadata(animal?.metadata);
+    return hasDisplayableMetadata(this.getDisplayMetadata(animal));
+  }
+
+  public getDisplayMetadata(animal: any): unknown {
+    return this.isAdminForActiveTenant() ? animal?.metadata : withoutFinancialMetadata(animal?.metadata);
   }
 
   public openMetadata(animal: any) {
