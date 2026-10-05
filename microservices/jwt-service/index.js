@@ -167,7 +167,11 @@ app.post('/generate-token', loginLimiter, async (req, res) => {
         token: token,
         role: companyData.role,
         id_company: companyData.id_company,
-        company: companyData
+        company: companyData,
+        // Siempre incluir la lista completa (aunque sea de 1), para que el frontend
+        // sobrescriba cualquier `user_tenants` obsoleto de una sesión anterior en el
+        // mismo navegador — ver incidente de Context Switcher mostrando empresas ajenas.
+        companies: authorizedCompanies
       }
     });
 
