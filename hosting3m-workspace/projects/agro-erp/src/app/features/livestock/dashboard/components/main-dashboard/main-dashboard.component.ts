@@ -13,6 +13,7 @@ import { ExpenseModalComponent } from '../../../expenses/components/expense-moda
 import { ComplianceAlertCardComponent } from '../../../../compliance/components/compliance-alert-card/compliance-alert-card.component';
 import { MetadataDetailModalComponent } from '@shared/components/metadata-detail-modal/metadata-detail-modal.component';
 import { hasDisplayableMetadata } from '@shared/utils/metadata-view.util';
+import { withoutFinancialMetadata } from '@shared/utils/financial-metadata.util';
 import { HERD_STATUS_FILTER_OPTIONS, HerdStatusFilter, filterByHerdStatus } from '@shared/utils/herd-status.util';
 import { SPECIES_FILTER_ALL, deriveAvailableSpecies, getAnimalSpecies } from '@shared/utils/species.util';
 import { LOT_FILTER_ALL, deriveAvailableLots, getAnimalLot } from '@shared/utils/lot.util';
@@ -62,8 +63,15 @@ export class MainDashboardComponent implements OnInit {
   // Modal de detalle de metadata (JSONB variable por animal — sin shape fijo)
   public metadataAnimal = signal<any | null>(null);
 
+  // 🔒 no-ADMIN nunca ve claves financieras del JSONB (purchase_price, seller_name, etc. —
+  // ver financial-metadata.util.ts). Si tras quitarlas no queda nada mostrable, el ícono de
+  // "Detalle" se oculta para ese rol, igual que ya pasaba con las claves puramente técnicas.
   public animalHasMetadata(animal: any): boolean {
-    return hasDisplayableMetadata(animal?.metadata);
+    return hasDisplayableMetadata(this.getDisplayMetadata(animal));
+  }
+
+  public getDisplayMetadata(animal: any): unknown {
+    return this.isAdminForActiveTenant() ? animal?.metadata : withoutFinancialMetadata(animal?.metadata);
   }
 
   public openMetadata(animal: any) {

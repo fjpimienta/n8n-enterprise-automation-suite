@@ -638,7 +638,7 @@
 }
 
 @if (metadataAnimal(); as animal) {
-<app-metadata-detail-modal [metadata]="animal.metadata" [title]="'Detalle — ' + animal.rfid_siniiga"
+<app-metadata-detail-modal [metadata]="getDisplayMetadata(animal)" [title]="'Detalle — ' + animal.rfid_siniiga"
     (close)="closeMetadata()">
 </app-metadata-detail-modal>
 }
