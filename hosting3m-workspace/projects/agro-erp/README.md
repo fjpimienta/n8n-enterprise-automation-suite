@@ -10,6 +10,20 @@ Desarrollada como una **Angular 21 SPA** estructurada por dominios (*Feature-Dri
 
 ---
 
+## 🚀 Key Features (v1.16.0)
+
+### 1. 🐄 Gestión Avanzada de Hato vía Agente IA — 8 herramientas MCP nuevas
+* **Traslado intra-UPP, reproducción, desparasitación, castración, cambio de identificador, autorización y anulación de eventos:** antes solo accesibles por escritura directa en base de datos, ahora disponibles por WhatsApp y Chat Web — `move_livestock`, `list_pending_requests`, `review_pending_request`, `log_breeding_event`, `log_deworming_event`, `update_livestock_tag`, `log_castration_event`, `void_event`.
+* **Dos bugs reales de arquitectura de n8n, confirmados en las 8 tools a la vez:** el campo `queryReplacement` necesita el delimitador `{{ }}` o n8n lo trata como texto literal; y el tipo declarado en `$fromAI` debe seguir el casteo intermedio de la query (`::text` antes de `::numeric`/`::date`), no el tipo final de la columna, o n8n rechaza el parámetro antes de llegar a Postgres.
+* `void_event` es genérico (whitelist de 3 tablas de evento) pero **no revierte** efectos secundarios en `cattle_livestock` — anular una castración, por ejemplo, no restaura la categoría anterior del animal. Documentado como limitación de diseño, no como bug.
+
+### 2. 🛒 Tres bugs reales corregidos en `register_livestock_purchase`
+* La UPP destino ahora se infiere automáticamente de la UPP del lote cuando el usuario solo menciona el lote — antes quedaba sin asignar y el trigger de consistencia rechazaba el alta.
+* El Agente IA inventaba un peso cuando el usuario no lo mencionaba (mismo bug de tipos que las 8 tools nuevas) — corregido el tipo y reforzado el `toolDescription` para prohibir explícitamente estimar o inventar el peso.
+* Nueva validación de identificador duplicado: rechaza el alta si el arete/fuego/chip ya pertenece a otro animal del mismo tenant — antes se podía duplicar sin aviso.
+
+---
+
 ## 🚀 Key Features (v1.15.0)
 
 ### 1. 🐂 Módulo de Reproducción en el Dashboard
@@ -220,7 +234,7 @@ ng build agro-erp --configuration=production
 * [x] **Herramienta de alta de nacimiento por Agente IA (`register_birth_event`):** validada en producción por Chat Web y WhatsApp, evento rutinario sin confirmación previa (v1.11.0).
 * [ ] **Resolución de nombre de UPP en texto libre:** el Agente IA no distingue una UPP específica por nombre cuando un tenant tiene varias unidades de producción reales — solo reconoce el tenant completo.
 * [x] **Reporte de mortandad/venta para animales sin identificador físico:** resuelto en v1.12.0 vía la herramienta MCP `find_calf_by_dam` y la propagación de `livestock_id` en toda la cadena de autorización asíncrona.
-* [ ] **Garantía arquitectónica de `tenant_id` en tools MCP:** hoy la inyección correcta del tenant en llamadas a herramientas del Agente IA depende solo del refuerzo de prompt, no de un mecanismo verificable a nivel de arquitectura (hallazgo v1.12.0). Diagnóstico completo confirmado el 2026-09-27 sobre las 15 tools reales: todas reciben `tenant_id`/`user_email` vía `$fromAI()`, controlados por el LLM — el único freno real es el `auth_check` SQL (valida que la pareja tenant/email exista y esté activa, pero no que sea la resuelta para esta sesión específica). Solución diseñada y lista para implementar: resolver `tenant_id`/`user_email` server-side por `session_id` (tabla `agent_active_sessions`, TTL 30 min, escrita solo por el backend — nunca por el LLM), sacando esos dos parámetros del control del modelo en las 15 tools. Implementación diferida — se hará en fases (piloto con Web Chat + `count_livestock`, luego el resto de tools de lectura, luego escritura rutinaria, luego las de baja irreversible, luego WhatsApp) en una sesión dedicada, no junto con trabajo de otro tipo.
+* [ ] **Garantía arquitectónica de `tenant_id` en tools MCP:** hoy la inyección correcta del tenant en llamadas a herramientas del Agente IA depende solo del refuerzo de prompt, no de un mecanismo verificable a nivel de arquitectura (hallazgo v1.12.0). Diagnóstico completo confirmado el 2026-09-27 sobre las 15 tools reales de entonces: todas reciben `tenant_id`/`user_email` vía `$fromAI()`, controlados por el LLM — el único freno real es el `auth_check` SQL (valida que la pareja tenant/email exista y esté activa, pero no que sea la resuelta para esta sesión específica). Solución diseñada y lista para implementar: resolver `tenant_id`/`user_email` server-side por `session_id` (tabla `agent_active_sessions`, TTL 30 min, escrita solo por el backend — nunca por el LLM), sacando esos dos parámetros del control del modelo en todas las tools, hoy 23 (las 15 originales + las 8 de v1.16.0). Implementación diferida — se hará en fases (piloto con Web Chat + `count_livestock`, luego el resto de tools de lectura, luego escritura rutinaria, luego las de baja irreversible, luego WhatsApp) en una sesión dedicada, no junto con trabajo de otro tipo.
 - [x] **Corrección de sanitización de identificadores dictados por voz:** pérdida de dígitos en folios/aretes transcritos por Whisper, corregida moviendo la limpieza a código determinista antes del Agente IA (v1.13.0).
 - [x] **Vista de auditoría de eventos de ganado:** `vw_cattle_event_log` (peso, salud, nacimiento) expuesta en una nueva pestaña de solo lectura en `main-dashboard` (v1.13.0).
 - [x] **Vacunación estructurada del Agente IA:** `log_vaccination_event` correctamente enrutada en ambos canales, con Zero-Hallucination reforzado (v1.14.0).
@@ -230,6 +244,10 @@ ng build agro-erp --configuration=production
 - [x] **Módulo de Reproducción en el dashboard:** pestaña y tablero dedicados para el modelo de negocio `REPRODUCCION` (v1.15.0, 2026-09-28).
 - [x] **Cattle Event Log con cobertura de las 15 tools MCP:** compras, destetes y solicitudes de baja/venta visibles en la bitácora (v1.15.0, 2026-09-28).
 - [ ] **Asignar `REPRODUCCION` desde la UI:** el formulario de alta/edición de ganado solo ofrece Cría y Engorda.
+- [x] **Gestión avanzada de hato vía Agente IA (8 tools nuevas):** traslado intra-UPP, reproducción, desparasitación, castración, cambio de identificador, listado/resolución de solicitudes pendientes y anulación de eventos — probadas de punta a punta en producción por chat real (v1.16.0, 2026-10-03/04).
+- [x] **Tres bugs reales corregidos en `register_livestock_purchase`:** inferencia de UPP desde el lote, bug de tipos `number`/`null` en `current_weight_kg` (y el peso inventado por el Agente IA que ese bug disfrazaba), y validación de identificador duplicado (v1.16.0, 2026-10-04).
+- [ ] **Anulación de eventos sin reversión de estado:** `void_event` no revierte efectos secundarios sobre `cattle_livestock` (ej. categoría tras anular una castración) — decisión de producto pendiente sobre si corregirlo.
+- [ ] **Consulta de historial de eventos por animal:** no existe una tool MCP de lectura para reproducción/desparasitación/castración — las 8 tools nuevas de v1.16.0 son solo de escritura.
 
 ---
 

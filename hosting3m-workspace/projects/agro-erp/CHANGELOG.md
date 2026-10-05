@@ -5,6 +5,82 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🐄 Ocho herramientas MCP nuevas: traslado, reproducción, desparasitación, castración, cambio de arete, autorización y anulación de eventos
+
+El Agente IA no podía trasladar animales entre lotes de la misma UPP, registrar reproducción,
+desparasitación ni castración, cambiar un identificador perdido/dañado, ni anular un evento mal
+capturado — todo eso se hacía solo por acceso directo a base de datos. Ocho tools MCP nuevas en
+`v6/MCP Server Cattle`, probadas de punta a punta en PRODUCCIÓN (tenant 3) por el canal real de
+chat: `move_livestock`, `list_pending_requests`, `review_pending_request`, `log_breeding_event`,
+`log_deworming_event`, `update_livestock_tag`, `log_castration_event`, `void_event`.
+
+#### 🏗️ Dos bugs de arquitectura de n8n, confirmados en las 8 tools a la vez
+
+* **`queryReplacement` sin el delimitador `{{ }}`:** el campo `options.queryReplacement` de un
+  nodo `postgresTool` debe envolverse en `{{ ... }}` (ej. `={{ (() => {...})() }}`), no basta con
+  `=[$fromAI(...)]`. Sin el wrapper, n8n trata el campo como texto literal y lo separa ingenuamente
+  por comas — confirmado con una prueba aislada (`[3]` hardcodeado seguía fallando como el string
+  `"[3]"`). Corregido en las 8 tools copiando el patrón ya usado en `find_livestock_by_criteria`.
+* **Tipo declarado en `$fromAI` debe coincidir con el casteo de la query, no con el tipo final de
+  la columna:** `$fromAI('current_weight_kg', ..., 'number', null)` rompe la validación de schema
+  de n8n en cuanto el LLM manda `null` (`Expected number, received null`) — la llamada nunca llega
+  a Postgres. Si la query castea `$N::text` antes de `::numeric`/`::date` (patrón estándar de esta
+  sesión), el `$fromAI` correspondiente debe declararse `'string'`, aunque el valor final sea
+  numérico.
+* **Patrón adoptado para parámetros opcionales en las 8 tools:**
+  `NULLIF(NULLIF($N::text, 'null'), 'undefined')` en la CTE `params` (cubre el string literal
+  `"null"`/`"undefined"` que a veces manda el LLM, además de `''`/`undefined` real), combinado con
+  `empty($fromAI(..., 'string', null))` en el `queryReplacement`.
+
+#### 🐂 `move_livestock`
+
+* Limitado a propósito a traslados **dentro de la misma UPP** (cambio de lote) — confirmado con el
+  cliente. El motor de movilización oficial UPP↔UPP/PSG (`cattle_movement_rules`) sigue sin SP
+  propio, es un sistema distinto.
+* Nombre de lote resuelto con `ILIKE '%...%'` (match parcial), no exacto — el Agente IA
+  frecuentemente descarta artículos al extraer el nombre ("el 110" → `"110"`, lote real "El 110").
+  El chequeo de ambigüedad (rechaza si hay >1 match en la misma UPP) hace seguro el match parcial.
+* Bug real corregido antes de la primera prueba: usaba `tipo_movimiento = 'TRASLADO_LOTE'`, valor
+  no permitido por `historico_movimientos_tipo_check` — corregido a `'TRASLADO'`.
+
+#### 🏷️ `update_livestock_tag`
+
+* Requirió ampliar `historico_movimientos_tipo_check` (`ALTER TABLE`, LOCAL y PRODUCCIÓN mismo
+  turno) para incluir `'CAMBIO_ARETE'`, antes inexistente en la lista permitida.
+* Valida unicidad del nuevo identificador contra el tenant antes de actualizar.
+
+#### ✅ `review_pending_request`
+
+* Wrapper nuevo sobre `sp_resolver_autorizacion` que agrega una validación de propiedad por
+  tenant — hallazgo de seguridad real: el SP original no valida por sí solo que la solicitud
+  pertenezca al tenant que la resuelve.
+
+#### 🗑️ `void_event`
+
+* Genérico por diseño (whitelist de 3 tablas de evento + SQL dinámico). ⚠️ **Solo registra la
+  anulación en `event_voids` — no revierte efectos secundarios sobre `cattle_livestock`.**
+  Confirmado: anular una castración deja `category = CABALLO_CASTRADO` sin cambio, aunque el
+  evento ya no aparezca en la Bitácora.
+
+#### 🛒 `register_livestock_purchase` (tool preexistente, 3 bugs reales corregidos)
+
+1. `production_unit_id` ahora se infiere automáticamente de la UPP del lote resuelto cuando el
+   usuario solo da el nombre del lote — antes quedaba `NULL` y el trigger de consistencia
+   UPP/lote rechazaba el insert.
+2. `current_weight_kg`: mismo bug de tipos descrito arriba (`'number'` → `'string'`); además, el
+   Agente IA **inventaba** un peso cuando el usuario no lo mencionaba (120kg, luego 100kg) — se
+   reforzó el `toolDescription` (parámetro y descripción principal) prohibiéndolo explícitamente.
+3. Nueva validación de duplicado: rechaza el insert si el `rfid_siniiga` dado ya identifica a otro
+   animal del mismo tenant en cualquiera de las 3 columnas de identificador — antes insertaba un
+   segundo animal duplicado sin aviso.
+
+### 📌 Pendientes que quedan abiertos
+
+* No existe tool MCP de **consulta** de historial de eventos por animal (reproducción/
+  desparasitación/castración) — las 8 tools nuevas son de escritura.
+* Decisión de producto pendiente: si `void_event` debe revertir estado del animal por tipo de
+  evento (rompería su diseño genérico).
+
 ### ✨ Cattle Event Log: filtro y agrupación por Lote
 
 La Bitácora no permitía filtrar ni agrupar por lote. Nuevo selector **Lote** (Todos / Sin lote /

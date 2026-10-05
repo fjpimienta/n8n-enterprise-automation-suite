@@ -3,7 +3,7 @@
 ## 📝 Descripción
 
 **Project:** Hosting3M Automation Suite (Agro ERP)
-**Version:** v1.13.0 (WhatsApp Voice-Input Digit Sanitization Fix, Cattle Event Audit View)
+**Version:** v1.16.0 (Gestión Avanzada de Hato vía Agente IA: traslado intra-UPP, reproducción, desparasitación, castración, cambio de identificador, autorización y anulación de eventos)
 **Stack:** Angular 21 (Signals) | n8n (API Gateway / MCP) | PostgreSQL (JSONB, Views & PL/pgSQL) | Tabler UI
 **Author:** Francisco Jesus Pérez Pimienta
 
@@ -30,6 +30,13 @@
   WhatsApp (sanitización determinista movida del LLM a código, nodo `Set Prompt Final`);
   nueva vista de auditoría `vw_cattle_event_log` (peso/salud/nacimiento combinados) expuesta
   como modelo Meta-CRUD de solo lectura, consumida por una nueva pestaña en `main-dashboard`
+- v1.16.0 (2026-10-03 a 2026-10-04) — Gestión Avanzada de Hato vía Agente IA: 8 herramientas
+  MCP nuevas (`move_livestock`, `list_pending_requests`, `review_pending_request`,
+  `log_breeding_event`, `log_deworming_event`, `update_livestock_tag`,
+  `log_castration_event`, `void_event`), probadas de punta a punta en producción por el
+  canal real de chat; dos bugs reales de arquitectura de n8n encontrados y corregidos en las
+  8 tools a la vez; 3 bugs reales corregidos en `register_livestock_purchase` (tool
+  preexistente, no nueva de esta versión); migración 063 de `vw_cattle_event_log`
 
 ## 📝 1. Estructura del Workspace (Feature-Driven Architecture)
 
@@ -124,6 +131,12 @@ graph TD
 
 ```
 
+> ⚠️ **Nota v1.16.0:** las 8 herramientas MCP de la nueva sección 8 (más abajo) **no pasan
+> por este diagrama** — igual que `register_birth_event`/`find_calf_by_dam` (sección 5), se
+> invocan directo desde `v6/MCP Server Cattle` vía nodos `postgresTool`, sin tocar el
+> gateway REST `v6/crud` ni `crud_models`. El diagrama de arriba sigue describiendo
+> correctamente el único camino de escritura del panel Web.
+
 ### ⚠️ Contrato del motor Meta-CRUD (restricciones implícitas, no declaradas en `crud_models`)
 
 *Añadido en v1.9.0, extendido en v1.11.0.* Restricciones que el gateway impone en runtime y que no aparecen en ningún esquema ni
@@ -172,6 +185,15 @@ inyección a `config.allowed_fields.includes('tenant_id')`. Cualquier tabla glob
 `call_sp`. Necesaria para procedimientos como `sp_resolver_autorizacion`, que no reciben
 `tenant_id` como parámetro (la validación de tenant ya ocurrió al crear la solicitud
 original).
+
+**7. Una tool MCP sobre `postgresTool` vive fuera de este contrato por completo.**
+*Añadido en v1.16.0, patrón ya presente desde v1.11.1 con `register_birth_event`.* Ninguna
+de las 7 reglas anteriores aplica a las tools del Agente IA (`v6/MCP Server Cattle`): no hay
+`crud_models`, no hay shape de payload fijo, no hay Silent Error Shield — cada tool define su
+propio contrato de error dentro de su SQL (ver hallazgos de n8n en la sección 8). Un bug de
+una tool MCP nunca es "el mismo bug del gateway Meta-CRUD" solo por síntoma parecido (HTTP 200
+con error silencioso) — son dos motores de ejecución completamente distintos que comparten la
+misma base de datos.
 
 ### 📋 Anatomía de Campos del Motor Dinámico
 
@@ -317,6 +339,13 @@ para edición directa vía frontend.
 compliance-document chain (REEMO guide, CZM, GBG constancia, state introduction permit,
 ownership-transfer letter) that supports an interstate movement in practice.
 
+> ⚠️ **No confundir con `sp_move_livestock` (sección 8, v1.16.0).** Este subsistema (4) es
+> el motor de movilización **oficial** SENASICA-REEMO, UPP↔UPP/PSG, con folio y cadena
+> documental. La tool MCP `move_livestock` de la sección 8 es un movimiento **interno**,
+> intra-UPP (cambio de lote dentro de la misma unidad) — confirmado explícitamente con el
+> cliente que son dos conceptos distintos, no una superposición ni un reemplazo parcial de
+> este subsistema.
+
 ### Design decisions worth preserving (the "why", not just the "what")
 
 * **PSG modeled as a physical facility (`psg_facilities`), not just a license.** The original
@@ -363,7 +392,10 @@ ownership-transfer letter) that supports an interstate movement in practice.
   (`LOST`/`REPLACED`/`FOUND_LOOSE_REASSIGNED`) can set `app.identifier_change_reason` (a
   session-local Postgres setting) immediately before the `UPDATE` to enrich the log — optional,
   so no existing load script needed to change. Verified end-to-end against a real animal in
-  both environments, including a correctly-skipped `NULL→NULL` no-op update.
+  both environments, including a correctly-skipped `NULL→NULL` no-op update. *(v1.16.0: see
+  section 8 — `update_livestock_tag` relies on this same trigger without setting either
+  session variable, so every AI-Agent-driven tag change logs with the default reason/no
+  `changed_by`.)*
 
 ### `cattle_movement_rules` — de borrador a confirmado (migrations 020, 042, 048)
 
@@ -453,7 +485,9 @@ movimiento de salida por venta puede originarse aquí o directo, según el canal
   desambiguación multi-identificador que `sp_procesar_salida_ganado`: acepta
   `electronic_rfid`/`rfid_siniiga`/`numero_fuego`, rechaza con error explícito si hay más de
   un match). `sp_resolver_autorizacion` no vuelve a tocar la tabla `cattle_livestock`
-  directamente — delega por completo en el SP real correspondiente.
+  directamente — delega por completo en el SP real correspondiente. ⚠️ **Lo que sí NO valida
+  por sí solo** (hallazgo v1.16.0, ver sección 8): que la solicitud resuelta pertenezca al
+  tenant del usuario que la resuelve — solo vigencia y estado.
 * **`mortality_events` con dos campos de email deliberadamente distintos**
   (`reported_by_email`/`authorized_by_email`) — quien reporta una muerte en campo no es
   necesariamente quien tiene autoridad para dar de baja el animal del sistema.
@@ -476,7 +510,8 @@ movimiento de salida por venta puede originarse aquí o directo, según el canal
   la regla general), pero sigue siendo una garantía de prompt, no de arquitectura — el
   workflow MCP server corre aislado, sin acceso directo al contexto de sesión del workflow
   que lo invoca, así que no hay forma simple de inyectarlo por expresión de n8n en su lugar.
-  Deuda técnica de arquitectura abierta, ver `CLAUDE.md`.
+  Deuda técnica de arquitectura abierta, ver `CLAUDE.md`. **Sigue sin resolverse en v1.16.0
+  — las 8 tools nuevas de la sección 8 heredan exactamente el mismo riesgo, sin excepción.**
 
 ### Pantalla Web: `/admin/autorizaciones`
 
@@ -488,6 +523,9 @@ movimiento de salida por venta puede originarse aquí o directo, según el canal
   GETALL, GETONE` con un `join` declarativo hacia `cattle_livestock` (categoría/especie
   embebidos, sin llamada adicional); la resolución (Aprobar/Rechazar) invoca el modelo
   `resolver_autorizacion` (`call_sp`).
+* ⚠️ **Desde v1.16.0 existe una segunda puerta de entrada al mismo flujo**, por chat
+  (`list_pending_requests`/`review_pending_request`, ver sección 8) — ambas comparten el
+  mismo `sp_resolver_autorizacion` subyacente, solo cambia el canal de invocación.
 
 Ver `DATABASE_SCHEMA.md`, sección "Mortality & Async Authorization Subsystem", para el DDL
 completo de `pending_authorizations` y `mortality_events`.
@@ -549,7 +587,8 @@ real (5) en la llamada a la herramienta — no porque el panel esté ligado a ot
 datos, sino porque no pasa por el flujo real de resolución de tenant (`Resolver Tenant`/
 `Validar Token`) del canal de producción (WhatsApp/Chat Web). Cualquier prueba de un Agente
 IA debe hacerse por el canal real (WhatsApp o la app Chat Web), nunca desde el panel de
-Chat interno del editor de n8n, precisamente por esta razón.
+Chat interno del editor de n8n, precisamente por esta razón. **Regla seguida sin excepción
+durante las pruebas de las 8 tools nuevas de v1.16.0 — ver sección 8.**
 
 ---
 
@@ -641,15 +680,124 @@ from that bug's discovery.
   tagged with `event_type` (`PESO`/`SALUD`/`NACIMIENTO`) and `tenant_id`. Registered in
   `crud_models` with `allowed_ops = {SELECT,GETALL,GETONE}` only — consistent with how other
   audit-style views in this project (`vw_cattle_kpi`, `vw_cattle_lot_history`) are exposed.
+  ⚠️ **Extendida en v1.16.0 (migración 063)** con 4 ramas más — ver sección 8.
 
 ### New Meta-CRUD model
 
 | Model | Table/View | Ops | RBAC | Notes |
 |---|---|---|---|---|
-| `cattle_event_log` | `vw_cattle_event_log` (view, migration 060) | SELECT, GETONE, GETALL (no write) | read access per existing dashboard role gates | combines weight/health/birth by `livestock_id`; consumed by the new "Cattle Event Log" tab in `main-dashboard` (`agro-erp`) |
+| `cattle_event_log` | `vw_cattle_event_log` (view, migration 060, extendida migración 063 — v1.16.0) | SELECT, GETONE, GETALL (no write) | read access per existing dashboard role gates | combines weight/health/birth/breeding/deworming/castration/lot-movement by `livestock_id`; consumed by the "Cattle Event Log" tab in `main-dashboard` (`agro-erp`), con filtro y agrupación por Lote agregados en v1.Unreleased |
 
 **Verification (2026-09-22):** applied and verified against both LOCAL and PRODUCTION
 (`n8n-enterprise-db`, `hosting3m_db` — same single Postgres instance shared with n8n, per
 Regla 7 de `CLAUDE.md`). Migration applied via the standard runbook: pre-migration
 `pg_dump -Fc` backup, `md5sum` integrity check after `scp` transfer, container/database
 confirmed via `docker ps`/`\dt` before touching production.
+
+---
+
+## 🐂 8. Gestión Avanzada de Hato vía Agente IA (2026-10-03 a 2026-10-04)
+
+*Añadido en v1.16.0.* Ocho herramientas MCP nuevas (`v6/MCP Server Cattle`), probadas de
+punta a punta en PRODUCCIÓN por el canal real de chat (WhatsApp/Web Chat), siguiendo el
+mismo flujo de trabajo establecido en este proyecto: clonar un nodo `postgresTool`
+funcionando, reemplazar nombre + `toolDescription` + `query` + `queryReplacement`, probar
+una por una contra el canal real, corregir con los logs reales de ejecución de n8n (nunca
+confiando solo en el texto del chat), documentar al final.
+
+### Design decisions worth preserving
+
+* **`move_livestock` modela un movimiento interno, no el oficial.** Confirmado
+  explícitamente con el cliente: cambiar de lote dentro de la misma UPP es un concepto
+  distinto del motor de movilización SENASICA-REEMO (sección 4) — `move_livestock` no toca
+  `cattle_movement_events` ni ninguna tabla de ese subsistema, solo
+  `cattle_livestock.lot_id` e `historico_movimientos`. Se decidió deliberadamente NO
+  intentar unificar ambos motores en esta ronda.
+* **Resolución de lote por `ILIKE` parcial, con el chequeo de ambigüedad como red de
+  seguridad.** El Agente IA extrae nombres de lote de frases en español de forma
+  inconsistente ("el 110" vs. el nombre real "El 110"), igual que ya se documentó para
+  `find_calf_by_dam`/UPP por texto libre (sección 5). En vez de exigirle al LLM una extracción
+  exacta (tarea en la que ya se sabe que falla, ver sección 7), se relajó el match a `ILIKE
+  '%...%'` y se delegó la seguridad al chequeo de "más de un match → error", mismo principio
+  usado en toda la cadena de desambiguación multi-identificador de este proyecto desde
+  v1.0.0 (`sp_procesar_salida_ganado`).
+* **Dos bugs reales de n8n, no de PL/pgSQL, encontrados en las 8 tools a la vez** — ambos ya
+  se habían visto antes en este proyecto por separado, pero nunca juntos ni documentados como
+  patrón recurrente de n8n hasta ahora:
+  1. **`queryReplacement` sin el delimitador `{{ }}`:** el campo `options.queryReplacement`
+     de un nodo `postgresTool` debe envolverse en `{{ (() => {...})() }}`; sin el wrapper,
+     n8n trata el campo como texto literal y lo separa ingenuamente por comas. Confirmado
+     con una prueba aislada (`[3]` hardcodeado seguía fallando como el string literal
+     `"[3]"`). Corregido en las 8 tools copiando el patrón ya correcto de
+     `find_livestock_by_criteria`.
+  2. **El tipo declarado en `$fromAI` debe coincidir con el casteo intermedio de la query,
+     no con el tipo final de la columna:** `$fromAI(key, desc, 'number', null)` rompe la
+     validación de schema de n8n en cuanto el LLM manda `null`
+     (`Expected number, received null`) — la llamada nunca llega a Postgres. Si la query
+     castea `$N::text` antes de `::numeric`/`::date` (patrón ya establecido en este
+     proyecto), el `$fromAI` debe declararse `'string'`. Afectó tanto a las tools nuevas
+     como a `register_livestock_purchase` (tool preexistente, ver más abajo).
+* **`void_event` es genérico por whitelist, no por SQL dinámico sin restricción** — mismo
+  principio de seguridad que el despachador de `sp_resolver_autorizacion` (sección 5): una
+  whitelist fija de 3 nombres de tabla (`cattle_breeding_events`/`cattle_deworming_events`/
+  `cattle_castration_events`), nunca un nombre de tabla tomado del LLM sin validar.
+  **Trade-off aceptado conscientemente, no descubierto después:** al ser genérico y
+  table-agnostic, no revierte efectos secundarios sobre `cattle_livestock` (ej. categoría
+  tras anular una castración) — corregir eso requeriría lógica específica por tipo de
+  evento, perdiendo la ventaja de un único mecanismo genérico. Decisión de producto
+  pendiente, no un bug a corregir de inmediato.
+* **`review_pending_request` agrega una validación de seguridad que el SP subyacente no
+  tiene.** Hallazgo real durante esta sesión: `sp_resolver_autorizacion` (sección 5) valida
+  vigencia y estado de una solicitud, pero no valida que pertenezca al tenant de quien la
+  resuelve. En vez de modificar el SP compartido con el panel Web (riesgo de romper ese
+  flujo, fuera del alcance de esta sesión), la validación de propiedad por tenant se agregó
+  como una capa extra en la query SQL de la tool MCP, antes de invocar el SP — mismo patrón
+  de "envolver, no modificar" ya usado en otros puntos de este proyecto cuando tocar el
+  componente compartido es más riesgoso que envolverlo.
+
+### Nuevas herramientas MCP
+
+| Tool | Mecanismo | Alcance / notas |
+|---|---|---|
+| `move_livestock` | `UPDATE cattle_livestock SET lot_id = ...` + `INSERT historico_movimientos` (`'TRASLADO'`) | intra-UPP únicamente; ver "Design decisions" arriba |
+| `list_pending_requests` | `SELECT` directo sobre `pending_authorizations WHERE estado = 'PENDIENTE'` | lectura, sin SP propio |
+| `review_pending_request` | wrapper SQL + `sp_resolver_autorizacion` | agrega validación de propiedad por tenant (ver arriba) |
+| `log_breeding_event` | `INSERT cattle_castration_events`… *(sic, ver nota)* `cattle_breeding_events` | ver `DATABASE_SCHEMA.md` para columnas observadas |
+| `log_deworming_event` | `INSERT cattle_deworming_events` | ver `DATABASE_SCHEMA.md` |
+| `update_livestock_tag` | `UPDATE cattle_livestock SET <identificador> = ...` + `INSERT historico_movimientos` (`'CAMBIO_ARETE'`, nuevo valor de CHECK) | dispara `trg_log_identifier_changes` automáticamente (sección 4) |
+| `log_castration_event` | `INSERT cattle_castration_events` + `UPDATE cattle_livestock.category` en la misma transacción | ver nota sobre `cattle_lifestage_catalog` en `DATABASE_SCHEMA.md` |
+| `void_event` | `INSERT event_voids` contra whitelist de 3 tablas | no revierte `cattle_livestock` — ver "Design decisions" |
+
+*(tabla corregida de una nota de transcripción: `log_breeding_event` inserta en
+`cattle_breeding_events`, no en `cattle_castration_events` — dejado explícito aquí para
+evitar confusión al leer este archivo.)*
+
+Las 8 son tools MCP puras (nodos `postgresTool` en `v6/MCP Server Cattle`) — **no están
+registradas en `crud_models`**, mismo patrón que `register_birth_event`/`find_calf_by_dam`
+(sección 5) y sujetas al mismo contrato (punto 7 de la sección 2 de este archivo).
+
+### `register_livestock_purchase` — 3 bugs reales corregidos (tool preexistente, no nueva de v1.16.0)
+
+* No tiene un SP propio — es SQL inline en el campo Query del nodo n8n. Documentado aquí por
+  haber sido depurada en la misma sesión que las 8 tools nuevas, con el mismo bug de tipos
+  `$fromAI`/`null` descrito arriba (parámetro `current_weight_kg`).
+* Ver `DATABASE_SCHEMA.md`, bajo `cattle_livestock`, para el detalle completo de los 3 fixes
+  (inferencia de UPP desde el lote, el bug de tipos + peso inventado por el Agente, y la
+  validación de identificador duplicado).
+
+### Verificación
+
+**Probadas de punta a punta en producción** (WhatsApp/Web Chat, tenant 3 "Pista de Hielo" y
+transacciones reales confirmadas por el cliente), siguiendo la misma disciplina ya
+establecida en este proyecto: cada bug se confirmó leyendo el log de ejecución real de n8n,
+nunca confiando solo en lo que el chat mostró al usuario. Ver `CHANGELOG.md`, sección
+`[Unreleased]`, para el detalle de cada prueba individual.
+
+**Hallazgos de seguridad/diseño que quedan como deuda técnica, sin resolver en esta
+versión** (ver `CLAUDE.md` para el detalle completo de cada uno):
+* `tenant_id`/`user_email` en las 15 tools MCP previas + estas 8 (23 en total) siguen
+  dependiendo solo de refuerzo de prompt, no de un mecanismo arquitectónico verificable
+  (mismo hallazgo de la sección 5, sin cambios en v1.16.0).
+* `void_event` no revierte efectos secundarios sobre `cattle_livestock`.
+* No existe una tool MCP de **consulta** de historial de reproducción/desparasitación/
+  castración — las 8 tools nuevas son todas de escritura.
