@@ -5,6 +5,287 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🔒 "Ver detalle" (metadata) ocultaba todo menos lo financiero — ahora también oculta lo financiero para no-ADMIN
+
+Follow-up al ciclo de visibilidad financiera: `cattle_livestock.metadata` (JSONB sin shape
+fijo) contiene, para algunos animales, `purchase_price`, `seller_name`, `purchase_date`,
+`nota_venta` y `venta_registrada_solo_en_libreta` — confirmado contra el contenido real de
+LOCAL (29 claves distintas en total) y contra la única herramienta MCP que escribe aquí
+(`register_livestock_purchase`; las dos últimas vienen de los scripts de carga histórica, no
+del Agente IA). El modal "Ver detalle" en `main-dashboard` y `cattle-list` pasaba
+`animal.metadata` tal cual a `<app-metadata-detail-modal>`, sin ningún filtro por rol — un
+EDITOR podía ver el precio de compra y el vendedor de cualquier animal.
+
+**Fix:** nueva lista compartida `FINANCIAL_METADATA_KEYS` (`shared/utils/financial-metadata.util.ts`)
+y `withoutFinancialMetadata()`, que devuelve una copia de la metadata sin esas 5 claves.
+`main-dashboard.component.ts`/`cattle-list.component.ts` agregan `getDisplayMetadata(animal)`
+(ADMIN recibe `animal.metadata` íntegro; no-ADMIN recibe la copia filtrada) y lo usan tanto en
+el binding `[metadata]` del modal como en `animalHasMetadata()` — si tras filtrar no queda nada
+mostrable, el ícono de "Detalle" se oculta igual que ya pasaba con las claves puramente
+técnicas. Deliberadamente NO se incluyen `notes`/`source` en la lista: son genéricos, se usan
+también para contenido no financiero, y ocultarlos perdería información legítima.
+
+⚠️ **Riesgo residual, NO cerrado por este fix:** el dato financiero sigue viajando completo en
+la respuesta HTTP de `vw_cattle_kpi` — el gateway no filtra columnas ni claves de `metadata`
+(`Build Query`'s `buildSelectFields()` siempre hace `SELECT *`, confirmado). Este fix solo evita
+que la UI lo renderice; cualquiera con las herramientas de desarrollador del navegador abiertas
+sigue viendo la respuesta cruda completa. El cierre real es una vista en PostgreSQL que excluya
+estas claves de `metadata` antes de que el gateway las devuelva — **Fase 1, no implementada
+aquí.**
+
+### 📌 Deuda técnica — el gateway corta GETALL en 1500 filas (tope 2000), listas client-side truncan en silencio
+
+Hallazgo del diseño de estandarización de paginación (fase 0-1, `PagedTable`/`exportRowsToCsv`
+en `shared/utils/`, aún sin cablear a ningún componente). `Build Query` (`v6/CRUD`,
+`sanitizePaginationParams`) aplica `limit = 1500` por default cuando el frontend no manda
+`body.limit`, con un tope duro de 2000 aunque se pida más. Todas las tablas de agro-erp hoy
+(`cattle-list`, `cattle-event-log`, main-dashboard, etc.) hacen "traer todo, paginar/filtrar/
+ordenar en memoria" sin mandar `limit` nunca — **si el hato o la bitácora de un tenant superan
+1500 filas, el resto se descarta silenciosamente antes de llegar al cliente**: ni un error, ni
+un aviso, ni un "mostrando parcial" — el paginador simplemente calcula `totalPages` sobre un
+dataset ya incompleto, y lo que no entró en esas 1500 filas no existe para el usuario. Hoy no
+hay evidencia de que ningún tenant real supere ese umbral (el ejemplo más grande documentado es
+581 animales, un tenant), pero no hay ninguna alarma que avise cuando se cruce.
+
+Propuesta (no implementada, solo nota, según se pidió): un chequeo explícito en el pipeline de
+carga de cada tabla grande — si el array recibido tiene exactamente `1500` o `2000` elementos
+(las dos cotas conocidas de `sanitizePaginationParams`), mostrar una advertencia visible ("estos
+datos pueden estar incompletos, contactar a soporte") en vez de asumir que esa cifra redonda es
+coincidencia. Cierre real requiere tocar el gateway (subir el tope, o mejor, implementar
+paginación servidor-side real con `limit`/`offset` — ver la entrada de diseño de paginación para
+el detalle de qué le falta a `Build Query` para eso, p.ej. total-count y sort ASC) — fuera de
+alcance de esta nota.
+
+### 📌 Deuda técnica — `ng test agro-erp` no compila; specs nuevos verificados solo por Vitest standalone
+
+`ng test agro-erp` falla al compilar el proyecto completo, no solo las pruebas nuevas de este
+ciclo: `admin.service.ts`/`production-unit-lot.service.ts` tienen errores reales de TypeScript
+en modo estricto (`Object is of type 'unknown'`, `Cannot find module 'core-auth'`), y varios
+specs preexistentes (`reproductive-dashboard.component.spec.ts` ×2, `expense-modal.component.spec.ts`,
+`tenant-selector.component.spec.ts`) importan rutas/clases que ya no existen — boilerplate de
+`ng generate` nunca actualizado. Ninguno de estos errores lo introdujo este ciclo de trabajo.
+
+Por eso `paged-table.util.spec.ts` (13 casos: slicing, reset por `linkedSignal`, clamp al
+encoger el dataset, `showPager` con y sin umbral, búsqueda normalizada) y, en la rama
+`Parametrizacion`, `tenant.service.spec.ts`, se verificaron corriendo Vitest de forma standalone
+(`npx vitest run --config <config temporal>`, fuera del builder de Angular) en vez de vía
+`ng test` — válido porque ambos archivos son clases puras sin decoradores de Angular, pero
+significa que **ningún test de este ciclo corrió nunca por el comando real del proyecto**.
+Cerrar esto requiere arreglar los specs rotos y los errores de `admin.service.ts` primero —
+fuera de alcance de este ciclo (es deuda preexistente, no introducida por `PagedTable`).
+
+### 🐛 Tasa de Preñez Global inflaba el denominador con animales sin diagnóstico
+
+`reproductive-dashboard.component.ts` (módulo CRIA) mostraba cosas como "0 de 147 vientres" con el
+donut en 100% Vacías, aunque casi ningún vientre tuviera palpación registrada. Causa: `stats()`/
+`getChartOptions()` usaban `data().length` (**todas** las CRIA: machos, becerros, hembras nunca
+palpadas) como denominador de la tasa y como "Vacías" del chart — un animal sin ningún diagnóstico
+se contaba silenciosamente como si estuviera diagnosticado "VACIA". El computed `diagnosisSummary`
+ya distinguía correctamente `sinDiagnostico`/`prenadas`/`vacias`, pero solo se usaba en los badges
+de la tabla colapsable, no en la tarjeta principal ni en el chart.
+
+**Fix:** `stats()`/`getChartOptions()` ahora derivan de `diagnosisSummary()` — el denominador es
+`prenadas + vacias` (solo vientres **con** diagnóstico), nunca el total de animales del módulo.
+`tasa: null` quando no hay ningún vientre diagnosticado (vs. una tasa real de 0%) — la plantilla
+muestra "Sin diagnóstico" en vez de "0.0%" y oculta el donut (con un placeholder) en ese caso,
+mismo criterio que el "Sin Diagnósticos Reproductivos" que ya existía para `data().length === 0`.
+Verificado que `reproduccion-dashboard.component.ts` (módulo REPRODUCCION) no tiene este bug — su
+"X vientres preñados" es un conteo simple, sin denominador ni gráfico de "Vacías".
+
+### 👷 Panel Operativo (no-ADMIN) enriquecido — sin endpoints nuevos, sin Cattle Event Log
+
+Extiende el Panel Operativo del fix anterior. Cambios en `main-dashboard.component.ts/.html`:
+* **Título de página** condicional: "Capitalización y Rendimiento" (ADMIN) vs. "Panel Operativo"
+  (no-ADMIN), vía `isAdminForActiveTenant()`.
+* **Widgets enviados**, todos de solo lectura, sin ninguna cifra financiera, 100% client-side
+  desde `filteredCattleList()` (cero fetches nuevos): Peso Promedio por Lote y Categoría, e
+  Identificación Incompleta (falta arete SINIIGA y/o RFID electrónico).
+
+🔴 **Hallazgo de seguridad encontrado al construir esta entrega, y por qué faltan 3 widgets que
+se intentaron primero:** se habían agregado también "Pesajes Recientes", "Eventos Sanitarios
+Recientes" y "Animales Sin Pesaje Reciente" (dos métodos nuevos en `CattleApiService`,
+`getRecentWeightLogs`/`getRecentHealthLogs`, mismo endpoint genérico Meta-CRUD de siempre) — pero
+se confirmó que `cattle_weight_logs` y `cattle_health_logs` **NO TIENEN columna `tenant_id`**
+(vía `\d` directo contra ambas tablas) y por lo tanto tampoco aparece en su `allowed_fields` de
+`crud_models`. El "SECURITY PATCH: Aislamiento Multi-Tenant" de `Build Query` solo inyecta el
+filtro de tenant cuando `tenant_id`/`id_company` SÍ está en `allowed_fields` del modelo — para
+estas dos tablas esa condición nunca se cumple: **un `GETALL` sin filtro de `livestock_id`
+devuelve las filas de *todos* los tenants del sistema, sin excepción**, para cualquier rol con
+SELECT (incluido EDITOR y CUSTOMER). Los métodos previos (`getExpensesByAnimal`,
+`getHealthLogsByAnimal`) nunca lo exponían porque siempre filtran por un `livestock_id` puntual
+que el frontend ya sabía que pertenecía al tenant activo — nadie había hecho antes un GETALL
+"todo el tenant" sobre estas dos tablas.
+
+Se había mitigado client-side (filtro de segunda capa contra `filteredCattleList()`, mismo patrón
+que `cattle-event-log.component.ts#entries`), pero en revisión **se decidió retirar los tres
+widgets y los tres métodos/computeds que dependían de datos tenant-wide de estas tablas** —
+un filtro en el navegador nunca es aislamiento real: la respuesta cruda con filas de otros
+tenants sigue llegando al cliente antes de filtrarse, visible en cualquier inspector de red.
+Removido de `CattleApiService`: `getRecentWeightLogs`, `getRecentHealthLogs`. Removido de
+`main-dashboard.component.ts`: `rawWeightLogs`, `rawHealthLogs`, el branch de fetch no-ADMIN en
+`loadDashboardData()`, `animalById`, `recentWeightLogs`, `recentHealthLogs`,
+`lastWeighDateByAnimal`, `recentWeighWindowDays`, `animalsWithoutRecentWeighIn`. Confirmado que
+`vw_cattle_kpi` (`pg_get_viewdef`) no tiene ninguna columna de fecha de pesaje — "Animales Sin
+Pesaje Reciente" no se puede reconstruir sin tocar `cattle_weight_logs`, así que queda pendiente
+por completo, no solo pausado por estilo.
+
+**Pendiente de raíz, bloqueante para reintroducir estos 3 widgets:** agregar `tenant_id` real a
+`cattle_weight_logs`/`cattle_health_logs` (o una vista tenant-scoped con `default_filter`/join de
+cross-check, registrada aparte en `crud_models` con su propio `tenant_id` en `allowed_fields`)
+para que el gateway mismo filtre — ver la auditoría completa de los 62 modelos en la entrada de
+abajo. Cualquier otro consumidor futuro de estos dos modelos que haga un GETALL amplio sin pasar
+por un componente con su propia segunda capa queda expuesto al mismo problema hoy.
+
+### 📌 Deuda técnica — ciclo de visibilidad financiera/rol (Cattle Event Log + gastos, 2026-10-05)
+
+Cuatro ítems de deuda, confirmados con evidencia directa durante este ciclo de fixes (migración
+064 + gates de frontend), ninguno corregido aquí a propósito — alcance mayor al de "ocultar un tab":
+
+1. **`PRECIO_KILO = 65.00` hardcodeado en el cliente** (`main-dashboard.component.ts`). "Valor
+   Estimado del Hato"/capitalización no vienen de ningún modelo de precios del servidor — es
+   `current_weight_kg × 65.00`, constante fija en el componente. Sin tabla de precios, sin
+   historial, sin ajuste por especie/categoría. Cualquier cambio de precio real requiere un
+   despliegue de frontend. No es parte del alcance de este fix (que es de *visibilidad* por rol,
+   no de *exactitud* del dato), pero es la raíz de por qué no hubo nada que restringir en el
+   servidor para esa cifra específica.
+2. **Rol de JWT congelado al login vs. rol por-empresa** (ver detalle completo en la entrada
+   "Cattle Event Log debía ser ADMIN-only" más abajo). Afecta a *todo* el enforcement de rol de la
+   suite, backend y frontend — `roleGuard`/`authService.hasRole()` y el nodo `Security Validation`
+   de `v6/CRUD` leen el `role` del JWT (fijo a la empresa del login); solo
+   `tenantService.activeTenant()?.role` se actualiza en vivo al cambiar de rancho. Confirmado con
+   test real (`tenant.service.spec.ts`, 5 casos, todos verdes) que el mecanismo del frontend sí
+   funciona correctamente — el gap es que el *backend* no tiene un mecanismo equivalente.
+3. ❌ **"Actividad reciente" sigue sin implementar — intento revertido en revisión.** Se había
+   construido "Pesajes Recientes"/"Eventos Sanitarios Recientes" directo de
+   `cattle_weight_logs`/`cattle_health_logs` (EDITOR ya tiene SELECT en ambas), pero se descubrió
+   que ninguna de las dos tablas tiene `tenant_id` — un GETALL tenant-wide devuelve filas de
+   *todos* los tenants al navegador antes de cualquier filtro client-side, que nunca es
+   aislamiento real. Removido por completo (código y widgets), no solo oculto. Ver la entrada
+   "Panel Operativo (no-ADMIN) enriquecido" más arriba para el detalle completo y la auditoría de
+   los 62 modelos más abajo. Bloqueado hasta que exista una fuente tenant-scoped real (columna
+   `tenant_id` nativa o vista con `default_filter`/join registrada aparte en `crud_models`).
+4. 🔴 **`cattle_livestock` permite UPDATE a EDITOR, y el gateway no acota ese UPDATE por tenant —
+   confirmado contra el workflow `v6/CRUD` EN VIVO (no el JSON del repo), 2026-10-05.** El nodo
+   `Build Query`, caso `'update'`, arma el `WHERE` **solo** con las columnas de la primary key
+   (`pkList`, para `cattle_livestock` es únicamente `id`) — nunca con `tenant_id`/`id_company`.
+   Peor aún: como `cattle_livestock.allowed_fields` SÍ incluye `"tenant_id"`, el parche de
+   aislamiento (`fields['tenant_id'] = tenantIdHeader`, aplicado a TODAS las operaciones antes del
+   `switch`) hace que **cualquier UPDATE exitoso reasigne silenciosamente `tenant_id` al valor del
+   header `x-tenant-id` del solicitante** — no es solo una fuga de lectura/escritura cruzada, es
+   un vector activo de secuestro de registro: un usuario de la Empresa B que conozca (o adivine)
+   el `id` (UUID) de un animal de la Empresa A puede, con su propio rol EDITOR legítimo, hacer
+   `UPDATE` sobre ese registro y de paso reclamarlo para su propio tenant. Mismo patrón ya
+   documentado de forma genérica en "🔴 Hallazgo de seguridad (gateway, no corregido aquí)" más
+   abajo (deuda técnica a nivel suite) — esta entrada lo confirma con evidencia fresca y lo ata
+   específicamente a `cattle_livestock`, el modelo donde EDITOR tiene UPDATE hoy. **No corregido
+   en este ciclo** (alcance de infraestructura del gateway, no de un modelo puntual) — reportado
+   como hallazgo, no arreglado, tal como se pidió.
+
+### 🔒 Datos financieros (gastos, capitalización) ocultos para no-ADMIN — Panel Operativo nuevo
+
+Follow-up directo del fix de Cattle Event Log: un EDITOR (capataz) tampoco debía ver valor
+estimado del hato, balance neto, capitalización, historial de gastos ni costo por animal, ni
+tener el botón "Registrar Gasto" en `main-dashboard`.
+
+**Servidor — inventario completo de `crud_models`, leído en solo-lectura (62 filas).** Solo
+`cattle_expenses` alimenta los widgets financieros de "Capitalización y Rendimiento"
+(`CattleApiService.getExpenses()` → Historial de Gastos, Costo por Animal, Balance por UPP) y
+tenía `allowed_roles_select = 'ADMIN,EDITOR,CUSTOMER'` — el default de la columna, igual que el
+hallazgo de `cattle_event_log`. "Valor Estimado del Hato"/Biomasa **no tienen modelo propio**: se
+calculan 100% client-side en `main-dashboard.component.ts` desde `cattleList()` (peso) × una
+constante hardcodeada `PRECIO_KILO = 65.00` — no hay nada que restringir en el servidor para esa
+parte, solo ocultarla en el frontend. `cattle_livestock`/`vw_cattle_kpi` quedan sin tocar a
+propósito: EDITOR los necesita para pesajes, eventos de salud e inventario, que siguen siendo
+operación legítima suya.
+
+**Migración 064 preparada, NO aplicada** (`database/migrations/064_restrict_cattle_expenses_select_to_admin.sql`):
+backup de la fila (`crud_models_backup_20261005`) + `UPDATE allowed_roles_select = 'ADMIN'` +
+SELECT de verificación, con rollback documentado. **Deliberadamente deja intacto**
+`allowed_roles_insert` (`'ADMIN,EDITOR'`) — revocar INSERT habría roto la tool MCP
+`register_ranch_expense` del Agente IA, decisión de negocio ya confirmada (ver Regla 10/Deuda
+técnica, "EDITOR debe poder usar las 5 tools rutinarias... sin restricción de rol"). Efecto neto:
+EDITOR puede seguir *reportando* un gasto por WhatsApp/Chat, pero no puede *leerlos* de vuelta vía
+el gateway. Producción pendiente de que el dueño del proyecto corra la migración.
+
+**Frontend aplicado** (mismo patrón que Cattle Event Log, fuente de rol
+`tenantService.activeTenant()?.role` vía `isAdminForActiveTenant`, nunca `roleGuard`/JWT — ver
+hallazgo de abajo): tarjeta "Valor Estimado del Hato", botón "Registrar Gasto", y los tabs
+"Historial de Gastos"/"Costo por Animal" ocultos para no-ADMIN, con el mismo triple gate
+(nav oculto + `setSubTab()` rechaza el tab + bloque `@if` del contenido) extendido a
+`ADMIN_ONLY_SUBTABS = {EVENT_LOG, GASTOS, POR_ANIMAL}`. `loadDashboardData()` ya ni siquiera llama
+`getExpenses()` para un rol no-ADMIN (evita un 403 inútil).
+
+**Panel Operativo nuevo** (reemplaza la tarjeta "Balance por UPP" en el tab Resumen para
+no-ADMIN, cero cifras financieras, sin ningún fetch nuevo — reutiliza `filteredCattleList()`):
+hato por especie, por categoría y por lote (conteos), y una tabla de animales en
+RIESGO/CUARENTENA/EN_TRANSITO ("requieren atención").
+
+⚠️ **"Actividad reciente" del panel operativo, pedida en el requerimiento, NO implementada.** El
+`Livestock` del frontend no trae ningún timestamp de evento (ni `last_weighed_at` ni similar), y
+la única fuente con fecha real por evento es `vw_cattle_event_log` — que este mismo ciclo de fixes
+dejó ADMIN-only a propósito. Construir una actividad reciente para EDITOR requeriría una fuente
+de datos nueva (ej. una vista reducida, sin gasto/health_event_type, con su propio
+`allowed_roles_select` separado) — no se improvisó sin esa decisión de diseño. Pendiente de
+confirmar si se quiere como follow-up.
+
+**Rol de escritura hoy para pesaje y salud (sin cambios en este fix):**
+`cattle_weight_logs.allowed_roles_insert = 'ADMIN,EDITOR,IOT'`,
+`cattle_health_logs.allowed_roles_insert = 'ADMIN,EDITOR'` — EDITOR puede registrar ambos eventos
+hoy, vía panel Web o Agente IA.
+
+### 🔒 Cattle Event Log debía ser ADMIN-only — gateado en 3 capas, hallazgo arquitectónico de rol obsoleto
+
+Reproducido con una cuenta EDITOR: el tab "Cattle Event Log" era visible y usable por cualquier rol.
+
+**Hallazgo clave — fuente de rol correcta para un gate por-empresa:** `authService.hasRole()` /
+`roleGuard` (core-auth) leen `authService.currentUser()?.role`, decodificado del JWT — y el JWT
+fija el rol de la empresa activa **al momento del login**, nunca se refresca. `TenantSelectorComponent.onSelect()`
+(Context Switcher) solo llama `tenantService.setActiveTenant()` con la entrada ya cacheada de
+`availableTenants()` — no vuelve a loguear, no emite un token nuevo. Resultado: si un usuario con
+roles distintos entre empresas (el esquema lo permite vía `user_companies.role` por fila, aunque
+ningún usuario real de hoy lo tiene) cambia de rancho, `authService.hasRole()`/`roleGuard` siguen
+reportando el rol de la empresa del login original, no el de la empresa activa. Solo
+`tenantService.activeTenant()?.role` es correcto y se actualiza en vivo en cada cambio de contexto
+— es la fuente usada para este gate, no `roleGuard`.
+
+**"Guardar la ruta" no aplica literalmente — `EVENT_LOG` no es una ruta.** `ganaderia/dashboard`
+(`livestock.routes.ts`) carga `MainDashboardComponent` sin ningún `canActivate` (ni siquiera
+`authGuard`); "Cattle Event Log" es `activeSubTab() === 'EVENT_LOG'`, un signal interno, nunca
+reflejado en la URL/queryParams. No hay nada donde enganchar `canActivate: [roleGuard(['ADMIN'])]`
+tal cual se pidió. Protección equivalente implementada a nivel de componente (`main-dashboard.component.ts`):
+* `isAdminForActiveTenant` (computed, fuente `tenantService.activeTenant()?.role`).
+* `setSubTab()` rechaza activar `'EVENT_LOG'` si el rol de la empresa activa no es ADMIN (defensa
+  ante consola/binding forzado).
+* Nuevo `effect()` reactivo: si el usuario ya está en el tab y cambia de rancho hacia una empresa
+  donde no es ADMIN, lo saca al instante a `'RESUMEN'`.
+* Plantilla: el `<li>` del tab y el `@if` que monta `<app-cattle-event-log>` quedan ambos detrás
+  de `isAdminForActiveTenant()` — ni visible ni montado (no dispara su propio fetch) para no-ADMIN.
+
+**No era solo ocultamiento de frontend — había enforcement real, mal configurado.** El gateway
+Meta-CRUD (`v6/CRUD`, workflow vivo en n8n, confirmado leyendo el JSON real — `06-dynamic-crud-engine/v6/v6-crud.json`
+del repo puede estar desactualizado, ver deuda técnica de re-exportación pendiente) tiene un nodo
+`Security Validation` que sí valida `crud_models.allowed_roles_<operación>` contra el rol del
+usuario antes de ejecutar cualquier query. El problema: `cattle_event_log` tenía
+`allowed_roles_select = 'ADMIN,EDITOR,CUSTOMER'` (el default de la columna, nunca se endureció al
+crear el modelo en v1.13.0) — EDITOR y CUSTOMER sí estaban autorizados a nivel de base de datos,
+no solo "visibles por error de UI". **Corregido en LOCAL:**
+`UPDATE crud_models SET allowed_roles_select = 'ADMIN' WHERE model_name = 'cattle_event_log'`.
+**Pendiente aplicar en PRODUCCIÓN** (mismo protocolo de Regla 7).
+
+⚠️ **Hallazgo arquitectónico más profundo, NO corregido aquí (alcance mayor al de este bug) — el rol
+usado por `Security Validation` también viene del JWT.** El nodo `Extract Auth Context` obtiene el
+rol vía `/verify-token` de `jwt-service` → `decoded.role`, el mismo valor congelado al login,
+nunca re-derivado para la empresa activa real de la petición. Mientras tanto, el aislamiento de
+datos por tenant (`tenantInterceptor` → header `x-tenant-id` ← `tenantService.activeTenantId()`,
+vivo) sí viaja actualizado en cada petición. Es decir: **el tenant de una petición es siempre
+fresco, pero el rol que la autoriza puede corresponder a una empresa distinta a la que esa misma
+petición está consultando.** Sin impacto confirmado hoy (ningún usuario real tiene roles distintos
+entre empresas), pero es un gap real, afecta a *todo* el enforcement de rol de la suite (no solo
+Cattle Event Log), y cerrarlo requiere re-emitir el JWT en cada cambio de Context Switcher, o que
+`Extract Auth Context`/`Security Validation` re-deriven el rol por `(email, x-tenant-id)` contra
+`user_companies` en cada petición en vez de confiar en el claim plano del JWT. Queda como deuda
+técnica de arquitectura, fuera del alcance de este fix puntual.
+
 ### 🐛 Context Switcher mostraba empresas a las que el usuario no tenía acceso
 
 Un usuario con una sola empresa activa en `user_companies` (ej. `id_company=6`) veía en el

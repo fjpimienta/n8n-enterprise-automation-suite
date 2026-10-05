@@ -12,7 +12,11 @@ import { CattleEventLogComponent } from '../cattle-event-log/cattle-event-log.co
 import { ExpenseModalComponent } from '../../../expenses/components/expense-modal/expense-modal.component';
 import { ComplianceAlertCardComponent } from '../../../../compliance/components/compliance-alert-card/compliance-alert-card.component';
 import { MetadataDetailModalComponent } from '@shared/components/metadata-detail-modal/metadata-detail-modal.component';
+import { TableToolbarComponent } from '@shared/components/table-toolbar/table-toolbar.component';
+import { TableFooterComponent } from '@shared/components/table-footer/table-footer.component';
+import { PagedTable } from '@shared/utils/paged-table.util';
 import { hasDisplayableMetadata } from '@shared/utils/metadata-view.util';
+import { withoutFinancialMetadata } from '@shared/utils/financial-metadata.util';
 import { HERD_STATUS_FILTER_OPTIONS, HerdStatusFilter, filterByHerdStatus } from '@shared/utils/herd-status.util';
 import { SPECIES_FILTER_ALL, deriveAvailableSpecies, getAnimalSpecies } from '@shared/utils/species.util';
 import { LOT_FILTER_ALL, deriveAvailableLots, getAnimalLot } from '@shared/utils/lot.util';
@@ -25,7 +29,7 @@ import { Paginator } from '../../utils/paginator';
 @Component({
   selector: 'app-main-dashboard',
   standalone: true,
-  imports: [CommonModule, NgApexchartsModule, ReproductiveDashboardComponent, EngordaDashboardComponent, ReproduccionDashboardComponent, ExpenseModalComponent, ComplianceAlertCardComponent, MetadataDetailModalComponent, CattleEventLogComponent],
+  imports: [CommonModule, NgApexchartsModule, ReproductiveDashboardComponent, EngordaDashboardComponent, ReproduccionDashboardComponent, ExpenseModalComponent, ComplianceAlertCardComponent, MetadataDetailModalComponent, CattleEventLogComponent, TableToolbarComponent, TableFooterComponent],
   templateUrl: './main-dashboard.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -62,8 +66,15 @@ export class MainDashboardComponent implements OnInit {
   // Modal de detalle de metadata (JSONB variable por animal — sin shape fijo)
   public metadataAnimal = signal<any | null>(null);
 
+  // 🔒 no-ADMIN nunca ve claves financieras del JSONB (purchase_price, seller_name, etc. —
+  // ver financial-metadata.util.ts). Si tras quitarlas no queda nada mostrable, el ícono de
+  // "Detalle" se oculta para ese rol, igual que ya pasaba con las claves puramente técnicas.
   public animalHasMetadata(animal: any): boolean {
-    return hasDisplayableMetadata(animal?.metadata);
+    return hasDisplayableMetadata(this.getDisplayMetadata(animal));
+  }
+
+  public getDisplayMetadata(animal: any): unknown {
+    return this.isAdminForActiveTenant() ? animal?.metadata : withoutFinancialMetadata(animal?.metadata);
   }
 
   public openMetadata(animal: any) {
@@ -88,6 +99,21 @@ export class MainDashboardComponent implements OnInit {
     return tab === 'ENGORDA' || tab === 'REPRODUCCION' ? tab : 'CRIA';
   });
 
+  // 🔒 Cattle Event Log es ADMIN-only. Deliberadamente leído de `tenantService.activeTenant()`,
+  // NO de `authService.hasRole()`/`roleGuard` (JWT): el rol del JWT queda fijo al rol de la
+  // empresa activa AL MOMENTO DEL LOGIN y no se actualiza al cambiar de rancho desde el Context
+  // Switcher (ver `tenant-selector.component.ts#onSelect`, que solo llama `setActiveTenant()`,
+  // sin re-emitir token). `activeTenant().role` sí es por-empresa y se actualiza en vivo en cada
+  // cambio de contexto — es la única fuente correcta para un gate que depende de la empresa activa.
+  public isAdminForActiveTenant = computed(() =>
+    (this.tenantService.activeTenant()?.role || '').toUpperCase() === 'ADMIN'
+  );
+
+  // Sub-tabs financieros/de auditoría — ADMIN-only. GASTOS y POR_ANIMAL se suman aquí a raíz del
+  // mismo hallazgo que Cattle Event Log: cattle_expenses alimenta ambos y es dato financiero que
+  // un EDITOR (capataz) no debe poder ver.
+  private static readonly ADMIN_ONLY_SUBTABS = new Set(['EVENT_LOG', 'GASTOS', 'POR_ANIMAL']);
+
   constructor() {
     /**
      * 🔄 EFECTO REACTIVO: Escucha activa del Contexto de Rancho.
@@ -110,6 +136,16 @@ export class MainDashboardComponent implements OnInit {
       this.activeSubTab.set('RESUMEN');
       this.pagination.reset();
     }, { allowSignalWrites: true });
+
+    // 🔒 EFECTO REACTIVO: si el usuario está en un tab ADMIN-only (Cattle Event Log, Historial de
+    // Gastos, Costo por Animal — los tres financieros/de auditoría) y cambia de rancho activo
+    // desde el Context Switcher hacia una empresa donde no es ADMIN, lo saca de inmediato — el rol
+    // por-empresa (`activeTenant().role`) puede cambiar en cualquier momento sin recargar la app.
+    effect(() => {
+      if (MainDashboardComponent.ADMIN_ONLY_SUBTABS.has(this.activeSubTab()) && !this.isAdminForActiveTenant()) {
+        this.activeSubTab.set('RESUMEN');
+      }
+    }, { allowSignalWrites: true });
   }
 
   ngOnInit() {
@@ -122,8 +158,15 @@ export class MainDashboardComponent implements OnInit {
     // cambio de tenant); aquí solo se cargan los gastos, que no forman parte de esa fuente.
     this.isLoading.set(true);
     try {
-      const expensesRaw = await this.cattleApi.getExpenses();
-      this.expensesList.set((Array.isArray(expensesRaw) ? expensesRaw : []) as Expense[]);
+      // 🔒 cattle_expenses es financiero y no-ADMIN no debe verlo (ver fix de Cattle Event Log) —
+      // ni siquiera se intenta el fetch para un rol sin acceso: evita un 403 inútil contra el
+      // gateway y la fila de `expensesList` nunca llega a existir en memoria para ese rol.
+      if (this.isAdminForActiveTenant()) {
+        const expensesRaw = await this.cattleApi.getExpenses();
+        this.expensesList.set((Array.isArray(expensesRaw) ? expensesRaw : []) as Expense[]);
+      } else {
+        this.expensesList.set([]);
+      }
     } catch (error) {
       console.error('Error en el Data Pipeline:', error);
     } finally {
@@ -207,6 +250,143 @@ export class MainDashboardComponent implements OnInit {
     this.filteredCattleList().filter(a => !a.production_unit_id).length
   );
 
+  // 👷 Panel Operativo (no-ADMIN): conteos por especie/categoría/lote y animales que requieren
+  // atención biológica — cero cifras financieras (precio, capitalización, gasto). Reutiliza
+  // `filteredCattleList()`, ya cargado para el resto del dashboard; no agrega ningún fetch nuevo.
+  private static countBy<T>(
+    list: readonly T[],
+    keyFn: (item: T) => string | null | undefined,
+    fallback: string
+  ): Array<{ label: string; count: number }> {
+    const counts = new Map<string, number>();
+    for (const item of list) {
+      const key = keyFn(item) || fallback;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count);
+  }
+
+  public herdCountsBySpecies = computed(() =>
+    MainDashboardComponent.countBy(this.filteredCattleList(), getAnimalSpecies, 'Sin especie')
+  );
+
+  public herdCountsByCategory = computed(() =>
+    MainDashboardComponent.countBy(this.filteredCattleList(), a => a.category, 'Sin categoría')
+  );
+
+  public herdCountsByLot = computed(() =>
+    MainDashboardComponent.countBy(this.filteredCattleList(), getAnimalLot, 'Sin lote')
+  );
+
+  // Estados biológicos que piden revisión humana — ninguno es financiero (venta/gasto aparte).
+  private static readonly ATTENTION_STATUSES = new Set(['RIESGO', 'CUARENTENA', 'EN_TRANSITO']);
+
+  public animalsNeedingAttention = computed(() =>
+    this.filteredCattleList().filter(a =>
+      MainDashboardComponent.ATTENTION_STATUSES.has((a.current_status || '').toUpperCase())
+    )
+  );
+
+  // Promedio solo sobre animales con peso > 0 — un animal sin pesaje (current_weight_kg en 0/null)
+  // no debe arrastrar el promedio hacia abajo como si realmente pesara 0 kg. `weighedCount` vs.
+  // `totalCount` quedan ambos expuestos para la columna "Con peso" (ej. "2 de 3").
+  public averageWeightByLotAndCategory = computed(() => {
+    const groups = new Map<string, { lot: string; category: string; totalWeight: number; weighedCount: number; totalCount: number }>();
+    for (const animal of this.filteredCattleList()) {
+      const lot = animal.lot_name || 'Sin lote';
+      const category = animal.category || 'Sin categoría';
+      const key = `${lot}__${category}`;
+      const entry = groups.get(key) ?? { lot, category, totalWeight: 0, weighedCount: 0, totalCount: 0 };
+      const weight = Number(animal.current_weight_kg || 0);
+      if (weight > 0) {
+        entry.totalWeight += weight;
+        entry.weighedCount += 1;
+      }
+      entry.totalCount += 1;
+      groups.set(key, entry);
+    }
+    return Array.from(groups.values())
+      .map(g => ({
+        lot: g.lot,
+        category: g.category,
+        avgWeight: g.weighedCount > 0 ? g.totalWeight / g.weighedCount : null,
+        weighedCount: g.weighedCount,
+        totalCount: g.totalCount
+      }))
+      .sort((a, b) => a.lot.localeCompare(b.lot) || a.category.localeCompare(b.category));
+  });
+
+  // "Sin SINIIGA" cubre tanto el vacío real como el placeholder 'S/N' que usa el formulario de
+  // alta por default (cattle-detail-modal.component.ts) — ambos significan "no identificado".
+  public animalsMissingIdentifier = computed(() =>
+    this.filteredCattleList().filter(a => {
+      const missingSiniiga = !a.rfid_siniiga || a.rfid_siniiga === 'S/N';
+      const missingRfid = !a.electronic_rfid;
+      return missingSiniiga || missingRfid;
+    })
+  );
+
+  // 🔑 Clave de reinicio compartida por las tablas paginadas de este componente: cualquier
+  // cambio de módulo/especie/lote/rancho activo debe regresar a la página 1. PagedTable la
+  // combina internamente con su propio `searchQuery` — no hace falta llamar `reset()` a mano
+  // en ningún setter, a diferencia del `Paginator` legacy.
+  private operationalPanelResetKey = computed(() => ({
+    tab: this.activeTab(),
+    species: this.selectedSpecies(),
+    lot: this.selectedLot(),
+    tenant: this.tenantService.activeTenantId()
+  }));
+
+  public pesoPromedioTable = new PagedTable(
+    () => this.averageWeightByLotAndCategory(),
+    () => this.operationalPanelResetKey(),
+    { search: { fields: row => [row.lot, row.category] } }
+  );
+
+  // Filtro estructurado "Falta" — select, no texto libre, por eso vive aparte del buscador de
+  // PagedTable y se filtra ANTES de entrar a la tabla paginada (mismo patrón que especie/lote).
+  public identificacionFaltaFilter = signal<'TODOS' | 'SINIIGA' | 'RFID'>('TODOS');
+
+  private identificacionFiltrada = computed(() => {
+    const filter = this.identificacionFaltaFilter();
+    if (filter === 'TODOS') return this.animalsMissingIdentifier();
+    return this.animalsMissingIdentifier().filter(a => {
+      if (filter === 'SINIIGA') return !a.rfid_siniiga || a.rfid_siniiga === 'S/N';
+      return !a.electronic_rfid; // filter === 'RFID'
+    });
+  });
+
+  public identificacionTable = new PagedTable(
+    () => this.identificacionFiltrada(),
+    () => ({ ...this.operationalPanelResetKey(), falta: this.identificacionFaltaFilter() }),
+    { search: { fields: row => [row.rfid_siniiga, row.numero_fuego] } }
+  );
+
+  public setIdentificacionFaltaFilter(value: string): void {
+    this.identificacionFaltaFilter.set(value as 'TODOS' | 'SINIIGA' | 'RFID');
+  }
+
+  // Filtro estructurado "Estado" — mismo patrón que "Falta" arriba.
+  public atencionEstadoFilter = signal<'TODOS' | 'RIESGO' | 'CUARENTENA' | 'EN_TRANSITO'>('TODOS');
+
+  private atencionFiltrada = computed(() => {
+    const filter = this.atencionEstadoFilter();
+    const list = this.animalsNeedingAttention();
+    return filter === 'TODOS' ? list : list.filter(a => (a.current_status || '').toUpperCase() === filter);
+  });
+
+  public atencionTable = new PagedTable(
+    () => this.atencionFiltrada(),
+    () => ({ ...this.operationalPanelResetKey(), estado: this.atencionEstadoFilter() }),
+    { search: { fields: row => [row.rfid_siniiga, row.numero_fuego, row.lot_name] } }
+  );
+
+  public setAtencionEstadoFilter(value: string): void {
+    this.atencionEstadoFilter.set(value as 'TODOS' | 'RIESGO' | 'CUARENTENA' | 'EN_TRANSITO');
+  }
+
   // 🔎 Inventario filtrado por búsqueda reactiva (rfid_siniiga, numero_fuego o electronic_rfid)
   public inventorySearchedList = computed(() => {
     const query = this.inventorySearch().trim().toLowerCase();
@@ -250,6 +430,10 @@ export class MainDashboardComponent implements OnInit {
   }
 
   public setSubTab(subTab: 'RESUMEN' | 'INVENTARIO' | 'GASTOS' | 'POR_ANIMAL' | 'EVENT_LOG') {
+    // Defensa en profundidad: aunque el <li> del tab esté oculto en el template, esto bloquea
+    // cualquier intento de activar un tab ADMIN-only programáticamente (consola, binding forzado,
+    // etc.) para un rol no-ADMIN en la empresa activa.
+    if (MainDashboardComponent.ADMIN_ONLY_SUBTABS.has(subTab) && !this.isAdminForActiveTenant()) return;
     this.activeSubTab.set(subTab);
     this.pagination.reset();
   }
@@ -320,6 +504,12 @@ export class MainDashboardComponent implements OnInit {
 
   public totalAnimalCosts = computed(() =>
     this.animalCostSummary().reduce((sum, row) => sum + row.total, 0)
+  );
+
+  public porAnimalTable = new PagedTable(
+    () => this.animalCostSummary(),
+    () => this.operationalPanelResetKey(),
+    { search: { fields: row => [row.rfid, row.numero_fuego, row.category] } }
   );
 
   /** Top 10 animales con más gasto registrado: balance (valor estimado - gasto) para detectar rendimiento negativo */
