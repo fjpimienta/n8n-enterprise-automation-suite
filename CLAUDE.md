@@ -92,6 +92,33 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
   directamente — los `schema.sql`/seeds versionados en el repo se han desactualizado
   respecto a producción más de una vez (ver `projects/agro-erp/CLAUDE.md`, regla 7, para
   el caso documentado).
+- **Manejo de `password` en el gateway CRUD — invariantes verificadas en vivo (LOCAL,
+  `workflow_entity`) en `v5/CRUD` y `v6/CRUD` por igual el 2026-10-05, no solo en la versión
+  que usa `agro-erp`:**
+  - El nodo `Build Query` omite `password` del `SET` de un `UPDATE` cuando el valor llega
+    vacío (`if (key === 'password' && (!value || value === '')) return;`). Esto es carga
+    estructural, no un detalle cosmético: los formularios de edición de usuario de
+    `agro-erp` y `dashboard` siempre mandan `password: ''` en cada guardado de perfil (el
+    campo se limpia al abrir el modal de edición para no mostrar el hash), así que sin este
+    guard cualquier edición de perfil (nombre, rol, teléfono) borraría silenciosamente la
+    contraseña real del usuario editado. Toda versión futura del motor (`v7`+) debe
+    conservar este guard explícitamente — no es un efecto secundario incidental de otra
+    lógica, hay que portarlo a mano.
+  - Las contraseñas que el gateway escribe se guardan como SHA-256 **sin sal**
+    (`crypto.createHash('sha256').update(value).digest('hex')` en `processValue`, mismo
+    patrón en `v5` y `v6`). Pendiente: migrar a bcrypt en `jwt-service` al momento del login
+    — fuera de alcance de esta nota, solo se documenta el estado actual.
+  - 🔴 **NO verificado — contradicho por lectura directa del código vivo:** se investigó si
+    el nodo `Normalize Data` de `v5/CRUD` o `v6/CRUD` elimina recursivamente la clave
+    `password` de la respuesta antes de devolverla. Leído el cuerpo completo de ambos nodos
+    directamente desde `workflow_entity` en LOCAL (2026-10-05): **ninguno de los dos hace
+    ningún filtrado de claves** — solo reestructuran `data`/`message`/`error` según
+    `operation`. La exposición original (`SELECT ${table}.*` en `Build Query` devuelve
+    *todas* las columnas de `users`, incluido el hash, a cualquier rol en
+    `allowed_roles_select`) sigue así de abierta en ambas versiones, salvo que el cambio se
+    haya aplicado solo en PRODUCCIÓN y no en el clon LOCAL — sin verificar contra el VPS. No
+    se documenta como cerrado porque no se pudo confirmar; ver conversación para el pedido
+    original de documentarlo como resuelto.
 
 ## Deuda técnica activa a nivel suite
 

@@ -30,6 +30,21 @@ Architecture overview, tech stack, and data-flow diagram: @ARCHITECTURE.md
   future reservation's ID. This broke once in `room-detail-modal` — the walk-in flow and
   the future-reservation flow must stay decoupled.
 
+## Known Debt (reported, not fixed here)
+
+- 🔴 **`UserListComponent` (embedded in `DashboardComponent` via `viewMode === 'user_mgmt'`,
+  triggered by the "Manage Users" button in `room-filters.component.html`) has zero role
+  check anywhere in its trigger chain.** `DashboardComponent`'s route only carries `authGuard`
+  (no `roleGuard`), and nothing downstream re-checks role before mounting the component or
+  fetching `users`. Any authenticated user of this app — any role — can open it and see every
+  row of `users` for the active tenant, including the password hash column (the gateway's
+  `Build Query` always does `SELECT *`; `allowed_fields` only whitelists what can be written/
+  filtered on, not what a SELECT/GETALL/GETONE returns — same root cause documented in
+  `agro-erp/CLAUDE.md`). Not fixed here — this note only records the finding so it isn't
+  rediscovered from scratch. Closing it needs a `roleGuard(['ADMIN'])` (or equivalent
+  component-level gate) in front of that `viewMode`, not a crud_models change — `users`'
+  `allowed_roles_select` already includes roles below ADMIN for other legitimate reasons.
+
 ## Build & Development Commands
 Always use these exact scripts:
 - **Install dependencies:** `npm install`
