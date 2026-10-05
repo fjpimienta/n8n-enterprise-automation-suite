@@ -21,8 +21,14 @@
         <div class="card shadow-sm border-0 h-100">
             <div class="card-body text-center d-flex flex-column justify-content-center">
                 <div class="subheader mb-2 font-weight-bold">Tasa de Preñez Global</div>
+                @if (stats().tasa === null) {
+                <div class="h2 mb-0 text-muted">Sin diagnóstico</div>
+                <small class="text-muted mt-2">Ningún vientre con palpación registrada en este grupo.</small>
+                } @else {
                 <div class="h1 mb-0 text-primary">{{ stats().tasa }}%</div>
-                <small class="text-muted mt-2">{{ stats().prenadas }} de {{ stats().total }} vientres preñados</small>
+                <small class="text-muted mt-2">{{ stats().prenadas }} de {{ stats().total }} vientres con
+                    diagnóstico, preñados</small>
+                }
             </div>
         </div>
     </div>
@@ -33,10 +39,14 @@
                 <h3 class="card-title">Distribución del Hato (Gestación)</h3>
             </div>
             <div class="card-body">
+                @if (stats().tasa === null) {
+                <div class="text-center text-muted py-5">Sin diagnósticos registrados para graficar.</div>
+                } @else {
                 <apx-chart [series]="getChartOptions().series" [labels]="getChartOptions().labels"
                     [colors]="getChartOptions().colors" [chart]="{ type: 'donut', height: 250 }"
                     [theme]="{ mode: themeService.currentTheme() }">
                 </apx-chart>
+                }
             </div>
         </div>
     </div>

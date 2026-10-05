@@ -2,7 +2,7 @@
     <div class="row g-2 align-items-center">
         <div class="col-12 mb-3">
             <div class="page-pretitle text-uppercase font-weight-bold text-muted">Resumen Ejecutivo</div>
-            <h2 class="page-title font-weight-bold">Capitalización y Rendimiento</h2>
+            <h2 class="page-title font-weight-bold">{{ isAdminForActiveTenant() ? 'Capitalización y Rendimiento' : 'Panel Operativo' }}</h2>
         </div>
 
         <div class="col-12 d-print-none">
@@ -44,6 +44,7 @@
                     <label for="tab-reproduccion" class="btn btn-outline-primary font-weight-bold flex-grow-1 flex-sm-grow-0">Módulo de Reproducción</label>
                 </div>
 
+                @if (isAdminForActiveTenant()) {
                 <button class="col-12 col-sm-auto btn btn-primary font-weight-bold d-flex align-items-center justify-content-center"
                     (click)="showExpenseModal.set(true)">
                     <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
@@ -55,6 +56,7 @@
                     </svg>
                     Registrar Gasto
                 </button>
+                }
             </div>
         </div>
     </div>
@@ -63,6 +65,7 @@
 <app-compliance-alert-card></app-compliance-alert-card>
 
 <div class="row row-cards mb-4">
+    @if (isAdminForActiveTenant()) {
     <div class="col-sm-6 col-xl-4">
         <div class="card shadow-sm border-0">
             <div class="card-body">
@@ -72,6 +75,7 @@
             </div>
         </div>
     </div>
+    }
     <div class="col-sm-6 col-xl-4">
         <div class="card shadow-sm border-0">
             <div class="card-body">
@@ -106,6 +110,7 @@
                     }
                 </a>
             </li>
+            @if (isAdminForActiveTenant()) {
             <li class="nav-item">
                 <a class="nav-link font-weight-bold" [class.active]="activeSubTab() === 'GASTOS'"
                     (click)="setSubTab('GASTOS')" style="cursor: pointer;">Historial de Gastos ({{
@@ -121,12 +126,14 @@
                 <a class="nav-link font-weight-bold" [class.active]="activeSubTab() === 'EVENT_LOG'"
                     (click)="setSubTab('EVENT_LOG')" style="cursor: pointer;">Cattle Event Log</a>
             </li>
+            }
         </ul>
     </div>
 
     <div class="card-body p-0">
         @if (activeSubTab() === 'RESUMEN') {
         <div class="p-4 rounded-bottom">
+            @if (isAdminForActiveTenant()) {
             <div class="card shadow-sm border-0 mb-4">
                 <div class="card-header border-bottom-0 pb-0 d-flex align-items-center justify-content-between">
                     <h3 class="card-title">Balance por UPP: Capitalización vs Gastos</h3>
@@ -172,6 +179,196 @@
                     }
                 </div>
             </div>
+            } @else {
+            <!-- 👷 Panel Operativo (no-ADMIN): conteos y estado del hato, sin ninguna cifra financiera. -->
+            <div class="row row-cards mb-4">
+                <div class="col-12 col-lg-4">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-header border-bottom-0 pb-0">
+                            <h3 class="card-title">Hato por Especie</h3>
+                        </div>
+                        <div class="card-body">
+                            @if (herdCountsBySpecies().length === 0) {
+                            <div class="text-muted">Sin animales en este periodo.</div>
+                            } @else {
+                            <ul class="list-unstyled mb-0">
+                                @for (row of herdCountsBySpecies(); track row.label) {
+                                <li class="d-flex justify-content-between align-items-center py-1">
+                                    <span class="badge bg-purple-lt font-weight-bold">{{ row.label }}</span>
+                                    <span class="font-weight-bold">{{ row.count }}</span>
+                                </li>
+                                }
+                            </ul>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-4">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-header border-bottom-0 pb-0">
+                            <h3 class="card-title">Hato por Categoría</h3>
+                        </div>
+                        <div class="card-body">
+                            @if (herdCountsByCategory().length === 0) {
+                            <div class="text-muted">Sin animales en este periodo.</div>
+                            } @else {
+                            <ul class="list-unstyled mb-0">
+                                @for (row of herdCountsByCategory(); track row.label) {
+                                <li class="d-flex justify-content-between align-items-center py-1">
+                                    <span class="badge bg-secondary-lt">{{ row.label }}</span>
+                                    <span class="font-weight-bold">{{ row.count }}</span>
+                                </li>
+                                }
+                            </ul>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-lg-4">
+                    <div class="card shadow-sm border-0 h-100">
+                        <div class="card-header border-bottom-0 pb-0">
+                            <h3 class="card-title">Hato por Lote</h3>
+                        </div>
+                        <div class="card-body">
+                            @if (herdCountsByLot().length === 0) {
+                            <div class="text-muted">Sin animales en este periodo.</div>
+                            } @else {
+                            <ul class="list-unstyled mb-0">
+                                @for (row of herdCountsByLot(); track row.label) {
+                                <li class="d-flex justify-content-between align-items-center py-1">
+                                    <span class="badge bg-blue-lt">{{ row.label }}</span>
+                                    <span class="font-weight-bold">{{ row.count }}</span>
+                                </li>
+                                }
+                            </ul>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header border-bottom-0 pb-0">
+                    <h3 class="card-title">Peso Promedio por Lote y Categoría</h3>
+                </div>
+                <div class="card-body">
+                    @if (averageWeightByLotAndCategory().length === 0) {
+                    <div class="text-center text-muted py-3">Sin animales en este periodo.</div>
+                    } @else {
+                    <div class="table-responsive">
+                        <table class="table table-vcenter card-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Lote</th>
+                                    <th>Categoría</th>
+                                    <th class="text-end">Con peso</th>
+                                    <th class="text-end">Peso Promedio</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (row of averageWeightByLotAndCategory(); track row.lot + '__' + row.category) {
+                                <tr>
+                                    <td><span class="badge bg-blue-lt">{{ row.lot }}</span></td>
+                                    <td><span class="badge bg-secondary-lt">{{ row.category }}</span></td>
+                                    <td class="text-end text-muted">{{ row.weighedCount }} de {{ row.totalCount }}</td>
+                                    <td class="text-end font-weight-bold">
+                                        @if (row.avgWeight === null) {
+                                        —
+                                        } @else {
+                                        {{ row.avgWeight | number:'1.1-1' }} kg
+                                        }
+                                    </td>
+                                </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    }
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header border-bottom-0 pb-0">
+                    <h3 class="card-title">Identificación Incompleta</h3>
+                </div>
+                <div class="card-body">
+                    @if (animalsMissingIdentifier().length === 0) {
+                    <div class="text-center text-muted py-3">Todos los animales tienen arete SINIIGA y RFID
+                        registrados.</div>
+                    } @else {
+                    <div class="table-responsive">
+                        <table class="table table-vcenter card-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Arete SINIIGA</th>
+                                    <th>Nº Fuego</th>
+                                    <th>Lote</th>
+                                    <th>Falta</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (animal of animalsMissingIdentifier(); track animal.id) {
+                                <tr>
+                                    <td class="font-monospace text-primary font-weight-bold">{{
+                                        (!animal.rfid_siniiga || animal.rfid_siniiga === 'S/N') ? 'Sin arete' :
+                                        animal.rfid_siniiga }}</td>
+                                    <td>{{ animal.numero_fuego || 'S/N' }}</td>
+                                    <td>{{ animal.lot_name || 'Sin lote' }}</td>
+                                    <td>
+                                        @if (!animal.rfid_siniiga || animal.rfid_siniiga === 'S/N') {
+                                        <span class="badge bg-danger-lt me-1">SINIIGA</span>
+                                        }
+                                        @if (!animal.electronic_rfid) {
+                                        <span class="badge bg-warning-lt">RFID</span>
+                                        }
+                                    </td>
+                                </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    }
+                </div>
+            </div>
+
+            <div class="card shadow-sm border-0 mb-4">
+                <div class="card-header border-bottom-0 pb-0">
+                    <h3 class="card-title">Animales que Requieren Atención</h3>
+                </div>
+                <div class="card-body">
+                    @if (animalsNeedingAttention().length === 0) {
+                    <div class="text-center text-muted py-3">Ningún animal en Riesgo, Cuarentena o En Tránsito en este
+                        periodo.</div>
+                    } @else {
+                    <div class="table-responsive">
+                        <table class="table table-vcenter card-table mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Arete SINIIGA</th>
+                                    <th>Nº Fuego</th>
+                                    <th>Categoría</th>
+                                    <th>Lote</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (animal of animalsNeedingAttention(); track animal.id) {
+                                <tr>
+                                    <td class="font-monospace text-primary font-weight-bold">{{ animal.rfid_siniiga }}
+                                    </td>
+                                    <td>{{ animal.numero_fuego || 'S/N' }}</td>
+                                    <td>{{ animal.category }}</td>
+                                    <td>{{ animal.lot_name || 'Sin lote' }}</td>
+                                    <td><span class="badge bg-danger-lt">{{ animal.current_status }}</span></td>
+                                </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                    }
+                </div>
+            </div>
+            }
 
             @if (activeTab() === 'CRIA') {
             <app-reproductive-dashboard [cattleData]="filteredCattleList()"></app-reproductive-dashboard>
@@ -280,7 +477,7 @@
         </div>
         }
 
-        @if (activeSubTab() === 'GASTOS') {
+        @if (activeSubTab() === 'GASTOS' && isAdminForActiveTenant()) {
         <div class="card-body border-bottom py-3">
             <div class="text-muted">Mostrar <div class="mx-2 d-inline-block"><select class="form-select form-select-sm"
                         [value]="pagination.pageSize()" (change)="pagination.changePageSize($event)">
@@ -336,7 +533,7 @@
         </div>
         }
 
-        @if (activeSubTab() === 'POR_ANIMAL') {
+        @if (activeSubTab() === 'POR_ANIMAL' && isAdminForActiveTenant()) {
         @if (animalCostSummary().length === 0) {
         <div class="text-center text-muted py-5">
             <i class="ti ti-pig-off fs-2 d-block mb-2"></i>
@@ -415,7 +612,7 @@
         }
         }
 
-        @if (activeSubTab() === 'EVENT_LOG') {
+        @if (activeSubTab() === 'EVENT_LOG' && isAdminForActiveTenant()) {
         <app-cattle-event-log [cattleData]="cattleList()" [moduleCattleData]="eventLogCattleList()"></app-cattle-event-log>
         }
 
