@@ -5,6 +5,50 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🐛 Context Switcher mostraba empresas a las que el usuario no tenía acceso
+
+Un usuario con una sola empresa activa en `user_companies` (ej. `id_company=6`) veía en el
+selector de rancho empresas de una sesión anterior en el mismo navegador (ej. Hosting3m, UPP La
+Bendición, Rancho El Palomar), pese a que el backend (`jwt-service`, filtrado correctamente por
+`user_companies`) nunca las autorizó para esa cuenta.
+
+**Causa raíz confirmada** (verificada con cuentas QA sintéticas en LOCAL, sin tocar datos
+reales — ver detalle completo en el hilo de la sesión que originó este fix):
+* `TenantService` (`core-auth`) persiste `user_tenants`/`active_tenant_context` en
+  `localStorage` y solo los limpia vía `clearContext()` — nunca invocado automáticamente.
+* `AuthService.logout()` solo limpiaba `authToken`/`role`, dejando esas dos llaves obsoletas
+  en el navegador tras cerrar sesión.
+* `jwt-service` (`/generate-token`) devolvía `data.company` (singular) en el login exitoso de
+  una cuenta con **una sola empresa**, pero **omitía `data.companies`** por completo — el
+  `login.component.ts` de `agro-erp` ya sabía sincronizar `TenantService.setAvailableTenants()`
+  con ese arreglo, pero nunca se ejecutaba porque el arreglo nunca llegaba.
+* Resultado: una cuenta de una sola empresa heredaba silenciosamente el `user_tenants` de la
+  sesión anterior en ese navegador.
+
+**Fix aplicado (2 archivos, sin cambios en `login.component.ts` — ya sincronizaba correctamente
+una vez que el backend empezó a mandar `companies`):**
+* `microservices/jwt-service/index.js`: el login exitoso ahora siempre incluye
+  `data.companies` (la lista completa, aunque sea de 1), no solo `data.company`.
+* `core-auth/src/lib/services/auth.service.ts`: `logout()` ahora también llama a
+  `tenantService.clearContext()` — defensa en profundidad, fail-closed, independiente del fix
+  del punto anterior.
+* Verificado en LOCAL con dos cuentas QA sintéticas (1 empresa / 3 empresas, creadas y
+  eliminadas en la misma sesión, sin tocar cuentas reales): el flujo de una sola empresa ahora
+  devuelve `companies` con 1 entrada y sobrescribe el caché viejo; el flujo multi-empresa
+  (`select_company` → selección → `success`) sigue devolviendo la lista completa sin cambios.
+* **Pendiente antes de cerrar:** aplicar ambos archivos a PRODUCCIÓN (mismo protocolo de
+  backup/checksum/rebuild) y verificar con las dos cuentas reales que originaron el reporte —
+  `12095038@gmail.com` (debe ver únicamente `id_company=6`) y `aguilar.resendez@hotmail.com`
+  (debe seguir viendo exactamente `5,6,7,8,9`, caso multi-empresa legítimo que no debe romperse).
+
+**Deuda técnica no bloqueante, detectada durante la revisión (no forma parte de este fix):**
+* `activeCompany.business_type` en `login.component.ts` siempre cae al default `'ADMIN'`
+  porque el `SELECT` de `/generate-token` en `jwt-service` nunca incluye la columna
+  `business_type` — cualquier lógica de UI de `agro-erp` que ramifique sobre `business_type`
+  está recibiendo silenciosamente `'ADMIN'` sin importar el valor real.
+* `login.component.ts` línea ~70 tiene una llamada muerta a `this.tenantService.debugState()`
+  (el método ya es un no-op, solo código de debug sin usar) — remover antes de mergear a `main`.
+
 ### 🐄 Ocho herramientas MCP nuevas: traslado, reproducción, desparasitación, castración, cambio de arete, autorización y anulación de eventos
 
 El Agente IA no podía trasladar animales entre lotes de la misma UPP, registrar reproducción,
