@@ -27,6 +27,16 @@
   3 tablas fuente. Ver `ARCHITECTURE.md` y `CLAUDE.md` para el fix de sanitización de
   identificadores dictados por voz de esta misma versión (sin impacto en este archivo, es
   un cambio de n8n, no de base de datos).
+- v1.16.0 (2026-10-03 a 2026-10-04) — Gestión Avanzada de Hato vía Agente IA: tres tablas
+  nuevas de evento (`cattle_breeding_events`, `cattle_deworming_events`,
+  `cattle_castration_events`), tabla genérica de anulación (`event_voids`); extensión del
+  `CHECK` de `historico_movimientos.tipo_movimiento` para incluir `CAMBIO_ARETE`; corrección
+  de un bug real en `sp_move_livestock` (`'TRASLADO_LOTE'` → `'TRASLADO'`, y match de lote
+  por `ILIKE` parcial en vez de exacto); migración 063 de `vw_cattle_event_log` (4 ramas
+  `UNION ALL` nuevas: `REPRODUCCION`/`DESPARASITACION`/`CASTRACION`/`TRASLADO`+
+  `CAMBIO_ARETE`); tres bugs reales corregidos en `register_livestock_purchase` (SQL inline
+  en n8n, no un SP) — inferencia de UPP desde el lote, bug de tipos `number`/`null` en
+  `current_weight_kg`, validación de identificador duplicado.
 
 > ⚠️ **Nota de higiene de documentación (2026-08-14):** el `schema.sql` versionado en el
 > repo **no refleja ninguna tabla ni columna de v1.10.0** (verificado: cero coincidencias
@@ -34,7 +44,12 @@
 > `cattle_movement_event_health_certs`, `chk_normative_type_fixed_mapping`,
 > `compliance_certificates_type_subject_check`). Regenerar con `pg_dump --schema-only`
 > contra producción antes de usarlo como referencia de diagnóstico — mismo patrón de
-> desactualización ya señalado en `CLAUDE.md`, regla 7, y van tres veces.
+> desactualización ya señalado en `CLAUDE.md`, regla 7, y van tres veces. **El mismo patrón
+> aplica ahora también a las tablas de v1.16.0** (`cattle_breeding_events`,
+> `cattle_deworming_events`, `cattle_castration_events`, `event_voids`) — documentadas aquí
+> a partir de las pruebas reales de esta sesión, no de una captura de `pg_dump` formal.
+> Confirmar con `pg_dump --schema-only` antes de usar esta sección como referencia exacta
+> de columnas/constraints.
 
 ## 📌 Core Directives
 * **RDBMS:** PostgreSQL
@@ -78,6 +93,13 @@ Registry of biomass with embedded compliance rules.
   Guarded by `fn_guard_livestock_paddock()`: a paddock belongs to exactly one production
   unit, and the trigger rejects assigning it to an animal standing in a different unit.
   *(añadido en v1.9.0)*
+* `lot_id` (UUID, FK -> `production_unit_lots`, nullable) - Current administrative lot
+  (distinct from `paddock_id`, see `production_unit_lots` below for that distinction).
+  Updated by `sp_move_livestock` (v1.16.0, intra-UPP lot transfers via the AI Agent) and by
+  the Lotes admin screen (v1.15.0). ⚠️ **Not exposed by any Meta-CRUD model nor by
+  `vw_cattle_kpi`** — the frontend lot filter/count derives it indirectly via
+  `vw_cattle_kpi.lot_name` matched by name, not by this column directly (see "Módulo de
+  administración de Lotes por UPP" in `CHANGELOG.md`, v1.Unreleased known limitations).
 * `production_unit_id` (UUID, FK -> `production_units`, nullable) - Real FK that replaces
   the free-text `upp_origen` as the authoritative link to a UPP. Guarded by
   `fn_guard_livestock_production_unit()` (fail-closed against cross-tenant assignment).
@@ -88,17 +110,50 @@ Registry of biomass with embedded compliance rules.
   vía `pg_type` el 2026-09-09, corrigiendo la documentación previa que lo listaba como
   ENUM): VACA, TORO, NOVILLO, NOVILLONA, BECERRA, BECERRO, BECERRO_TORETE *(añadido en
   v1.11.0, ver más abajo)*, BUFALA, BUFALO, BUCERRO, BUCERRA, BORREGO, BORREGA, CABALLO,
-  YEGUA, POTRO, POTRANCA, CABALLO_CASTRADO. Alterable vía
-  `ALTER TABLE ... DROP/ADD CONSTRAINT` (no `ALTER TYPE`, precisamente porque no es un
-  ENUM). El CHECK es global a toda la plataforma multi-tenant — incluye categorías equinas
-  no usadas por este cliente, compartidas con otro tenant de la suite.
+  YEGUA, POTRO, POTRANCA, CABALLO_CASTRADO *(destino de `log_castration_event`, v1.16.0, al
+  castrar un `CABALLO`)*. Alterable vía `ALTER TABLE ... DROP/ADD CONSTRAINT` (no
+  `ALTER TYPE`, precisamente porque no es un ENUM). El CHECK es global a toda la plataforma
+  multi-tenant — incluye categorías equinas no usadas por este cliente, compartidas con
+  otro tenant de la suite.
 * `current_status` (ENUM: ACTIVO, EN_TRANSITO, VENDIDO, BAJA_MORTANDAD, PREÑADA, VACÍA, DESARROLLO, RIESGO, FINALIZADO, CUARENTENA)
 * `birth_date` (DATE)
 * `current_weight_kg` (NUMERIC 10,2) - Auto-updated via trigger.
 * `metadata` (JSONB) - Flexible attribute bag for vertical-specific data not worth normalizing.
+  Used by `register_livestock_purchase` (ver más abajo) para `source`/`purchase_price`/
+  `seller_name`/`purchase_date`/`notes` de una compra.
 * `species` (VARCHAR, Default: 'BOVINO')
 * `upp_origen` (VARCHAR) - Origin ranch / cost center (e.g. "UPP La Bendición"). Automatically set to `NULL` on exit (`VENDIDO`) by `sp_procesar_salida_ganado`. ⚠️ **`sp_procesar_baja_mortandad` (v1.11.0) deliberadamente NO limpia este campo** — a diferencia de venta, se conserva para permitir análisis de mortalidad por lote/UPP.
 * `tb_test_date` / `br_test_date` (DATE) - Compliance metrics. Regulatory validity window: 60 days.
+
+#### `register_livestock_purchase` — alta por compra (SQL inline en n8n, no un SP; 3 bugs reales corregidos en v1.16.0)
+
+*A diferencia del resto de las tools MCP de este archivo, `register_livestock_purchase` no
+invoca una función PL/pgSQL — es un `INSERT` armado directamente en el campo Query del nodo
+`postgresTool` de `v6/MCP Server Cattle`. Documentado aquí porque afecta directamente esta
+tabla, no por tener un SP propio que documentar.*
+
+* **Bug 1 — UPP no inferida del lote:** cuando el usuario solo menciona el lote destino
+  (sin nombrar la UPP), `production_unit_id` quedaba `NULL` y el trigger
+  `fn_guard_livestock_production_unit()`/de consistencia UPP↔lote rechazaba el alta.
+  Corregido resolviendo `production_unit_id` también desde la UPP propietaria del lote
+  resuelto (`production_unit_lots.production_unit_id`) cuando no se da UPP explícita.
+* **Bug 2 — tipo `current_weight_kg` y peso inventado:** el parámetro opcional de peso se
+  declaraba `$fromAI(..., 'number', null)` pese a que la query lo castea `$N::text` antes de
+  `::numeric` — n8n rechaza la llamada completa (`Expected number, received null`) antes de
+  que llegue a Postgres en cuanto el LLM omite el peso. El síntoma visible en producción era
+  más grave que el error técnico: el Agente **inventaba** un peso (120kg, luego 100kg) en
+  vez de omitirlo. Corregido cambiando el tipo declarado a `'string'` (igual que el resto de
+  parámetros opcionales de esta tool) y reforzando el `toolDescription` para prohibir
+  explícitamente estimar el peso.
+* **Bug 3 — sin validación de identificador duplicado:** el `INSERT` no comprobaba si
+  `rfid_siniiga` ya identificaba a otro animal del tenant (en cualquiera de las 3 columnas:
+  `rfid_siniiga`, `electronic_rfid`, `numero_fuego`) — permitía registrar un segundo animal
+  con un arete ya usado. Corregido con una CTE `duplicate_check` + `AND NOT EXISTS (...)` en
+  el `WHERE` del `INSERT`. Confirmado en producción: repetir un arete ya registrado hace que
+  el `INSERT` no inserte ninguna fila (0 filas, sin error — el Agente lo reporta como
+  rechazo de negocio).
+* Las 3 correcciones están **verificadas en producción** con pruebas reales (ver
+  `CHANGELOG.md`, sección `[Unreleased]`, para el detalle completo de cada prueba).
 
 ### `cattle_weight_logs` (Telemetry)
 * `id` (UUID, PK)
@@ -147,14 +202,23 @@ Registry of biomass with embedded compliance rules.
 * `livestock_id` (UUID, FK -> `cattle_livestock`)
 * `electronic_rfid` (VARCHAR)
 * `tenant_id` (INT)
-* `tipo_movimiento` (ENUM: VENTA, BAJA_MORTANDAD, TRASLADO)
+* `tipo_movimiento` (VARCHAR + CHECK `historico_movimientos_tipo_check`: VENTA,
+  BAJA_MORTANDAD, TRASLADO, REVERSION *(añadido en migración 025, ver "Compensating
+  reversal" más abajo)*, CAMBIO_ARETE *(añadido en v1.16.0, migración ad-hoc
+  `ALTER TABLE ... DROP/ADD CONSTRAINT`, aplicada LOCAL y PRODUCCIÓN mismo turno)*).
 * `upp_origen_anterior` (VARCHAR) - Snapshot of the ranch of origin at the moment of the movement.
 * `fecha_registro` (TIMESTAMP)
 * `notes` (TEXT) — *(añadido en v1.11.0)* usado por `sp_procesar_baja_mortandad` para
   resumir causa y descripción; el detalle rico vive en `mortality_events` (ver más abajo).
-* Write-only side effect of `sp_procesar_salida_ganado` (`VENTA` case) y de
-  `sp_procesar_baja_mortandad` (`BAJA_MORTANDAD` case, *añadido en v1.11.0*); not exposed as
-  a direct Meta-CRUD model.
+  *(v1.16.0)* También usado por `sp_move_livestock` (resumen de lote origen/destino) y por
+  `update_livestock_tag` (resumen de identificador anterior/nuevo, `tipo_movimiento =
+  'CAMBIO_ARETE'`) para quedar visibles en `vw_cattle_event_log` (migración 063).
+* Write-only side effect of `sp_procesar_salida_ganado` (`VENTA` case), de
+  `sp_procesar_baja_mortandad` (`BAJA_MORTANDAD` case, *añadido en v1.11.0*), de
+  `sp_move_livestock` (`TRASLADO` case, *v1.16.0 — originalmente escribía el valor inválido
+  `'TRASLADO_LOTE'`, corregido a `'TRASLADO'`, ya permitido desde la línea base*) y de
+  `update_livestock_tag` (`CAMBIO_ARETE` case, *v1.16.0*); not exposed as a direct Meta-CRUD
+  model.
 
 ### `agriculture_telemetry` (Agriculture Module - Hybrid Table)
 * `id` (UUID, PK)
@@ -221,6 +285,11 @@ cruzar edad + peso real antes de promover un animal, nunca promover solo por eda
 * Valores confirmados con el cliente (especie BOVINO; Búfalo/Borrego quedan sin filas
   todavía — este cliente solo maneja Bovino en la práctica): destete 5 meses, etapa
   reproductiva (femenina) 16 meses.
+* ⚠️ **Sin fila para `CABALLO → CABALLO_CASTRADO` (v1.16.0):** `log_castration_event` aplica
+  la transición de categoría directamente en código SQL, sin consultar este catálogo — la
+  castración equina no pasa por `requiere_validacion_peso` ni por ninguna regla de edad/peso
+  aquí. Consistente con que `cattle_lifestage_catalog` nunca cubrió especie `EQUIDO` en la
+  práctica (ver nota arriba: "Búfalo/Borrego quedan sin filas todavía").
 
 ---
 
@@ -256,6 +325,36 @@ lifecycle. Deployed to production 2026-07-27 through 2026-07-29 (migrations 010-
   livestock (client-confirmed real state for Santa Lucía, 2026-07-29).
 * `fire_brand_patent` — links to `brand_registrations` by patent number where known
   (e.g. UPP 27-009-4146-002 carries patent 155, matching brand `R`'s municipal registry).
+* **Editable desde el panel Web (v1.Unreleased, ver `CHANGELOG.md`):** nombre, clave UPP,
+  estado, municipio y localidad. `state_code`/`municipality_code` y `surface_matrix` quedan
+  deliberadamente fuera del formulario (generados / transcripción verbatim del documento
+  oficial, respectivamente).
+
+### `production_unit_lots` (Lote administrativo) — previamente indocumentada
+
+*Documentada por primera vez en v1.11.1 (existía desde antes, sin documentación); uso
+ampliado en v1.16.0.*
+
+* `id` (UUID, PK), `id_company` (INT) — tenant-scoped.
+* `production_unit_id` (UUID, FK -> `production_units`).
+* `lot_name` (VARCHAR) — único por UPP entre lotes activos (`uq_lot_name_per_unit`,
+  case-insensitive), **no único por tenant**: dos UPPs del mismo tenant pueden tener un lote
+  con el mismo nombre. ⚠️ Esto es la base del hallazgo señalado en `CHANGELOG.md` sobre el
+  filtro de lote de la Bitácora: filtra por **nombre**, no por `id`, y hoy ningún tenant
+  repite nombre de lote entre sus propias UPPs (verificado 2026-10-04) — si eso cambiara,
+  ambos lotes se mezclarían en ese filtro.
+* `tenencia` (VARCHAR, CHECK, valores observados: PROPIA/RENTADA — u otros, no
+  completamente enumerados en esta sesión), `lessor_name` (VARCHAR, nullable) — solo
+  poblado cuando `tenencia = 'RENTADA'` (`production_unit_lots_lessor_only_if_rented_check`).
+* `is_active` (BOOLEAN) — no hay `DELETE` físico, solo baja lógica. Desactivar un lote **no**
+  limpia `cattle_livestock.lot_id` de los animales asignados a él (limitación conocida,
+  documentada en `CHANGELOG.md`).
+* **Sin datos en producción hasta v1.9.0** ("`production_unit_lots` está vacía en
+  producción al 2026-09-16"); poblada progresivamente desde v1.15.0/v1.16.0 conforme se usa
+  el módulo de administración de lotes y la tool `move_livestock`.
+* **Consumida por `sp_register_birth_event` (v1.9.0+, `p_lot_id`), `sp_move_livestock`
+  (v1.16.0, resuelve destino vía `ILIKE '%...%'` parcial sobre `lot_name`, no exacto — ver
+  más abajo) y por el módulo de administración de Lotes (frontend, v1.15.0).**
 
 ### `psg_licenses` (Prestador de Servicios Ganaderos)
 * Belongs to the **person**, not the predio — operational, gates livestock movement.
@@ -367,6 +466,14 @@ lifecycle. Deployed to production 2026-07-27 through 2026-07-29 (migrations 010-
 chain that supports an interstate movement. Complements the Regulatory Registry Subsystem
 above; a movement changes *where* an animal is, the registry subsystem records *who* is
 certified to hold it there.
+
+> ⚠️ **No confundir con `sp_move_livestock` (v1.16.0, Agente IA).** Este subsistema modela
+> movilización oficial UPP↔UPP/PSG con folio REEMO y cadena documental de cumplimiento.
+> `sp_move_livestock` es un movimiento **interno, intra-UPP** (cambio de lote dentro de la
+> misma unidad de producción) — no toca `cattle_movement_events` ni ninguna tabla de este
+> subsistema, solo `cattle_livestock.lot_id` e `historico_movimientos`. Son dos motores de
+> movimiento completamente separados, confirmado con el cliente (ver "Gestión Avanzada de
+> Hato vía Agente IA" más abajo).
 
 ### `cattle_movement_rules` (Policy Catalog) — restructured, migration 042
 * `id` (UUID, PK), no `id_company` (global policy, applies to all tenants equally).
@@ -495,6 +602,13 @@ so every existing load script keeps working unmodified. Verified against a real 
 update on `numero_fuego` correctly produced zero history rows; a real `rfid_siniiga` change
 correctly produced one row with the `CAPTURE_CORRECTION` default and no `changed_by`.
 
+⚠️ **v1.16.0:** `update_livestock_tag` (ver más abajo) hace su `UPDATE` sin pasar ningún
+`SET LOCAL` de los anteriores — cualquier cambio de arete/fuego/chip vía Agente IA queda
+registrado con `reason = 'CAPTURE_CORRECTION'` y `changed_by = NULL` por default, igual que
+cualquier otro `UPDATE` que no los especifique. No se consideró necesario distinguir el
+origen Agente IA en esta columna; si se requiere en el futuro, `update_livestock_tag` podría
+emitir `SET LOCAL app.identifier_change_user` con el email del usuario antes del `UPDATE`.
+
 ---
 
 ## ⚰️ Mortality & Async Authorization Subsystem (v1.11.0 – v1.12.0)
@@ -527,6 +641,11 @@ decisiones de diseño completas (el "por qué"). Esta sección cubre el DDL.
 * No hay `UNIQUE` a nivel de constraint sobre `(livestock_id, tipo_evento, estado)`, pero
   `sp_solicitar_autorizacion` reutiliza una solicitud `PENDIENTE` existente del mismo
   animal+tipo en vez de duplicar, a nivel de lógica de aplicación.
+* **Herramientas MCP de lectura/resolución (v1.16.0):** `list_pending_requests` (lista
+  `estado = 'PENDIENTE'` del tenant, para que el usuario pregunte "¿qué tengo pendiente de
+  aprobar?" sin entrar al panel Web) y `review_pending_request` — ver "Gestión Avanzada de
+  Hato vía Agente IA" más abajo para el wrapper de seguridad que esta última agrega sobre
+  `sp_resolver_autorizacion`.
 
 ### `sp_procesar_baja_mortandad(p_electronic_rfid, p_rfid_siniiga, p_numero_fuego, p_tenant_id, p_causa_mortandad, p_fecha_evento, p_descripcion, p_reportado_por_email, p_autorizado_por_email, p_livestock_id)`
 * Mismo patrón de desambiguación multi-identificador que `sp_procesar_salida_ganado`
@@ -580,6 +699,12 @@ decisiones de diseño completas (el "por qué"). Esta sección cubre el DDL.
 * Registrado en `crud_models` con `sp_requires_tenant = false` — no recibe `tenant_id` como
   parámetro; la validación de tenant ya ocurrió al crear la solicitud original en
   `sp_solicitar_autorizacion`.
+* ⚠️ **v1.16.0 — hallazgo de seguridad real, mitigado en la capa de la tool, no en el SP:**
+  este SP por sí solo **no valida** que la solicitud que resuelve pertenezca al tenant del
+  usuario que la resuelve — solo valida vigencia y estado. La tool MCP
+  `review_pending_request` agrega esa validación de propiedad por tenant antes de invocarlo
+  (ver "Gestión Avanzada de Hato vía Agente IA" más abajo). El SP en sí no fue modificado en
+  v1.16.0 — el wrapper vive en la query del nodo n8n, no en PL/pgSQL.
 
 ---
 
@@ -628,7 +753,9 @@ principio, ser sustituido por el LLM.
 * **No es una garantía arquitectónica**, solo un refuerzo de prompt — `v6/MCP Server Cattle`
   corre como workflow MCP separado, sin acceso directo al contexto de sesión del workflow
   que lo invoca, así que no hay forma simple de inyectar `tenant_id` por expresión de n8n en
-  vez de depender del LLM. Queda como deuda técnica de arquitectura, ver `CLAUDE.md`.
+  vez de depender del LLM. Queda como deuda técnica de arquitectura, ver `CLAUDE.md`. **El
+  mismo riesgo aplica íntegramente a las 8 tools nuevas de v1.16.0** — ninguna de ellas
+  cambia este mecanismo; ver la sección correspondiente más abajo.
 
 **Probado end-to-end en producción (2026-09-18/19), tenant 3 ("Pista de Hielo"):**
 mortandad ✅ (madre `9999999999`, cría `aab8e413-f94b-40ef-afdb-5577b091703f` →
@@ -686,11 +813,9 @@ anterior de este archivo — no son nuevos de v1.11.0, solo su documentación lo
   nada.
 * **Versión de 13 parámetros** (con `p_lot_id uuid DEFAULT NULL`, la vigente para la tool
   MCP `register_birth_event`, ver más abajo): agrega la tabla **`production_unit_lots`**
-  (`id`, `id_company`, `production_unit_id`, previamente indocumentada — no confundir con
-  `production_unit_paddocks`, que es un concepto distinto: potrero físico vs. lote
-  administrativo). Si `p_lot_id` viene poblado, se valida que exista y pertenezca al
-  tenant (`RAISE EXCEPTION ... P0002` si no), y **de ahí se deriva `production_unit_id`
-  automáticamente** — no hace falta mandar ambos.
+  (documentada arriba, sección "Regulatory Registry Subsystem"). Si `p_lot_id` viene
+  poblado, se valida que exista y pertenezca al tenant (`RAISE EXCEPTION ... P0002` si no),
+  y **de ahí se deriva `production_unit_id` automáticamente** — no hace falta mandar ambos.
 * **Prioridad de ubicación real (versión de 13 parámetros):**
   `v_final_lot_id := COALESCE(p_lot_id, v_dam_lot_id)`
   `v_final_production_unit := COALESCE(v_explicit_lot_unit, v_dam_production_unit, p_production_unit_id)`
@@ -699,6 +824,8 @@ anterior de este archivo — no son nuevos de v1.11.0, solo su documentación lo
   madre tampoco tiene nada, se usa `p_production_unit_id` tal cual.
 * `production_unit_lots` está vacía en producción al 2026-09-16 (0 filas para todos los
   tenants existentes) — en la práctica, hoy `p_lot_id` siempre debe omitirse/ir `NULL`.
+  ⚠️ **Esto cambió a partir de v1.15.0/v1.16.0** conforme se usa el módulo de Lotes y
+  `move_livestock` — ver la entrada de `production_unit_lots` arriba.
 
 ### Herramienta MCP `register_birth_event` (Agente IA, v1.11.0+)
 
@@ -725,6 +852,118 @@ anterior de este archivo — no son nuevos de v1.11.0, solo su documentación lo
 
 ---
 
+## 🐂 Gestión Avanzada de Hato vía Agente IA (v1.16.0)
+
+*Añadido 2026-10-03/04.* Ocho herramientas MCP nuevas probadas de punta a punta en
+PRODUCCIÓN por el canal real de chat (WhatsApp/Web Chat). ⚠️ **Nota de procedencia:** las 3
+tablas de evento y `event_voids` descritas aquí se documentan a partir del comportamiento
+observado en pruebas reales de esta sesión, no de una captura `pg_get_functiondef`/
+`pg_dump --schema-only` formal — confirmar columnas/constraints exactos contra producción
+antes de usar esta sección como referencia de diagnóstico (mismo patrón de higiene ya
+señalado en la nota al inicio de este archivo).
+
+### `cattle_breeding_events` (Reproducción) — tabla de evento, whitelisted en `event_voids`
+* Respalda `log_breeding_event`. Columnas observadas: `livestock_id`, `tenant_id`,
+  `breeding_date`, método de monta/inseminación, semental, fecha de parto estimada, notas.
+* Alimenta la rama `REPRODUCCION` de `vw_cattle_event_log` (migración 063, ver más abajo).
+
+### `cattle_deworming_events` (Desparasitación) — tabla de evento, whitelisted en `event_voids`
+* Respalda `log_deworming_event`. Columnas observadas: `livestock_id`, `tenant_id`,
+  `application_date`, producto, dosis, fecha de refuerzo, notas.
+* Alimenta la rama `DESPARASITACION` de `vw_cattle_event_log`.
+
+### `cattle_castration_events` (Castración) — tabla de evento, whitelisted en `event_voids`
+* Respalda `log_castration_event`. Columnas observadas: `livestock_id`, `tenant_id`,
+  `castration_date`, categoría anterior, categoría nueva, método, notas.
+* El `UPDATE` de `cattle_livestock.category` que acompaña el registro (ej.
+  `CABALLO → CABALLO_CASTRADO`) se hace en la misma transacción que el `INSERT` en esta
+  tabla, **sin pasar por `cattle_lifestage_catalog`** (ver nota en esa sección arriba).
+* Alimenta la rama `CASTRACION` de `vw_cattle_event_log`.
+
+### `event_voids` (Anulación genérica) — whitelist-only
+* Mecanismo genérico de "borrado lógico" para las 3 tablas de evento anteriores
+  (`cattle_breeding_events`/`cattle_deworming_events`/`cattle_castration_events`) — whitelist
+  fija de 3 nombres de tabla, sin SQL dinámico sobre tablas arbitrarias.
+* `UNIQUE (event_table, event_id)` — un mismo evento no puede anularse dos veces.
+* Filtrado en `vw_cattle_event_log` vía `NOT EXISTS (... WHERE event_table = X AND
+  event_id = Y AND tenant_id = <mismo tenant>)` — **fail-closed por tenant**: una anulación
+  de un tenant distinto nunca oculta el evento de otro tenant (verificado).
+* ⚠️ **`void_event` NO revierte efectos secundarios sobre `cattle_livestock`.** Confirmado en
+  producción: anular una castración deja `category = CABALLO_CASTRADO` sin cambio — el
+  animal sigue mostrando la categoría post-castración aunque el evento ya no aparezca en la
+  Bitácora. Limitación de diseño (genérico/table-agnostic por whitelist), no un bug — decisión
+  de producto pendiente sobre si corregirlo (ver `CLAUDE.md`, deuda técnica).
+
+### `sp_move_livestock` (o lógica equivalente en el nodo n8n de `move_livestock`)
+* **Alcance deliberadamente limitado a traslados intra-UPP** (cambio de lote dentro de la
+  misma unidad de producción) — confirmado con el cliente que esto es distinto del motor de
+  movilización oficial UPP↔UPP/PSG (ver nota al inicio de "Movement Subsystem" arriba).
+* **Bug real corregido antes de la primera prueba:** escribía `tipo_movimiento =
+  'TRASLADO_LOTE'` en `historico_movimientos` — valor no permitido por
+  `historico_movimientos_tipo_check` en ese entonces (la tabla ya tenía `'TRASLADO'`
+  permitido desde la línea base, solo el valor usado era incorrecto). Corregido a
+  `'TRASLADO'`.
+* **Resolución de lote por `ILIKE '%...%'` (match parcial), no exacto:** el Agente IA
+  frecuentemente descarta artículos al extraer el nombre del lote de una frase en español
+  ("muévelo a **el** 110" → extrae `"110"`, lote real `"El 110"`). El chequeo de ambigüedad
+  (rechaza con error si hay más de un match dentro de la misma UPP) hace seguro el match
+  parcial — mismo patrón de seguridad que el resto de los SPs de esta sección usan para
+  identificadores físicos.
+* Actualiza `cattle_livestock.lot_id` y escribe una fila en `historico_movimientos`
+  (`tipo_movimiento = 'TRASLADO'`) con el resumen origen/destino en `notes`.
+
+### `update_livestock_tag` (cambio de identificador perdido/dañado)
+* `UPDATE cattle_livestock SET rfid_siniiga|numero_fuego|electronic_rfid = <nuevo valor>` —
+  dispara automáticamente `trg_cattle_livestock_identifier_history` (ver nota en esa
+  sección arriba sobre `reason`/`changed_by` por default).
+* Valida unicidad del nuevo identificador contra el tenant antes de actualizar (mismo
+  principio que las columnas `UNIQUE` de `cattle_livestock`, pero validado explícitamente
+  antes del `UPDATE` para dar un mensaje de error claro al Agente, en vez de depender del
+  error crudo de constraint de Postgres).
+* Escribe además una fila en `historico_movimientos` (`tipo_movimiento = 'CAMBIO_ARETE'`,
+  requirió extender el CHECK — ver `historico_movimientos` arriba) con el identificador
+  anterior/nuevo en `notes`, para que el cambio quede visible en `vw_cattle_event_log`
+  (migración 063) además de en `cattle_identifier_history`.
+
+### `list_pending_requests` / `review_pending_request` (sobre `pending_authorizations`)
+* `list_pending_requests`: `SELECT ... FROM pending_authorizations WHERE id_company =
+  $tenant AND estado = 'PENDIENTE'` — lectura simple, sin SP propio.
+* `review_pending_request`: wrapper sobre `sp_resolver_autorizacion` que agrega la
+  validación de propiedad por tenant que el SP no hace por sí solo (ver hallazgo de
+  seguridad documentado en la sección de `sp_resolver_autorizacion` arriba).
+
+### `void_event` (anulación genérica, sobre `event_voids`)
+* `INSERT INTO event_voids (event_table, event_id, tenant_id, voided_by_email, ...)` contra
+  la whitelist de 3 tablas — rechaza cualquier `event_table` fuera de la whitelist antes de
+  insertar.
+* Ver limitación de no-reversión documentada en `event_voids` arriba.
+
+### Actualización de `vw_cattle_event_log` — migración 063
+
+*Extiende la vista documentada en v1.13.0 (ver sección "Views (BI Layer)" más abajo); no
+cambia ninguna de las columnas/ramas existentes (`PESO`/`SALUD`/`NACIMIENTO`/`COMPRA`/
+`DESTETE`/`SOLICITUD_BAJA`/`SOLICITUD_VENTA`, migraciones 060/v1.15.0).*
+
+* 4 ramas `UNION ALL` nuevas, misma forma común que las existentes (`livestock_id`,
+  `tenant_id`, `event_type`, `event_date`, `created_at`, `detail` JSONB):
+  * `REPRODUCCION` ← `cattle_breeding_events` (`event_date = breeding_date`)
+  * `DESPARASITACION` ← `cattle_deworming_events` (`event_date = application_date`)
+  * `CASTRACION` ← `cattle_castration_events` (`event_date = castration_date`)
+  * `TRASLADO` / `CAMBIO_ARETE` ← `historico_movimientos`, filtrado a solo esos 2 valores de
+    `tipo_movimiento` (`event_date = fecha_registro`) — **`VENTA`/`BAJA_MORTANDAD`/
+    `REVERSION` quedan deliberadamente fuera**, decisión de producto pendiente (posible
+    duplicidad con las ramas `SOLICITUD_BAJA`/`SOLICITUD_VENTA` ya existentes).
+* Las 3 ramas de tabla de evento (no la de `historico_movimientos`) respetan `event_voids`
+  vía `NOT EXISTS (...)`, mismo patrón fail-closed por tenant descrito arriba.
+* Aplicada y verificada en LOCAL y PRODUCCIÓN el 2026-10-04, por una sesión distinta de
+  Claude Code con acceso directo al repo `agro-erp` (ver `CLAUDE.md` para el detalle del
+  traspaso) — **no ejecutada directamente desde esta sesión**, que no tiene acceso a ese
+  repositorio. Verificación funcional (conteos reales por `event_type`), no por comparación
+  de `md5(pg_get_viewdef(...))` — esos hashes resultaron no comparables de forma confiable
+  entre sesiones/herramientas por diferencias de formato.
+
+---
+
 ## 📊 Views (BI Layer)
 
 ### `vw_cattle_kpi`
@@ -733,7 +972,10 @@ anterior de este archivo — no son nuevos de v1.11.0, solo su documentación lo
   * `tenant_name` (from `companys.company_name`)
   * `adg_lifetime_kg` - `current_weight_kg` / age in days since `birth_date`
   * `last_palpation_result` / `current_gestation_days` - latest `PALPACION` entry pulled from `cattle_health_logs.medicines_json`
-  * Also passes through `species`, `upp_origen`, `tb_test_date`, `br_test_date`.
+  * Also passes through `species`, `upp_origen`, `tb_test_date`, `br_test_date`, `lot_name`
+    (join contra `production_unit_lots` vía `cattle_livestock.lot_id`) — consultado por el
+    filtro de lote de la Bitácora (v1.Unreleased, ver `CHANGELOG.md`) y por el módulo de
+    administración de Lotes (v1.15.0), ninguno de los cuales requirió una migración nueva.
 * ⚠️ **Column order constraint:** `CREATE OR REPLACE VIEW` requires existing columns to keep their name/position; new columns can only be appended at the end (see migration `004_vw_cattle_kpi_add_salida_fields.sql`).
 
 ### `vw_upp_compliance_status` (20 columns)
@@ -777,29 +1019,37 @@ its absence fails at runtime, not at deploy time (see CLAUDE.md, Contrato Meta-C
 
 
 ### `vw_cattle_event_log`
-*Añadido en v1.13.0, migración 060 (`CREATE OR REPLACE VIEW`, idempotente).*
-* **Source:** `UNION ALL` de `cattle_weight_logs`, `cattle_health_logs` y `birth_events`,
-  cada rama proyectada a una forma común:
-  * `livestock_id`, `tenant_id`, `event_type` (`'PESO'`/`'SALUD'`/`'NACIMIENTO'`, literal por
-    rama), `event_date` (`log_date`/`event_date`/`birth_date` según la rama), `created_at`.
-  * `detail` (JSONB) — payload específico por tipo: peso en kg para `PESO`;
-    `event_type`/`description`/`medicines_json` para `SALUD`; sexo, fecha de nacimiento y
-    peso de la cría para `NACIMIENTO`.
+*Añadido en v1.13.0, migración 060 (`CREATE OR REPLACE VIEW`, idempotente). Extendida en
+v1.15.0 (compras/destetes/solicitudes) y en v1.16.0, migración 063 (reproducción/
+desparasitación/castración/traslado/cambio de arete) — ver "Gestión Avanzada de Hato vía
+Agente IA" arriba para el detalle de esta última extensión.*
+* **Source:** `UNION ALL` de `cattle_weight_logs`, `cattle_health_logs`, `birth_events`,
+  `cattle_breeding_events`, `cattle_deworming_events`, `cattle_castration_events` y
+  `historico_movimientos` (solo `TRASLADO`/`CAMBIO_ARETE`), cada rama proyectada a una forma
+  común:
+  * `livestock_id`, `tenant_id`, `event_type` (literal por rama — `'PESO'`/`'SALUD'`/
+    `'NACIMIENTO'`/`'COMPRA'`/`'DESTETE'`/`'SOLICITUD_BAJA'`/`'SOLICITUD_VENTA'`/
+    `'REPRODUCCION'`/`'DESPARASITACION'`/`'CASTRACION'`/`'TRASLADO'`/`'CAMBIO_ARETE'`),
+    `event_date`, `created_at`.
+  * `detail` (JSONB) — payload específico por tipo (ver cada tabla fuente arriba para su
+    contenido).
 * **`tenant_id` expuesto explícitamente** (no vía join) para que el gateway pueda filtrar
   por tenant directamente sobre la vista, mismo patrón que `vw_cattle_kpi`.
 * **Registrada en `crud_models`** como `cattle_event_log`, `allowed_ops = {SELECT, GETALL,
   GETONE}` — sin `INSERT`/`UPDATE`/`DELETE`, es puramente de lectura/auditoría.
 * **Propósito:** verificación humana de que los eventos reportados por voz/texto al Agente
-  IA de WhatsApp (peso, vacunación/salud, nacimiento) quedaron registrados correctamente —
-  nace directamente del hallazgo de pérdida de dígitos en identificadores dictados por voz
-  de esta misma versión (ver `CLAUDE.md`, Regla 11, y `ARCHITECTURE.md`, sección 7), como
-  mecanismo de QA continuo, no solo para ese incidente puntual.
-* **Consumida por:** nueva pestaña "Cattle Event Log" en `main-dashboard` (app `agro-erp`),
-  de solo lectura.
+  IA de WhatsApp (peso, vacunación/salud, nacimiento, y ahora reproducción/desparasitación/
+  castración/traslado/cambio de arete) quedaron registrados correctamente — nace
+  directamente del hallazgo de pérdida de dígitos en identificadores dictados por voz de
+  v1.13.0 (ver `CLAUDE.md`, Regla 11, y `ARCHITECTURE.md`, sección 7), como mecanismo de QA
+  continuo, no solo para ese incidente puntual.
+* **Consumida por:** pestaña "Cattle Event Log" en `main-dashboard` (app `agro-erp`), de
+  solo lectura, con filtro y agrupación por Lote agregados en v1.Unreleased sin migración
+  nueva (ver `vw_cattle_kpi.lot_name` arriba).
 * Cumple el contrato de `created_at` señalado arriba (todas las tablas fuente ya lo tienen).
-* **Verificado en LOCAL y PRODUCCIÓN el 2026-09-22** (`n8n-enterprise-db`/`hosting3m_db`),
-  con backup previo y checksum de integridad tras transferir el archivo de migración —
-  runbook estándar, ver `CLAUDE.md`.
+* **Verificado en LOCAL y PRODUCCIÓN el 2026-09-22** (migración 060) **y el 2026-10-04**
+  (migración 063) (`n8n-enterprise-db`/`hosting3m_db`), con backup previo y checksum de
+  integridad tras transferir el archivo de migración — runbook estándar, ver `CLAUDE.md`.
 
 ### `execute_metacrud_write`
 * **Purpose:** Centralized Zero-Compute Client mutation gateway.
@@ -897,3 +1147,5 @@ firma), no una sola función con parámetros opcionales agregados con el tiempo.
   correctly a no-op); inserts one `cattle_identifier_history` row per changed column. Reads
   `app.identifier_change_reason`/`app.identifier_change_user` (optional session-local
   settings) via `current_setting(..., true)`, defaulting to `CAPTURE_CORRECTION`/`NULL`.
+  *(v1.16.0: `update_livestock_tag` depende de este trigger sin pasar ningún `SET LOCAL` —
+  ver nota en "Identifier History Subsystem" arriba.)*

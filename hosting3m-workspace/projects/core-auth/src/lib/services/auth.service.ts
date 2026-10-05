@@ -6,6 +6,7 @@ import { jwtDecode } from 'jwt-decode';
 
 // ✅ Importación consolidada de configuración y contexto
 import { AUTH_ENV_CONFIG, CompanyContext } from '../auth.config';
+import { TenantService } from './tenant.service';
 
 const TOKEN_KEY = 'authToken';
 
@@ -33,6 +34,7 @@ export class AuthService {
 
   // Inyección de dependencias de utilidades
   private logger = inject(LoggerService);
+  private tenantService = inject(TenantService);
 
   private readonly _currentUser = signal<UserPayload | null>(this.loadUserFromStorage());
   private readonly _isAuthenticated = signal<boolean>(this.hasValidToken());
@@ -125,6 +127,10 @@ export class AuthService {
     localStorage.removeItem('role');
     this._currentUser.set(null);
     this._isAuthenticated.set(false);
+    // Fail-closed: sin esto, el siguiente login en el mismo navegador podía heredar
+    // el `user_tenants`/`active_tenant_context` de la sesión anterior si esa cuenta
+    // tiene una sola empresa (ver incidente de Context Switcher, 2026-10-04).
+    this.tenantService.clearContext();
   }
 
   hasRole(role: string): boolean {

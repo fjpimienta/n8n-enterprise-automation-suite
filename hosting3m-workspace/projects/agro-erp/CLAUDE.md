@@ -1,178 +1,868 @@
-# 🤖 Project Context & AI Master Instructions (CLAUDE.md)
+# Changelog
 
-## 📌 Identidad del Proyecto
-**Nombre:** Hosting3M Automation Suite - Agro ERP
-**Versión Actual:** v1.15.1 🐛 Bug real: el Agente IA sumaba mal el resultado de `count_livestock`. **Fix:** se quita al LLM la necesidad de sumar. La query ahora calcula el total real
+Todos los cambios notables en el proyecto **n8n Enterprise Automation Suite** serán documentados en este archivo.
+El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/), y este proyecto se adhiere a [Semantic Versioning](https://semver.org/lang/es/).
+
+## [Unreleased]
+
+### 🐛 Context Switcher mostraba empresas a las que el usuario no tenía acceso
+
+Un usuario con una sola empresa activa en `user_companies` (ej. `id_company=6`) veía en el
+selector de rancho empresas de una sesión anterior en el mismo navegador (ej. Hosting3m, UPP La
+Bendición, Rancho El Palomar), pese a que el backend (`jwt-service`, filtrado correctamente por
+`user_companies`) nunca las autorizó para esa cuenta.
+
+**Causa raíz confirmada** (verificada con cuentas QA sintéticas en LOCAL, sin tocar datos
+reales — ver detalle completo en el hilo de la sesión que originó este fix):
+* `TenantService` (`core-auth`) persiste `user_tenants`/`active_tenant_context` en
+  `localStorage` y solo los limpia vía `clearContext()` — nunca invocado automáticamente.
+* `AuthService.logout()` solo limpiaba `authToken`/`role`, dejando esas dos llaves obsoletas
+  en el navegador tras cerrar sesión.
+* `jwt-service` (`/generate-token`) devolvía `data.company` (singular) en el login exitoso de
+  una cuenta con **una sola empresa**, pero **omitía `data.companies`** por completo — el
+  `login.component.ts` de `agro-erp` ya sabía sincronizar `TenantService.setAvailableTenants()`
+  con ese arreglo, pero nunca se ejecutaba porque el arreglo nunca llegaba.
+* Resultado: una cuenta de una sola empresa heredaba silenciosamente el `user_tenants` de la
+  sesión anterior en ese navegador.
+
+**Fix aplicado (2 archivos, sin cambios en `login.component.ts` — ya sincronizaba correctamente
+una vez que el backend empezó a mandar `companies`):**
+* `microservices/jwt-service/index.js`: el login exitoso ahora siempre incluye
+  `data.companies` (la lista completa, aunque sea de 1), no solo `data.company`.
+* `core-auth/src/lib/services/auth.service.ts`: `logout()` ahora también llama a
+  `tenantService.clearContext()` — defensa en profundidad, fail-closed, independiente del fix
+  del punto anterior.
+* Verificado en LOCAL con dos cuentas QA sintéticas (1 empresa / 3 empresas, creadas y
+  eliminadas en la misma sesión, sin tocar cuentas reales): el flujo de una sola empresa ahora
+  devuelve `companies` con 1 entrada y sobrescribe el caché viejo; el flujo multi-empresa
+  (`select_company` → selección → `success`) sigue devolviendo la lista completa sin cambios.
+* **Pendiente antes de cerrar:** aplicar ambos archivos a PRODUCCIÓN (mismo protocolo de
+  backup/checksum/rebuild) y verificar con las dos cuentas reales que originaron el reporte —
+  `12095038@gmail.com` (debe ver únicamente `id_company=6`) y `aguilar.resendez@hotmail.com`
+  (debe seguir viendo exactamente `5,6,7,8,9`, caso multi-empresa legítimo que no debe romperse).
+
+**Deuda técnica no bloqueante, detectada durante la revisión (no forma parte de este fix):**
+* `activeCompany.business_type` en `login.component.ts` siempre cae al default `'ADMIN'`
+  porque el `SELECT` de `/generate-token` en `jwt-service` nunca incluye la columna
+  `business_type` — cualquier lógica de UI de `agro-erp` que ramifique sobre `business_type`
+  está recibiendo silenciosamente `'ADMIN'` sin importar el valor real.
+* `login.component.ts` línea ~70 tiene una llamada muerta a `this.tenantService.debugState()`
+  (el método ya es un no-op, solo código de debug sin usar) — remover antes de mergear a `main`.
+
+### 🐄 Ocho herramientas MCP nuevas: traslado, reproducción, desparasitación, castración, cambio de arete, autorización y anulación de eventos
+
+El Agente IA no podía trasladar animales entre lotes de la misma UPP, registrar reproducción,
+desparasitación ni castración, cambiar un identificador perdido/dañado, ni anular un evento mal
+capturado — todo eso se hacía solo por acceso directo a base de datos. Ocho tools MCP nuevas en
+`v6/MCP Server Cattle`, probadas de punta a punta en PRODUCCIÓN (tenant 3) por el canal real de
+chat: `move_livestock`, `list_pending_requests`, `review_pending_request`, `log_breeding_event`,
+`log_deworming_event`, `update_livestock_tag`, `log_castration_event`, `void_event`.
+
+#### 🏗️ Dos bugs de arquitectura de n8n, confirmados en las 8 tools a la vez
+
+* **`queryReplacement` sin el delimitador `{{ }}`:** el campo `options.queryReplacement` de un
+  nodo `postgresTool` debe envolverse en `{{ ... }}` (ej. `={{ (() => {...})() }}`), no basta con
+  `=[$fromAI(...)]`. Sin el wrapper, n8n trata el campo como texto literal y lo separa ingenuamente
+  por comas — confirmado con una prueba aislada (`[3]` hardcodeado seguía fallando como el string
+  `"[3]"`). Corregido en las 8 tools copiando el patrón ya usado en `find_livestock_by_criteria`.
+* **Tipo declarado en `$fromAI` debe coincidir con el casteo de la query, no con el tipo final de
+  la columna:** `$fromAI('current_weight_kg', ..., 'number', null)` rompe la validación de schema
+  de n8n en cuanto el LLM manda `null` (`Expected number, received null`) — la llamada nunca llega
+  a Postgres. Si la query castea `$N::text` antes de `::numeric`/`::date` (patrón estándar de esta
+  sesión), el `$fromAI` correspondiente debe declararse `'string'`, aunque el valor final sea
+  numérico.
+* **Patrón adoptado para parámetros opcionales en las 8 tools:**
+  `NULLIF(NULLIF($N::text, 'null'), 'undefined')` en la CTE `params` (cubre el string literal
+  `"null"`/`"undefined"` que a veces manda el LLM, además de `''`/`undefined` real), combinado con
+  `empty($fromAI(..., 'string', null))` en el `queryReplacement`.
+
+#### 🐂 `move_livestock`
+
+* Limitado a propósito a traslados **dentro de la misma UPP** (cambio de lote) — confirmado con el
+  cliente. El motor de movilización oficial UPP↔UPP/PSG (`cattle_movement_rules`) sigue sin SP
+  propio, es un sistema distinto.
+* Nombre de lote resuelto con `ILIKE '%...%'` (match parcial), no exacto — el Agente IA
+  frecuentemente descarta artículos al extraer el nombre ("el 110" → `"110"`, lote real "El 110").
+  El chequeo de ambigüedad (rechaza si hay >1 match en la misma UPP) hace seguro el match parcial.
+* Bug real corregido antes de la primera prueba: usaba `tipo_movimiento = 'TRASLADO_LOTE'`, valor
+  no permitido por `historico_movimientos_tipo_check` — corregido a `'TRASLADO'`.
+
+#### 🏷️ `update_livestock_tag`
+
+* Requirió ampliar `historico_movimientos_tipo_check` (`ALTER TABLE`, LOCAL y PRODUCCIÓN mismo
+  turno) para incluir `'CAMBIO_ARETE'`, antes inexistente en la lista permitida.
+* Valida unicidad del nuevo identificador contra el tenant antes de actualizar.
+
+#### ✅ `review_pending_request`
+
+* Wrapper nuevo sobre `sp_resolver_autorizacion` que agrega una validación de propiedad por
+  tenant — hallazgo de seguridad real: el SP original no valida por sí solo que la solicitud
+  pertenezca al tenant que la resuelve.
+
+#### 🗑️ `void_event`
+
+* Genérico por diseño (whitelist de 3 tablas de evento + SQL dinámico). ⚠️ **Solo registra la
+  anulación en `event_voids` — no revierte efectos secundarios sobre `cattle_livestock`.**
+  Confirmado: anular una castración deja `category = CABALLO_CASTRADO` sin cambio, aunque el
+  evento ya no aparezca en la Bitácora.
+
+#### 🛒 `register_livestock_purchase` (tool preexistente, 3 bugs reales corregidos)
+
+1. `production_unit_id` ahora se infiere automáticamente de la UPP del lote resuelto cuando el
+   usuario solo da el nombre del lote — antes quedaba `NULL` y el trigger de consistencia
+   UPP/lote rechazaba el insert.
+2. `current_weight_kg`: mismo bug de tipos descrito arriba (`'number'` → `'string'`); además, el
+   Agente IA **inventaba** un peso cuando el usuario no lo mencionaba (120kg, luego 100kg) — se
+   reforzó el `toolDescription` (parámetro y descripción principal) prohibiéndolo explícitamente.
+3. Nueva validación de duplicado: rechaza el insert si el `rfid_siniiga` dado ya identifica a otro
+   animal del mismo tenant en cualquiera de las 3 columnas de identificador — antes insertaba un
+   segundo animal duplicado sin aviso.
+
+### 📌 Pendientes que quedan abiertos
+
+* No existe tool MCP de **consulta** de historial de eventos por animal (reproducción/
+  desparasitación/castración) — las 8 tools nuevas son de escritura.
+* Decisión de producto pendiente: si `void_event` debe revertir estado del animal por tipo de
+  evento (rompería su diseño genérico).
+
+### ✨ Cattle Event Log: filtro y agrupación por Lote
+
+La Bitácora no permitía filtrar ni agrupar por lote. Nuevo selector **Lote** (Todos / Sin lote /
+lotes del módulo activo) y nueva opción **Agrupar por → Lote** (`Lote: <nombre>` / `Lote: Sin lote`).
+La exportación CSV respeta el filtro, igual que el de tipo de evento.
+
+* **Lote ACTUAL del animal**, no el lote en el que estaba al momento de cada evento: un animal
+  trasladado muestra todo su historial bajo su lote de hoy. Mismo criterio que las demás columnas de
+  estado del animal (categoría, módulo).
+* **Sin cambios de base de datos (sin migración 064):** el lote actual ya llega al componente vía
+  `vw_cattle_kpi.lot_name` (`cattle_livestock.lot_id → production_unit_lots`), cruzado por
+  `livestock_id`. Misma fuente que "Filtrar Lote" de Inventario (`@shared/utils/lot.util`).
+* Las opciones del selector se derivan de los animales del módulo activo; los animales sin lote
+  aparecen bajo "Sin lote" y quedan fuera al elegir un lote específico.
+* ⚠️ Filtro por **nombre** de lote, igual que Inventario: el nombre es único por UPP, no por tenant.
+  Hoy ningún tenant repite nombre de lote entre UPPs (verificado 2026-10-04); si ocurre, ambos lotes
+  se mezclarían en la Bitácora.
+
+### ✨ Cattle Event Log: Reproducción, Desparasitación, Castración, Traslado y Cambio de Arete
+
+La Bitácora (`vw_cattle_event_log`) no incluía los eventos de las tablas nuevas
+`cattle_breeding_events`, `cattle_deworming_events` y `cattle_castration_events`, ni los movimientos
+`TRASLADO`/`CAMBIO_ARETE` de `historico_movimientos`.
+
+**Migración 063** (`CREATE OR REPLACE VIEW`, aplicada y verificada en LOCAL y PRODUCCIÓN el
+2026-10-04): cuatro ramas `UNION ALL` al final de la vista, sin cambiar columnas ni las 8 ramas
+existentes (0 filas previas modificadas en ambos ambientes).
+
+| `event_type` | Fuente | Fecha | Detalle (`description`) |
+|---|---|---|---|
+| `REPRODUCCION` | `cattle_breeding_events` | `breeding_date` | método — semental — parto estimado — notas |
+| `DESPARASITACION` | `cattle_deworming_events` | `application_date` | producto — dosis — refuerzo — notas |
+| `CASTRACION` | `cattle_castration_events` | `castration_date` | categoría anterior → nueva — método — notas |
+| `TRASLADO` / `CAMBIO_ARETE` | `historico_movimientos` | `fecha_registro` | origen (`lot_origen_anterior`/`upp_origen_anterior`) — notas |
+
+* **Anulaciones:** los eventos de las tres tablas nuevas anulados en `event_voids` (mismo tenant) no
+  aparecen. Verificado: la castración anulada del tenant de pruebas no se muestra.
+* **Fuera de alcance a propósito:** `VENTA`/`BAJA_MORTANDAD`/`REVERSION` de `historico_movimientos`
+  (posible duplicidad con las filas `Solicitud de Baja/Venta`, decisión de producto pendiente).
+* **Frontend:** los 5 tipos nuevos en `CattleEventType`, etiquetas, filtro por tipo, colores de badge
+  y detalle en tabla y CSV.
+* ⚠️ `CAMBIO_ARETE` cubre cualquier identificador (SINIIGA, fuego o chip); el tipo viene en el
+  detalle. La fila aparece bajo el arete SINIIGA actual del animal.
+
+### ✨ Edición de UPP oficial (`production_units`)
+
+No existía pantalla para corregir los datos de identificación de una UPP oficial (solo lectura en
+Cumplimiento Normativo). Nuevo botón **Editar** en cada tarjeta de `admin/tenants/:tenantId/production-units`.
+
+* **Editables:** nombre del rancho, clave UPP, estado, municipio y localidad.
+* **No editables a propósito:** `state_code`/`municipality_code` (columnas `GENERATED ALWAYS` a partir
+  de `upp_code`) y superficie (`surface_matrix`, se transcribe verbatim del documento SENASICA — Regla 4).
+* Clave UPP validada con el mismo regex que `production_units_upp_code_format_check`.
+* `uq_production_units_active_code` es **global entre tenants**: no se puede prevalidar en cliente, así
+  que la violación se muestra con un mensaje que no revela a qué empresa pertenece la clave.
+* Mismas protecciones que lotes: solo empresa activa, re-lectura con `getone` acotado por tenant antes
+  del `update` (el gateway filtra `update` solo por PK) y validación de `error:true`.
+* Escritura limitada a rol de tenant `ADMIN`/`OWNER` (`crud_models` de `production_units`).
+
+### 🐛 Empresas: el modal "no guardaba" y cada guardado podía borrar la metadata
+
+El `update` de `companys` sí llegaba a la base (`error:false`), pero:
+* **Lectura rota:** `getone` del gateway devuelve `data` como **objeto** (`rows[0]` en `Normalize
+  Data`), y `openModal` leía `res.data?.[0]` → siempre `undefined` → caía al `TenantContext` de
+  localStorage (sin `metadata`). Al reabrir, el modal se veía vacío aunque el dato estuviera guardado.
+* **Pérdida de datos latente:** como el modal arrancaba con `metadata: {}`, cada guardado reemplazaba
+  el JSONB completo con solo lo capturado en esa sesión (clave UPP, productor, RFC… se perdían).
+* `saveUpp` ignoraba `error:true` (HTTP 200) y enviaba llaves que no son columnas (`role`).
+* La tarjeta y el selector no reflejaban el nombre nuevo (leen el contexto cacheado del login).
+
+**Fix:** se desempaqueta `data` como objeto o arreglo; si no hay registro, se muestra error en vez de
+abrir con datos parciales (fail-closed); se envían solo `company_name`/`metadata` (+ `industry` en
+alta); se valida `error:true`; y tras actualizar se sincroniza el nombre en `availableTenants` y en el
+tenant activo.
+
+⚠️ **Hallazgo, sin cambiar aquí:** el modal guarda `curp` y `rfc` en texto plano dentro de
+`companys.metadata`, mientras que la Regla 4 de `CLAUDE.md` establece que la PII del productor se cifra
+vía `sp_upsert_producer_pii()` (`livestock_producers`). Pendiente decidir si estos campos deben salir
+del modal o redirigirse a ese SP.
+
+### 🧭 "Empresa" vs. "UPP oficial": un término = un concepto
+
+La pantalla `admin/tenants` y el menú llamaban "UPP" a la **empresa** (`companys`), y la nueva
+pantalla de lotes llama "UPP" al **registro oficial SENASICA** (`production_units`). Al entrar a la
+empresa "UPP 54" aparecía otra "UPP" ("EL PUYACATENGO", clave `27-009-4146-002`), lo que se
+percibía como un cambio de nombre inesperado.
+
+* `admin/tenants`, su modal de alta/edición y la entrada del menú ahora dicen **Empresas** /
+  **Nueva Empresa**. "UPP" queda reservado para las UPP oficiales (`production_units`).
+* Breadcrumb en las pantallas nuevas: `Empresas › <empresa> › UPP <clave> · <rancho> › Lotes`.
+* Botón con texto **"UPP oficiales y Lotes"** en el pie de la tarjeta de la empresa activa (antes
+  un ícono sin etiqueta, poco descubrible en modo oscuro).
+
+Fuera de alcance, pendientes de validar con el cliente: "Personal UPP" en el menú, el campo
+"Clave UPP" del modal de empresa (metadata SINIIGA), y el nombre de la empresa "UPP 54" (dato capturado
+por el cliente). El Agente IA sigue tratando "UPP" como sinónimo de empresa (Regla 11 de `CLAUDE.md`).
+
+### ✨ Módulo de administración de Lotes por UPP (`production_unit_lots`)
+
+Hasta ahora los lotes solo se podían crear/consultar directo en base de datos. Nuevo flujo en
+`admin/tenants` → **UPP y Lotes** (solo para la empresa activa):
+
+* `admin/tenants/:tenantId/production-units` — UPPs (`production_units`) del tenant activo.
+* `admin/tenants/:tenantId/production-units/:uppId/lots` — tabla de lotes (nombre, tenencia,
+  arrendador, animales asignados, estado) con alta, edición, desactivación y reactivación.
+
+**Reglas aplicadas (solo frontend, sin cambios de esquema, vista ni gateway):**
+* **Fail-closed multi-tenant:** `activeTenantRouteGuard` rechaza cualquier `:tenantId` distinto
+  del tenant activo (nunca cambia de tenant implícitamente); la UPP de la URL se revalida con un
+  `getone` acotado por tenant; toda fila devuelta se descarta si su `id_company` no coincide; y
+  **antes de cada `update` se re-lee el lote con `getone` acotado por tenant** (ver hallazgo abajo).
+* **Sin DELETE físico:** "eliminar" es `is_active = false`; el modelo Meta-CRUD tampoco expone DELETE.
+* `lessor_name` solo se captura con tenencia `RENTADA` y se envía `null` en cualquier otro caso
+  (incluido al cambiar de `RENTADA` a otra tenencia) — respeta `production_unit_lots_lessor_only_if_rented_check`.
+* Unicidad de `lot_name` validada en cliente (case-insensitive, solo entre lotes activos, igual
+  que `uq_lot_name_per_unit`); la violación del índice que llegue del gateway (`error:true`) se
+  muestra como mensaje claro, incluido al reactivar un lote cuyo nombre ya usa otro lote activo.
+* Escritura limitada a rol de tenant `ADMIN`/`OWNER` (mismo criterio que `crud_models.allowed_roles_insert/update`).
+
+⚠️ **Limitaciones conocidas (aceptadas, requieren cambio de BD fuera de este alcance):**
+* `cattle_livestock.lot_id` no está expuesto por ningún modelo Meta-CRUD ni por `vw_cattle_kpi`.
+  El conteo de animales por lote se deriva de `vw_cattle_kpi` por (`production_unit_id`,
+  `upper(lot_name)`) excluyendo estados terminales — exacto mientras el nombre sea único en la
+  UPP; si dos lotes comparten nombre (uno inactivo) se muestra "—" en vez de un número dudoso.
+* Desactivar un lote **no** limpia `lot_id` de sus animales: siguen vinculados al lote inactivo
+  (no quedan "sin lote"). El diálogo de confirmación lo advierte así, con el conteo real.
+
+🔴 **Hallazgo de seguridad (gateway, no corregido aquí):** en el `Build Query` de `v6/CRUD`
+(verificado en la instancia LOCAL de n8n, 2026-10-03; pendiente confirmar en PRODUCCIÓN), `update`
+filtra **solo por llave primaria** y agrega el tenant del header al `SET`, no al `WHERE`. Un tenant
+que conozca el id de un registro ajeno puede modificarlo **y reasignarlo a su propio tenant**.
+Aplica a todo modelo con `UPDATE` y columna `tenant_id`/`id_company`. Ver `CLAUDE.md` → Deuda técnica.
+
+### 🐛 "Cattle Event Log" ignoraba el módulo seleccionado (Cría / Engorda / Reproducción)
+
+La pestaña "Cattle Event Log" de `main-dashboard` mostraba exactamente las mismas filas sin
+importar el módulo activo, mientras Inventario y los KPIs sí cambiaban (ej. tenant 3: 16 → 0 → 2
+cabezas). No era un bug de backend: `vw_cattle_event_log` ya trae `livestock_id` por fila, y el
+componente recibía a propósito el hato completo del tenant (`cattleList()`) desde `624b918`, que
+lo desacopló de `filteredCattleList()` para que animales vendidos/muertos no perdieran su historial.
+
+**Fix (solo frontend, sin cambios de vista ni de gateway):**
+* Nuevo computed `eventLogCattleList` en `main-dashboard`: filtra `cattleList()` **solo por
+  módulo** (`business_model === activeTab`). Deliberadamente **sin** especie/lote y **sin**
+  `herdStatusFilter` — un animal vendido o muerto conserva su historial dentro de su módulo (no se
+  reabre lo corregido en `624b918`).
+* Nuevo input `moduleCattleData` en `CattleEventLogComponent`; las filas se filtran por
+  `livestock_id` contra ese subconjunto. `cattleData` (hato completo) se mantiene como la compuerta
+  de aislamiento multi-tenant — el filtro de módulo es de alcance, no de seguridad.
+* Animales sin `business_model`: mismo criterio que `scopedCattleList` en el resto de la página
+  (excluidos). Verificado 2026-10-01: 0 animales sin `business_model` en los tenants 3, 5 y 6.
+
+⚠️ **Limitación conocida (aceptada):** el módulo usado es el `business_model` **actual** del animal,
+no el que tenía al momento del evento — no existe historial de módulo. Una cría nacida en CRIA y
+movida después a ENGORDA muestra su nacimiento (y todo su historial) bajo ENGORDA.
+
+## [1.15.1] - 2026-09-30
+
+### 🐛 Bug real: el Agente IA sumaba mal el resultado de `count_livestock`
+
+`count_livestock` devuelve una fila por combinación categoría+estatus (ej. 7 filas
+para 12 animales reales). Al preguntar "¿cuántos animales en total?", el LLM debía
+sumar el campo `total` de todas las filas — y en la práctica se "perdía" algunas:
+en una prueba real devolvió **9** en vez de **12**, omitiendo silenciosamente las
+3 filas de categoría `VACA` de la suma (aunque sí las describió correctamente en el
+desglose). No es un bug de SQL ni de datos — la query ya traía el desglose correcto,
+verificado fila por fila contra el dashboard. Es un error de aritmética del modelo
+sobre datos tabulares, no corregible con más instrucciones de prompt.
+
+**Fix:** se quita al LLM la necesidad de sumar. La query ahora calcula el total real
 con una función de ventana (`SUM(COUNT(*)) OVER ()`) y lo entrega como columna
-`grand_total`, idéntica en cada fila.
+`grand_total`, idéntica en cada fila. El `toolDescription` se actualizó para
+instruir explícitamente: usar `grand_total` tal cual, nunca sumar `total` a mano
+ni omitir filas. De paso se corrigió una línea de documentación desactualizada del
+mismo `toolDescription` que aún prometía "default ACTIVO" (superada por el fix de
+v1.14.1, exclusión de `VENDIDO`/`FINALIZADO`/`BAJA_DEPURACION_DATOS`).
 
-## 👤 Rol del Asistente de IA (Persona)
-Debes actuar siempre como mi **Technical Lead auxiliar y Senior Project Manager (PMP)** con más de 20 años de experiencia, certificado por el PMI y especializado en el SDLC.
-* **Estilo de Comunicación:** Profesional, estructurado, pragmático y orientado a resultados.
-* **Enfoque Técnico:** Reducción de deuda técnica, entrega de valor (MVP) y escalabilidad.
-* **Antes de afirmar el estado de producción, verificar contra el clon local o contra el VPS directamente.** Este proyecto ya tuvo tres diagnósticos erróneos por confiar en `schema.sql` y `crud_models_seed.sql` desactualizados (la tercera vez confirmada 2026-08-14). Ver regla 7.
+Verificado en LOCAL y producción: "¿cuántos animales tengo en total?" → 12,
+desglose completo y correcto por categoría/estatus, coincide con el dashboard.
 
-## 📐 Reglas Arquitectónicas de Oro (NO ROMPER)
+⚠️ Patrón a vigilar: cualquier otra tool MCP que agrupe filas y espere que el LLM
+sume manualmente un total está expuesta al mismo tipo de error. Ninguna otra tool
+del servidor hace esto hoy (todas las demás son de una sola fila por operación),
+pero aplica el mismo criterio (calcular el total en SQL, nunca en el prompt) si se
+agrega una en el futuro.
 
-### 1. Sistema Meta-CRUD y Mutación de Datos
-* **Prohibido el SQL manual para escrituras básicas:** las mutaciones van por el gateway Meta-CRUD de n8n, no por consultas ad-hoc.
-* ⚠️ `execute_metacrud_write` existe pero está parcialmente en desuso: su `p_record_id` es `integer` y falla con PKs UUID (verificado 2026-07-27, `invalid input syntax for type uuid`). Además usa `WHERE id = %L` hardcodeado, ignorando `crud_models.primary_key` — por eso nunca pudo actualizar `companys` (PK `id_company`). El gateway real construye su propio SQL en un nodo Build Query dentro del workflow **`v6/crud`** (renombrado desde `06-dynamic-crud-engine`, mismo workflow, confirmado 2026-09-11); no asumir que `execute_metacrud_write` es la ruta real de escritura.
-* **Zero-Compute Client:** El frontend nunca calcula métricas persistentes (ej. peso actual). El trigger `update_current_weight` en la tabla `cattle_weight_logs` actualiza automáticamente el registro maestro del animal.
+## [1.15.0] - 2026-09-28
 
-### 2. Estándar de Identificación (Biometría Interna)
-* ⚠️ **`electronic_rfid` está documentado como llave operativa primaria, pero NO lo es en la práctica.** Verificado en producción el 2026-07-29: **262 de 270 animales (97%) no tienen bolo ruminal**. `sp_procesar_salida_ganado` se invoca por `electronic_rfid`, así que solo 8 animales pueden procesarse hoy por el flujo oficial de salida. Hasta que el cliente decida colocar bolos al hato completo, el arete SINIIGA (`rfid_siniiga`) es la identificación que realmente cubre al hato. **Confirmado igual para el subsistema de autorización asíncrona (v1.11.0):** `sp_solicitar_autorizacion` acepta los tres identificadores por el mismo motivo.
-* **El arete SINIIGA bovino es de 10 dígitos** (`EE + 4 + 4`, `EE` = código INEGI del estado: 07 Chiapas, 27 Tabasco). Confirmado contra tres fuentes independientes del cliente (libretas de campo, hoja de cálculo de movimientos, estructura física del arete). `fn_has_official_ear_tag()` valida este formato exacto — no aceptar longitudes distintas sin confirmación explícita.
-* **El número a fuego (`numero_fuego`) no está capturado de manera uniforme.** La Bendición lo tiene al 100%; UPP 54 lo tiene al 0%. No asumir que existe al diseñar features que dependan de él (ordenamiento, búsqueda).
-* ⚠️ **Los tres identificadores (fuego, arete SINIIGA, chip) ahora tienen historial automático** (`cattle_identifier_history`, migración 047, nuevo en v1.10.0): cualquier `UPDATE` a `numero_fuego`, `rfid_siniiga` o `electronic_rfid` en `cattle_livestock` queda registrado solo, vía trigger — nunca depender de que un script lo registre a mano. Motivo por default: `CAPTURE_CORRECTION`. Si un flujo conoce el motivo real (pérdida, reposición, arete suelto reasignado), puede enriquecerlo con `SET LOCAL app.identifier_change_reason = '...'` inmediatamente antes del `UPDATE` — opcional, nunca obligatorio.
+### 🐂 Módulo de Reproducción en el Dashboard
 
-### 3. Integridad Normativa en Procedimientos Almacenados
-* La venta y salida de animales debe ejecutarse exclusivamente a través de `sp_procesar_salida_ganado`. El gateway n8n lo expone como el modelo Meta-CRUD `salida_ganado` (ID 46, únicamente `INSERT`) — nunca como escritura directa a `cattle_livestock`.
-* ⚠️ **Los 60 días de vigencia TB/BR NO son una regla universal.** Corresponden exclusivamente a la Prueba de Lote. Un hato con dictamen de Hato Libre vigente (`herd_free_certificates`, 12-24 meses de vigencia) se exime de esa ventana. `sp_procesar_salida_ganado` (corregido en migración 024) consulta ambos caminos antes de rechazar.
-* ⚠️ **El arete oficial es requisito de movilización, no solo TB/BR.** La NOM-001-SAG/GAN-2015 exige el arete SINIIGA para cualquier traslado. `sp_procesar_salida_ganado` valida `fn_has_official_ear_tag()` además de la normativa sanitaria.
-* Cada venta exitosa queda auditada en `historico_movimientos` (`tipo_movimiento = VENTA`) y limpia `upp_origen`, `production_unit_id` y `lot_id` del animal. `REVERSION` es un tipo de movimiento válido (migración 025) para compensar una operación errónea sin borrar el registro original — la tabla es append-only, nunca se elimina una fila de auditoría.
-* ⚠️ **PENDIENTE DE VERIFICAR CONTRA EL ESQUEMA REAL (ver Regla 7 antes de confiar en este punto):** este archivo describía una columna `historico_movimientos.lot_origen_anterior` (agregada 2026-09-16, corregida 2026-09-17 en el overload de 4 parámetros de `sp_procesar_salida_ganado`, capturando `lot_name` desde `production_unit_lots` vía `lot_id`) y un modelo `cattle_lot_history` (`vw_cattle_lot_history`) consumido por `cattle-list.component.ts`. **Ninguno de estos objetos aparece en `DATABASE_SCHEMA.md`** — ni en la definición de `historico_movimientos` (que solo lista `upp_origen_anterior`), ni en `cattle_livestock` (sin columna `lot_id`), ni en la sección de Views, ni en la descripción de v1.12.0 del overload de 4/5 parámetros (que documenta explícitamente el comportamiento de éxito como limpiar `upp_origen` y `production_unit_id`, sin mencionar lotes). Antes de seguir citando este punto, correr `\d historico_movimientos` y `\dv vw_cattle_lot_history` contra el clon local (Regla 7) y, según el resultado, **o backfillear `DATABASE_SCHEMA.md`, o eliminar esta entrada de `CLAUDE.md`** por desactualizada/errónea.
-* Nuevo modelo de solo lectura `cattle_lot_history` (`vw_cattle_lot_history`, `allowed_ops = {SELECT,GETALL,GETONE}`, sin INSERT/UPDATE/DELETE) — expone el lote histórico más reciente por animal (`DISTINCT ON (livestock_id) ... WHERE lot_origen_anterior IS NOT NULL ORDER BY fecha_registro DESC`), consumido únicamente por `cattle-list.component.ts` como fallback visual cuando `lot_name` viene vacío y el animal ya no está `ACTIVO` — nunca reemplaza el join en vivo de `vw_cattle_kpi`, solo lo complementa para animales que ya salieron. *(Mismo aviso de verificación que el punto anterior.)*
-* ⚠️ **`sp_procesar_salida_ganado` sigue siendo invocable directamente** (modelo Meta-CRUD `salida_ganado`, sin cambios) — v1.11.0 añade un **segundo camino** para la venta iniciada desde el Agente IA (WhatsApp/Chat), que ahora pasa primero por autorización asíncrona (ver Regla 10). Los dos caminos coexisten a propósito: una venta capturada directo en el panel Web por un ADMIN sigue sin requerir el paso de autorización; una venta que un usuario reporta por voz/texto al agente conversacional sí lo requiere. No es una regresión de seguridad — es una decisión de negocio confirmada por el cliente (ver Regla 10).
-* **Desde v1.12.0, el overload no-legacy de `sp_procesar_salida_ganado` tiene 5 parámetros**, no 4: se agregó `p_livestock_id uuid DEFAULT NULL` como alternativa de resolución del animal por UUID (mismo patrón que `sp_procesar_baja_mortandad`), útil para vender un animal sin arete todavía asignado — sin eximirlo del requisito legal de arete oficial SINIIGA (salvo `species = 'EQUIDO''`). Ver Regla 11 y `DATABASE_SCHEMA.md`, sección "Reporte de eventos para animales sin identificador físico".
+* La base de datos ya manejaba el modelo de negocio `REPRODUCCION`, pero `main-dashboard` solo
+  ofrecía las vistas de Cría y Engorda — los animales de reproducción no tenían un tablero propio.
+* **Nuevo tipo `BusinessModel`** (`'CRIA' | 'ENGORDA' | 'REPRODUCCION'`) en `livestock.model.ts`,
+  usado por `Livestock.business_model`, `activeTab` y `setTab()` — fuente única del tipo.
+* **Nueva pestaña "Módulo de Reproducción"** en `main-dashboard`, con deep link `?tab=reproduccion`
+  (cualquier otro valor sigue cayendo en `CRIA` por default).
+* **Nuevo componente `ReproduccionDashboardComponent`** (standalone, OnPush, misma estructura que
+  Engorda): filtra estrictamente `business_model === 'REPRODUCCION'`, muestra cabezas del hato
+  reproductor, peso promedio y hembras con diagnóstico `PREÑADA`, más una gráfica de composición del
+  hato por categoría.
+* ⚠️ **Nombres parecidos:** `ReproductiveDashboardComponent` (existente) es el tablero de **Cría**, no
+  el de Reproducción — renombrarlo a `CriaDashboardComponent` queda como refactor pendiente.
 
-### 4. Registro Normativo SENASICA-SINIIGA (v1.9.0)
-* Un tenant (`companys`) puede sostener **N unidades de producción** (`production_units`, UPP). La equivalencia "una empresa = un predio" ya no aplica.
-* El **productor** (`livestock_producers`) se replica por tenant a propósito — la misma persona en dos tenants son dos filas, nunca un registro global compartido. Su CURP/RFC se cifran con pgcrypto vía `sp_upsert_producer_pii()`; la tabla cruda nunca expone PII en Meta-CRUD.
-* El **fierro de propiedad** (`brand_registrations`) es independiente de la UPP donde el animal está parado. Confirmado con datos reales: hay ganado de un titular pastando en la unidad del otro. El tenant es *dónde está*; el fierro es *de quién es*. La cría hereda el fierro de la madre automáticamente (`fn_inherit_brand_from_mother`, `fn_apply_birth_brand_inheritance`).
-* Toda superficie declarada (`production_units.surface_matrix`) se transcribe **verbatim** del documento oficial de SENASICA, nunca normalizada ni corregida. Los documentos reales contienen inconsistencias (ej. total declarado ≠ suma de conceptos); eso se expone como bandera revisable (`has_surface_inconsistency`), no como error de captura.
-* El quemado (número a fuego) puede repetirse por error de captura — es un hecho confirmado por el cliente, no una excepción teórica. Se trata como alerta (`vw_duplicate_fire_numbers`), nunca como restricción `UNIQUE` que bloquee la operación real.
+### 📋 Cattle Event Log: cobertura de las 15 herramientas MCP
 
-### 5. Motor de Movimientos SENASICA-REEMO (nuevo en v1.10.0)
-* `cattle_movement_rules` **dejó de ser borrador** (migraciones 042, 044, 048): 16 filas confirmadas contra reglas de negocio reales del cliente (audio grabado + 4 documentos REEMO/CZM/permiso reales), no ya "creada pero no ejecutada".
-* ⚠️ **`PSG → UPP` está permanentemente prohibido, confirmado y aplicado.** Un animal que entra a un PSG solo puede moverse a otro PSG (propio o de tercero) o salir a rastro/exportación — nunca de vuelta a una UPP.
-* Los requisitos dependen de **si el movimiento es interestatal** (`is_interstate`), no solo del par origen/destino — el mismo par UPP→UPP tiene requisitos completamente distintos según cruce o no una frontera estatal.
-* ⚠️ **`requires_valid_psg` y `requires_health_tests` NO son lo mismo**, aunque hoy tengan los mismos valores en las filas confirmadas: el primero es la vigencia de la licencia del PSG (`psg_facilities.psg_license_id -> psg_licenses.expires_at`); el segundo es el estatus sanitario TB/BR del animal. Coinciden hoy por casualidad de los datos, no por diseño — no verificado independientemente contra un caso real donde diverjan.
-* ⚠️ **`requires_gbg_certificate`** (renombrado de `requires_oirsa_certificate`): constancia de tratamiento contra gusano barrenador, requisito DINESA vigente desde diciembre 2025 en Chiapas/Tabasco (zonas de máximo riesgo SENASICA), verificado de forma independiente, no solo por dicho del cliente.
-* **`is_confirmed = false` sigue siendo el default fail-closed en 14 de las 16 filas** — no asumir que el enforcement está activo. `rule_id` en `cattle_movement_events` es una referencia almacenada, todavía no consultada por ninguna lógica de validación. Falta una sola respuesta del cliente (`requires_destination_ack`) para poder activar la mayoría.
-* Un movimiento tiene exactamente un origen (UPP o PSG) y exactamente un destino (UPP, PSG, o tercero externo) — `chk_origin_exclusive`/`chk_destination_exclusive`. Aislamiento multi-tenant fail-closed vía triggers `BEFORE INSERT/UPDATE`, no RLS (ver regla 6 sobre `n8n_user`).
+* `vw_cattle_event_log` solo cubría `PESO`, `SALUD`, `PARTO` y `NACIMIENTO` — tres tools de escritura
+  del Agente IA no dejaban rastro en la bitácora: `register_livestock_purchase`, `log_weaning_event`
+  y `log_mortality_event`/`request_livestock_sale`.
+* Tres ramas `UNION ALL` nuevas en la vista para `COMPRA`, `DESTETE`, `SOLICITUD_BAJA` y
+  `SOLICITUD_VENTA`, reutilizando `health_event_type` para el estado de la solicitud
+  (`PENDIENTE`/`APROBADO`/`RECHAZADO`/`EXPIRADO`) y `medicines_json` para el payload crudo — mismo
+  patrón de reutilización de columnas de la rama `SALUD`, sin cambiar la forma de la vista.
+* Frontend: `CattleEventType`, etiquetas, filtros, badges y detalle extendidos a los 4 tipos nuevos.
+  Los gastos (`register_ranch_expense`) quedan fuera a propósito — viven en "Historial de Gastos".
+* ⚠️ **El cambio a la vista se aplicó directo en Postgres, sin migración versionada en el repo.**
 
-### 6. Stateful Context Injection (Agentes de IA)
-* Los agentes LLM tienen prohibido inferir parámetros de la base de datos (Zero-Hallucination). Cualquier herramienta de escritura o consulta requiere inyección silenciosa del `tenant_id`.
-* Anti-Jailbreak: Cualquier inserción exige un protocolo "Human-in-the-Loop" previo — desde v1.11.0, para `BAJA_MORTANDAD` y `VENTA` iniciadas por el agente, este protocolo se extiende más allá de la confirmación en el mismo chat: ver Regla 10.
-* ⚠️ **Hallazgo sin resolver (SEC-001, cerrado como falso positivo el 2026-07-27, pero revisar si cambia el escenario):** un usuario con `id_company` distinto en el JWT pudo leer y modificar un registro de otro tenant al que tenía acceso legítimo vía `user_companies`. Confirmar siempre `user_companies` antes de asumir fuga; no es automático que un `id_company` en el JWT limite el alcance real.
-* ⚠️ **`tenant_id` en llamadas a tools MCP no es un límite de confianza garantizado, solo prompt-enforced (hallazgo v1.12.0).** Durante las pruebas de `find_calf_by_dam`, el Agente IA envió un `tenant_id` de una empresa real en vez del tenant correcto de la conversación, pese a que la resolución de tenant del workflow (WhatsApp/Chat Web) ya lo tenía correcto en contexto — el LLM lo ignoró al construir los parámetros de esa llamada específica. Sin efecto real en esa prueba (sin match en BD para ese tenant), pero el patrón es real: cualquier parámetro `tenant_id` que dependa de `$fromAI()` en una tool MCP puede, en principio, ser sustituido por el LLM. **Mitigado, no resuelto arquitectónicamente:** se agregó el valor literal del tenant justo antes del diccionario de herramientas en ambos system prompts (WhatsApp y Chat Web) — más efectivo que reforzar la regla general de tenant de este mismo punto. `v6/MCP Server Cattle` corre como workflow MCP aislado, sin acceso directo al contexto de sesión del workflow que lo invoca, así que no hay forma simple de inyectar `tenant_id` por expresión de n8n en vez de depender del LLM. Mismo riesgo confirmado también en el panel "Chat" interno del editor de n8n (no solo en el panel "Test" de un nodo, ver Regla 11) — cualquier prueba del Agente IA debe hacerse por el canal real (WhatsApp o Chat Web), nunca desde el editor de n8n. Ver `ARCHITECTURE.md`/`DATABASE_SCHEMA.md` para el detalle completo del incidente.
+### 📌 Pendientes que quedan abiertos
 
-### 7. Validación de Esquema contra Réplica Local
-* Antes de proponer cambios de estructura de base de datos, valida contra el clon local de `hosting3m_db` (contenedor `n8n-enterprise-db`), restaurado automáticamente todos los días desde el VPS vía `~/scripts/backup_postgres_vps_to_local.sh`. No asumas el estado de producción sin confirmarlo ahí.
-* `schema.sql` y `crud_models_seed.sql` versionados en el repo **se han desactualizado respecto a producción tres veces** (última confirmación 2026-08-14: cero coincidencias para ningún objeto de las migraciones 042-049). No los uses como única fuente para diagnósticos — contrasta con `\d`, `pg_get_functiondef` o consultas directas antes de afirmar un hallazgo.
-* ⚠️ **Cada script de cambio de esquema (v1.11.0 en adelante) se corre primero en LOCAL, se verifica, y se replica en PRODUCCIÓN en el mismo turno de trabajo — nunca se deja "para después".** Norma adoptada tras detectar múltiples divergencias reales entre ambos ambientes durante el desarrollo del subsistema de autorización asíncrona (catálogos poblados solo en un ambiente, ajustes de `edad_min_meses` aplicados solo en uno, etc.). **Caso de éxito de esta regla (2026-09-21):** el fix de aislamiento multi-tenant de `production_unit_lots` (ver Deuda técnica, antes urgente) se verificó primero en LOCAL con datos reales de `id_company = 3` vs `= 6`, y la misma prueba se repitió contra PRODUCCIÓN (`n8n.hosting3m.com`, confirmado como VPS independiente — Plesk, detrás de Cloudflare, no un túnel al equipo local) en el mismo turno, antes de dar el hallazgo por cerrado.
+* El formulario de alta/edición (`cattle-detail-modal`) todavía no ofrece `REPRODUCCION` en el
+  selector de modelo de negocio — no se puede asignar un animal a ese modelo desde la UI.
+* Versionar como migración el cambio de `vw_cattle_event_log` de esta versión.
 
-### 8. Manejo de Secretos y Credenciales (nuevo en v1.10.0)
-* ⚠️ **Incidente real (2026-08-13):** el valor real de `INTERNAL_SECRET` (compartido entre `n8n-jwt-service` y `upload-file`) se pegó en texto plano dos veces durante una sesión de trabajo, incluyendo en el servidor de producción. Se instruyó rotación; **no confirmada como completada** al corte de este documento.
-* **Nunca pegar valores reales de secretos** (tokens, API keys, contraseñas, `INTERNAL_SECRET`, `JWT_SECRET`) en chats de trabajo, logs compartidos, o cualquier canal no cifrado — ni siquiera para "verificar que coincide". Usar comandos que confirmen igualdad sin exponer el valor (ej. comparar hashes, o simplemente confirmar "sí coincide"/"no coincide") o redactar con `****` cuando haga falta mostrar algo.
-* Si un secreto se expone accidentalmente, **tratarlo como comprometido de inmediato** y rotarlo en todos los servicios que lo comparten y en todos los ambientes (local y producción) antes de continuar cualquier otro trabajo — no lo dejes como pendiente de baja prioridad.
-* `upload-file` (`infrastructure/upload-file`) reutiliza `JWT_SECRET`/`INTERNAL_SECRET` de `n8n-jwt-service` para autenticar subida y lectura de archivos — ambos servicios deben rotarse juntos, nunca uno sin el otro.
-* ⚠️ **`n8n` es también consumidor de `INTERNAL_SECRET`** (vía `$env[...]` dentro del workflow `GenerateToken`, para llamar a `jwt-service`), no solo `jwt-service`/`upload-file`. Un contenedor no relee su `.env` solo tras editarlo — necesita reiniciarse. **Antes de rotar cualquier secreto compartido, identificar primero todos los consumidores reales** (`grep -rl` del nombre de la variable en `infrastructure/`), no asumir que son solo los servicios cuyo código se tocó en la sesión. Reiniciar con `docker compose up -d <servicio>` (sin `--build` si no cambió el código, evita además el riesgo de fallo `429` de Docker Hub al intentar descargar imágenes).
+## [1.14.1] - 2026-09-27
 
-### 9. Catálogos Globales de Parametrización (nuevo en v1.11.0)
-* `cattle_breed_catalog` y `cattle_lifestage_catalog` son **catálogos globales**, sin `tenant_id` — los pesos objetivo y las ventanas de etapa de vida son estándar zootécnico, no varían por rancho. Protegidos vía `crud_models.allowed_roles_* = 'ADMIN'` exclusivo, no por aislamiento de tenant.
-* ⚠️ **Bug real de gateway descubierto al desplegar el primer catálogo global (2026-07-23):** el nodo Build Query inyectaba `tenant_id` en el `WHERE` de **cualquier** tabla, sin verificar si la tabla lo tenía. Corregido condicionando la inyección a que `config.allowed_fields` incluya `tenant_id` — verificar este patrón en cualquier tabla global futura antes de asumir que el `GETALL` funciona. Ver `ARCHITECTURE.md`, Contrato Meta-CRUD, para el detalle.
-* `crud_models` tiene una columna `sp_requires_tenant` (BOOLEAN, default `true`) — necesaria para los procedimientos `call_sp` que no reciben `tenant_id` como parámetro (ej. `sp_resolver_autorizacion`, ver Regla 10). Sin marcarla en `false` explícitamente, el gateway exige el header `x-tenant-id` y falla si no llega.
-* ⚠️ **Datos semilla de `cattle_breed_catalog` con procedencia mixta**, sin marcar en el esquema (deuda pendiente): las filas de Cebú/Droughtmaster validadas directamente con el cliente (documento de validación firmado) conviven con filas capturadas de una lista en imagen, con pesos de captura aleatoria — ver `DATABASE_SCHEMA.md` para el detalle de cuáles son cuáles. No hay columna `fuente_dato`/`confianza` todavía para distinguirlas programáticamente.
-* **Principio rector, aplica a todo el subsistema de catálogos:** la edad es un disparador de revisión, nunca el criterio determinante de una transición de categoría por sí sola. `cattle_lifestage_catalog.requiere_validacion_peso` materializa esta regla — si es `true`, la transición real exige además que el peso del animal alcance `pct_peso_primer_servicio` de `cattle_breed_catalog` para su raza.
-* ✅ **Actualización 2026-09-21 — el mismo patrón de bug de `HOTFIX ARQUITECTÓNICO 2` (columna de tenant no reconocida por nombre distinto) se generalizó de raíz:** el `Build Query` ahora reconoce tanto `tenant_id` como `id_company` (`modelHasTenantId` / `modelHasIdCompany`) al inyectar el filtro de tenant en `getall`/`insert`/`update`, y además se extendió el mismo filtro a `getone`/`delete` (que antes no aplicaban ningún aislamiento de tenant, independiente del nombre de columna). Ver Deuda técnica → "Fuga real y activa..." (ahora cerrada) para el detalle completo del fix y su verificación.
+### 🔓 Cierre del hallazgo v1.14.0: diccionario de herramientas completado
 
-### 10. Protocolo de Autorización Asíncrona (Human-in-the-Loop diferido, nuevo en v1.11.0)
-* Dos tipos de evento — `BAJA_MORTANDAD` y `VENTA` (iniciada desde el Agente IA) — no ejecutan su cambio de estado inmediatamente. Crean una fila en `pending_authorizations` (estado `PENDIENTE`); el animal **no cambia** de `current_status` hasta que un `ADMIN` del tenant aprueba desde el panel Web (`/admin/autorizaciones`).
-* **Vigencia: hasta medianoche del día de la solicitud**, no una ventana móvil de 24h — un Cron diario (00:05, `America/Mexico_City`, confirmado vía `GENERIC_TIMEZONE` del contenedor) marca como `EXPIRADO` cualquier `PENDIENTE` de un día anterior. `sp_resolver_autorizacion` revalida la fecha también en el momento de aprobar, por si el Cron aún no ha corrido.
-* Despacho vía `sp_resolver_autorizacion` con **whitelist explícita por tipo de evento** (`IF/ELSIF` fijo, sin SQL dinámico) — agregar un tipo de evento nuevo requiere tocar este SP explícitamente, es intencional, mismo principio que la whitelist de `call_sp` en Build Query.
-* Solo `ADMIN`/dueños del tenant pueden resolver — confirmado con el cliente, no incluye `EDITOR`.
-* **Edad de madurez reproductiva de `BECERRO_TORETE → TORO` confirmada con el cliente (Alejandro, 2026-09-15): 16 meses.** El valor ya en `cattle_lifestage_catalog` desde su inserción original resultó ser correcto — no fue necesario ningún `UPDATE` numérico, solo se actualizó la nota de la fila para reflejar la confirmación.
-* `mortality_events` guarda el detalle rico del evento (causa, descripción, quién reportó, quién autorizó — deliberadamente dos campos de email distintos, ya que quien reporta la muerte no es necesariamente quien autoriza la baja). `historico_movimientos` recibe solo el resumen, igual que con venta.
-* Al aprobar una `BAJA_MORTANDAD`, `sp_procesar_baja_mortandad` marca automáticamente como `RIESGO` cualquier cría activa y sin destetar (`mother_id` = el animal, `current_status = 'ACTIVO'`, sin fila en `weaning_events`) — señal de "requiere revisión humana", no una decisión automática de destete.
-* **Desde v1.12.0, `sp_solicitar_autorizacion` y los SPs de despacho (`sp_procesar_baja_mortandad`, `sp_procesar_salida_ganado`) aceptan `p_livestock_id` como identificador alternativo** a los tres campos físicos — ver Regla 11 para el flujo completo de animales sin identificador. Bug real corregido en esta misma versión: `sp_resolver_autorizacion` creaba la solicitud con `livestock_id` resuelto correctamente, pero no lo reenviaba a los SPs reales al aprobar (`ERRCODE P0002` pese a tener el UUID correcto guardado) — corregido reenviando `v_request.livestock_id` en ambas invocaciones del despachador.
+* Las 4 tools que quedaron pendientes en v1.14.0 (`count_livestock`, `register_livestock_purchase`,
+  `log_supplement_event`, `log_palpation_event`) ya están en el diccionario de herramientas de ambos
+  `systemMessage` (`v6_ai_chat_cattle`, `v6_WhatsApp_Agent_Cattle`).
+* ✅ Verificado en LOCAL y producción por **ambos canales, Web Chat y WhatsApp** (WhatsApp
+  confirmado el 2026-09-27, después del corte inicial de esta versión).
 
-### 11. Herramienta MCP de Alta de Nacimiento, Reporte sin Identificador y Estrategia de Pruebas (validado en producción, 2026-09-16 a 2026-09-19)
-* `register_birth_event` (tool MCP, invoca `sp_register_birth_event`) es un **evento rutinario, sin confirmación previa** — a diferencia de mortandad/venta. Probada de punta a punta por Chat Web y WhatsApp con datos reales.
-* ⚠️ **`sp_register_birth_event` tiene dos versiones sobrecargadas en producción** (12 y 13 parámetros) — la vigente para la tool MCP es la de 13, que agrega `p_lot_id` (UUID, referencia a `production_unit_lots`, tabla previamente indocumentada). Ver `DATABASE_SCHEMA.md`, sección "Birth Subsystem", para el detalle completo y la lógica de prioridad de ubicación (`lote explícito > heredado de la madre > parámetro directo`).
-* **Blindaje de tipos requerido en cualquier tool MCP con parámetros UUID opcionales:** el panel de prueba de n8n (y potencialmente el propio `$fromAI()` cuando el modelo omite un campo) puede mandar `""` en vez de `NULL`/`undefined` — un `::uuid` sobre string vacío falla en runtime (`invalid input syntax for type uuid`). Toda tool nueva con parámetros UUID opcionales debe envolver el `queryReplacement` con una función `empty(v) => (v === '' || v === undefined) ? null : v`, no asumir que `$fromAI` nunca devuelve vacío.
-* ⚠️ **El vocabulario del Agente IA trata "UPP" como sinónimo de tenant completo** (`companys.company_name`), no de `production_units.ranch_name`. Confirmado en pruebas reales 2026-09-16: un tenant con múltiples UPPs reales cargadas no puede seleccionar una específica por nombre vía WhatsApp/Chat — el Agente no intenta resolver el nombre contra `production_units`, solo hereda de la madre o deja `production_unit_id` vacío. No bloqueante hoy (ningún cliente real tiene aún más de una UPP cargada en `production_units`), pero es una limitación real del diseño actual, no solo falta de datos.
-* ✅ **Resuelto en v1.12.0 (antes listado aquí como limitación sin resolver):** un animal sin ningún identificador físico (`electronic_rfid`/`rfid_siniiga`/`numero_fuego`) ya puede reportarse por mortandad o venta. La nueva tool MCP `find_calf_by_dam` busca crías sin identificador nacidas de una madre dada en los últimos 90 días; si hay un único resultado, el Agente usa su `id` como `livestock_id` sin pedir confirmación (el usuario no puede dictar un UUID por voz/texto), y si hay varios, desambigua por sexo/fecha/peso. Ese `livestock_id` se propaga de punta a punta: `find_calf_by_dam` → `log_mortality_event`/`request_livestock_sale` → `sp_solicitar_autorizacion` → `pending_authorizations.livestock_id` → `sp_resolver_autorizacion` → `sp_procesar_baja_mortandad`/`sp_procesar_salida_ganado`. Probado end-to-end en producción 2026-09-18/19, tenant 3 ("Pista de Hielo"), ambos flujos con crías reales sin identificador. Ver Regla 6 para el hallazgo de aislamiento multi-tenant encontrado durante estas mismas pruebas, y `DATABASE_SCHEMA.md`, sección "Reporte de eventos para animales sin identificador físico", para el detalle SQL completo.
-* **Fix real de frontend (2026-09-16):** el componente de `/admin/autorizaciones` no incluía `resuelto_por_email` en el payload al Aprobar/Rechazar, pese a que `sp_resolver_autorizacion` lo exige — el botón fallaba con "Se requiere email de quien reporta y de quien autoriza la baja". Corregido para leerlo del usuario autenticado (`AuthService`/`TenantService`), nunca pedido al usuario ni hardcodeado.
-* **Estrategia de pruebas para el Agente IA sin afectar producción:** WhatsApp solo tiene un número conectado al workflow de producción (no existe un ambiente "LOCAL" equivalente al de Postgres) — un mensaje real de WhatsApp siempre corre contra la base real. Mitigación adoptada: un **tenant ficticio dedicado a pruebas** (`id_company = 3`, reutilizando una empresa demo vacía preexistente, "Pista de Hielo" — confirmado sin cliente real detrás antes de usarlo), con animales de prueba identificados con `rfid_siniiga` claramente falso (`9999999999`, `9999999998`, ...; el prefijo `99` no corresponde a ningún código de estado INEGI real, evitando colisión). **Toda prueba conversacional de escritura contra producción debe usar este tenant**, nunca un tenant de cliente real, y debe limpiarse (`DELETE` en orden de dependencias de FK) cuando el registro de prueba no aporte valor de dato de referencia futuro. **Esta misma convención (tenant 3 = "Pista de Hielo") también se usó para verificar por curl, el 2026-09-21, el cierre de la fuga de aislamiento de `production_unit_lots` contra `id_company = 6` — ver Deuda técnica.**
-* ⚠️ **Renombre del tenant de pruebas (2026-10-04):** `id_company = 3` se llama ahora **"Rancho El Palomar"** (antes "Pista de Hielo"). **Sigue siendo exclusivamente de pruebas** — todo lo que cuelgue de él (animales `9999…`, "UPP Ficticia de Pruebas" `99-999-9999-999`, registros de pruebas del Agente IA) es dato de prueba, aunque el nombre suene a cliente real. Las menciones a "Pista de Hielo" en este archivo se refieren a este mismo tenant.
-* ⚠️ **El panel de pruebas ("Test <tool>") de un nodo `postgresTool` en n8n ejecuta contra la base configurada en la credencial del nodo, sin distinguir si la instancia de n8n desde la que se abre el panel es local o de producción.** Confirmado por incidente real: una prueba de `register_birth_event` lanzada desde una pestaña de n8n local insertó un registro en la base de PRODUCCIÓN, porque ambas instancias de n8n comparten la misma credencial de Postgres. Revertido manualmente (3 `DELETE` en orden de FK: `cattle_weight_logs` → `birth_events` → `cattle_livestock`) sin dejar rastro. Verificar siempre la URL del navegador antes de usar el panel de pruebas contra cualquier tool de escritura.
-* ⚠️ **Mismo riesgo confirmado también en el panel "Chat" interno del editor de n8n (hallazgo v1.12.0), distinto del panel "Test" de un nodo individual:** una ejecución lanzada desde ahí produjo un `tenant_id` de una empresa real en la llamada a la herramienta — no porque el panel esté ligado a otra base de datos, sino porque no pasa por el flujo real de resolución de tenant (`Resolver Tenant`/`Validar Token`) del canal de producción. Cualquier prueba de un Agente IA debe hacerse por el canal real (WhatsApp o la app Chat Web), nunca desde el panel de Chat interno del editor de n8n. Ver Regla 6.
+### 🐛 Bugs reales en `count_livestock`, encontrados en su primera prueba real
 
-* ⚠️ **Pérdida de dígitos en identificadores dictados por voz — CORREGIDO Y VERIFICADO 2026-09-22.** Whisper transcribe números dictados dígito por dígito con espacios (`"9 9 9 9 8 8 8 8 7 7"`); el `systemMessage` del Agente IA (WhatsApp) delegaba en el LLM (`gpt-4o-mini`) la reconstrucción manual del identificador antes de invocar `get_livestock_info` — tarea de conteo/reensamblaje que el modelo falló en producción (execution #699966: `"9 9 9 9 8 8 8 8 7 7"` → `"999988877"`, un dígito perdido, animal no encontrado pese a existir con folio `9999888877`). **Fix:** se movió la sanitización a código determinista en el nodo `Set Prompt Final` (workflow `v6/WhatsApp Agent Cattle`) — regex `\d(?:\s+\d){2,}` colapsa 3+ dígitos sueltos consecutivos en un bloque contiguo antes de que el texto llegue al Agente IA; el `systemMessage` (Regla 2 de su prompt, "SANITIZACIÓN DE ARETES") se simplificó para asumir que el identificador ya llega limpio, en vez de pedirle al LLM que lo re-limpie. Texto escrito (no dictado) nunca tuvo el bug, porque llega ya contiguo. Reproducido, corregido y re-verificado con el mismo folio de prueba tras el fix, tenant 3 ("Pista de Hielo").
+* **Bug 1:** `current_status`, al omitirse, no aplicaba ningún filtro pese a que la `toolDescription`
+  prometía un default de `ACTIVO` — "¿cuántas vacas tengo?" devolvía vacas en cualquier estado,
+  incluida una en `BAJA_MORTANDAD`.
+* **Intento de fix incorrecto (revertido en el mismo turno):** forzar el default a `'ACTIVO'` literal
+  dejó la misma pregunta en 0 resultados — en este esquema una VACA adulta normalmente vive en
+  `PREÑADA`/`VACÍA`, no `ACTIVO` puro (confirmado contra el CHECK constraint real: 11 valores
+  posibles; uso real: 317 `ACTIVO`, 145 `VACÍA`, 110 `PREÑADA`, 4 `BAJA_MORTANDAD`, 4 `VENDIDO`,
+  1 `RIESGO`).
+* **Fix correcto:** exclusión explícita de los 3 estados terminales (`VENDIDO`, `FINALIZADO`,
+  `BAJA_DEPURACION_DATOS`) en vez de un default positivo — decisión de negocio confirmada: todo lo
+  demás, incluido `BAJA_MORTANDAD` mientras la baja no se apruebe, cuenta como "lo tengo".
+* Verificado en LOCAL y PRODUCCIÓN.
 
-### 12. Vista de Auditoría de Eventos de Ganado (nuevo en v1.13.0)
-* Nueva vista de solo lectura `vw_cattle_event_log` (migración 060, `CREATE OR REPLACE VIEW`, idempotente, aplicada y verificada en LOCAL y PRODUCCIÓN el 2026-09-22 — Regla 7) — combina `cattle_weight_logs`, `cattle_health_logs` y `birth_events` por `livestock_id`, con `event_type` (`PESO`/`SALUD`/`NACIMIENTO`) y `tenant_id` explícito para filtrado por tenant.
-* Registrada en `crud_models` (`model_name = 'cattle_event_log'`, `allowed_ops = {SELECT,GETALL,GETONE}`, sin INSERT/UPDATE/DELETE) — consumida por la nueva pestaña "Cattle Event Log" dentro de `main-dashboard` (app `agro-erp`), de solo lectura, para auditoría manual de los 3 tipos de evento capturados por el Agente IA de WhatsApp.
-* Propósito: verificación humana de que los eventos reportados por voz/texto (peso, vacunación/salud, nacimiento) quedaron registrados correctamente — nace directamente del hallazgo de pérdida de dígitos de este mismo release (ver Regla 11), como mecanismo de QA continuo, no solo para ese incidente puntual.
-* ⚠️ **Ampliada en v1.15.0 (2026-09-28):** tres ramas `UNION ALL` nuevas agregan `COMPRA` (`register_livestock_purchase`), `DESTETE` (`weaning_events`) y `SOLICITUD_BAJA`/`SOLICITUD_VENTA` (`pending_authorizations`). En esas filas, `health_event_type` lleva el estado de la solicitud (`PENDIENTE`/`APROBADO`/`RECHAZADO`/`EXPIRADO`) y `medicines_json` el payload crudo — reutilización de columnas, no su significado literal. Este cambio se aplicó originalmente directo en Postgres; ✅ **quedó versionado en la migración 062** (2026-09-30), que contiene la definición completa de la vista. Los gastos (`register_ranch_expense`) quedan fuera de esta bitácora a propósito.
-* **Migración 062 (2026-09-30):** dos columnas al final (`calf_category`, `dam_identifier`), pobladas solo en filas `NACIMIENTO` — madre vía `LEFT JOIN` a `cattle_livestock` con fallback a `birth_events.dam_ear_tag`/`dam_fire_number`.
-* **Migración 063 (2026-10-04, LOCAL y PRODUCCIÓN, Regla 7):** cuatro ramas `UNION ALL` nuevas, sin cambiar columnas ni ramas existentes: `REPRODUCCION` (`cattle_breeding_events`), `DESPARASITACION` (`cattle_deworming_events`), `CASTRACION` (`cattle_castration_events`) y `TRASLADO`/`CAMBIO_ARETE` (`historico_movimientos`, **solo esos dos valores** — `VENTA`/`BAJA_MORTANDAD`/`REVERSION` de esa tabla quedan fuera a propósito por posible duplicidad con `SOLICITUD_*`, decisión de producto pendiente). El detalle legible se arma en SQL dentro de `description` (`concat_ws` + `NULLIF(…,'')`, porque `notes` llega como `''`); el frontend mapea `event_type` → etiqueta y muestra `description`.
-* ⚠️ **Anulaciones (`event_voids`):** las filas de las tres tablas nuevas se ocultan si existe un `event_voids` con el mismo `(event_table, event_id)` **y el mismo `tenant_id`** (fail-closed: una anulación de otro tenant nunca oculta un evento). `historico_movimientos` **no** se filtra por `event_voids`, y las ramas anteriores a 063 tampoco — si se empieza a anular otro tipo de evento, hay que agregar el mismo `NOT EXISTS` a su rama.
-* ⚠️ **`CAMBIO_ARETE` registra cualquier identificador, no solo el SINIIGA:** el tipo cambiado viene en `notes` (`Tipo: ELECTRONIC_RFID. …`). La fila se muestra bajo el `rfid_siniiga` actual del animal, que puede no ser el identificador que cambió.
-* **Filtro/agrupación por lote (2026-10-04, solo frontend):** la Bitácora filtra y agrupa por el lote **actual** del animal, tomado de `vw_cattle_kpi.lot_name` (vía `moduleCattleData`, cruzado por `livestock_id`) con `@shared/utils/lot.util` — **no** por una columna de la vista. Se descartó a propósito agregar `lot_id`/`lot_name` a `vw_cattle_event_log` (migración 064): duplicaría un dato que el cliente ya tiene. Si algún día se necesita el lote **del momento del evento**, eso sí requiere historial (p. ej. `historico_movimientos.lot_origen_anterior` en `TRASLADO`), no un join a `cattle_livestock`.
-* Antes de modificar la vista, comparar `md5(pg_get_viewdef('vw_cattle_event_log', true))` entre LOCAL y PRODUCCIÓN y contra la última migración (063: `451b07c5a05a5d7f30892a4879367134`), y reconstruir la siguiente migración desde la definición en vivo — nunca desde un archivo del repo sin verificar.
-* Migración aplicada con el runbook estándar (backup `pg_dump -Fc` previo, verificación `md5sum` de integridad tras `scp`, confirmación de contenedor/BD `n8n-enterprise-db`/`hosting3m_db` vía `docker ps`/`\dt` antes de tocar producción) — verificada en `hosting3m_db` (única instancia Postgres del VPS, contenedor `n8n-enterprise-db`, compartida con n8n).
+### ✅ Hallazgo resuelto: inconsistencia dashboard vs. Agente IA
 
-### 13. Vacunación Estructurada y Auditoría de Herramientas MCP Invisibles (nuevo en v1.14.0)
-* `log_vaccination_event` (tool MCP dedicada) reemplaza el uso de `log_health_event` para vacunación en ambos canales del Agente IA — la tool ya existía en el servidor MCP desde antes, pero nunca apareció en el diccionario de herramientas de ningún `systemMessage`, así que el LLM nunca la invocaba pese a que su propia `toolDescription` ya advertía no usar `log_health_event` para este caso. Corregido agregándola al diccionario de ambos prompts (WhatsApp y Chat Web) el 2026-09-25/26.
-* ✅ **Mismo patrón de bug, confirmado en 4 tools más — resuelto 2026-09-27:** al releer los 3 workflows completos se confirmó que el servidor MCP expone 15 herramientas, no 11. `count_livestock`, `register_livestock_purchase`, `log_supplement_event` y `log_palpation_event` estaban correctamente conectadas al servidor pero ausentes del diccionario de herramientas de ambos `systemMessage`. Corregido agregándolas al diccionario de ambos prompts — verificado en LOCAL y producción por **ambos canales, Web Chat y WhatsApp** (2026-09-27). Hallazgo completamente cerrado.
-* ✅ **Bugs reales encontrados en la primera prueba real de `count_livestock` (2026-09-27), corregidos:** su parámetro `current_status` no aplicaba ningún default pese a que su `toolDescription` lo prometía; un primer intento de fix (default literal a `'ACTIVO'`) resultó incorrecto porque una VACA adulta en este esquema normalmente vive en `PREÑADA`/`VACÍA`, no `ACTIVO` puro. Corregido con una exclusión explícita de los 3 estados terminales (`VENDIDO`, `FINALIZADO`, `BAJA_DEPURACION_DATOS`) en vez de un default positivo — decisión de negocio confirmada, incluye `BAJA_MORTANDAD` como "lo tengo" mientras la baja no se apruebe. Verificado en LOCAL y PRODUCCIÓN. ✅ **Inconsistencia dashboard vs. Agente IA resuelta el mismo día:** `herd-status.util.ts` alineado al mismo criterio (`VENDIDO`/`FINALIZADO`/`BAJA_DEPURACION_DATOS`), dashboard y Agente IA coinciden para el mismo tenant, verificado en LOCAL y PRODUCCIÓN. Confirmado que ningún tenant real tiene animales en `FINALIZADO`/`BAJA_DEPURACION_DATOS` — sin efectos secundarios.
-* Tres reglas nuevas de Zero-Hallucination (4bis, 5, 6) agregadas a ambos `systemMessage` tras observar en pruebas reales, sobre el tenant ficticio de pruebas (Regla 11), tres formas distintas en que el agente podía fallar silenciosamente: confirmar un registro sin invocar ninguna herramienta, inventar una razón de negocio para disfrazar un error técnico real (`livestock_id` vacío), e inventar una política de "no se puede repetir" para negarse a ejecutar una herramienta rutinaria legítima. Ver `workflows/09-MCP-Agent-Cattle/v6/README.md` para el detalle completo de cada patrón.
-* ✅ **`event_date` corregido y verificado en `log_supplement_event` y `log_palpation_event` (2026-09-27, LOCAL y PRODUCCIÓN, Regla 7):** ambas tools tenían el mismo bug que `log_vaccination_event` antes de su fix (`COALESCE(fecha, CURRENT_DATE)`, medianoche en vez de hora real cuando no se especifica fecha) — cambiado a `COALESCE(fecha::timestamp, CURRENT_TIMESTAMP)` en las dos. Hallazgo cerrado — la visibilidad de las 4 tools en el diccionario también quedó resuelta (punto anterior).
-* ✅ **Bug de suma del LLM en `count_livestock`, corregido (2026-09-30):** el LLM sumaba mal el total de las filas devueltas (9 en vez de 12 en una prueba real), aunque la query y los datos estaban correctos. Corregido agregando `grand_total` (calculado en SQL vía `SUM(COUNT(*)) OVER ()`) para que el LLM reporte el total real en vez de sumarlo él mismo. Verificado en LOCAL y producción.
+* Para el mismo tenant de pruebas, el dashboard (filtro "Estado: Activos") reportaba 9 cabezas activas
+  y `count_livestock` reportaba 11 — la diferencia eran 2 animales en `BAJA_MORTANDAD`. Decisión del
+  cliente: ambos deben ser consistentes. Corregido alineando `herd-status.util.ts` al mismo criterio
+  de exclusión de `count_livestock` (`VENDIDO`, `FINALIZADO`, `BAJA_DEPURACION_DATOS`). Verificado en
+  LOCAL y producción — dashboard y Agente IA coinciden. Confirmado sin efectos secundarios: 0 animales
+  reales en `FINALIZADO`/`BAJA_DEPURACION_DATOS` en cualquier tenant de producción.
 
-### 14. Modelos de Negocio en el Dashboard (nuevo en v1.15.0)
-* `BusinessModel` (`'CRIA' | 'ENGORDA' | 'REPRODUCCION'`, en `livestock.model.ts`) es la fuente única del tipo — `Livestock.business_model`, `activeTab` y `setTab()` de `main-dashboard` lo reutilizan. Agregar un modelo de negocio nuevo exige tocar ese tipo, el computed `activeTab` (lectura de `?tab=`), el `btn-group` y el bloque `@if` de `main-dashboard.component.html`, y el selector de `cattle-detail-modal`.
-* ⚠️ **Trampa de nombres:** `ReproductiveDashboardComponent` (`app-reproductive-dashboard`) es el tablero de **CRIA** (filtra `business_model === 'CRIA'`, palpaciones/gestación); el de **REPRODUCCION** es `ReproduccionDashboardComponent` (`app-reproduccion-dashboard`). No confundirlos al editar — renombrar el primero a `CriaDashboardComponent` está pendiente.
-* Cada tablero por modelo re-filtra su `cattleData` por `business_model` aunque `main-dashboard` ya lo filtre — blindaje intencional, no redundancia a eliminar.
+### 📌 Pendientes
 
-## Contrato Meta-CRUD (verificado en producción)
-- Payload: `{ entity, table_name, operation (minúsculas), filters|fields, id }`
-- Errores de Postgres llegan como HTTP 200 con `error:true` — inspeccionar siempre, nunca confiar solo en el status HTTP
-- Colecciones vacías devuelven `data:[{}]`, no `[]` — filtrar por identificador antes de contar o renderizar. **El mismo comportamiento aplica a `getone`: una búsqueda sin match devuelve `error:false, data:{}` en vez de `error:true, "Registro no encontrado."`** (confirmado 2026-09-21, ver Deuda técnica → bug cosmético de `Normalize Data`) — no interpretar `data:{}` como ausencia de fuga sin cruzarlo con el `id_company` esperado.
-- **Toda tabla o vista registrada en `crud_models` debe exponer `created_at`** — el gateway lo usa para el `ORDER BY` por defecto de `getall`; omitirlo produce `column ... created_at does not exist` en runtime, no en despliegue
-- Numéricos llegan como string: parsear explícitamente, nunca comparar/ordenar como texto
-- **`sp_requires_tenant`** (columna en `crud_models`, default `true`) determina si el gateway exige `x-tenant-id` para un modelo `call_sp` antes de invocarlo. Ver Regla 9.
-- Build: `npx ng build agro-erp --configuration=production`
+* Ninguno — v1.14.1 queda cerrada.
 
-## Deuda técnica activa (ver `docs/DOCS_DELTA_v1.9.0_FINAL.md`, `docs/DATABASE_SCHEMA_DELTA_v1.10.0.md` y `docs/INVENTARIO_COMPLETITUD.md` para detalle completo)
+## [1.14.0] - 2026-09-26
 
-**Urgente:**
-- ⚠️ **Rotación de `INTERNAL_SECRET` no confirmada** tras la exposición del 2026-08-13 (ver regla 8). Verificar en ambos servicios (`n8n-jwt-service`, `upload-file`) y ambos ambientes (espejo local, VPS) antes de tratar el subsistema de archivos como seguro.
-- ✅ **Fuga de aislamiento multi-tenant en `production_unit_lots` — RESUELTA Y VERIFICADA, 2026-09-21.** (Antes 🔴 urgente, confirmada con evidencia en vivo el 2026-09-20 18:47 UTC.) Causa raíz: el parche "Zero-Trust" del `Build Query` (`v6/crud`) solo inyectaba el tenant del header cuando la columna se llamaba literalmente `tenant_id` (`modelHasTenantId = allowed_fields.includes('tenant_id')`); `production_unit_lots` usa `id_company`, así que nunca se filtraba — mismo patrón de bug ya corregido antes para `users` (Regla 9, `HOTFIX ARQUITECTÓNICO 2`), pero sin ese hotfix aquí.
-  **Fix aplicado:** se generalizó la inyección de tenant en `Build Query` para reconocer también `id_company` (`modelHasIdCompany`), cubriendo `getall`/`insert`/`update` vía el objeto `fields` compartido. Adicionalmente se detectó y cerró un **segundo hallazgo, previamente indocumentado**: `getone` y `delete` no pasaban por `fields` en absoluto y no aplicaban ningún filtro de tenant, sin importar el nombre de la columna — se agregó el mismo filtro explícito a ambos casos (excluyendo el modelo `users`, que resuelve tenant vía la tabla pivote `user_companies`, no por columna directa).
-  **Verificación (2026-09-21):** confirmado con datos reales (`id_company = 3` vs `= 6`) tanto en LOCAL como en PRODUCCIÓN (`n8n.hosting3m.com`, confirmado como VPS independiente detrás de Cloudflare, no un túnel a la máquina local — probado deteniendo el contenedor `n8n-enterprise-core` LOCAL y confirmando que producción seguía respondiendo). `delete` no aplica a este modelo (`DELETE` no está en `allowed_ops` de `production_unit_lots`), así que no representaba riesgo aquí, pero el fix de `Build Query` sigue siendo válido para cualquier otro modelo que sí tenga `DELETE` habilitado con `tenant_id`/`id_company`.
-  **Pendiente menor:** re-exportar el JSON versionado del workflow `v6/CRUD` en el repo para que quede sincronizado con el `Build Query` ya corriendo en LOCAL/PRODUCCIÓN.
-- 🔴 **`update` del gateway sin filtro de tenant en el `WHERE`** (hallazgo 2026-10-03, verificado en la instancia **LOCAL** de n8n — `v6/CRUD`, `Build Query`; **pendiente confirmar en PRODUCCIÓN**, Regla 7). El fix del 2026-09-21 inyecta `tenant_id`/`id_company` en el objeto `fields`, que en `update` se convierte en `SET id_company = <header>`, mientras el `WHERE` usa solo la llave primaria. Un tenant que conozca el id de un registro ajeno puede modificarlo **y reasignarlo a su propio tenant** — aplica a todo modelo con `UPDATE` y columna de tenant (`production_unit_lots`, `cattle_livestock`, …). Fix sugerido: agregar `AND <columna_tenant> = <header>` al `WHERE` de `update`, igual que ya se hizo en `getone`/`delete`. Mitigación parcial solo en el módulo de Lotes (`ProductionUnitLotService` re-lee con `getone` acotado antes de actualizar) — no protege contra llamadas directas a la API.
-- ⚠️ **`cattle_livestock.lot_id` no expuesto por Meta-CRUD ni por `vw_cattle_kpi`** (2026-10-03): el admin de Lotes cuenta animales por (`production_unit_id`, `upper(lot_name)`) — ambiguo si un lote inactivo comparte nombre con otro (se muestra "—"). Desactivar un lote tampoco limpia `lot_id` de sus animales. Exponer `lot_id` en `vw_cattle_kpi` cerraría ambos puntos.
-- ⚠️ **`tsconfig.spec.json` de `agro-erp` no resuelve `core-auth`** (redefine `paths` sin incluirlo) y 4 specs importan archivos inexistentes (`reproductive-dashboard` ×2, `expense-modal`, `tenant-selector`) — `ng test agro-erp` no compila hoy. Detectado 2026-10-03.
-- ⚠️ **`historico_movimientos` no está registrada en `crud_models`** (confirmado 2026-09-20) — la falta de columna `created_at` en esa tabla (tiene `fecha_registro`) no representa riesgo hoy porque no se expone por `GETALL` de Meta-CRUD. Sin acción necesaria mientras siga sin registrarse; si algún día se registra, agregar `sort_by` explícito o alias `created_at`.
+### 💉 Vacunación Estructurada en el Agente IA
 
-**Pendiente de respuesta del cliente:**
-- `cattle_movement_rules`: 14 de 16 filas con valores reales ya capturados pero `is_confirmed = false`, a la espera de una sola confirmación (`requires_destination_ack`).
-- Alta de tenant/UPP/PSG para Juan Carlos (nuevo titular, primo de Alejandro y Pedro, tenant propio confirmado sin sociedad).
-- Confirmación de Pedro sobre 8 registros NOVILLO→NOVILLONA (corrección mecánica) y 2 conflictos de arete reales (fuegos 1943/1811).
-- Lista final corregida del archivo `TRATAMIENTO_LOTE_ROJO_VACIO_AGO_2026.xlsx`.
+* **Bug real confirmado en producción:** toda vacunación reportada por WhatsApp o Chat Web
+  caía en `log_health_event` con `event_type = 'VACUNACION'` y `medicines_json = {}` — la
+  tool dedicada `log_vaccination_event` ya existía en el MCP Server (su propia
+  `toolDescription` incluso advertía "NO uses `log_health_event` para vacunación"), pero
+  nunca apareció en el diccionario de herramientas de ningún `systemMessage`, así que el
+  LLM no sabía que existía y jamás la invocaba.
+* **Corregido:** ambos `systemMessage` (`v6_ai_chat_cattle`, `v6_WhatsApp_Agent_Cattle`)
+  ahora enrutan vacunación explícitamente a `log_vaccination_event` — vacuna, dosis, unidad
+  y fecha de refuerzo quedan en `medicines_json` estructurado.
+* **Bug de `event_date` corregido en la misma tool:** usaba `COALESCE(application_date,
+  CURRENT_DATE)` — sin fecha explícita, el evento quedaba a medianoche, descuadrando el
+  orden cronológico de `vw_cattle_event_log` frente a otros eventos del mismo día. Cambiado
+  a `COALESCE(application_date::timestamp, CURRENT_TIMESTAMP)`.
 
-**Sin bloquear operación hoy:**
-- `n8n_user` es superusuario de PostgreSQL: toda la seguridad depende de la whitelist de `crud_models`, sin segunda línea de defensa en base de datos (RLS inaplicable mientras esto no cambie)
-- 97% del hato sin bolo ruminal — decisión de negocio pendiente sobre si `electronic_rfid` sigue siendo la llave operativa objetivo
-- Solo 5 de 270 animales pasan hoy la validación completa de movilidad (arete + TB/BR/hato libre) — cifra que puede ser artefacto de falta de dictámenes cargados, no de la situación sanitaria real
-- `n8n-jwt-service`: `/verify-token` recibe `internal_secret` del nodo n8n `Verify Token` pero nunca lo valida (solo `/generate-token` lo revisa) — inconsistencia de diseño, no regresión de seguridad
-- `requires_valid_psg` vs. `requires_health_tests`: documentado que son conceptos distintos, pero no verificado independientemente contra un documento real si de hecho pueden divergir
-- **`cattle_breed_catalog` sin columna de procedencia/confianza del dato** (v1.11.0) — filas validadas con el cliente y filas de captura preliminar conviven sin distinción programática. Ver Regla 9.
-- **`REPRODUCCION` no se puede asignar desde la UI** (v1.15.0): el selector de `business_model` en `cattle-detail-modal` solo ofrece CRIA/ENGORDA — el tablero de Reproducción solo muestra animales cargados por otra vía.
-- ✅ **`vw_cattle_event_log` sin migración versionada para la ampliación de v1.15.0** — cerrado: la definición completa quedó versionada en las migraciones 062 y 063. Ver Regla 12.
-- **`historico_movimientos` `VENTA`/`BAJA_MORTANDAD`/`REVERSION` no aparecen en la Bitácora** (2026-10-04) — decisión de producto pendiente sobre si duplican las filas `SOLICITUD_*` de `pending_authorizations`. Ver Regla 12.
-- **El Agente IA no resuelve nombre de UPP → `production_unit_id`** cuando un tenant tiene múltiples UPPs reales — confirmado en pruebas 2026-09-16. Ver Regla 11.
-- ⚠️ **`tenant_id` en llamadas a tools MCP no es un límite de confianza garantizado, solo prompt-enforced** (v1.12.0) — ver Regla 6 y Regla 11 para el detalle del hallazgo y la mitigación aplicada; sigue siendo deuda técnica de arquitectura, no resuelta de raíz.
-- ✅ **Ausencia de gate de rol (ADMIN vs. EDITOR) en el Agente IA de ganado — re-alcanzada y cerrada como diseño intencional (decisión de Francisco Pérez Pimienta, PM, 2026-09-20), NO confirmada todavía con el cliente final.** Corrección en dos tiempos: primero (2026-09-19, tercer diagnóstico erróneo del proyecto, ver Regla 7) se confirmó que ningún canal (ni WhatsApp ni Web Chat) tiene gate de rol funcionando — el README del workflow documentaba antes un nodo `Switch Role` en WhatsApp que ya no existe, y afirmaba que Web Chat compensaba con RBAC de prompt, falso contra el `systemMessage` real. Después (2026-09-20) se re-planteó el hallazgo como decisión de producto: EDITOR **debe** poder usar las 5 tools rutinarias de captura de campo (`log_cattle_weight`, `log_health_event`, `register_ranch_expense`, `log_weaning_event`, `register_birth_event`) sin restricción de rol — es el propósito del Agente IA. Las dos operaciones irreversibles (`log_mortality_event`/`request_livestock_sale`) **ya están gateadas**, vía Regla 10 (aprobación ADMIN diferida), sin importar qué rol las solicitó. **No se requiere construir ningún gate de rol nuevo.** El cálculo de `global_role` en WhatsApp queda como deuda cosmética (variable sin consumidor), no de seguridad. Pendiente real: confirmar esta decisión con el cliente final antes de considerarla definitiva, y el hallazgo de aislamiento de *tenant* (no de rol) en `find_calf_by_dam`/`register_ranch_expense` sigue abierto — ver el README del workflow, sección "Seguridad y Gobernanza de Datos", puntos 1-2 y 7.
-- ⚠️ **Verificar `historico_movimientos.lot_origen_anterior` / `production_unit_lots` / `vw_cattle_lot_history` contra el esquema real** — mencionados en la Regla 3 pero ausentes de `DATABASE_SCHEMA.md`; no dar por ciertos hasta confirmarlo (ver Regla 3 y Regla 7).
-- ✅ **Confirmado contra `pg_get_functiondef` real (2026-09-20) — los 3 overloads existen y su orden de parámetros queda cerrado.** `sp_procesar_salida_ganado` tiene: (1) legacy de 1 parámetro (`p_electronic_rfid`, sin `tenant_id`, sin lote, sin excepción EQUIDO — nunca invocado por el gateway); (2) el de 4 parámetros `(p_electronic_rfid, p_tenant_id DEFAULT NULL, p_rfid_siniiga DEFAULT NULL, p_numero_fuego DEFAULT NULL)`, que es exactamente el que arma hoy el `Build Query` de `v6/crud` (`paramOrder: ['electronic_rfid','rfid_siniiga','numero_fuego']`, `tenantPosition: 1` → coincide match exacto, sin ambigüedad); (3) el de 5 parámetros desde v1.12.0, **con `p_livestock_id uuid DEFAULT NULL` al final** (no en medio). La ambigüedad de Postgres con una llamada de un solo argumento (`ERROR: function sp_procesar_salida_ganado(unknown) is not unique`, confirmada 2026-09-17) sigue sin ser un riesgo real porque el gateway nunca llama con 1 solo argumento.
-✅ **Fix aplicado y verificado — 2026-09-21:** en el `spConfigByModel` del `Build Query`, se cambió `paramOrder: ['electronic_rfid','rfid_siniiga','numero_fuego']` por `paramOrder: ['electronic_rfid','rfid_siniiga','numero_fuego','livestock_id']` (se mantuvo `tenantPosition: 1`) — con eso el modelo Meta-CRUD `salida_ganado` invocado directo desde el panel Web queda al parejo del Agente IA para vender animales sin identificador físico. **Verificado en LOCAL y PRODUCCIÓN** (mismo turno, Regla 7) contra el tenant de pruebas (`id_company = 3`, animal `279f6d99-e133-4ddd-9fef-f80e0d5a1e84`, sin identificadores físicos): en ambos ambientes el SP resolvió correctamente el animal por `livestock_id` y devolvió una respuesta de negocio estructurada (`success:false`, rechazado por falta de arete SINIIGA y de pruebas TB/BR vigentes/dictamen de hato libre) — confirma que los 5 parámetros llegan en el orden correcto a `sp_procesar_salida_ganado` sin error de tipo, sintaxis ni ambigüedad de sobrecarga, y que las validaciones normativas (Regla 3) se siguen aplicando igual quen se resuelve por `livestock_id`. **Pendiente opcional, no bloqueante:** correr el mismo flujo con un animal que sí tenga arete vigente + TB/BR (o dictamen de hato libre) para confirmar también el camino de éxito completo (venta efectiva), no solo el de rechazo.
-**Hallazgo colateral, corrige el punto anterior de esta misma sección — CERRADO 2026-09-20, confirmado con `\d` directo (no solo por inferencia del código):** `historico_movimientos.lot_origen_anterior` (`character varying(100)`, nullable) y `production_unit_lots` (con `lot_name character varying(100) NOT NULL`) **sí existen en el esquema real**. Backfillear `DATABASE_SCHEMA.md` con ambos objetos — ya no es un punto "pendiente de verificar".
-⚠️ **Un hallazgo colateral de este mismo `\d`, sin verificar todavía si aplica en la práctica:**
-  - `historico_movimientos` **no tiene `created_at`** — tiene `fecha_registro` en su lugar. El Contrato Meta-CRUD exige `created_at` en toda tabla registrada en `crud_models` para el `ORDER BY` por defecto de `getall` (ver sección "Contrato Meta-CRUD"); si esta tabla está registrada para `GETALL` sin que el frontend mande siempre `sort_by=fecha_registro` explícito, se rompe en runtime. Pendiente confirmar si `historico_movimientos` está en `crud_models`.
-- ✅ **CERRADO 2026-09-21:** `production_unit_lots` usa `id_company` como columna de tenant, no `tenant_id` — el mismo patrón que obligó al `HOTFIX ARQUITECTÓNICO 2` de `users`. Confirmado que sí estaba registrada en `crud_models` sin hotfix propio, lo cual causaba la fuga documentada arriba (ahora resuelta). El `Build Query` ya reconoce `id_company` de forma genérica (ver Regla 9) — no se requiere un hotfix dedicado por tabla como el de `users`.
+### 🛡️ Endurecimiento Zero-Hallucination (Reglas 4bis/5/6)
 
+* **Tres patrones de alucinación distintos, confirmados en pruebas reales** contra el
+  tenant ficticio (`id_company = 3`, "Pista de Hielo", arete `71569901`):
+  1. Falso éxito sin invocar ninguna herramienta ("ya registré la vacunación", solo memoria
+     conversacional).
+  2. Excusa de negocio inventada sobre un error técnico real (`livestock_id` vacío →
+     `invalid input syntax for type uuid`; el agente respondió que "el animal está VACÍA" —
+     regla inexistente en el prompt).
+  3. Rechazo de negocio inventado sin ningún error de por medio ("no se puede hacer otra
+     llamada para el mismo evento inmediato").
+* **Mitigado** con tres reglas nuevas en ambos `systemMessage`: Regla 4bis (propagación
+  obligatoria del `id` de `get_livestock_info` a `livestock_id`, prohibido enviarlo vacío),
+  Regla 5 (prohibición de excusas de negocio inventadas ante un error técnico real) y Regla
+  6 (prohibición de rechazos inventados en herramientas rutinarias — cada evento reportado
+  es un registro nuevo, sin límite de repeticiones).
+* ⚠️ Mitigación de prompt sobre un modelo estocástico (`gpt-4o-mini`) — no garantiza que no
+  aparezca un cuarto patrón de alucinación distinto.
+
+### 🔍 Auditoría de Herramientas MCP — 4 tools reales, invisibles para el LLM (hallazgo, NO corregido en esta versión)
+
+* Al releer los 3 workflows completos (no solo fragmentos de nodo) para documentar el fix
+  de vacunación, se confirmó que el servidor MCP expone **15 herramientas, no 11** como se
+  creía: además de `log_vaccination_event`, existen `log_supplement_event`,
+  `log_palpation_event`, `count_livestock` y `register_livestock_purchase` — las últimas 4
+  sin documentar hasta ahora.
+* **Mismo bug de fondo que el de vacunación, sin corregir todavía:** las 4 tools están
+  correctamente conectadas al servidor MCP pero **ninguna aparece en el diccionario de
+  herramientas de ningún `systemMessage`**. Un usuario que reporte un suplemento o una
+  palpación hoy probablemente cae en `log_health_event` genérico (sin `medicines_json`, sin
+  actualizar `current_status` en el caso de palpación); una pregunta de conteo de hato
+  probablemente no se responde con datos reales.
+* **`log_supplement_event` y `log_palpation_event` tienen el mismo bug de `event_date`**
+  que tenía `log_vaccination_event` antes de esta corrección — sin corregir.
+* Decisión explícita de esta sesión: documentar el hallazgo sin tocar los workflows
+  todavía — ver `workflows/09-MCP-Agent-Cattle/v6/README.md`, punto 8bis, para el detalle
+  completo.
+
+### ✅ Validado
+
+* Confirmado leyendo los 3 JSON completos de los workflows el 2026-09-26: el fix de
+  vacunación y las reglas 4bis/5/6 ya están desplegados en ambos canales.
+
+### 📌 Pendientes que quedan abiertos
+
+* Agregar `count_livestock`, `register_livestock_purchase`, `log_supplement_event` y
+  `log_palpation_event` al diccionario de herramientas de ambos `systemMessage`.
+* Corregir `event_date` en `log_supplement_event` y `log_palpation_event`.
+* Inconsistencia sin resolver en el animal de pruebas (`71569901`): `current_status =
+  'VACÍA'` con última palpación registrada `'PREÑADA'` — no pudo originarse en
+  `log_palpation_event` (sincroniza ambos campos en la misma transacción).
+  
+## [1.13.0] - 2026-09-22
+
+### 🎙️ Corrección de Sanitización de Identificadores Dictados por Voz
+
+* **Bug real confirmado en producción (execution #699966):** Whisper transcribe folios y
+  aretes dictados por voz dígito por dígito con espacios (`"9 9 9 9 8 8 8 8 7 7"`). El
+  `systemMessage` del Agente IA (WhatsApp) delegaba en el propio LLM (`gpt-4o-mini`) la
+  reconstrucción manual del identificador antes de invocar `get_livestock_info` — el modelo
+  perdió un dígito al reensamblar (`"999988877"` en vez de `"9999888877"`), devolviendo
+  "animal no encontrado" pese a que el animal existía. Texto escrito nunca tuvo el bug,
+  porque llega ya contiguo (sin espacios que reconstruir).
+* **Corregido:** sanitización movida a código determinista (expresión regular
+  `\d(?:\s+\d){2,}`) en el nodo `Set Prompt Final` del workflow `v6/WhatsApp Agent Cattle`
+  — colapsa 3+ dígitos sueltos consecutivos en un bloque contiguo antes de que el texto
+  llegue al Agente IA. El `systemMessage` (Regla 2, "SANITIZACIÓN DE ARETES") se simplificó
+  para asumir que el identificador ya llega limpio, en vez de pedirle al LLM que lo re-limpie.
+
+### 📋 Vista de Auditoría de Eventos de Ganado
+
+#### 🗄️ Base de datos
+* **`vw_cattle_event_log` (nueva, migración 060, idempotente):** combina
+  `cattle_weight_logs`, `cattle_health_logs` y `birth_events` por `livestock_id`, con
+  `event_type` (`PESO`/`SALUD`/`NACIMIENTO`) y `tenant_id` explícito para filtrado.
+* Registrada en `crud_models` (`model_name = 'cattle_event_log'`,
+  `allowed_ops = {SELECT,GETALL,GETONE}`, sin escritura).
+
+#### 🖥️ Frontend
+* **Nueva pestaña "Cattle Event Log"** dentro de `main-dashboard` (app `agro-erp`), de solo
+  lectura, para auditoría manual de los 3 tipos de evento capturados por el Agente IA de
+  WhatsApp — nace directamente del hallazgo de pérdida de dígitos de esta misma versión,
+  como mecanismo de QA continuo.
+
+### ✅ Validado en producción
+
+* Tenant 3 ("Pista de Hielo"), 2026-09-22: folio de prueba dictado por voz resuelto
+  correctamente tras el fix de sanitización; los 3 tipos de evento (peso, vacuna,
+  nacimiento) registrados y verificados vía `vw_cattle_event_log`.
+* Migración 060 aplicada en LOCAL y PRODUCCIÓN con backup previo (`pg_dump -Fc`) y
+  verificación de checksum (`md5sum`) tras la transferencia del archivo al servidor.
+  
+## [1.12.0] - 2026-09-19
+
+### 🐄 Reporte de eventos para animales sin identificador físico
+
+* Nueva herramienta MCP `find_calf_by_dam`: busca crías sin arete/fuego/chip nacidas de
+  una madre dada en los últimos 90 días, para poder reportar mortandad o venta de animales
+  recién nacidos aún sin identificador — resuelve la limitación #2 señalada en v1.11.1.
+* **`livestock_id` propagado de punta a punta** en la cadena de autorización asíncrona:
+  agregado a `sp_solicitar_autorizacion` (8vo parámetro) y a `sp_procesar_baja_mortandad`
+  (10mo parámetro, `p_livestock_id DEFAULT NULL`) como alternativa a los 3 identificadores
+  físicos.
+* **Corregido bug real:** `sp_resolver_autorizacion` creaba la solicitud con `livestock_id`
+  resuelto correctamente, pero no lo reenviaba a `sp_procesar_baja_mortandad` /
+  `sp_procesar_salida_ganado` al aprobar — el SP real fallaba con `ERRCODE P0002` pese a
+  tener el UUID correcto guardado. Corregido reenviando `v_request.livestock_id` en ambas
+  invocaciones del despachador.
+* Documentación retroactiva del overload de 4 parámetros de `sp_procesar_salida_ganado`
+  (existía en producción desde v1.9.0, nunca documentado) y corrección de la firma
+  documentada de `sp_solicitar_autorizacion` (le faltaba `p_livestock_id`, ya presente en
+  producción antes de esta versión).
+
+### 🔍 Hallazgo de seguridad — aislamiento multi-tenant en el Agente IA
+
+* Durante las pruebas de `find_calf_by_dam`, el Agente IA envió `tenant_id: 5` (empresa
+  real) en vez de `tenant_id: 3` (tenant de pruebas) al invocar la herramienta, pese a que
+  el workflow de WhatsApp ya había resuelto correctamente el tenant en contexto — el LLM
+  lo ignoró al construir esa llamada específica. Sin efecto real (sin match en BD para ese
+  tenant), pero confirma que `tenant_id` vía `$fromAI()` en una tool MCP no es un límite de
+  confianza garantizado, solo prompt-enforced.
+* **Mitigado** colocando el valor literal del tenant justo antes del diccionario de
+  herramientas en ambos system prompts (WhatsApp y Chat Web) — más efectivo que la regla
+  general de tenant ya existente.
+* Mismo riesgo confirmado también en el panel "Chat" interno del editor de n8n (no solo en
+  el panel "Test" de un nodo individual): cualquier prueba del Agente IA debe hacerse por el
+  canal real (WhatsApp o Chat Web app).
+* ⚠️ No es una garantía arquitectónica — `v6/MCP Server Cattle` corre aislado, sin acceso al
+  contexto de sesión del workflow que lo invoca. Deuda técnica abierta, ver `CLAUDE.md`.
+
+### ✅ Validado en producción
+
+* Tenant 3 ("Pista de Hielo"), 2026-09-18/19: mortandad ✅ (cría sin identificador →
+  `BAJA_MORTANDAD`) y venta ✅ (cría sin identificador → `APROBADO`,
+  `sp_procesar_salida_ganado` ejecutado sin error).
+
+## [1.11.1] - 2026-09-16
+
+### 🐄 Herramienta MCP de Alta de Nacimiento — validada en producción
+
+* **`register_birth_event` (Agente IA)** conectada y probada de punta a punta por Chat Web
+  y WhatsApp, con datos reales. Evento rutinario, sin protocolo de confirmación previa —
+  consistente con la clasificación confirmada por el cliente (solo "Baja por muerte" y
+  "Baja por venta" requieren autorización).
+* Documentado por primera vez: `sp_register_birth_event` existe en **dos versiones
+  sobrecargadas** en producción; la vigente (13 parámetros) introduce `p_lot_id`, que
+  referencia la tabla `production_unit_lots` — previamente indocumentada, actualmente sin
+  datos cargados.
+
+### 🐛 Fixes
+
+* **`register_birth_event` (nodo n8n):** los campos `query` y `options.queryReplacement`
+  del nodo quedaron invertidos durante la construcción inicial — corregido.
+* **`register_birth_event` (nodo n8n):** parámetros UUID opcionales (`dam_id`, `lot_id`,
+  `production_unit_id`, `paddock_id`) fallaban con `invalid input syntax for type uuid`
+  cuando el panel de prueba (o el propio modelo) mandaba string vacío en vez de omitir el
+  campo. Corregido con una función `empty()` que normaliza `""`/`undefined` a `null` antes
+  de castear.
+* **Panel Web `/admin/autorizaciones`:** el payload de Aprobar/Rechazar no incluía
+  `resuelto_por_email`, requerido por `sp_resolver_autorizacion` — el botón fallaba con
+  "Se requiere email de quien reporta y de quien autoriza la baja". Corregido para leerlo
+  del usuario autenticado.
+
+### 🔍 Hallazgos confirmados en pruebas reales (no bloqueantes, documentados como deuda)
+
+* El Agente IA no resuelve un nombre de UPP mencionado en texto libre contra
+  `production_units.ranch_name` — su vocabulario trata "UPP" como sinónimo del tenant
+  completo. Sin impacto en clientes actuales (ninguno tiene aún más de una UPP real
+  cargada), pero es una limitación de diseño, no solo de datos.
+* Un animal sin ningún identificador físico (arete/fuego/chip) — por ejemplo, una cría
+  recién nacida antes de ser aretada — no puede reportarse por mortandad ni venta hoy, ya
+  que `sp_solicitar_autorizacion` no acepta el `livestock_id` interno como identificador.
+* Confirmado (y corregido operativamente, no en código): el panel de prueba de un nodo
+  `postgresTool` en n8n ejecuta contra la base real configurada en su credencial, sin
+  distinguir si la instancia de n8n abierta es local o de producción. Adoptada una
+  estrategia de tenant ficticio dedicado a pruebas conversacionales del Agente IA (ver
+  `CLAUDE.md`, Regla 11) para no repetir el incidente.
+
+### ✅ Confirmaciones del cliente
+
+* Edad de madurez reproductiva `BECERRO_TORETE → TORO`: **16 meses**, confirmado por
+  Alejandro el 2026-09-15. El valor placeholder insertado originalmente resultó correcto.
+
+## [1.11.0] - 2026-09-11
+
+### 🔒 Subsistema de Autorización Asíncrona
+
+Introduce un mecanismo de aprobación humana diferida para dos eventos irreversibles —
+baja por mortandad y baja por venta iniciada desde el Agente IA — separando la captura del
+reporte (WhatsApp/Chat) de la ejecución real del cambio de estado, que ahora requiere
+aprobación explícita de un ADMIN/dueño del tenant desde el panel Web.
+
+#### 🗄️ Base de datos
+* **`pending_authorizations` (genérica) + `mortality_events` (detalle rico):** el animal
+  no cambia de `current_status` al solicitar, solo al aprobarse. `payload` JSONB flexible
+  por tipo de evento en vez de columnas fijas.
+* **`sp_solicitar_autorizacion` / `sp_resolver_autorizacion`:** despachador con whitelist
+  explícita por `tipo_evento` (sin SQL dinámico) que invoca `sp_procesar_baja_mortandad` o
+  `sp_procesar_salida_ganado` según corresponda, solo al aprobar.
+* **`sp_procesar_baja_mortandad` (nuevo):** mismo patrón de desambiguación
+  multi-identificador que `sp_procesar_salida_ganado`. A diferencia de venta, **conserva**
+  `upp_origen` (útil para análisis de mortalidad por lote). Marca automáticamente crías
+  activas y sin destetar como `RIESGO` cuando muere la madre.
+* **Vigencia hasta medianoche del día de solicitud**, no una ventana móvil de 24h —
+  confirmado con el cliente. Revalidada tanto por un Cron diario (00:05,
+  `America/Mexico_City`) como por el propio `sp_resolver_autorizacion` al momento de
+  aprobar.
+* **Corregido bug real de gateway:** el nodo Build Query del workflow `v6/crud` inyectaba
+  `tenant_id` en el `WHERE` de cualquier `GETALL`, sin verificar si la tabla lo tenía —
+  rompía el listado de los nuevos catálogos globales (`column ... tenant_id does not
+  exist`). Corregido condicionando la inyección a `allowed_fields`. Agregada columna
+  `sp_requires_tenant` a `crud_models` para procedimientos `call_sp` que no reciben
+  `tenant_id` como parámetro.
+
+#### 🧬 Catálogos Globales de Parametrización
+* **`cattle_breed_catalog` / `cattle_lifestage_catalog` (nuevas, sin `tenant_id`):**
+  pesos objetivo por raza, % de peso para primer servicio, y transiciones de categoría con
+  validación dual edad+peso — la edad nunca es el único criterio de promoción.
+* Datos de razas poblados en dos rondas: captura preliminar (lista de imagen, pesos
+  aleatorios) corregida posteriormente con el documento de validación formal firmado por
+  el cliente.
+* **Corregida transición biológicamente inválida:** `NOVILLO → TORO` implicaba que un
+  macho castrado pudiera convertirse en reproductor. Reemplazada por
+  `BECERRO → BECERRO_TORETE → TORO` (rama separada para machos destinados a semental).
+
+#### 🤖 Agente IA (WhatsApp / Chat Web)
+* Nuevas herramientas MCP `log_mortality_event` y `request_livestock_sale`: ya no
+  ejecutan el cambio de estado directamente, crean una solicitud de autorización. El
+  Agente informa al usuario que la solicitud quedó pendiente de aprobación, nunca que el
+  animal ya fue dado de baja.
+* Candado Anti-Jailbreak (confirmación explícita antes de invocar herramientas de
+  escritura) extendido a ambas herramientas nuevas en los dos *system prompts* (Chat Web y
+  WhatsApp) — el de WhatsApp no lo tenía replicado explícitamente y quedó alineado con
+  Chat Web en esta versión.
+
+#### 🖥️ Frontend
+* **Nueva pantalla `/admin/autorizaciones`:** pestañas Pendientes (con cuenta regresiva a
+  medianoche y botones Aprobar/Rechazar con modal de confirmación) e Historial (solo
+  lectura, badges por estado).
+* **Nuevas pantallas de catálogos** (`/admin/catalogos/razas`, etapas de vida) siguiendo
+  el mismo patrón que `tenant-list`.
+
+#### 📚 Documentación
+* **Corregido:** `cattle_livestock.category` estaba documentado como ENUM real de
+  Postgres — es `VARCHAR` + `CHECK constraint`, confirmado vía `pg_type`. Afecta cómo se
+  agregan valores nuevos (`ALTER TABLE ... DROP/ADD CONSTRAINT`, no `ALTER TYPE`).
+* **Documentados por primera vez** (existían en producción sin documentación previa):
+  `weaning_events`, `sp_register_weaning_event`, y el comportamiento completo de
+  `sp_register_birth_event` (incluyendo el cambio automático de estatus de la madre de
+  `PREÑADA` a `VACÍA` al registrar el parto).
+* Confirmado: el workflow del gateway Meta-CRUD documentado previamente como
+  `06-dynamic-crud-engine` es el mismo workflow actualmente nombrado `v6/crud` — solo
+  renombrado, no una migración de infraestructura.
+
+### 📌 Pendientes que quedan abiertos
+* Edad de madurez reproductiva de `BECERRO_TORETE → TORO` — actualmente 16 meses como
+  placeholder, sin confirmación específica del cliente para machos.
+* `cattle_breed_catalog` sin columna que distinga programáticamente filas validadas de
+  filas de captura preliminar.
+* Confirmación de `requires_destination_ack` (cliente) — sin cambios desde v1.10.0.
+* Rotación confirmada de `INTERNAL_SECRET`/`JWT_SECRET` en ambos ambientes — sin cambios
+  desde v1.10.0.
+
+## [1.10.0] - 2026-08-14
+
+### 🚀 Motor de Movimientos SENASICA-REEMO y Cumplimiento Documental
+
+Convierte el catálogo de reglas de movimiento (`cattle_movement_rules`, creado en migración
+020, nunca ejecutado) en un subsistema completo y confirmado contra reglas de negocio reales
+del cliente (audio grabado, 2026-08-11, más cuatro ejemplos de documentos REEMO/CZM/permiso
+reales), junto con el registro de eventos de movimiento, la cadena documental de cumplimiento
+que los respalda, y el historial automático de identificadores del animal.
+
+#### 🐄 Registro de eventos de movimiento
+* **`cattle_movement_events` / `cattle_movement_event_animals`:** bitácora real de
+  movilizaciones, con origen y destino cada uno estrictamente uno de UPP interna, PSG interna
+  o destino externo (`CHECK` de exclusividad de tres vías). Un mismo evento cubre tanto un
+  animal individual como un lote completo — mismo mecanismo, solo cambia el número de filas
+  en la tabla de detalle.
+* **`psg_facilities`:** un PSG pasa a modelarse como una ubicación física real (a donde se
+  transporta ganado), no solo como una licencia — confirmado con documentos reales del
+  cliente.
+* **Aislamiento multi-tenant fail-closed** vía triggers `BEFORE INSERT/UPDATE`, verificado en
+  local y producción: un movimiento entre tenants distintos se rechaza explícitamente; uno
+  dentro del mismo tenant se acepta.
+
+#### 📜 Matriz de reglas confirmada (16 filas, antes 8 en borrador)
+* **`PSG → UPP` queda permanentemente prohibido** — un animal que entra a un PSG nunca puede
+  volver a una UPP, solo a otro PSG o salir a rastro/exportación. Confirmado y aplicado de
+  inmediato (`is_confirmed = true`).
+* Los requisitos ahora dependen de si el movimiento es interestatal (`is_interstate`), no
+  solo del par origen/destino — un mismo par UPP→UPP tiene requisitos completamente distintos
+  según cruce o no una frontera estatal.
+* 14 de las 16 filas quedan con los valores reales ya capturados pero `is_confirmed = false`,
+  a la espera de una única confirmación pendiente del cliente (`requires_destination_ack`) —
+  el enforcement real sigue inactivo hasta que llegue esa respuesta.
+
+#### 📄 Cadena documental real (`compliance_certificates` extendido)
+* 5 tipos de documento nuevos: guía de tránsito REEMO, Certificado Zoosanitario de
+  Movilización, constancia de tratamiento GBG (gusano barrenador — requisito DINESA vigente
+  desde diciembre 2025, verificado independientemente contra fuentes oficiales), permiso de
+  internación estatal, y carta de cesión de derechos.
+* **Corrección de un bug real detectado en revisión posterior:** el constraint original de
+  "sujeto único" hacía imposible insertar cualquier documento de movimiento sin forzar
+  también una UPP/PSG no relacionada — no era solo una regla sin aplicar, bloqueaba la
+  inserción por completo. Corregido con dos constraints (sujeto ampliado a tres opciones +
+  emparejamiento tipo-de-documento↔sujeto correcto).
+* **TB/BR enlazado vía tabla puente**, no FK directo: el mismo folio de hato libre puede
+  respaldar varios movimientos mientras siga vigente, confirmado por los documentos CZM
+  reales que citan folios TB/BR como referencia, no como documento de un solo uso.
+
+#### 🏷️ Historial automático de identificadores
+* **`cattle_identifier_history`:** registra automáticamente cualquier cambio a los tres
+  identificadores del animal (fuego, arete SINIIGA, chip RFID) vía trigger — nada se pierde
+  sin importar qué script haga el cambio. El motivo por default es corrección de captura;
+  scripts que conozcan el motivo real (pérdida, reposición, arete suelto reasignado) pueden
+  enriquecerlo sin que el resto del sistema tenga que cambiar.
+* `herd_free_certificates` **registrada en `crud_models`** por primera vez desde su creación
+  (migración 024) — el frontend no podía leerla ni escribirla hasta ahora.
+
+#### 🔐 Seguridad — `upload-file`
+* El microservicio de almacenamiento de archivos que respalda `compliance_documents`
+  (`upload-file`, no documentado previamente) era completamente público y sin autenticación.
+  Dado que va a almacenar credenciales de identificación reales, se endureció reutilizando la
+  infraestructura JWT/`INTERNAL_SECRET` ya existente en `n8n-jwt-service` — mismo modelo de
+  confianza de dos niveles, sin inventar un mecanismo paralelo.
+* Nombres de archivo ahora criptográficamente aleatorios (antes basados en timestamp);
+  SHA-256 calculado en servidor; secretos movidos fuera del `docker-compose.yml` versionado.
+* **`core-auth` 0.0.1 → 0.0.2:** `apiUrl_upload` agregado a `AuthEnvironmentConfig` para que
+  el interceptor funcional adjunte el JWT también hacia `upload-file` — campo opcional,
+  aditivo, sin romper apps consumidoras que no suben archivos.
+* ⚠️ **Pendiente operativo:** el valor real de `INTERNAL_SECRET` se expuso en texto plano
+  durante el trabajo de endurecimiento y debe tratarse como comprometido. Rotación
+  instruida, **no confirmada como completada**.
+
+### 🗄️ Migraciones incluidas
+`020` (aplicada por primera vez), `039`–`049`. Todas aplicadas y verificadas contra el clon
+local y el VPS de producción, con respaldo previo a cada aplicación en producción.
+
+### 📌 Pendientes que quedan abiertos
+* Confirmación de `requires_destination_ack` (cliente).
+* Alta de tenant/UPP/PSG para Juan Carlos (nuevo titular, primo de Alejandro y Pedro).
+* Confirmación de dos grupos de registros de Pedro (8 correcciones NOVILLO→NOVILLONA, 2
+  conflictos de arete reales).
+* Lista final corregida del archivo `TRATAMIENTO_LOTE_ROJO_VACIO_AGO_2026.xlsx`.
+* Rotación confirmada de `INTERNAL_SECRET`/`JWT_SECRET` en ambos ambientes.
+* Inconsistencia en `jwt-service`: `/verify-token` no valida `internal_secret` pese a
+  recibirlo.
+
+
+## [1.8.1] - 2026-07-08
+
+### 📚 Sincronización de Documentación y Validación de Esquema
+
+Alineación de `DATABASE_SCHEMA.md` y `ARCHITECTURE.md` contra el estado real de producción (VPS), con verificación campo por campo sin discrepancias contra un clon local restaurado el mismo día.
+
+#### 🗄️ Documentación de Base de Datos
+* **Campos y tablas antes indocumentados:** `cattle_livestock.upp_origen`, la tabla de auditoría `historico_movimientos`, la vista `vw_cattle_kpi`, y las tablas `cattle_tenants`, `cattle_task_evidence` y `agriculture_telemetry`.
+* **Modelo Meta-CRUD `salida_ganado` (ID 46):** Documentado en `ARCHITECTURE.md` como el único modelo que invoca una función PL/pgSQL (`sp_procesar_salida_ganado`) en lugar de una tabla física.
+* **Corrección de RBAC:** `cattle_livestock` (el borrado es `ADMIN` exclusivo, no `ADMIN,EDITOR`) y `cattle_tenants` (la lectura está abierta a `EDITOR`, no solo a `ADMIN`).
+
+#### 🔁 Infraestructura de Validación
+* **Pipeline de respaldo extendido:** `backup_postgres_vps_to_local.sh` ahora replica tanto `n8n_db` como `hosting3m_db` diariamente (antes solo `n8n_db`), permitiendo validar la documentación contra un clon local sin necesitar acceso directo al VPS de producción.
+
+## [1.8.0] - 2026-07-07
+
+### 🚀 Consolidación del Core Business Logic y Server-Side BI
+
+Esta versión formaliza la delegación computacional de la lógica de negocio al motor de PostgreSQL mediante Procedimientos Almacenados y Triggers, eliminando la duplicidad de reglas en la capa de integración.
+
+#### 🏗️ Arquitectura y Procedimientos Almacenados (PL/pgSQL)
+* **Meta-CRUD Gateway:** Documentación e integración formal de la función `execute_metacrud_write` para orquestar la inserción y actualización dinámica (JSONB) desde n8n de manera segura.
+* **Control Sanitario Estricto:** Implementación del SP `sp_procesar_salida_ganado`. Se añadieron reglas de validación en el servidor que bloquean operaciones de venta si las pruebas de Tuberculosis y Brucelosis superan los 60 días de antigüedad o son inexistentes.
+* **Automatización de Biomasa:** Alta del trigger `update_current_weight` que sincroniza el `current_weight_kg` de la tabla maestra `cattle_livestock` al detectar nuevos registros en `cattle_weight_logs`.
+
+#### 🐾 Gobernanza de Datos y Biometría
+* **Transición de Estándar Físico:** Depreciación del enfoque en aretes SINIIGA para el control de inventario en vivo debido a las bajas tasas de retención física. Adopción oficial del esquema basado en **Bolos Ruminales y Microchips Subcutáneos** (`electronic_rfid`) como Primary Key operativa.
+
+## [1.7.0] - 2026-06-18
+
+### 🚀 Evolución a Agro-ERP y Arquitectura Multi-Dominio
+
+Transformación estructural del proyecto para soportar múltiples verticales de negocio (Ganadería y Agricultura) bajo un mismo ecosistema de código y persistencia, garantizando la escalabilidad transversal.
+
+#### 🏗️ Refactorización Estructural (Feature-Driven Architecture)
+* **Domain Isolation:** Renombramiento del workspace a `agro-erp`. Separación estricta de módulos en `features/livestock` y `features/agriculture`.
+* **Lazy Loading Estricto:** Reescritura del `app.routes.ts` para delegar la carga de componentes mediante *Lazy Loading*, asegurando que el código agrícola no sature clientes ganaderos y viceversa.
+* **Context Switcher Reactivo:** Actualización del `MainLayoutComponent` y `SidebarComponent` para reaccionar dinámicamente al `business_type` y la columna `industry` de la base de datos, alternando rutas y temas visuales (`theme-cattle` vs `theme-palm`) sin recargar la SPA.
+
+#### 🚁 Arquitectura Híbrida y Telemetría Agrícola
+* **JSONB Persistence Layer:** Creación de la tabla `agriculture_telemetry` en PostgreSQL utilizando tipos de datos JSONB para ingestar formatos variables provenientes de vuelos de drones (litros, hectáreas, agroquímicos).
+* **Meta-CRUD Integration (v3):** Registro del modelo `PalmTelemetry` en el motor de n8n, permitiendo operaciones CRUD completas para la plantación de palma con seguridad Multi-Tenant inherente sin requerir nuevos endpoints.
+
+#### 🛡️ Programación Defensiva y Paridad IA
+* **Resilient Routing:** Implementación de Signals computadas (`isLivestock`, `isAgriculture`) para mitigar desincronizaciones en el Payload JWT, previniendo pantallas vacías.
+* **UI Chat Restoration:** Corrección del selector de Standalone Components (`<lib-ai-chat>`) para garantizar la persistencia del Agente IA en ambos dominios operativos.
+
+---
+
+## [1.6.0] - 2026-06-09
+
+### 🚀 Multi-Species Architecture & Stateful AI Context
+
+Esta actualización mayor transforma el dashboard en una plataforma integral multiespecie y eleva el motor de Inteligencia Artificial a un nivel transaccional seguro, introduciendo desambiguación de contextos para múltiples ranchos.
+
+#### 🐾 Arquitectura Multi-Especie y UI Reactiva
+* **Database Evolution:** Creación de la columna física `species` en la tabla `cattle_livestock` y actualización de los Constraints de Postgres para soportar taxones extendidos (BÚFALO, BORREGO, etc.).
+* **Meta-CRUD Synchronization:** Actualización dinámica en la tabla `crud_models` (ID 37) para mapear el campo `species` de manera nativa sin requerir endpoints adicionales.
+* **Reactive Signals (Frontend):** Refactorización de `MainDashboardComponent` para extraer opciones taxonómicas y filtrar el DOM instántaneamente sin peticiones asíncronas innecesarias.
+
+#### 🤖 Inteligencia Artificial & Stateful Context Injection
+* **Context-Aware Disambiguation:** Refactorización de la herramienta MCP `get_livestock_info` para eliminar consultas ciegas (`LIMIT 1`). Ahora inyecta el `tenant_id` y permite al LLM desambiguar colisiones naturales (Ej. múltiples animales con el mismo número de fuego).
+* **Web Chat Context Bridge:** Actualización de `AiService` en Angular para inyectar silenciosamente el `tenant_id` extraído desde `core-auth` hacia el webhook del Agente IA en n8n.
+* **Master Prompt Consolidation:** Unificación del prompt del sistema para el Chat Web y WhatsApp con reglas de Sanitización de Aretes y protocolos Anti-Jailbreak.
+
+#### 🛠️ Correcciones y Refactorización (Bug Fixes)
+* **Fix (Angular Compiler):** Resolución de excepción `NG5002` en `EngordaDashboardComponent` reestructurando el árbol lógico de `@if / @else if` para prevenir colapsos en la renderización condicional.
+* **Component Isolation:** Aplicación de filtros rígidos (`validEngordaData`) dentro de sub-componentes para prevenir contaminación cruzada de KPIs de peso entre módulos de Cría y Engorda.
+
+---
+
+## [1.5.0] - 2026-06-02
+
+### 🚀 Multi-Tenant Auth & AI Data Integrity Hardening
+
+Este release mayor consolida la arquitectura del Monorepo mediante la abstracción de la seguridad y despliega las defensas de grado empresarial para el Agente de Inteligencia Artificial, asegurando la fase estratégica de 12 meses de recolección de datos.
+
+#### 🛡️ Inteligencia Artificial & MCP (Model Context Protocol)
+* **Zero-Hallucination Firewall:** Inyección de directivas estrictas en el *System Prompt* del Agente IA (`v6_ai_chat_cattle.json`) para prohibir la inferencia de parámetros de base de datos.
+* **Anti-Jailbreak Protocol (Human-in-the-Loop):** Candado de ejecución que bloquea herramientas de escritura (`log_health_event`, `register_ranch_expense`) si no existe una confirmación afirmativa explícita en el turno inmediato anterior.
+* **Strongly Typed Schema Definition:** Implementación de `$fromAI` en el `v6_MCP_Server_Cattle.json` para garantizar un casting determinista de tipos (string, number) desde el LLM hacia PostgreSQL. Fix de desfase de columnas inyectando `CURRENT_TIMESTAMP`.
+* **WhatsApp Field Agent:** Despliegue de `v6_WhatsApp_Agent_Cattle.json` en el nuevo directorio `workflows/09-MCP-Agent-Cattle` para captura automatizada desde campo mediante lenguaje natural.
+
+#### 🏗️ Arquitectura Multi-Tenant (Frontend & Backend)
+* **Librería `core-auth`:** Extracción exitosa de la lógica de autenticación, Guards e Interceptors desde las aplicaciones individuales hacia una librería Angular independiente (`@hosting3m/core-auth`).
+* **Context Switcher:** Implementación de una interfaz reactiva basada en Angular Signals (`TenantService`) que permite a los usuarios con múltiples unidades de negocio (ej. Rancho y Hotel) seleccionar su entorno de trabajo dinámicamente.
+* **Data Pipeline Resilience:** Refactorización de servicios (`CattleApiService`) implementando programación defensiva (operadores `catchError` y `map` en RxJS) para evitar colapsos de UI (`TypeError`) al desenvolver respuestas anidadas de n8n.
+
+---
+
+## [1.0.0] - 2026-05-21
+
+### 🚀 Lanzamiento Inicial (Core Architecture)
+
+Establecimiento del sistema transaccional y analítico para la gestión de ranchos ganaderos, enfocado en los ciclos de Cría (Cow-Calf) y Engorda (Feedlot).
+
+#### 🏗️ Arquitectura & Base de Datos
+* **Multi-Tenancy:** Aislamiento de datos a nivel de base de datos (`tenant_id`), permitiendo gestionar múltiples ranchos desde una sola instancia. Migración de llaves foráneas a `Integer` para compatibilidad con sistemas legados.
+* **Meta-CRUD Integration:** Conexión fluida con el API Gateway de n8n, implementando reglas estrictas de integridad (`Check Constraints`) para modelos de negocio y estatus del animal (ACTIVO, PREÑADA, VACÍA, FINALIZADO).
+
+#### 📊 Business Intelligence & Server-Side Computing
+* **Vista `vw_cattle_kpi`:** Creación del motor de cálculo en PostgreSQL para resolver la Ganancia Diaria de Peso (ADG) y extraer el último diagnóstico reproductivo directamente desde campos JSONB (`medicines_json`).
+* **Supresión de Mock Data:** Transición exitosa del `CattleDataService` simulado a conexiones en tiempo real usando Angular Signals y el `HttpClient`.
+
+#### 🎨 UI/UX y Flujos Operativos
+* **Tabler UI Integration:** Implementación de modales reactivos con `FormGroup` para Altas, Control de Biomasa (Pesajes) y Eventos Sanitarios.
+* **Captura Flexible:** Rediseño del formulario de alta para admitir SINIIGA, Número de Fuego y Chip RFID, soportando la realidad operativa donde los animales pierden sus identificadores físicos.
+
+## 📦 Authors
+
+**Francisco Jesus Pérez Pimienta**
+*Senior Systems Architect & Project Lead*
+Hosting3M Automation Suite
