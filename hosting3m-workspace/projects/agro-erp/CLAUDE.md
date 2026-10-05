@@ -33,6 +33,47 @@ sigue viendo la respuesta cruda completa. El cierre real es una vista en Postgre
 estas claves de `metadata` antes de que el gateway las devuelva — **Fase 1, no implementada
 aquí.**
 
+### 📌 Deuda técnica — el gateway corta GETALL en 1500 filas (tope 2000), listas client-side truncan en silencio
+
+Hallazgo del diseño de estandarización de paginación (fase 0-1, `PagedTable`/`exportRowsToCsv`
+en `shared/utils/`, aún sin cablear a ningún componente). `Build Query` (`v6/CRUD`,
+`sanitizePaginationParams`) aplica `limit = 1500` por default cuando el frontend no manda
+`body.limit`, con un tope duro de 2000 aunque se pida más. Todas las tablas de agro-erp hoy
+(`cattle-list`, `cattle-event-log`, main-dashboard, etc.) hacen "traer todo, paginar/filtrar/
+ordenar en memoria" sin mandar `limit` nunca — **si el hato o la bitácora de un tenant superan
+1500 filas, el resto se descarta silenciosamente antes de llegar al cliente**: ni un error, ni
+un aviso, ni un "mostrando parcial" — el paginador simplemente calcula `totalPages` sobre un
+dataset ya incompleto, y lo que no entró en esas 1500 filas no existe para el usuario. Hoy no
+hay evidencia de que ningún tenant real supere ese umbral (el ejemplo más grande documentado es
+581 animales, un tenant), pero no hay ninguna alarma que avise cuando se cruce.
+
+Propuesta (no implementada, solo nota, según se pidió): un chequeo explícito en el pipeline de
+carga de cada tabla grande — si el array recibido tiene exactamente `1500` o `2000` elementos
+(las dos cotas conocidas de `sanitizePaginationParams`), mostrar una advertencia visible ("estos
+datos pueden estar incompletos, contactar a soporte") en vez de asumir que esa cifra redonda es
+coincidencia. Cierre real requiere tocar el gateway (subir el tope, o mejor, implementar
+paginación servidor-side real con `limit`/`offset` — ver la entrada de diseño de paginación para
+el detalle de qué le falta a `Build Query` para eso, p.ej. total-count y sort ASC) — fuera de
+alcance de esta nota.
+
+### 📌 Deuda técnica — `ng test agro-erp` no compila; specs nuevos verificados solo por Vitest standalone
+
+`ng test agro-erp` falla al compilar el proyecto completo, no solo las pruebas nuevas de este
+ciclo: `admin.service.ts`/`production-unit-lot.service.ts` tienen errores reales de TypeScript
+en modo estricto (`Object is of type 'unknown'`, `Cannot find module 'core-auth'`), y varios
+specs preexistentes (`reproductive-dashboard.component.spec.ts` ×2, `expense-modal.component.spec.ts`,
+`tenant-selector.component.spec.ts`) importan rutas/clases que ya no existen — boilerplate de
+`ng generate` nunca actualizado. Ninguno de estos errores lo introdujo este ciclo de trabajo.
+
+Por eso `paged-table.util.spec.ts` (13 casos: slicing, reset por `linkedSignal`, clamp al
+encoger el dataset, `showPager` con y sin umbral, búsqueda normalizada) y, en la rama
+`Parametrizacion`, `tenant.service.spec.ts`, se verificaron corriendo Vitest de forma standalone
+(`npx vitest run --config <config temporal>`, fuera del builder de Angular) en vez de vía
+`ng test` — válido porque ambos archivos son clases puras sin decoradores de Angular, pero
+significa que **ningún test de este ciclo corrió nunca por el comando real del proyecto**.
+Cerrar esto requiere arreglar los specs rotos y los errores de `admin.service.ts` primero —
+fuera de alcance de este ciclo (es deuda preexistente, no introducida por `PagedTable`).
+
 ### 🐛 Tasa de Preñez Global inflaba el denominador con animales sin diagnóstico
 
 `reproductive-dashboard.component.ts` (módulo CRIA) mostraba cosas como "0 de 147 vientres" con el
