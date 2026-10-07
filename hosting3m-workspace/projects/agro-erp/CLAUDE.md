@@ -1147,3 +1147,24 @@ Establecimiento del sistema transaccional y analítico para la gestión de ranch
 **Francisco Jesus Pérez Pimienta**
 *Senior Systems Architect & Project Lead*
 Hosting3M Automation Suite
+## Event authorization matrix (source of truth, set by the project owner 2026-10-06)
+
+The foreman (role EDITOR) must NOT be limited in day-to-day operation. Any non-ADMIN user may
+register every event below; only the two marked events require ADMIN authorization.
+
+| Event | Requires ADMIN authorization |
+|---|---|
+| Nacimiento (birth) | No |
+| Destete (weaning) | No |
+| Baja por muerte (death) | **Yes** |
+| Baja por venta (sale) | **Yes** |
+| Alta por compra (purchase intake) | No |
+| Asignación de peso (weight) | No |
+| Aplicación de vacunas | No |
+| Aplicación de suplementos | No |
+| Palpación | No |
+| Inseminación | No |
+| Transferencia de embrión | No |
+
+Rule for future migrations and gateway changes: role restrictions on financial data apply to
+READ access (select) only. Do not restrict INSERT/UPDATE of operational events for EDITOR.
