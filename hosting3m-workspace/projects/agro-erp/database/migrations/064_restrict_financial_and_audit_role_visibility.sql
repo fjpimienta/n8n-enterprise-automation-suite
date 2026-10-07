@@ -1,39 +1,28 @@
--- Migration 064: Restrict financial/audit visibility to ADMIN in crud_models.
+-- Migration 064: Restrict financial/audit READ visibility to ADMIN in crud_models.
 --
 -- Closes the server-side half of "non-ADMIN (EDITOR, ranch foreman) must not see or fetch
 -- financial data": Cattle Event Log and cattle_expenses were both left at the raw column
--- default ('ADMIN,EDITOR,CUSTOMER'/'ADMIN,EDITOR') when their models were registered — never
--- hardened on purpose. Replaces the earlier draft (064_restrict_cattle_expenses_select_to_admin.sql,
+-- default ('ADMIN,EDITOR,CUSTOMER') when their models were registered — never hardened on
+-- purpose. Replaces the earlier draft (064_restrict_cattle_expenses_select_to_admin.sql,
 -- never applied anywhere) with a single file covering both models.
 --
--- SCOPE — four guarded changes, nothing else touched:
+-- SCOPE — two guarded changes, nothing else touched:
 --   1) cattle_event_log.allowed_roles_select : 'ADMIN,EDITOR,CUSTOMER' -> 'ADMIN'
 --      (table_name is the view vw_cattle_event_log; there is no separate model for it — this
 --      row IS the only gate for that view's GETALL/GETONE.)
 --   2) cattle_expenses.allowed_roles_select  : 'ADMIN,EDITOR,CUSTOMER' -> 'ADMIN'
---   3) cattle_expenses.allowed_roles_update  : 'ADMIN,EDITOR'          -> 'ADMIN'
---   4) cattle_expenses.allowed_roles_insert  : 'ADMIN,EDITOR'          -> 'ADMIN'  (RECOMMENDATION —
---      kept in its own DO block, trivially removable by deleting that block alone, see below.)
 --
--- Change #4 rationale, CONFIRMED against the LIVE n8n workflow (not the repo export) on
--- 2026-10-05: the AI Agent's `register_ranch_expense` tool (`v6/MCP Server Cattle`, node
--- `register_ranch_expense`, type `postgresTool`) runs its own hardcoded
--- `INSERT INTO cattle_expenses (...) SELECT ... WHERE EXISTS (SELECT 1 FROM user_companies uc
--- JOIN users u ON u.email = uc.email WHERE u.email = $5 AND uc.id_company = $1 AND
--- uc.is_active = true) RETURNING id, amount;` directly against Postgres. It never calls the
--- `v6/CRUD` webhook and therefore never passes through `Security Validation` or reads
--- `crud_models.allowed_roles_insert` at all — tightening this column to ADMIN-only has ZERO
--- effect on the AI Agent's ability to register an expense for EDITOR. It only removes EDITOR's
--- ability to INSERT an expense through the generic Meta-CRUD gateway directly (e.g. a manual
--- "Registrar Gasto" web-panel submission bypassing the now-hidden button) — which nothing in the
--- current frontend does once the "Registrar Gasto" button is hidden for non-ADMIN (see companion
--- frontend diff). Still shipped as a separate, independently-droppable block in case the project
--- owner wants EDITOR to keep INSERT via the gateway for some other reason.
+-- BUSINESS RULE (project owner, 2026-10-06): the foreman (EDITOR) may perform every cattle
+-- event (birth, weaning, purchase intake, weight assignment, vaccines, supplements, palpation,
+-- insemination, embryo transfer). Only "baja por muerte" and "baja por venta" require ADMIN
+-- authorization. This migration therefore restricts READ access to financial data only. It
+-- deliberately does NOT touch cattle_expenses.allowed_roles_insert / allowed_roles_update, which
+-- stay 'ADMIN,EDITOR'.
 --
 -- NOT touched, and why: `cattle_livestock`/`vw_cattle_kpi` SELECT (EDITOR needs it for weighing,
--- health-event target lookup and inventory — not in scope); `cattle_expenses.allowed_roles_delete`
--- (already 'ADMIN' only, nothing to change); `cattle_weight_logs`/`cattle_health_logs` INSERT
--- (EDITOR must keep write access — explicit ask of this same follow-up, see verification query).
+-- health-event target lookup and inventory — not in scope); `cattle_expenses` INSERT/UPDATE
+-- (business rule above) and DELETE (already 'ADMIN' only); `cattle_weight_logs`/
+-- `cattle_health_logs` INSERT (EDITOR must keep write access).
 --
 -- GUARD / IDEMPOTENCY: each change is wrapped in a DO block that reads the column's CURRENT
 -- value first:
@@ -41,16 +30,22 @@
 --     apply, e.g. LOCAL already has cattle_event_log at 'ADMIN' from the earlier fix — this
 --     migration detects that and skips it without erroring).
 --   * at the EXPECTED OLD value (confirmed against both LOCAL and the values the project owner
---     read directly from PRODUCTION on 2026-10-05) -> applies the UPDATE.
+--     read directly from PRODUCTION on 2026-10-05 and 2026-10-06) -> applies the UPDATE.
 --   * any OTHER value -> RAISE EXCEPTION and ABORT THE WHOLE TRANSACTION (ROLLBACK), so an
 --     environment that has drifted from the assumed baseline is never silently overwritten.
 --
 -- Backup: full pre-migration snapshot of both crud_models rows, taken before any UPDATE, kept
--- in a dated table. Verification SELECT prints before/after for every touched column. Rollback
+-- in a dated table. Verification SELECT prints before/after for every role column. Rollback
 -- script at the bottom (commented out — run manually, not part of the forward migration).
 --
--- Protocol: apply and test on LOCAL only in this change. Production is applied by the project
--- owner, same Rule-7 protocol as every prior migration in this file.
+-- LOCAL NOTE: a LOCAL database that already ran the EARLIER version of this migration (which
+-- also set cattle_expenses insert/update to 'ADMIN') must be realigned once, by hand:
+--   UPDATE crud_models
+--      SET allowed_roles_insert = 'ADMIN,EDITOR', allowed_roles_update = 'ADMIN,EDITOR'
+--    WHERE model_name = 'cattle_expenses';
+--
+-- Protocol: apply and test on LOCAL first. Production is applied by the project owner, same
+-- Rule-7 protocol as every prior migration in this file.
 
 BEGIN;
 
@@ -90,41 +85,7 @@ BEGIN
   END IF;
 END $$;
 
--- 3) cattle_expenses.allowed_roles_update -> 'ADMIN'
-DO $$
-DECLARE
-  v_current text;
-BEGIN
-  SELECT allowed_roles_update INTO v_current FROM crud_models WHERE model_name = 'cattle_expenses';
-  IF v_current = 'ADMIN' THEN
-    RAISE NOTICE 'cattle_expenses.allowed_roles_update already ADMIN — skipping (idempotent no-op).';
-  ELSIF v_current = 'ADMIN,EDITOR' THEN
-    UPDATE crud_models SET allowed_roles_update = 'ADMIN' WHERE model_name = 'cattle_expenses';
-    RAISE NOTICE 'cattle_expenses.allowed_roles_update: ADMIN,EDITOR -> ADMIN.';
-  ELSE
-    RAISE EXCEPTION 'ABORT: cattle_expenses.allowed_roles_update is "%" — neither the expected old value (ADMIN,EDITOR) nor the target (ADMIN). Review before applying.', v_current;
-  END IF;
-END $$;
-
--- 4) cattle_expenses.allowed_roles_insert -> 'ADMIN'  [RECOMMENDATION — delete this whole DO
---    block (and nothing else) to keep EDITOR's gateway INSERT access if the project owner
---    decides against it; it does not affect register_ranch_expense either way, see header].
-DO $$
-DECLARE
-  v_current text;
-BEGIN
-  SELECT allowed_roles_insert INTO v_current FROM crud_models WHERE model_name = 'cattle_expenses';
-  IF v_current = 'ADMIN' THEN
-    RAISE NOTICE 'cattle_expenses.allowed_roles_insert already ADMIN — skipping (idempotent no-op).';
-  ELSIF v_current = 'ADMIN,EDITOR' THEN
-    UPDATE crud_models SET allowed_roles_insert = 'ADMIN' WHERE model_name = 'cattle_expenses';
-    RAISE NOTICE 'cattle_expenses.allowed_roles_insert: ADMIN,EDITOR -> ADMIN.';
-  ELSE
-    RAISE EXCEPTION 'ABORT: cattle_expenses.allowed_roles_insert is "%" — neither the expected old value (ADMIN,EDITOR) nor the target (ADMIN). Review before applying.', v_current;
-  END IF;
-END $$;
-
--- 5) Verification: before (from the backup snapshot) vs. after (live table), every touched column.
+-- 3) Verification: before (from the backup snapshot) vs. after (live table), every role column.
 SELECT
   b.model_name,
   b.allowed_roles_select AS select_before, c.allowed_roles_select AS select_after,
@@ -135,8 +96,8 @@ FROM crud_models_backup_20261005 b
 JOIN crud_models c ON c.model_name = b.model_name
 ORDER BY b.model_name;
 -- Expected final state:
---   cattle_event_log | select ADMIN | insert NONE  | update NONE  | delete NONE  (insert/update/delete untouched, already NONE)
---   cattle_expenses  | select ADMIN | insert ADMIN | update ADMIN | delete ADMIN (delete untouched, already ADMIN)
+--   cattle_event_log | select ADMIN | insert NONE         | update NONE         | delete NONE  (all but select untouched)
+--   cattle_expenses  | select ADMIN | insert ADMIN,EDITOR | update ADMIN,EDITOR | delete ADMIN (all but select untouched)
 
 COMMIT;
 
