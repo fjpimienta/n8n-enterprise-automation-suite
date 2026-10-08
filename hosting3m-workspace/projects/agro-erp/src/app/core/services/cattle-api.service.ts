@@ -42,6 +42,13 @@ export class CattleApiService {
                 this.http.post<any>(this.apiUrl_crud + '/vw_cattle_kpi', payload)
             );
 
+            // MetaCRUD Silent Error Shield: un HTTP 200 con error:true es un error real — nunca
+            // se trata como "0 animales". Se relanza para que el llamador conserve su último
+            // dato bueno en vez de vaciar el inventario (ver CattleDataService.loadCattleData()).
+            if (res?.error) {
+                throw new Error(res.message || 'El gateway reportó un error al consultar el inventario de ganado.');
+            }
+
             // Desempaquetado resiliente con logs para auditoría en vivo
             if (res && Array.isArray(res)) return res;
             if (res && Array.isArray(res.data)) return res.data;
@@ -50,7 +57,7 @@ export class CattleApiService {
             return [];
         } catch (error) {
             this.logger.error('Error en getAllLivestock:', error);
-            return [];
+            throw error;
         }
     }
 
@@ -244,6 +251,13 @@ export class CattleApiService {
                 this.http.post(`${this.apiUrl_crud}/cattle_expenses`, payload)
             );
 
+            // MetaCRUD Silent Error Shield: un HTTP 200 con error:true es un error real — nunca
+            // se trata como "0 gastos". Se relanza para que el llamador conserve su último dato
+            // bueno en vez de vaciar el historial (ver MainDashboardComponent.loadDashboardData()).
+            if (res?.error) {
+                throw new Error(res.message || 'El gateway reportó un error al consultar los gastos.');
+            }
+
             if (res && Array.isArray(res.data)) {
                 return res.data;
             } else if (res?.data && Array.isArray(res.data.data)) {
@@ -253,7 +267,7 @@ export class CattleApiService {
             return [];
         } catch (error) {
             this.logger.warn('No se pudieron cargar los gastos del Tenant:', error);
-            return [];
+            throw error;
         }
     }
 
