@@ -83,6 +83,11 @@ export class CattleEventLogComponent {
   // la compuerta multi-tenant.
   public moduleCattleData = input<Livestock[]>([]);
 
+  // Disparador adicional de refetch desde MainDashboardComponent: se bumpea en cada refresco
+  // manual/automático del dashboard (nunca en un cambio de tenant — ver constructor más abajo,
+  // ese caso ya se cubre por su cuenta). El valor en sí no se usa, solo su cambio.
+  public refreshToken = input<number>(0);
+
   public readonly eventTypeLabel = EVENT_TYPE_LABEL;
 
   public isLoading = signal<boolean>(false);
@@ -118,33 +123,67 @@ export class CattleEventLogComponent {
 
   public pagination = new Paginator(() => this.sortedEntries().length);
 
+  // `null` hasta el primer run del effect — así ese primer run siempre cuenta como "cambio de
+  // tenant" (dispara sin el guard de concurrencia), igual que un cambio real de rancho.
+  private lastSeenTenantId: number | null = null;
+
   constructor() {
-    // Recarga ante cambio de rancho activo — mismo patrón reactivo que MainDashboardComponent.
-    // Fail-closed: sin tenant activo no se dispara ninguna consulta (ver loadEventLog más abajo
-    // para el caso en que el tenant se pierde a mitad de una carga ya en curso).
+    // Recarga ante cambio de rancho activo O ante un bump de `refreshToken` desde el dashboard
+    // — mismo patrón reactivo que MainDashboardComponent, mismas reglas de concurrencia:
+    //   - Cambio de tenant: SIEMPRE dispara una carga nueva, sin importar si ya había una en
+    //     curso (nunca se "salta" un cambio de tenant). El guard de secuencia dentro de
+    //     loadEventLog() es lo que garantiza que la respuesta más reciente gane siempre.
+    //   - Bump de `refreshToken` (tick automático o botón del dashboard, propagado): si ya hay
+    //     una carga en curso, se omite — nunca peticiones simultáneas apiladas para esta causa.
+    // Fail-closed: sin tenant activo no se dispara ninguna consulta.
     effect(() => {
-      if (this.tenantService.activeTenantId()) {
-        this.loadEventLog();
-      } else {
+      const tenantId = this.tenantService.activeTenantId();
+      this.refreshToken(); // dependencia del effect — su cambio también debe re-disparar la carga
+
+      const tenantChanged = tenantId !== this.lastSeenTenantId;
+      this.lastSeenTenantId = tenantId;
+
+      if (!tenantId) {
         this.loadError.set('No hay un rancho activo — no se puede mostrar la bitácora de eventos.');
+        return;
       }
+
+      this.loadEventLog({ skipIfBusy: !tenantChanged });
     }, { allowSignalWrites: true });
   }
 
-  public async loadEventLog(): Promise<void> {
+  // "Latest-wins": cada llamada toma su propio número de secuencia. Si al resolver ya se
+  // disparó una llamada más reciente, la respuesta (éxito o error) se descarta sin tocar
+  // ningún signal — nunca gana una respuesta vieja sobre una más nueva.
+  private requestSeq = 0;
+  // Conteo de llamadas en vuelo — isLoading se apaga solo cuando la ÚLTIMA llamada pendiente
+  // termina, para no apagar el spinner mientras una más nueva (ej. dos cambios de tenant
+  // seguidos) todavía está en curso.
+  private pendingLoads = 0;
+
+  public async loadEventLog(options: { skipIfBusy?: boolean } = {}): Promise<void> {
+    if (options.skipIfBusy && this.pendingLoads > 0) return;
+
+    const seq = ++this.requestSeq;
+    this.pendingLoads++;
     this.isLoading.set(true);
     this.loadError.set(null);
     try {
       const rows = await this.cattleApi.getCattleEventLog();
+      if (seq !== this.requestSeq) return; // una carga más reciente ya ganó — descartar
+
       this.rawRows.set(rows);
     } catch (error: any) {
+      if (seq !== this.requestSeq) return; // idem — no mostrar un error viejo sobre un estado ya superado
+
       // MetaCRUD Silent Error Shield: el servicio deja propagar tanto los errores HTTP como
-      // el `error:true` que el gateway responde con status 200 — nunca se asume éxito.
+      // el `error:true` que el gateway responde con status 200 — nunca se asume éxito. Y nunca
+      // se vacía rawRows() aquí: se conserva la última bitácora buena, solo se avisa del error.
       console.error('[Agro-ERP] Error al cargar la bitácora de eventos:', error);
       this.loadError.set(error?.message || 'No se pudo cargar la bitácora de eventos.');
-      this.rawRows.set([]);
     } finally {
-      this.isLoading.set(false);
+      this.pendingLoads--;
+      if (this.pendingLoads === 0) this.isLoading.set(false);
     }
   }
 
