@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit, ChangeDetectionStrategy, effect } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, ChangeDetectionStrategy, effect, DestroyRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -11,6 +11,7 @@ import { ReproduccionDashboardComponent } from '../reproduccion-dashboard/reprod
 import { CattleEventLogComponent } from '../cattle-event-log/cattle-event-log.component';
 import { ExpenseModalComponent } from '../../../expenses/components/expense-modal/expense-modal.component';
 import { ComplianceAlertCardComponent } from '../../../../compliance/components/compliance-alert-card/compliance-alert-card.component';
+import { ComplianceService } from '../../../../compliance/services/compliance.service';
 import { MetadataDetailModalComponent } from '@shared/components/metadata-detail-modal/metadata-detail-modal.component';
 import { TableToolbarComponent } from '@shared/components/table-toolbar/table-toolbar.component';
 import { TableFooterComponent } from '@shared/components/table-footer/table-footer.component';
@@ -20,6 +21,7 @@ import { withoutFinancialMetadata } from '@shared/utils/financial-metadata.util'
 import { HERD_STATUS_FILTER_OPTIONS, HerdStatusFilter, filterByHerdStatus } from '@shared/utils/herd-status.util';
 import { SPECIES_FILTER_ALL, deriveAvailableSpecies, getAnimalSpecies } from '@shared/utils/species.util';
 import { LOT_FILTER_ALL, deriveAvailableLots, getAnimalLot } from '@shared/utils/lot.util';
+import { isAutoRefreshDue } from '@shared/utils/auto-refresh.util';
 import { TenantService } from 'core-auth';
 import { ThemeService } from '@core/services/theme.service';
 import { Expense } from '../../../models/expense.model';
@@ -36,10 +38,12 @@ import { Paginator } from '../../utils/paginator';
 export class MainDashboardComponent implements OnInit {
   private cattleApi = inject(CattleApiService);
   private cattleDataService = inject(CattleDataService);
+  private complianceService = inject(ComplianceService);
   private tenantService = inject(TenantService);
   public themeService = inject(ThemeService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private destroyRef = inject(DestroyRef);
 
   public PRECIO_KILO = 65.00;
 
@@ -47,7 +51,47 @@ export class MainDashboardComponent implements OnInit {
   // una copia del hato desincronizada del resto de la app.
   public cattleList = this.cattleDataService.cattleList;
   public expensesList = signal<Expense[]>([]);
+
+  // `isLoading`: SOLO la carga inicial / cambio de tenant (datos aún no visibles por primera
+  // vez). `isRefreshing`: refresco manual o automático de datos ya visibles — nunca oculta ni
+  // vacía nada mientras está en vuelo, el spinner vive únicamente en el botón "Actualizar".
+  // Dos signals distintos a propósito: no deben compartir semántica ni UI.
   public isLoading = signal<boolean>(true);
+  public isRefreshing = signal<boolean>(false);
+
+  // Aviso no intrusivo de un refresco fallido (manual/automático) — los datos previos
+  // permanecen visibles, nunca se vacía ninguna tabla. Independiente del estado de error de
+  // "nunca cargamos el hato" (ver initialLoadFailed más abajo, basado en CattleDataService).
+  public refreshError = signal<string | null>(null);
+
+  // "Actualizado hh:mm" — hora local del navegador del último refresco (inicial, tenant,
+  // manual o automático) que efectivamente aplicó datos nuevos.
+  public lastRefreshedAt = signal<Date | null>(null);
+  public lastRefreshedLabel = computed(() => {
+    const at = this.lastRefreshedAt();
+    return at ? at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null;
+  });
+
+  // Bumped en cada refresco EXPLÍCITO (manual o automático, nunca en el cambio de tenant —
+  // CattleEventLogComponent ya reacciona a ese cambio por su cuenta). CattleEventLogComponent
+  // lo recibe como input y lo usa como disparador adicional de su propio fetch — es el único
+  // hijo de esta pantalla con fetch propio aparte de ComplianceAlertCardComponent (cubierto más
+  // abajo vía ComplianceService.loadUppStatus/loadPsgStatus con force=true). Los demás paneles
+  // (reproductive/engorda/reproduccion-dashboard) son 100% [cattleData] input, sin fetch propio.
+  public refreshToken = signal<number>(0);
+
+  // "Nunca cargamos el hato" vs. "el hato está genuinamente vacío": estado de error visible y
+  // bloqueante SOLO para la carga inicial (o tras un cambio de tenant que nunca llegó a
+  // resolver con éxito) — nunca se confunde con una tabla vacía normal.
+  public initialLoadFailed = computed(() =>
+    !this.cattleDataService.hasLoadedOnce() && !!this.cattleDataService.loadError()
+  );
+  public cattleLoadError = computed(() => this.cattleDataService.loadError());
+
+  private static readonly AUTO_REFRESH_MS = 5 * 60 * 1000;
+  // Cadencia de verificación "¿ya toca refrescar?" — no es el intervalo de refresco en sí
+  // (ver AUTO_REFRESH_MS); mismo valor de chequeo que authorization-list.component.ts.
+  private static readonly AUTO_REFRESH_CHECK_INTERVAL_MS = 30_000;
 
   // Navegación y Filtros de Trazabilidad Biológica
   public activeSubTab = signal<'RESUMEN' | 'INVENTARIO' | 'GASTOS' | 'POR_ANIMAL' | 'EVENT_LOG'>('RESUMEN');
@@ -119,13 +163,20 @@ export class MainDashboardComponent implements OnInit {
      * 🔄 EFECTO REACTIVO: Escucha activa del Contexto de Rancho.
      * Cada vez que el tenantService cambie el rancho activo en el header del ERP,
      * este bloque detectará el cambio de ID y re-orquestará el pipeline automáticamente.
+     *
+     * Deliberadamente SIN ningún guard de "ya hay una carga en curso": un cambio de tenant
+     * SIEMPRE debe disparar una carga nueva, incluso si ya había una en vuelo (ej. un refresco
+     * manual todavía resolviendo) — el guard de "nunca peticiones simultáneas apiladas" es
+     * exclusivo de refreshNow()/maybeAutoRefresh(). El número de secuencia dentro de
+     * loadDashboardData() es lo que garantiza que la respuesta más reciente gane siempre,
+     * sin importar el orden de llegada (latest-wins).
      */
     effect(() => {
       const activeTenantId = this.tenantService.activeTenantId();
 
       if (activeTenantId) {
         //console.log(`🔄 [Dashboard Pipeline] Detectado cambio de rancho a ID: ${activeTenantId}. Re-indexando KPIs...`);
-        this.loadDashboardData();
+        this.loadDashboardData('initial');
       }
     }, { allowSignalWrites: true }); // Permite que la escritura de isLoading y listas ocurra en cascada
 
@@ -146,6 +197,20 @@ export class MainDashboardComponent implements OnInit {
         this.activeSubTab.set('RESUMEN');
       }
     }, { allowSignalWrites: true });
+
+    // ⏱️ Auto-refresco cada AUTO_REFRESH_MS, pausado mientras la pestaña del navegador está
+    // oculta. El chequeo corre cada AUTO_REFRESH_CHECK_INTERVAL_MS (no hace falta más
+    // resolución) y, al volver a visible, se revisa de inmediato si ya venció el intervalo
+    // mientras estuvo oculta — sin esperar al siguiente tick del setInterval.
+    const intervalId = setInterval(
+      () => this.maybeAutoRefresh(),
+      MainDashboardComponent.AUTO_REFRESH_CHECK_INTERVAL_MS
+    );
+    this.destroyRef.onDestroy(() => clearInterval(intervalId));
+
+    const onVisibilityChange = () => this.maybeAutoRefresh();
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    this.destroyRef.onDestroy(() => document.removeEventListener('visibilitychange', onVisibilityChange));
   }
 
   ngOnInit() {
@@ -153,24 +218,85 @@ export class MainDashboardComponent implements OnInit {
     // garantizando sincronía y evitando llamadas duplicadas al backend en el ciclo de vida.
   }
 
-  async loadDashboardData() {
-    // El ganado ya se refresca vía CattleDataService (su propio effect reacciona al
-    // cambio de tenant); aquí solo se cargan los gastos, que no forman parte de esa fuente.
-    this.isLoading.set(true);
+  private maybeAutoRefresh(): void {
+    if (document.visibilityState !== 'visible') return;
+    if (!isAutoRefreshDue(this.lastRefreshedAt(), Date.now(), MainDashboardComponent.AUTO_REFRESH_MS)) return;
+    this.refreshNow();
+  }
+
+  /** Botón "Actualizar" y tick automático — ambos entran por aquí. Si ya hay un refresco (o la
+   *  carga inicial) en curso, se omite: nunca se apilan peticiones simultáneas. El cambio de
+   *  tenant NUNCA pasa por este guard (ver el effect del constructor). */
+  public async refreshNow(): Promise<void> {
+    if (this.isLoading() || this.isRefreshing()) return;
+    await this.loadDashboardData('refresh');
+  }
+
+  // Número de secuencia global ("latest-wins"): cada llamada a loadDashboardData se queda con
+  // el suyo. Si al resolver (éxito o error) ya se disparó una llamada más reciente — otro
+  // refresco, o un cambio de tenant — esta respuesta se descarta sin tocar ningún signal
+  // compartido (expensesList, compliance, refreshToken, lastRefreshedAt).
+  private dashboardLoadSeq = 0;
+  // Conteo de llamadas en vuelo por tipo — permite que isLoading/isRefreshing se apaguen solo
+  // cuando la ÚLTIMA llamada pendiente de ESE tipo termina (evita que una llamada vieja apague
+  // el indicador mientras una más nueva del mismo tipo todavía está en curso).
+  private pendingInitialLoads = 0;
+  private pendingRefreshes = 0;
+
+  private async loadDashboardData(kind: 'initial' | 'refresh'): Promise<void> {
+    const seq = ++this.dashboardLoadSeq;
+    if (kind === 'initial') {
+      this.pendingInitialLoads++;
+      this.isLoading.set(true);
+    } else {
+      this.pendingRefreshes++;
+      this.isRefreshing.set(true);
+    }
+
     try {
+      // El hato (cattleList) ya se recarga solo en el cambio de tenant vía el propio effect de
+      // CattleDataService — repetirlo aquí para 'initial' duplicaría la petición HTTP. Para
+      // 'refresh' sí hace falta pedirlo explícitamente: es la única forma de que el botón
+      // "Actualizar"/el tick automático traigan eventos nuevos (ej. del Agente IA) para el
+      // MISMO tenant, sin esperar a que el tenant cambie.
+      const cattleReload = kind === 'refresh' ? this.cattleDataService.loadCattleData() : Promise.resolve();
+
       // 🔒 cattle_expenses es financiero y no-ADMIN no debe verlo (ver fix de Cattle Event Log) —
       // ni siquiera se intenta el fetch para un rol sin acceso: evita un 403 inútil contra el
       // gateway y la fila de `expensesList` nunca llega a existir en memoria para ese rol.
-      if (this.isAdminForActiveTenant()) {
-        const expensesRaw = await this.cattleApi.getExpenses();
-        this.expensesList.set((Array.isArray(expensesRaw) ? expensesRaw : []) as Expense[]);
-      } else {
-        this.expensesList.set([]);
-      }
+      const [, expensesRaw] = await Promise.all([
+        cattleReload,
+        this.isAdminForActiveTenant() ? this.cattleApi.getExpenses() : Promise.resolve([])
+      ]);
+
+      if (seq !== this.dashboardLoadSeq) return; // una carga más reciente ya ganó — descartar sin tocar signals
+
+      this.expensesList.set((Array.isArray(expensesRaw) ? expensesRaw : []) as Expense[]);
+
+      // Recarga forzada de los hijos con fetch propio, acotada al mismo guard de tenant que el
+      // resto de esta carga (el `return` de arriba ya descartó cualquier respuesta de un tenant
+      // que dejó de ser el activo antes de llegar aquí).
+      this.complianceService.loadUppStatus(true);
+      this.complianceService.loadPsgStatus(true);
+      if (kind === 'refresh') this.refreshToken.update(n => n + 1); // CattleEventLogComponent reacciona a esto
+
+      this.lastRefreshedAt.set(new Date());
+      this.refreshError.set(null);
     } catch (error) {
+      if (seq !== this.dashboardLoadSeq) return; // idem — no mostrar un error viejo sobre un estado ya superado
+
       console.error('Error en el Data Pipeline:', error);
+      // MetaCRUD Silent Error Shield: NUNCA se vacía expensesList ni ninguna otra tabla — se
+      // conserva la última información disponible, solo se avisa de forma no intrusiva.
+      this.refreshError.set('No se pudieron actualizar los datos. Se conserva la última información disponible.');
     } finally {
-      this.isLoading.set(false);
+      if (kind === 'initial') {
+        this.pendingInitialLoads--;
+        if (this.pendingInitialLoads === 0) this.isLoading.set(false);
+      } else {
+        this.pendingRefreshes--;
+        if (this.pendingRefreshes === 0) this.isRefreshing.set(false);
+      }
     }
   }
 
