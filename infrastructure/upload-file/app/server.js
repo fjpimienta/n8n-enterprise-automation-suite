@@ -9,6 +9,11 @@ require('dotenv').config();
 
 const app = express();
 
+// Behind exactly one reverse proxy (Plesk nginx → 127.0.0.1:3005), which appends
+// the client IP via $proxy_add_x_forwarded_for. Trust only that hop so req.ip is
+// the real client IP and spoofed X-Forwarded-For values are ignored.
+app.set('trust proxy', 1);
+
 // Configuración del limitador de tasa para prevenir ataques de fuerza bruta y denegación de servicio
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutos
