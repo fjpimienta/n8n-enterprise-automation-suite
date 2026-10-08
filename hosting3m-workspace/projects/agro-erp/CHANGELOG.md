@@ -5,6 +5,57 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### ✨ Refresco manual y automático (cada 5 min) del dashboard, sin recargar la página
+
+Hasta ahora la única forma de ver datos nuevos (ej. eventos registrados por el Agente IA) en
+"Capitalización y Rendimiento" era F5 — lo que reiniciaba `<lib-ai-chat>` y todo el estado de la
+UI. Nuevo botón **Actualizar** (ícono Tabler `ti-refresh`, spinner mientras carga) junto al
+título, con "Actualizado hh:mm" (hora local del navegador) y auto-refresco cada
+`AUTO_REFRESH_MS = 5 * 60 * 1000` (un solo lugar, `main-dashboard.component.ts`).
+
+* **Pausa en pestaña oculta, recupera al volver:** el chequeo corre cada 30s pero solo actúa si
+  `document.visibilityState === 'visible'` y ya venció el intervalo desde el último refresco
+  (`isAutoRefreshDue()`, nuevo `shared/utils/auto-refresh.util.ts`, puro y cubierto por
+  5 casos de Vitest standalone). Un `visibilitychange` listener revisa lo mismo al volver a la
+  pestaña, sin esperar al siguiente tick.
+* **Hijos con fetch propio, todos cubiertos:** `cattle-event-log` recibe un nuevo input
+  `refreshToken` (bumpeado en cada refresco explícito) que su propio `effect()` ya observa junto
+  al tenant activo; `compliance-alert-card` se refresca vía
+  `ComplianceService.loadUppStatus(true)/loadPsgStatus(true)`. Los demás paneles
+  (reproductive/engorda/reproduccion-dashboard) son 100% `[cattleData]` input, sin fetch propio
+  — nada que cablear ahí.
+* **Concurrencia "latest-wins" con número de secuencia** (no un simple booleano "ocupado"), en
+  `MainDashboardComponent.loadDashboardData()`, `CattleDataService.loadCattleData()` y
+  `CattleEventLogComponent.loadEventLog()`: un cambio de tenant SIEMPRE dispara una carga nueva,
+  nunca se "salta" por un guard de concurrencia; si la respuesta de una carga vieja llega después
+  de una más reciente, se descarta sin tocar ningún signal. El tick automático y el botón
+  "Actualizar" sí se omiten si ya hay un refresco en curso (nunca peticiones simultáneas
+  apiladas). Verificado con una simulación standalone (Node, fuera de Angular) que reproduce el
+  algoritmo exacto de ambos componentes bajo resolución fuera de orden — no solo razonamiento.
+* **`isLoading` (carga inicial/cambio de tenant) y `isRefreshing` (refresco manual/automático)
+  son signals separados a propósito:** los datos visibles nunca se ocultan ni se vacían durante
+  un refresco — el spinner vive únicamente en el botón "Actualizar". Un refresco fallido muestra
+  un aviso no intrusivo (`refreshError`, banner descartable) y conserva la última información
+  disponible; solo la carga inicial fallida bloquea la pantalla con un estado de error explícito
+  y un botón "Reintentar" (`initialLoadFailed`, basado en el nuevo `CattleDataService.hasLoadedOnce()`
+  — distingue "el hato está genuinamente vacío" de "nunca llegamos a cargar datos reales").
+* **Estado de UI 100% preservado:** el refresco no toca `activeSubTab`/especie/lote/búsqueda/
+  agrupación/paginación — ninguno de esos signals se escribe durante una carga, así que el tab,
+  los filtros y la página actual sobreviven intactos. El chat (`<lib-ai-chat>`) ni siquiera está
+  en el árbol de este componente, así que un refresco por signals nunca lo toca.
+
+### 🔧 `fix(agro-erp): stop swallowing MetaCRUD errors in CattleApiService` (commit previo, prerrequisito de lo anterior)
+
+`getAllLivestock()` y `getExpenses()` atrapaban tanto los errores HTTP como el `error:true` que
+el gateway devuelve con status 200 (MetaCRUD Silent Error Shield) y devolvían `[]` en ambos
+casos — indistinguible de "el tenant genuinamente no tiene animales/gastos". Para el refresco de
+arriba esto era inaceptable: un error transitorio de red habría vaciado el inventario completo en
+vez de conservar el último dato bueno. Ambos métodos ahora validan `res.error` y relanzan en vez
+de devolver `[]`. Verificado que el único otro llamador de `getAllLivestock()`
+(`production-unit-lot.service.ts#getLots()`, sin try/catch propio) ya propaga el rechazo hasta
+`lot-list.component.ts`, que sí lo captura y muestra `loadError` — un fallo ahora se ve como error
+real, no como "0 lotes/0 animales por lote" engañoso. `getExpenses()` no tiene otros llamadores.
+
 ### 🐄 Ocho herramientas MCP nuevas: traslado, reproducción, desparasitación, castración, cambio de arete, autorización y anulación de eventos
 
 El Agente IA no podía trasladar animales entre lotes de la misma UPP, registrar reproducción,

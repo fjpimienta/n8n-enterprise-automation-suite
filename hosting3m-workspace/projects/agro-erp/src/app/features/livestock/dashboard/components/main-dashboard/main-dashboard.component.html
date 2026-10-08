@@ -1,8 +1,24 @@
 <div class="page-header d-print-none mb-4">
     <div class="row g-2 align-items-center">
         <div class="col-12 mb-3">
-            <div class="page-pretitle text-uppercase font-weight-bold text-muted">Resumen Ejecutivo</div>
-            <h2 class="page-title font-weight-bold">{{ isAdminForActiveTenant() ? 'Capitalización y Rendimiento' : 'Panel Operativo' }}</h2>
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <div>
+                    <div class="page-pretitle text-uppercase font-weight-bold text-muted">Resumen Ejecutivo</div>
+                    <h2 class="page-title font-weight-bold mb-0">{{ isAdminForActiveTenant() ? 'Capitalización y Rendimiento' : 'Panel Operativo' }}</h2>
+                </div>
+                <button type="button" class="btn btn-outline-secondary btn-sm d-flex align-items-center"
+                    (click)="refreshNow()" [disabled]="isLoading() || isRefreshing()" title="Actualizar datos">
+                    @if (isLoading() || isRefreshing()) {
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    } @else {
+                    <i class="ti ti-refresh me-2"></i>
+                    }
+                    Actualizar
+                </button>
+                @if (lastRefreshedLabel(); as label) {
+                <span class="text-muted small">Actualizado {{ label }}</span>
+                }
+            </div>
         </div>
 
         <div class="col-12 d-print-none">
@@ -61,6 +77,28 @@
         </div>
     </div>
 </div>
+
+@if (refreshError(); as err) {
+<div class="alert alert-warning alert-dismissible d-print-none mb-3" role="alert">
+    {{ err }}
+    <button type="button" class="btn-close" (click)="refreshError.set(null)" aria-label="Cerrar"></button>
+</div>
+}
+
+@if (initialLoadFailed()) {
+<div class="card shadow-sm border-0">
+    <div class="card-body text-center py-5">
+        <i class="ti ti-alert-triangle fs-1 text-danger d-block mb-2"></i>
+        <p class="text-muted mb-3">{{ cattleLoadError() }}</p>
+        <button type="button" class="btn btn-primary" (click)="refreshNow()" [disabled]="isRefreshing()">
+            @if (isRefreshing()) {
+            <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+            }
+            Reintentar
+        </button>
+    </div>
+</div>
+} @else {
 
 <app-compliance-alert-card></app-compliance-alert-card>
 
@@ -624,7 +662,8 @@
         }
 
         @if (activeSubTab() === 'EVENT_LOG' && isAdminForActiveTenant()) {
-        <app-cattle-event-log [cattleData]="cattleList()" [moduleCattleData]="eventLogCattleList()"></app-cattle-event-log>
+        <app-cattle-event-log [cattleData]="cattleList()" [moduleCattleData]="eventLogCattleList()"
+            [refreshToken]="refreshToken()"></app-cattle-event-log>
         }
 
         @if (activeSubTab() !== 'RESUMEN' && activeSubTab() !== 'POR_ANIMAL' && activeSubTab() !== 'EVENT_LOG') {
@@ -643,9 +682,11 @@
     </div>
 </div>
 
+} <!-- @else de initialLoadFailed -->
+
 @if (showExpenseModal()) {
 <app-expense-modal (onClose)="showExpenseModal.set(false)"
-    (onSaveSuccess)="showExpenseModal.set(false); loadDashboardData()"></app-expense-modal>
+    (onSaveSuccess)="showExpenseModal.set(false); refreshNow()"></app-expense-modal>
 }
 
 @if (metadataAnimal(); as animal) {
