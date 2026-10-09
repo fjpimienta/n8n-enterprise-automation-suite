@@ -70,7 +70,7 @@
     "autoprefixer": "^10.6.0",
     "hono": "^4.13.13",
     "jsdom": "^30.0.1",
-    "ng-packagr": "^21.2.7",
+    "ng-packagr": "^22.2.4",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.3.3",
     "typescript": "~5.9.2",
