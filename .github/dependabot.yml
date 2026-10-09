@@ -5,18 +5,46 @@ updates:
     schedule:
       interval: "weekly"
     target-branch: "develop"
+    groups:
+      # Angular packages pin each other with exact peer versions: they must move together.
+      angular:
+        patterns:
+          - "@angular/*"
+          - "@angular-devkit/*"
+          - "@schematics/angular"
+        update-types: ["minor", "patch"]
+      workspace-minor-patch:
+        patterns: ["*"]
+        exclude-patterns:
+          - "@angular/*"
+          - "@angular-devkit/*"
+          - "@schematics/angular"
+        update-types: ["minor", "patch"]
     ignore:
       - dependency-name: "@angular/*"
         update-types: ["version-update:semver-major"]
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
+      # @angular/build 21.x peers vitest ^4; revisit when Angular supports vitest 5 (see #734).
+      - dependency-name: "vitest"
+        update-types: ["version-update:semver-major"]
+
   - package-ecosystem: "npm"
     directory: "/infrastructure/upload-file/app"
     schedule:
       interval: "weekly"
     target-branch: "develop"
+    groups:
+      upload-file-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
   - package-ecosystem: "npm"
     directory: "/microservices/jwt-service"
     schedule:
       interval: "weekly"
     target-branch: "develop"
+    groups:
+      jwt-service-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
