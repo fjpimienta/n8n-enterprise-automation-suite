@@ -1,22 +1,3 @@
-<<<<<<< HEAD
--- 071_sale_income.sql
--- Business rules (set by the project owner, 2026-10-10):
---  * Every sale request must carry its REAL sale data, dictated by the requester. Amounts printed on
---    transit guides or invoices are never used (they are often symbolic, e.g. $1.00 per head).
---  * Three sale modes:
---      POR_PIEZA    -> "al bulto": a price per animal.
---      POR_KG       -> the requester gives the animal's weight and the amount paid; $/kg is derived.
---      POR_GENETICA -> a fixed price per animal for genetic quality (heifers, bulls).
---  * Buyer, payment method (EFECTIVO / TRANSFERENCIA) and whether it was invoiced are mandatory data.
---    "Bancarizado" is derived: TRANSFERENCIA = true, EFECTIVO = false.
---  * Income is recorded ONLY when the sale is approved. Rejected, cancelled or expired requests never
---    produce income. A sale can no longer be approved without a price (fail-closed).
---  * Income is financial data: visible to ADMIN only.
-
-BEGIN;
-
--- 1) Backup of the function this migration replaces
-=======
 -- 071_sale_income.sql  (v2 — replaces the first local draft of 071; safe to re-run)
 -- Business rules (set by the project owner, 2026-10-10):
 --  * The foreman REQUESTS the sale: which animals leave (identifier, category comes from the herd record),
@@ -42,7 +23,6 @@ DROP TRIGGER  IF EXISTS trg_pending_auth_validate_sale ON public.pending_authori
 DROP FUNCTION IF EXISTS public.fn_pending_auth_validate_sale();
 
 -- 1) Backup of the resolver being replaced (only the first time this migration runs)
->>>>>>> 3cda7a9 (feat(agro-erp): record sale income set by ADMIN on approval, with reference prices (migration 071))
 CREATE TABLE IF NOT EXISTS function_backup_20261010_071 AS
 SELECT p.proname,
        pg_get_function_identity_arguments(p.oid) AS identity_args,
@@ -79,13 +59,6 @@ CREATE TABLE IF NOT EXISTS public.cattle_sale_income (
 CREATE INDEX IF NOT EXISTS idx_sale_income_tenant_date ON public.cattle_sale_income (tenant_id, sale_date);
 CREATE INDEX IF NOT EXISTS idx_sale_income_livestock   ON public.cattle_sale_income (livestock_id);
 
-<<<<<<< HEAD
--- 3) Validate and normalize the sale data of every new VENTA request, whatever path inserts it
---    (both sp_solicitar_autorizacion overloads, the gateway or a manual insert).
-CREATE OR REPLACE FUNCTION public.fn_pending_auth_validate_sale()
-RETURNS trigger
-LANGUAGE plpgsql
-=======
 -- 3) Reference prices per category (pre-fill only; never imposed)
 CREATE TABLE IF NOT EXISTS public.cattle_sale_reference_prices (
     id                     uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -110,7 +83,6 @@ CREATE INDEX IF NOT EXISTS idx_sale_reference_tenant_cat ON public.cattle_sale_r
 CREATE OR REPLACE FUNCTION public.fn_normalize_sale_data(p_data jsonb)
 RETURNS jsonb
 LANGUAGE plpgsql IMMUTABLE
->>>>>>> 3cda7a9 (feat(agro-erp): record sale income set by ADMIN on approval, with reference prices (migration 071))
 AS $function$
 DECLARE
     v_mode   text;
@@ -121,32 +93,6 @@ DECLARE
     v_pay    text;
     v_inv    boolean;
 BEGIN
-<<<<<<< HEAD
-    IF NEW.tipo_evento <> 'VENTA' THEN
-        RETURN NEW;
-    END IF;
-
-    v_mode := upper(btrim(COALESCE(NEW.payload->>'modo_venta', '')));
-    IF v_mode NOT IN ('POR_PIEZA', 'POR_KG', 'POR_GENETICA') THEN
-        RAISE EXCEPTION 'La venta requiere modo_venta: POR_PIEZA, POR_KG o POR_GENETICA'
-            USING ERRCODE = 'P0022';
-    END IF;
-
-    IF COALESCE(NEW.payload->>'precio_venta', '') !~ '^\d+(\.\d{1,2})?$' THEN
-        RAISE EXCEPTION 'La venta requiere precio_venta: el importe real cobrado por el animal, solo el número'
-            USING ERRCODE = 'P0023';
-    END IF;
-    v_amount := (NEW.payload->>'precio_venta')::numeric;
-    IF v_amount <= 0 THEN
-        RAISE EXCEPTION 'precio_venta debe ser mayor a cero' USING ERRCODE = 'P0023';
-    END IF;
-
-    IF NULLIF(btrim(COALESCE(NEW.payload->>'peso_kg', '')), '') IS NOT NULL THEN
-        IF NEW.payload->>'peso_kg' !~ '^\d+(\.\d{1,2})?$' OR (NEW.payload->>'peso_kg')::numeric <= 0 THEN
-            RAISE EXCEPTION 'peso_kg debe ser un número mayor a cero' USING ERRCODE = 'P0026';
-        END IF;
-        v_weight := (NEW.payload->>'peso_kg')::numeric;
-=======
     IF p_data IS NULL OR jsonb_typeof(p_data) <> 'object' THEN
         RAISE EXCEPTION 'La aprobación de una venta requiere los datos de venta (modo, importe, comprador y forma de pago)'
             USING ERRCODE = 'P0021';
@@ -167,42 +113,20 @@ BEGIN
             RAISE EXCEPTION 'peso_kg debe ser un número mayor a cero' USING ERRCODE = 'P0026';
         END IF;
         v_weight := (p_data->>'peso_kg')::numeric;
->>>>>>> 3cda7a9 (feat(agro-erp): record sale income set by ADMIN on approval, with reference prices (migration 071))
     END IF;
 
     IF v_mode = 'POR_KG' THEN
         IF v_weight IS NULL THEN
-<<<<<<< HEAD
-            RAISE EXCEPTION 'La venta POR_KG requiere peso_kg del animal' USING ERRCODE = 'P0026';
-=======
             RAISE EXCEPTION 'La venta POR_KG requiere el peso del animal' USING ERRCODE = 'P0026';
->>>>>>> 3cda7a9 (feat(agro-erp): record sale income set by ADMIN on approval, with reference prices (migration 071))
         END IF;
         v_ppk := round(v_amount / v_weight, 2);
     END IF;
 
-<<<<<<< HEAD
-    v_buyer := btrim(COALESCE(NEW.payload->>'comprador', ''));
-=======
     v_buyer := btrim(COALESCE(p_data->>'comprador', ''));
->>>>>>> 3cda7a9 (feat(agro-erp): record sale income set by ADMIN on approval, with reference prices (migration 071))
     IF v_buyer = '' THEN
         RAISE EXCEPTION 'La venta requiere el nombre del comprador' USING ERRCODE = 'P0024';
     END IF;
 
-<<<<<<< HEAD
-    v_pay := upper(btrim(COALESCE(NEW.payload->>'forma_pago', '')));
-    IF v_pay NOT IN ('EFECTIVO', 'TRANSFERENCIA') THEN
-        RAISE EXCEPTION 'La venta requiere forma_pago: EFECTIVO o TRANSFERENCIA' USING ERRCODE = 'P0025';
-    END IF;
-
-    IF lower(COALESCE(NEW.payload->>'facturado', 'false')) NOT IN ('true', 'false') THEN
-        RAISE EXCEPTION 'facturado debe ser true o false' USING ERRCODE = 'P0025';
-    END IF;
-    v_inv := lower(COALESCE(NEW.payload->>'facturado', 'false')) = 'true';
-
-    NEW.payload := NEW.payload || jsonb_build_object(
-=======
     v_pay := upper(btrim(COALESCE(p_data->>'forma_pago', '')));
     IF v_pay NOT IN ('EFECTIVO', 'TRANSFERENCIA') THEN
         RAISE EXCEPTION 'forma_pago debe ser EFECTIVO o TRANSFERENCIA' USING ERRCODE = 'P0025';
@@ -214,7 +138,6 @@ BEGIN
     v_inv := lower(COALESCE(p_data->>'facturado', 'false')) = 'true';
 
     RETURN jsonb_build_object(
->>>>>>> 3cda7a9 (feat(agro-erp): record sale income set by ADMIN on approval, with reference prices (migration 071))
         'modo_venta',    v_mode,
         'precio_venta',  v_amount,
         'peso_kg',       v_weight,
@@ -222,22 +145,6 @@ BEGIN
         'comprador',     v_buyer,
         'forma_pago',    v_pay,
         'facturado',     v_inv,
-<<<<<<< HEAD
-        'folio_factura', NULLIF(btrim(COALESCE(NEW.payload->>'folio_factura', '')), ''),
-        'bancarizado',   (v_pay = 'TRANSFERENCIA')
-    );
-    RETURN NEW;
-END;
-$function$;
-
-DROP TRIGGER IF EXISTS trg_pending_auth_validate_sale ON public.pending_authorizations;
-CREATE TRIGGER trg_pending_auth_validate_sale
-    BEFORE INSERT ON public.pending_authorizations
-    FOR EACH ROW EXECUTE FUNCTION public.fn_pending_auth_validate_sale();
-
--- 4) Resolver: same as 069 + a sale cannot be approved without price, and approval records the income
-CREATE OR REPLACE FUNCTION public.sp_resolver_autorizacion(p_request_id uuid, p_decision character varying, p_resuelto_por_email character varying, p_notas text DEFAULT NULL::text)
-=======
         'folio_factura', NULLIF(btrim(COALESCE(p_data->>'folio_factura', '')), ''),
         'bancarizado',   (v_pay = 'TRANSFERENCIA')
     );
@@ -256,7 +163,6 @@ CREATE OR REPLACE FUNCTION public.sp_resolver_autorizacion(
     p_notas              text  DEFAULT NULL::text,
     p_datos_venta        jsonb DEFAULT NULL::jsonb
 )
->>>>>>> 3cda7a9 (feat(agro-erp): record sale income set by ADMIN on approval, with reference prices (migration 071))
  RETURNS jsonb
  LANGUAGE plpgsql
 AS $function$
@@ -264,10 +170,7 @@ DECLARE
     v_request        pending_authorizations%ROWTYPE;
     v_resultado_sp   jsonb;
     v_excepcion      boolean := false;
-<<<<<<< HEAD
-=======
     v_sale           jsonb;
->>>>>>> 3cda7a9 (feat(agro-erp): record sale income set by ADMIN on approval, with reference prices (migration 071))
     v_sale_date      date;
 BEGIN
     IF p_decision IS NULL OR p_decision NOT IN ('APROBADO', 'APROBADO_CON_EXCEPCION', 'RECHAZADO') THEN
@@ -318,17 +221,9 @@ BEGIN
         RETURN jsonb_build_object('success', true, 'estado', 'RECHAZADO', 'request_id', p_request_id);
     END IF;
 
-<<<<<<< HEAD
-    -- 071: a sale without its real price can no longer be approved (legacy requests included).
-    IF v_request.tipo_evento = 'VENTA'
-       AND (v_request.payload->>'precio_venta' IS NULL OR v_request.payload->>'modo_venta' IS NULL) THEN
-        RAISE EXCEPTION 'La venta no tiene precio registrado; debe cancelarse y solicitarse de nuevo con el precio real'
-            USING ERRCODE = 'P0021';
-=======
     -- 071: a sale is approved only with the sale data set by the ADMIN (validated BEFORE touching the animal).
     IF v_request.tipo_evento = 'VENTA' THEN
         v_sale := public.fn_normalize_sale_data(p_datos_venta);
->>>>>>> 3cda7a9 (feat(agro-erp): record sale income set by ADMIN on approval, with reference prices (migration 071))
     END IF;
 
     v_excepcion := (p_decision = 'APROBADO_CON_EXCEPCION');
@@ -386,11 +281,7 @@ BEGIN
         );
     END IF;
 
-<<<<<<< HEAD
-    -- 071: record the income of an approved sale (same transaction: all or nothing).
-=======
     -- 071: record the income of the approved sale (same transaction: all or nothing).
->>>>>>> 3cda7a9 (feat(agro-erp): record sale income set by ADMIN on approval, with reference prices (migration 071))
     IF v_request.tipo_evento = 'VENTA' THEN
         v_sale_date := COALESCE(
             CASE WHEN v_request.payload->>'fecha_evento' ~ '^\d{4}-\d{2}-\d{2}$'
@@ -403,17 +294,6 @@ BEGIN
              guia_transito, requested_by_email, approved_by_email)
         VALUES
             (v_request.id_company, v_request.livestock_id, v_request.id, v_sale_date,
-<<<<<<< HEAD
-             v_request.payload->>'modo_venta',
-             (v_request.payload->>'precio_venta')::numeric,
-             (v_request.payload->>'peso_kg')::numeric,
-             (v_request.payload->>'precio_kg')::numeric,
-             v_request.payload->>'comprador',
-             v_request.payload->>'forma_pago',
-             COALESCE((v_request.payload->>'facturado')::boolean, false),
-             v_request.payload->>'folio_factura',
-             COALESCE((v_request.payload->>'bancarizado')::boolean, false),
-=======
              v_sale->>'modo_venta',
              (v_sale->>'precio_venta')::numeric,
              (v_sale->>'peso_kg')::numeric,
@@ -423,22 +303,14 @@ BEGIN
              (v_sale->>'facturado')::boolean,
              v_sale->>'folio_factura',
              (v_sale->>'bancarizado')::boolean,
->>>>>>> 3cda7a9 (feat(agro-erp): record sale income set by ADMIN on approval, with reference prices (migration 071))
              NULLIF(v_request.payload->>'guia_transito', ''),
              v_request.solicitado_por_email,
              p_resuelto_por_email);
 
         -- The sale weight is the animal's last real weighing.
-<<<<<<< HEAD
-        IF v_request.payload->>'peso_kg' IS NOT NULL THEN
-            INSERT INTO public.cattle_weight_logs (livestock_id, weight_kg, log_date, source_device)
-            VALUES (v_request.livestock_id, (v_request.payload->>'peso_kg')::numeric,
-                    v_sale_date::timestamp, 'VENTA');
-=======
         IF v_sale->>'peso_kg' IS NOT NULL THEN
             INSERT INTO public.cattle_weight_logs (livestock_id, weight_kg, log_date, source_device)
             VALUES (v_request.livestock_id, (v_sale->>'peso_kg')::numeric, v_sale_date::timestamp, 'VENTA');
->>>>>>> 3cda7a9 (feat(agro-erp): record sale income set by ADMIN on approval, with reference prices (migration 071))
         END IF;
     END IF;
 
@@ -448,43 +320,19 @@ BEGIN
        SET estado = 'APROBADO',
            resuelto_por_email = p_resuelto_por_email,
            fecha_resolucion = now(),
-<<<<<<< HEAD
-           notas_resolucion = CASE WHEN v_excepcion THEN '[EXCEPCION SANITARIA] ' || p_notas ELSE p_notas END
-=======
            notas_resolucion = CASE WHEN v_excepcion THEN '[EXCEPCION SANITARIA] ' || p_notas ELSE p_notas END,
            payload = CASE WHEN v_sale IS NOT NULL THEN payload || jsonb_build_object('venta', v_sale) ELSE payload END
->>>>>>> 3cda7a9 (feat(agro-erp): record sale income set by ADMIN on approval, with reference prices (migration 071))
      WHERE id = p_request_id;
 
     RETURN jsonb_build_object(
         'success', true, 'estado', 'APROBADO', 'request_id', p_request_id,
         'excepcion_sanitaria', v_excepcion,
-<<<<<<< HEAD
-=======
         'venta', v_sale,
->>>>>>> 3cda7a9 (feat(agro-erp): record sale income set by ADMIN on approval, with reference prices (migration 071))
         'resultado_sp', v_resultado_sp
     );
 END;
 $function$;
 
-<<<<<<< HEAD
--- 5) Read-only gateway model, ADMIN only (financial data)
-INSERT INTO crud_models (model_name, table_name, primary_key, allowed_fields, schema_json, allowed_ops, hooks,
-                         allowed_roles_select, allowed_roles_insert, allowed_roles_update, allowed_roles_delete,
-                         joins, is_global, sp_requires_tenant)
-SELECT 'cattle_sale_income', 'cattle_sale_income', 'id',
-       '["id","tenant_id","livestock_id","pending_authorization_id","sale_date","sale_mode","amount","weight_kg","price_per_kg","buyer_name","payment_method","invoiced","invoice_folio","banked","guia_transito","requested_by_email","approved_by_email","notes","created_at"]',
-       '{}', '{SELECT}', '{"pre": [], "post": []}',
-       'ADMIN', 'ADMIN', 'ADMIN', 'ADMIN',
-       '[]', false, false
-WHERE NOT EXISTS (SELECT 1 FROM crud_models WHERE model_name = 'cattle_sale_income');
-
--- 6) Verification
-SELECT to_regclass('public.cattle_sale_income') AS income_table;
-SELECT tgname FROM pg_trigger WHERE tgname = 'trg_pending_auth_validate_sale';
-SELECT model_name, allowed_ops, allowed_roles_select FROM crud_models WHERE model_name = 'cattle_sale_income';
-=======
 -- 6) Gateway models (ADMIN only)
 UPDATE crud_models
    SET allowed_fields = '["request_id", "decision", "resuelto_por_email", "notas", "datos_venta"]'
@@ -514,6 +362,5 @@ SELECT p.oid::regprocedure FROM pg_proc p WHERE proname IN ('sp_resolver_autoriz
 SELECT count(*) AS old_trigger_left FROM pg_trigger WHERE tgname = 'trg_pending_auth_validate_sale';
 SELECT model_name, allowed_ops, allowed_roles_select FROM crud_models
  WHERE model_name IN ('resolver_autorizacion', 'cattle_sale_income', 'cattle_sale_reference_prices');
->>>>>>> 3cda7a9 (feat(agro-erp): record sale income set by ADMIN on approval, with reference prices (migration 071))
 
 COMMIT;
