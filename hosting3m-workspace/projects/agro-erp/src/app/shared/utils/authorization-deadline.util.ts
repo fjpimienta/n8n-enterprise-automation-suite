@@ -1,43 +1,42 @@
-const TIMEZONE = 'America/Mexico_City';
+export const AUTHORIZATION_TIMEZONE = 'America/Mexico_City';
 
 /**
- * Medianoche (00:00 del día siguiente) en `America/Mexico_City` del día en que se creó
- * la solicitud, como instante UTC real.
- *
- * `fechaSolicitud` llega del gateway representando un instante UTC: el servidor Postgres
- * corre con `timezone = Etc/UTC` (confirmado) y `fecha_solicitud` usa `now()` como default,
- * aunque la columna sea `timestamp without time zone` — nunca se interpreta el valor crudo
- * como si ya fuera hora local de Chiapas/Tabasco.
+ * Parses a gateway timestamp as a real UTC instant. `pending_authorizations.fecha_solicitud`
+ * and `fecha_resolucion` are `timestamp without time zone` filled with `now()` on a server
+ * running `Etc/UTC`, so a value without an offset is UTC, never browser-local time. Also
+ * normalizes the Postgres text form (space separator, microseconds) for strict parsers.
  */
-export function getAuthorizationDeadline(fechaSolicitud: string): Date {
-  const hasTzSuffix = /[Zz]|[+-]\d{2}:?\d{2}$/.test(fechaSolicitud);
-  const createdAtUtc = new Date(hasTzSuffix ? fechaSolicitud : `${fechaSolicitud}Z`);
-
-  // Fecha calendario (YYYY-MM-DD) en hora local de Chiapas/Tabasco del momento de creación.
-  const localDateStr = new Intl.DateTimeFormat('en-CA', {
-    timeZone: TIMEZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit'
-  }).format(createdAtUtc);
-
-  const nextDayGuess = new Date(`${localDateStr}T00:00:00Z`);
-  nextDayGuess.setUTCDate(nextDayGuess.getUTCDate() + 1);
-
-  return zonedMidnightToUtc(nextDayGuess, TIMEZONE);
+export function parseGatewayTimestamp(value: string): Date {
+  let iso = value.trim().replace(' ', 'T').replace(/(\.\d{3})\d+/, '$1');
+  if (!iso.includes('T')) iso += 'T00:00:00';
+  // Offset check only on the time part, so a date like "2026-10-09" is not read as "-09".
+  if (!/T.*(?:[Zz]|[+-]\d{2}(?::?\d{2})?)$/.test(iso)) iso += 'Z';
+  return new Date(iso);
 }
 
 /**
- * Dado un instante cuyo valor UTC literal coincide con el wall-clock objetivo (p.ej.
- * "2026-09-12T00:00:00" interpretado ingenuamente como UTC), devuelve el instante UTC real
- * en que ese mismo wall-clock ocurre en `timeZone`. Mide el offset dinámicamente (no asume
- * -06:00 fijo) para no romperse si la política de horario de verano cambia.
+ * Expiry instant of a request, mirroring the backend rule: it expires once CURRENT_DATE (UTC)
+ * passes the UTC date of `fecha_solicitud`, i.e. at the start of that UTC day + 24h. In
+ * America/Mexico_City (UTC-6) that is 18:00 of the same day when requested before 18:00,
+ * otherwise 18:00 of the next day.
  */
-function zonedMidnightToUtc(naiveUtcGuess: Date, timeZone: string): Date {
-  const asIfUtc = new Date(naiveUtcGuess.toLocaleString('en-US', { timeZone: 'UTC' }));
-  const asIfZoned = new Date(naiveUtcGuess.toLocaleString('en-US', { timeZone }));
-  const offsetMs = asIfUtc.getTime() - asIfZoned.getTime();
-  return new Date(naiveUtcGuess.getTime() + offsetMs);
+export function getAuthorizationDeadline(fechaSolicitud: string): Date {
+  const createdAt = parseGatewayTimestamp(fechaSolicitud);
+  return new Date(Date.UTC(createdAt.getUTCFullYear(), createdAt.getUTCMonth(), createdAt.getUTCDate() + 1));
+}
+
+const DISPLAY_FORMAT = new Intl.DateTimeFormat('es-MX', {
+  timeZone: AUTHORIZATION_TIMEZONE,
+  dateStyle: 'short',
+  timeStyle: 'short',
+  hourCycle: 'h23'
+});
+
+/** Gateway timestamp rendered in America/Mexico_City regardless of the browser's zone. */
+export function formatAuthorizationTimestamp(value: string | null | undefined): string {
+  if (!value) return '—';
+  const date = parseGatewayTimestamp(value);
+  return Number.isNaN(date.getTime()) ? '—' : DISPLAY_FORMAT.format(date);
 }
 
 export type CountdownSeverity = 'ok' | 'warning' | 'danger';

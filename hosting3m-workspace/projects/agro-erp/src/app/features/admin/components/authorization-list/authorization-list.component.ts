@@ -1,16 +1,27 @@
 import { Component, DestroyRef, inject, signal, computed, effect, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { lastValueFrom } from 'rxjs';
-import { TenantService } from 'core-auth';
+import { AuthService, TenantService } from 'core-auth';
 import { AdminService } from '@features/admin/services/admin.service';
-import { PendingAuthorization, TipoEventoAutorizacion } from '@core/models/pending-authorization.model';
+import {
+  DecisionAutorizacion,
+  PendingAuthorization,
+  ResolveAuthorizationResult,
+  TipoEventoAutorizacion
+} from '@core/models/pending-authorization.model';
 import { ConfirmActionModalComponent } from '@shared/components/confirm-action-modal/confirm-action-modal.component';
 import {
   getAuthorizationDeadline,
+  formatAuthorizationTimestamp,
   getCountdownSeverity,
   formatCountdown,
   CountdownSeverity
 } from '@shared/utils/authorization-deadline.util';
+import {
+  canCancelRequest,
+  isSanitaryExceptionAvailable,
+  resolveCurrentUserEmail
+} from '@shared/utils/authorization-actions.util';
 
 const TIPO_EVENTO_LABEL: Record<TipoEventoAutorizacion, string> = {
   BAJA_MORTANDAD: 'Baja por Mortandad',
@@ -22,12 +33,38 @@ interface PendingRow {
   msRemaining: number;
   severity: CountdownSeverity;
   countdownLabel: string;
+  canCancel: boolean;
 }
+
+type ConfirmAction = DecisionAutorizacion | 'CANCELAR';
 
 interface ConfirmContext {
   row: PendingAuthorization;
-  decision: 'APROBADO' | 'RECHAZADO';
+  action: ConfirmAction;
 }
+
+interface ConfirmModalConfig {
+  title: string;
+  message: string;
+  confirmLabel: string;
+  cancelLabel: string;
+  variant: 'danger' | 'warning' | 'primary';
+  notesLabel: string;
+  notesRequired: boolean;
+}
+
+/** VENTA approval blocked by the sanitary rule, with the exception still available. */
+interface SanitaryExceptionOffer {
+  row: PendingAuthorization;
+  motivo: string;
+}
+
+const SUCCESS_MESSAGE: Record<ConfirmAction, string> = {
+  APROBADO: '✅ Autorización aprobada correctamente',
+  APROBADO_CON_EXCEPCION: '✅ Venta aprobada con excepción sanitaria',
+  RECHAZADO: '✅ Autorización rechazada correctamente',
+  CANCELAR: '✅ Solicitud cancelada correctamente'
+};
 
 @Component({
   selector: 'app-authorization-list',
@@ -38,12 +75,17 @@ interface ConfirmContext {
 })
 export class AuthorizationListComponent {
   private tenantService = inject(TenantService);
+  private authService = inject(AuthService);
   public adminService = inject(AdminService);
   private destroyRef = inject(DestroyRef);
 
   public activeTab = signal<'PENDIENTES' | 'HISTORIAL'>('PENDIENTES');
   public confirmContext = signal<ConfirmContext | null>(null);
   public isSubmitting = signal<boolean>(false);
+  public sanitaryExceptionOffer = signal<SanitaryExceptionOffer | null>(null);
+
+  /** Email of the logged-in user, used only to show "Cancelar solicitud" on own requests. */
+  private currentUserEmail = computed(() => resolveCurrentUserEmail(this.authService.currentUser() as any));
 
   /** Reloj reactivo para que la cuenta regresiva avance sin refrescar la lista. */
   private now = signal<number>(Date.now());
@@ -62,6 +104,7 @@ export class AuthorizationListComponent {
 
   public pendingRows = computed<PendingRow[]>(() => {
     const nowMs = this.now();
+    const email = this.currentUserEmail();
     return this.adminService.pendingAuthorizations().map(row => {
       const deadline = getAuthorizationDeadline(row.fecha_solicitud);
       const msRemaining = deadline.getTime() - nowMs;
@@ -69,12 +112,20 @@ export class AuthorizationListComponent {
         row,
         msRemaining,
         severity: getCountdownSeverity(msRemaining),
-        countdownLabel: formatCountdown(msRemaining)
+        countdownLabel: formatCountdown(msRemaining),
+        canCancel: canCancelRequest(row, email)
       };
     });
   });
 
   public historyRows = computed(() => this.adminService.authorizationHistory());
+
+  /** Offer is shown only while its request is still in the current tenant's pending list. */
+  public visibleSanitaryExceptionOffer = computed(() => {
+    const offer = this.sanitaryExceptionOffer();
+    if (!offer) return null;
+    return this.adminService.pendingAuthorizations().some(r => r.id === offer.row.id) ? offer : null;
+  });
 
   public setTab(tab: 'PENDIENTES' | 'HISTORIAL'): void {
     this.activeTab.set(tab);
@@ -110,8 +161,14 @@ export class AuthorizationListComponent {
       case 'APROBADO': return 'bg-green-lt';
       case 'RECHAZADO': return 'bg-red-lt';
       case 'EXPIRADO': return 'bg-secondary-lt';
+      case 'CANCELADO': return 'bg-dark-lt';
       default: return 'bg-secondary-lt';
     }
+  }
+
+  /** fecha_solicitud / fecha_resolucion are UTC; shown in America/Mexico_City. */
+  public formatTimestamp(value: string | null | undefined): string {
+    return formatAuthorizationTimestamp(value);
   }
 
   public severityBadgeClass(severity: CountdownSeverity): string {
@@ -122,34 +179,107 @@ export class AuthorizationListComponent {
     }
   }
 
-  public openConfirm(row: PendingAuthorization, decision: 'APROBADO' | 'RECHAZADO'): void {
-    this.confirmContext.set({ row, decision });
+  public confirmConfig = computed<ConfirmModalConfig | null>(() => {
+    const ctx = this.confirmContext();
+    if (!ctx) return null;
+    const tipo = this.tipoEventoLabel(ctx.row.tipo_evento).toLowerCase();
+    switch (ctx.action) {
+      case 'APROBADO':
+        return {
+          title: 'Aprobar autorización',
+          message: `¿Confirmas aprobar esta solicitud de ${tipo}? Esta acción es irreversible.`,
+          confirmLabel: 'Aprobar',
+          cancelLabel: 'Cancelar',
+          variant: 'primary',
+          notesLabel: 'Notas (opcional)',
+          notesRequired: false
+        };
+      case 'RECHAZADO':
+        return {
+          title: 'Rechazar autorización',
+          message: `¿Confirmas rechazar esta solicitud de ${tipo}? Esta acción es irreversible.`,
+          confirmLabel: 'Rechazar',
+          cancelLabel: 'Cancelar',
+          variant: 'danger',
+          notesLabel: 'Motivo del rechazo (obligatorio)',
+          notesRequired: true
+        };
+      case 'APROBADO_CON_EXCEPCION':
+        return {
+          title: 'Aprobar con excepción sanitaria',
+          message: '¿Confirmas aprobar esta venta con excepción sanitaria? La justificación quedará registrada. Esta acción es irreversible.',
+          confirmLabel: 'Aprobar con excepción',
+          cancelLabel: 'Cancelar',
+          variant: 'warning',
+          notesLabel: 'Justificación de la excepción (obligatoria)',
+          notesRequired: true
+        };
+      case 'CANCELAR':
+        return {
+          title: 'Cancelar solicitud',
+          message: `¿Confirmas cancelar tu solicitud de ${tipo}? Esta acción es irreversible.`,
+          confirmLabel: 'Cancelar solicitud',
+          cancelLabel: 'Volver',
+          variant: 'danger',
+          notesLabel: 'Motivo de la cancelación (obligatorio)',
+          notesRequired: true
+        };
+    }
+  });
+
+  public openConfirm(row: PendingAuthorization, action: ConfirmAction): void {
+    // The sanitary exception only exists for VENTA; never offer it for BAJA_MORTANDAD.
+    if (action === 'APROBADO_CON_EXCEPCION' && row.tipo_evento !== 'VENTA') return;
+    this.confirmContext.set({ row, action });
   }
 
   public closeConfirm(): void {
     this.confirmContext.set(null);
   }
 
+  public dismissSanitaryExceptionOffer(): void {
+    this.sanitaryExceptionOffer.set(null);
+  }
+
   public async onConfirm(event: { notas?: string }): Promise<void> {
     const ctx = this.confirmContext();
-    if (!ctx) return;
+    if (!ctx || this.isSubmitting()) return;
 
     this.isSubmitting.set(true);
     try {
-      // El gateway responde HTTP 200 con `error:true` ante un fallo de Postgres — nunca
-      // confiar solo en que la petición HTTP no haya lanzado (MetaCRUD Silent Error Shield).
-      const res: any = await lastValueFrom(this.adminService.resolveAuthorization(ctx.row.id, ctx.decision, event.notas));
-      if (res && res.error) throw new Error(res.message || 'El servidor reportó un error al resolver la autorización.');
+      const request$ = ctx.action === 'CANCELAR'
+        ? this.adminService.cancelAuthorization(ctx.row.id, event.notas ?? '')
+        : this.adminService.resolveAuthorization(ctx.row.id, ctx.action, event.notas);
 
-      // Remoción local inmediata de la fila — evita esperar un refetch para reflejar la acción.
+      // The gateway answers HTTP 200 with `error:true` on a Postgres failure (MetaCRUD Silent
+      // Error Shield) — the backend message is shown as-is and the row is left untouched.
+      const res: any = await lastValueFrom(request$);
+      if (res?.error) {
+        alert(res.message || 'El servidor reportó un error al procesar la solicitud.');
+        return;
+      }
+
+      const result = res?.data as ResolveAuthorizationResult | null;
+      if (result?.success === false) {
+        // A dispatcher rejected the approval (e.g. sanitary rule): the request stays PENDIENTE.
+        this.closeConfirm();
+        const motivo = result.motivo || 'La aprobación fue rechazada por el servidor.';
+        if (ctx.action === 'APROBADO' && isSanitaryExceptionAvailable(ctx.row, result)) {
+          this.sanitaryExceptionOffer.set({ row: ctx.row, motivo });
+        } else {
+          alert(`⚠️ ${motivo}`);
+        }
+        return;
+      }
+
+      if (this.sanitaryExceptionOffer()?.row.id === ctx.row.id) this.sanitaryExceptionOffer.set(null);
       this.adminService.pendingAuthorizations.update(rows => rows.filter(r => r.id !== ctx.row.id));
-
-      alert(ctx.decision === 'APROBADO' ? '✅ Autorización aprobada correctamente' : '✅ Autorización rechazada correctamente');
+      alert(SUCCESS_MESSAGE[ctx.action]);
       this.closeConfirm();
       this.refresh();
     } catch (error) {
-      console.error('[Agro-ERP] Error al resolver la autorización:', error);
-      alert('❌ No se pudo resolver la autorización. Verifica el detalle en consola.');
+      console.error('[Agro-ERP] Error al procesar la autorización:', error);
+      alert('❌ No se pudo conectar con el servicio de autorizaciones. Intenta de nuevo.');
     } finally {
       this.isSubmitting.set(false);
     }

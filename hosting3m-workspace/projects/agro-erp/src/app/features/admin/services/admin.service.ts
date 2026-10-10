@@ -8,9 +8,14 @@ import { User } from '@core/models/user.model';
 import { Guest } from '@core/models/guest.model';
 import { BreedCatalog } from '@core/models/breed-catalog.model';
 import { LifestageCatalog } from '@core/models/lifestage-catalog.model';
-import { PendingAuthorization } from '@core/models/pending-authorization.model';
+import { DecisionAutorizacion, PendingAuthorization } from '@core/models/pending-authorization.model';
 import { stripPhantomRows } from '@core/utils/gateway-empty-row.util';
-import { TenantService, AuthService } from 'core-auth';
+import { parseGatewayTimestamp } from '@shared/utils/authorization-deadline.util';
+import { TenantService } from 'core-auth';
+
+/** fecha_resolucion is a UTC timestamp without offset; rows without it sort last. */
+const resolutionTime = (row: PendingAuthorization): number =>
+  row.fecha_resolucion ? parseGatewayTimestamp(row.fecha_resolucion).getTime() : 0;
 
 @Injectable({
   providedIn: 'root',
@@ -19,7 +24,6 @@ export class AdminService {
   private http = inject(HttpClient);
   private apiUrl_crud = environment.apiUrl_crud;
   private tenantService = inject(TenantService);
-  private authService = inject(AuthService);
   public loadingUsers = signal<boolean>(false);
   public loadingGuests = signal<boolean>(false);
   public users = signal<User[]>([]);
@@ -408,7 +412,7 @@ export class AdminService {
         const pending = rows.filter(r => r.estado === 'PENDIENTE');
         const history = rows
           .filter(r => r.estado !== 'PENDIENTE')
-          .sort((a, b) => new Date(b.fecha_resolucion ?? 0).getTime() - new Date(a.fecha_resolucion ?? 0).getTime());
+          .sort((a, b) => resolutionTime(b) - resolutionTime(a));
 
         this.pendingAuthorizations.set(pending);
         this.authorizationHistory.set(history);
@@ -418,11 +422,12 @@ export class AdminService {
   }
 
   /**
-   * Invoca `sp_resolver_autorizacion` vía el modelo Meta-CRUD `resolver_autorizacion`
-   * (operation: call_sp). `resuelto_por_email` se resuelve internamente desde el usuario
-   * autenticado — nunca se recibe como parámetro del caller.
+   * Calls `sp_resolver_autorizacion` through the Meta-CRUD model `resolver_autorizacion`
+   * (operation: call_sp). No actor email is sent: the gateway takes it from the verified JWT
+   * and overwrites any value in the body (migration 069). Only an active ADMIN of the company
+   * may resolve; RECHAZADO and APROBADO_CON_EXCEPCION require `notas`.
    */
-  public resolveAuthorization(requestId: string, decision: 'APROBADO' | 'RECHAZADO', notas?: string) {
+  public resolveAuthorization(requestId: string, decision: DecisionAutorizacion, notas?: string) {
     const payload = {
       entity: 'resolver_autorizacion',
       table_name: 'sp_resolver_autorizacion',
@@ -430,18 +435,32 @@ export class AdminService {
       fields: {
         request_id: requestId,
         decision,
-        // El JWT real emitido por jwt-service (/generate-token) trae el correo bajo el
-        // claim `user`, no `email` — la interfaz UserPayload de core-auth no coincide con
-        // el shape real del token (verificado en microservices/jwt-service/index.js), así
-        // que `.email` siempre resuelve a undefined y JSON.stringify elimina la clave del
-        // payload de red por completo. Se lee el claim real directo; se conserva `.email`
-        // como fallback por si ese desajuste se corrige más adelante en core-auth.
-        resuelto_por_email: (this.authService.currentUser() as any)?.user ?? this.authService.currentUser()?.email,
         notas: notas || undefined
       }
     };
 
     return this.http.post<ApiResponse<any>>(`${this.apiUrl_crud}/resolver_autorizacion`, payload, {
+      headers: this.getAuthHeaders()
+    });
+  }
+
+  /**
+   * Calls `sp_cancelar_autorizacion` through the Meta-CRUD model `cancelar_autorizacion`
+   * (operation: call_sp). Only the requester may cancel, with a mandatory reason, while the
+   * request is PENDIENTE — enforced by the SP. No actor email is sent (taken from the JWT).
+   */
+  public cancelAuthorization(requestId: string, motivo: string) {
+    const payload = {
+      entity: 'cancelar_autorizacion',
+      table_name: 'sp_cancelar_autorizacion',
+      operation: 'call_sp',
+      fields: {
+        request_id: requestId,
+        motivo
+      }
+    };
+
+    return this.http.post<ApiResponse<any>>(`${this.apiUrl_crud}/cancelar_autorizacion`, payload, {
       headers: this.getAuthHeaders()
     });
   }
