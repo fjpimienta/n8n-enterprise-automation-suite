@@ -5,6 +5,39 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🔒 Autorizaciones: frontend alineado con la migración 069 (aprobación solo ADMIN, cancelación por el solicitante)
+
+Adapta `/admin/autorizaciones` a las reglas nuevas de `sp_resolver_autorizacion` /
+`sp_cancelar_autorizacion` (migración 069):
+
+* **Sin email del actor en el payload:** `resolveAuthorization()` ya no envía
+  `resuelto_por_email` y la nueva `cancelAuthorization()` (modelo `cancelar_autorizacion`,
+  `call_sp`, `{ request_id, motivo }`) tampoco manda `cancelado_por_email` — el gateway lo toma
+  del JWT verificado y sobrescribe cualquier valor del body.
+* **Motivo obligatorio:** `confirm-action-modal` tiene un input nuevo `notesRequired` (default
+  `false`, sin cambios en usos existentes) que deshabilita "Confirmar" mientras las notas estén
+  vacías. Se usa en Rechazar, Cancelar solicitud y Aprobar con excepción sanitaria.
+* **Excepción sanitaria (solo VENTA):** si un APROBADO regresa `success:false` con
+  `resultado_sp.excepcion_disponible === true`, se muestra el `motivo` del backend y el botón
+  "Aprobar con excepción sanitaria" (decisión `APROBADO_CON_EXCEPCION`, justificación
+  obligatoria). Nunca se ofrece para `BAJA_MORTANDAD`. Antes un `success:false` se trataba como
+  éxito y la fila desaparecía de Pendientes sin haberse resuelto.
+* **Cancelar solicitud:** botón visible solo en filas PENDIENTE cuyo `solicitado_por_email`
+  coincide (sin distinguir mayúsculas) con el usuario actual. Es solo conveniencia de UI; la
+  regla real la aplica el SP.
+* **Errores:** un `error:true` muestra el `message` del backend tal cual y deja la fila sin
+  cambios. Tras cualquier acción exitosa se recarga la lista.
+* **Estado nuevo `CANCELADO`:** badge neutro (`bg-dark-lt`) en Historial y en Cattle Event Log
+  (`SOLICITUD_BAJA`/`SOLICITUD_VENTA`), distinto del rojo de RECHAZADO.
+* Helpers puros nuevos en `shared/utils/authorization-actions.util.ts` (`canCancelRequest`,
+  `isSanitaryExceptionAvailable`, `resolveCurrentUserEmail`) con 10 casos de Vitest, verificados
+  standalone (`ng test agro-erp` sigue sin compilar, deuda preexistente).
+
+⚠️ **Limitación conocida:** la ruta `/admin/autorizaciones` sigue con `roleGuard(['ADMIN'])`, así
+que un EDITOR que creó una solicitud (p. ej. el capataz) no llega a esta pantalla y no puede
+cancelarla desde la Web, aunque `cancelar_autorizacion` sí permite `ADMIN,EDITOR`. Abrir la vista
+a EDITOR (solo con su propia cancelación, sin aprobar/rechazar) queda como decisión pendiente.
+
 ### ✨ Refresco manual y automático (cada 5 min) del dashboard, sin recargar la página
 
 Hasta ahora la única forma de ver datos nuevos (ej. eventos registrados por el Agente IA) en
