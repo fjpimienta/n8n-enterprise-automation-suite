@@ -21,6 +21,27 @@
     <div class="alert alert-danger" role="alert">{{ adminService.authorizationError() }}</div>
     }
 
+    @if (visibleSanitaryExceptionOffer(); as offer) {
+    <div class="alert alert-warning" role="alert">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+            <div>
+                <div class="font-weight-bold">
+                    No se pudo aprobar la venta de {{ identifierFor(offer.row) }} por normativa sanitaria
+                </div>
+                <div class="small">{{ offer.motivo }}</div>
+            </div>
+            <div class="d-flex gap-1 flex-shrink-0">
+                <button class="btn btn-warning btn-sm" (click)="openConfirm(offer.row, 'APROBADO_CON_EXCEPCION')">
+                    <i class="ti ti-alert-triangle"></i> Aprobar con excepción sanitaria
+                </button>
+                <button class="btn btn-outline-secondary btn-sm" (click)="dismissSanitaryExceptionOffer()">
+                    Descartar
+                </button>
+            </div>
+        </div>
+    </div>
+    }
+
     <div class="card shadow-sm border-0">
         <div class="card-header border-bottom-0">
             <ul class="nav nav-tabs card-header-tabs">
@@ -77,7 +98,7 @@
                                 }
                             </td>
                             <td class="text-muted">{{ item.row.solicitado_por_email }}</td>
-                            <td class="text-muted">{{ item.row.fecha_solicitud | date:'short' }}</td>
+                            <td class="text-muted">{{ formatTimestamp(item.row.fecha_solicitud) }}</td>
                             <td>
                                 <span class="badge" [ngClass]="severityBadgeClass(item.severity)">
                                     {{ item.countdownLabel }}
@@ -91,6 +112,11 @@
                                     <button class="btn btn-danger btn-sm" (click)="openConfirm(item.row, 'RECHAZADO')">
                                         <i class="ti ti-x"></i> Rechazar
                                     </button>
+                                    @if (item.canCancel) {
+                                    <button class="btn btn-outline-secondary btn-sm" (click)="openConfirm(item.row, 'CANCELAR')">
+                                        <i class="ti ti-ban"></i> Cancelar solicitud
+                                    </button>
+                                    }
                                 </div>
                             </td>
                         </tr>
@@ -143,7 +169,7 @@
                             <td class="text-muted">{{ row.solicitado_por_email }}</td>
                             <td><span class="badge" [ngClass]="estadoBadgeClass(row.estado)">{{ row.estado }}</span></td>
                             <td class="text-muted">{{ row.resuelto_por_email || '—' }}</td>
-                            <td class="text-muted">{{ row.fecha_resolucion ? (row.fecha_resolucion | date:'short') : '—' }}</td>
+                            <td class="text-muted">{{ formatTimestamp(row.fecha_resolucion) }}</td>
                             <td class="text-muted">{{ row.notas_resolucion || '—' }}</td>
                         </tr>
                         } @empty {
@@ -167,15 +193,15 @@
     </div>
 </div>
 
-@if (confirmContext(); as ctx) {
+@if (confirmConfig(); as cfg) {
 <app-confirm-action-modal
-    [title]="ctx.decision === 'APROBADO' ? 'Aprobar autorización' : 'Rechazar autorización'"
-    [message]="ctx.decision === 'APROBADO'
-        ? '¿Confirmas aprobar esta solicitud de ' + tipoEventoLabel(ctx.row.tipo_evento).toLowerCase() + '? Esta acción es irreversible.'
-        : '¿Confirmas rechazar esta solicitud de ' + tipoEventoLabel(ctx.row.tipo_evento).toLowerCase() + '? Esta acción es irreversible.'"
-    [confirmLabel]="ctx.decision === 'APROBADO' ? 'Aprobar' : 'Rechazar'"
-    [variant]="ctx.decision === 'APROBADO' ? 'primary' : 'danger'"
-    [notesLabel]="ctx.decision === 'APROBADO' ? 'Notas (opcional)' : 'Motivo del rechazo (opcional)'"
+    [title]="cfg.title"
+    [message]="cfg.message"
+    [confirmLabel]="cfg.confirmLabel"
+    [cancelLabel]="cfg.cancelLabel"
+    [variant]="cfg.variant"
+    [notesLabel]="cfg.notesLabel"
+    [notesRequired]="cfg.notesRequired"
     (confirm)="onConfirm($event)"
     (cancel)="closeConfirm()">
 </app-confirm-action-modal>

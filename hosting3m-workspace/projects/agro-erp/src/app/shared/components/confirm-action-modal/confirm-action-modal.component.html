@@ -28,7 +28,7 @@
                 <button type="button" class="btn btn-secondary" (click)="onCancel()">{{ cancelLabel }}</button>
                 <button type="button" class="btn" [class.btn-danger]="variant === 'danger'"
                     [class.btn-warning]="variant === 'warning'" [class.btn-primary]="variant === 'primary'"
-                    (click)="onConfirm()">{{ confirmLabel }}</button>
+                    [disabled]="notesRequired && !hasNotes()" (click)="onConfirm()">{{ confirmLabel }}</button>
             </div>
         </div>
     </div>

@@ -1,4 +1,4 @@
-import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
+import { Component, EventEmitter, Input, Output, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 
@@ -21,13 +21,17 @@ export class ConfirmActionModalComponent {
   @Input() variant: 'danger' | 'warning' | 'primary' = 'primary';
   /** Si se define, muestra un textarea opcional de notas con esta etiqueta. */
   @Input() notesLabel?: string;
+  /** When true, the confirm button stays disabled until the trimmed notes are non-empty. */
+  @Input() notesRequired = false;
 
   @Output() confirm = new EventEmitter<{ notas?: string }>();
   @Output() cancel = new EventEmitter<void>();
 
   public notas = signal<string>('');
+  public hasNotes = computed(() => this.notas().trim() !== '');
 
   public onConfirm(): void {
+    if (this.notesRequired && !this.hasNotes()) return;
     const notas = this.notas().trim();
     this.confirm.emit(notas ? { notas } : {});
     this.notas.set('');
