@@ -1,20 +1,28 @@
--- 071_sale_income.sql
+-- 071_sale_income.sql  (v2 — replaces the first local draft of 071; safe to re-run)
 -- Business rules (set by the project owner, 2026-10-10):
---  * Every sale request must carry its REAL sale data, dictated by the requester. Amounts printed on
---    transit guides or invoices are never used (they are often symbolic, e.g. $1.00 per head).
+--  * The foreman REQUESTS the sale: which animals leave (identifier, category comes from the herd record),
+--    sale date and transit guide. The foreman never sets prices.
+--  * The PRICE is set exclusively by the UPP owners / administrators (ADMIN), WHEN APPROVING the sale.
+--    Amounts printed on guides or invoices are never used (they are often symbolic, e.g. $1.00 per head).
 --  * Three sale modes:
---      POR_PIEZA    -> "al bulto": a price per animal.
---      POR_KG       -> the requester gives the animal's weight and the amount paid; $/kg is derived.
---      POR_GENETICA -> a fixed price per animal for genetic quality (heifers, bulls).
---  * Buyer, payment method (EFECTIVO / TRANSFERENCIA) and whether it was invoiced are mandatory data.
+--      POR_PIEZA    -> "al bulto": an amount per animal.
+--      POR_KG       -> the ADMIN gives the animal's weight and the amount; $/kg is derived.
+--      POR_GENETICA -> a fixed amount per animal for genetic quality.
+--  * Buyer, payment method (EFECTIVO / TRANSFERENCIA) and whether it was invoiced are mandatory.
 --    "Bancarizado" is derived: TRANSFERENCIA = true, EFECTIVO = false.
---  * Income is recorded ONLY when the sale is approved. Rejected, cancelled or expired requests never
---    produce income. A sale can no longer be approved without a price (fail-closed).
---  * Income is financial data: visible to ADMIN only.
+--  * Reference prices per category can be configured to pre-fill the approval form. The recorded amount
+--    is always the one the ADMIN confirms.
+--  * Income is recorded ONLY on approval. Rejected, cancelled or expired requests never produce income.
+--    A sale cannot be approved without its sale data (fail-closed).
+--  * Income and reference prices are financial data: ADMIN only.
 
 BEGIN;
 
--- 1) Backup of the function this migration replaces
+-- 0) Undo the first local draft (request-time validation trigger). No-op on a fresh database.
+DROP TRIGGER  IF EXISTS trg_pending_auth_validate_sale ON public.pending_authorizations;
+DROP FUNCTION IF EXISTS public.fn_pending_auth_validate_sale();
+
+-- 1) Backup of the resolver being replaced (only the first time this migration runs)
 CREATE TABLE IF NOT EXISTS function_backup_20261010_071 AS
 SELECT p.proname,
        pg_get_function_identity_arguments(p.oid) AS identity_args,
@@ -51,11 +59,30 @@ CREATE TABLE IF NOT EXISTS public.cattle_sale_income (
 CREATE INDEX IF NOT EXISTS idx_sale_income_tenant_date ON public.cattle_sale_income (tenant_id, sale_date);
 CREATE INDEX IF NOT EXISTS idx_sale_income_livestock   ON public.cattle_sale_income (livestock_id);
 
--- 3) Validate and normalize the sale data of every new VENTA request, whatever path inserts it
---    (both sp_solicitar_autorizacion overloads, the gateway or a manual insert).
-CREATE OR REPLACE FUNCTION public.fn_pending_auth_validate_sale()
-RETURNS trigger
-LANGUAGE plpgsql
+-- 3) Reference prices per category (pre-fill only; never imposed)
+CREATE TABLE IF NOT EXISTS public.cattle_sale_reference_prices (
+    id                     uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    tenant_id              integer       NOT NULL REFERENCES public.companys(id_company),
+    category               varchar(50)   NOT NULL,
+    sale_mode              varchar(20)   NOT NULL CHECK (sale_mode IN ('POR_PIEZA', 'POR_KG', 'POR_GENETICA')),
+    reference_amount       numeric(12,2) CHECK (reference_amount > 0),
+    reference_price_per_kg numeric(10,2) CHECK (reference_price_per_kg > 0),
+    valid_from             date          NOT NULL DEFAULT CURRENT_DATE,
+    valid_to               date,
+    is_active              boolean       NOT NULL DEFAULT true,
+    notes                  text,
+    created_at             timestamptz   NOT NULL DEFAULT now(),
+    CONSTRAINT sale_reference_value_check
+        CHECK (reference_amount IS NOT NULL OR reference_price_per_kg IS NOT NULL),
+    CONSTRAINT sale_reference_range_check
+        CHECK (valid_to IS NULL OR valid_to >= valid_from)
+);
+CREATE INDEX IF NOT EXISTS idx_sale_reference_tenant_cat ON public.cattle_sale_reference_prices (tenant_id, category);
+
+-- 4) Single place that validates and normalizes the sale data entered by the ADMIN
+CREATE OR REPLACE FUNCTION public.fn_normalize_sale_data(p_data jsonb)
+RETURNS jsonb
+LANGUAGE plpgsql IMMUTABLE
 AS $function$
 DECLARE
     v_mode   text;
@@ -66,55 +93,51 @@ DECLARE
     v_pay    text;
     v_inv    boolean;
 BEGIN
-    IF NEW.tipo_evento <> 'VENTA' THEN
-        RETURN NEW;
+    IF p_data IS NULL OR jsonb_typeof(p_data) <> 'object' THEN
+        RAISE EXCEPTION 'La aprobación de una venta requiere los datos de venta (modo, importe, comprador y forma de pago)'
+            USING ERRCODE = 'P0021';
     END IF;
 
-    v_mode := upper(btrim(COALESCE(NEW.payload->>'modo_venta', '')));
+    v_mode := upper(btrim(COALESCE(p_data->>'modo_venta', '')));
     IF v_mode NOT IN ('POR_PIEZA', 'POR_KG', 'POR_GENETICA') THEN
-        RAISE EXCEPTION 'La venta requiere modo_venta: POR_PIEZA, POR_KG o POR_GENETICA'
-            USING ERRCODE = 'P0022';
+        RAISE EXCEPTION 'modo_venta debe ser POR_PIEZA, POR_KG o POR_GENETICA' USING ERRCODE = 'P0022';
     END IF;
 
-    IF COALESCE(NEW.payload->>'precio_venta', '') !~ '^\d+(\.\d{1,2})?$' THEN
-        RAISE EXCEPTION 'La venta requiere precio_venta: el importe real cobrado por el animal, solo el número'
-            USING ERRCODE = 'P0023';
+    IF COALESCE(p_data->>'precio_venta', '') !~ '^\d+(\.\d{1,2})?$' OR (p_data->>'precio_venta')::numeric <= 0 THEN
+        RAISE EXCEPTION 'precio_venta debe ser el importe real del animal, mayor a cero' USING ERRCODE = 'P0023';
     END IF;
-    v_amount := (NEW.payload->>'precio_venta')::numeric;
-    IF v_amount <= 0 THEN
-        RAISE EXCEPTION 'precio_venta debe ser mayor a cero' USING ERRCODE = 'P0023';
-    END IF;
+    v_amount := (p_data->>'precio_venta')::numeric;
 
-    IF NULLIF(btrim(COALESCE(NEW.payload->>'peso_kg', '')), '') IS NOT NULL THEN
-        IF NEW.payload->>'peso_kg' !~ '^\d+(\.\d{1,2})?$' OR (NEW.payload->>'peso_kg')::numeric <= 0 THEN
+    IF NULLIF(btrim(COALESCE(p_data->>'peso_kg', '')), '') IS NOT NULL THEN
+        IF p_data->>'peso_kg' !~ '^\d+(\.\d{1,2})?$' OR (p_data->>'peso_kg')::numeric <= 0 THEN
             RAISE EXCEPTION 'peso_kg debe ser un número mayor a cero' USING ERRCODE = 'P0026';
         END IF;
-        v_weight := (NEW.payload->>'peso_kg')::numeric;
+        v_weight := (p_data->>'peso_kg')::numeric;
     END IF;
 
     IF v_mode = 'POR_KG' THEN
         IF v_weight IS NULL THEN
-            RAISE EXCEPTION 'La venta POR_KG requiere peso_kg del animal' USING ERRCODE = 'P0026';
+            RAISE EXCEPTION 'La venta POR_KG requiere el peso del animal' USING ERRCODE = 'P0026';
         END IF;
         v_ppk := round(v_amount / v_weight, 2);
     END IF;
 
-    v_buyer := btrim(COALESCE(NEW.payload->>'comprador', ''));
+    v_buyer := btrim(COALESCE(p_data->>'comprador', ''));
     IF v_buyer = '' THEN
         RAISE EXCEPTION 'La venta requiere el nombre del comprador' USING ERRCODE = 'P0024';
     END IF;
 
-    v_pay := upper(btrim(COALESCE(NEW.payload->>'forma_pago', '')));
+    v_pay := upper(btrim(COALESCE(p_data->>'forma_pago', '')));
     IF v_pay NOT IN ('EFECTIVO', 'TRANSFERENCIA') THEN
-        RAISE EXCEPTION 'La venta requiere forma_pago: EFECTIVO o TRANSFERENCIA' USING ERRCODE = 'P0025';
+        RAISE EXCEPTION 'forma_pago debe ser EFECTIVO o TRANSFERENCIA' USING ERRCODE = 'P0025';
     END IF;
 
-    IF lower(COALESCE(NEW.payload->>'facturado', 'false')) NOT IN ('true', 'false') THEN
+    IF lower(COALESCE(p_data->>'facturado', 'false')) NOT IN ('true', 'false') THEN
         RAISE EXCEPTION 'facturado debe ser true o false' USING ERRCODE = 'P0025';
     END IF;
-    v_inv := lower(COALESCE(NEW.payload->>'facturado', 'false')) = 'true';
+    v_inv := lower(COALESCE(p_data->>'facturado', 'false')) = 'true';
 
-    NEW.payload := NEW.payload || jsonb_build_object(
+    RETURN jsonb_build_object(
         'modo_venta',    v_mode,
         'precio_venta',  v_amount,
         'peso_kg',       v_weight,
@@ -122,20 +145,24 @@ BEGIN
         'comprador',     v_buyer,
         'forma_pago',    v_pay,
         'facturado',     v_inv,
-        'folio_factura', NULLIF(btrim(COALESCE(NEW.payload->>'folio_factura', '')), ''),
+        'folio_factura', NULLIF(btrim(COALESCE(p_data->>'folio_factura', '')), ''),
         'bancarizado',   (v_pay = 'TRANSFERENCIA')
     );
-    RETURN NEW;
 END;
 $function$;
 
-DROP TRIGGER IF EXISTS trg_pending_auth_validate_sale ON public.pending_authorizations;
-CREATE TRIGGER trg_pending_auth_validate_sale
-    BEFORE INSERT ON public.pending_authorizations
-    FOR EACH ROW EXECUTE FUNCTION public.fn_pending_auth_validate_sale();
+-- 5) Resolver: 069 rules + sale data entered by the ADMIN at approval time.
+--    The 4-argument version is dropped so calls with 4 arguments (sp_review_pending_request, gateway)
+--    resolve unambiguously to the new one through the DEFAULT of p_datos_venta.
+DROP FUNCTION IF EXISTS public.sp_resolver_autorizacion(uuid, character varying, character varying, text);
 
--- 4) Resolver: same as 069 + a sale cannot be approved without price, and approval records the income
-CREATE OR REPLACE FUNCTION public.sp_resolver_autorizacion(p_request_id uuid, p_decision character varying, p_resuelto_por_email character varying, p_notas text DEFAULT NULL::text)
+CREATE OR REPLACE FUNCTION public.sp_resolver_autorizacion(
+    p_request_id         uuid,
+    p_decision           character varying,
+    p_resuelto_por_email character varying,
+    p_notas              text  DEFAULT NULL::text,
+    p_datos_venta        jsonb DEFAULT NULL::jsonb
+)
  RETURNS jsonb
  LANGUAGE plpgsql
 AS $function$
@@ -143,6 +170,7 @@ DECLARE
     v_request        pending_authorizations%ROWTYPE;
     v_resultado_sp   jsonb;
     v_excepcion      boolean := false;
+    v_sale           jsonb;
     v_sale_date      date;
 BEGIN
     IF p_decision IS NULL OR p_decision NOT IN ('APROBADO', 'APROBADO_CON_EXCEPCION', 'RECHAZADO') THEN
@@ -193,11 +221,9 @@ BEGIN
         RETURN jsonb_build_object('success', true, 'estado', 'RECHAZADO', 'request_id', p_request_id);
     END IF;
 
-    -- 071: a sale without its real price can no longer be approved (legacy requests included).
-    IF v_request.tipo_evento = 'VENTA'
-       AND (v_request.payload->>'precio_venta' IS NULL OR v_request.payload->>'modo_venta' IS NULL) THEN
-        RAISE EXCEPTION 'La venta no tiene precio registrado; debe cancelarse y solicitarse de nuevo con el precio real'
-            USING ERRCODE = 'P0021';
+    -- 071: a sale is approved only with the sale data set by the ADMIN (validated BEFORE touching the animal).
+    IF v_request.tipo_evento = 'VENTA' THEN
+        v_sale := public.fn_normalize_sale_data(p_datos_venta);
     END IF;
 
     v_excepcion := (p_decision = 'APROBADO_CON_EXCEPCION');
@@ -255,7 +281,7 @@ BEGIN
         );
     END IF;
 
-    -- 071: record the income of an approved sale (same transaction: all or nothing).
+    -- 071: record the income of the approved sale (same transaction: all or nothing).
     IF v_request.tipo_evento = 'VENTA' THEN
         v_sale_date := COALESCE(
             CASE WHEN v_request.payload->>'fecha_evento' ~ '^\d{4}-\d{2}-\d{2}$'
@@ -268,24 +294,23 @@ BEGIN
              guia_transito, requested_by_email, approved_by_email)
         VALUES
             (v_request.id_company, v_request.livestock_id, v_request.id, v_sale_date,
-             v_request.payload->>'modo_venta',
-             (v_request.payload->>'precio_venta')::numeric,
-             (v_request.payload->>'peso_kg')::numeric,
-             (v_request.payload->>'precio_kg')::numeric,
-             v_request.payload->>'comprador',
-             v_request.payload->>'forma_pago',
-             COALESCE((v_request.payload->>'facturado')::boolean, false),
-             v_request.payload->>'folio_factura',
-             COALESCE((v_request.payload->>'bancarizado')::boolean, false),
+             v_sale->>'modo_venta',
+             (v_sale->>'precio_venta')::numeric,
+             (v_sale->>'peso_kg')::numeric,
+             (v_sale->>'precio_kg')::numeric,
+             v_sale->>'comprador',
+             v_sale->>'forma_pago',
+             (v_sale->>'facturado')::boolean,
+             v_sale->>'folio_factura',
+             (v_sale->>'bancarizado')::boolean,
              NULLIF(v_request.payload->>'guia_transito', ''),
              v_request.solicitado_por_email,
              p_resuelto_por_email);
 
         -- The sale weight is the animal's last real weighing.
-        IF v_request.payload->>'peso_kg' IS NOT NULL THEN
+        IF v_sale->>'peso_kg' IS NOT NULL THEN
             INSERT INTO public.cattle_weight_logs (livestock_id, weight_kg, log_date, source_device)
-            VALUES (v_request.livestock_id, (v_request.payload->>'peso_kg')::numeric,
-                    v_sale_date::timestamp, 'VENTA');
+            VALUES (v_request.livestock_id, (v_sale->>'peso_kg')::numeric, v_sale_date::timestamp, 'VENTA');
         END IF;
     END IF;
 
@@ -295,31 +320,47 @@ BEGIN
        SET estado = 'APROBADO',
            resuelto_por_email = p_resuelto_por_email,
            fecha_resolucion = now(),
-           notas_resolucion = CASE WHEN v_excepcion THEN '[EXCEPCION SANITARIA] ' || p_notas ELSE p_notas END
+           notas_resolucion = CASE WHEN v_excepcion THEN '[EXCEPCION SANITARIA] ' || p_notas ELSE p_notas END,
+           payload = CASE WHEN v_sale IS NOT NULL THEN payload || jsonb_build_object('venta', v_sale) ELSE payload END
      WHERE id = p_request_id;
 
     RETURN jsonb_build_object(
         'success', true, 'estado', 'APROBADO', 'request_id', p_request_id,
         'excepcion_sanitaria', v_excepcion,
+        'venta', v_sale,
         'resultado_sp', v_resultado_sp
     );
 END;
 $function$;
 
--- 5) Read-only gateway model, ADMIN only (financial data)
+-- 6) Gateway models (ADMIN only)
+UPDATE crud_models
+   SET allowed_fields = '["request_id", "decision", "resuelto_por_email", "notas", "datos_venta"]'
+ WHERE model_name = 'resolver_autorizacion';
+
+DELETE FROM crud_models WHERE model_name = 'cattle_sale_income';  -- re-created below (first draft had no ops change)
 INSERT INTO crud_models (model_name, table_name, primary_key, allowed_fields, schema_json, allowed_ops, hooks,
                          allowed_roles_select, allowed_roles_insert, allowed_roles_update, allowed_roles_delete,
                          joins, is_global, sp_requires_tenant)
-SELECT 'cattle_sale_income', 'cattle_sale_income', 'id',
-       '["id","tenant_id","livestock_id","pending_authorization_id","sale_date","sale_mode","amount","weight_kg","price_per_kg","buyer_name","payment_method","invoiced","invoice_folio","banked","guia_transito","requested_by_email","approved_by_email","notes","created_at"]',
-       '{}', '{SELECT}', '{"pre": [], "post": []}',
-       'ADMIN', 'ADMIN', 'ADMIN', 'ADMIN',
-       '[]', false, false
-WHERE NOT EXISTS (SELECT 1 FROM crud_models WHERE model_name = 'cattle_sale_income');
+VALUES ('cattle_sale_income', 'cattle_sale_income', 'id',
+        '["id","tenant_id","livestock_id","pending_authorization_id","sale_date","sale_mode","amount","weight_kg","price_per_kg","buyer_name","payment_method","invoiced","invoice_folio","banked","guia_transito","requested_by_email","approved_by_email","notes","created_at"]',
+        '{}', '{SELECT}', '{"pre": [], "post": []}',
+        'ADMIN', 'ADMIN', 'ADMIN', 'ADMIN', '[]', false, false);
 
--- 6) Verification
-SELECT to_regclass('public.cattle_sale_income') AS income_table;
-SELECT tgname FROM pg_trigger WHERE tgname = 'trg_pending_auth_validate_sale';
-SELECT model_name, allowed_ops, allowed_roles_select FROM crud_models WHERE model_name = 'cattle_sale_income';
+INSERT INTO crud_models (model_name, table_name, primary_key, allowed_fields, schema_json, allowed_ops, hooks,
+                         allowed_roles_select, allowed_roles_insert, allowed_roles_update, allowed_roles_delete,
+                         joins, is_global, sp_requires_tenant)
+SELECT 'cattle_sale_reference_prices', 'cattle_sale_reference_prices', 'id',
+       '["id","tenant_id","category","sale_mode","reference_amount","reference_price_per_kg","valid_from","valid_to","is_active","notes","created_at"]',
+       '{"category": {"type": "text", "required": true}, "sale_mode": {"type": "text", "required": true}}',
+       '{SELECT,INSERT,UPDATE,DELETE}', '{"pre": [], "post": []}',
+       'ADMIN', 'ADMIN', 'ADMIN', 'ADMIN', '[]', false, false
+WHERE NOT EXISTS (SELECT 1 FROM crud_models WHERE model_name = 'cattle_sale_reference_prices');
+
+-- 7) Verification
+SELECT p.oid::regprocedure FROM pg_proc p WHERE proname IN ('sp_resolver_autorizacion', 'fn_normalize_sale_data');
+SELECT count(*) AS old_trigger_left FROM pg_trigger WHERE tgname = 'trg_pending_auth_validate_sale';
+SELECT model_name, allowed_ops, allowed_roles_select FROM crud_models
+ WHERE model_name IN ('resolver_autorizacion', 'cattle_sale_income', 'cattle_sale_reference_prices');
 
 COMMIT;
