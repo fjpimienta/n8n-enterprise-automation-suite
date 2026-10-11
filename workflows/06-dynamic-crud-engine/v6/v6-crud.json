@@ -12,10 +12,10 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        4544,
-        2096
+        6944,
+        4704
       ],
-      "id": "241ff6c4-e54d-4ebb-9c2b-008d20fa58e4",
+      "id": "97f331e9-dc47-4aa2-b253-11a1d9252523",
       "name": "Respond to Webhook",
       "alwaysOutputData": true
     },
@@ -26,10 +26,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -512,
-        2304
+        1888,
+        4912
       ],
-      "id": "a31e6429-a0e5-408b-8f36-d3e87e2a179e",
+      "id": "118c67ba-51d1-4766-88d8-4bdfe1f65f3a",
       "name": "Get Model Name"
     },
     {
@@ -41,10 +41,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        832,
-        2112
+        3232,
+        4720
       ],
-      "id": "561c49ef-af0c-4cbe-9757-fd55d53ca817",
+      "id": "e0e095da-a04a-4108-93d0-2bd177abe731",
       "name": "Get Model Config",
       "retryOnFail": false,
       "alwaysOutputData": true,
@@ -62,10 +62,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2528,
-        1920
+        4928,
+        4528
       ],
-      "id": "ef5b87dd-1668-4147-b0aa-a875602b19ca",
+      "id": "6689ad98-8b11-4972-bc93-152563182013",
       "name": "Schema Validate"
     },
     {
@@ -77,10 +77,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        1504,
-        2112
+        3904,
+        4720
       ],
-      "id": "b7348a7c-b55c-42f9-a379-390e22a90d30",
+      "id": "240a871c-cc90-4e26-a512-109b8cee48d5",
       "name": "Get",
       "credentials": {
         "postgres": {
@@ -117,10 +117,10 @@
       "type": "@n8n/n8n-nodes-langchain.openAi",
       "typeVersion": 2.1,
       "position": [
-        1952,
-        2112
+        4352,
+        4720
       ],
-      "id": "c44528b3-a512-46fa-a280-a99d195a3d6c",
+      "id": "d2076e4b-d068-484b-9917-1e1cfd820b40",
       "name": "Message a model",
       "credentials": {
         "openAiApi": {
@@ -137,10 +137,10 @@
       "type": "n8n-nodes-base.aggregate",
       "typeVersion": 1,
       "position": [
-        1728,
-        2112
+        4128,
+        4720
       ],
-      "id": "99ab82da-531d-427a-97a6-e70456117ca2",
+      "id": "1d0ecba4-66a2-4ceb-a01f-a3f6983d041f",
       "name": "Aggregate"
     },
     {
@@ -150,10 +150,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2304,
-        2112
+        4704,
+        4720
       ],
-      "id": "a8106423-5274-4706-8485-9740712ea0b7",
+      "id": "9862edc1-20bb-473a-a1f8-aa12e38b9b64",
       "name": "Parse IA"
     },
     {
@@ -167,10 +167,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        2528,
-        2112
+        4928,
+        4720
       ],
-      "id": "1c61ff1c-459c-4f24-91b1-c78b47c30c83",
+      "id": "01c0a8de-cda2-4743-9f58-b7d983c1eb71",
       "name": "Execute a SQL query",
       "credentials": {
         "postgres": {
@@ -207,10 +207,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        4096,
-        1952
+        6496,
+        4560
       ],
-      "id": "8719c86a-aebc-4704-9e03-a2d02b1b40c5",
+      "id": "23a30cfb-0be3-4c6d-99fc-4385af2b3712",
       "name": "Check Post-Hooks"
     },
     {
@@ -222,10 +222,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        4320,
-        1872
+        6720,
+        4480
       ],
-      "id": "44c97548-729a-42ab-9fd2-fd851c657714",
+      "id": "1fcbe333-72de-4bfa-9f54-b39da9639a58",
       "name": "Insert Logs",
       "credentials": {
         "postgres": {
@@ -262,10 +262,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        4320,
-        2288
+        6720,
+        4896
       ],
-      "id": "2a79cc22-2f41-496e-949b-254ccd35ec3b",
+      "id": "fe0017d8-21aa-4791-83c2-5a01a860bce4",
       "name": "If1"
     },
     {
@@ -275,10 +275,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2752,
-        2016
+        5152,
+        4624
       ],
-      "id": "ddcf42e7-3e5b-45c0-9ab6-6a057922ad9f",
+      "id": "65143734-6b9c-4e1a-b9ae-b7b2edee4a3a",
       "name": "Extract Auth Context"
     },
     {
@@ -288,10 +288,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2976,
-        2016
+        5376,
+        4624
       ],
-      "id": "2748b898-89c5-4512-bae5-aec0b3efa15e",
+      "id": "680068b3-b6c1-48c4-ab08-b637046cd6a4",
       "name": "Security Validation",
       "onError": "continueRegularOutput"
     },
@@ -322,10 +322,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        160,
-        2384
+        2560,
+        4992
       ],
-      "id": "4ff82b0d-bb23-479b-8b56-ff71a3a31ead",
+      "id": "a5a9ab8f-c5b5-4580-93a8-39d40c9e78f7",
       "name": "IsValid"
     },
     {
@@ -356,10 +356,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        1056,
-        2112
+        3456,
+        4720
       ],
-      "id": "d7d312d5-a32e-4433-afda-f391d95363eb",
+      "id": "9f7ada00-ceb2-424e-bcde-c5aebd0d1180",
       "name": "ModelExist"
     },
     {
@@ -384,10 +384,10 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
       "position": [
-        -64,
-        2384
+        2336,
+        4992
       ],
-      "id": "537725ec-1a0b-481b-9acf-a7665a140088",
+      "id": "484737b2-19d1-43d1-9d3b-e0fcb07ef939",
       "name": "Verify Token"
     },
     {
@@ -427,10 +427,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -288,
-        2304
+        2112,
+        4912
       ],
-      "id": "7c01c7d1-a928-4219-a61e-5550bfb22c55",
+      "id": "d8417472-f206-405f-9386-6fc1791cb240",
       "name": "If"
     },
     {
@@ -444,10 +444,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        3648,
-        1952
+        6048,
+        4560
       ],
-      "id": "7804c039-a05a-4fd4-89d9-9de0a79dbe10",
+      "id": "556107ca-5bf1-4ac5-b6b6-352b40272b4f",
       "name": "Execute SQL",
       "alwaysOutputData": true,
       "credentials": {
@@ -460,15 +460,15 @@
     },
     {
       "parameters": {
-        "jsCode": "const crypto = require('crypto');\n\n// Capturamos los datos directamente de los nodos anteriores\nconst config = $('Security Validation').first().json;\nconst webhookData = $('WebhookCRUD').first().json; // Obtenemos el payload completo\nconst body = webhookData.body || {};\nconst headers = webhookData.headers || {};\nconst operation = (config.operation || '').toLowerCase();\nconst table = config.table_name;\n\n// 🚀 FIX: Soportar \"filter\" en singular y aislar el payload\n// Hacemos una copia profunda (JSON.parse) para no mutar el objeto original\nlet fields = body.filter || body.filters || body.fields || JSON.parse(JSON.stringify(body));\n\n// 🛡️ SECURITY PATCH: Aislamiento Multi-Tenant (Zero-Trust)\n// Solo inyectamos tenant_id si el modelo realmente tiene esa columna\nconst tenantIdHeader = headers['x-tenant-id'];\nconst modelHasTenantId = (config.allowed_fields || []).includes('tenant_id');\nconst modelHasIdCompany = (config.allowed_fields || []).includes('id_company');\nif (tenantIdHeader && modelHasTenantId) {\n    fields['tenant_id'] = tenantIdHeader;\n} else if (tenantIdHeader && modelHasIdCompany) {\n    fields['id_company'] = tenantIdHeader;\n}\nconst joins = config.joins || [];\nconst buildJoins = () => {\n    if (!joins.length) return '';\n    return joins.map(j => {\n        const myCol = j.own_col || j.localField;\n        const otherCol = j.foreign_col || j.foreignField || 'id';\n        return ` LEFT JOIN ${j.table} ON ${table}.${myCol} = ${j.table}.${otherCol}`;\n    }).join(' ');\n};\n\nconst buildSelectFields = () => {\n    if (!joins.length) return `${table}.*`;\n    let select = `${table}.*`;\n    joins.forEach(j => { select += `, row_to_json(${j.table}.*) as ${j.table}_data`; });\n    return select;\n};\n\nconst processValue = (key, value) => {\n    if (key === 'password' && value) return crypto.createHash('sha256').update(value).digest('hex');\n    return value;\n};\n\n// Sanitización de paginación\nconst sanitizePaginationParams = (limitInput, offsetInput) => {\n    let limit = 1500;\n    let offset = 0;\n    if (limitInput) {\n        const parsedLimit = parseInt(limitInput, 10);\n        if (!isNaN(parsedLimit) && parsedLimit > 0) limit = Math.min(parsedLimit, 2000);\n    }\n    if (offsetInput) {\n        const parsedOffset = parseInt(offsetInput, 10);\n        if (!isNaN(parsedOffset) && parsedOffset >= 0) offset = parsedOffset;\n    }\n    return { limit, offset };\n};\n\nlet query = '';\nlet values = [];\n\nswitch (operation) {\n    case 'insert': {\n        const allowedFields = config.allowed_fields || [];\n        const insertFields = [];\n        const placeholders = [];\n        let paramIndex = 1;\n\n        Object.entries(fields).forEach(([key, value]) => {\n            if (allowedFields.includes(key)) {\n                insertFields.push(key);\n                placeholders.push(`$${paramIndex++}`);\n                values.push(processValue(key, value));\n            }\n        });\n\n        if (insertFields.length === 0) throw new Error(\"No hay campos válidos para insertar.\");\n        \n        // Obtener la PK configurada (soporta simples y compuestas separadas por coma)\n        const primaryKeyStr = config.primary_key || 'id';\n        const pkList = primaryKeyStr.split(',').map(k => k.trim());\n\n        // Filtrar campos para el DO UPDATE SET (excluimos URLs, fechas estáticas y las columnas que componen la PK)\n        const updateParts = insertFields\n            .filter(f => f !== 'url' && f !== 'created_at' && !pkList.includes(f))\n            .map(f => `${f} = EXCLUDED.${f}`);\n\n        if (updateParts.length > 0) {\n            query = `INSERT INTO ${table} (${insertFields.join(', ')}) VALUES (${placeholders.join(', ')}) ON CONFLICT (${primaryKeyStr}) DO UPDATE SET ${updateParts.join(', ')} RETURNING *;`;\n        } else {\n            query = `INSERT INTO ${table} (${insertFields.join(', ')}) VALUES (${placeholders.join(', ')}) ON CONFLICT (${primaryKeyStr}) DO NOTHING RETURNING *;`;\n        }\n        break;\n      }\n      case 'update': {\n        const primaryKeyStr = config.primary_key || 'id';\n        const pkList = primaryKeyStr.split(',').map(k => k.trim());\n        // SECURITY: tenant columns are never updatable; they scope the WHERE clause instead.\n        const tenantCols = ['tenant_id', 'id_company'];\n\n        const updateParts = [];\n        let paramIndex = 1;\n\n        Object.entries(fields).forEach(([key, value]) => {\n            if ((config.allowed_fields || []).includes(key) && !pkList.includes(key) && !tenantCols.includes(key)) {\n                if (key === 'password' && (!value || value === '')) return;\n                updateParts.push(`${key} = $${paramIndex++}`);\n                values.push(processValue(key, value));\n            }\n        });\n\n        if (updateParts.length === 0) throw new Error(\"No hay campos válidos para actualizar.\");\n\n        const whereParts = [];\n        pkList.forEach(pkField => {\n            const idVal = body[pkField] ?? fields[pkField];\n            if (idVal === undefined || idVal === null) {\n                throw new Error(`UPDATE requiere el valor de la llave primaria (${pkField}).`);\n            }\n            whereParts.push(`${pkField} = $${paramIndex++}`);\n            values.push(idVal);\n        });\n\n        // 🛡️ SECURITY PATCH: Multi-tenant isolation on UPDATE (fail-closed), same rule as GETONE/DELETE.\n        // A record of another tenant simply matches zero rows (\"No se actualizó ningún registro\").\n        if (table !== 'users' && (modelHasTenantId || modelHasIdCompany)) {\n            if (!tenantIdHeader) throw new Error('x-tenant-id requerido para actualizar este modelo.');\n            const tenantCol = modelHasTenantId ? 'tenant_id' : 'id_company';\n            whereParts.push(`${tenantCol} = $${paramIndex++}`);\n            values.push(tenantIdHeader);\n        }\n\n        query = `UPDATE ${table} SET ${updateParts.join(', ')} WHERE ${whereParts.join(' AND ')} RETURNING *;`;\n        break;\n    }\n    case 'getall': {\n        const { limit, offset } = sanitizePaginationParams(body.limit, body.offset);\n        \n        let selectFields = buildSelectFields();\n        // 🚀 HOTFIX ARQUITECTÓNICO 1: Sobrescribir el Rol global con el Rol del Tenant\n        if (table === 'users') {\n            selectFields = selectFields.replace(`${table}.*`, `${table}.*, uc.role`);\n        }\n        \n        let baseQuery = `SELECT ${selectFields} FROM ${table} ${buildJoins()}`;\n        let whereParts = [];\n        let paramIndex = 1;\n\n        // 🚀 HOTFIX ARQUITECTÓNICO 2: Inyectar JOIN con tabla pivote para Multi-Tenancy\n        if (table === 'users') {\n            if (!baseQuery.includes('user_companies')) {\n                baseQuery += ` INNER JOIN user_companies uc ON ${table}.email = uc.email`;\n            }\n        }\n\n        Object.entries(fields).forEach(([key, value]) => {\n            const isAllowed = (config.allowed_fields || []).includes(key);\n            \n            if (isAllowed && key !== 'limit' && key !== 'offset') {\n                let dbColumn = `${table}.${key}`;\n                \n                // Redirección del filtro hacia la tabla pivote\n                if (table === 'users' && key === 'tenant_id') {\n                    dbColumn = 'uc.id_company';\n                } else if (key === 'created_at' || key === 'check_in') {\n                    dbColumn = `(${table}.${key} - INTERVAL '6 hours')::date`;\n                }\n\n                if (value !== null && typeof value === 'object' && !Array.isArray(value)) {\n                    Object.entries(value).forEach(([op, val]) => {\n                        const sqlOp = op === '_gte' ? '>=' : op === '_lte' ? '<=' : op === '_gt' ? '>' : op === '_lt' ? '<' : '=';\n                        const isDateLike = typeof val === 'string' && (val.includes('T') || /^\\d{4}-\\d{2}-\\d{2}$/.test(val));\n                        \n                        // 🛡️ PATCH 1: Evita que basura intente evaluarse como fecha en un objeto\n                        if ((key === 'created_at' || key === 'check_in' || key === 'check_out') && !isDateLike) return;\n\n                        if (isDateLike && key !== 'created_at' && key !== 'check_in') {\n                             whereParts.push(`${dbColumn}::date ${sqlOp} $${paramIndex++}::date`);\n                             values.push(val.split('T')[0]);\n                        } else {\n                             whereParts.push(`${dbColumn} ${sqlOp} $${paramIndex++}`);\n                             values.push(val);\n                        }\n                    });\n                } else if (value !== undefined && value !== '' && value !== null) {\n                    const isDateLike = typeof value === 'string' && (value.includes('T') || /^\\d{4}-\\d{2}-\\d{2}$/.test(value));\n                    \n                    // 🛡️ PATCH 2: Evita el colapso de Postgres si el frontend manda texto en campos de fecha\n                    if ((key === 'created_at' || key === 'check_in' || key === 'check_out') && !isDateLike) return;\n\n                    if (isDateLike && key !== 'created_at' && key !== 'check_in') {\n                        whereParts.push(`${dbColumn}::date = $${paramIndex++}::date`);\n                        values.push(value.split('T')[0]);\n                    } else {\n                        whereParts.push(`${dbColumn} = $${paramIndex++}`);\n                        values.push(value);\n                    }\n                } else if (value === null) {\n                    whereParts.push(`${dbColumn} IS NULL`);\n                }\n            }\n        });\n\n        // 🛡️ FIX: Resolver la Ambigüedad de la columna is_active en el default_filter\n        if (config.default_filter && !fields.hasOwnProperty('is_active') && !config.default_filter.includes('$1')) {\n            let defFilter = config.default_filter;\n            if (table === 'users' && defFilter.includes('is_active')) {\n                defFilter = defFilter.replace('is_active', `${table}.is_active`);\n            }\n            whereParts.push(defFilter);\n        }\n\n        if (whereParts.length > 0) baseQuery += ` WHERE ${whereParts.join(' AND ')}`;\n        \n        let sortCol = body.sort_by ? body.sort_by : (fields.published_at ? 'published_at' : 'created_at');\n        // SECURITY: the sort column is interpolated into ORDER BY; allow plain identifiers only.\n        if (typeof sortCol !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]{0,62}$/.test(sortCol)) {\n            throw new Error('Columna de ordenamiento inválida.');\n        }\n        let finalSortCol = (table === 'users' && sortCol === 'tenant_id') ? 'uc.id_company' : `${table}.${sortCol}`;\n        \n        baseQuery += ` ORDER BY ${finalSortCol} DESC NULLS LAST LIMIT $${paramIndex++} OFFSET $${paramIndex++};`;\n        \n        query = baseQuery;\n        values.push(limit, offset);\n        break;\n    }\n    case 'delete': {\n        const pkField = config.primary_key || 'id';\n        const idValue = body[pkField] || fields[pkField] || body.id || fields.id;\n        if (!idValue) throw new Error(`DELETE requiere el valor de ${pkField}`);\n\n        // 🛡️ SECURITY PATCH: Aislamiento Multi-Tenant en DELETE (soft-delete)\n        // Antes: cualquier tenant podía desactivar un registro de otro solo conociendo su id.\n        let whereParts = [`${pkField} = $1`];\n        values = [idValue];\n\n        // Excepción: 'users' resuelve tenant vía tabla pivote (user_companies), no aplica aquí.\n        if (table !== 'users') {\n            if (tenantIdHeader && modelHasTenantId) {\n                whereParts.push(`tenant_id = $2`);\n                values.push(tenantIdHeader);\n            } else if (tenantIdHeader && modelHasIdCompany) {\n                whereParts.push(`id_company = $2`);\n                values.push(tenantIdHeader);\n            }\n        }\n\n        query = `UPDATE ${table} SET is_active = false WHERE ${whereParts.join(' AND ')} RETURNING *;`;\n        break;\n    }\n    case 'getone': {\n        const pkField = config.primary_key || 'id';\n        let val = fields[pkField] || body[pkField] || body.id || fields.id || fields.email || body.email;\n        let searchField;\n\n        if (!val && Object.keys(fields).length > 0) {\n            searchField = Object.keys(fields)[0];\n            val = fields[searchField];\n        } else if (val) {\n            searchField = (fields.email || body.email) && !fields[pkField] ? 'email' : pkField;\n        }\n        if (!val) throw new Error(`GETONE requiere un ID o un campo de búsqueda.`);\n        // SECURITY: the search field is interpolated into WHERE; allow plain identifiers only.\n        if (!/^[A-Za-z_][A-Za-z0-9_]{0,62}$/.test(String(searchField))) {\n            throw new Error('Campo de búsqueda inválido.');\n        }\n\n        // 🛡️ SECURITY PATCH: Aislamiento Multi-Tenant en GETONE\n        // Antes: cualquier tenant podía leer un registro de otro solo conociendo su id/campo de búsqueda.\n        let whereParts = [`${table}.${searchField} = $1`];\n        values = [val];\n\n        // Excepción: 'users' resuelve tenant vía tabla pivote (user_companies), no aplica aquí.\n        if (table !== 'users') {\n            if (tenantIdHeader && modelHasTenantId) {\n                whereParts.push(`${table}.tenant_id = $2`);\n                values.push(tenantIdHeader);\n            } else if (tenantIdHeader && modelHasIdCompany) {\n                whereParts.push(`${table}.id_company = $2`);\n                values.push(tenantIdHeader);\n            }\n        }\n\n        query = `SELECT ${buildSelectFields()} FROM ${table} ${buildJoins()} WHERE ${whereParts.join(' AND ')} LIMIT 1;`;\n        break;\n    }\n    case 'call_sp': {\n        // Configuración por modelo: orden exacto de parámetros de negocio (sin tenant_id)\n        // y en qué posición (0-indexed, ANTES de insertar) va el tenant en la firma real de Postgres.\n        const spConfigByModel = {\n            'sp_procesar_salida_ganado': {\n                paramOrder: ['electronic_rfid', 'rfid_siniiga', 'numero_fuego', 'livestock_id'],\n                tenantPosition: 1\n            },\n            'sp_register_birth_event': {\n                paramOrder: ['calf_sex', 'species', 'dam_id', 'dam_ear_tag', 'dam_fire_number', 'birth_date', 'lot_id', 'production_unit_id', 'paddock_id', 'birth_weight_kg', 'notes'],\n                tenantPosition: 0\n            },\n            'sp_procesar_baja_mortandad': {\n                paramOrder: ['electronic_rfid', 'rfid_siniiga', 'numero_fuego', 'causa_mortandad', 'fecha_evento', 'descripcion', 'reportado_por_email', 'autorizado_por_email'],\n                tenantPosition: 3  // p_electronic_rfid(0), p_rfid_siniiga(1), p_numero_fuego(2), p_tenant_id(3) → 4to parámetro\n            },\n            'sp_solicitar_autorizacion': {\n                paramOrder: ['electronic_rfid', 'rfid_siniiga', 'numero_fuego', 'livestock_id', 'tipo_evento', 'payload', 'solicitado_por_email'],\n                tenantPosition: 4,  // p_electronic_rfid(0), p_rfid_siniiga(1), p_numero_fuego(2), p_livestock_id(3), p_tenant_id(4)\n                actorEmailField: 'solicitado_por_email'\n            },\n            'sp_resolver_autorizacion': {\n                paramOrder: ['request_id', 'decision', 'resuelto_por_email', 'notas'],\n                tenantPosition: null,  // tenant/role are validated inside the SP (fn_is_active_company_admin)\n                actorEmailField: 'resuelto_por_email'\n            },\n            'sp_cancelar_autorizacion': {\n                paramOrder: ['request_id', 'cancelado_por_email', 'motivo'],\n                tenantPosition: 1,  // p_request_id(0), p_tenant_id(1)\n                actorEmailField: 'cancelado_por_email'\n            }\n        };\n            \n        const spConfig = spConfigByModel[table];\n        if (!spConfig) {\n            throw new Error(`No hay configuración de parámetros para el procedimiento ${table}`);\n        }\n    \n        const requiresTenant = config.sp_requires_tenant !== false;\n        // 🛡️ SECURITY: actor identity always comes from the verified JWT; any client-supplied email is overwritten.\n        if (spConfig.actorEmailField) {\n            if (!config.user_email) {\n                throw new Error('Authenticated user email is required for this procedure');\n            }\n            fields[spConfig.actorEmailField] = config.user_email;\n        }\n        const values_sp = spConfig.paramOrder.map(p => fields[p] ?? null);\n    \n        if (requiresTenant) {\n            if (!tenantIdHeader) throw new Error('tenant_id requerido para ejecutar este procedimiento almacenado');\n            values_sp.splice(spConfig.tenantPosition, 0, parseInt(tenantIdHeader, 10));\n        }\n    \n        const placeholders = values_sp.map((_, i) => `$${i + 1}`);\n        query = `SELECT ${table}(${placeholders.join(', ')}) AS resultado;`;\n        values = values_sp;\n        break;\n    }\n\n}\n\nreturn [{ json: { query, values, operation, is_transactional: ['insert', 'update', 'delete'].includes(operation) } }];"
+        "jsCode": "const crypto = require('crypto');\n\n// Capturamos los datos directamente de los nodos anteriores\nconst config = $('Security Validation').first().json;\nconst webhookData = $('WebhookCRUD').first().json; // Obtenemos el payload completo\nconst body = webhookData.body || {};\nconst headers = webhookData.headers || {};\nconst operation = (config.operation || '').toLowerCase();\nconst table = config.table_name;\n\n// 🚀 FIX: Soportar \"filter\" en singular y aislar el payload\n// Hacemos una copia profunda (JSON.parse) para no mutar el objeto original\nlet fields = body.filter || body.filters || body.fields || JSON.parse(JSON.stringify(body));\n\n// 🛡️ SECURITY PATCH: Aislamiento Multi-Tenant (Zero-Trust)\n// Solo inyectamos tenant_id si el modelo realmente tiene esa columna\nconst tenantIdHeader = headers['x-tenant-id'];\nconst modelHasTenantId = (config.allowed_fields || []).includes('tenant_id');\nconst modelHasIdCompany = (config.allowed_fields || []).includes('id_company');\nif (tenantIdHeader && modelHasTenantId) {\n    fields['tenant_id'] = tenantIdHeader;\n} else if (tenantIdHeader && modelHasIdCompany) {\n    fields['id_company'] = tenantIdHeader;\n}\nconst joins = config.joins || [];\nconst buildJoins = () => {\n    if (!joins.length) return '';\n    return joins.map(j => {\n        const myCol = j.own_col || j.localField;\n        const otherCol = j.foreign_col || j.foreignField || 'id';\n        return ` LEFT JOIN ${j.table} ON ${table}.${myCol} = ${j.table}.${otherCol}`;\n    }).join(' ');\n};\n\nconst buildSelectFields = () => {\n    if (!joins.length) return `${table}.*`;\n    let select = `${table}.*`;\n    joins.forEach(j => { select += `, row_to_json(${j.table}.*) as ${j.table}_data`; });\n    return select;\n};\n\nconst processValue = (key, value) => {\n    if (key === 'password' && value) return crypto.createHash('sha256').update(value).digest('hex');\n    return value;\n};\n\n// Sanitización de paginación\nconst sanitizePaginationParams = (limitInput, offsetInput) => {\n    let limit = 1500;\n    let offset = 0;\n    if (limitInput) {\n        const parsedLimit = parseInt(limitInput, 10);\n        if (!isNaN(parsedLimit) && parsedLimit > 0) limit = Math.min(parsedLimit, 2000);\n    }\n    if (offsetInput) {\n        const parsedOffset = parseInt(offsetInput, 10);\n        if (!isNaN(parsedOffset) && parsedOffset >= 0) offset = parsedOffset;\n    }\n    return { limit, offset };\n};\n\nlet query = '';\nlet values = [];\n\nswitch (operation) {\n    case 'insert': {\n        const allowedFields = config.allowed_fields || [];\n        const insertFields = [];\n        const placeholders = [];\n        let paramIndex = 1;\n\n        Object.entries(fields).forEach(([key, value]) => {\n            if (allowedFields.includes(key)) {\n                insertFields.push(key);\n                placeholders.push(`$${paramIndex++}`);\n                values.push(processValue(key, value));\n            }\n        });\n\n        if (insertFields.length === 0) throw new Error(\"No hay campos válidos para insertar.\");\n        \n        // Obtener la PK configurada (soporta simples y compuestas separadas por coma)\n        const primaryKeyStr = config.primary_key || 'id';\n        const pkList = primaryKeyStr.split(',').map(k => k.trim());\n\n        // Filtrar campos para el DO UPDATE SET (excluimos URLs, fechas estáticas y las columnas que componen la PK)\n        const updateParts = insertFields\n            .filter(f => f !== 'url' && f !== 'created_at' && !pkList.includes(f))\n            .map(f => `${f} = EXCLUDED.${f}`);\n\n        if (updateParts.length > 0) {\n            query = `INSERT INTO ${table} (${insertFields.join(', ')}) VALUES (${placeholders.join(', ')}) ON CONFLICT (${primaryKeyStr}) DO UPDATE SET ${updateParts.join(', ')} RETURNING *;`;\n        } else {\n            query = `INSERT INTO ${table} (${insertFields.join(', ')}) VALUES (${placeholders.join(', ')}) ON CONFLICT (${primaryKeyStr}) DO NOTHING RETURNING *;`;\n        }\n        break;\n      }\n      case 'update': {\n        const primaryKeyStr = config.primary_key || 'id';\n        const pkList = primaryKeyStr.split(',').map(k => k.trim());\n        // SECURITY: tenant columns are never updatable; they scope the WHERE clause instead.\n        const tenantCols = ['tenant_id', 'id_company'];\n\n        const updateParts = [];\n        let paramIndex = 1;\n\n        Object.entries(fields).forEach(([key, value]) => {\n            if ((config.allowed_fields || []).includes(key) && !pkList.includes(key) && !tenantCols.includes(key)) {\n                if (key === 'password' && (!value || value === '')) return;\n                updateParts.push(`${key} = $${paramIndex++}`);\n                values.push(processValue(key, value));\n            }\n        });\n\n        if (updateParts.length === 0) throw new Error(\"No hay campos válidos para actualizar.\");\n\n        const whereParts = [];\n        pkList.forEach(pkField => {\n            const idVal = body[pkField] ?? fields[pkField];\n            if (idVal === undefined || idVal === null) {\n                throw new Error(`UPDATE requiere el valor de la llave primaria (${pkField}).`);\n            }\n            whereParts.push(`${pkField} = $${paramIndex++}`);\n            values.push(idVal);\n        });\n\n        // 🛡️ SECURITY PATCH: Multi-tenant isolation on UPDATE (fail-closed), same rule as GETONE/DELETE.\n        // A record of another tenant simply matches zero rows (\"No se actualizó ningún registro\").\n        if (table !== 'users' && (modelHasTenantId || modelHasIdCompany)) {\n            if (!tenantIdHeader) throw new Error('x-tenant-id requerido para actualizar este modelo.');\n            const tenantCol = modelHasTenantId ? 'tenant_id' : 'id_company';\n            whereParts.push(`${tenantCol} = $${paramIndex++}`);\n            values.push(tenantIdHeader);\n        }\n\n        query = `UPDATE ${table} SET ${updateParts.join(', ')} WHERE ${whereParts.join(' AND ')} RETURNING *;`;\n        break;\n    }\n    case 'getall': {\n        const { limit, offset } = sanitizePaginationParams(body.limit, body.offset);\n        \n        let selectFields = buildSelectFields();\n        // 🚀 HOTFIX ARQUITECTÓNICO 1: Sobrescribir el Rol global con el Rol del Tenant\n        if (table === 'users') {\n            selectFields = selectFields.replace(`${table}.*`, `${table}.*, uc.role`);\n        }\n        \n        let baseQuery = `SELECT ${selectFields} FROM ${table} ${buildJoins()}`;\n        let whereParts = [];\n        let paramIndex = 1;\n\n        // 🚀 HOTFIX ARQUITECTÓNICO 2: Inyectar JOIN con tabla pivote para Multi-Tenancy\n        if (table === 'users') {\n            if (!baseQuery.includes('user_companies')) {\n                baseQuery += ` INNER JOIN user_companies uc ON ${table}.email = uc.email`;\n            }\n        }\n\n        Object.entries(fields).forEach(([key, value]) => {\n            const isAllowed = (config.allowed_fields || []).includes(key);\n            \n            if (isAllowed && key !== 'limit' && key !== 'offset') {\n                let dbColumn = `${table}.${key}`;\n                \n                // Redirección del filtro hacia la tabla pivote\n                if (table === 'users' && key === 'tenant_id') {\n                    dbColumn = 'uc.id_company';\n                } else if (key === 'created_at' || key === 'check_in') {\n                    dbColumn = `(${table}.${key} - INTERVAL '6 hours')::date`;\n                }\n\n                if (value !== null && typeof value === 'object' && !Array.isArray(value)) {\n                    Object.entries(value).forEach(([op, val]) => {\n                        const sqlOp = op === '_gte' ? '>=' : op === '_lte' ? '<=' : op === '_gt' ? '>' : op === '_lt' ? '<' : '=';\n                        const isDateLike = typeof val === 'string' && (val.includes('T') || /^\\d{4}-\\d{2}-\\d{2}$/.test(val));\n                        \n                        // 🛡️ PATCH 1: Evita que basura intente evaluarse como fecha en un objeto\n                        if ((key === 'created_at' || key === 'check_in' || key === 'check_out') && !isDateLike) return;\n\n                        if (isDateLike && key !== 'created_at' && key !== 'check_in') {\n                             whereParts.push(`${dbColumn}::date ${sqlOp} $${paramIndex++}::date`);\n                             values.push(val.split('T')[0]);\n                        } else {\n                             whereParts.push(`${dbColumn} ${sqlOp} $${paramIndex++}`);\n                             values.push(val);\n                        }\n                    });\n                } else if (value !== undefined && value !== '' && value !== null) {\n                    const isDateLike = typeof value === 'string' && (value.includes('T') || /^\\d{4}-\\d{2}-\\d{2}$/.test(value));\n                    \n                    // 🛡️ PATCH 2: Evita el colapso de Postgres si el frontend manda texto en campos de fecha\n                    if ((key === 'created_at' || key === 'check_in' || key === 'check_out') && !isDateLike) return;\n\n                    if (isDateLike && key !== 'created_at' && key !== 'check_in') {\n                        whereParts.push(`${dbColumn}::date = $${paramIndex++}::date`);\n                        values.push(value.split('T')[0]);\n                    } else {\n                        whereParts.push(`${dbColumn} = $${paramIndex++}`);\n                        values.push(value);\n                    }\n                } else if (value === null) {\n                    whereParts.push(`${dbColumn} IS NULL`);\n                }\n            }\n        });\n\n        // 🛡️ FIX: Resolver la Ambigüedad de la columna is_active en el default_filter\n        if (config.default_filter && !fields.hasOwnProperty('is_active') && !config.default_filter.includes('$1')) {\n            let defFilter = config.default_filter;\n            if (table === 'users' && defFilter.includes('is_active')) {\n                defFilter = defFilter.replace('is_active', `${table}.is_active`);\n            }\n            whereParts.push(defFilter);\n        }\n\n        if (whereParts.length > 0) baseQuery += ` WHERE ${whereParts.join(' AND ')}`;\n        \n        let sortCol = body.sort_by ? body.sort_by : (fields.published_at ? 'published_at' : 'created_at');\n        // SECURITY: the sort column is interpolated into ORDER BY; allow plain identifiers only.\n        if (typeof sortCol !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]{0,62}$/.test(sortCol)) {\n            throw new Error('Columna de ordenamiento inválida.');\n        }\n        let finalSortCol = (table === 'users' && sortCol === 'tenant_id') ? 'uc.id_company' : `${table}.${sortCol}`;\n        \n        baseQuery += ` ORDER BY ${finalSortCol} DESC NULLS LAST LIMIT $${paramIndex++} OFFSET $${paramIndex++};`;\n        \n        query = baseQuery;\n        values.push(limit, offset);\n        break;\n    }\n    case 'delete': {\n        const pkField = config.primary_key || 'id';\n        const idValue = body[pkField] || fields[pkField] || body.id || fields.id;\n        if (!idValue) throw new Error(`DELETE requiere el valor de ${pkField}`);\n\n        // 🛡️ SECURITY PATCH: Aislamiento Multi-Tenant en DELETE (soft-delete)\n        // Antes: cualquier tenant podía desactivar un registro de otro solo conociendo su id.\n        let whereParts = [`${pkField} = $1`];\n        values = [idValue];\n\n        // Excepción: 'users' resuelve tenant vía tabla pivote (user_companies), no aplica aquí.\n        if (table !== 'users') {\n            if (tenantIdHeader && modelHasTenantId) {\n                whereParts.push(`tenant_id = $2`);\n                values.push(tenantIdHeader);\n            } else if (tenantIdHeader && modelHasIdCompany) {\n                whereParts.push(`id_company = $2`);\n                values.push(tenantIdHeader);\n            }\n        }\n\n        query = `UPDATE ${table} SET is_active = false WHERE ${whereParts.join(' AND ')} RETURNING *;`;\n        break;\n    }\n    case 'getone': {\n        const pkField = config.primary_key || 'id';\n        let val = fields[pkField] || body[pkField] || body.id || fields.id || fields.email || body.email;\n        let searchField;\n\n        if (!val && Object.keys(fields).length > 0) {\n            searchField = Object.keys(fields)[0];\n            val = fields[searchField];\n        } else if (val) {\n            searchField = (fields.email || body.email) && !fields[pkField] ? 'email' : pkField;\n        }\n        if (!val) throw new Error(`GETONE requiere un ID o un campo de búsqueda.`);\n        // SECURITY: the search field is interpolated into WHERE; allow plain identifiers only.\n        if (!/^[A-Za-z_][A-Za-z0-9_]{0,62}$/.test(String(searchField))) {\n            throw new Error('Campo de búsqueda inválido.');\n        }\n\n        // 🛡️ SECURITY PATCH: Aislamiento Multi-Tenant en GETONE\n        // Antes: cualquier tenant podía leer un registro de otro solo conociendo su id/campo de búsqueda.\n        let whereParts = [`${table}.${searchField} = $1`];\n        values = [val];\n\n        // Excepción: 'users' resuelve tenant vía tabla pivote (user_companies), no aplica aquí.\n        if (table !== 'users') {\n            if (tenantIdHeader && modelHasTenantId) {\n                whereParts.push(`${table}.tenant_id = $2`);\n                values.push(tenantIdHeader);\n            } else if (tenantIdHeader && modelHasIdCompany) {\n                whereParts.push(`${table}.id_company = $2`);\n                values.push(tenantIdHeader);\n            }\n        }\n\n        query = `SELECT ${buildSelectFields()} FROM ${table} ${buildJoins()} WHERE ${whereParts.join(' AND ')} LIMIT 1;`;\n        break;\n    }\n    case 'call_sp': {\n        // Configuración por modelo: orden exacto de parámetros de negocio (sin tenant_id)\n        // y en qué posición (0-indexed, ANTES de insertar) va el tenant en la firma real de Postgres.\n        const spConfigByModel = {\n            'sp_procesar_salida_ganado': {\n                paramOrder: ['electronic_rfid', 'rfid_siniiga', 'numero_fuego', 'livestock_id'],\n                tenantPosition: 1\n            },\n            'sp_register_birth_event': {\n                paramOrder: ['calf_sex', 'species', 'dam_id', 'dam_ear_tag', 'dam_fire_number', 'birth_date', 'lot_id', 'production_unit_id', 'paddock_id', 'birth_weight_kg', 'notes'],\n                tenantPosition: 0\n            },\n            'sp_procesar_baja_mortandad': {\n                paramOrder: ['electronic_rfid', 'rfid_siniiga', 'numero_fuego', 'causa_mortandad', 'fecha_evento', 'descripcion', 'reportado_por_email', 'autorizado_por_email'],\n                tenantPosition: 3  // p_electronic_rfid(0), p_rfid_siniiga(1), p_numero_fuego(2), p_tenant_id(3) → 4to parámetro\n            },\n            'sp_solicitar_autorizacion': {\n                paramOrder: ['electronic_rfid', 'rfid_siniiga', 'numero_fuego', 'livestock_id', 'tipo_evento', 'payload', 'solicitado_por_email'],\n                tenantPosition: 4,  // p_electronic_rfid(0), p_rfid_siniiga(1), p_numero_fuego(2), p_livestock_id(3), p_tenant_id(4)\n                actorEmailField: 'solicitado_por_email'\n            },\n            'sp_resolver_autorizacion': {\n                paramOrder: ['request_id', 'decision', 'resuelto_por_email', 'notas', 'datos_venta'],\n                tenantPosition: null,  // tenant/role are validated inside the SP (fn_is_active_company_admin)\n                actorEmailField: 'resuelto_por_email'\n            },\n            'sp_cancelar_autorizacion': {\n                paramOrder: ['request_id', 'cancelado_por_email', 'motivo'],\n                tenantPosition: 1,  // p_request_id(0), p_tenant_id(1)\n                actorEmailField: 'cancelado_por_email'\n            }\n        };\n            \n        const spConfig = spConfigByModel[table];\n        if (!spConfig) {\n            throw new Error(`No hay configuración de parámetros para el procedimiento ${table}`);\n        }\n    \n        const requiresTenant = config.sp_requires_tenant !== false;\n        // 🛡️ SECURITY: actor identity always comes from the verified JWT; any client-supplied email is overwritten.\n        if (spConfig.actorEmailField) {\n            if (!config.user_email) {\n                throw new Error('Authenticated user email is required for this procedure');\n            }\n            fields[spConfig.actorEmailField] = config.user_email;\n        }\n                // jsonb arguments (e.g. datos_venta) travel as JSON text; Postgres casts them to jsonb.\n        const values_sp = spConfig.paramOrder.map(p => {\n            const v = fields[p] ?? null;\n            return (v !== null && typeof v === 'object') ? JSON.stringify(v) : v;\n        });\n    \n        if (requiresTenant) {\n            if (!tenantIdHeader) throw new Error('tenant_id requerido para ejecutar este procedimiento almacenado');\n            values_sp.splice(spConfig.tenantPosition, 0, parseInt(tenantIdHeader, 10));\n        }\n    \n        const placeholders = values_sp.map((_, i) => `$${i + 1}`);\n        query = `SELECT ${table}(${placeholders.join(', ')}) AS resultado;`;\n        values = values_sp;\n        break;\n    }\n\n}\n\nreturn [{ json: { query, values, operation, is_transactional: ['insert', 'update', 'delete'].includes(operation) } }];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3424,
-        1952
+        5824,
+        4560
       ],
-      "id": "5800d9fc-982b-432a-8e39-5a6cfbd41977",
+      "id": "8bfa0509-3647-4b88-8162-ec76e45c2c35",
       "name": "Build Query"
     },
     {
@@ -478,10 +478,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3872,
-        1952
+        6272,
+        4560
       ],
-      "id": "e608fc7f-e4c0-4a18-833e-ededeee28e40",
+      "id": "feeb914a-a6da-499f-9513-a3c54b2b9c22",
       "name": "Normalize Data"
     },
     {
@@ -493,13 +493,13 @@
           "allowedOrigins": "*"
         }
       },
-      "id": "3f4e332f-f80e-45af-8075-4b064815206e",
+      "id": "10bea054-12eb-4816-87be-f9435327c414",
       "name": "WebhookCRUD",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [
-        -736,
-        2304
+        1664,
+        4912
       ],
       "webhookId": "586606bc-e1df-4c02-bf37-10e0a87d4bfd"
     },
@@ -531,10 +531,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        3200,
-        2016
+        5600,
+        4624
       ],
-      "id": "c54c1c54-9e62-40a2-ade9-5f82513e6895",
+      "id": "461432b4-a9e7-4653-a5a1-16c2055a66e7",
       "name": "If Error"
     },
     {
@@ -564,10 +564,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        1280,
-        2208
+        3680,
+        4816
       ],
-      "id": "c2dd59a0-c78d-4071-bf26-7cb6b9f697d4",
+      "id": "3e718ad9-7837-4f32-b33b-ea5dc4826ca3",
       "name": "Can Register Model"
     },
     {
@@ -581,10 +581,10 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        1504,
-        2304
+        3904,
+        4912
       ],
-      "id": "96d4ba8a-7707-4dd0-b49e-e5e34fb8b09a",
+      "id": "307376b6-ecae-4f80-a042-e0aa442d877b",
       "name": "Respond Model Not Found"
     },
     {
@@ -598,10 +598,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        384,
-        2288
+        2784,
+        4896
       ],
-      "id": "efc10fb7-ad23-4407-a6ff-7aa1a930dc52",
+      "id": "76cbb2d7-3c38-4d2d-a54b-f892d4faca05",
       "name": "Get Membresia",
       "alwaysOutputData": true,
       "credentials": {
@@ -639,10 +639,10 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        608,
-        2288
+        3008,
+        4896
       ],
-      "id": "7d07d41f-3b5d-4e00-83fc-65f8a71cbaad",
+      "id": "e41a98ad-bd14-4bbf-be06-3fd053b03260",
       "name": "Existe Membresia"
     },
     {
@@ -656,10 +656,10 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        384,
-        2480
+        2784,
+        5088
       ],
-      "id": "e9a46464-ad8e-4b44-a63b-15516b6d0982",
+      "id": "4916488c-4b6e-4a48-90da-94c80466fb63",
       "name": "Respond Denegate"
     },
     {
@@ -673,10 +673,10 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        832,
-        2336
+        3232,
+        4944
       ],
-      "id": "f0c7804d-0c17-4946-94fb-ccf092416fb6",
+      "id": "ba35c64e-3240-46d3-b611-161e8cb23b68",
       "name": "Respond Tenant Forbidden"
     }
   ],
@@ -1017,7 +1017,7 @@
     "timeSavedMode": "fixed",
     "timeSavedPerExecution": 1
   },
-  "versionId": "478054ef-fd57-406c-acc4-e8d93f64911b",
+  "versionId": "abd4ad8a-2d2b-49eb-9a69-feda8af08735",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"

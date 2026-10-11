@@ -1,0 +1,76 @@
+{
+  "name": "v6/Expiración Diaria",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtMinute": 5
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        0
+      ],
+      "id": "949644b8-ef00-49be-8761-d5c03fd9d125",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "   UPDATE pending_authorizations\n   SET estado = 'EXPIRADO',\n       fecha_resolucion = now(),\n       notas_resolucion = 'Vencido automáticamente: no autorizado dentro del día de la solicitud.'\n   WHERE estado = 'PENDIENTE'\n     AND public.fn_authorization_expired(fecha_solicitud);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        208,
+        0
+      ],
+      "id": "36a8bd01-11fa-4455-95a5-1fe1821f79b0",
+      "name": "Expirar Vencidas",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Expirar Vencidas",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "9SrVXdATmlrZemJT",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "6a72ad55-7b8b-4aec-b8d7-af639892a0fb",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
+  },
+  "nodeGroups": [],
+  "id": "pdsWJwr3wrg9e8lE",
+  "tags": []
+}
