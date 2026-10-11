@@ -1,0 +1,202 @@
+<div class="modal modal-blur fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1"
+    role="dialog">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" [class.modal-lg]="isBatch()" role="document">
+        <div class="modal-content shadow-lg border-0">
+
+            <div class="modal-header">
+                <h5 class="modal-title font-weight-bold text-body">
+                    <span class="status-dot status-blue me-2"></span>
+                    {{ isBatch() ? 'Aprobar ventas seleccionadas (' + rows().length + ')' : 'Aprobar venta' }}
+                </h5>
+                <button type="button" class="btn-close" (click)="onCancel()" [disabled]="submitting()" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body p-4">
+
+                @if (!isBatch() && rows()[0]; as first) {
+                <div class="row g-2 mb-3 small">
+                    <div class="col-6"><span class="text-muted">Identificador</span>
+                        <div class="font-monospace">{{ first.item.identifier }}</div>
+                    </div>
+                    <div class="col-6"><span class="text-muted">Categoría / Especie</span>
+                        <div>{{ categorySpecies(first.item) }}</div>
+                    </div>
+                    <div class="col-6"><span class="text-muted">Fecha de venta</span>
+                        <div>{{ date(first.item.saleDate) }}</div>
+                    </div>
+                    <div class="col-6"><span class="text-muted">Guía de tránsito</span>
+                        <div>{{ first.item.guide || '—' }}</div>
+                    </div>
+                </div>
+                <hr class="my-3">
+                }
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label required">Modo de venta</label>
+                        <select class="form-select" [value]="mode()" (change)="setMode($any($event.target).value)">
+                            @for (m of saleModes; track m) {
+                            <option [value]="m">{{ saleModeLabel[m] }}</option>
+                            }
+                        </select>
+                    </div>
+
+                    @if (isBatch()) {
+                    <div class="col-md-6">
+                        <label class="form-label">Importe por defecto (por animal)</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" min="0" step="0.01" class="form-control"
+                                [value]="defaultAmount() ?? ''" (input)="defaultAmount.set(parseNumber($any($event.target).value))">
+                            <button type="button" class="btn btn-outline-secondary" [disabled]="defaultAmount() === null"
+                                (click)="applyDefaultToAll()">Aplicar a todas</button>
+                        </div>
+                        <small class="form-hint">Se usa en las filas sin precio de referencia.</small>
+                    </div>
+                    } @else if (rows()[0]; as first) {
+                    <div class="col-md-6">
+                        <label class="form-label required">Importe de este animal</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" min="0" step="0.01" class="form-control" [class.is-invalid]="first.amountInvalid"
+                                [value]="first.amount ?? ''" (input)="setAmount(0, $any($event.target).value)">
+                        </div>
+                        <small class="form-hint">
+                            @if (first.reference) {
+                            Referencia: {{ money(first.reference.referenceAmount) }}
+                            @if (first.reference.referencePricePerKg !== null) { · {{ money(first.reference.referencePricePerKg) }}/kg }
+                            } @else {
+                            Sin precio de referencia para esta categoría y modo.
+                            }
+                        </small>
+                    </div>
+
+                    @if (isPorKg()) {
+                    <div class="col-md-6">
+                        <label class="form-label required">Peso (kg)</label>
+                        <input type="number" min="0" step="0.01" class="form-control" [class.is-invalid]="first.weightInvalid"
+                            [value]="first.weightKg ?? ''" (input)="setWeight(0, $any($event.target).value)">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Precio por kilo</label>
+                        <div class="form-control-plaintext font-weight-bold">
+                            {{ first.pricePerKg !== null ? money(first.pricePerKg) + '/kg' : '—' }}
+                        </div>
+                    </div>
+                    }
+                    }
+
+                    <div class="col-md-6">
+                        <label class="form-label required">Comprador</label>
+                        <input type="text" class="form-control" maxlength="200" [value]="buyer()"
+                            (input)="buyer.set($any($event.target).value)">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label required">Forma de pago</label>
+                        <select class="form-select" [value]="paymentMethod()" (change)="paymentMethod.set($any($event.target).value)">
+                            <option value="" disabled>Selecciona...</option>
+                            @for (p of paymentMethods; track p) {
+                            <option [value]="p">{{ paymentMethodLabel[p] }}</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end">
+                        <label class="form-check mb-2">
+                            <input type="checkbox" class="form-check-input" [checked]="invoiced()"
+                                (change)="invoiced.set($any($event.target).checked)">
+                            <span class="form-check-label">Facturado</span>
+                        </label>
+                    </div>
+                    @if (invoiced()) {
+                    <div class="col-md-6">
+                        <label class="form-label">Folio de factura (opcional)</label>
+                        <input type="text" class="form-control" maxlength="100" [value]="invoiceFolio()"
+                            (input)="invoiceFolio.set($any($event.target).value)">
+                    </div>
+                    }
+                </div>
+
+                @if (isBatch()) {
+                <div class="table-responsive mt-4">
+                    <table class="table table-sm table-vcenter mb-0">
+                        <thead>
+                            <tr>
+                                <th>Identificador</th>
+                                <th>Categoría</th>
+                                @if (isPorKg()) { <th style="width: 8rem;">Peso (kg)</th> }
+                                <th style="width: 10rem;">Importe</th>
+                                @if (isPorKg()) { <th class="text-end">$/kg</th> }
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (row of rows(); track row.item.requestId; let i = $index) {
+                            <tr>
+                                <td class="font-monospace">{{ row.item.identifier }}</td>
+                                <td class="text-muted">{{ row.item.category || '—' }}</td>
+                                @if (isPorKg()) {
+                                <td>
+                                    <input type="number" min="0" step="0.01" class="form-control form-control-sm"
+                                        [class.is-invalid]="row.weightInvalid" [value]="row.weightKg ?? ''"
+                                        (input)="setWeight(i, $any($event.target).value)">
+                                </td>
+                                }
+                                <td>
+                                    <input type="number" min="0" step="0.01" class="form-control form-control-sm"
+                                        [class.is-invalid]="row.amountInvalid" [value]="row.amount ?? ''"
+                                        (input)="setAmount(i, $any($event.target).value)">
+                                    @if (row.fromReference) { <small class="text-muted">ref.</small> }
+                                </td>
+                                @if (isPorKg()) {
+                                <td class="text-end text-muted">{{ row.pricePerKg !== null ? money(row.pricePerKg) : '—' }}</td>
+                                }
+                            </tr>
+                            }
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th [attr.colspan]="isPorKg() ? 3 : 2" class="text-end">Total del lote</th>
+                                <th>{{ money(total()) }}</th>
+                                @if (isPorKg()) { <th></th> }
+                            </tr>
+                        </tfoot>
+                    </table>
+                    <button type="button" class="btn btn-link btn-sm px-0" (click)="resetAmounts()">
+                        Restablecer importes de referencia
+                    </button>
+                </div>
+
+                <div class="mt-3">
+                    <label class="form-check">
+                        <input type="checkbox" class="form-check-input" [checked]="exceptionEnabled()"
+                            (change)="exceptionEnabled.set($any($event.target).checked)">
+                        <span class="form-check-label">Si alguna requiere excepción sanitaria, aprobarla con excepción</span>
+                    </label>
+                    @if (exceptionEnabled()) {
+                    <label class="form-label">Justificación de la excepción (obligatoria)</label>
+                    <textarea class="form-control" rows="2" [value]="exceptionNotes()"
+                        (input)="exceptionNotes.set($any($event.target).value)"></textarea>
+                    }
+                </div>
+                }
+
+                @if (errorMessage()) {
+                <div class="alert alert-danger mt-3 mb-0" role="alert">{{ errorMessage() }}</div>
+                }
+
+                @if (errors().length > 0) {
+                <ul class="text-danger small mt-3 mb-0 ps-3">
+                    @for (e of errors(); track e) { <li>{{ e }}</li> }
+                </ul>
+                }
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="onCancel()" [disabled]="submitting()">Cancelar</button>
+                <button type="button" class="btn btn-primary" [disabled]="!canSubmit()" (click)="onConfirm()">
+                    @if (submitting()) { <span class="spinner-border spinner-border-sm me-2" role="status"></span> }
+                    {{ isBatch() ? 'Aprobar ' + rows().length + ' ventas (' + money(total()) + ')' : 'Aprobar venta' }}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

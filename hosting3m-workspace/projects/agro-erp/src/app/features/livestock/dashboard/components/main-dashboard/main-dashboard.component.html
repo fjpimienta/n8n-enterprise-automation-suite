@@ -155,6 +155,10 @@
                     filteredExpensesList().length }})</a>
             </li>
             <li class="nav-item">
+                <a class="nav-link font-weight-bold" [class.active]="activeSubTab() === 'VENTAS'"
+                    (click)="setSubTab('VENTAS')" style="cursor: pointer;">Ingresos por Venta</a>
+            </li>
+            <li class="nav-item">
                 <a class="nav-link font-weight-bold" [class.active]="activeSubTab() === 'POR_ANIMAL'"
                     (click)="setSubTab('POR_ANIMAL')" style="cursor: pointer;">
                     Costo por Animal ({{ animalCostSummary().length }})
@@ -661,12 +665,17 @@
         }
         }
 
+        @if (activeSubTab() === 'VENTAS' && isAdminForActiveTenant()) {
+        <app-sale-income-log [cattleData]="cattleList()" [moduleCattleData]="eventLogCattleList()"
+            [refreshToken]="refreshToken()"></app-sale-income-log>
+        }
+
         @if (activeSubTab() === 'EVENT_LOG' && isAdminForActiveTenant()) {
         <app-cattle-event-log [cattleData]="cattleList()" [moduleCattleData]="eventLogCattleList()"
             [refreshToken]="refreshToken()"></app-cattle-event-log>
         }
 
-        @if (activeSubTab() !== 'RESUMEN' && activeSubTab() !== 'POR_ANIMAL' && activeSubTab() !== 'EVENT_LOG') {
+        @if (activeSubTab() !== 'RESUMEN' && activeSubTab() !== 'POR_ANIMAL' && activeSubTab() !== 'EVENT_LOG' && activeSubTab() !== 'VENTAS') {
         <div class="card-footer d-flex align-items-center border-top">
             <p class="m-0 text-muted">Mostrando <span>{{ pagination.showingStart() }}</span> a <span>{{ pagination.showingEnd() }}</span> de
                 un total disponible</p>
