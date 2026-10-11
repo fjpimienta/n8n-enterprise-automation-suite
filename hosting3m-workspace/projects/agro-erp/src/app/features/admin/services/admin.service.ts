@@ -9,6 +9,7 @@ import { Guest } from '@core/models/guest.model';
 import { BreedCatalog } from '@core/models/breed-catalog.model';
 import { LifestageCatalog } from '@core/models/lifestage-catalog.model';
 import { DecisionAutorizacion, PendingAuthorization } from '@core/models/pending-authorization.model';
+import { SaleData } from '@core/models/sale.model';
 import { stripPhantomRows } from '@core/utils/gateway-empty-row.util';
 import { parseGatewayTimestamp } from '@shared/utils/authorization-deadline.util';
 import { TenantService } from 'core-auth';
@@ -425,9 +426,10 @@ export class AdminService {
    * Calls `sp_resolver_autorizacion` through the Meta-CRUD model `resolver_autorizacion`
    * (operation: call_sp). No actor email is sent: the gateway takes it from the verified JWT
    * and overwrites any value in the body (migration 069). Only an active ADMIN of the company
-   * may resolve; RECHAZADO and APROBADO_CON_EXCEPCION require `notas`.
+   * may resolve; RECHAZADO and APROBADO_CON_EXCEPCION require `notas`. Approving a VENTA requires
+   * `datosVenta` (migration 071, P0021); it is ignored for BAJA_MORTANDAD and RECHAZADO.
    */
-  public resolveAuthorization(requestId: string, decision: DecisionAutorizacion, notas?: string) {
+  public resolveAuthorization(requestId: string, decision: DecisionAutorizacion, notas?: string, datosVenta?: SaleData) {
     const payload = {
       entity: 'resolver_autorizacion',
       table_name: 'sp_resolver_autorizacion',
@@ -435,7 +437,8 @@ export class AdminService {
       fields: {
         request_id: requestId,
         decision,
-        notas: notas || undefined
+        notas: notas || undefined,
+        datos_venta: datosVenta
       }
     };
 

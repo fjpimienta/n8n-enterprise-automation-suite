@@ -23,6 +23,10 @@ export class ConfirmActionModalComponent {
   @Input() notesLabel?: string;
   /** When true, the confirm button stays disabled until the trimmed notes are non-empty. */
   @Input() notesRequired = false;
+  /** While true (request in flight) both buttons are disabled. */
+  @Input() busy = false;
+  /** Backend error shown inside the modal; the typed notes are kept so the user can retry. */
+  @Input() errorMessage: string | null = null;
 
   @Output() confirm = new EventEmitter<{ notas?: string }>();
   @Output() cancel = new EventEmitter<void>();
@@ -31,13 +35,15 @@ export class ConfirmActionModalComponent {
   public hasNotes = computed(() => this.notas().trim() !== '');
 
   public onConfirm(): void {
-    if (this.notesRequired && !this.hasNotes()) return;
+    if (this.busy || (this.notesRequired && !this.hasNotes())) return;
     const notas = this.notas().trim();
+    // The notes are NOT cleared here: on a backend error the modal stays open for a retry.
+    // The parent closes (destroys) the modal on success.
     this.confirm.emit(notas ? { notas } : {});
-    this.notas.set('');
   }
 
   public onCancel(): void {
+    if (this.busy) return;
     this.notas.set('');
     this.cancel.emit();
   }

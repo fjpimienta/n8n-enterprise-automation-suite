@@ -9,10 +9,10 @@
       "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
       "typeVersion": 2,
       "position": [
-        1440,
-        592
+        2912,
+        1264
       ],
-      "id": "20140a69-ad24-4392-850e-789f2ff32e45",
+      "id": "d0d5cc20-a489-4e9c-8d70-1e46e14da90a",
       "name": "MCP Server Cattle",
       "webhookId": "68e31c86-2f32-4234-be5d-32fd5260fd1c",
       "credentials": {
@@ -35,10 +35,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1936,
-        272
+        3408,
+        944
       ],
-      "id": "5d209495-6de0-4419-8deb-43efd1f4ba94",
+      "id": "44dcc00a-9ddd-4a51-b583-987b2bb6ef3a",
       "name": "get_table_metadata",
       "credentials": {
         "postgres": {
@@ -61,10 +61,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1040,
-        624
+        2512,
+        1296
       ],
-      "id": "a0d3dd3f-0664-4e65-b801-a92684302056",
+      "id": "13bd85ed-da88-442f-9407-e19a7b6832ba",
       "name": "log_cattle_weight",
       "credentials": {
         "postgres": {
@@ -86,10 +86,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        880,
-        624
+        2352,
+        1296
       ],
-      "id": "84d7567d-a46c-4811-9ff3-6b0b573bed48",
+      "id": "1bef289b-7a05-4503-8cb7-03c0203b5d9c",
       "name": "log_health_event",
       "credentials": {
         "postgres": {
@@ -111,10 +111,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1776,
-        272
+        3248,
+        944
       ],
-      "id": "090fab19-82ec-406c-9246-b466011a7e4c",
+      "id": "94f17040-ec2d-4a27-9956-5bfaa7c3f44f",
       "name": "get_livestock_info",
       "credentials": {
         "postgres": {
@@ -136,10 +136,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2112,
-        816
+        3584,
+        1488
       ],
-      "id": "7ee7280c-51d3-4c11-acf2-69cff0c1039b",
+      "id": "7bae7c09-a4e2-495a-8677-3fb730622bdc",
       "name": "register_ranch_expense",
       "credentials": {
         "postgres": {
@@ -155,16 +155,16 @@
         "operation": "executeQuery",
         "query": "WITH params AS (\n  SELECT\n    $1::int AS tenant_id,\n    $2::uuid AS livestock_id,\n    $3::date AS weaning_date,\n    COALESCE(NULLIF(NULLIF($4::text, 'null'), 'undefined'), 'NATURAL') AS weaning_method,\n    $5::text AS reported_by_email,\n    NULLIF(NULLIF($6::text, 'null'), 'undefined')::numeric AS weight_kg,\n    NULLIF(NULLIF($7::text, 'null'), 'undefined') AS notes\n),\nauth_check AS (\n  SELECT 1\n  FROM params p\n  JOIN user_companies uc ON uc.id_company = p.tenant_id AND uc.is_active = true\n  JOIN users u ON u.email = uc.email AND u.email = p.reported_by_email\n)\nSELECT sp.*\nFROM params p,\nLATERAL sp_register_weaning_event(\n    p_id_company        := p.tenant_id,\n    p_livestock_id       := p.livestock_id,\n    p_weaning_date       := p.weaning_date,\n    p_weaning_method     := p.weaning_method,\n    p_reported_by_email  := p.reported_by_email,\n    p_weight_kg          := p.weight_kg,\n    p_notes              := p.notes\n) sp\nWHERE EXISTS (SELECT 1 FROM auth_check);",
         "options": {
-          "queryReplacement": "={{ [ $fromAI('tenant_id', 'ID del rancho / tenant_id actual del usuario, tal como aparece en el contexto de sesión', 'number'), $fromAI('livestock_id', 'The internal UUID of the animal, obtained from a prior get_livestock_info call. Never a RFID, SINIIGA tag, or fire number.', 'string'), $fromAI('weaning_date', 'The date the weaning occurred, in YYYY-MM-DD format. If the user says \\\"today\\\" or \\\"hoy\\\", use the current date.', 'string'), $fromAI('weaning_method', 'The weaning method: NATURAL, INDUCED, or EARLY. Omit if the user does not specify.', 'string'), $fromAI('user_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string'), $fromAI('weight_kg', 'The animal weight in kilograms at the moment of weaning, if the user mentioned one. Omit entirely if no weight was mentioned — do not guess a value.', 'number'), $fromAI('notes', 'Any additional free-text notes the user provided about this weaning event.', 'string') ] }}"
+          "queryReplacement": "={{ [ $fromAI('tenant_id', 'ID del rancho / tenant_id actual del usuario, tal como aparece en el contexto de sesión', 'number'), $fromAI('livestock_id', 'The internal UUID of the animal, obtained from a prior get_livestock_info call. Never a RFID, SINIIGA tag, or fire number.', 'string'), $fromAI('weaning_date', 'The date the weaning occurred, in YYYY-MM-DD format. If the user says \\\"today\\\" or \\\"hoy\\\", use the current date.', 'string'), $fromAI('weaning_method', 'The weaning method: NATURAL, INDUCED, or EARLY. Omit if the user does not specify.', 'string', null), $fromAI('user_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string'), $fromAI('weight_kg', 'The animal weight in kilograms at the moment of weaning, if the user mentioned one. Omit entirely if no weight was mentioned — do not guess a value.', 'number', null), $fromAI('notes', 'Any additional free-text notes the user provided about this weaning event.', 'string', null) ] }}"
         }
       },
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        720,
-        624
+        2192,
+        1296
       ],
-      "id": "0e9c97a3-5444-42bd-8aa6-8d393bee0ad4",
+      "id": "ea527ecf-e0fc-4446-8723-1d8ae9c52de1",
       "name": "log_weaning_event",
       "credentials": {
         "postgres": {
@@ -180,16 +180,16 @@
         "operation": "executeQuery",
         "query": "WITH params AS (\n  SELECT\n    NULLIF(NULLIF($1::text, 'null'), 'undefined') AS electronic_rfid,\n    NULLIF(NULLIF($2::text, 'null'), 'undefined') AS rfid_siniiga,\n    NULLIF(NULLIF($3::text, 'null'), 'undefined') AS numero_fuego,\n    $4::int AS tenant_id,\n    $5::jsonb AS payload,\n    NULLIF(NULLIF($6::text, 'null'), 'undefined')::uuid AS livestock_id,\n    $7::text AS solicitado_por_email\n),\nauth_check AS (\n  SELECT 1\n  FROM params p\n  JOIN user_companies uc ON uc.id_company = p.tenant_id AND uc.is_active = true\n  JOIN users u ON u.email = uc.email AND u.email = p.solicitado_por_email\n)\nSELECT sp.*\nFROM params p,\nLATERAL sp_solicitar_autorizacion(\n    p_electronic_rfid      := p.electronic_rfid,\n    p_rfid_siniiga         := p.rfid_siniiga,\n    p_numero_fuego         := p.numero_fuego,\n    p_tenant_id            := p.tenant_id,\n    p_tipo_evento          := 'BAJA_MORTANDAD',\n    p_payload              := p.payload,\n    p_livestock_id         := p.livestock_id,\n    p_solicitado_por_email := p.solicitado_por_email\n) sp\nWHERE EXISTS (SELECT 1 FROM auth_check);",
         "options": {
-          "queryReplacement": "={{ (() => {\n  const empty = (v) => (v === '' || v === undefined) ? null : v;\n  const causa = $fromAI('causa_mortandad', 'Cause of death — must be exactly one of: ENFERMEDAD, ACCIDENTE, DEPREDACIÓN, DESCONOCIDA, NATURAL', 'string');\n  const fecha = $fromAI('fecha_evento', 'Date of death in YYYY-MM-DD format. If the user says \"today\" or \"hoy\", use the current date.', 'string');\n  const desc  = $fromAI('descripcion', 'Free-text details about the death, if the user provided any. Omit if none given.', 'string');\n  return [\n    $fromAI('electronic_rfid', 'Electronic RFID / chip identifier, if the user provided this one specifically. Omit if not mentioned.', 'string'),\n    $fromAI('rfid_siniiga', 'SINIIGA ear tag number, if the user provided this one specifically. Omit if not mentioned.', 'string'),\n    $fromAI('numero_fuego', 'Fire brand / internal management number, if the user provided this one specifically. Omit if not mentioned.', 'string'),\n    $fromAI('tenant_id', 'ID del rancho / tenant_id actual del usuario, tal como aparece en el contexto de sesión', 'number'),\n    JSON.stringify({ causa_mortandad: causa, fecha_evento: fecha, descripcion: desc }),\n    empty($fromAI('livestock_id', 'UUID of the animal, ONLY if obtained from a prior find_calf_by_dam call (never ask the user to say this out loud). Omit if using electronic_rfid/rfid_siniiga/numero_fuego instead.', 'string')),\n    $fromAI('user_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string')\n  ];\n})() }}"
+          "queryReplacement": "={{ (() => {\n  const empty = (v) => (v === '' || v === undefined) ? null : v;\n  const causa = $fromAI('causa_mortandad', 'Cause of death — must be exactly one of: ENFERMEDAD, ACCIDENTE, DEPREDACIÓN, DESCONOCIDA, NATURAL', 'string');\n  const fecha = $fromAI('fecha_evento', 'Date of death in YYYY-MM-DD format. If the user says \"today\" or \"hoy\", use the current date.', 'string');\n  const desc  = $fromAI('descripcion', 'Free-text details about the death, if the user provided any. Omit if none given.', 'string', null);\n  return [\n    $fromAI('electronic_rfid', 'Electronic RFID / chip identifier, if the user provided this one specifically. Omit if not mentioned.', 'string', null),\n    $fromAI('rfid_siniiga', 'SINIIGA ear tag number, if the user provided this one specifically. Omit if not mentioned.', 'string', null),\n    $fromAI('numero_fuego', 'Fire brand / internal management number, if the user provided this one specifically. Omit if not mentioned.', 'string', null),\n    $fromAI('tenant_id', 'ID del rancho / tenant_id actual del usuario, tal como aparece en el contexto de sesión', 'number'),\n    JSON.stringify({ causa_mortandad: causa, fecha_evento: fecha, descripcion: desc }),\n    empty($fromAI('livestock_id', 'UUID of the animal, ONLY if obtained from a prior find_calf_by_dam call (never ask the user to say this out loud). Omit if using electronic_rfid/rfid_siniiga/numero_fuego instead.', 'string', null)),\n    $fromAI('user_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string')\n  ];\n})() }}"
         }
       },
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        720,
-        816
+        2192,
+        1488
       ],
-      "id": "e797a42c-173c-429b-8243-10471f4aab0e",
+      "id": "47214c09-667e-4e2e-8346-645f32a23856",
       "name": "log_mortality_event",
       "credentials": {
         "postgres": {
@@ -205,16 +205,16 @@
         "operation": "executeQuery",
         "query": "WITH inp AS (\n  SELECT\n    NULLIF(NULLIF($1::text, 'null'), 'undefined') AS electronic_rfid,\n    NULLIF(NULLIF($2::text, 'null'), 'undefined') AS rfid_siniiga,\n    NULLIF(NULLIF($3::text, 'null'), 'undefined') AS numero_fuego,\n    $4::int AS tenant_id,\n    NULLIF(NULLIF($5::text, 'null'), 'undefined')::uuid AS livestock_id,\n    $6::text AS solicitado_por_email,\n    NULLIF(NULLIF($7::text, 'null'), 'undefined') AS fecha_txt,\n    NULLIF(NULLIF($8::text, 'null'), 'undefined') AS guia_txt\n),\nparams AS (\n  SELECT i.*,\n    jsonb_strip_nulls(jsonb_build_object(\n      'fecha_evento', CASE\n          WHEN i.fecha_txt IS NULL THEN NULL\n          WHEN i.fecha_txt ~ '^\\d{4}-\\d{2}-\\d{2}$' THEN to_char(i.fecha_txt::date, 'YYYY-MM-DD')\n          ELSE (i.fecha_txt || ' (use YYYY-MM-DD)')::date::text\n        END,\n      'guia_transito', left(trim(i.guia_txt), 40)\n    )) AS payload\n  FROM inp i\n),\nauth_check AS (\n  SELECT 1\n  FROM params p\n  JOIN user_companies uc ON uc.id_company = p.tenant_id AND uc.is_active = true\n  JOIN users u ON u.email = uc.email AND u.email = p.solicitado_por_email\n)\nSELECT sp.*\nFROM params p,\nLATERAL sp_solicitar_autorizacion(\n    p_electronic_rfid      := p.electronic_rfid,\n    p_rfid_siniiga         := p.rfid_siniiga,\n    p_numero_fuego         := p.numero_fuego,\n    p_tenant_id            := p.tenant_id,\n    p_tipo_evento          := 'VENTA',\n    p_payload              := p.payload,\n    p_livestock_id         := p.livestock_id,\n    p_solicitado_por_email := p.solicitado_por_email\n) sp\nWHERE EXISTS (SELECT 1 FROM auth_check);",
         "options": {
-          "queryReplacement": "={{ (() => {\n  const empty = (v) => (v === '' || v === undefined) ? null : v;\n  return [\n    $fromAI('electronic_rfid', 'Electronic RFID / chip identifier, if the user provided this one specifically. Omit if not mentioned.', 'string'),\n    $fromAI('rfid_siniiga', 'SINIIGA ear tag number, if the user provided this one specifically. Omit if not mentioned.', 'string'),\n    $fromAI('numero_fuego', 'Fire brand / internal management number, if the user provided this one specifically. Omit if not mentioned.', 'string'),\n    $fromAI('tenant_id', 'ID del rancho / tenant_id actual del usuario, tal como aparece en el contexto de sesión', 'number'),\n    empty($fromAI('livestock_id', 'UUID of the animal, ONLY if obtained from a prior find_calf_by_dam call (never ask the user to say this out loud). Omit if using electronic_rfid/rfid_siniiga/numero_fuego instead.', 'string')),\n    $fromAI('user_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string'),\n    empty($fromAI('fecha_evento', 'Fecha en que ocurrió la venta/movimiento, formato YYYY-MM-DD, SOLO si el usuario la dijo (\"ayer\" = el día anterior a HOY ES). Omite si no la dio. Nunca la inventes.', 'string', null)),\n    empty($fromAI('guia_transito', 'Folio(s) de la guía de tránsito, SOLO si el usuario los dio; si son varios, sepáralos con coma. Omite si no los dio. Nunca los inventes.', 'string', null))\n  ];\n})() }}"
+          "queryReplacement": "={{ (() => {\n  const empty = (v) => (v === '' || v === undefined) ? null : v;\n  return [\n    $fromAI('electronic_rfid', 'Electronic RFID / chip identifier, if the user provided this one specifically. Omit if not mentioned.', 'string', null),\n    $fromAI('rfid_siniiga', 'SINIIGA ear tag number, if the user provided this one specifically. Omit if not mentioned.', 'string', null),\n    $fromAI('numero_fuego', 'Fire brand / internal management number, if the user provided this one specifically. Omit if not mentioned.', 'string', null),\n    $fromAI('tenant_id', 'ID del rancho / tenant_id actual del usuario, tal como aparece en el contexto de sesión', 'number'),\n    empty($fromAI('livestock_id', 'UUID of the animal, ONLY if obtained from a prior find_calf_by_dam call (never ask the user to say this out loud). Omit if using electronic_rfid/rfid_siniiga/numero_fuego instead.', 'string', null)),\n    $fromAI('user_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string'),\n    empty($fromAI('fecha_evento', 'Fecha en que ocurrió la venta/movimiento, formato YYYY-MM-DD, SOLO si el usuario la dijo (\"ayer\" = el día anterior a HOY ES). Omite si no la dio. Nunca la inventes.', 'string', null)),\n    empty($fromAI('guia_transito', 'Folio(s) de la guía de tránsito, SOLO si el usuario los dio; si son varios, sepáralos con coma. Omite si no los dio. Nunca los inventes.', 'string', null))\n  ];\n})() }}"
         }
       },
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2112,
-        640
+        3584,
+        1312
       ],
-      "id": "744e036f-e9ae-48ec-bd8b-eba13784986c",
+      "id": "1bfeee86-ff8f-4af5-b5bc-0f51a9acbd0a",
       "name": "request_livestock_sale",
       "credentials": {
         "postgres": {
@@ -236,10 +236,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1936,
-        816
+        3408,
+        1488
       ],
-      "id": "b39a6678-589d-4853-869c-d33f08e6525a",
+      "id": "93ceb642-54e8-415c-9c6b-488405a4c482",
       "name": "register_birth_event",
       "credentials": {
         "postgres": {
@@ -255,16 +255,16 @@
         "operation": "executeQuery",
         "query": "WITH params AS (\n  SELECT\n    $1::int AS tenant_id,\n    NULLIF(NULLIF($2::text, 'null'), 'undefined') AS dam_electronic_rfid,\n    NULLIF(NULLIF($3::text, 'null'), 'undefined') AS dam_rfid_siniiga,\n    NULLIF(NULLIF($4::text, 'null'), 'undefined') AS dam_numero_fuego,\n    $5::text AS user_email\n),\nauth_check AS (\n  SELECT 1\n  FROM params p\n  JOIN user_companies uc ON uc.id_company = p.tenant_id AND uc.is_active = true\n  JOIN users u ON u.email = uc.email AND u.email = p.user_email\n),\ndam AS (\n  SELECT cl.id\n  FROM cattle_livestock cl, params p\n  WHERE cl.tenant_id = p.tenant_id\n    AND (\n      (p.dam_electronic_rfid IS NOT NULL AND cl.electronic_rfid = p.dam_electronic_rfid)\n      OR (p.dam_rfid_siniiga IS NOT NULL AND cl.rfid_siniiga = p.dam_rfid_siniiga)\n      OR (p.dam_numero_fuego IS NOT NULL AND cl.numero_fuego = p.dam_numero_fuego)\n    )\n  LIMIT 1\n)\nSELECT cl.id, cl.category, cl.current_status, be.birth_date, be.calf_sex, cl.current_weight_kg\nFROM cattle_livestock cl\nJOIN birth_events be ON be.calf_id = cl.id\nJOIN params p ON cl.tenant_id = p.tenant_id\nWHERE EXISTS (SELECT 1 FROM auth_check)\n  AND be.dam_id = (SELECT id FROM dam)\n  AND cl.rfid_siniiga IS NULL\n  AND cl.numero_fuego IS NULL\n  AND cl.electronic_rfid IS NULL\n  AND be.birth_date >= (CURRENT_DATE - INTERVAL '90 days')\nORDER BY be.birth_date DESC;",
         "options": {
-          "queryReplacement": "={{ [\n  $fromAI('tenant_id', 'The EXACT numeric tenant/company id (id_company) for the current authenticated user, taken directly from the system context — NEVER guess, infer, or use a default. It must be identical to the tenant_id used in every other tool call in this same turn.', 'number'),\n  $fromAI('dam_electronic_rfid', 'Dam electronic RFID/microchip identifier (bolo ruminal/chip), ONLY if the user explicitly said RFID/chip. Omit otherwise.', 'string'),\n  $fromAI('dam_rfid_siniiga', 'Dam official SINIIGA ear tag: a 9-10 digit numeric code (e.g. 715690242, 9999999999). If the user gives a bare number identifying the dam without saying which identifier type it is, treat it as rfid_siniiga — this is the default interpretation for a plain number.', 'string'),\n  $fromAI('dam_numero_fuego', 'Dam fire-brand number (número de fuego / marca de hierro). Use this ONLY if the user explicitly says \"número de fuego\" or \"fuego\", or gives a short alphanumeric brand code (e.g. 19-116). NEVER use this field for a bare 9-10 digit number — that goes in dam_rfid_siniiga instead.', 'string'),\n  $fromAI('user_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string')\n] }}"
+          "queryReplacement": "={{ [\n  $fromAI('tenant_id', 'The EXACT numeric tenant/company id (id_company) for the current authenticated user, taken directly from the system context — NEVER guess, infer, or use a default. It must be identical to the tenant_id used in every other tool call in this same turn.', 'number'),\n  $fromAI('dam_electronic_rfid', 'Dam electronic RFID/microchip identifier (bolo ruminal/chip), ONLY if the user explicitly said RFID/chip. Omit otherwise.', 'string', null),\n  $fromAI('dam_rfid_siniiga', 'Dam official SINIIGA ear tag: a 9-10 digit numeric code (e.g. 715690242, 9999999999). If the user gives a bare number identifying the dam without saying which identifier type it is, treat it as rfid_siniiga — this is the default interpretation for a plain number.', 'string', null),\n  $fromAI('dam_numero_fuego', 'Dam fire-brand number (número de fuego / marca de hierro). Use this ONLY if the user explicitly says \"número de fuego\" or \"fuego\", or gives a short alphanumeric brand code (e.g. 19-116). NEVER use this field for a bare 9-10 digit number — that goes in dam_rfid_siniiga instead.', 'string', null),\n  $fromAI('user_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string')\n] }}"
         }
       },
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2112,
-        272
+        3584,
+        944
       ],
-      "id": "e57dbed8-8183-4c23-a2ba-40c35b53cbc8",
+      "id": "616a3b2d-a19c-4b71-b9de-dfa25e1bed85",
       "name": "find_calf_by_dam",
       "credentials": {
         "postgres": {
@@ -286,10 +286,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2112,
-        464
+        3584,
+        1136
       ],
-      "id": "c7de7ce3-336c-4549-9fa7-7b5f2b78b842",
+      "id": "e5e2ac4d-79f9-412a-8cd4-58a2900a9b60",
       "name": "count_livestock",
       "credentials": {
         "postgres": {
@@ -311,10 +311,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1776,
-        816
+        3248,
+        1488
       ],
-      "id": "1a8a0335-5178-4dc7-b316-403b9b386088",
+      "id": "dc92c507-41a8-420d-9303-cab1dd666a53",
       "name": "register_livestock_purchase",
       "credentials": {
         "postgres": {
@@ -336,10 +336,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        880,
-        816
+        2352,
+        1488
       ],
-      "id": "f9682a78-9a40-4778-af20-68d8a6b5c5c1",
+      "id": "0172e37e-e819-446d-8252-fb01f1e9bbc0",
       "name": "log_vaccination_event",
       "credentials": {
         "postgres": {
@@ -361,10 +361,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1040,
-        816
+        2512,
+        1488
       ],
-      "id": "1c48ee4b-5f33-46f5-a458-a922f87de488",
+      "id": "74bc4259-a7dc-4bc8-ba23-60a357658ccc",
       "name": "log_supplement_event",
       "credentials": {
         "postgres": {
@@ -386,10 +386,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1216,
-        816
+        2688,
+        1488
       ],
-      "id": "eb1e1775-1e66-4374-87ed-0bc08404d5da",
+      "id": "4e8d0e6a-7ebc-4418-b07c-fe51b66e1653",
       "name": "log_palpation_event",
       "credentials": {
         "postgres": {
@@ -411,10 +411,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1936,
-        464
+        3408,
+        1136
       ],
-      "id": "d40d73a6-5b52-49b9-b862-68dfb4faa357",
+      "id": "ba320ec8-5838-437f-a131-d7917e7b6334",
       "name": "find_livestock_by_criteria",
       "credentials": {
         "postgres": {
@@ -430,16 +430,16 @@
         "operation": "executeQuery",
         "query": "SELECT sp_move_livestock(\n    ARRAY(SELECT jsonb_array_elements_text($1::jsonb))::uuid[],\n    $2::integer,\n    $3::character varying,\n    $4::character varying,\n    $5::text\n) AS result\nWHERE EXISTS (\n  SELECT 1 FROM user_companies uc JOIN users u ON u.email = uc.email\n  WHERE u.email = $4::text AND uc.id_company = $2::int AND uc.is_active = true\n);",
         "options": {
-          "queryReplacement": "={{ [$fromAI('livestock_ids', 'JSON array (as a string) of livestock UUIDs to move, e.g. [\"uuid1\",\"uuid2\"]. Get each UUID first from get_livestock_info (field id) — never pass ear tags, RFID or fire numbers here.', 'string'), $fromAI('tenant_id', 'Numeric tenant/company id of the current user, from context.', 'number'), $fromAI('new_lot_name', 'Exact name of the destination lot/potrero, within the same UPP, as the user said it.', 'string'), $fromAI('moved_by_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string'), $fromAI('reason', 'Optional reason for the move, if mentioned.', 'string')] }}"
+          "queryReplacement": "={{ [$fromAI('livestock_ids', 'JSON array (as a string) of livestock UUIDs to move, e.g. [\"uuid1\",\"uuid2\"]. Get each UUID first from get_livestock_info (field id) — never pass ear tags, RFID or fire numbers here.', 'string'), $fromAI('tenant_id', 'Numeric tenant/company id of the current user, from context.', 'number'), $fromAI('new_lot_name', 'Exact name of the destination lot/potrero, within the same UPP, as the user said it.', 'string'), $fromAI('moved_by_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string'), $fromAI('reason', 'Optional reason for the move, if mentioned.', 'string', null)] }}"
         }
       },
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1936,
-        640
+        3408,
+        1312
       ],
-      "id": "115bf5fb-ca01-4fce-8709-8a3a24e580f2",
+      "id": "bbd8c51c-6768-4045-8b61-8e2f4f558af5",
       "name": "move_livestock",
       "credentials": {
         "postgres": {
@@ -461,10 +461,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2288,
-        464
+        3760,
+        1136
       ],
-      "id": "b133586c-1c3c-4d9d-bc18-d5ec859a444c",
+      "id": "6784c097-cfe9-41db-b0b2-432269e40e4a",
       "name": "list_pending_requests",
       "credentials": {
         "postgres": {
@@ -476,20 +476,20 @@
     {
       "parameters": {
         "descriptionType": "manual",
-        "toolDescription": "Aprueba o rechaza una solicitud pendiente de baja (mortandad) o venta, dado su request_id (obtenido primero con list_pending_requests). Solo debe usarse con usuarios con rol de administrador. Al aprobar, se ejecuta automáticamente el cambio de estatus final del animal; al rechazar, el animal permanece ACTIVO.",
+        "toolDescription": "Approves or rejects a PENDING request, given its request_id (get it first with list_pending_requests). The database enforces that only an active ADMIN of this company can resolve requests; never assume the user is an ADMIN.\n\nSALES (VENTA) CANNOT BE APPROVED FROM CHAT: the sale price is captured only in the web panel when an administrator approves it. From chat a VENTA request can only be REJECTED (with reason). If the user wants to approve a sale, tell them to do it in the web panel. Mortality requests (BAJA_MORTANDAD) can be approved or rejected here.\n\ndecision must be exactly one of:\n- APROBADO: approve a BAJA_MORTANDAD request. The final status change of the animal is applied automatically.\n- RECHAZADO: reject a VENTA or BAJA_MORTANDAD request. The animal keeps its current status. A reason (notas) is MANDATORY: ask the user for it if missing, never invent one.\nNever use APROBADO_CON_EXCEPCION from chat. If the user asks for a sanitary exception, tell them an administrator must handle it from the web panel.\n\nCONFIRM BEFORE EXECUTING: repeat back the animal identifier, the request type and the decision (and the reason, if any), and only call this tool after an explicit affirmative answer in the next turn.\n\nIf the result has code OWN_REQUEST, the request was created by this same user: do NOT report a failure; tell the user that their own request is cancelled, not rejected, and follow the cancel flow (cancel_pending_request) with a new summary and confirmation.\n\nIf the tool returns an error, relay it in plain Spanish and never claim success: user is not an ADMIN of this company (only an administrator can approve or reject), rejection without reason, a sale cannot be approved without its sale data (approve it in the web panel), request already resolved/cancelled/expired, or request not found in this company. Never show any email address to the user.",
         "operation": "executeQuery",
-        "query": "SELECT sp_review_pending_request(\n    $1::uuid,\n    $2::integer,\n    $3::character varying,\n    $4::character varying,\n    $5::text\n) AS result;",
+        "query": "-- Guard: a user never REJECTS a request they created themselves; they must CANCEL it (cancel_pending_request).\nSELECT CASE\n         WHEN upper($3::text) = 'RECHAZADO'\n          AND EXISTS (SELECT 1 FROM pending_authorizations pa\n                       WHERE pa.id = $1::uuid\n                         AND pa.id_company = $2::integer\n                         AND lower(pa.solicitado_por_email) = lower($4::text))\n         THEN jsonb_build_object(\n                'success', false,\n                'code', 'OWN_REQUEST',\n                'message', 'Esta solicitud la creó el mismo usuario: no se rechaza, se CANCELA. Usa cancel_pending_request con el mismo request_id y el motivo, después de mostrar el resumen y recibir la confirmación.')\n         ELSE sp_review_pending_request($1::uuid, $2::integer, $3::character varying, $4::character varying, $5::text)\n       END AS result;",
         "options": {
-          "queryReplacement": "={{ [$fromAI('request_id', 'UUID of the pending authorization request to resolve. Get it from list_pending_requests first.', 'string'), $fromAI('tenant_id', 'Numeric tenant/company id of the current user, from context.', 'number'), $fromAI('decision', 'APROBADO to approve, RECHAZADO to reject.', 'string'), $fromAI('resuelto_por_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string'), $fromAI('notas', 'Optional notes about the decision.', 'string')] }}"
+          "queryReplacement": "={{ [$fromAI('request_id', 'UUID of the pending authorization request to resolve. Get it from list_pending_requests first.', 'string'), $fromAI('tenant_id', 'Numeric tenant/company id of the current user, from context.', 'number'), $fromAI('decision', 'Exactly APROBADO (only for BAJA_MORTANDAD) or RECHAZADO. Never APROBADO_CON_EXCEPCION.', 'string'), $fromAI('resuelto_por_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string'), $fromAI('notas', 'Reason for the decision, exactly as the user stated it. MANDATORY for RECHAZADO; optional for APROBADO (omit if none). Never invent it.', 'string', null)] }}"
         }
       },
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2288,
-        640
+        3760,
+        1312
       ],
-      "id": "f1f998ae-d5e9-4f36-a4e1-8d9eb3db926f",
+      "id": "95310ef6-afb3-45d0-8139-7e721a2604a3",
       "name": "review_pending_request",
       "credentials": {
         "postgres": {
@@ -505,16 +505,16 @@
         "operation": "executeQuery",
         "query": "SELECT sp_log_breeding_event(\n    $1::character varying,\n    $2::integer,\n    $3::date,\n    $4::character varying,\n    $5::character varying,\n    $6::character varying,\n    $7::character varying,\n    $8::text\n) AS result\nWHERE EXISTS (\n  SELECT 1 FROM user_companies uc JOIN users u ON u.email = uc.email\n  WHERE u.email = $7::text AND uc.id_company = $2::int AND uc.is_active = true\n);",
         "options": {
-          "queryReplacement": "={{ [$fromAI('animal_identifier', 'Ear tag, RFID or fire number of the female being bred. If the user only describes the animal, resolve it first with find_livestock_by_criteria and pass the exact identifier here.', 'string'), $fromAI('tenant_id', 'Numeric tenant/company id of the current user, from context.', 'number'), $fromAI('breeding_date', 'Date the breeding/insemination occurred, YYYY-MM-DD. Default to today if not specified.', 'string'), $fromAI('method', 'MONTA_NATURAL for natural mounting, or INSEMINACION_ARTIFICIAL for artificial insemination. Default MONTA_NATURAL if not specified.', 'string'), $fromAI('sire_identifier', 'Ear tag or name of the sire (bull), if natural mounting and mentioned. Leave empty otherwise.', 'string'), $fromAI('semen_batch', 'Semen batch/lot number, if artificial insemination and mentioned. Leave empty otherwise.', 'string'), $fromAI('registered_by_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string'), $fromAI('notes', 'Any additional notes the user mentioned, if any.', 'string')] }}"
+          "queryReplacement": "={{ [$fromAI('animal_identifier', 'Ear tag, RFID or fire number of the female being bred. If the user only describes the animal, resolve it first with find_livestock_by_criteria and pass the exact identifier here.', 'string'), $fromAI('tenant_id', 'Numeric tenant/company id of the current user, from context.', 'number'), $fromAI('breeding_date', 'Date the breeding/insemination occurred, YYYY-MM-DD. Default to today if not specified.', 'string'), $fromAI('method', 'MONTA_NATURAL for natural mounting, or INSEMINACION_ARTIFICIAL for artificial insemination. Default MONTA_NATURAL if not specified.', 'string'), $fromAI('sire_identifier', 'Ear tag or name of the sire (bull), if natural mounting and mentioned. Leave empty otherwise.', 'string', null), $fromAI('semen_batch', 'Semen batch/lot number, if artificial insemination and mentioned. Leave empty otherwise.', 'string', null), $fromAI('registered_by_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string'), $fromAI('notes', 'Any additional notes the user mentioned, if any.', 'string', null)] }}"
         }
       },
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1056,
-        432
+        2528,
+        1104
       ],
-      "id": "c91c7115-f9d3-421a-b45d-65a29f49d83b",
+      "id": "209520c1-5634-4884-885d-3783e5e7f591",
       "name": "log_breeding_event",
       "credentials": {
         "postgres": {
@@ -530,16 +530,16 @@
         "operation": "executeQuery",
         "query": "SELECT sp_log_deworming_event(\n    $1::character varying,\n    $2::integer,\n    $3::character varying,\n    $4::date,\n    $5::character varying,\n    $6::character varying,\n    $7::integer,\n    $8::character varying,\n    $9::text\n) AS result\nWHERE EXISTS (\n  SELECT 1 FROM user_companies uc JOIN users u ON u.email = uc.email\n  WHERE u.email = $8::text AND uc.id_company = $2::int AND uc.is_active = true\n);",
         "options": {
-          "queryReplacement": "={{ [$fromAI('animal_identifier', 'Ear tag, RFID or fire number of the animal. If the user only describes the animal, resolve it first with find_livestock_by_criteria and pass the exact identifier here.', 'string'), $fromAI('tenant_id', 'Numeric tenant/company id of the current user, from context.', 'number'), $fromAI('product', 'Name of the deworming product/antiparasitic used, as the user said it.', 'string'), $fromAI('application_date', 'Date the product was applied, YYYY-MM-DD. Default to today if not specified.', 'string'), $fromAI('dose', 'Dose applied, if mentioned (e.g. \"10ml\", \"1 bolo\"). Leave empty otherwise.', 'string'), $fromAI('route', 'Route of administration if mentioned (ORAL, INYECTABLE, POUR_ON). Leave empty otherwise.', 'string'), $fromAI('reinforcement_days', 'Number of days until the next reinforcement dose is due, if mentioned. Leave empty if not applicable.', 'number'), $fromAI('registered_by_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string'), $fromAI('notes', 'Any additional notes the user mentioned, if any.', 'string')] }}"
+          "queryReplacement": "={{ [$fromAI('animal_identifier', 'Ear tag, RFID or fire number of the animal. If the user only describes the animal, resolve it first with find_livestock_by_criteria and pass the exact identifier here.', 'string'), $fromAI('tenant_id', 'Numeric tenant/company id of the current user, from context.', 'number'), $fromAI('product', 'Name of the deworming product/antiparasitic used, as the user said it.', 'string'), $fromAI('application_date', 'Date the product was applied, YYYY-MM-DD. Default to today if not specified.', 'string'), $fromAI('dose', 'Dose applied, if mentioned (e.g. \"10ml\", \"1 bolo\"). Leave empty otherwise.', 'string', null), $fromAI('route', 'Route of administration if mentioned (ORAL, INYECTABLE, POUR_ON). Leave empty otherwise.', 'string', null), $fromAI('reinforcement_days', 'Number of days until the next reinforcement dose is due, if mentioned. Leave empty if not applicable.', 'number', null), $fromAI('registered_by_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string'), $fromAI('notes', 'Any additional notes the user mentioned, if any.', 'string', null)] }}"
         }
       },
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        880,
-        432
+        2352,
+        1104
       ],
-      "id": "74296229-dec0-433f-af0f-2799da715c13",
+      "id": "a9019858-b509-4edd-8897-be1b8d0e7044",
       "name": "log_deworming_event",
       "credentials": {
         "postgres": {
@@ -555,16 +555,16 @@
         "operation": "executeQuery",
         "query": "SELECT sp_update_livestock_tag(\n    $1::character varying,\n    $2::integer,\n    $3::character varying,\n    $4::character varying,\n    $5::character varying,\n    $6::text\n) AS result\nWHERE EXISTS (\n  SELECT 1 FROM user_companies uc JOIN users u ON u.email = uc.email\n  WHERE u.email = $5::text AND uc.id_company = $2::int AND uc.is_active = true\n);",
         "options": {
-          "queryReplacement": "={{ [$fromAI('current_identifier', 'The animal\\'s CURRENT ear tag, electronic RFID or fire number. If the user only describes the animal, resolve it first with find_livestock_by_criteria.', 'string'), $fromAI('tenant_id', 'Numeric tenant/company id of the current user, from context.', 'number'), $fromAI('tag_type', 'Which identifier is being changed: ELECTRONIC_RFID, RFID_SINIIGA, or NUMERO_FUEGO.', 'string'), $fromAI('new_value', 'The new tag/identifier value to assign.', 'string'), $fromAI('changed_by_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string'), $fromAI('reason', 'Reason for the change, if mentioned.', 'string')] }}"
+          "queryReplacement": "={{ [$fromAI('current_identifier', 'The animal\\'s CURRENT ear tag, electronic RFID or fire number. If the user only describes the animal, resolve it first with find_livestock_by_criteria.', 'string'), $fromAI('tenant_id', 'Numeric tenant/company id of the current user, from context.', 'number'), $fromAI('tag_type', 'Which identifier is being changed: ELECTRONIC_RFID, RFID_SINIIGA, or NUMERO_FUEGO.', 'string'), $fromAI('new_value', 'The new tag/identifier value to assign.', 'string'), $fromAI('changed_by_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string'), $fromAI('reason', 'Reason for the change, if mentioned.', 'string', null)] }}"
         }
       },
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2288,
-        816
+        3760,
+        1488
       ],
-      "id": "ff1d6b21-be7d-493d-982e-c0a1a7fcfa63",
+      "id": "344dbd76-d117-4dd8-aa5c-6df3cfed2e89",
       "name": "update_livestock_tag",
       "credentials": {
         "postgres": {
@@ -580,16 +580,16 @@
         "operation": "executeQuery",
         "query": "SELECT sp_log_castration_event(\n    $1::character varying,\n    $2::integer,\n    $3::date,\n    $4::character varying,\n    $5::character varying,\n    $6::character varying,\n    $7::text\n) AS result\nWHERE EXISTS (\n  SELECT 1 FROM user_companies uc JOIN users u ON u.email = uc.email\n  WHERE u.email = $6::text AND uc.id_company = $2::int AND uc.is_active = true\n);",
         "options": {
-          "queryReplacement": "={{ [$fromAI('animal_identifier', 'Ear tag, RFID or fire number of the animal. If the user only describes the animal, resolve it first with find_livestock_by_criteria.', 'string'), $fromAI('tenant_id', 'Numeric tenant/company id of the current user, from context.', 'number'), $fromAI('castration_date', 'Date the castration occurred, YYYY-MM-DD. Default to today if not specified.', 'string'), $fromAI('method', 'Method used, if mentioned (e.g. QUIRURGICA, BANDA, BURDIZZO). Leave empty otherwise.', 'string'), $fromAI('new_category', 'Target category after castration, only if the animal is not a horse. Leave empty for horses.', 'string'), $fromAI('performed_by_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string'), $fromAI('notes', 'Any additional notes the user mentioned, if any.', 'string')] }}"
+          "queryReplacement": "={{ [$fromAI('animal_identifier', 'Ear tag, RFID or fire number of the animal. If the user only describes the animal, resolve it first with find_livestock_by_criteria.', 'string'), $fromAI('tenant_id', 'Numeric tenant/company id of the current user, from context.', 'number'), $fromAI('castration_date', 'Date the castration occurred, YYYY-MM-DD. Default to today if not specified.', 'string'), $fromAI('method', 'Method used, if mentioned (e.g. QUIRURGICA, BANDA, BURDIZZO). Leave empty otherwise.', 'string', null), $fromAI('new_category', 'Target category after castration, only if the animal is not a horse. Leave empty for horses.', 'string', null), $fromAI('performed_by_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string'), $fromAI('notes', 'Any additional notes the user mentioned, if any.', 'string', null)] }}"
         }
       },
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        720,
-        432
+        2192,
+        1104
       ],
-      "id": "1e9c716d-1372-4f5b-b26b-ca8c3178d555",
+      "id": "54e60cc3-9cfe-4a04-a9d5-2bcc1bad3d03",
       "name": "log_castration_event",
       "credentials": {
         "postgres": {
@@ -605,16 +605,16 @@
         "operation": "executeQuery",
         "query": "SELECT sp_void_event(\n    $1::character varying,\n    $2::uuid,\n    $3::integer,\n    $4::character varying,\n    $5::text\n) AS result\nWHERE EXISTS (\n  SELECT 1 FROM user_companies uc JOIN users u ON u.email = uc.email\n  WHERE u.email = $4::text AND uc.id_company = $3::int AND uc.is_active = true\n);",
         "options": {
-          "queryReplacement": "={{ [$fromAI('event_table', 'The table the event belongs to: cattle_breeding_events, cattle_deworming_events, or cattle_castration_events.', 'string'), $fromAI('event_id', 'The UUID of the specific event to void.', 'string'), $fromAI('tenant_id', 'Numeric tenant/company id of the current user, from context.', 'number'), $fromAI('voided_by_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string'), $fromAI('reason', 'Reason for voiding the event, if mentioned.', 'string')] }}"
+          "queryReplacement": "={{ [$fromAI('event_table', 'The table the event belongs to: cattle_breeding_events, cattle_deworming_events, or cattle_castration_events.', 'string'), $fromAI('event_id', 'The UUID of the specific event to void.', 'string'), $fromAI('tenant_id', 'Numeric tenant/company id of the current user, from context.', 'number'), $fromAI('voided_by_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string'), $fromAI('reason', 'Reason for voiding the event, if mentioned.', 'string', null)] }}"
         }
       },
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1776,
-        640
+        3248,
+        1312
       ],
-      "id": "8b6d5d91-d599-4d67-a406-5dae6c597150",
+      "id": "6cb2f3ef-9bcf-4af2-9441-2ae0b36ce65d",
       "name": "void_event",
       "credentials": {
         "postgres": {
@@ -636,10 +636,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1216,
-        624
+        2688,
+        1296
       ],
-      "id": "0550a358-a5dc-4c4a-b9c6-01b36f49d17b",
+      "id": "0df4d505-a6a4-4b4b-9b03-41bae5dfda69",
       "name": "log_palpation_event_batch",
       "credentials": {
         "postgres": {
@@ -661,11 +661,36 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1776,
-        464
+        3248,
+        1136
       ],
-      "id": "c2588812-3bd0-46c9-b0e8-3e52e84a0b39",
+      "id": "013cbfc2-f3d6-466c-9275-0e08a99d0991",
       "name": "list_lots",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Cancels a PENDING sale or mortality authorization request. Only the user who CREATED the request can cancel it, and a cancellation reason (motivo) is mandatory.\n\nHOW TO USE:\n1. Call list_pending_requests first to get the request_id. Only consider requests whose solicitado_por_email matches the session user email. If the user has no pending requests of their own, say so and do NOT call this tool.\n2. If the user did not state a reason, ask for it. Never invent a reason.\n3. CONFIRM BEFORE EXECUTING: repeat back the animal identifier, the request type (VENTA or BAJA_MORTANDAD) and the reason, and only call this tool after an explicit affirmative answer in the next turn.\n\nCancelling is NOT an approval: it is allowed in every channel, including WhatsApp, even when approvals are disabled there.\n\nAfter success, tell the user the request was cancelled and that the animal keeps its current status (it was NOT sold and NOT marked as dead). Never show any email address to the user.\n\nIf the tool returns an error, relay it in plain Spanish and never claim success: not the requester (only the person who created the request can cancel it), missing reason, request already resolved/cancelled/expired, or request not found in this company.",
+        "operation": "executeQuery",
+        "query": "SELECT sp_cancelar_autorizacion(\n    $1::uuid,\n    $2::integer,\n    $3::text,\n    $4::text\n) AS result\nWHERE EXISTS (\n  SELECT 1 FROM user_companies uc JOIN users u ON u.email = uc.email\n  WHERE u.email = $3::text AND uc.id_company = $2::int AND uc.is_active = true\n);",
+        "options": {
+          "queryReplacement": "={{ [ $fromAI('request_id', 'UUID of the pending request to cancel, taken from a prior list_pending_requests call. Never ask the user to say it.', 'string'), $fromAI('tenant_id', 'Numeric tenant/company id of the current user, from the session context.', 'number'), $fromAI('user_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string'), $fromAI('motivo', 'Cancellation reason exactly as the user stated it. Mandatory: ask the user if missing, never invent one.', 'string') ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        3744,
+        944
+      ],
+      "id": "530495fd-c126-4572-bf0c-4fd2af5fe07e",
+      "name": "cancel_pending_request",
       "credentials": {
         "postgres": {
           "id": "BQrod4uGVzM1nvLw",
@@ -961,6 +986,17 @@
           }
         ]
       ]
+    },
+    "cancel_pending_request": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -973,7 +1009,7 @@
     "timeSavedMode": "fixed",
     "timeSavedPerExecution": 3
   },
-  "versionId": "0a76d402-eba4-4238-a7d4-55a11212f963",
+  "versionId": "dc9d541c-f5d8-497d-8a71-56a8d1f902b2",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
@@ -982,16 +1018,10 @@
   "id": "pJ3CEaO70QEiGL0C",
   "tags": [
     {
-      "updatedAt": "2026-06-02T17:44:17.958Z",
-      "createdAt": "2026-06-02T17:44:17.958Z",
-      "id": "6NGDwjjesOlJeGQr",
-      "name": "v6"
-    },
-    {
-      "updatedAt": "2025-12-23T12:12:28.399Z",
-      "createdAt": "2025-12-23T12:12:28.399Z",
-      "id": "RWBzILPfFXEtEcLf",
-      "name": "AI Agent"
+      "updatedAt": "2025-12-31T16:55:06.301Z",
+      "createdAt": "2025-12-31T16:55:06.301Z",
+      "id": "ts9FABk8F02a5xrA",
+      "name": "Agent IA"
     },
     {
       "updatedAt": "2025-12-23T12:12:58.230Z",
@@ -1000,10 +1030,16 @@
       "name": "Chat"
     },
     {
-      "updatedAt": "2025-12-31T16:55:06.301Z",
-      "createdAt": "2025-12-31T16:55:06.301Z",
-      "id": "ts9FABk8F02a5xrA",
-      "name": "Agent IA"
+      "updatedAt": "2025-12-23T12:12:28.399Z",
+      "createdAt": "2025-12-23T12:12:28.399Z",
+      "id": "RWBzILPfFXEtEcLf",
+      "name": "AI Agent"
+    },
+    {
+      "updatedAt": "2026-06-02T17:44:17.958Z",
+      "createdAt": "2026-06-02T17:44:17.958Z",
+      "id": "6NGDwjjesOlJeGQr",
+      "name": "v6"
     }
   ]
 }

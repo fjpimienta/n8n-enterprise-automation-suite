@@ -7,11 +7,12 @@ import { SidebarComponent } from '../sidebar/sidebar.component';
 import { HeaderComponent } from '../header/header.component';
 import { AiChatComponent } from 'ui-chat';
 import { LayoutService } from '@shared/services/layout.service';
+import { ToastContainerComponent } from '@shared/components/toast-container/toast-container.component';
 
 @Component({
   selector: 'app-main-layout',
   standalone: true,
-  imports: [RouterOutlet, NgClass, SidebarComponent, HeaderComponent, AiChatComponent],
+  imports: [RouterOutlet, NgClass, SidebarComponent, HeaderComponent, AiChatComponent, ToastContainerComponent],
   templateUrl: './main-layout.component.html',
   styleUrls: ['./main-layout.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush

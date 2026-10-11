@@ -9,6 +9,7 @@ import { ReproductiveDashboardComponent } from '../reproductive-dashboard/reprod
 import { EngordaDashboardComponent } from '../engorda-dashboard/engorda-dashboard.component';
 import { ReproduccionDashboardComponent } from '../reproduccion-dashboard/reproduccion-dashboard.component';
 import { CattleEventLogComponent } from '../cattle-event-log/cattle-event-log.component';
+import { SaleIncomeLogComponent } from '../sale-income-log/sale-income-log.component';
 import { ExpenseModalComponent } from '../../../expenses/components/expense-modal/expense-modal.component';
 import { ComplianceAlertCardComponent } from '../../../../compliance/components/compliance-alert-card/compliance-alert-card.component';
 import { ComplianceService } from '../../../../compliance/services/compliance.service';
@@ -31,7 +32,7 @@ import { Paginator } from '../../utils/paginator';
 @Component({
   selector: 'app-main-dashboard',
   standalone: true,
-  imports: [CommonModule, NgApexchartsModule, ReproductiveDashboardComponent, EngordaDashboardComponent, ReproduccionDashboardComponent, ExpenseModalComponent, ComplianceAlertCardComponent, MetadataDetailModalComponent, CattleEventLogComponent, TableToolbarComponent, TableFooterComponent],
+  imports: [CommonModule, NgApexchartsModule, ReproductiveDashboardComponent, EngordaDashboardComponent, ReproduccionDashboardComponent, ExpenseModalComponent, ComplianceAlertCardComponent, MetadataDetailModalComponent, CattleEventLogComponent, SaleIncomeLogComponent, TableToolbarComponent, TableFooterComponent],
   templateUrl: './main-dashboard.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -94,7 +95,7 @@ export class MainDashboardComponent implements OnInit {
   private static readonly AUTO_REFRESH_CHECK_INTERVAL_MS = 30_000;
 
   // Navegación y Filtros de Trazabilidad Biológica
-  public activeSubTab = signal<'RESUMEN' | 'INVENTARIO' | 'GASTOS' | 'POR_ANIMAL' | 'EVENT_LOG'>('RESUMEN');
+  public activeSubTab = signal<'RESUMEN' | 'INVENTARIO' | 'GASTOS' | 'VENTAS' | 'POR_ANIMAL' | 'EVENT_LOG'>('RESUMEN');
   public selectedSpecies = signal<string>(SPECIES_FILTER_ALL); // 🚀 Filtro maestro de especie
   public selectedLot = signal<string>(LOT_FILTER_ALL); // 🚀 Filtro de lote, combinable (AND) con especie
   public showExpenseModal = signal<boolean>(false);
@@ -155,8 +156,8 @@ export class MainDashboardComponent implements OnInit {
 
   // Sub-tabs financieros/de auditoría — ADMIN-only. GASTOS y POR_ANIMAL se suman aquí a raíz del
   // mismo hallazgo que Cattle Event Log: cattle_expenses alimenta ambos y es dato financiero que
-  // un EDITOR (capataz) no debe poder ver.
-  private static readonly ADMIN_ONLY_SUBTABS = new Set(['EVENT_LOG', 'GASTOS', 'POR_ANIMAL']);
+  // un EDITOR (capataz) no debe poder ver. VENTAS (cattle_sale_income, migration 071) is financial too.
+  private static readonly ADMIN_ONLY_SUBTABS = new Set(['EVENT_LOG', 'GASTOS', 'VENTAS', 'POR_ANIMAL']);
 
   constructor() {
     /**
@@ -555,7 +556,7 @@ export class MainDashboardComponent implements OnInit {
     });
   }
 
-  public setSubTab(subTab: 'RESUMEN' | 'INVENTARIO' | 'GASTOS' | 'POR_ANIMAL' | 'EVENT_LOG') {
+  public setSubTab(subTab: 'RESUMEN' | 'INVENTARIO' | 'GASTOS' | 'VENTAS' | 'POR_ANIMAL' | 'EVENT_LOG') {
     // Defensa en profundidad: aunque el <li> del tab esté oculto en el template, esto bloquea
     // cualquier intento de activar un tab ADMIN-only programáticamente (consola, binding forzado,
     // etc.) para un rol no-ADMIN en la empresa activa.

@@ -34,6 +34,11 @@ export const adminRoutes: Routes = [
         loadComponent: () => import('./components/lifestage-catalog/lifestage-catalog.component').then(m => m.LifestageCatalogComponent)
     },
     {
+        path: 'precios-referencia',
+        canActivate: [roleGuard(['ADMIN'])],
+        loadComponent: () => import('./components/sale-reference-price-list/sale-reference-price-list.component').then(m => m.SaleReferencePriceListComponent)
+    },
+    {
         path: 'autorizaciones',
         canActivate: [roleGuard(['ADMIN'])],
         loadComponent: () => import('./components/authorization-list/authorization-list.component').then(m => m.AuthorizationListComponent)
