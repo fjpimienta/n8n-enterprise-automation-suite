@@ -1,3 +1,5 @@
+import type { StoredSaleData } from './sale.model';
+
 export type TipoEventoAutorizacion = 'BAJA_MORTANDAD' | 'VENTA';
 export type EstadoAutorizacion = 'PENDIENTE' | 'APROBADO' | 'RECHAZADO' | 'EXPIRADO' | 'CANCELADO';
 
@@ -35,6 +37,10 @@ export interface PendingAuthorizationPayload {
   causa_mortandad?: string;
   descripcion?: string;
   fecha_evento?: string;
+  /** Transit guide folio(s) reported by the requester for a VENTA. */
+  guia_transito?: string | null;
+  /** Sale data set by the ADMIN on approval (migration 071), stored by `sp_resolver_autorizacion`. */
+  venta?: StoredSaleData | null;
   [key: string]: unknown;
 }
 

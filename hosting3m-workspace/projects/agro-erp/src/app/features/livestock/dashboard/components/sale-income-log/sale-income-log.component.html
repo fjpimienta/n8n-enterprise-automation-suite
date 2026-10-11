@@ -1,0 +1,109 @@
+<div class="p-3 p-md-4">
+
+    <div class="d-flex flex-wrap align-items-end gap-2 mb-3">
+        <div>
+            <label class="form-label small mb-1">Desde</label>
+            <input type="date" class="form-control form-control-sm" [value]="dateFrom()"
+                (change)="dateFrom.set($any($event.target).value)">
+        </div>
+        <div>
+            <label class="form-label small mb-1">Hasta</label>
+            <input type="date" class="form-control form-control-sm" [value]="dateTo()"
+                (change)="dateTo.set($any($event.target).value)">
+        </div>
+        @if (dateFrom() || dateTo()) {
+        <button class="btn btn-link btn-sm" (click)="clearDates()">Quitar filtro</button>
+        }
+        @if (isLoading()) {
+        <span class="spinner-border spinner-border-sm text-secondary ms-auto" role="status"></span>
+        }
+    </div>
+
+    @if (loadError()) {
+    <div class="alert alert-danger py-2" role="alert">{{ loadError() }}</div>
+    }
+
+    <div class="row row-cards mb-3">
+        <div class="col-6 col-lg-3">
+            <div class="card card-sm">
+                <div class="card-body">
+                    <div class="text-muted small">Total vendido</div>
+                    <div class="h3 mb-0">{{ money(summary().totalAmount) }}</div>
+                    <div class="text-muted small">{{ summary().heads }} cabezas</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card card-sm">
+                <div class="card-body">
+                    <div class="text-muted small">Facturado</div>
+                    <div class="h3 mb-0">{{ money(summary().invoiced) }}</div>
+                    <div class="text-muted small">No facturado: {{ money(summary().notInvoiced) }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card card-sm">
+                <div class="card-body">
+                    <div class="text-muted small">Bancarizado</div>
+                    <div class="h3 mb-0">{{ money(summary().banked) }}</div>
+                    <div class="text-muted small">No bancarizado: {{ money(summary().notBanked) }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-vcenter text-nowrap table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Fecha</th>
+                    <th>Identificador</th>
+                    <th>Categoría</th>
+                    <th>Modo</th>
+                    <th class="text-end">Kg</th>
+                    <th class="text-end">$/kg</th>
+                    <th class="text-end">Importe</th>
+                    <th>Comprador</th>
+                    <th>Forma de pago</th>
+                    <th>Facturado</th>
+                    <th>Bancarizado</th>
+                    <th>Guía</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (r of filteredRows(); track r.income.id) {
+                <tr>
+                    <td>{{ date(r.income.saleDate) }}</td>
+                    <td class="font-monospace">{{ r.identifier }}</td>
+                    <td class="text-muted">{{ r.category }}</td>
+                    <td>{{ saleModeLabel[r.income.saleMode] || r.income.saleMode }}</td>
+                    <td class="text-end">{{ r.income.weightKg !== null ? (r.income.weightKg | number:'1.2-2') : '—' }}</td>
+                    <td class="text-end">{{ r.income.pricePerKg !== null ? money(r.income.pricePerKg) : '—' }}</td>
+                    <td class="text-end font-weight-bold">{{ money(r.income.amount) }}</td>
+                    <td>{{ r.income.buyerName }}</td>
+                    <td>{{ paymentMethodLabel[r.income.paymentMethod] || r.income.paymentMethod }}</td>
+                    <td>
+                        {{ r.income.invoiced ? 'Sí' : 'No' }}
+                        @if (r.income.invoiced && r.income.invoiceFolio) {
+                        <span class="text-muted small">({{ r.income.invoiceFolio }})</span>
+                        }
+                    </td>
+                    <td>{{ r.income.banked ? 'Sí' : 'No' }}</td>
+                    <td class="text-muted">{{ r.income.guiaTransito || '—' }}</td>
+                </tr>
+                } @empty {
+                <tr>
+                    <td colspan="12" class="text-center text-muted py-5">
+                        @if (rows().length === 0) {
+                        Sin ventas registradas en este módulo. Los ingresos se registran al aprobar una venta.
+                        } @else {
+                        Sin ventas en el rango de fechas seleccionado.
+                        }
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

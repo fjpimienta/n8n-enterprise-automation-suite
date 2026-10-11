@@ -21,6 +21,13 @@
     <div class="alert alert-danger" role="alert">{{ adminService.authorizationError() }}</div>
     }
 
+    @if (referencePricesError()) {
+    <div class="alert alert-info py-2 small" role="alert">
+        No se pudieron cargar los precios de referencia ({{ referencePricesError() }}). Al aprobar ventas
+        captura los importes manualmente.
+    </div>
+    }
+
     @if (visibleSanitaryExceptionOffer(); as offer) {
     <div class="alert alert-warning" role="alert">
         <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
@@ -31,7 +38,7 @@
                 <div class="small">{{ offer.motivo }}</div>
             </div>
             <div class="d-flex gap-1 flex-shrink-0">
-                <button class="btn btn-warning btn-sm" (click)="openConfirm(offer.row, 'APROBADO_CON_EXCEPCION')">
+                <button class="btn btn-warning btn-sm" (click)="openConfirm(offer.row, 'APROBADO_CON_EXCEPCION', offer.datosVenta)">
                     <i class="ti ti-alert-triangle"></i> Aprobar con excepción sanitaria
                 </button>
                 <button class="btn btn-outline-secondary btn-sm" (click)="dismissSanitaryExceptionOffer()">
@@ -69,10 +76,34 @@
             } @else {
 
             @if (activeTab() === 'PENDIENTES') {
+            @if (selectableSaleRows().length > 0) {
+            <div class="d-flex flex-wrap align-items-center gap-2 px-3 py-2 border-bottom">
+                @for (g of saleGuides(); track g.guide) {
+                <button class="btn btn-outline-primary btn-sm" (click)="selectGuide(g.guide)">
+                    Seleccionar todos de la guía {{ g.guide }} ({{ g.count }})
+                </button>
+                }
+                <div class="ms-auto d-flex gap-2">
+                    @if (selectedSaleRows().length > 0) {
+                    <button class="btn btn-link btn-sm" (click)="clearSelection()">Limpiar selección</button>
+                    }
+                    <button class="btn btn-success btn-sm" [disabled]="selectedSaleRows().length === 0"
+                        (click)="openBatchApproval()">
+                        <i class="ti ti-checks"></i> Aprobar ventas seleccionadas ({{ selectedSaleRows().length }})
+                    </button>
+                </div>
+            </div>
+            }
             <div class="table-responsive">
                 <table class="table card-table table-vcenter text-nowrap datatable table-hover mb-0">
                     <thead>
                         <tr>
+                            <th class="w-1">
+                                @if (selectableSaleRows().length > 0) {
+                                <input type="checkbox" class="form-check-input m-0" title="Seleccionar todas las ventas"
+                                    [checked]="allSalesSelected()" (change)="toggleAllSales($any($event.target).checked)">
+                                }
+                            </th>
                             <th>Identificador</th>
                             <th>Categoría/Especie</th>
                             <th>Evento</th>
@@ -86,6 +117,15 @@
                     <tbody>
                         @for (item of pendingRows(); track item.row.id) {
                         <tr>
+                            <td>
+                                @if (item.row.tipo_evento === 'VENTA') {
+                                <span [attr.title]="item.expired ? expiredTooltip : null">
+                                    <input type="checkbox" class="form-check-input m-0" [disabled]="item.expired"
+                                        [checked]="!item.expired && isSelected(item.row.id)"
+                                        (change)="toggleSelected(item.row.id, $any($event.target).checked)">
+                                </span>
+                                }
+                            </td>
                             <td class="font-monospace">{{ identifierFor(item.row) }}</td>
                             <td class="text-muted">{{ categorySpeciesFor(item.row) }}</td>
                             <td>{{ tipoEventoLabel(item.row.tipo_evento) }}</td>
@@ -95,25 +135,33 @@
                                 @if (item.row.payload.descripcion) {
                                 <div class="small">{{ item.row.payload.descripcion }}</div>
                                 }
+                                } @else if (item.row.tipo_evento === 'VENTA') {
+                                <div>Guía: {{ guideFor(item.row) || '—' }}</div>
                                 }
                             </td>
                             <td class="text-muted">{{ item.row.solicitado_por_email }}</td>
                             <td class="text-muted">{{ formatTimestamp(item.row.fecha_solicitud) }}</td>
                             <td>
-                                <span class="badge" [ngClass]="severityBadgeClass(item.severity)">
+                                @if (item.expired) {
+                                <span class="badge bg-red-lt" [attr.title]="expiredTooltip">Vencida</span>
+                                } @else {
+                                <span class="badge" [ngClass]="severityBadgeClass(item.severity)"
+                                    [attr.title]="'Vence: ' + item.deadlineLabel + ' (hora del centro de México)'">
                                     {{ item.countdownLabel }}
                                 </span>
+                                }
                             </td>
                             <td>
-                                <div class="d-flex gap-1">
-                                    <button class="btn btn-success btn-sm" (click)="openConfirm(item.row, 'APROBADO')">
+                                <!-- Disabled buttons do not fire mouse events, so the tooltip lives on the wrapper. -->
+                                <div class="d-flex gap-1" [attr.title]="item.expired ? expiredTooltip : null">
+                                    <button class="btn btn-success btn-sm" [disabled]="item.expired" (click)="approve(item.row)">
                                         <i class="ti ti-check"></i> Aprobar
                                     </button>
-                                    <button class="btn btn-danger btn-sm" (click)="openConfirm(item.row, 'RECHAZADO')">
+                                    <button class="btn btn-danger btn-sm" [disabled]="item.expired" (click)="openConfirm(item.row, 'RECHAZADO')">
                                         <i class="ti ti-x"></i> Rechazar
                                     </button>
                                     @if (item.canCancel) {
-                                    <button class="btn btn-outline-secondary btn-sm" (click)="openConfirm(item.row, 'CANCELAR')">
+                                    <button class="btn btn-outline-secondary btn-sm" [disabled]="item.expired" (click)="openConfirm(item.row, 'CANCELAR')">
                                         <i class="ti ti-ban"></i> Cancelar solicitud
                                     </button>
                                     }
@@ -122,7 +170,7 @@
                         </tr>
                         } @empty {
                         <tr>
-                            <td colspan="8" class="text-center py-5">
+                            <td colspan="9" class="text-center py-5">
                                 <div class="empty-state">
                                     <div class="empty-img"><i class="ti ti-shield-check fs-1 text-muted"></i></div>
                                     <p class="empty-title fs-3">No hay autorizaciones pendientes</p>
@@ -149,6 +197,7 @@
                             <th>Estado</th>
                             <th>Resuelto por</th>
                             <th>Fecha resolución</th>
+                            <th>Venta</th>
                             <th>Notas</th>
                         </tr>
                     </thead>
@@ -170,11 +219,12 @@
                             <td><span class="badge" [ngClass]="estadoBadgeClass(row.estado)">{{ row.estado }}</span></td>
                             <td class="text-muted">{{ row.resuelto_por_email || '—' }}</td>
                             <td class="text-muted">{{ formatTimestamp(row.fecha_resolucion) }}</td>
+                            <td>{{ saleSummaryFor(row) || '—' }}</td>
                             <td class="text-muted">{{ row.notas_resolucion || '—' }}</td>
                         </tr>
                         } @empty {
                         <tr>
-                            <td colspan="9" class="text-center py-5">
+                            <td colspan="10" class="text-center py-5">
                                 <div class="empty-state">
                                     <div class="empty-img"><i class="ti ti-history fs-1 text-muted"></i></div>
                                     <p class="empty-title fs-3">Sin historial todavía</p>
@@ -202,7 +252,61 @@
     [variant]="cfg.variant"
     [notesLabel]="cfg.notesLabel"
     [notesRequired]="cfg.notesRequired"
+    [busy]="isSubmitting()"
+    [errorMessage]="actionError()"
     (confirm)="onConfirm($event)"
     (cancel)="closeConfirm()">
 </app-confirm-action-modal>
+}
+
+@if (saleModal(); as sale) {
+<app-sale-approval-modal
+    [items]="sale.items"
+    [variant]="sale.variant"
+    [referencePrices]="referencePrices()"
+    [submitting]="isSubmitting()"
+    [errorMessage]="actionError()"
+    (confirm)="onSaleApprovalSubmit($event)"
+    (cancel)="closeSaleModal()">
+</app-sale-approval-modal>
+}
+
+@if (batchProgress(); as progress) {
+<div class="position-fixed bottom-0 end-0 m-3 alert alert-info shadow" style="z-index: 2000;" role="status">
+    <span class="spinner-border spinner-border-sm me-2"></span>
+    Aprobando ventas: {{ progress.done }} de {{ progress.total }}
+</div>
+}
+
+@if (batchResults(); as results) {
+<div class="modal modal-blur fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" role="document">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header">
+                <h5 class="modal-title font-weight-bold text-body">Resultado de la aprobación por lote</h5>
+                <button type="button" class="btn-close" (click)="closeBatchResults()" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-0">
+                <table class="table table-vcenter mb-0">
+                    <tbody>
+                        @for (r of results; track r.requestId) {
+                        <tr>
+                            <td class="font-monospace">{{ r.identifier }}</td>
+                            <td>
+                                <span class="badge" [ngClass]="batchStatusClass(r.status)">{{ batchStatusLabel(r.status) }}</span>
+                                @if (r.message) { <div class="small text-muted mt-1">{{ r.message }}</div> }
+                            </td>
+                        </tr>
+                        } @empty {
+                        <tr><td class="text-muted text-center py-4">Ninguna de las solicitudes seleccionadas seguía pendiente.</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" (click)="closeBatchResults()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
 }

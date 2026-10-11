@@ -1,0 +1,202 @@
+<div class="container-fluid p-3 p-md-4 animate__animated animate__fadeIn">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+        <div class="d-flex align-items-center gap-3">
+            <div class="d-none d-md-block">
+                <span class="bg-green-lt p-2 rounded-3"><i class="ti ti-tag fs-2"></i></span>
+            </div>
+            <div>
+                <h2 class="page-title mb-0">Precios de referencia</h2>
+                <div class="text-muted small mt-1">
+                    Precargan el importe al aprobar una venta. El importe registrado siempre es el que confirma el administrador.
+                </div>
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary shadow-sm" (click)="load()" [disabled]="isLoading()">
+                <i class="ti ti-refresh me-2"></i> Actualizar
+            </button>
+            <button class="btn btn-primary shadow-sm" (click)="openCreate()">
+                <i class="ti ti-plus me-2"></i> Nuevo precio
+            </button>
+        </div>
+    </div>
+
+    @if (loadError()) {
+    <div class="alert alert-danger" role="alert">{{ loadError() }}</div>
+    }
+
+    <div class="card shadow-sm border-0">
+        <div class="card-header">
+            <label class="form-check form-switch m-0">
+                <input class="form-check-input" type="checkbox" [checked]="showInactive()"
+                    (change)="showInactive.set($any($event.target).checked)">
+                <span class="form-check-label">Mostrar inactivos</span>
+            </label>
+        </div>
+        <div class="card-body p-0">
+            @if (isLoading()) {
+            <div class="text-center text-muted py-5">
+                <div class="spinner-border text-secondary mb-2" role="status"></div>
+                <div>Cargando precios de referencia...</div>
+            </div>
+            } @else {
+            <div class="table-responsive">
+                <table class="table card-table table-vcenter text-nowrap table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Categoría</th>
+                            <th>Modo</th>
+                            <th class="text-end">Importe por animal</th>
+                            <th class="text-end">Precio por kilo</th>
+                            <th>Vigencia</th>
+                            <th>Estado</th>
+                            <th>Notas</th>
+                            <th class="w-1"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (p of visiblePrices(); track p.id) {
+                        <tr [class.text-muted]="!p.isActive">
+                            <td>{{ p.category }}</td>
+                            <td>{{ saleModeLabel[p.saleMode] || p.saleMode }}</td>
+                            <td class="text-end">{{ money(p.referenceAmount) }}</td>
+                            <td class="text-end">{{ p.referencePricePerKg !== null ? money(p.referencePricePerKg) + '/kg' : '—' }}</td>
+                            <td>{{ validityLabel(p) }}</td>
+                            <td>
+                                <span class="badge" [class.bg-green-lt]="p.isActive" [class.bg-secondary-lt]="!p.isActive">
+                                    {{ p.isActive ? 'Activo' : 'Inactivo' }}
+                                </span>
+                            </td>
+                            <td class="text-muted text-wrap">{{ p.notes || '—' }}</td>
+                            <td>
+                                <div class="d-flex gap-1">
+                                    <button class="btn btn-outline-primary btn-sm" (click)="openEdit(p)">
+                                        <i class="ti ti-edit"></i> Editar
+                                    </button>
+                                    @if (p.isActive) {
+                                    <button class="btn btn-outline-danger btn-sm" (click)="askDeactivate(p)">
+                                        <i class="ti ti-ban"></i> Desactivar
+                                    </button>
+                                    } @else {
+                                    <button class="btn btn-outline-success btn-sm" (click)="reactivate(p)">
+                                        <i class="ti ti-refresh"></i> Reactivar
+                                    </button>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                        } @empty {
+                        <tr>
+                            <td colspan="8" class="text-center py-5">
+                                <div class="empty-state">
+                                    <div class="empty-img"><i class="ti ti-tag fs-1 text-muted"></i></div>
+                                    <p class="empty-title fs-3">Sin precios de referencia</p>
+                                    <p class="empty-subtitle text-muted">
+                                        Sin precio de referencia, el importe se captura a mano al aprobar cada venta.
+                                    </p>
+                                </div>
+                            </td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            }
+        </div>
+    </div>
+</div>
+
+@if (form(); as f) {
+<div class="modal modal-blur fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header">
+                <h5 class="modal-title font-weight-bold text-body">
+                    {{ f.id ? 'Editar precio de referencia' : 'Nuevo precio de referencia' }}
+                </h5>
+                <button type="button" class="btn-close" (click)="closeForm()" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label required">Categoría</label>
+                        <select class="form-select" [value]="f.category" (change)="patchForm({ category: $any($event.target).value })">
+                            <option value="" disabled>Selecciona...</option>
+                            @for (c of categories; track c) { <option [value]="c">{{ c }}</option> }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label required">Modo de venta</label>
+                        <select class="form-select" [value]="f.saleMode" (change)="patchForm({ saleMode: $any($event.target).value })">
+                            @for (m of saleModes; track m) { <option [value]="m">{{ saleModeLabel[m] }}</option> }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Importe por animal</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" min="0" step="0.01" class="form-control" [value]="f.referenceAmount ?? ''"
+                                (input)="patchForm({ referenceAmount: parseNumber($any($event.target).value) })">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Precio por kilo</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" min="0" step="0.01" class="form-control" [value]="f.referencePricePerKg ?? ''"
+                                (input)="patchForm({ referencePricePerKg: parseNumber($any($event.target).value) })">
+                            <span class="input-group-text">/kg</span>
+                        </div>
+                    </div>
+                    <div class="col-12">
+                        <small class="form-hint">Indica al menos uno. En ventas por kilo, el precio por kilo × peso precarga el importe.</small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label required">Vigente desde</label>
+                        <input type="date" class="form-control" [value]="f.validFrom"
+                            (change)="patchForm({ validFrom: $any($event.target).value })">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Vigente hasta (opcional)</label>
+                        <input type="date" class="form-control" [value]="f.validTo"
+                            (change)="patchForm({ validTo: $any($event.target).value })">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Notas</label>
+                        <textarea class="form-control" rows="2" [value]="f.notes"
+                            (input)="patchForm({ notes: $any($event.target).value })"></textarea>
+                    </div>
+                </div>
+
+                @if (formErrors().length > 0) {
+                <ul class="text-danger small mt-3 mb-0 ps-3">
+                    @for (e of formErrors(); track e) { <li>{{ e }}</li> }
+                </ul>
+                }
+                @if (formError()) {
+                <div class="alert alert-danger mt-3 mb-0" role="alert">{{ formError() }}</div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="closeForm()" [disabled]="isSaving()">Cancelar</button>
+                <button type="button" class="btn btn-primary" (click)="save()" [disabled]="isSaving() || formErrors().length > 0">
+                    @if (isSaving()) { <span class="spinner-border spinner-border-sm me-2" role="status"></span> }
+                    Guardar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+}
+
+@if (toDeactivate(); as p) {
+<app-confirm-action-modal
+    title="Desactivar precio de referencia"
+    [message]="'¿Desactivar el precio de ' + p.category + ' (' + (saleModeLabel[p.saleMode] || p.saleMode) + ')? Ya no se usará para precargar importes. Las ventas registradas no cambian.'"
+    confirmLabel="Desactivar"
+    variant="danger"
+    (confirm)="confirmDeactivate()"
+    (cancel)="toDeactivate.set(null)">
+</app-confirm-action-modal>
+}

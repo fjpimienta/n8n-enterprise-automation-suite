@@ -5,6 +5,53 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 💰 Ingresos por venta: el ADMIN fija el precio al aprobar (frontend de la migración 071)
+
+El capataz solo **solicita** la venta (animal, fecha, guía de tránsito); el precio lo fija el ADMIN
+al aprobar. Nunca se usan los importes de guías o facturas (suelen ser simbólicos).
+
+* **Aprobar una venta abre un formulario de venta** (en vez del confirm simple): encabezado de solo
+  lectura (identificador, categoría/especie, fecha de venta, guía), modo de venta (por pieza / por
+  kilo / por genética), importe del animal, peso con vista previa de $/kg (solo y obligatorio en
+  POR_KG), comprador, forma de pago (Efectivo / Transferencia), facturado y folio opcional. Se envía
+  como `datos_venta` a `resolver_autorizacion`; nunca se manda email (lo toma el gateway del JWT).
+  BAJA_MORTANDAD no cambia.
+* **Precarga desde precio de referencia:** misma empresa, categoría del animal, modo elegido, activo
+  y vigente en la fecha de venta (`valid_from <= fecha <= valid_to`). Si hay varios, gana el de
+  `valid_from` más reciente. En POR_KG con precio por kilo, el importe es $/kg × peso. El ADMIN
+  siempre puede editarlo; un importe editado a mano ya no se sobrescribe al cambiar modo o peso.
+* **Excepción sanitaria:** se conserva el flujo de 069, reenviando los **mismos** `datos_venta` con
+  `APROBADO_CON_EXCEPCION` y la justificación obligatoria.
+* **Aprobación por lote:** casillas en las ventas pendientes, "Seleccionar todos de la guía X" y
+  "Aprobar ventas seleccionadas". Campos compartidos (modo, comprador, forma de pago, facturado,
+  folio, importe por defecto) y tabla por animal (importe editable precargado, peso y $/kg en
+  POR_KG) con total del lote. Opción de aprobar con excepción sanitaria las que la requieran
+  (justificación obligatoria). Se ejecuta **una llamada por animal, en secuencia**, sin detenerse
+  ante una fila fallida; al final se muestra el resultado por fila (aprobada / aprobada con
+  excepción / pendiente: motivo / error: mensaje) y se recarga la lista.
+* **Historial:** columna "Venta" con importe y modo leídos de `payload.venta`.
+* **Nueva pantalla "Precios de referencia"** (`/admin/precios-referencia`, Configuración, solo
+  ADMIN): alta, edición, desactivación y reactivación por empresa activa. Categorías tomadas de la
+  lista del `CHECK` de `cattle_livestock.category` (nuevo `shared/utils/livestock-category.util.ts`).
+* **Nueva pestaña "Ingresos por Venta"** en el dashboard, junto a "Historial de Gastos" y con el
+  mismo gate ADMIN (nav oculto + `setSubTab()` + `@if`). Filtro por rango de fechas y totales:
+  importe, cabezas, facturado vs. no facturado, bancarizado vs. no bancarizado. Mismo alcance por
+  módulo que Cattle Event Log; una venta cuyo animal no aparece en el hato se muestra igual (nunca
+  se omite de los totales). `sale_date` es fecha calendario: se muestra tal cual, sin convertir de
+  zona horaria (convertirla la recorría al día anterior).
+* Helpers puros en `shared/utils/sale-income.util.ts` (`pickReferencePrice`, `computePricePerKg`,
+  `validateSaleData` espejo de `fn_normalize_sale_data`, `batchTotal`, entre otros) con Vitest
+  standalone (47 casos en total con los specs existentes, verdes en UTC, Asia/Tokyo y CDMX).
+
+⚠️ **Bloqueante para que funcione de punta a punta — gateway, no incluido en este cambio:** el
+`call_sp` de `sp_resolver_autorizacion` en `v6/CRUD` (repo y LOCAL vivo, verificado 2026-10-10) solo
+envía `['request_id', 'decision', 'resuelto_por_email', 'notas']`. `datos_venta` se descarta y toda
+aprobación de VENTA desde el panel falla con P0021 hasta agregarlo al `paramOrder`.
+
+⚠️ **Agente IA:** `sp_review_pending_request` sigue llamando al resolver con 4 argumentos, así que
+aprobar una venta por chat/WhatsApp ahora siempre falla con P0021 (coherente con "el precio solo lo
+fija el ADMIN en el panel", pero el agente debería explicarlo en vez de reportar un error genérico).
+
 ### 🔒 Autorizaciones: frontend alineado con la migración 069 (aprobación solo ADMIN, cancelación por el solicitante)
 
 Adapta `/admin/autorizaciones` a las reglas nuevas de `sp_resolver_autorizacion` /
