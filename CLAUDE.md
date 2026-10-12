@@ -108,17 +108,19 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
     (`crypto.createHash('sha256').update(value).digest('hex')` en `processValue`, mismo
     patrón en `v5` y `v6`). Pendiente: migrar a bcrypt en `jwt-service` al momento del login
     — fuera de alcance de esta nota, solo se documenta el estado actual.
-  - 🔴 **NO verificado — contradicho por lectura directa del código vivo:** se investigó si
-    el nodo `Normalize Data` de `v5/CRUD` o `v6/CRUD` elimina recursivamente la clave
-    `password` de la respuesta antes de devolverla. Leído el cuerpo completo de ambos nodos
-    directamente desde `workflow_entity` en LOCAL (2026-10-05): **ninguno de los dos hace
-    ningún filtrado de claves** — solo reestructuran `data`/`message`/`error` según
-    `operation`. La exposición original (`SELECT ${table}.*` en `Build Query` devuelve
-    *todas* las columnas de `users`, incluido el hash, a cualquier rol en
-    `allowed_roles_select`) sigue así de abierta en ambas versiones, salvo que el cambio se
-    haya aplicado solo en PRODUCCIÓN y no en el clon LOCAL — sin verificar contra el VPS. No
-    se documenta como cerrado porque no se pudo confirmar; ver conversación para el pedido
-    original de documentarlo como resuelto.
+  - **Exposición de `password` (actualizado 2026-10-12):** el export de `v6/CRUD` sincronizado
+    desde PRODUCCIÓN el 2026-10-08 (commit d711672) ya trae en `Normalize Data` un filtro
+    recursivo que quita `password` de toda respuesta (incluye `RETURNING *` y joins). La nota
+    previa (2026-10-05, LOCAL) que decía que ningún nodo filtraba quedó superada. La migración
+    073 agrega defensa en profundidad: `users` con columnas explícitas en `Build Query` (el hash
+    ya no llega ni a n8n), `SELECT` de `users` solo ADMIN, y la vista `vw_company_members` sin
+    `password` para Personal UPP. Sigue pendiente confirmar contra el `workflow_entity` vivo de
+    PRODUCCIÓN que ambos nodos coinciden con el repo.
+  - **`users` es global (migración 073):** una empresa nunca escribe directo en `users` ni en
+    `user_companies`. Altas, cambios de rol y (des)activación van por `sp_access_*`, que impiden
+    modificar la cuenta de alguien que también pertenece a otra empresa. El gateway aplica la
+    misma regla al modelo `users` crudo (lo sigue usando el `dashboard` del hotel): `insert` sin
+    sobrescribir, `update` solo para miembros exclusivos y `delete` bloqueado.
 
 ## Deuda técnica activa a nivel suite
 
