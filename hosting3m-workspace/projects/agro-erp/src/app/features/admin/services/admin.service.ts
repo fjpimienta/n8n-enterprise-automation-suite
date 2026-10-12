@@ -4,7 +4,8 @@ import { catchError, of } from 'rxjs';
 import { ApiResponse } from '@core/interfaces/api-response.interface';
 import { environment } from '@env/environment';
 import { Company } from '@core/models/company.model';
-import { User } from '@core/models/user.model';
+import { AccessProcedureResult, CompanyMember, MemberFormData } from '@core/models/company-member.model';
+import { buildUpdateFields, normalizeEmail } from '@shared/utils/member-access.util';
 import { Guest } from '@core/models/guest.model';
 import { BreedCatalog } from '@core/models/breed-catalog.model';
 import { LifestageCatalog } from '@core/models/lifestage-catalog.model';
@@ -25,9 +26,10 @@ export class AdminService {
   private http = inject(HttpClient);
   private apiUrl_crud = environment.apiUrl_crud;
   private tenantService = inject(TenantService);
-  public loadingUsers = signal<boolean>(false);
+  public loadingMembers = signal<boolean>(false);
+  public members = signal<CompanyMember[]>([]);
+  public membersError = signal<string | null>(null);
   public loadingGuests = signal<boolean>(false);
-  public users = signal<User[]>([]);
   public guests = signal<Guest[]>([]);
   public companies = signal<Company[]>([]);
   public loadingCompanies = signal<boolean>(false);
@@ -134,69 +136,92 @@ export class AdminService {
     });
   }
 
-  /* Users */
-  public loadUsers() {
-    const currentTenantId = this.tenantService.activeTenantId();
-    this.loadingUsers.set(true);
+  /**
+   * Members of the ACTIVE company from `vw_company_members` (model `company_members`, migration 073):
+   * never carries the password, and the gateway scopes it to `x-tenant-id`. Fail-closed: without a
+   * resolved active company nothing is requested and the list stays empty.
+   */
+  public loadMembers(): void {
+    const idCompany = this.tenantService.activeTenantId();
+    if (!idCompany) {
+      this.members.set([]);
+      return;
+    }
+
+    this.loadingMembers.set(true);
+    this.membersError.set(null);
+
     const payload = {
-      entity: 'users',
-      table_name: 'users',
+      entity: 'company_members',
+      table_name: 'vw_company_members',
       operation: 'getall',
-      action: 'list',
-      filters: { tenant_id: Number(currentTenantId) }
+      filters: { id_company: idCompany }
     };
-    this.http.post<ApiResponse<User>>(`${this.apiUrl_crud}/users`, payload, {
+
+    this.http.post<ApiResponse<CompanyMember>>(`${this.apiUrl_crud}/company_members`, payload, {
       headers: this.getAuthHeaders()
-    }).subscribe({
-      next: (res) => {
-        const data = Array.isArray(res.data) ? res.data : [];
+    }).pipe(
+      catchError(() => {
+        this.membersError.set('No se pudo conectar con el servicio de personal.');
+        return of<ApiResponse<CompanyMember>>({ error: true, operation: 'getall', message: '', data: [] });
+      })
+    ).subscribe(res => {
+      // A response for a company that is no longer the active one is discarded.
+      if (this.tenantService.activeTenantId() !== idCompany) return;
 
-        const validData = data.filter(u => u && u.email && u.email.trim() !== '');
-
-        const sortedUsers = validData.sort((a, b) => {
-          return (a.email || '').localeCompare(b.email || '');
-        });
-
-        this.users.set(sortedUsers);
-        this.loadingUsers.set(false);
-      },
-      error: (err) => {
-        console.error('Error en API:', err);
-        this.users.set([]);
-        this.loadingUsers.set(false);
+      // Fail-closed: only `error === false` with a `data` array is a valid list (a null body or an n8n
+      // failure payload is an error, never "no members").
+      if (!res || res.error !== false || !Array.isArray(res.data)) {
+        this.membersError.set((res?.error === true && res.message) || this.membersError() || 'El servidor no confirmó la consulta del personal.');
+        this.members.set([]);
+      } else {
+        const rows = stripPhantomRows(res.data, 'email')
+          .filter(m => Number(m.id_company) === Number(idCompany));
+        this.members.set(rows.sort((a, b) => (a.names || a.email).localeCompare(b.names || b.email)));
       }
+      this.loadingMembers.set(false);
     });
   }
 
-  /* Eliminar usuario (CASCADE elimina automáticamente user_companies vía FK) */
-  public deleteUser(email: string) {
-    const payload = {
-      entity: 'users',
-      table_name: 'users',
-      operation: 'delete',
-      email
-    };
-    return this.http.post<ApiResponse<any>>(`${this.apiUrl_crud}/users`, payload, {
-      headers: this.getAuthHeaders()
+  /**
+   * sp_access_add_user (call_sp). Creates the account only if the email does not exist yet; an
+   * existing account is added to the company untouched (name/password are NOT changed). The actor
+   * email is taken by the gateway from the JWT; the company from `x-tenant-id`.
+   */
+  public addMember(data: MemberFormData) {
+    return this.callAccessProcedure('access_add_user', 'sp_access_add_user', {
+      email: normalizeEmail(data.email),
+      names: data.names.trim(),
+      lastname: (data.lastname ?? '').trim(),
+      phone: (data.phone ?? '').trim(),
+      role: data.role,
+      password: data.password
     });
   }
 
-  /* Guardar o actualizar usuario */
-  public saveUser(user: Partial<User>, operation: 'insert' | 'update', email?: string) {
-    const payload = {
-      entity: 'users',
-      table_name: 'users',
-      operation: operation,
-      email: email,
-      fields: user
-    };
-
-    return this.http.post<ApiResponse<User>>(`${this.apiUrl_crud}/users`, payload, {
-      headers: this.getAuthHeaders()
-    });
+  /** sp_access_update_member (call_sp). Fields come from `buildUpdateFields` (null = keep current). */
+  public updateMember(fields: ReturnType<typeof buildUpdateFields>) {
+    return this.callAccessProcedure('access_update_member', 'sp_access_update_member', fields);
   }
 
-  /* Sincroniza el registro de pertenencia en user_companies (insert en alta, update en edición) */
+  /** sp_access_set_active (call_sp): this company's membership only; never deletes, never touches the account. */
+  public setMemberActive(email: string, isActive: boolean) {
+    return this.callAccessProcedure('access_set_active', 'sp_access_set_active', { email, is_active: isActive });
+  }
+
+  private callAccessProcedure(model: string, procedure: string, fields: Record<string, unknown>) {
+    const payload = { entity: model, table_name: procedure, operation: 'call_sp', fields };
+    return this.http.post<{ error: boolean; message: string; data: AccessProcedureResult | null }>(
+      `${this.apiUrl_crud}/${model}`, payload, { headers: this.getAuthHeaders() }
+    );
+  }
+
+  /**
+   * @deprecated Since migration 073 the gateway rejects writes to `user_companies` (memberships are
+   * written only through sp_access_*). Its only caller (tenant-list, new company) never reaches it:
+   * the JWT carries the email under `user`, not `email`. Granting the creator access to a new company
+   * moves to the Users & Access module (platform admin, migration 074).
+   */
   public saveUserCompany(
     email: string,
     idCompany: number,

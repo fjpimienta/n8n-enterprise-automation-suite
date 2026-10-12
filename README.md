@@ -55,6 +55,7 @@ Agente multimodal con **enrutamiento inteligente** y memoria persistente `pgvect
 
 ### 6. 🛠️ Dynamic CRUD Engine
 Capa de abstracción SQL que actúa como un **Backend as a Service (BaaS)** con persistencia híbrida (SQL + JSONB).
+* **Cuentas de usuario (2026-10-12, `v6/CRUD`):** `users` es una tabla global compartida por todas las apps. El gateway nunca selecciona ni devuelve `password` (columnas explícitas, además del filtro de `Normalize Data`), no la acepta como filtro, búsqueda ni orden, no sobrescribe una cuenta existente en `insert`, solo actualiza a miembros exclusivos de la empresa del `x-tenant-id` y bloquea `delete`. Las membresías (`user_companies`) se escriben solo vía `sp_access_*` (migración 073 de agro-erp).
 
 ### 7. 🏨 MCP Server: Hotel Management
 Implementación del **Model Context Protocol** para consultas de inventario mediante IA en lenguaje natural.
@@ -75,8 +76,8 @@ Librería para la estandarización de documentos salientes con motor de cálculo
 La interfaz pública de alta conversión del ecosistema (*Customer-Facing*) con diseño Eco-Boutique y captura reactiva.
 
 ### 🌾 13. Agro ERP Suite (Ganadería & Agricultura Digital)
-*Actualizado 2026-08-14 — ver `hosting3m-workspace/projects/agro-erp/README.md` y
-`CLAUDE.md` para el detalle técnico completo (v1.9.0–v1.10.0).*
+*Actualizado para agro-erp v1.16.1 (fecha de liberación al desplegarse) — ver `hosting3m-workspace/projects/agro-erp/README.md`
+y su `CHANGELOG.md` para el detalle técnico completo.*
 
 ERP agroindustrial evolucionado a una arquitectura Multi-Dominio para la gestión de biomasa, trazabilidad biológica y telemetría de drones agrícolas (Plantaciones), con registro normativo SENASICA-SINIIGA completo y motor de movilización interestatal REEMO.
 * **Server-Side BI:** Cálculo de KPIs complejos (ADG, Litros por Hectárea) directamente en Vistas SQL.
@@ -84,6 +85,7 @@ ERP agroindustrial evolucionado a una arquitectura Multi-Dominio para la gestió
 * **Inteligencia Artificial de Campo:** Uso del **WhatsApp Field Agent** (MCP) blindado con directivas *Zero-Hallucination* y validación *Human-in-the-Loop* operando bajo el *Context Switcher* Multi-Empresa.
 * **Registro Normativo SENASICA-SINIIGA:** múltiples unidades de producción (UPP) por tenant, propiedad por fierro independiente de la ubicación física del animal, dictámenes de hato libre.
 * **Motor de Movimientos SENASICA-REEMO:** reglas de movimiento UPP↔PSG confirmadas contra reglas de negocio reales del cliente, bitácora de traslados con aislamiento multi-tenant fail-closed, y cadena documental de cumplimiento (guía REEMO, Certificado Zoosanitario, constancia de gusano barrenador, permiso de internación estatal).
+* **Usuarios y Accesos (migración 073, hotfix de seguridad):** Personal UPP administra solo las membresías de la empresa activa mediante procedimientos almacenados (`sp_access_*`, modelos `company_members`, `access_add_user`, `access_update_member`, `access_set_active`); ya no hay escrituras directas a `users`/`user_companies`. Cerrado el secuestro de cuentas compartidas entre empresas, "eliminar" reemplazado por desactivar/reactivar la membresía, y bitácora de solo inserción `access_audit_log` que nunca guarda contraseñas.
 
 ### 🤖 14. MCP Field Agent (Cattle)
 Agente IA agropecuario especializado, blindado con directivas Zero-Hallucination y protocolo Anti-Jailbreak (Human-in-the-Loop). Documentado previamente solo en la tabla técnica de abajo; añadido aquí para que la lista de prosa quede alineada con ella. Ver `workflows/09-MCP-Agent-Cattle/v6/README.md`.
@@ -146,6 +148,9 @@ documentación viva aquí, junto a la librería que lo protege.
 * [x] **Registro Normativo SENASICA-SINIIGA:** UPP/PSG multi-tenant, propiedad por fierro, dictámenes de hato libre.
 * [x] **Motor de Movimientos SENASICA-REEMO:** reglas de movimiento confirmadas, bitácora de traslados, cadena documental de cumplimiento.
 * [x] **Endurecimiento del Media Server:** autenticación JWT/secreto interno en `upload-file`, extensión de `core-auth`.
+
+### ✅ Completado (2026-10, ver módulos 06 y 13 arriba)
+* [x] **Hotfix de seguridad de cuentas de usuario:** cerrado el secuestro de cuentas entre empresas en el gateway Meta-CRUD (afectaba a agro-erp y al `dashboard` del hotel); membresías solo vía procedimientos con reglas en la base y bitácora `access_audit_log` (agro-erp v1.16.1, migración 073; fecha de liberación al desplegarse).
 
 ### 🏗️ En Progreso / Backlog (Q3 / Q4 2026)
 * [ ] **Huéspedes CRM:** Segmentación eco-boutique y analítica de comportamiento.

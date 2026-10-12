@@ -10,6 +10,44 @@ Desarrollada como una **Angular 21 SPA** estructurada por dominios (*Feature-Dri
 
 ---
 
+## 🚀 Key Features (v1.16.1) — Hotfix de seguridad: Usuarios y Accesos
+
+*Parche sobre v1.16.0. La fecha de liberación se fija al desplegarse en producción.*
+
+### 1. 🔐 Personal UPP con acceso acotado por membresía
+* La pantalla **Personal UPP** (`/admin/personal`) ya no escribe directo en `users` ni en `user_companies`: lee la vista `vw_company_members` (modelo `company_members`) y escribe solo a través de tres procedimientos almacenados, `sp_access_add_user`, `sp_access_update_member` y `sp_access_set_active` (modelos `access_add_user`, `access_update_member`, `access_set_active`).
+* Las reglas viven en la base de datos, no en la UI: solo un ADMIN activo de la empresa administra su personal; correo normalizado (trim + minúsculas) y validado; un ADMIN no puede cambiar su propio rol ni desactivarse; ninguna empresa puede quedarse sin ADMIN activo.
+* **"Eliminar" ya no existe:** se reemplazó por **Desactivar / Reactivar acceso a esta empresa**. Solo cambia la membresía de esa empresa; la cuenta global y el acceso a otras empresas no se tocan.
+* El rol `CUSTOMER` se muestra como **"Solo lectura"** (aplica en el panel web; el Agente IA todavía no valida rol — Fase 3).
+
+### 2. 🛡️ Cierre del secuestro de cuentas entre empresas
+* **Hallazgo real:** el alta de usuario del gateway sobrescribía la contraseña y el perfil de una cuenta existente de otra empresa (upsert por correo), y la edición/baja de `users` no tenía alcance por empresa. Existían cuentas reales con acceso a varias empresas, así que era explotable entre cuentas reales.
+* **Ahora:** agregar a una persona que ya tiene cuenta solo crea su membresía — nunca modifica su nombre ni su contraseña. El nombre, teléfono y contraseña de alguien que también pertenece a otra empresa solo los cambia esa persona.
+* El gateway (`v6/CRUD`, nodo Build Query) aplica la misma regla al modelo `users` crudo, que todavía usa el `dashboard` del hotel: `insert` sin sobrescribir, `update` solo para miembros exclusivos de la empresa, `delete` bloqueado; `password` nunca se selecciona, nunca se devuelve y nunca se acepta como filtro, campo de búsqueda ni columna de orden. `SELECT` de `users` queda solo para ADMIN y `user_companies` es de solo lectura vía gateway.
+
+### 3. 🧾 Bitácora de accesos (`access_audit_log`)
+* Tabla de solo inserción con cada alta, cambio de rol, edición de perfil y activación/desactivación: quién, a quién, qué empresa, valor anterior y nuevo.
+* Nunca guarda contraseñas ni hashes (solo `password_changed: true/false`).
+
+### 4. 🗄️ Migración 073 y pruebas
+* `database/migrations/073_users_access_hotfix.sql` — aditiva e idempotente; re-aplicarla después del rollback restaura su configuración completa.
+* `073_users_access_hotfix_rollback.sql` — solo revierte lo que 073 cambió y desactiva (nunca borra) los modelos que creó. ⚠️ Revertir la migración exige volver a desplegar también el frontend anterior.
+* `073_tests.sql` (21 pruebas funcionales, todo con `ROLLBACK`) y `073_state_check.sql` (verificación de solo lectura para la secuencia aplicar → rollback → re-aplicar).
+
+### 🗄️ Migraciones desde v1.16.0
+
+| Migración | Contenido |
+|---|---|
+| `067` | Bitácora de eventos en hora de Ciudad de México (vista; aplicada 2026-10-08, versionada después) |
+| `068` | Corrección de datos: fecha de compra de dos registros del tenant de pruebas (2026-10-08) |
+| `069` | Autorizaciones: aprobar/rechazar solo ADMIN activo de la empresa; cancelación solo por el solicitante |
+| `070` | Corrección de datos (tenant 6): seis ventas directas del 2026-10-03 autorizadas fuera del sistema |
+| `071` | Ingresos por venta: el capataz solicita, el ADMIN fija el precio al aprobar; precios de referencia |
+| `072` | Vencimiento de autorizaciones al final del día en hora de Ciudad de México |
+| `073` | **Hotfix de seguridad: Usuarios y Accesos** (esta versión) |
+
+---
+
 ## 🚀 Key Features (v1.16.0)
 
 ### 1. 🐄 Gestión Avanzada de Hato vía Agente IA — 8 herramientas MCP nuevas
@@ -248,6 +286,9 @@ ng build agro-erp --configuration=production
 - [x] **Tres bugs reales corregidos en `register_livestock_purchase`:** inferencia de UPP desde el lote, bug de tipos `number`/`null` en `current_weight_kg` (y el peso inventado por el Agente IA que ese bug disfrazaba), y validación de identificador duplicado (v1.16.0, 2026-10-04).
 - [ ] **Anulación de eventos sin reversión de estado:** `void_event` no revierte efectos secundarios sobre `cattle_livestock` (ej. categoría tras anular una castración) — decisión de producto pendiente sobre si corregirlo.
 - [ ] **Consulta de historial de eventos por animal:** no existe una tool MCP de lectura para reproducción/desparasitación/castración — las 8 tools nuevas de v1.16.0 son solo de escritura.
+- [x] **Hotfix de seguridad de Usuarios y Accesos (migración 073):** secuestro de cuentas entre empresas cerrado, Personal UPP vía procedimientos con alcance por membresía, desactivar en vez de eliminar, bitácora `access_audit_log` (v1.16.1; fecha de liberación al desplegarse).
+- [ ] **Usuarios y Accesos, fases 1–2 (migración 074+):** administrador de plataforma (`platform_admins`), alcance por UPP/lote (`user_scope`) y `fn_user_can_access`; además "Mi perfil" para que cualquier miembro cambie su propia contraseña.
+- [ ] **Usuarios y Accesos, fase 3:** aplicar rol y alcance en el Agente IA (WhatsApp/Chat Web), las tools MCP y los procedimientos existentes — hoy "Solo lectura" solo aplica en el panel web.
 
 ---
 
