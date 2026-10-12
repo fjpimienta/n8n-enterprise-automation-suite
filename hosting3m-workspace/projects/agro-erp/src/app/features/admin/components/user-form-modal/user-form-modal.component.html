@@ -6,23 +6,48 @@
             <div class="modal-header bg-dark text-white">
                 <h5 class="modal-title">
                     <i class="ti ti-user me-2"></i>
-                    {{ selectedUser() ? 'Actualizar Ficha de Personal' : 'Alta de Nuevo Personal' }}
+                    {{ selectedMember() ? 'Actualizar Ficha de Personal' : 'Alta de Nuevo Personal' }}
                 </h5>
-                <button type="button" class="btn-close btn-close-white" (click)="onClose.emit()"></button>
+                <button type="button" class="btn-close btn-close-white" (click)="onClose.emit()"
+                    [disabled]="isSubmitting()"></button>
             </div>
             <div class="modal-body p-4">
+                @if (errorMessage(); as err) {
+                <div class="alert alert-danger" role="alert">{{ err }}</div>
+                }
+
+                @if (!profileEditable()) {
+                <div class="alert alert-info" role="alert">
+                    Esta persona también tiene acceso a otra empresa. Solo ella puede cambiar su nombre, teléfono o
+                    contraseña; aquí puedes cambiar su rol en esta empresa.
+                </div>
+                }
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Correo Electrónico <span class="text-danger">*</span></label>
+                    <input type="email" class="form-control shadow-sm"
+                        [ngModel]="userData().email" (ngModelChange)="updateField('email', $event)"
+                        [disabled]="selectedMember() !== null || isSubmitting()" placeholder="correo@rancho.com"
+                        autocomplete="off">
+                    @if (selectedMember() !== null) {
+                    <small class="text-muted">El correo identifica a la persona y no puede modificarse.</small>
+                    } @else {
+                    <small class="text-muted">Si la persona ya tiene cuenta en otra empresa, se agrega a esta sin
+                        cambiar su nombre ni su contraseña.</small>
+                    }
+                </div>
                 <div class="row">
                     <div class="col-6 mb-3">
                         <label class="form-label fw-bold">Nombres <span class="text-danger">*</span></label>
                         <input type="text" class="form-control shadow-sm"
                             [ngModel]="userData().names" (ngModelChange)="updateField('names', $event)"
-                            placeholder="Ej. Juan Carlos">
+                            [disabled]="!profileEditable() || isSubmitting()" placeholder="Ej. Juan Carlos">
                     </div>
                     <div class="col-6 mb-3">
                         <label class="form-label fw-bold">Apellidos</label>
                         <input type="text" class="form-control shadow-sm"
                             [ngModel]="userData().lastname" (ngModelChange)="updateField('lastname', $event)"
-                            placeholder="Ej. Hermida">
+                            [disabled]="!profileEditable() || isSubmitting()" placeholder="Ej. Hermida">
                     </div>
                 </div>
                 <div class="row">
@@ -30,49 +55,46 @@
                         <label class="form-label fw-bold">Teléfono (WhatsApp)</label>
                         <input type="tel" class="form-control shadow-sm"
                             [ngModel]="userData().phone" (ngModelChange)="updateField('phone', $event)"
-                            placeholder="Ej. 9930000000">
+                            [disabled]="!profileEditable() || isSubmitting()" placeholder="Ej. 9930000000">
                     </div>
                     <div class="col-6 mb-3">
-                        <label class="form-label fw-bold">Rol Operativo <span class="text-danger">*</span></label>
+                        <label class="form-label fw-bold">Rol en esta empresa <span class="text-danger">*</span></label>
                         <select class="form-select shadow-sm"
-                            [ngModel]="userData().role" (ngModelChange)="updateField('role', $event)">
-                            <option value="ADMIN">Administrador (Acceso Total)</option>
-                            <option value="EDITOR">Operador / Caporal</option>
-                            <option value="CUSTOMER">Veterinario / Consultor</option>
+                            [ngModel]="userData().role" (ngModelChange)="updateField('role', $event)"
+                            [disabled]="roleLocked() || isSubmitting()">
+                            @for (option of roleOptions; track option.value) {
+                            <option [value]="option.value">{{ option.label }}</option>
+                            }
                         </select>
+                        @if (roleLocked()) {
+                        <small class="text-muted">No puedes cambiar tu propio rol.</small>
+                        }
                     </div>
                 </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Correo Electrónico <span class="text-danger">*</span></label>
-                    <input type="email" class="form-control shadow-sm"
-                        [ngModel]="userData().email" (ngModelChange)="updateField('email', $event)"
-                        [disabled]="selectedUser() !== null" placeholder="correo@racho.com">
-                    @if(selectedUser() !== null) {
-                    <small class="text-muted">El correo es la llave primaria y no puede ser modificado.</small>
-                    }
-                </div>
+                <p class="text-muted small mb-3">{{ selectedRoleDescription() }}</p>
                 <div class="mb-3">
                     <label class="form-label fw-bold">Contraseña</label>
                     <input type="password" class="form-control shadow-sm"
                         [ngModel]="userData().password" (ngModelChange)="updateField('password', $event)"
-                        placeholder="{{ selectedUser() ? 'Dejar vacío para mantener actual' : 'Asignar contraseña inicial' }}">
+                        [disabled]="!profileEditable() || isSubmitting()" autocomplete="new-password"
+                        placeholder="{{ selectedMember() ? 'Dejar vacío para mantener la actual' : 'Contraseña inicial (mínimo ' + minPasswordLength + ' caracteres)' }}">
+                    @if (!selectedMember()) {
+                    <small class="text-muted">Solo se usa si la cuenta es nueva.</small>
+                    }
                 </div>
-                @if(selectedUser() !== null) {
-                <div class="mb-3">
-                    <label class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox"
-                            [ngModel]="userData().is_active" (ngModelChange)="updateField('is_active', $event)">
-                        <span class="form-check-label fw-bold">Cuenta Activa</span>
-                    </label>
-                </div>
-                }
             </div>
             <div class="modal-footer">
-                <button class="btn btn-outline-secondary px-4 shadow-sm" (click)="onClose.emit()">
+                <button class="btn btn-outline-secondary px-4 shadow-sm" (click)="onClose.emit()"
+                    [disabled]="isSubmitting()">
                     Cancelar
                 </button>
-                <button class="btn btn-success px-4 shadow-sm" (click)="onSave.emit()">
-                    <i class="ti ti-device-floppy me-2"></i> Guardar Cambios
+                <button class="btn btn-success px-4 shadow-sm" (click)="onSave.emit()" [disabled]="isSubmitting()">
+                    @if (isSubmitting()) {
+                    <span class="spinner-border spinner-border-sm me-2" role="status"></span>
+                    } @else {
+                    <i class="ti ti-device-floppy me-2"></i>
+                    }
+                    Guardar Cambios
                 </button>
             </div>
         </div>

@@ -6,18 +6,31 @@
                 <span class="bg-green-lt p-2 rounded-3"><i class="ti ti-tractor fs-2"></i></span>
             </div>
             <div>
-                <h2 class="page-title mb-0">Personal de la UPP</h2>
-                <div class="text-muted small mt-1">Gestiona los accesos, caporales y administradores</div>
+                <h2 class="page-title mb-0">Personal de la empresa</h2>
+                <div class="text-muted small mt-1">Gestiona los accesos, caporales y administradores de {{ tenantService.activeTenant()?.company_name }}</div>
             </div>
         </div>
         <div>
-            <button class="btn btn-primary shadow-sm" (click)="openModal()">
+            <button class="btn btn-primary shadow-sm" (click)="openModal()" [disabled]="isSubmitting()">
                 <i class="ti ti-user-plus me-2"></i>
                 <span class="d-none d-sm-inline">Registrar Personal</span>
                 <span class="d-inline d-sm-none">Nuevo</span>
             </button>
         </div>
     </div>
+
+    @if (successMessage(); as msg) {
+    <div class="alert alert-success alert-dismissible" role="alert">
+        {{ msg }}
+        <button type="button" class="btn-close" (click)="successMessage.set(null)" aria-label="Cerrar"></button>
+    </div>
+    }
+    @if (errorMessage() || adminService.membersError(); as err) {
+    <div class="alert alert-danger alert-dismissible" role="alert">
+        {{ err }}
+        <button type="button" class="btn-close" (click)="errorMessage.set(null); adminService.membersError.set(null)" aria-label="Cerrar"></button>
+    </div>
+    }
 
     <div class="row g-2 mb-3 align-items-center">
         <div class="col-12 col-md-6">
@@ -34,71 +47,88 @@
             <select class="form-select"
                 [ngModel]="roleFilter()" (ngModelChange)="roleFilter.set($event)">
                 <option value="ALL">Todos los roles</option>
-                <option value="ADMIN">Administradores</option>
-                <option value="EDITOR">Operadores / Caporales</option>
-                <option value="CUSTOMER">Veterinarios / Consultores</option>
+                @for (option of roleOptions; track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+                }
             </select>
         </div>
         <div class="col-12 col-md-2 text-muted small text-end">
-            {{ filteredUsers().length }} / {{ users().length }} registros
+            {{ filteredMembers().length }} / {{ members().length }} registros
         </div>
     </div>
 
+    @if (adminService.loadingMembers() && members().length === 0) {
+    <div class="text-center text-muted py-5">
+        <span class="spinner-border spinner-border-sm me-2" role="status"></span> Cargando personal...
+    </div>
+    } @else {
     <div class="row row-cards">
-        @for (user of filteredUsers(); track user.email) {
+        @for (member of filteredMembers(); track member.email) {
         <div class="col-12 col-md-6 col-xl-4">
             <div class="card shadow-sm border-0 h-100 hover-shadow-lg transition-all"
-                [class.opacity-50]="!user.is_active">
+                [class.opacity-50]="!member.is_active">
                 <div class="card-body d-flex align-items-center p-3">
 
                     <span class="avatar avatar-md me-3 text-uppercase fw-bold rounded shadow-sm"
-                        [class.bg-green-lt]="user.role === 'ADMIN'" [class.bg-orange-lt]="user.role !== 'ADMIN'">
-                        {{ (user.names || '?').charAt(0) }}{{ (user.lastname || '').charAt(0) }}
+                        [class.bg-green-lt]="member.role === 'ADMIN'" [class.bg-orange-lt]="member.role !== 'ADMIN'">
+                        {{ (member.names || '?').charAt(0) }}{{ (member.lastname || '').charAt(0) }}
                     </span>
 
                     <div class="flex-fill overflow-hidden">
                         <div class="font-weight-medium fs-4 text-truncate mb-1">
-                            {{ user.names }} {{ user.lastname }}
+                            {{ member.names }} {{ member.lastname }}
+                            @if (isSelf(member)) { <span class="text-muted small">(tú)</span> }
                         </div>
 
                         <div class="mb-1">
-                            <span class="badge" [class.bg-green-lt]="user.role === 'ADMIN'"
-                                [class.bg-orange-lt]="user.role === 'EDITOR'"
-                                [class.bg-blue-lt]="user.role === 'CUSTOMER'">
-                                {{ user.role === 'ADMIN' ? 'Administrador' : (user.role === 'EDITOR' ? 'Operador' :
-                                'Veterinario') }}
+                            <span class="badge" [class.bg-green-lt]="member.role === 'ADMIN'"
+                                [class.bg-orange-lt]="member.role === 'EDITOR'"
+                                [class.bg-blue-lt]="member.role === 'CUSTOMER'">
+                                {{ roleLabel(member.role) }}
                             </span>
-                            @if(!user.is_active) {
-                            <span class="badge bg-red-lt ms-1">Inactivo</span>
+                            @if (!member.is_active) {
+                            <span class="badge bg-red-lt ms-1">Sin acceso</span>
+                            }
+                            @if (!member.account_is_active) {
+                            <span class="badge bg-yellow-lt ms-1" title="Cuenta desactivada a nivel global (WhatsApp y Chat Web)">Cuenta desactivada</span>
                             }
                         </div>
 
                         <div class="text-muted fs-5 mt-1 text-truncate">
-                            <i class="ti ti-mail me-2"></i> {{ user.email }}
+                            <i class="ti ti-mail me-2"></i> {{ member.email }}
                         </div>
                     </div>
 
                     <div class="ms-3 d-flex flex-column gap-1">
-                        <button class="btn btn-icon btn-outline-secondary btn-sm" (click)="openModal(user)"
-                            title="Editar Perfil">
+                        <button class="btn btn-icon btn-outline-secondary btn-sm" (click)="openModal(member)"
+                            [disabled]="isSubmitting()" title="Editar">
                             <i class="ti ti-edit"></i>
                         </button>
-                        <button class="btn btn-icon btn-outline-danger btn-sm" (click)="deleteUser(user)"
-                            title="Eliminar Personal">
-                            <i class="ti ti-trash"></i>
+                        @if (!isSelf(member)) {
+                        @if (member.is_active) {
+                        <button class="btn btn-icon btn-outline-danger btn-sm" (click)="toggleActive(member)"
+                            [disabled]="isSubmitting()" title="Desactivar acceso a esta empresa">
+                            <i class="ti ti-user-off"></i>
                         </button>
+                        } @else {
+                        <button class="btn btn-icon btn-outline-success btn-sm" (click)="toggleActive(member)"
+                            [disabled]="isSubmitting()" title="Reactivar acceso a esta empresa">
+                            <i class="ti ti-user-check"></i>
+                        </button>
+                        }
+                        }
                     </div>
 
                 </div>
                 <div class="card-progress-bottom"
-                    [style.background-color]="user.role === 'ADMIN' ? '#2fb344' : '#f76707'"></div>
+                    [style.background-color]="member.role === 'ADMIN' ? '#2fb344' : '#f76707'"></div>
             </div>
         </div>
         } @empty {
         <div class="col-12 text-center py-5">
             <div class="empty-state">
                 <div class="empty-img"><i class="ti ti-users-off fs-1 text-muted"></i></div>
-                <p class="empty-title fs-3">No hay personal registrado en esta UPP</p>
+                <p class="empty-title fs-3">No hay personal registrado en esta empresa</p>
                 <p class="empty-subtitle text-muted">Da de alta a tus operadores de campo y administradores para
                     comenzar a operar.</p>
                 <button class="btn btn-primary mt-3" (click)="openModal()">
@@ -108,8 +138,10 @@
         </div>
         }
     </div>
+    }
 </div>
 
-<app-user-form-modal [isOpen]="isModalOpen()" [selectedUser]="selectedUser()" [(userData)]="currentUserData"
-    (onClose)="closeModal()" (onSave)="saveUser()">
+<app-user-form-modal [isOpen]="isModalOpen()" [selectedMember]="selectedMember()" [(userData)]="formData"
+    [profileEditable]="profileEditable()" [roleLocked]="roleLocked()" [isSubmitting]="isSubmitting()"
+    [errorMessage]="modalError()" (onClose)="closeModal()" (onSave)="saveMember()">
 </app-user-form-modal>

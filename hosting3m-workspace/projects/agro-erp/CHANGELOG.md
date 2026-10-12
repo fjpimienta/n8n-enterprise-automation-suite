@@ -5,6 +5,82 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🔒 Hotfix de seguridad: cuentas de usuario compartidas entre empresas (migración 073) — v1.16.1
+
+*Parche sobre v1.16.0; la fecha de liberación se fija al desplegarse en producción.*
+
+Hallazgos F1–F3 del reporte "Usuarios y Accesos" (Step 0, 2026-10-12). En producción existen
+cuentas con acceso a varias empresas (2 a 5 cada una), así que los tres eran explotables entre
+cuentas reales:
+
+* **F1 — secuestro de cuenta:** el `insert` de `users` del gateway era
+  `ON CONFLICT (email) DO UPDATE SET names, password, role, tenant_id…`. El ADMIN de la empresa A
+  que "daba de alta" un correo que ya pertenecía a la empresa B **sobrescribía su contraseña** y
+  podía entrar como esa persona a la empresa B.
+* **F2 — edición/baja global:** `update`/`delete` de `users` no tenían alcance por empresa. Cualquier
+  ADMIN podía cambiar nombre, teléfono, rol global o contraseña de cualquier cuenta, y el botón
+  "Eliminar" de Personal UPP era un soft-delete **global** (`users.is_active = false`): cortaba
+  WhatsApp y Chat Web en todas las empresas de esa persona (el login web seguía funcionando porque
+  `jwt-service` no revisa `users.is_active`).
+* **F3 — lectura de `users`:** `SELECT` permitido a ADMIN, EDITOR y CUSTOMER sobre `users.*`.
+  `Normalize Data` ya quita `password` de la respuesta desde 2026-10-08, pero el hash seguía llegando
+  a n8n y un EDITOR podía listar los datos personales de todo el personal.
+
+**Base de datos (migración 073, aditiva e idempotente, con rollback, 21 pruebas funcionales y `073_state_check.sql` de solo lectura para la secuencia aplicar → rollback → re-aplicar):**
+* `vw_company_members` (modelo `company_members`, solo ADMIN): miembros de **una** empresa, sin
+  `password`. `profile_managed_here = false` indica que la persona también pertenece a otra empresa
+  (sin revelar cuál).
+* `sp_access_add_user` / `sp_access_update_member` / `sp_access_set_active`: única vía de escritura
+  de membresías. Validan en la base: ADMIN activo de la empresa, correo normalizado (trim +
+  minúsculas) y bien formado, una cuenta existente **nunca** se modifica al agregarla a otra empresa,
+  nombre/teléfono/contraseña de una persona compartida solo los cambia ella misma, un ADMIN no puede
+  cambiar su propio rol ni desactivarse, y no se puede dejar a una empresa sin ADMIN activo. Las
+  membresías se desactivan/reactivan, nunca se borran; `users.is_active` no se toca.
+* `access_audit_log` (solo inserción): cada alta, cambio de rol, edición de perfil y
+  (des)activación. Nunca guarda contraseñas ni hashes.
+* `crud_models`: `users` → `SELECT` solo ADMIN y sin `DELETE`; `user_companies` sin
+  `INSERT`/`UPDATE`/`DELETE`.
+  Los 4 modelos nuevos se registran con upsert (`ON CONFLICT (model_name) DO UPDATE`): re-aplicar
+  073 después del rollback restaura su configuración completa. El rollback solo restaura las dos
+  columnas que 073 cambia en `users`/`user_companies` y desactiva (nunca borra) los modelos que creó.
+
+**Gateway (`v6/CRUD`, nodo Build Query):** `users` con columnas explícitas (nunca `password`) en
+`getall`/`getone`/`RETURNING`; `insert` con `DO NOTHING` (nunca sobrescribe); `update` solo si la
+persona pertenece únicamente a la empresa del `x-tenant-id`; `getone` solo miembros de esa empresa;
+`delete` bloqueado; `password` nunca se acepta como filtro, campo de búsqueda ni columna de orden en
+`users`; listar `users`/`company_members` exige `x-tenant-id` (defensa en profundidad: `Get Membresia`
+ya lo niega). Registro de los 3 procedimientos en `spConfigByModel` (actor tomado del JWT).
+
+⚠️ **Rollback = migración + frontend:** el rollback de 073 desactiva `company_members` y los
+`sp_access_*` que usa la nueva pantalla de Personal UPP; si se revierte la migración hay que volver
+a desplegar también el frontend anterior. Los guardias de `users` del Build Query pueden quedarse.
+
+⚠️ **Datos de ejecución de n8n:** el alta/edición vía `sp_access_*` deja la contraseña en texto plano
+en los datos de ejecución de `v6/CRUD` (el webhook y `Get Model Name` ya la tenían antes de 073).
+Recomendado: no guardar ejecuciones exitosas de `v6/CRUD` y activar el pruning por antigüedad.
+También protege la pantalla de usuarios del `dashboard` del hotel, que usa el mismo modelo.
+
+**Frontend (Personal UPP):** lista desde `company_members`; alta y edición vía los procedimientos;
+"Eliminar" reemplazado por **Desactivar/Reactivar acceso a esta empresa** con confirmación; campos
+de perfil bloqueados (con explicación) para personas compartidas; rol bloqueado al editarse a sí
+mismo; CUSTOMER se muestra como **"Solo lectura"**; estados explícitos de envío/éxito/error con el
+mensaje del SP (Silent Error Shield). Se quitó el switch "Cuenta Activa" (era el flag global).
+**Fail-closed:** solo cuenta como éxito una respuesta con `error === false` **y** `data.success === true`
+(`interpretAccessResponse`); cualquier otra (cuerpo vacío, falla de n8n, `error: true`) muestra el
+estado rojo. "La persona ya tenía cuenta" solo aparece si el SP devuelve explícitamente
+`created_account: false` — en pruebas locales, con un Build Query sin la configuración del SP, la
+pantalla mostraba ese mensaje en verde sin haber escrito nada.
+
+⚠️ **Pendientes, fuera de este hotfix:**
+* Los usuarios que el botón "Eliminar" anterior desactivó globalmente siguen con
+  `users.is_active = false` (la lista los marca como "Cuenta desactivada"); su reactivación es una
+  decisión manual.
+* Crear una empresa nunca le dio membresía a su creador (`currentUser()?.email` no existe en el JWT);
+  se resuelve con el administrador de plataforma (migración 074).
+* "Solo lectura" aplica en el panel web; el Agente IA (WhatsApp/Chat) y las tools MCP todavía no
+  validan rol — Fase 3.
+* `jwt-service` compara el correo del login de forma exacta (sensible a mayúsculas).
+
 ### 💰 Ingresos por venta: el ADMIN fija el precio al aprobar (frontend de la migración 071)
 
 El capataz solo **solicita** la venta (animal, fecha, guía de tránsito); el precio lo fija el ADMIN
