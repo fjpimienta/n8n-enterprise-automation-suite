@@ -67,6 +67,44 @@ BEGIN
     END IF;
 END $$;
 
+-- 2d) Friendly message for the same rule. Runs BEFORE INSERT on every path (including the existing
+--     sp_solicitar_autorizacion, which is not modified), so callers get P0036 with a readable text
+--     instead of the raw unique-violation; the unique index above stays the race-proof guarantee.
+CREATE OR REPLACE FUNCTION public.fn_pending_auth_one_pending_guard()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    v_tipo  text;
+    v_por   text;
+BEGIN
+    IF NEW.estado IS DISTINCT FROM 'PENDIENTE' THEN
+        RETURN NEW;
+    END IF;
+    SELECT pa.tipo_evento, pa.solicitado_por_email INTO v_tipo, v_por
+      FROM public.pending_authorizations pa
+     WHERE pa.livestock_id = NEW.livestock_id AND pa.estado = 'PENDIENTE'
+     LIMIT 1;
+    IF FOUND THEN
+        RAISE EXCEPTION 'El animal ya tiene una solicitud pendiente de % (solicitada por %). Cancélala o espera a que se resuelva antes de enviar otra.',
+            CASE v_tipo WHEN 'VENTA' THEN 'venta' WHEN 'BAJA_MORTANDAD' THEN 'baja por mortandad' ELSE lower(v_tipo) END, v_por
+            USING ERRCODE = 'P0036';
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger
+                    WHERE tgname = 'trg_pending_auth_one_pending_guard'
+                      AND tgrelid = 'public.pending_authorizations'::regclass) THEN
+        CREATE TRIGGER trg_pending_auth_one_pending_guard
+            BEFORE INSERT ON public.pending_authorizations
+            FOR EACH ROW EXECUTE FUNCTION public.fn_pending_auth_one_pending_guard();
+    END IF;
+END $$;
+
 -- 3) Order procedure
 CREATE OR REPLACE FUNCTION public.sp_solicitar_venta_orden(
     p_items                jsonb,
@@ -286,6 +324,9 @@ BEGIN
     END IF;
     IF NOT (SELECT allowed_fields ? 'sale_order_id' FROM crud_models WHERE model_name = 'pending_authorizations') THEN
         RAISE EXCEPTION '074: crud_models not updated';
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_pending_auth_one_pending_guard') THEN
+        RAISE EXCEPTION '074: pending guard trigger missing';
     END IF;
     RAISE NOTICE '074: OK';
 END $$;

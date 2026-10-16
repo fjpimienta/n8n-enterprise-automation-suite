@@ -119,19 +119,17 @@ BEGIN
         v_res->'errores'->0->>'error';
     UPDATE user_companies SET role = 'EDITOR' WHERE email = v_user AND id_company = 8;
 
-    -- T11: one PENDIENTE per animal is enforced by the unique index (if it was created)
-    IF to_regclass('public.uq_pending_auth_one_pending_per_animal') IS NOT NULL THEN
-        BEGIN
-            INSERT INTO pending_authorizations (id_company, livestock_id, tipo_evento, payload, solicitado_por_email)
-            SELECT id_company, livestock_id, tipo_evento, payload, solicitado_por_email
-              FROM pending_authorizations WHERE sale_order_id IS NOT NULL AND estado = 'PENDIENTE' LIMIT 1;
-            RAISE NOTICE 'T11 FAIL: second PENDIENTE for the same animal accepted';
-        EXCEPTION WHEN unique_violation THEN
-            RAISE NOTICE 'T11 OK: duplicate PENDIENTE rejected by uq_pending_auth_one_pending_per_animal';
-        END;
-    ELSE
-        RAISE NOTICE 'T11 SKIP: unique index not created (existing duplicates, see migration warning)';
-    END IF;
+    -- T11: a second PENDIENTE for the same animal (any event type) is rejected with a friendly message (P0036)
+    BEGIN
+        INSERT INTO pending_authorizations (id_company, livestock_id, tipo_evento, payload, solicitado_por_email)
+        SELECT id_company, livestock_id, 'BAJA_MORTANDAD', '{"causa_mortandad":"NATURAL"}', solicitado_por_email
+          FROM pending_authorizations WHERE sale_order_id IS NOT NULL AND estado = 'PENDIENTE' LIMIT 1;
+        RAISE NOTICE 'T11 FAIL: second PENDIENTE for the same animal accepted';
+    EXCEPTION WHEN OTHERS THEN
+        RAISE NOTICE 'T11 % (%): %', CASE WHEN SQLSTATE = 'P0036' THEN 'OK' ELSE 'FAIL' END, SQLSTATE, left(SQLERRM, 110);
+    END;
+    RAISE NOTICE 'T11b %: unique index present',
+        CASE WHEN to_regclass('public.uq_pending_auth_one_pending_per_animal') IS NOT NULL THEN 'OK' ELSE 'WARN (not created)' END;
 
     -- T9: unknown requester
     BEGIN
