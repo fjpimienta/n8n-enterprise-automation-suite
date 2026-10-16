@@ -9,10 +9,10 @@
       "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
       "typeVersion": 2,
       "position": [
-        2912,
-        1264
+        512,
+        1088
       ],
-      "id": "d0d5cc20-a489-4e9c-8d70-1e46e14da90a",
+      "id": "9a25245e-3ad9-4484-82c6-3fa4ea4e3df3",
       "name": "MCP Server Cattle",
       "webhookId": "68e31c86-2f32-4234-be5d-32fd5260fd1c",
       "credentials": {
@@ -35,10 +35,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3408,
-        944
+        1008,
+        768
       ],
-      "id": "44dcc00a-9ddd-4a51-b583-987b2bb6ef3a",
+      "id": "01e3ce0c-9528-498d-9cbc-0999d2514a22",
       "name": "get_table_metadata",
       "credentials": {
         "postgres": {
@@ -61,10 +61,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2512,
-        1296
+        112,
+        1120
       ],
-      "id": "13bd85ed-da88-442f-9407-e19a7b6832ba",
+      "id": "933a10de-e0cf-46ca-a363-b100b5a4f66d",
       "name": "log_cattle_weight",
       "credentials": {
         "postgres": {
@@ -86,10 +86,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2352,
-        1296
+        -48,
+        1120
       ],
-      "id": "1bef289b-7a05-4503-8cb7-03c0203b5d9c",
+      "id": "40919612-33ee-407a-8955-2cfe68e5e859",
       "name": "log_health_event",
       "credentials": {
         "postgres": {
@@ -111,10 +111,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3248,
-        944
+        848,
+        768
       ],
-      "id": "94f17040-ec2d-4a27-9956-5bfaa7c3f44f",
+      "id": "e777a45f-7034-41df-bdcd-94af044bce0e",
       "name": "get_livestock_info",
       "credentials": {
         "postgres": {
@@ -136,10 +136,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3584,
-        1488
+        1184,
+        1312
       ],
-      "id": "7bae7c09-a4e2-495a-8677-3fb730622bdc",
+      "id": "ad73d151-d618-4947-8101-f72186528162",
       "name": "register_ranch_expense",
       "credentials": {
         "postgres": {
@@ -161,10 +161,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2192,
-        1296
+        -208,
+        1120
       ],
-      "id": "ea527ecf-e0fc-4446-8723-1d8ae9c52de1",
+      "id": "ae95858a-6d27-4beb-a0a7-d17066cf7574",
       "name": "log_weaning_event",
       "credentials": {
         "postgres": {
@@ -186,10 +186,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2192,
-        1488
+        -208,
+        1312
       ],
-      "id": "47214c09-667e-4e2e-8346-645f32a23856",
+      "id": "95ce9071-46b5-421e-b4cd-6267ce1b0b94",
       "name": "log_mortality_event",
       "credentials": {
         "postgres": {
@@ -201,7 +201,7 @@
     {
       "parameters": {
         "descriptionType": "manual",
-        "toolDescription": "Registers a REQUEST to sell/check-out (dar de baja por venta) a live animal — this does NOT immediately finalize the sale. It creates a pending authorization that an ADMIN/owner must approve from the web panel before the animal's status changes to VENDIDO. Requires the animal's identifier — accepts electronic_rfid, rfid_siniiga, or numero_fuego. Also requires tenant_id and user_email from the current session context.\n\n🛑 CONFIRM BEFORE EXECUTING: Never call this tool in the same turn the user first mentions a sale. Repeat back the animal identifier (and the sale date and transit guide folio(s), if the user gave them) and only call this tool after the user gives an explicit affirmative confirmation in the immediately following turn — same protocol as log_mortality_event.\n\nAfter calling this tool successfully, tell the user their sale request was submitted for authorization and that an ADMIN/owner of the ranch must approve it TODAY BEFORE 6:00 PM Mexico City time or it will expire automatically — do NOT tell the user the animal has been sold, since the actual TB/Brucelosis compliance check and status change only happen once approved.\n\nOptional parameters: fecha_evento (YYYY-MM-DD, the day the sale/movement happened) and guia_transito (transit guide folio(s), comma-separated). Pass them ONLY if the user stated them; never invent or infer them. They are stored in the request so the ADMIN sees them when authorizing. In a batch sale, pass the same values on every call.",
+        "toolDescription": "LEGACY single-animal sale request. For ANY sale use preview_livestock_sale_order + request_livestock_sale_order instead; use this tool only for a newborn calf without ear tag resolved with find_calf_by_dam (livestock_id).\n\nRegisters a REQUEST to sell/check-out (dar de baja por venta) a live animal — this does NOT immediately finalize the sale. It creates a pending authorization that an ADMIN/owner must approve from the web panel before the animal's status changes to VENDIDO. Requires the animal's identifier — accepts electronic_rfid, rfid_siniiga, or numero_fuego. Also requires tenant_id and user_email from the current session context.\n\n🛑 CONFIRM BEFORE EXECUTING: Never call this tool in the same turn the user first mentions a sale. Repeat back the animal identifier (and the sale date and transit guide folio(s), if the user gave them) and only call this tool after the user gives an explicit affirmative confirmation in the immediately following turn — same protocol as log_mortality_event.\n\nAfter calling this tool successfully, tell the user their sale request was submitted for authorization and that an ADMIN/owner of the ranch must approve it before 23:59 (Mexico City time) of today or it will expire automatically — do NOT tell the user the animal has been sold, since the actual TB/Brucelosis compliance check and status change only happen once approved.\n\nOptional parameters: fecha_evento (YYYY-MM-DD, the day the sale/movement happened) and guia_transito (transit guide folio(s), comma-separated). Pass them ONLY if the user stated them; never invent or infer them. They are stored in the request so the ADMIN sees them when authorizing. In a batch sale, pass the same values on every call.",
         "operation": "executeQuery",
         "query": "WITH inp AS (\n  SELECT\n    NULLIF(NULLIF($1::text, 'null'), 'undefined') AS electronic_rfid,\n    NULLIF(NULLIF($2::text, 'null'), 'undefined') AS rfid_siniiga,\n    NULLIF(NULLIF($3::text, 'null'), 'undefined') AS numero_fuego,\n    $4::int AS tenant_id,\n    NULLIF(NULLIF($5::text, 'null'), 'undefined')::uuid AS livestock_id,\n    $6::text AS solicitado_por_email,\n    NULLIF(NULLIF($7::text, 'null'), 'undefined') AS fecha_txt,\n    NULLIF(NULLIF($8::text, 'null'), 'undefined') AS guia_txt\n),\nparams AS (\n  SELECT i.*,\n    jsonb_strip_nulls(jsonb_build_object(\n      'fecha_evento', CASE\n          WHEN i.fecha_txt IS NULL THEN NULL\n          WHEN i.fecha_txt ~ '^\\d{4}-\\d{2}-\\d{2}$' THEN to_char(i.fecha_txt::date, 'YYYY-MM-DD')\n          ELSE (i.fecha_txt || ' (use YYYY-MM-DD)')::date::text\n        END,\n      'guia_transito', left(trim(i.guia_txt), 40)\n    )) AS payload\n  FROM inp i\n),\nauth_check AS (\n  SELECT 1\n  FROM params p\n  JOIN user_companies uc ON uc.id_company = p.tenant_id AND uc.is_active = true\n  JOIN users u ON u.email = uc.email AND u.email = p.solicitado_por_email\n)\nSELECT sp.*\nFROM params p,\nLATERAL sp_solicitar_autorizacion(\n    p_electronic_rfid      := p.electronic_rfid,\n    p_rfid_siniiga         := p.rfid_siniiga,\n    p_numero_fuego         := p.numero_fuego,\n    p_tenant_id            := p.tenant_id,\n    p_tipo_evento          := 'VENTA',\n    p_payload              := p.payload,\n    p_livestock_id         := p.livestock_id,\n    p_solicitado_por_email := p.solicitado_por_email\n) sp\nWHERE EXISTS (SELECT 1 FROM auth_check);",
         "options": {
@@ -211,10 +211,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3584,
-        1312
+        1184,
+        1136
       ],
-      "id": "1bfeee86-ff8f-4af5-b5bc-0f51a9acbd0a",
+      "id": "823192be-6603-450a-8927-8d9f09e0eccb",
       "name": "request_livestock_sale",
       "credentials": {
         "postgres": {
@@ -236,10 +236,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3408,
-        1488
+        1008,
+        1312
       ],
-      "id": "93ceb642-54e8-415c-9c6b-488405a4c482",
+      "id": "514fa340-7f4e-42c1-b4cd-907fbead60c6",
       "name": "register_birth_event",
       "credentials": {
         "postgres": {
@@ -261,10 +261,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3584,
-        944
+        1184,
+        768
       ],
-      "id": "616a3b2d-a19c-4b71-b9de-dfa25e1bed85",
+      "id": "b6d1d52d-26a0-473d-b91f-c3c9621bdebb",
       "name": "find_calf_by_dam",
       "credentials": {
         "postgres": {
@@ -286,10 +286,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3584,
-        1136
+        1184,
+        960
       ],
-      "id": "e5e2ac4d-79f9-412a-8cd4-58a2900a9b60",
+      "id": "7a4ef54a-5cb3-4d0a-b9e6-90d4d2b01225",
       "name": "count_livestock",
       "credentials": {
         "postgres": {
@@ -311,10 +311,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3248,
-        1488
+        848,
+        1312
       ],
-      "id": "dc92c507-41a8-420d-9303-cab1dd666a53",
+      "id": "ef4669f4-b3d2-4fe3-9bb1-433d3a3f8f2c",
       "name": "register_livestock_purchase",
       "credentials": {
         "postgres": {
@@ -336,10 +336,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2352,
-        1488
+        -48,
+        1312
       ],
-      "id": "0172e37e-e819-446d-8252-fb01f1e9bbc0",
+      "id": "0cba2452-626f-40d4-a3fd-6283140e76a5",
       "name": "log_vaccination_event",
       "credentials": {
         "postgres": {
@@ -361,10 +361,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2512,
-        1488
+        112,
+        1312
       ],
-      "id": "74bc4259-a7dc-4bc8-ba23-60a357658ccc",
+      "id": "d3368b98-1ee6-4eae-8cc6-53d15849b115",
       "name": "log_supplement_event",
       "credentials": {
         "postgres": {
@@ -386,10 +386,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2688,
-        1488
+        288,
+        1312
       ],
-      "id": "4e8d0e6a-7ebc-4418-b07c-fe51b66e1653",
+      "id": "06d9cffd-f840-4459-bc2f-681989b493f5",
       "name": "log_palpation_event",
       "credentials": {
         "postgres": {
@@ -411,10 +411,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3408,
-        1136
+        1008,
+        960
       ],
-      "id": "ba320ec8-5838-437f-a131-d7917e7b6334",
+      "id": "5622068d-0872-4ed2-bca4-26c7203e5984",
       "name": "find_livestock_by_criteria",
       "credentials": {
         "postgres": {
@@ -436,10 +436,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3408,
-        1312
+        1008,
+        1136
       ],
-      "id": "bbd8c51c-6768-4045-8b61-8e2f4f558af5",
+      "id": "bebb3870-4c9d-4c25-a04e-eb4e464c0b7a",
       "name": "move_livestock",
       "credentials": {
         "postgres": {
@@ -461,10 +461,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3760,
-        1136
+        1360,
+        960
       ],
-      "id": "6784c097-cfe9-41db-b0b2-432269e40e4a",
+      "id": "025a57e5-3e2a-4804-955a-1d6ebd5893c8",
       "name": "list_pending_requests",
       "credentials": {
         "postgres": {
@@ -486,10 +486,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3760,
-        1312
+        1360,
+        1136
       ],
-      "id": "95310ef6-afb3-45d0-8139-7e721a2604a3",
+      "id": "c7d93cc2-0b14-453e-b499-caefda458710",
       "name": "review_pending_request",
       "credentials": {
         "postgres": {
@@ -511,10 +511,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2528,
-        1104
+        128,
+        928
       ],
-      "id": "209520c1-5634-4884-885d-3783e5e7f591",
+      "id": "9b225c4f-57d0-44e3-828e-cd55d4b83359",
       "name": "log_breeding_event",
       "credentials": {
         "postgres": {
@@ -536,10 +536,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2352,
-        1104
+        -48,
+        928
       ],
-      "id": "a9019858-b509-4edd-8897-be1b8d0e7044",
+      "id": "75cd803b-861d-4133-b7a8-6a246b1bffc8",
       "name": "log_deworming_event",
       "credentials": {
         "postgres": {
@@ -561,10 +561,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3760,
-        1488
+        1360,
+        1312
       ],
-      "id": "344dbd76-d117-4dd8-aa5c-6df3cfed2e89",
+      "id": "9fe22ade-147b-4114-a9a3-7ca24b9ac712",
       "name": "update_livestock_tag",
       "credentials": {
         "postgres": {
@@ -586,10 +586,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2192,
-        1104
+        -208,
+        928
       ],
-      "id": "54e60cc3-9cfe-4a04-a9d5-2bcc1bad3d03",
+      "id": "913f68de-6c9e-48da-9159-d0b8b286a78a",
       "name": "log_castration_event",
       "credentials": {
         "postgres": {
@@ -611,10 +611,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3248,
-        1312
+        848,
+        1136
       ],
-      "id": "6cb2f3ef-9bcf-4af2-9441-2ae0b36ce65d",
+      "id": "8177c5a6-f1af-41ba-b66c-4188c0800701",
       "name": "void_event",
       "credentials": {
         "postgres": {
@@ -636,10 +636,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2688,
-        1296
+        288,
+        1120
       ],
-      "id": "0df4d505-a6a4-4b4b-9b03-41bae5dfda69",
+      "id": "3762e49a-fc4b-46d5-bb41-8cd603716f43",
       "name": "log_palpation_event_batch",
       "credentials": {
         "postgres": {
@@ -661,10 +661,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3248,
-        1136
+        848,
+        960
       ],
-      "id": "013cbfc2-f3d6-466c-9275-0e08a99d0991",
+      "id": "1759c897-0c49-487a-a64a-6561a2920ee7",
       "name": "list_lots",
       "credentials": {
         "postgres": {
@@ -686,11 +686,61 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3744,
-        944
+        1344,
+        768
       ],
-      "id": "530495fd-c126-4572-bf0c-4fd2af5fe07e",
+      "id": "69d02334-d241-4ba9-b7a6-6e0eed7ceb14",
       "name": "cancel_pending_request",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "READ-ONLY preview of a SALE ORDER (orden de venta). Use it FIRST whenever the user asks to sell one or more animals, before showing the confirmation summary. It looks up every identifier ONLY among the companies the user belongs to (any UPP or lot), and returns: total, validos, errores (identifier + reason, e.g. 'No existe en tus empresas', 'Ya tiene una solicitud pendiente', 'Estatus VENDIDO', 'Falta la guía de tránsito') and grupos (empresa, upp, guia_transito, cantidad, por_categoria, aretes). Nothing is written. Build the confirmation summary ONLY from this result, grouped by empresa / UPP / guía. Never ask for or mention prices.",
+        "operation": "executeQuery",
+        "query": "SELECT sp_solicitar_venta_orden(\n    $1::jsonb,\n    $2::varchar,\n    NULLIF(NULLIF(NULLIF($3::text, 'null'), 'undefined'), '')::date,\n    true,\n    'AGENTE'\n) AS result;",
+        "options": {
+          "queryReplacement": "={{ [ $fromAI('items_json', 'JSON array (as text) with ONE object per animal of the order, in the order the user gave them: [{\\\"identificador\\\": \\\"<ear tag / RFID / fire number exactly as the user wrote it>\\\", \\\"guia_transito\\\": \\\"<transit guide folio of the group of that animal>\\\"}]. Every animal needs its guia_transito: animals of the same UPP share the guide the user gave for that group. Never invent identifiers or guides; ask the user if a guide is missing.', 'string'), $fromAI('user_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string'), $fromAI('fecha_evento', 'Sale date YYYY-MM-DD, ONLY if the user said it (\\\"ayer\\\" = the day before HOY ES). Omit otherwise (today is used).', 'string', null) ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        1184,
+        1336
+      ],
+      "id": "24f900ff-a52b-4cb8-b184-2a1f98ed7fd3",
+      "name": "preview_livestock_sale_order",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Creates a SALE ORDER (orden de venta): one pending authorization per animal, each in the company where the animal lives, all linked by the same order code (OV-000123). Call it ONLY after preview_livestock_sale_order returned no errors AND the user explicitly confirmed (\"Sí\") the summary in the immediately following turn, with EXACTLY the same items_json and fecha_evento used in the preview. It is all-or-nothing: if any animal fails, nothing is created and the error lists each identifier with its reason; relay it literally. On success report: orden_venta, number of animals per empresa/UPP/guía, status PENDIENTE, and that an ADMIN of EACH company must approve its part in the web panel before 23:59 (Mexico City) of today, where the price is captured. Never say the animals were sold. This tool does NOT take prices.",
+        "operation": "executeQuery",
+        "query": "SELECT sp_solicitar_venta_orden(\n    $1::jsonb,\n    $2::varchar,\n    NULLIF(NULLIF(NULLIF($3::text, 'null'), 'undefined'), '')::date,\n    false,\n    'AGENTE'\n) AS result;",
+        "options": {
+          "queryReplacement": "={{ [ $fromAI('items_json', 'JSON array (as text) with ONE object per animal of the order, in the order the user gave them: [{\\\"identificador\\\": \\\"<ear tag / RFID / fire number exactly as the user wrote it>\\\", \\\"guia_transito\\\": \\\"<transit guide folio of the group of that animal>\\\"}]. Every animal needs its guia_transito: animals of the same UPP share the guide the user gave for that group. Never invent identifiers or guides; ask the user if a guide is missing.', 'string'), $fromAI('user_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string'), $fromAI('fecha_evento', 'Sale date YYYY-MM-DD, ONLY if the user said it (\\\"ayer\\\" = the day before HOY ES). Omit otherwise (today is used).', 'string', null) ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        1504,
+        1336
+      ],
+      "id": "f5ba8e2d-4ad9-43ad-b4f0-646351183300",
+      "name": "request_livestock_sale_order",
       "credentials": {
         "postgres": {
           "id": "BQrod4uGVzM1nvLw",
@@ -997,6 +1047,28 @@
           }
         ]
       ]
+    },
+    "preview_livestock_sale_order": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "request_livestock_sale_order": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -1009,7 +1081,6 @@
     "timeSavedMode": "fixed",
     "timeSavedPerExecution": 3
   },
-  "versionId": "dc9d541c-f5d8-497d-8a71-56a8d1f902b2",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
@@ -1018,16 +1089,10 @@
   "id": "pJ3CEaO70QEiGL0C",
   "tags": [
     {
-      "updatedAt": "2025-12-31T16:55:06.301Z",
-      "createdAt": "2025-12-31T16:55:06.301Z",
-      "id": "ts9FABk8F02a5xrA",
-      "name": "Agent IA"
-    },
-    {
-      "updatedAt": "2025-12-23T12:12:58.230Z",
-      "createdAt": "2025-12-23T12:12:58.230Z",
-      "id": "MKrwsTVnLLBXLfUP",
-      "name": "Chat"
+      "updatedAt": "2026-06-02T17:44:17.958Z",
+      "createdAt": "2026-06-02T17:44:17.958Z",
+      "id": "6NGDwjjesOlJeGQr",
+      "name": "v6"
     },
     {
       "updatedAt": "2025-12-23T12:12:28.399Z",
@@ -1036,10 +1101,16 @@
       "name": "AI Agent"
     },
     {
-      "updatedAt": "2026-06-02T17:44:17.958Z",
-      "createdAt": "2026-06-02T17:44:17.958Z",
-      "id": "6NGDwjjesOlJeGQr",
-      "name": "v6"
+      "updatedAt": "2025-12-23T12:12:58.230Z",
+      "createdAt": "2025-12-23T12:12:58.230Z",
+      "id": "MKrwsTVnLLBXLfUP",
+      "name": "Chat"
+    },
+    {
+      "updatedAt": "2025-12-31T16:55:06.301Z",
+      "createdAt": "2025-12-31T16:55:06.301Z",
+      "id": "ts9FABk8F02a5xrA",
+      "name": "Agent IA"
     }
   ]
 }
