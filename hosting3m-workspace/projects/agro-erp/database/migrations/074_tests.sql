@@ -1,4 +1,4 @@
--- 074_tests.sql — functional checks for migration 074 (LOCAL first). Everything is rolled back at the end.
+-- 074_tests.sql — functional checks for migration 074 (LOCAL only). Everything is rolled back at the end.
 -- Uses the 38 animals registered by alta_38_bendicion_20261015.sql (company 5: 33, company 8: 5)
 -- and fjpimienta@gmail.com (member of company 5, NOT of company 8).
 BEGIN;
@@ -110,6 +110,28 @@ BEGIN
     EXCEPTION WHEN OTHERS THEN
         RAISE NOTICE 'T8 OK (%): %', SQLSTATE, left(SQLERRM, 80);
     END;
+
+    -- T10: a read-only membership cannot request sales (role allowlist ADMIN/EDITOR)
+    UPDATE user_companies SET role = 'CUSTOMER' WHERE email = v_user AND id_company = 8;
+    v_res := sp_solicitar_venta_orden('[{"identificador":"0724019910","guia_transito":"7139697"}]', v_user, NULL, true, 'TEST');
+    RAISE NOTICE 'T10 %: %',
+        CASE WHEN v_res->'errores'->0->>'error' = 'Tu acceso a la empresa de este animal es de solo lectura' THEN 'OK' ELSE 'FAIL' END,
+        v_res->'errores'->0->>'error';
+    UPDATE user_companies SET role = 'EDITOR' WHERE email = v_user AND id_company = 8;
+
+    -- T11: one PENDIENTE per animal is enforced by the unique index (if it was created)
+    IF to_regclass('public.uq_pending_auth_one_pending_per_animal') IS NOT NULL THEN
+        BEGIN
+            INSERT INTO pending_authorizations (id_company, livestock_id, tipo_evento, payload, solicitado_por_email)
+            SELECT id_company, livestock_id, tipo_evento, payload, solicitado_por_email
+              FROM pending_authorizations WHERE sale_order_id IS NOT NULL AND estado = 'PENDIENTE' LIMIT 1;
+            RAISE NOTICE 'T11 FAIL: second PENDIENTE for the same animal accepted';
+        EXCEPTION WHEN unique_violation THEN
+            RAISE NOTICE 'T11 OK: duplicate PENDIENTE rejected by uq_pending_auth_one_pending_per_animal';
+        END;
+    ELSE
+        RAISE NOTICE 'T11 SKIP: unique index not created (existing duplicates, see migration warning)';
+    END IF;
 
     -- T9: unknown requester
     BEGIN

@@ -47,6 +47,26 @@ ALTER TABLE public.pending_authorizations
     ADD COLUMN IF NOT EXISTS sale_order_id uuid REFERENCES public.sale_orders(id);
 CREATE INDEX IF NOT EXISTS idx_pending_auth_sale_order ON public.pending_authorizations (sale_order_id);
 
+-- 2b) Version notified_at (already present in the live schema; used by the notification workflow)
+ALTER TABLE public.pending_authorizations ADD COLUMN IF NOT EXISTS notified_at timestamp;
+
+-- 2c) At most one PENDING request per animal (guards concurrent requests from any procedure).
+--     Created only when no duplicates exist today; otherwise reported and skipped (no data is changed).
+DO $$
+DECLARE v_dup int;
+BEGIN
+    SELECT count(*) INTO v_dup FROM (
+        SELECT livestock_id FROM public.pending_authorizations
+         WHERE estado = 'PENDIENTE' GROUP BY livestock_id HAVING count(*) > 1) d;
+    IF v_dup = 0 THEN
+        EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS uq_pending_auth_one_pending_per_animal
+                   ON public.pending_authorizations (livestock_id) WHERE estado = ''PENDIENTE''';
+        RAISE NOTICE '074: unique pending-per-animal index in place';
+    ELSE
+        RAISE WARNING '074: % animal(s) already have more than one PENDIENTE request; unique index NOT created. Resolve them and re-run.', v_dup;
+    END IF;
+END $$;
+
 -- 3) Order procedure
 CREATE OR REPLACE FUNCTION public.sp_solicitar_venta_orden(
     p_items                jsonb,
@@ -69,16 +89,23 @@ DECLARE
     r            record;
     v_n          int;
     v_animal     cattle_livestock%ROWTYPE;
+    v_ro_companies int[];
 BEGIN
     -- Requester: active user with at least one active membership
     IF v_email = '' THEN
         RAISE EXCEPTION 'Se requiere el email de quien solicita la venta' USING ERRCODE = 'P0007';
     END IF;
-    SELECT array_agg(DISTINCT uc.id_company) INTO v_companies
+    -- Only ADMIN / EDITOR memberships can request sales (fail-closed: any other role is read-only here)
+    SELECT array_agg(DISTINCT uc.id_company) FILTER (WHERE upper(uc.role) IN ('ADMIN', 'EDITOR')),
+           array_agg(DISTINCT uc.id_company) FILTER (WHERE upper(coalesce(uc.role, '')) NOT IN ('ADMIN', 'EDITOR'))
+      INTO v_companies, v_ro_companies
       FROM user_companies uc JOIN users u ON lower(u.email) = lower(uc.email)
      WHERE lower(uc.email) = v_email AND uc.is_active AND u.is_active;
-    IF v_companies IS NULL THEN
+    IF v_companies IS NULL AND v_ro_companies IS NULL THEN
         RAISE EXCEPTION 'El usuario no pertenece a ninguna empresa activa' USING ERRCODE = 'P0031';
+    END IF;
+    IF v_companies IS NULL THEN
+        RAISE EXCEPTION 'Tu acceso es de solo lectura: no puedes solicitar ventas' USING ERRCODE = 'P0035';
     END IF;
 
     IF p_items IS NULL OR jsonb_typeof(p_items) <> 'array' OR jsonb_array_length(p_items) = 0 THEN
@@ -117,7 +144,14 @@ BEGIN
            AND (l.rfid_siniiga = r.identificador OR l.electronic_rfid = r.identificador
                 OR l.numero_fuego = r.identificador);
         IF v_n = 0 THEN
-            UPDATE tmp_sale_order_items SET error = 'No existe en tus empresas' WHERE pos = r.pos;
+            UPDATE tmp_sale_order_items
+               SET error = CASE WHEN EXISTS (SELECT 1 FROM cattle_livestock l
+                                              WHERE l.tenant_id = ANY (coalesce(v_ro_companies, '{}'))
+                                                AND (l.rfid_siniiga = r.identificador OR l.electronic_rfid = r.identificador
+                                                     OR l.numero_fuego = r.identificador))
+                                THEN 'Tu acceso a la empresa de este animal es de solo lectura'
+                                ELSE 'No existe en tus empresas' END
+             WHERE pos = r.pos;
         ELSIF v_n > 1 THEN
             UPDATE tmp_sale_order_items
                SET error = 'Identificador ambiguo (' || v_n || ' animales); usa el arete SINIIGA' WHERE pos = r.pos;
@@ -178,6 +212,26 @@ BEGIN
 
     IF v_errors > 0 THEN
         RAISE EXCEPTION 'La orden no se registró: % animal(es) con error: %', v_errors,
+            (SELECT string_agg(identificador || ' (' || error || ')', '; ' ORDER BY pos)
+               FROM tmp_sale_order_items WHERE error IS NOT NULL)
+            USING ERRCODE = 'P0034';
+    END IF;
+
+    -- Concurrency: lock the animals, then re-check status and pending requests under the lock
+    PERFORM 1 FROM cattle_livestock
+     WHERE id IN (SELECT livestock_id FROM tmp_sale_order_items) ORDER BY id FOR UPDATE;
+    UPDATE tmp_sale_order_items t
+       SET error = 'Ya tiene una solicitud pendiente'
+     WHERE EXISTS (SELECT 1 FROM pending_authorizations pa
+                    WHERE pa.livestock_id = t.livestock_id AND pa.estado = 'PENDIENTE');
+    UPDATE tmp_sale_order_items t
+       SET error = 'Estatus ' || l.current_status || ': no se puede vender'
+      FROM cattle_livestock l
+     WHERE l.id = t.livestock_id AND t.error IS NULL
+       AND l.current_status IN ('VENDIDO', 'BAJA_MORTANDAD', 'BAJA_DEPURACION_DATOS', 'FINALIZADO');
+    IF EXISTS (SELECT 1 FROM tmp_sale_order_items WHERE error IS NOT NULL) THEN
+        RAISE EXCEPTION 'La orden no se registró: % animal(es) con error: %',
+            (SELECT count(*) FROM tmp_sale_order_items WHERE error IS NOT NULL),
             (SELECT string_agg(identificador || ' (' || error || ')', '; ' ORDER BY pos)
                FROM tmp_sale_order_items WHERE error IS NOT NULL)
             USING ERRCODE = 'P0034';
