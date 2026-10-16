@@ -136,6 +136,20 @@ export function formatCalendarDate(value: string | null | undefined): string {
   return match ? `${match[3]}/${match[2]}/${match[1]}` : '—';
 }
 
+/**
+ * Deadline text of a pending request (migration 072 rule): "Vence hoy a las 23:59 (hora CDMX)"
+ * while its CDMX request day is today, "Vencida" once past it.
+ */
+export function formatDeadlineNotice(fechaSolicitud: string, nowMs: number): string {
+  if (isAuthorizationExpired(fechaSolicitud, nowMs)) return 'Vencida';
+  const requestDay = authorizationLocalDate(fechaSolicitud);
+  const now = localParts(nowMs);
+  const today = `${now.year}-${String(now.month).padStart(2, '0')}-${String(now.day).padStart(2, '0')}`;
+  return requestDay === today
+    ? 'Vence hoy a las 23:59 (hora CDMX)'
+    : `Vence el ${formatCalendarDate(requestDay)} a las 23:59 (hora CDMX)`;
+}
+
 export type CountdownSeverity = 'ok' | 'warning' | 'danger';
 
 /** Verde (>4h), amarillo (≤4h), rojo (<1h) — umbrales tal cual definidos en el alcance. */

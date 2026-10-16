@@ -39,6 +39,8 @@ export interface PendingAuthorizationPayload {
   fecha_evento?: string;
   /** Transit guide folio(s) reported by the requester for a VENTA. */
   guia_transito?: string | null;
+  /** Sale order code (e.g. `OV-000003`) when the request belongs to a sale order (migration 074). */
+  orden_venta?: string | null;
   /** Sale data set by the ADMIN on approval (migration 071), stored by `sp_resolver_autorizacion`. */
   venta?: StoredSaleData | null;
   [key: string]: unknown;
@@ -48,6 +50,8 @@ export interface PendingAuthorization {
   id: string;
   id_company: number;
   livestock_id: string;
+  /** `sale_orders.id` (migration 074); null for requests made before sale orders existed. */
+  sale_order_id?: string | null;
   tipo_evento: TipoEventoAutorizacion;
   payload: PendingAuthorizationPayload;
   solicitado_por_email: string;

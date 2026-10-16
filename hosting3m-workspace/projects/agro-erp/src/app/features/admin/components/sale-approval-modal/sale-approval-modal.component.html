@@ -6,7 +6,7 @@
             <div class="modal-header">
                 <h5 class="modal-title font-weight-bold text-body">
                     <span class="status-dot status-blue me-2"></span>
-                    {{ isBatch() ? 'Aprobar ventas seleccionadas (' + rows().length + ')' : 'Aprobar venta' }}
+                    {{ isBatch() ? (title() || 'Aprobar ventas seleccionadas') + ' (' + rows().length + ')' : 'Aprobar venta' }}
                 </h5>
                 <button type="button" class="btn-close" (click)="onCancel()" [disabled]="submitting()" aria-label="Cerrar"></button>
             </div>
@@ -41,9 +41,21 @@
                         </select>
                     </div>
 
-                    @if (isBatch()) {
+                    @if (isBatch() && isPorKg()) {
                     <div class="col-md-6">
-                        <label class="form-label">Importe por defecto (por animal)</label>
+                        <label class="form-label">Precio por kg</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" min="0" step="0.01" class="form-control"
+                                [value]="defaultPricePerKg() ?? ''" (input)="defaultPricePerKg.set(parseNumber($any($event.target).value))">
+                            <button type="button" class="btn btn-outline-secondary" [disabled]="defaultPricePerKg() === null"
+                                (click)="applyPricePerKgToAll()">Aplicar a todas</button>
+                        </div>
+                        <small class="form-hint">Importe de cada animal = su peso × precio por kg (2 decimales). Captura el peso en cada fila.</small>
+                    </div>
+                    } @else if (isBatch()) {
+                    <div class="col-md-6">
+                        <label class="form-label">Precio por cabeza</label>
                         <div class="input-group">
                             <span class="input-group-text">$</span>
                             <input type="number" min="0" step="0.01" class="form-control"
@@ -51,7 +63,7 @@
                             <button type="button" class="btn btn-outline-secondary" [disabled]="defaultAmount() === null"
                                 (click)="applyDefaultToAll()">Aplicar a todas</button>
                         </div>
-                        <small class="form-hint">Se usa en las filas sin precio de referencia.</small>
+                        <small class="form-hint">Precarga las filas sin precio de referencia; cada fila sigue siendo editable.</small>
                     </div>
                     } @else if (rows()[0]; as first) {
                     <div class="col-md-6">
@@ -122,6 +134,7 @@
                         <thead>
                             <tr>
                                 <th>Identificador</th>
+                                <th>Fuego</th>
                                 <th>Categoría</th>
                                 @if (isPorKg()) { <th style="width: 8rem;">Peso (kg)</th> }
                                 <th style="width: 10rem;">Importe</th>
@@ -132,6 +145,7 @@
                             @for (row of rows(); track row.item.requestId; let i = $index) {
                             <tr>
                                 <td class="font-monospace">{{ row.item.identifier }}</td>
+                                <td class="text-muted">{{ row.item.fireNumber || '—' }}</td>
                                 <td class="text-muted">{{ row.item.category || '—' }}</td>
                                 @if (isPorKg()) {
                                 <td>
@@ -154,7 +168,7 @@
                         </tbody>
                         <tfoot>
                             <tr>
-                                <th [attr.colspan]="isPorKg() ? 3 : 2" class="text-end">Total del lote</th>
+                                <th [attr.colspan]="isPorKg() ? 4 : 3" class="text-end">Total del lote</th>
                                 <th>{{ money(total()) }}</th>
                                 @if (isPorKg()) { <th></th> }
                             </tr>
@@ -163,6 +177,19 @@
                     <button type="button" class="btn btn-link btn-sm px-0" (click)="resetAmounts()">
                         Restablecer importes de referencia
                     </button>
+                </div>
+
+                <div class="mt-3">
+                    <label class="form-check">
+                        <input type="checkbox" class="form-check-input" [checked]="totalConfirmed()"
+                            [disabled]="errors().length > 0" (change)="setTotalConfirmed($any($event.target).checked)">
+                        <span class="form-check-label font-weight-bold">
+                            Confirmo el total del lote: {{ money(total()) }} por {{ rows().length }} animales
+                        </span>
+                    </label>
+                    @if (!totalConfirmed() && errors().length === 0) {
+                    <small class="form-hint">Revisa el importe de cada fila; si cambias alguno, vuelve a confirmar.</small>
+                    }
                 </div>
 
                 <div class="mt-3">

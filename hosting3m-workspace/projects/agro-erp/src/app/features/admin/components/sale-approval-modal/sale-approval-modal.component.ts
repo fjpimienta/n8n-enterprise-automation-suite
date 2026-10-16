@@ -11,6 +11,7 @@ import {
   SaleReferencePrice
 } from '@core/models/sale.model';
 import {
+  autoRowAmount,
   batchTotal,
   buildSaleData,
   computePricePerKg,
@@ -27,6 +28,8 @@ import { formatCalendarDate } from '@shared/utils/authorization-deadline.util';
 export interface SaleApprovalItem {
   requestId: string;
   identifier: string;
+  /** `numero_fuego` reported with the request, shown next to the ear tag in batch tables. */
+  fireNumber: string | null;
   category: string | null;
   species: string | null;
   /** YYYY-MM-DD, the date the server will record (see `saleDateFor`). */
@@ -77,6 +80,8 @@ export class SaleApprovalModalComponent implements OnInit {
   items = input.required<SaleApprovalItem[]>();
   referencePrices = input<SaleReferencePrice[]>([]);
   variant = input<'single' | 'batch'>('single');
+  /** Batch only: heading set by the parent (e.g. "Aprobar guía 14287 · OV-000003"). */
+  title = input<string | null>(null);
   submitting = input<boolean>(false);
   /** Backend error of the last attempt, shown inline; the form keeps everything typed. */
   errorMessage = input<string | null>(null);
@@ -95,6 +100,12 @@ export class SaleApprovalModalComponent implements OnInit {
   public invoiced = signal<boolean>(false);
   public invoiceFolio = signal<string>('');
   public defaultAmount = signal<number | null>(null);
+  /** Batch POR_KG: "Precio por kg"; each row's amount = its weight × this price (2 decimals). */
+  public defaultPricePerKg = signal<number | null>(null);
+  /** "Aplicar a todas" for the price per kg: it overrides the reference $/kg of every row. */
+  public perKgForAll = signal<boolean>(false);
+  /** Batch: the lot total the ADMIN explicitly confirmed; any change of the total un-confirms it. */
+  private confirmedTotal = signal<number | null>(null);
   public exceptionEnabled = signal<boolean>(false);
   public exceptionNotes = signal<string>('');
   private rowStates = signal<RowState[]>([]);
@@ -109,7 +120,10 @@ export class SaleApprovalModalComponent implements OnInit {
   public rows = computed<RowView[]>(() => {
     const mode = this.mode();
     const prices = this.referencePrices();
-    const fallback = this.isBatch() ? this.defaultAmount() : null;
+    const batch = this.isBatch();
+    const batchAmount = batch ? this.defaultAmount() : null;
+    const batchPricePerKg = batch ? this.defaultPricePerKg() : null;
+    const perKgForAll = batch && this.perKgForAll();
     const shared = {
       mode,
       buyer: this.buyer(),
@@ -122,7 +136,11 @@ export class SaleApprovalModalComponent implements OnInit {
     return this.rowStates().map(state => {
       const reference = pickReferencePrice(prices, state.item.category, mode, state.item.saleDate);
       const suggested = suggestAmount(reference, mode, state.weightKg);
-      const amount = state.touched ? state.amount : (suggested ?? fallback);
+      // Never a split of a lot total: each row is its own price (per head, or weight × $/kg).
+      const auto = autoRowAmount({ mode, reference, weightKg: state.weightKg, batchAmount, batchPricePerKg, perKgForAll });
+      const amount = state.touched ? state.amount : auto;
+      const fromReference = !state.touched && suggested !== null && auto === suggested
+        && !(mode === 'POR_KG' && perKgForAll);
       const weightKg = mode === 'POR_KG' ? state.weightKg : null;
       const data = buildSaleData({ ...shared, amount, weightKg });
       const errors = validateSaleData(data);
@@ -132,7 +150,7 @@ export class SaleApprovalModalComponent implements OnInit {
         amount,
         weightKg,
         pricePerKg: mode === 'POR_KG' ? computePricePerKg(amount, weightKg) : null,
-        fromReference: !state.touched && suggested !== null,
+        fromReference,
         amountInvalid: !isPositiveTwoDecimals(amount),
         weightInvalid: mode === 'POR_KG' && !isPositiveTwoDecimals(weightKg),
         data,
@@ -153,7 +171,16 @@ export class SaleApprovalModalComponent implements OnInit {
     return [...messages];
   });
 
-  public canSubmit = computed(() => !this.submitting() && this.rows().length > 0 && this.errors().length === 0);
+  /** Batch: the confirmation checkbox is checked only for the exact total currently shown. */
+  public totalConfirmed = computed(() => !this.isBatch() || this.confirmedTotal() === this.total());
+
+  public canSubmit = computed(() =>
+    !this.submitting() && this.rows().length > 0 && this.errors().length === 0 && this.totalConfirmed()
+  );
+
+  public setTotalConfirmed(checked: boolean): void {
+    this.confirmedTotal.set(checked ? this.total() : null);
+  }
 
   public setMode(value: string): void {
     this.mode.set(value as SaleMode);
@@ -176,8 +203,16 @@ export class SaleApprovalModalComponent implements OnInit {
     this.rowStates.update(rows => rows.map(r => ({ ...r, amount, touched: true })));
   }
 
+  /** Batch POR_KG: every row uses weight × the batch price per kg (rows stay editable). */
+  public applyPricePerKgToAll(): void {
+    if (this.defaultPricePerKg() === null) return;
+    this.perKgForAll.set(true);
+    this.rowStates.update(rows => rows.map(r => ({ ...r, amount: null, touched: false })));
+  }
+
   /** Back to the reference/default amount for every row. */
   public resetAmounts(): void {
+    this.perKgForAll.set(false);
     this.rowStates.update(rows => rows.map(r => ({ ...r, amount: null, touched: false })));
   }
 
