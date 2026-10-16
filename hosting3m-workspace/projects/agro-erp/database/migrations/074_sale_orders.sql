@@ -3,20 +3,30 @@
 -- several UPPs and even in several companies of the requester.
 --
 -- Business rules (set by the project owner, 2026-10-16):
---   * ANY active member of a company may request the sale of animals of the companies they belong to,
---     whatever the UPP or lot. Only an ADMIN of the animal's company may approve (unchanged: sp_resolver_autorizacion).
+--   * Any member with a writer role (ADMIN or EDITOR) in a company may request the sale of that company's animals,
+--     whatever the UPP or lot; read-only roles cannot request. Only an ADMIN of the animal's company may approve
+--     (unchanged: sp_resolver_autorizacion).
 --   * One order groups the animals of one sale. Each animal carries the transit guide of its UPP of origin
 --     (one guide per UPP group); the guide is mandatory for every animal of an order.
 --   * The order is split into one pending authorization per animal, created in the animal's own company, all
 --     linked by sale_order_id. Each company only ever sees and approves its own part.
 --   * All-or-nothing: if any animal fails validation, nothing is created.
 --   * Notifications are sent once per order and company (workflow V6/Notificación de Autorizaciones Pendientes).
+--   * An animal can have only one PENDIENTE request of any type: a pending sale must be cancelled (or resolved /
+--     expired) before a mortality can be reported, and vice versa.
 --
 -- Objects:
 --   sale_orders                          (new)   order header, cross-company, NOT exposed through the CRUD gateway
 --   pending_authorizations.sale_order_id (new)   nullable FK; single-animal requests keep working unchanged
 --   sp_solicitar_venta_orden(...)        (new)   preview (p_preview = true, read-only) or create the order
+--   pending_authorizations.notified_at   (versioned) ADD COLUMN IF NOT EXISTS; used by the notification workflow
+--   uq_pending_auth_one_pending_per_animal (new) partial unique index (estado = 'PENDIENTE'); created only if no
+--                                                duplicates exist, otherwise a WARNING and no data change
+--   fn/trg_pending_auth_one_pending_guard (new) BEFORE INSERT guard on every path -> P0036 with a readable message
 --   crud_models 'pending_authorizations' allowed_fields += sale_order_id (backed up first)
+-- Error codes: P0031 no active membership, P0032 empty/oversized order, P0033 future date, P0034 order rejected
+--              (all-or-nothing), P0035 read-only requester, P0036 animal already pending, P0037 orders disabled (rollback).
+-- Rollback: 074_rollback.sql (no DROP / DELETE).
 --
 -- Usage:
 --   psql -v ON_ERROR_STOP=1 -v apply=false -f 074_sale_orders.sql   -> dry run
