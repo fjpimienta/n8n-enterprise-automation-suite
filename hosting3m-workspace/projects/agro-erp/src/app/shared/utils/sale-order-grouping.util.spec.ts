@@ -7,7 +7,8 @@ import {
   formatCategoryCounts,
   groupSaleAuthorizations,
   isOwnCompanyRow,
-  matchesSaleFilters
+  matchesSaleFilters,
+  otherCompaniesWarning
 } from './sale-order-grouping.util';
 
 let seq = 0;
@@ -123,5 +124,54 @@ describe('quick filters', () => {
     expect(rows.filter(r => matchesSaleFilters(r, '', '14287')).length).toBe(2);
     expect(rows.filter(r => matchesSaleFilters(r, 'OV-000003', '14287')).length).toBe(1);
     expect(rows.filter(r => matchesSaleFilters(r, '', '')).length).toBe(4);
+  });
+});
+
+describe('other-company warning (order-level counts, migration 074)', () => {
+  const withCounts = (orden: string, totalAnimals: unknown, totalCompanies: unknown, over: Partial<PendingAuthorization> = {}) => {
+    const row = req({ orden, guia: '14287', ...over });
+    row.payload = { ...row.payload, orden_total_animales: totalAnimals as any, orden_total_empresas: totalCompanies as any };
+    return row;
+  };
+
+  it('order with 2 companies where 3 of 8 are visible -> warning with N = 5', () => {
+    const pending = [withCounts('OV-000007', 8, 2), withCounts('OV-000007', 8, 2)];
+    const approved = withCounts('OV-000007', '8', '2', { estado: 'APROBADO' }); // history counts too (any estado)
+    const { orders } = groupSaleAuthorizations(pending, 5, [...pending, approved]);
+
+    expect(orders).toHaveLength(1);
+    expect(orders[0].visibleAnimals).toBe(3);
+    expect(orders[0].orderTotalAnimals).toBe(8);
+    expect(orders[0].orderTotalCompanies).toBe(2);
+    expect(otherCompaniesWarning(orders[0]))
+      .toBe('Esta orden incluye 5 animal(es) de otras empresas; su ADMIN los autoriza por separado.');
+  });
+
+  it('missing counts (orders created before 074) -> unknown, no warning', () => {
+    const pending = [req({ orden: 'OV-000001', guia: '1' }), req({ orden: 'OV-000001', guia: '1' })];
+    const { orders } = groupSaleAuthorizations(pending, 5);
+    expect(orders[0].orderTotalAnimals).toBeNull();
+    expect(orders[0].orderTotalCompanies).toBeNull();
+    expect(otherCompaniesWarning(orders[0])).toBeNull();
+  });
+
+  it('no warning when the whole order (one company) is visible', () => {
+    const pending = [withCounts('OV-000002', 2, 1), withCounts('OV-000002', 2, 1)];
+    expect(otherCompaniesWarning(groupSaleAuthorizations(pending, 5).orders[0])).toBeNull();
+  });
+
+  it('several companies but no animals missing: warning without a number', () => {
+    const pending = [withCounts('OV-000003', 1, 2)];
+    expect(otherCompaniesWarning(groupSaleAuthorizations(pending, 5).orders[0]))
+      .toBe('Esta orden incluye animales de otras empresas; su ADMIN los autoriza por separado.');
+  });
+
+  it('matches the order by sale_order_id or by payload.orden_venta and counts each request once', () => {
+    const a = withCounts('OV-000004', 4, 1);
+    const sameIdNoCode = { ...withCounts('OV-000004', 4, 1), payload: { orden_total_animales: 4 } } as PendingAuthorization;
+    const { orders } = groupSaleAuthorizations([a], 5, [a, a, sameIdNoCode]);
+    expect(orders[0].visibleAnimals).toBe(2);
+    expect(otherCompaniesWarning(orders[0]))
+      .toBe('Esta orden incluye 2 animal(es) de otras empresas; su ADMIN los autoriza por separado.');
   });
 });

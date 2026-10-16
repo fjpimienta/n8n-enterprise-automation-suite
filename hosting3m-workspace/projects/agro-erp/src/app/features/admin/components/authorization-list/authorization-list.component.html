@@ -181,10 +181,8 @@
                         </button>
                     </div>
                 </div>
-                @if (order.hasForeignRows) {
-                <div class="alert alert-warning mx-3 my-2 py-2 small" role="alert">
-                    Esta orden incluye animales de otras empresas; su ADMIN los autoriza por separado.
-                </div>
+                @if (otherCompaniesWarning(order); as warning) {
+                <div class="alert alert-warning mx-3 my-2 py-2 small" role="alert">{{ warning }}</div>
                 }
 
                 @for (guide of order.guides; track guide.guiaTransito) {

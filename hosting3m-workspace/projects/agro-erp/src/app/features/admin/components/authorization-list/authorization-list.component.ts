@@ -37,7 +37,8 @@ import {
   groupSaleAuthorizations,
   isOwnCompanyRow,
   matchesSaleFilters,
-  orderCodeFor
+  orderCodeFor,
+  otherCompaniesWarning
 } from '@shared/utils/sale-order-grouping.util';
 import {
   ActionOutcome,
@@ -193,6 +194,7 @@ export class AuthorizationListComponent {
   public guideFilter = signal<string>('');
   public pendingView = signal<PendingView>('AGRUPADA');
   readonly formatCategoryCounts = formatCategoryCounts;
+  readonly otherCompaniesWarning = otherCompaniesWarning;
 
   /** Email of the logged-in user, used only to show "Cancelar solicitud" on own requests. */
   private currentUserEmail = computed(() => resolveCurrentUserEmail(this.authService.currentUser() as any));
@@ -277,7 +279,9 @@ export class AuthorizationListComponent {
     const order = this.orderFilter();
     const guide = this.guideFilter();
     const rows = this.adminService.pendingAuthorizations().filter(r => matchesSaleFilters(r, order, guide));
-    return groupSaleAuthorizations(rows, this.activeCompanyId());
+    // Visible animals of an order are counted over every request that reached the panel, any estado.
+    const scope = [...this.adminService.pendingAuthorizations(), ...this.adminService.authorizationHistory()];
+    return groupSaleAuthorizations(rows, this.activeCompanyId(), scope);
   });
 
   /** Requests without a sale order, rendered exactly as before under the order groups. */

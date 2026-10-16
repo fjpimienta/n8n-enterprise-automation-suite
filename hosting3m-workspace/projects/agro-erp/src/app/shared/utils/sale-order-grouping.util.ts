@@ -23,6 +23,11 @@ export interface SaleOrderGroup {
   total: number;
   /** Rows of this order that belong to another company were seen and excluded (never resolved here). */
   hasForeignRows: boolean;
+  /** `payload.orden_total_animales` / `orden_total_empresas` (migration 074); null when unknown. */
+  orderTotalAnimals: number | null;
+  orderTotalCompanies: number | null;
+  /** Requests of this order that reached the panel, in any estado (pending + history). */
+  visibleAnimals: number;
 }
 
 export interface SaleOrderGrouping {
@@ -60,7 +65,9 @@ const byCode = (a: string, b: string) => a.localeCompare(b, 'es', { numeric: tru
  */
 export function groupSaleAuthorizations(
   rows: readonly PendingAuthorization[],
-  activeCompanyId: number | null | undefined
+  activeCompanyId: number | null | undefined,
+  /** Every request that reached the panel, any estado; used only to count an order's visible animals. */
+  orderScopeRows: readonly PendingAuthorization[] = rows
 ): SaleOrderGrouping {
   const orders = new Map<string, { orderCode: string; saleOrderId: string; requesters: Set<string>; guides: Map<string, PendingAuthorization[]>; hasForeignRows: boolean }>();
   const ungrouped: PendingAuthorization[] = [];
@@ -96,6 +103,7 @@ export function groupSaleAuthorizations(
   }
 
   const result: SaleOrderGroup[] = [...orders.values()].map(order => {
+    const scope = requestsOfOrder(orderScopeRows, order.saleOrderId, order.orderCode);
     const guides: SaleGuideGroup[] = [...order.guides.entries()]
       .map(([guiaTransito, requests]) => ({ guiaTransito, requests, categoryCounts: countCategories(requests) }))
       .sort((a, b) => byCode(a.guiaTransito, b.guiaTransito));
@@ -105,11 +113,59 @@ export function groupSaleAuthorizations(
       requestedBy: [...order.requesters].sort().join(', '),
       guides,
       total: guides.reduce((sum, g) => sum + g.requests.length, 0),
-      hasForeignRows: foreignOrderKeys.has(order.saleOrderId)
+      hasForeignRows: foreignOrderKeys.has(order.saleOrderId),
+      orderTotalAnimals: firstCount(scope, 'orden_total_animales'),
+      orderTotalCompanies: firstCount(scope, 'orden_total_empresas'),
+      visibleAnimals: scope.length
     };
   }).sort((a, b) => byCode(a.orderCode, b.orderCode));
 
   return { orders: result, ungrouped, foreignExcluded };
+}
+
+/** Distinct requests (by id) of one order, matched by `sale_order_id` or `payload.orden_venta`. */
+export function requestsOfOrder(
+  rows: readonly PendingAuthorization[],
+  saleOrderId: string,
+  orderCode: string
+): PendingAuthorization[] {
+  const seen = new Map<string, PendingAuthorization>();
+  for (const row of rows) {
+    if (row.tipo_evento !== 'VENTA') continue;
+    const matches = trimmed(row.sale_order_id) === saleOrderId || orderCodeFor(row) === orderCode;
+    if (matches && !seen.has(row.id)) seen.set(row.id, row);
+  }
+  return [...seen.values()];
+}
+
+/** First valid positive integer of a payload count among the order's requests; null when unknown. */
+function firstCount(rows: readonly PendingAuthorization[], key: 'orden_total_animales' | 'orden_total_empresas'): number | null {
+  for (const row of rows) {
+    const raw = row.payload?.[key];
+    const n = typeof raw === 'number' ? raw : (typeof raw === 'string' && raw.trim() ? Number(raw) : NaN);
+    if (Number.isInteger(n) && n > 0) return n;
+  }
+  return null;
+}
+
+/**
+ * Warning for an order that spans other companies (migration 074 order-level counts):
+ *  - orden_total_empresas > 1, or fewer visible requests than orden_total_animales → warn,
+ *    N = orden_total_animales − visible;
+ *  - counts missing (orders created before 074's counts) → unknown, no warning, unless rows of
+ *    another company actually reached the panel.
+ */
+export function otherCompaniesWarning(
+  order: Pick<SaleOrderGroup, 'orderTotalAnimals' | 'orderTotalCompanies' | 'visibleAnimals' | 'hasForeignRows'>
+): string | null {
+  const missing = order.orderTotalAnimals !== null ? order.orderTotalAnimals - order.visibleAnimals : null;
+  const spans = (order.orderTotalCompanies !== null && order.orderTotalCompanies > 1)
+    || (missing !== null && missing > 0)
+    || order.hasForeignRows;
+  if (!spans) return null;
+  return missing !== null && missing > 0
+    ? `Esta orden incluye ${missing} animal(es) de otras empresas; su ADMIN los autoriza por separado.`
+    : 'Esta orden incluye animales de otras empresas; su ADMIN los autoriza por separado.';
 }
 
 export function countCategories(requests: readonly PendingAuthorization[]): Record<string, number> {

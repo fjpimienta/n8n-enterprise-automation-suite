@@ -41,6 +41,10 @@ export interface PendingAuthorizationPayload {
   guia_transito?: string | null;
   /** Sale order code (e.g. `OV-000003`) when the request belongs to a sale order (migration 074). */
   orden_venta?: string | null;
+  /** Animals in the whole sale order, across companies (migration 074). Absent on older orders. */
+  orden_total_animales?: number | string | null;
+  /** Companies the sale order spans (migration 074). Absent on older orders. */
+  orden_total_empresas?: number | string | null;
   /** Sale data set by the ADMIN on approval (migration 071), stored by `sp_resolver_autorizacion`. */
   venta?: StoredSaleData | null;
   [key: string]: unknown;
