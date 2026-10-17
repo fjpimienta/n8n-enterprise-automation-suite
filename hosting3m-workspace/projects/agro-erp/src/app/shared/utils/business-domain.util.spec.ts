@@ -5,6 +5,8 @@ import {
   dashboardRouteFor,
   isLivestockDomain,
   isPalmDomain,
+  livestockRouteRedirect,
+  palmRouteRedirect,
   resolveBusinessDomain,
   themeClassFor,
 } from './business-domain.util';
@@ -55,6 +57,22 @@ describe('domain helpers', () => {
     expect(dashboardRouteFor({ industry: 'Agricultura de Precisión' })).toBe(PALM_DASHBOARD_ROUTE);
     expect(dashboardRouteFor({ industry: 'Ganadería de Precisión' })).toBe(LIVESTOCK_DASHBOARD_ROUTE);
     expect(dashboardRouteFor(null)).toBe(LIVESTOCK_DASHBOARD_ROUTE);
+  });
+
+  it('palm screens: only palm passes; livestock / unknown go to their own dashboard', () => {
+    expect(palmRouteRedirect({ industry: 'Agricultura de Precisión' })).toBeNull();
+    expect(palmRouteRedirect({ industry: 'Ganadería de Precisión' })).toBe(LIVESTOCK_DASHBOARD_ROUTE);
+    expect(palmRouteRedirect({ industry: 'Generic' })).toBe(LIVESTOCK_DASHBOARD_ROUTE);
+    expect(palmRouteRedirect(null)).toBe(LIVESTOCK_DASHBOARD_ROUTE);
+  });
+
+  it('livestock screens: livestock and unknown pass (as today); palm goes to the palm dashboard', () => {
+    expect(livestockRouteRedirect({ industry: 'Ganadería de Precisión' })).toBeNull();
+    expect(livestockRouteRedirect({ industry: 'Servicio de Renta de Pista de Hielo y Ganadería' })).toBeNull();
+    expect(livestockRouteRedirect({ industry: 'Generic' })).toBeNull();
+    expect(livestockRouteRedirect(null)).toBeNull();
+    expect(livestockRouteRedirect({ industry: 'Agricultura de Precisión' })).toBe(PALM_DASHBOARD_ROUTE);
+    expect(livestockRouteRedirect({ business_type: 'AGRICULTURE' })).toBe(PALM_DASHBOARD_ROUTE);
   });
 
   it('themeClassFor follows the domain', () => {

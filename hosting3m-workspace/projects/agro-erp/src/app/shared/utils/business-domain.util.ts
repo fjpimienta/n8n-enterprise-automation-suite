@@ -52,6 +52,19 @@ export function dashboardRouteFor(tenant: DomainBearing | null | undefined): str
   return isPalmDomain(tenant) ? PALM_DASHBOARD_ROUTE : LIVESTOCK_DASHBOARD_ROUTE;
 }
 
+/**
+ * Route-guard decisions (UX only: the real isolation is id_company in the gateway). `null` = allowed,
+ * otherwise the URL to redirect to.
+ */
+export function palmRouteRedirect(tenant: DomainBearing | null | undefined): string | null {
+  return isPalmDomain(tenant) ? null : dashboardRouteFor(tenant);
+}
+
+/** Livestock screens: livestock and unknown domains pass (historical behavior); palm goes to its dashboard. */
+export function livestockRouteRedirect(tenant: DomainBearing | null | undefined): string | null {
+  return isPalmDomain(tenant) ? PALM_DASHBOARD_ROUTE : null;
+}
+
 export function themeClassFor(tenant: DomainBearing | null | undefined): 'theme-palm' | 'theme-cattle' {
   return isPalmDomain(tenant) ? 'theme-palm' : 'theme-cattle';
 }

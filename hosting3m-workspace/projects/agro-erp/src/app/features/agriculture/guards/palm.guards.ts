@@ -1,7 +1,7 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
 import { TenantService } from 'core-auth';
-import { PALM_DASHBOARD_ROUTE, dashboardRouteFor, isPalmDomain } from '@shared/utils/business-domain.util';
+import { PALM_DASHBOARD_ROUTE, isPalmDomain, palmRouteRedirect } from '@shared/utils/business-domain.util';
 import { canAdministerPalm } from '../utils/agri.util';
 
 /**
@@ -9,9 +9,8 @@ import { canAdministerPalm } from '../utils/agri.util';
  * dashboard — never shown palm screens under another company's heading.
  */
 export const palmDomainGuard: CanActivateFn = () => {
-  const tenant = inject(TenantService).activeTenant();
-  if (isPalmDomain(tenant)) return true;
-  return inject(Router).parseUrl(dashboardRouteFor(tenant));
+  const redirect = palmRouteRedirect(inject(TenantService).activeTenant());
+  return redirect ? inject(Router).parseUrl(redirect) : true;
 };
 
 /**
