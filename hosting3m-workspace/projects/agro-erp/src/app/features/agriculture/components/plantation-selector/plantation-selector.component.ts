@@ -17,7 +17,7 @@ import { PlantationContextService } from '../../services/plantation-context.serv
         }
         @default {
           @if (context.availablePlantations().length > 0) {
-            <select class="form-select form-select-sm border-success" aria-label="Plantación activa"
+            <select class="form-select form-select-sm border-success" style="max-width: 14rem;" aria-label="Plantación activa"
               title="Plantación activa" (change)="onSelect($any($event.target).value)">
               @for (p of context.availablePlantations(); track p.id) {
                 <option [value]="p.id" [selected]="p.id === context.activePlantationId()">
