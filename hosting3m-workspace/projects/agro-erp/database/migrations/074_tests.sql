@@ -16,6 +16,9 @@ DECLARE
     v_n     int;
     v_req   uuid;
 BEGIN
+    -- Start from "not a member of company 8" even if a local test membership exists (rolled back at the end)
+    UPDATE user_companies SET is_active = false WHERE email = v_user AND id_company = 8;
+
     IF (SELECT count(*) FROM cattle_livestock WHERE metadata->>'source' = 'REGULARIZACION_PADRON'
           AND metadata->>'guia_transito' IN ('7139696','7139697','7139698') AND current_status = 'ACTIVO') <> 38 THEN
         RAISE EXCEPTION 'precondition: the 38 animals must be registered and ACTIVO';
@@ -39,7 +42,8 @@ BEGIN
     RAISE NOTICE 'T2b %: sale_orders created = %', CASE WHEN v_n = 0 THEN 'OK' ELSE 'FAIL' END, v_n;
 
     -- Make the user a plain member (EDITOR) of company 8 for the rest of the test (rolled back)
-    INSERT INTO user_companies (email, id_company, role, is_active) VALUES (v_user, 8, 'EDITOR', true);
+    INSERT INTO user_companies (email, id_company, role, is_active) VALUES (v_user, 8, 'EDITOR', true)
+    ON CONFLICT (email, id_company) DO UPDATE SET role = 'EDITOR', is_active = true;
 
     -- T3: preview of the full 38 -> 38 valid in 3 groups (Maceo/7139696, Santa Lucía/7139697, San José/7139698)
     v_res := sp_solicitar_venta_orden(

@@ -204,7 +204,11 @@ BEGIN
             v_pos := v_pos + 1;
             INSERT INTO tmp_sale_order_items (pos, identificador, guia, error)
             VALUES (v_pos, 'lote ' || v_lote, v_guia,
-                    CASE WHEN v_n = 0 THEN 'No existe ese lote en tus empresas'
+                    CASE WHEN v_n = 0 AND EXISTS (SELECT 1 FROM production_unit_lots lt
+                                                   WHERE lt.id_company = ANY (coalesce(v_ro_companies, '{}'))
+                                                     AND lower(btrim(lt.lot_name)) = lower(v_lote))
+                              THEN 'Tu acceso a la empresa de ese lote es de solo lectura'
+                         WHEN v_n = 0 THEN 'No existe ese lote en tus empresas'
                          ELSE 'Hay ' || v_n || ' lotes con ese nombre; da los aretes' END);
             CONTINUE;
         END IF;
