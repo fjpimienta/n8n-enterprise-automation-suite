@@ -1,0 +1,164 @@
+<div class="container-fluid p-3 p-md-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h2 class="page-title mb-0"><i class="ti ti-plant-2 me-2 text-success"></i>Plantaciones</h2>
+            <div class="text-muted small mt-1">
+                Empresa {{ activeTenant()?.company_name }} · {{ activeCount() }} activas / {{ rows().length }} totales
+            </div>
+        </div>
+        @if (canEdit()) {
+        <button class="btn btn-primary shadow-sm" (click)="openModal()">
+            <i class="ti ti-square-rounded-plus me-2"></i>Nueva plantación
+        </button>
+        }
+    </div>
+
+    @if (loadError()) {
+    <div class="alert alert-danger" role="alert"><i class="ti ti-alert-triangle me-2"></i>{{ loadError() }}</div>
+    }
+    @if (actionError()) {
+    <div class="alert alert-warning alert-dismissible" role="alert">
+        <i class="ti ti-alert-circle me-2"></i>{{ actionError() }}
+        <button type="button" class="btn-close" (click)="actionError.set(null)"></button>
+    </div>
+    }
+    @if (actionSuccess()) {
+    <div class="alert alert-success alert-dismissible" role="alert">
+        <i class="ti ti-check me-2"></i>{{ actionSuccess() }}
+        <button type="button" class="btn-close" (click)="actionSuccess.set(null)"></button>
+    </div>
+    }
+    @if (possiblyTruncated()) {
+    <div class="alert alert-warning" role="alert">
+        <i class="ti ti-alert-triangle me-2"></i>La lista llegó con el máximo de registros que entrega el servidor: los datos pueden estar incompletos.
+    </div>
+    }
+
+    @if (isLoading() && rows().length === 0) {
+    <div class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Cargando plantaciones…</div>
+    } @else {
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-vcenter card-table">
+                <thead>
+                    <tr>
+                        <th>Clave · Nombre</th>
+                        <th>Ubicación</th>
+                        <th>Tenencia</th>
+                        <th class="text-end">Superficie (ha)</th>
+                        <th class="text-end">Sembrada (ha)</th>
+                        <th class="text-end">Lotes activos</th>
+                        <th>Estado</th>
+                        @if (canEdit()) { <th class="w-1">Acciones</th> }
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (row of rows(); track row.id) {
+                    <tr [class.text-muted]="!row.isActive">
+                        <td>
+                            <div class="fw-medium">{{ row.code }} · {{ row.name }}</div>
+                            @if (row.isDefault) { <span class="badge bg-green-lt mt-1"><i class="ti ti-star me-1"></i>Predeterminada</span> }
+                        </td>
+                        <td class="small">{{ row.municipality || '—' }}{{ row.state ? ', ' + row.state : '' }}</td>
+                        <td>
+                            {{ tenureLabel(row.tenure) }}
+                            @if (row.lessorName) { <div class="small text-muted">{{ row.lessorName }}</div> }
+                        </td>
+                        <td class="text-end">{{ row.totalAreaHa | number: '1.0-2' }}</td>
+                        <td class="text-end">
+                            {{ (row.summary?.plantedAreaHa ?? 0) | number: '1.0-2' }}
+                            @if (row.summary?.hasAreaInconsistency) {
+                            <i class="ti ti-alert-triangle text-warning ms-1"
+                                title="La suma de los lotes activos supera la superficie total de la plantación. Revisa la captura."></i>
+                            }
+                        </td>
+                        <td class="text-end">{{ row.summary?.activeLots ?? 0 }}</td>
+                        <td>
+                            @if (row.isActive) { <span class="badge bg-green-lt">Activa</span> }
+                            @else { <span class="badge bg-secondary-lt">Inactiva</span> }
+                        </td>
+                        @if (canEdit()) {
+                        <td>
+                            <div class="btn-list flex-nowrap">
+                                <button class="btn btn-icon btn-outline-secondary btn-sm" title="Editar"
+                                    [disabled]="busyId() === row.id" (click)="openModal(row)"><i class="ti ti-edit"></i></button>
+                                @if (row.isActive && !row.isDefault) {
+                                <button class="btn btn-icon btn-outline-success btn-sm" title="Hacer predeterminada"
+                                    [disabled]="busyId() === row.id" (click)="makeDefault(row)">
+                                    @if (busyId() === row.id) { <span class="spinner-border spinner-border-sm" role="status"></span> }
+                                    @else { <i class="ti ti-star"></i> }
+                                </button>
+                                }
+                                @if (row.isActive) {
+                                <button class="btn btn-icon btn-outline-danger btn-sm" title="Desactivar"
+                                    [disabled]="busyId() === row.id" (click)="requestDeactivate(row)"><i class="ti ti-archive"></i></button>
+                                } @else {
+                                <button class="btn btn-icon btn-outline-success btn-sm" title="Reactivar"
+                                    [disabled]="busyId() === row.id" (click)="reactivate(row)">
+                                    @if (busyId() === row.id) { <span class="spinner-border spinner-border-sm" role="status"></span> }
+                                    @else { <i class="ti ti-refresh"></i> }
+                                </button>
+                                }
+                            </div>
+                        </td>
+                        }
+                    </tr>
+                    } @empty {
+                    <tr>
+                        <td [attr.colspan]="canEdit() ? 8 : 7" class="text-center py-5">
+                            <i class="ti ti-plant-2 fs-1 text-muted d-block mb-2"></i>
+                            <div class="text-muted mb-3">Registre una plantación para empezar a capturar lotes y filas.</div>
+                            @if (canEdit()) {
+                            <button class="btn btn-primary" (click)="openModal()"><i class="ti ti-square-rounded-plus me-2"></i>Registrar plantación</button>
+                            }
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="text-muted small mt-2">
+        <i class="ti ti-info-circle me-1"></i>
+        La primera plantación activa queda como predeterminada. La plantación que eliges arriba (junto a la empresa) solo filtra lo que ves;
+        <a routerLink="/agricultura/lotes">ver los lotes de la plantación activa</a>.
+    </div>
+    }
+</div>
+
+<app-plantation-form-modal [isOpen]="isModalOpen()" [editingId]="editingId()" [isSubmitting]="isSubmitting()"
+    [errorMessage]="formError()" [(data)]="formData" (onClose)="closeModal()" (onSave)="save()">
+</app-plantation-form-modal>
+
+@if (toDeactivate(); as row) {
+<div class="modal-backdrop fade show"></div>
+<div class="modal modal-blur fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-status bg-danger"></div>
+            <div class="modal-body text-center py-4">
+                <i class="ti ti-alert-triangle text-danger fs-1 mb-2 d-block"></i>
+                <h3>¿Desactivar "{{ row.name }}"?</h3>
+                <div class="text-muted">
+                    No se borra nada: la plantación y sus lotes se conservan, pero no podrás registrar lotes nuevos en ella hasta reactivarla.
+                    @if (row.isDefault) { <strong class="d-block mt-2">Es la predeterminada: después elige otra como predeterminada.</strong> }
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="w-100">
+                    <div class="row">
+                        <div class="col"><button class="btn w-100" [disabled]="busyId()" (click)="cancelDeactivate()">Cancelar</button></div>
+                        <div class="col">
+                            <button class="btn btn-danger w-100" [disabled]="busyId()" (click)="confirmDeactivate()">
+                                @if (busyId()) { <span class="spinner-border spinner-border-sm me-2" role="status"></span> }
+                                Desactivar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+}

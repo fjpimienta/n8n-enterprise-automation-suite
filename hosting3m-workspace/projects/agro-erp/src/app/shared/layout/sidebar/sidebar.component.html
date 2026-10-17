@@ -32,11 +32,13 @@
         <div class="collapse navbar-collapse show" id="sidebar-menu">
             <ul class="navbar-nav pt-lg-3 h-100 d-flex flex-column">
 
+                @if (showIntelligenceSection()) {
                 <li class="nav-item">
                     <div class="nav-link-title text-uppercase small text-muted mt-2 mb-1 ms-2 font-weight-bold">
                         Inteligencia
                     </div>
                 </li>
+                }
 
                 @if (isLivestock()) {
                 <li class="nav-item">
@@ -76,21 +78,31 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" routerLink="/agricultura/telemetria" routerLinkActive="active"
+                    <a class="nav-link" routerLink="/agricultura/lotes" routerLinkActive="active" (click)="closeMenu()">
+                        <span class="nav-link-icon text-muted">🌱</span>
+                        <span class="nav-link-title">Lotes y conteos</span>
+                    </a>
+                </li>
+                @if (canAdministerPalm()) {
+                <li class="nav-item">
+                    <a class="nav-link" routerLink="/agricultura/plantaciones" routerLinkActive="active"
                         (click)="closeMenu()">
-                        <span class="nav-link-icon text-muted">🛸</span>
-                        <span class="nav-link-title">Vuelos & Aspersión</span>
+                        <span class="nav-link-icon text-muted">🗺️</span>
+                        <span class="nav-link-title">Plantaciones</span>
                     </a>
                 </li>
                 }
+                }
 
+                @if (showConfigSection()) {
                 <li class="nav-item">
                     <div class="nav-link-title text-uppercase small text-muted mt-4 mb-1 ms-2 font-weight-bold">
                         Configuración
                     </div>
                 </li>
+                }
 
-                @if (tenantService.activeTenant()?.role === 'ADMIN') {
+                @if (isAdmin()) {
                 <li class="nav-item">
                     <a class="nav-link" routerLink="/admin/tenants" routerLinkActive="active" (click)="closeMenu()">
                         <span class="nav-link-icon text-muted">
@@ -112,7 +124,7 @@
                 </li>
                 }
 
-                @if (tenantService.activeTenant()?.role === 'ADMIN') {
+                @if (showLivestockConfig()) {
                 <li class="nav-item">
                     <a class="nav-link" routerLink="/admin/razas" routerLinkActive="active" (click)="closeMenu()">
                         <span class="nav-link-icon text-muted">
@@ -130,7 +142,7 @@
                 </li>
                 }
 
-                @if (tenantService.activeTenant()?.role === 'ADMIN') {
+                @if (showLivestockConfig()) {
                 <li class="nav-item">
                     <a class="nav-link" routerLink="/admin/etapas-vida" routerLinkActive="active" (click)="closeMenu()">
                         <span class="nav-link-icon text-muted">
@@ -148,7 +160,7 @@
                 </li>
                 }
 
-                @if (tenantService.activeTenant()?.role === 'ADMIN') {
+                @if (showLivestockConfig()) {
                 <li class="nav-item">
                     <a class="nav-link" routerLink="/admin/precios-referencia" routerLinkActive="active" (click)="closeMenu()">
                         <span class="nav-link-icon text-muted">
@@ -164,7 +176,7 @@
                 </li>
                 }
 
-                @if (tenantService.activeTenant()?.role === 'ADMIN') {
+                @if (isAdmin()) {
                 <li class="nav-item">
                     <a class="nav-link" routerLink="/admin/personal" routerLinkActive="active" (click)="closeMenu()">
                         <span class="nav-link-icon text-muted">
@@ -176,12 +188,12 @@
                                 <path d="M15 19l2 2l4 -4" />
                             </svg>
                         </span>
-                        <span class="nav-link-title font-weight-bold">Personal UPP</span>
+                        <span class="nav-link-title font-weight-bold">{{ personalLabel() }}</span>
                     </a>
                 </li>
                 }
 
-                @if (tenantService.activeTenant()?.role === 'ADMIN') {
+                @if (showLivestockConfig()) {
                 <li class="nav-item">
                     <a class="nav-link" routerLink="/admin/autorizaciones" routerLinkActive="active" (click)="closeMenu()">
                         <span class="nav-link-icon text-muted">

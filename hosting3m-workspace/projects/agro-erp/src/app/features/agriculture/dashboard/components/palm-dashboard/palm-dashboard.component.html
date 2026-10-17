@@ -1,19 +1,169 @@
-<div class="empty mt-5">
-    <div class="empty-icon text-success">
-        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="64" height="64" viewBox="0 0 24 24"
-            stroke-width="1.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-            <path d="M12 3v18" />
-            <path d="M12 9l-4 -4l-4 4" />
-            <path d="M12 14l-4 -4l-4 4" />
-            <path d="M12 21l-4 -4l-4 4" />
-            <path d="M12 9l4 -4l4 4" />
-            <path d="M12 14l4 -4l4 4" />
-            <path d="M12 21l4 -4l4 4" />
-        </svg>
+<div class="container-fluid p-3 p-md-4">
+
+    @switch (context.status()) {
+    @case ('loading') {
+    <div class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Cargando plantaciones…</div>
+    }
+    @case ('error') {
+    <div class="alert alert-danger" role="alert"><i class="ti ti-alert-triangle me-2"></i>{{ context.error() }}</div>
+    }
+    @default {
+    @if (!plantation()) {
+    <div class="empty py-6">
+        <div class="empty-icon"><i class="ti ti-plant-off fs-1 text-muted"></i></div>
+        @if (canAdminister()) {
+        <p class="empty-title">Registre una plantación</p>
+        <p class="empty-subtitle text-muted">El tablero muestra la plantación activa; esta empresa aún no tiene plantaciones activas.</p>
+        <div class="empty-action"><a class="btn btn-primary" routerLink="/agricultura/plantaciones"><i class="ti ti-square-rounded-plus me-2"></i>Ir a Plantaciones</a></div>
+        } @else {
+        <p class="empty-title">No hay plantaciones activas</p>
+        <p class="empty-subtitle text-muted">Pide a un administrador de la empresa que registre o reactive una plantación.</p>
+        }
     </div>
-    <p class="empty-title h3">Centro de Control: Palma Africana</p>
-    <p class="empty-subtitle text-muted">
-        Este módulo ingesta telemetría de drones y aspersión agrícola mediante el motor Meta-CRUD.
-    </p>
+    } @else {
+
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h2 class="page-title mb-0"><i class="ti ti-plant-2 me-2 text-success"></i>Tablero de Palma · {{ plantation()!.name }}</h2>
+            <div class="text-muted small mt-1">Solo lectura · plantación activa (cámbiala arriba, junto a la empresa)</div>
+        </div>
+        <a class="btn btn-outline-primary" routerLink="/agricultura/lotes"><i class="ti ti-layout-grid me-2"></i>Lotes y conteos</a>
+    </div>
+
+    @if (loadError()) {
+    <div class="alert alert-danger" role="alert"><i class="ti ti-alert-triangle me-2"></i>{{ loadError() }}</div>
+    }
+    @if (possiblyTruncated()) {
+    <div class="alert alert-warning" role="alert">
+        <i class="ti ti-alert-triangle me-2"></i>Un listado llegó con el máximo de registros que entrega el servidor: las cifras pueden estar incompletas.
+    </div>
+    }
+    @if (summary()?.hasAreaInconsistency) {
+    <div class="alert alert-warning" role="alert">
+        <i class="ti ti-ruler-measure me-2"></i>
+        La superficie sembrada (suma de lotes activos, {{ summary()!.plantedAreaHa | number: '1.0-2' }} ha) supera la superficie total de la
+        plantación ({{ summary()!.totalAreaHa | number: '1.0-2' }} ha). Revisa la captura de la plantación o de los lotes.
+    </div>
+    }
+
+    @if (isLoading() && !summary()) {
+    <div class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Cargando tablero…</div>
+    } @else if (!loadError()) {
+
+    <!-- KPIs -->
+    <div class="row row-cards mb-3">
+        <div class="col-6 col-lg-3">
+            <div class="card card-sm"><div class="card-body">
+                <div class="subheader">Superficie</div>
+                <div class="h2 mb-0">{{ (summary()?.totalAreaHa ?? plantation()!.totalAreaHa) | number: '1.0-2' }} ha</div>
+                <div class="text-muted small">Sembrada: {{ (summary()?.plantedAreaHa ?? 0) | number: '1.0-2' }} ha
+                    @if (summary()?.hasAreaInconsistency) { <i class="ti ti-alert-triangle text-warning" title="Supera la superficie total"></i> }
+                </div>
+            </div></div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card card-sm"><div class="card-body">
+                <div class="subheader">Lotes activos</div>
+                <div class="h2 mb-0">{{ activeLots().length }}</div>
+                <div class="text-muted small">{{ summary()?.activeRows ?? 0 | number }} filas activas</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card card-sm"><div class="card-body">
+                <div class="subheader">Plantas vivas</div>
+                <div class="h2 mb-0">{{ totals().alivePlants | number }}</div>
+                <div class="text-muted small">de {{ totals().plantingPositions | number }} puntos de plantación</div>
+            </div></div>
+        </div>
+        <div class="col-6 col-lg-3">
+            <div class="card card-sm"><div class="card-body">
+                <div class="subheader">Faltantes</div>
+                <div class="h2 mb-0" [class.text-danger]="totals().missingPlants > 0">{{ totals().missingPlants | number }}</div>
+                <div class="text-muted small">{{ totals().missingPct !== null ? totals().missingPct + ' % de los puntos' : 'Sin puntos registrados' }}</div>
+            </div></div>
+        </div>
+    </div>
+
+    <div class="row row-cards mb-3">
+        <!-- Lots by stage -->
+        <div class="col-12 col-lg-6">
+            <div class="card h-100">
+                <div class="card-header"><h3 class="card-title">Lotes por etapa productiva</h3></div>
+                <div class="card-body">
+                    @for (s of stages(); track s.stage) {
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between small">
+                            <span><span class="badge me-1" [class]="s.badge">{{ s.label }}</span><span class="text-muted">{{ s.range }}</span></span>
+                            <span>{{ s.lots }} lote(s) · {{ s.areaHa | number: '1.0-2' }} ha</span>
+                        </div>
+                        <div class="progress progress-sm mt-1">
+                            <div class="progress-bar bg-success" role="progressbar" [style.width.%]="(100 * s.lots) / maxStageLots()"
+                                [attr.aria-valuenow]="s.lots" aria-valuemin="0" [attr.aria-valuemax]="maxStageLots()"></div>
+                        </div>
+                    </div>
+                    }
+                    <div class="text-muted small mt-2"><i class="ti ti-info-circle me-1"></i>Cortes orientativos por años cumplidos, pendientes de confirmar con el cliente.</div>
+                </div>
+            </div>
+        </div>
+        <!-- Density -->
+        <div class="col-12 col-lg-6">
+            <div class="card h-100">
+                <div class="card-header"><h3 class="card-title">Densidad real contra la de diseño</h3></div>
+                <div class="card-body">
+                    @if (density().lotsCompared > 0) {
+                    <div class="d-flex align-items-baseline gap-3 mb-2">
+                        <div class="h1 mb-0">{{ density().realPlantsHa }}</div>
+                        <div class="text-muted">plantas vivas/ha · diseño {{ density().designPlantsHa }}/ha</div>
+                    </div>
+                    <div class="progress mb-2">
+                        <div class="progress-bar" role="progressbar" [class.bg-success]="(density().pctOfDesign ?? 0) >= 90"
+                            [class.bg-warning]="(density().pctOfDesign ?? 0) < 90" [style.width.%]="density().pctOfDesign ?? 0"></div>
+                    </div>
+                    <div class="text-muted small">{{ density().pctOfDesign }} % del diseño, sobre {{ density().lotsCompared }} lote(s) con densidad de diseño capturada.</div>
+                    } @else {
+                    <div class="text-muted">Ningún lote activo tiene densidad de diseño capturada.</div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Per lot -->
+    <div class="card">
+        <div class="card-header"><h3 class="card-title">Plantas por lote</h3></div>
+        <div class="table-responsive">
+            <table class="table table-vcenter card-table">
+                <thead>
+                    <tr>
+                        <th>Lote</th><th>Etapa</th><th class="text-end">Superficie (ha)</th>
+                        <th class="text-end">Vivas</th><th class="text-end">Faltantes</th>
+                        <th class="text-end">Densidad real / diseño</th><th>Último conteo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (lot of activeLots(); track lot.id) {
+                    <tr>
+                        <td><a [routerLink]="['/agricultura/lotes', lot.id, 'filas']">{{ lot.code }}</a>{{ lot.name ? ' · ' + lot.name : '' }}</td>
+                        <td><span class="badge" [class]="stageBadge(lot.productiveStage)">{{ stageLabel(lot.productiveStage) }}</span></td>
+                        <td class="text-end">{{ lot.areaHa | number: '1.0-2' }}</td>
+                        <td class="text-end">{{ lot.alivePlants | number }}</td>
+                        <td class="text-end" [class.text-danger]="lot.missingPlants > 0">{{ lot.missingPlants | number }}</td>
+                        <td class="text-end small">
+                            {{ lot.realDensityPlantsHa ?? '—' }} / {{ lot.designDensityPlantsHa ?? '—' }}
+                            @if (lot.densityPctOfDesign !== null) { <span class="text-muted">({{ lot.densityPctOfDesign }} %)</span> }
+                        </td>
+                        <td>{{ lot.lastCensusDate || '—' }}</td>
+                    </tr>
+                    } @empty {
+                    <tr><td colspan="7" class="text-center text-muted py-4">Esta plantación aún no tiene lotes activos.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    }
+    }
+    }
+    }
 </div>

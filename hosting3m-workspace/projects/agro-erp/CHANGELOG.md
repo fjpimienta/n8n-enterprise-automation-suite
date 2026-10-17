@@ -5,6 +5,64 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🌴 Palma, fase 1: plantaciones, lotes y filas (migración 080) — versión por asignar
+
+*Base de datos y `v6/CRUD` (Build Query: solo `spConfigByModel`). Aplicada y probada solo en LOCAL
+(2026-10-17). La versión se asigna al desplegar, después de v1.17.3. El frontend va en la misma rama (ver abajo).*
+
+**Frontend (`agro-erp`):**
+* Detección de dominio centralizada en `@shared/utils/business-domain.util` (layout, sidebar, selector de
+  empresa y login); el login, la raíz y las URLs desconocidas llevan al dashboard del dominio. Se quitó el
+  link roto `/agricultura/telemetria`.
+* `PlantationContextService` y selector de plantación junto a la empresa (última elección por empresa →
+  predeterminada → otra activa; fail-closed; `localStorage` por empresa con try/catch; el cierre de sesión
+  limpia el contexto).
+* Pantallas: Plantaciones (ADMIN/OWNER), Lotes de la plantación activa, Filas (alta individual y masiva por
+  SP, conteo con motivo para ADMIN/OWNER/EDITOR, cambio de puntos solo ADMIN/OWNER, historial) y Tablero de
+  Palma de solo lectura. Guards locales por el rol de la empresa activa (`roleGuard` de `core-auth` intacto).
+* Specs de Vitest standalone para las utilidades puras; `ng build agro-erp --configuration=production` sin
+  errores. Probado a mano en LOCAL con la empresa 10 como ADMIN y como EDITOR (2026-10-17).
+
+
+**Jerarquía:** Empresa → Plantación (≈ UPP del dominio palma) → Lote → Fila, con conteo de plantas por
+fila. Varias plantaciones por empresa; plantas individuales, pagos, inventario, cosecha y alcance por
+usuario son fases posteriores.
+
+**Base de datos (migración 080, aditiva e idempotente, dry run por default, rollback sin DROP/DELETE):**
+* Tablas `agri_variety_catalog` (global, con semilla), `agri_plantations`, `agri_lots` (tenencia propia
+  opcional; si no, hereda la de la plantación), `agri_rows` y `agri_row_census_history` (solo inserción).
+* Aislamiento fail-closed por `id_company`: triggers con mensajes que no revelan la otra empresa y
+  llaves foráneas compuestas `(padre, id_company)`; padre e `id_company` inmutables; nada se crea ni se
+  reactiva bajo un padre inactivo; nada se borra físicamente.
+* Una plantación predeterminada activa por empresa (la primera es automática; después solo con
+  `sp_agri_set_default_plantation`).
+* `sp_agri_bulk_create_rows` (también para una sola fila) y `sp_agri_record_row_census`, único camino
+  para `alive_plants` (ADMIN, OWNER, EDITOR) y `planting_positions` (ADMIN, OWNER), con historia
+  automática de motivo y actor; un `CENSO` que confirma los mismos números también queda registrado.
+* Vistas `vw_agri_lot_summary` (edad, etapa productiva **orientativa, pendiente de confirmar con el
+  cliente**, tenencia efectiva, densidades, faltantes) y `vw_agri_plantation_summary` (área sembrada y
+  bandera de inconsistencia).
+* 10 modelos `agri_*` en `crud_models`, ninguno con `id` en `allowed_fields` (el upsert del `insert`
+  nunca alcanza un registro existente) ni con `DELETE`. `PalmTelemetry` pierde `DELETE` y deja `UPDATE`
+  solo para ADMIN.
+* Códigos de error `P0080`–`P0089`.
+
+**Gateway (`v6/CRUD`):** los 3 procedimientos registrados en `spConfigByModel` (tenant primero, actor
+siempre desde el JWT).
+
+**Empresa de pruebas de palma:** `080_qa_palm_tenant_seed.sql` crea "Plantación de Pruebas" (LOCAL:
+`id_company = 10`) con ADMIN para el dueño del proyecto. Todo lo que cuelga de ella es dato de prueba;
+la empresa 7 es cliente real.
+
+**Pruebas (LOCAL):**
+* `080_tests.sql`: 73 de 73 OK, todo revertido. `apply` → `applied` → rollback → `rolled_back` →
+  re-apply → `applied`, con huellas idénticas en cada paso.
+* `curl` contra `v6` LOCAL con la empresa 10: plantaciones (la primera queda predeterminada; el `id`
+  del cliente se ignora), cambio de predeterminada por SP, lotes, filas por SP, conteos por SP (el actor
+  sale del JWT aunque el cliente mande otro), `getone`/`update` por `id`, vistas.
+* Aislamiento en ambos sentidos entre las empresas 3 y 10: lecturas vacías, escrituras con `error:true`
+  y sin cambios en la base; sin membresía o sin header → 403. `v5` no atiende ningún `agri_*`.
+
 ### 🔒 Global Error Handler: URL de ntfy fuera del repo e `INSERT` de errores parametrizado — v1.17.2
 
 *Workflow de n8n + una variable en `.env`; sin migración ni frontend. Se despliega **después** de la

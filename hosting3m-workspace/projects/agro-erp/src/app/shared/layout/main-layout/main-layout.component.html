@@ -2,7 +2,8 @@
 
     <app-sidebar></app-sidebar>
 
-    <app-header></app-header>
+    <!-- Same left offset as .page-wrapper: the fixed sidebar must never cover the header (title was cut). -->
+    <app-header class="app-header" [class.expanded-content]="layoutService.sidebarCollapsed()"></app-header>
 
     <div class="page-wrapper" [class.expanded-content]="layoutService.sidebarCollapsed()">
         <div class="page-body">

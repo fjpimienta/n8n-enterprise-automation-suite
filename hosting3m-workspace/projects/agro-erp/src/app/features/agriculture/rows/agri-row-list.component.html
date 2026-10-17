@@ -1,0 +1,275 @@
+<div class="container-fluid p-3 p-md-4">
+
+    <ol class="breadcrumb breadcrumb-arrows mb-3" aria-label="Ruta de navegación">
+        <li class="breadcrumb-item"><a routerLink="/agricultura/lotes">Lotes · {{ context.activePlantation()?.name }}</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Filas{{ lot() ? ' · ' + lot()!.code : '' }}</li>
+    </ol>
+
+    @if (loadError()) {
+    <div class="alert alert-danger" role="alert">
+        <i class="ti ti-alert-triangle me-2"></i>{{ loadError() }}
+        <div class="mt-2"><a routerLink="/agricultura/lotes">Volver a los lotes</a></div>
+    </div>
+    }
+
+    @if (isLoading() && !lot()) {
+    <div class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Cargando filas…</div>
+    }
+
+    @if (lot(); as l) {
+    <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-3">
+            <a class="btn btn-icon btn-outline-secondary" routerLink="/agricultura/lotes" title="Volver a los lotes"><i class="ti ti-arrow-left"></i></a>
+            <div>
+                <h2 class="page-title mb-0">Lote {{ l.code }}{{ l.name ? ' · ' + l.name : '' }}</h2>
+                <div class="text-muted small mt-1">
+                    {{ stageLabel(l.productiveStage) }} · {{ l.areaHa | number: '1.0-2' }} ha · {{ l.activeRows }} filas activas ·
+                    {{ l.alivePlants | number }} vivas de {{ l.plantingPositions | number }} puntos
+                    @if (l.missingPlants > 0) { · <span class="text-danger">{{ l.missingPlants | number }} faltantes</span> }
+                </div>
+            </div>
+        </div>
+        @if (canAdminister() && l.isActive) {
+        <div class="btn-list">
+            <button class="btn btn-outline-primary" (click)="openCreate('single')"><i class="ti ti-plus me-1"></i>Alta de una fila</button>
+            <button class="btn btn-primary" (click)="openCreate('range')"><i class="ti ti-list-numbers me-1"></i>Alta masiva</button>
+        </div>
+        }
+    </div>
+
+    @if (!l.isActive) {
+    <div class="alert alert-secondary" role="alert"><i class="ti ti-info-circle me-2"></i>Este lote está inactivo: no se pueden registrar filas ni conteos.</div>
+    }
+    @if (!canCount()) {
+    <div class="alert alert-info" role="alert"><i class="ti ti-lock me-2"></i>Solo lectura: tu rol en esta empresa no permite registrar conteos.</div>
+    } @else if (!canAdminister()) {
+    <div class="alert alert-info" role="alert"><i class="ti ti-info-circle me-2"></i>Puedes registrar conteos. Dar de alta filas o cambiar los puntos de plantación lo hace un administrador.</div>
+    }
+    @if (actionError()) {
+    <div class="alert alert-warning alert-dismissible" role="alert">
+        <i class="ti ti-alert-circle me-2"></i>{{ actionError() }}
+        <button type="button" class="btn-close" (click)="actionError.set(null)"></button>
+    </div>
+    }
+    @if (actionSuccess()) {
+    <div class="alert alert-success alert-dismissible" role="alert">
+        <i class="ti ti-check me-2"></i>{{ actionSuccess() }}
+        <button type="button" class="btn-close" (click)="actionSuccess.set(null)"></button>
+    </div>
+    }
+    @if (possiblyTruncated()) {
+    <div class="alert alert-warning" role="alert">
+        <i class="ti ti-alert-triangle me-2"></i>La lista llegó con el máximo de registros que entrega el servidor: puede haber filas que no se muestran.
+    </div>
+    }
+
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-vcenter card-table">
+                <thead>
+                    <tr>
+                        <th class="text-end">Fila</th>
+                        <th class="text-end">Puntos de plantación</th>
+                        <th class="text-end">Plantas vivas</th>
+                        <th class="text-end">Faltantes</th>
+                        <th>Último conteo</th>
+                        <th>Estado</th>
+                        <th class="w-1">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (row of rows(); track row.id) {
+                    <tr [class.text-muted]="!row.isActive">
+                        <td class="text-end fw-medium">{{ row.rowNumber }}</td>
+                        <td class="text-end">{{ row.plantingPositions | number }}</td>
+                        <td class="text-end">{{ row.alivePlants | number }}</td>
+                        <td class="text-end" [class.text-danger]="row.plantingPositions - row.alivePlants > 0">{{ row.plantingPositions - row.alivePlants | number }}</td>
+                        <td>{{ row.lastCensusDate || '—' }}</td>
+                        <td>
+                            @if (row.isActive) { <span class="badge bg-green-lt">Activa</span> }
+                            @else { <span class="badge bg-secondary-lt">Inactiva</span> }
+                        </td>
+                        <td>
+                            <div class="btn-list flex-nowrap">
+                                @if (canCount() && row.isActive && l.isActive) {
+                                <button class="btn btn-sm btn-success" (click)="openCensus(row)"><i class="ti ti-clipboard-check me-1"></i>Conteo</button>
+                                }
+                                <button class="btn btn-icon btn-sm btn-outline-secondary" title="Historial de conteos" (click)="openHistory(row)"><i class="ti ti-history"></i></button>
+                                @if (canAdminister()) {
+                                @if (row.isActive) {
+                                <button class="btn btn-icon btn-sm btn-outline-danger" title="Desactivar fila" [disabled]="busyId() === row.id"
+                                    (click)="setActive(row, false)"><i class="ti ti-archive"></i></button>
+                                } @else if (l.isActive) {
+                                <button class="btn btn-icon btn-sm btn-outline-success" title="Reactivar fila" [disabled]="busyId() === row.id"
+                                    (click)="setActive(row, true)"><i class="ti ti-refresh"></i></button>
+                                }
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                    } @empty {
+                    <tr>
+                        <td colspan="7" class="text-center py-5">
+                            <i class="ti ti-list-numbers fs-1 text-muted d-block mb-2"></i>
+                            <span class="text-muted">Este lote aún no tiene filas registradas.</span>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    }
+</div>
+
+<!-- Create rows (single or range); always through agri_bulk_create_rows -->
+@if (createOpen()) {
+<div class="modal-backdrop fade show"></div>
+<div class="modal modal-blur fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header">
+                <h5 class="modal-title">{{ createForm().mode === 'single' ? 'Alta de una fila' : 'Alta masiva de filas' }}</h5>
+                <button type="button" class="btn-close" [disabled]="createSubmitting()" (click)="closeCreate()"></button>
+            </div>
+            <div class="modal-body">
+                @if (createError()) {
+                <div class="alert alert-danger" role="alert"><i class="ti ti-alert-triangle me-2"></i>{{ createError() }}</div>
+                }
+                <div class="row">
+                    <div class="col mb-3">
+                        <label class="form-label fw-bold">{{ createForm().mode === 'single' ? 'Número de fila' : 'Fila inicial' }}</label>
+                        <input type="text" inputmode="numeric" class="form-control" [disabled]="createSubmitting()"
+                            [ngModel]="createForm().from" (ngModelChange)="setCreate('from', $event)">
+                    </div>
+                    @if (createForm().mode === 'range') {
+                    <div class="col mb-3">
+                        <label class="form-label fw-bold">Fila final</label>
+                        <input type="text" inputmode="numeric" class="form-control" [disabled]="createSubmitting()"
+                            [ngModel]="createForm().to" (ngModelChange)="setCreate('to', $event)">
+                    </div>
+                    }
+                    <div class="col mb-3">
+                        <label class="form-label fw-bold">Puntos por fila</label>
+                        <input type="text" inputmode="numeric" class="form-control" [disabled]="createSubmitting()"
+                            [ngModel]="createForm().positions" (ngModelChange)="setCreate('positions', $event)" placeholder="Ej. 20">
+                    </div>
+                </div>
+                <small class="form-hint">Cada fila nueva empieza con todas sus plantas vivas. Máximo 500 filas por alta; no se permiten números de fila activos repetidos.</small>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" [disabled]="createSubmitting()" (click)="closeCreate()">Cancelar</button>
+                <button class="btn btn-primary" [disabled]="createSubmitting()" (click)="submitCreate()">
+                    @if (createSubmitting()) { <span class="spinner-border spinner-border-sm me-2" role="status"></span>Registrando… }
+                    @else { Registrar }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+}
+
+<!-- Census: alive plants (ADMIN/OWNER/EDITOR) and planting positions (ADMIN/OWNER) via agri_record_row_census -->
+@if (censusRow(); as row) {
+<div class="modal-backdrop fade show"></div>
+<div class="modal modal-blur fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="ti ti-clipboard-check me-2"></i>Registrar conteo · fila {{ row.rowNumber }}</h5>
+                <button type="button" class="btn-close" [disabled]="censusSubmitting()" (click)="closeCensus()"></button>
+            </div>
+            <div class="modal-body">
+                @if (censusError()) {
+                <div class="alert alert-danger" role="alert"><i class="ti ti-alert-triangle me-2"></i>{{ censusError() }}</div>
+                }
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">Plantas vivas <span class="text-danger">*</span></label>
+                        <input type="text" inputmode="numeric" class="form-control" [disabled]="censusSubmitting()"
+                            [ngModel]="censusForm().alive" (ngModelChange)="setCensus('alive', $event)">
+                        <small class="form-hint">Antes: {{ row.alivePlants }}</small>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">Puntos de plantación</label>
+                        <input type="text" inputmode="numeric" class="form-control" [disabled]="censusSubmitting() || !canAdminister()"
+                            [ngModel]="censusForm().positions" (ngModelChange)="setCensus('positions', $event)">
+                        <small class="form-hint">{{ canAdminister() ? 'Solo cámbialo si se recontaron los puntos.' : 'Lo cambia un administrador.' }}</small>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">Motivo <span class="text-danger">*</span></label>
+                        <select class="form-select" [disabled]="censusSubmitting()" [ngModel]="censusForm().reason" (ngModelChange)="setCensus('reason', $event)">
+                            @for (o of reasonOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+                        </select>
+                    </div>
+                    <div class="col-6 mb-3">
+                        <label class="form-label fw-bold">Fecha del conteo</label>
+                        <input type="date" class="form-control" [max]="today" [disabled]="censusSubmitting()"
+                            [ngModel]="censusForm().censusDate" (ngModelChange)="setCensus('censusDate', $event)">
+                    </div>
+                </div>
+                <div class="mb-1">
+                    <label class="form-label">Notas</label>
+                    <textarea class="form-control" rows="2" maxlength="500" [disabled]="censusSubmitting()"
+                        [ngModel]="censusForm().notes" (ngModelChange)="setCensus('notes', $event)"></textarea>
+                </div>
+                <small class="form-hint">Un conteo de rutina sin cambios también queda en el historial.</small>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" [disabled]="censusSubmitting()" (click)="closeCensus()">Cancelar</button>
+                <button class="btn btn-success" [disabled]="censusSubmitting()" (click)="submitCensus()">
+                    @if (censusSubmitting()) { <span class="spinner-border spinner-border-sm me-2" role="status"></span>Guardando… }
+                    @else { Registrar conteo }
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+}
+
+<!-- History of one row (append-only) -->
+@if (historyRow(); as row) {
+<div class="modal-backdrop fade show"></div>
+<div class="modal modal-blur fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="ti ti-history me-2"></i>Historial de conteos · fila {{ row.rowNumber }}</h5>
+                <button type="button" class="btn-close" (click)="closeHistory()"></button>
+            </div>
+            <div class="modal-body p-0">
+                @if (historyLoading()) {
+                <div class="text-center py-4 text-muted"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Cargando historial…</div>
+                } @else if (historyError()) {
+                <div class="alert alert-danger m-3" role="alert"><i class="ti ti-alert-triangle me-2"></i>{{ historyError() }}</div>
+                } @else {
+                <div class="table-responsive">
+                    <table class="table table-sm table-vcenter card-table mb-0">
+                        <thead>
+                            <tr><th>Fecha (CDMX)</th><th>Motivo</th><th class="text-end">Puntos</th><th class="text-end">Vivas</th><th>Registró</th><th>Notas</th></tr>
+                        </thead>
+                        <tbody>
+                            @for (h of history(); track h.id) {
+                            <tr>
+                                <td class="small">{{ asUtc(h.changedAt) | date: 'yyyy-MM-dd HH:mm' : '-0600' }}</td>
+                                <td>{{ reasonLabel(h.reason) }}</td>
+                                <td class="text-end small">{{ h.previousPositions ?? '—' }} → {{ h.newPositions }}</td>
+                                <td class="text-end small">{{ h.previousAlive ?? '—' }} → {{ h.newAlive }}</td>
+                                <td class="small">{{ h.changedBy || '—' }}</td>
+                                <td class="small">{{ h.notes || '' }}</td>
+                            </tr>
+                            } @empty {
+                            <tr><td colspan="6" class="text-center text-muted py-4">Sin registros.</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                }
+            </div>
+            <div class="modal-footer"><button class="btn" (click)="closeHistory()">Cerrar</button></div>
+        </div>
+    </div>
+</div>
+}
