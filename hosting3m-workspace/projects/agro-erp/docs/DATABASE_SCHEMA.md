@@ -1177,3 +1177,72 @@ firma), no una sola función con parámetros opcionales agregados con el tiempo.
   settings) via `current_setting(..., true)`, defaulting to `CAPTURE_CORRECTION`/`NULL`.
   *(v1.16.0: `update_livestock_tag` depende de este trigger sin pasar ningún `SET LOCAL` —
   ver nota en "Identifier History Subsystem" arriba.)*
+
+---
+
+## 🌴 Palm Plantation Subsystem (migration 080)
+*Added in migration 080 (2026-10-17, LOCAL only until deployed). Files: `080_agri_structure.sql`,
+`080_tests.sql` (73 checks, always rolled back), `080_rollback.sql` (no DROP/DELETE),
+`080_state_check.sql` (read-only), `080_qa_palm_tenant_seed.sql` (QA tenant, separate script).*
+
+Hierarchy: `companys` → `agri_plantations` → `agri_lots` → `agri_rows` (plant count per row).
+All timestamps are naive UTC (`timestamp`, `now() AT TIME ZONE 'UTC'`); "today" for date checks is
+`America/Mexico_City` (`fn_agri_today_cdmx()`). Nothing is physically deleted (`is_active = false`).
+
+### Tables
+| Table | Key columns | Constraints worth knowing |
+|---|---|---|
+| `agri_variety_catalog` (global, no `id_company`) | `variety_code` (unique, `^[A-Z0-9_]+$`), `variety_name`, `notes`, `is_active`, `created_at` | Seed: `TENERA`, `DURA`, `HIBRIDO_OXG`, `OTRA_SIN_ESPECIFICAR` |
+| `agri_plantations` | `id_company` (FK `companys`, no cascade), `plantation_code`, `plantation_name`, `state`, `municipality`, `locality`, `latitude`/`longitude`, `total_area_ha` (12,4), `tenure`, `lessor_name`, `is_default`, `is_active`, `notes`, `metadata`, `created_at`, `updated_at` | Code unique per company among active rows, case/space-insensitive (`uq_agri_plantations_code_active`); one active default per company (`uq_agri_plantations_default_active`); `total_area_ha > 0`; coordinates in range and both-or-none; `tenure` ∈ `PROPIA, RENTADA, EJIDAL, COMODATO`; `lessor_name` only if `RENTADA`; `UNIQUE (id, id_company)` |
+| `agri_lots` | `id_company`, `plantation_id`, `lot_code`, `lot_name`, `area_ha` (> 0), `planting_date`, `planting_date_is_approx`, `variety_id`, `seed_supplier`, `planting_pattern` (`TRESBOLILLO, CUADRO, OTRO`), `spacing_m`, `design_density_plants_ha`, `water_regime` (`TEMPORAL, RIEGO`), `soil_type`, `tenure`/`lessor_name` (optional, NULL = inherited) | FK `(plantation_id, id_company)` → `agri_plantations (id, id_company)`; code unique per plantation among active rows; a lot `lessor_name` only if the lot's own tenure is `RENTADA` (NULL-safe: `tenure IS NOT DISTINCT FROM 'RENTADA'`) |
+| `agri_rows` | `id_company`, `lot_id`, `row_number` (> 0), `planting_positions` (≥ 0), `alive_plants`, `last_census_date` | FK `(lot_id, id_company)`; `alive_plants BETWEEN 0 AND planting_positions`; row number unique per lot among active rows |
+| `agri_row_census_history` (append-only) | `row_id`, `id_company`, `previous_/new_positions`, `previous_/new_alive`, `reason` (`CENSO, RESIEMBRA, PERDIDA, CORRECCION_CAPTURA, ALTA`), `changed_by`, `notes`, `changed_at`, `created_at` | FK `(row_id, id_company)` → `agri_rows`; updates, deletes and truncation rejected |
+
+### Triggers
+| Trigger | Table | Behavior |
+|---|---|---|
+| `trg_agri_plantations_guard` | `agri_plantations` | `id_company` immutable; no create/reactivate in an inactive company; on INSERT `is_default` is computed (first active plantation of the company), never taken from the client; deactivation clears `is_default`; any other `is_default` change outside `sp_agri_set_default_plantation` → `P0088` |
+| `trg_agri_lots_guard` | `agri_lots` | plantation must exist in the same company (`P0080`); `id_company`/`plantation_id` immutable (`P0082`); no create/reactivate under an inactive plantation (`P0081`); no future `planting_date` (`P0083`); variety must be active |
+| `trg_agri_rows_guard` | `agri_rows` | lot must exist in the same company; `id_company`/`lot_id` immutable; no create/reactivate when the lot or plantation is inactive; on INSERT `alive_plants := planting_positions`; `alive_plants`/`planting_positions` change only with the census procedure flag set (`P0087`) |
+| `trg_agri_rows_census_history` | `agri_rows` (AFTER) | History on INSERT (`ALTA`) and on any `planting_positions`/`alive_plants` change (`IS DISTINCT FROM`); reason/actor/notes from `app.agri_census_reason`/`_user`/`_notes`, default `CORRECCION_CAPTURA` |
+| `trg_agri_census_history_guard`, `trg_agri_census_history_no_truncate` | `agri_row_census_history` | Append-only (`P0089`); a history row must belong to the company of its row |
+| `trg_agri_*_updated_at` | plantations, lots, rows | `updated_at` = UTC now |
+
+### Procedures (all return `jsonb` with `success`)
+| Procedure | Roles (checked in the DB by `fn_agri_actor_role`) | Notes |
+|---|---|---|
+| `sp_agri_set_default_plantation(p_tenant_id, p_plantation_id, p_actor_email)` | ADMIN, OWNER | Locks the company's plantations, clears the old default and sets the new one; `changed=false` if it already was the default |
+| `sp_agri_bulk_create_rows(p_tenant_id, p_lot_id, p_from_row, p_to_row, p_positions_per_row, p_actor_email)` | ADMIN, OWNER | Max 500 rows, positions 0–10000, rejects overlaps with active rows (all-or-nothing); also used for a single row (`from = to`) |
+| `sp_agri_record_row_census(p_tenant_id, p_row_id, p_alive_plants, p_reason, p_census_date, p_notes, p_actor_email, p_planting_positions DEFAULT NULL)` | count: ADMIN, OWNER, EDITOR; positions: ADMIN, OWNER | Only way to change `alive_plants`/`planting_positions`; validates against the final values; no future dates; a `CENSO` with unchanged numbers writes one explicit history row (previous = new) |
+
+### Views (expose `id_company` and `created_at`)
+* `vw_agri_lot_summary`: plantation and variety, own and `effective_tenure`/`effective_lessor_name`,
+  `age_years` (completed years), `productive_stage` — **orientative cut-offs, pending confirmation with
+  the client**: `INMADURA` <3, `INICIO_PRODUCCION` 3–7, `PRODUCCION_PLENA` 8–20, `PRODUCCION_DECLINANTE`
+  21–25, `RENOVACION` >25, `SIN_FECHA` without date —, active rows, `planting_positions`, `alive_plants`,
+  `missing_plants`, `real_density_plants_ha`, `density_pct_of_design`, `last_census_date`.
+* `vw_agri_plantation_summary`: active lots, `planted_area_ha` (sum of active lots),
+  `has_area_inconsistency` (planted > `total_area_ha`, review flag, not an error), plant totals.
+
+### Error codes
+| Code | Meaning |
+|---|---|
+| `P0080` | Not found or not in the active company (never says which company owns it) |
+| `P0081` | Parent (company / plantation / lot) inactive |
+| `P0082` | Immutable column changed (`id_company`, `plantation_id`, `lot_id`) |
+| `P0083` | Future date (planting, census) |
+| `P0084` | Role not allowed (incl. an EDITOR changing planting positions) |
+| `P0085` | Invalid row range or size (bulk creation) |
+| `P0086` | Row range overlaps active rows |
+| `P0087` | Invalid census, or `alive_plants`/`planting_positions` changed outside the procedure |
+| `P0088` | Default plantation: target inactive, or `is_default` changed outside the procedure |
+| `P0089` | Census history is append-only |
+
+### `crud_models` (10 models, none with `id` in `allowed_fields`, none with a DELETE op)
+`agri_variety_catalog` (select all roles, write ADMIN), `agri_plantations` / `agri_lots` (select
+ADMIN/OWNER/EDITOR/CUSTOMER, write ADMIN/OWNER), `agri_rows` (same; `planting_positions`,
+`alive_plants`, `last_census_date` not writable), `agri_row_census_history` (select ADMIN/OWNER/EDITOR),
+`agri_lot_summary` / `agri_plantation_summary` (read only), and the `call_sp` models
+`agri_set_default_plantation`, `agri_bulk_create_rows` (ADMIN/OWNER), `agri_record_row_census`
+(ADMIN/OWNER/EDITOR). `PalmTelemetry` (id 45): DELETE op removed, `UPDATE` only ADMIN (restored by the
+rollback). Rollback backup table: `crud_models_backup_20261017_080`.
