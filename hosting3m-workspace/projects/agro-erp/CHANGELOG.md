@@ -38,6 +38,68 @@ nulos, vacíos, comillas/`DROP TABLE` como texto literal y recorte a 255/255/100
 variables de entorno de n8n (incluido `INTERNAL_SECRET`); no se cambia porque `GenerateToken` depende de
 ello.
 
+### 🔒 Contención de seguridad del gateway `v5/CRUD` y `companys` pública — v1.17.1
+
+*Workflows de n8n únicamente (sin migración ni frontend). Probado en LOCAL el 2026-10-17; la fecha de
+liberación se fija al importar en producción. La regla WAF de Cloudflare para `crud/v5/` ya está activa.*
+
+**Origen:** al revisar el hotfix del upsert de `v6` se confirmó que el `dashboard` del hotel y
+`hotel-website` no usan `v6/CRUD` sino `v5/CRUD`, todavía activo en producción y sin ninguno de los
+endurecimientos de `v6` (sin membresía, rol del JWT, header de tenant opcional). Sobre el export de
+producción (`versionId 32719959-…`) se confirmó en el código:
+* **Inyección SQL como superusuario:** `Get Model Config` y `Get` interpolaban el nombre del modelo;
+  `Build Query` pegaba `sort_by` en el `ORDER BY` y el primer campo del `getone` en el `WHERE`. La
+  ruta pública de `companys` llegaba a `sort_by` **sin token**.
+* **El body podía reemplazar el modelo de la URL** (`Get Model Name` hacía el spread después de
+  `model_name`), lo que también saltaba cualquier filtro por URL.
+* **Registro automático de tablas:** un modelo inexistente se registraba en `crud_models` con todas
+  las operaciones (rama falsa de `ModelExist` → OpenAI → `INSERT`). Sin evidencia de que haya pasado
+  en producción (revisado por el dueño).
+* **Cualquier modelo de `crud_models` era alcanzable por `v5`**, incluidos ganado, `users`,
+  `livestock_producers_pii` (CURP/RFC descifrados) y `employee_credentials`.
+* **`companys getall` público devolvía `companys.*`** (`metadata`, notas, ingresos) en `v5` y `v6`.
+
+**Cambios (`v5/CRUD`):**
+* Nodos nuevos `Model Allowlist` + `Is Allowed Model`, justo después de `Get Model Name` y antes de
+  `If`/`Verify Token`/`Get Model Config`: solo pasan los 9 modelos del hotel (`hotel_guests`,
+  `hotel_bookings`, `hotel_reviews`, `hotel_expenses`, `hotel_rooms`, `hotel_room_inspections`,
+  `hotel_maintenance_tickets`, `hotel_assets`, `hotel_capital`; la misma lista que la regla WAF).
+  Todo lo demás → HTTP 404 `MODEL_NOT_ALLOWED`, sin tocar la base.
+* `Get Model Name`: la URL siempre gana sobre el body; la lista blanca además exige que coincidan.
+* `Get Model Config`: parámetro enlazado (`model_name = $1`) en vez de interpolación.
+* La rama falsa de `ModelExist` responde 404 `MODEL_NOT_FOUND`; el registro automático queda
+  desconectado (no borrado). `Get` (`information_schema`) quedó inalcanzable y no se modificó.
+* `sort_by` y el campo de búsqueda de `getone` solo aceptan identificadores simples (misma regla que
+  `v6`).
+
+**Cambios (`v5/CRUD` y `v6/CRUD`):** `companys getall` devuelve solo `id_company` y `company_name`,
+ignora cualquier filtro salvo `id_company` y ordena siempre por `company_name`.
+
+**Sin cambios a propósito:** el aislamiento por empresa, el upsert, el `update` y el `delete` de `v5`
+(van con la migración del hotel a `v6`); `Insert Logs` (no alcanzable: ningún modelo tiene
+`hooks.post`); el `call_sp` de `v5` (no alcanzable: ningún modelo tiene `CALL_SP`).
+
+**Efecto conocido:** la **pantalla de usuarios del `dashboard` del hotel queda sin servicio** (`users`
+bloqueado en `v5`) hasta migrar el hotel a `v6`. `pista-hielo` queda marcado como **legacy, fuera
+de uso**; sus modelos (`ph_*`, `transactions`) ya no pasan por `v5`.
+
+**Pruebas en LOCAL (2026-10-17, `localhost`, token de un ADMIN del tenant 3):**
+* `v5`: `cattle_livestock`, `companys`, `users`, `livestock_producers_pii`, `employee_credentials`,
+  `crud_models`, `ph_clients`, `transactions` y un modelo inexistente → 404 `MODEL_NOT_ALLOWED`;
+  en ninguna de esas ejecuciones corrió un nodo de Postgres.
+* `v5` `hotel_rooms`: `getall` normal y con `sort_by` válido → 200 con datos; `sort_by` con comilla o
+  subconsulta y `getone` con campo inválido → rechazados en `Build Query`, sin ejecutar SQL (responden
+  HTTP 200 con cuerpo vacío, comportamiento previo de `v5` ante un error); `"model_name": "users"` en
+  el body → devuelve habitaciones, no usuarios.
+* `v6`: `companys getall` sin token → 9 filas con solo `id_company`/`company_name`, aun con filtros
+  sobre `metadata`; `livestock_producers_pii` con header del tenant 3 → 0 productores de otras
+  empresas (también con filtro `id_company=5` y con `getone` del id de un productor de la empresa 5).
+
+**Deuda nueva** (detalle en el `CLAUDE.md` raíz): migrar el hotel a `v6` (`hotel_guests` → `users` →
+resto); errores de producción publicados en un tema público de ntfy.sh; `dashboard`/`hotel-website`
+apuntan a producción en dev; modelos y datos de `pista-hielo` en la base; modelos con PII sin
+consumidor; `sp_upsert_producer_pii` sin tenant.
+
 ### 🧾 Órdenes de venta: una sola orden para muchos animales, varias UPP y varias empresas (migración 074) — v1.17.0
 
 *La base de datos (074 + alta de 38 animales) y los workflows de n8n se aplicaron en producción el
@@ -169,7 +231,9 @@ a desplegar también el frontend anterior. Los guardias de `users` del Build Que
 ⚠️ **Datos de ejecución de n8n:** el alta/edición vía `sp_access_*` deja la contraseña en texto plano
 en los datos de ejecución de `v6/CRUD` (el webhook y `Get Model Name` ya la tenían antes de 073).
 Recomendado: no guardar ejecuciones exitosas de `v6/CRUD` y activar el pruning por antigüedad.
-También protege la pantalla de usuarios del `dashboard` del hotel, que usa el mismo modelo.
+~~También protege la pantalla de usuarios del `dashboard` del hotel, que usa el mismo modelo.~~
+⚠️ **Corrección (v1.17.1, 2026-10-17):** no era así. El `dashboard` del hotel usa `v5/CRUD`, que no
+tiene ninguno de estos guardias. Desde v1.17.1 `users` está bloqueado en `v5`.
 
 **Frontend (Personal UPP):** lista desde `company_members`; alta y edición vía los procedimientos;
 "Eliminar" reemplazado por **Desactivar/Reactivar acceso a esta empresa** con confirmación; campos

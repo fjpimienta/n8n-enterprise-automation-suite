@@ -161,6 +161,7 @@ Debes actuar siempre como mi **Technical Lead auxiliar y Senior Project Manager 
 * `access_audit_log` es solo inserción y nunca guarda contraseñas ni hashes.
 * `CUSTOMER` = "Solo lectura": no puede pedir órdenes de venta (Regla 16). En el resto del Agente IA el rol se aplicará en la Fase 3.
 * Gateway (`v6/CRUD`, Build Query): `users` sin `password` en ningún SELECT/RETURNING, `insert` con DO NOTHING, `delete` bloqueado; `user_companies` de solo lectura.
+* ⚠️ Estos guardias son **solo de `v6`**. El `dashboard` del hotel usa `v5/CRUD`, que no los tiene; desde v1.17.1 `users` está bloqueado en `v5` (ver `CLAUDE.md` raíz).
 
 ## Contrato Meta-CRUD (verificado en producción)
 - Payload: `{ entity, table_name, operation (minúsculas), filters|fields, id }`
@@ -214,6 +215,9 @@ Debes actuar siempre como mi **Technical Lead auxiliar y Senior Project Manager 
 - **No existe tool MCP de consulta de historial de eventos por animal** (reproducción/desparasitación/castración) — solo tools de escritura y `vw_cattle_event_log` a nivel dashboard. Ver Regla 15.
 - **`user_email` de las tools de órdenes de venta lo llena el modelo (`$fromAI`)** y la base lo usa para decidir qué empresas puede tocar — misma deuda de sesión del agente (Regla 6); resolverlo junto con `agent_active_sessions`. Ver Regla 16.
 - **CORS del webhook del chat en producción incluye `http://localhost:4200`** (preexistente, detectado 2026-10-16).
+- ⚠️ **`sp_upsert_producer_pii(p_producer_id, p_curp, p_rfc)` no recibe tenant** (2026-10-17): cualquiera que conozca el `uuid` de un productor puede escribir su CURP/RFC, sea de la empresa que sea. Además el modelo `producer_pii` está roto (`table_name` = el SP con op `INSERT`, sin entrada en `spConfigByModel`), así que hoy no es alcanzable. Antes de usarlo (Regla 4), envolverlo en un `sp_*` con `p_tenant_id` que valide la empresa del productor y registrarlo en `spConfigByModel`.
+- ⚠️ **`curp`/`rfc` en texto plano en `companys.metadata`** (modal de `/admin/tenants`, `upp-form-modal`; en LOCAL solo la empresa 3, de pruebas). Opción elegida (PR aparte): quitar los campos del modal y del modelo `Company`, quitar esas llaves del `metadata` antes de guardar (si no, el `getone` las vuelve a mandar) y limpiar con respaldo previo (`metadata - 'curp' - 'rfc'`, UPDATE, no DELETE).
+- Gateway compartido (`v5`/`v6`), hotel, ntfy, `pista-hielo` legacy y modelos con PII sin consumidor (`livestock_producers_pii`, `livestock_producers`, `employee_credentials`): ver la deuda a nivel suite en el `CLAUDE.md` raíz (contención v1.17.1, 2026-10-17).
 
 ## Event authorization matrix (source of truth, set by the project owner 2026-10-06)
 
