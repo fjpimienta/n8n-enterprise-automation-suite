@@ -5,6 +5,7 @@ import { LayoutService } from '@shared/services/layout.service';
 import { AuthService, TenantService } from 'core-auth';
 import { ThemeService } from '@core/services/theme.service';
 import { isLivestockDomain, isPalmDomain } from '@shared/utils/business-domain.util';
+import { canAdministerPalm } from '@features/agriculture/utils/agri.util';
 
 @Component({
   selector: 'app-sidebar',
@@ -28,6 +29,8 @@ export class SidebarComponent {
   // Business domain of the active company (single rule: @shared/utils/business-domain.util)
   public isLivestock = computed(() => isLivestockDomain(this.tenantService.activeTenant()));
   public isAgriculture = computed(() => isPalmDomain(this.tenantService.activeTenant()));
+  // Palm administration entries: role of the ACTIVE company (not the JWT role).
+  public canAdministerPalm = computed(() => canAdministerPalm(this.tenantService.activeTenant()?.role));
 
   ngOnInit() {
     const currentRole = localStorage.getItem('role') || 'EDITOR';
