@@ -75,6 +75,12 @@
                         <span class="nav-link-title font-weight-bold">Dashboard Agrícola</span>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" routerLink="/agricultura/lotes" routerLinkActive="active" (click)="closeMenu()">
+                        <span class="nav-link-icon text-muted">🌱</span>
+                        <span class="nav-link-title">Lotes y conteos</span>
+                    </a>
+                </li>
                 @if (canAdministerPalm()) {
                 <li class="nav-item">
                     <a class="nav-link" routerLink="/agricultura/plantaciones" routerLinkActive="active"

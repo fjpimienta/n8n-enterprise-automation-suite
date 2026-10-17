@@ -13,5 +13,12 @@ export const agricultureRoutes: Routes = [
         canActivate: [palmAdminGuard],
         loadComponent: () => import('./plantations/plantation-list.component').then(m => m.PlantationListComponent)
     },
+    {
+        // Lots of the active plantation: every palm role reads (EDITOR records counts from the rows);
+        // create / edit / deactivate is ADMIN / OWNER inside the screen.
+        path: 'lotes',
+        canActivate: [palmDomainGuard],
+        loadComponent: () => import('./lots/agri-lot-list.component').then(m => m.AgriLotListComponent)
+    },
     { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
 ];
