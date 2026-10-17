@@ -49,6 +49,10 @@ BEGIN
     INSERT INTO user_companies (email, id_company, role, is_active) VALUES (c_actor, 3, 'ADMIN', true), (c_actor, 6, 'ADMIN', true)
     ON CONFLICT (email, id_company) DO UPDATE SET role = 'ADMIN', is_active = true;
 
+    -- Independent of earlier QA data: plantations already registered for 3 / 6 are deactivated inside
+    -- this transaction only (deactivation also clears their default flag), so the tests start clean.
+    UPDATE agri_plantations SET is_active = false WHERE id_company IN (3, 6) AND is_active;
+
     -- T01 catalog seed
     SELECT count(*) INTO v_n FROM agri_variety_catalog WHERE variety_code IN ('TENERA','DURA','HIBRIDO_OXG','OTRA_SIN_ESPECIFICAR');
     PERFORM pg_temp.ok('T01 variety catalog seeded (4)', v_n = 4, v_n::text);
@@ -402,6 +406,10 @@ SELECT pg_temp.ok('T34 10 agri_* models registered, none with id in allowed_fiel
     AND (SELECT allowed_fields ? 'planting_positions' FROM crud_models WHERE model_name = 'agri_record_row_census')
     AND (SELECT allowed_roles_insert FROM crud_models WHERE model_name = 'agri_record_row_census') = 'ADMIN,OWNER,EDITOR'
     AND (SELECT allowed_roles_insert FROM crud_models WHERE model_name = 'agri_bulk_create_rows') = 'ADMIN,OWNER');
+SELECT pg_temp.ok('T34b agri_rows has no INSERT op (rows only via sp_agri_bulk_create_rows); UPDATE stays ADMIN/OWNER',
+    (SELECT NOT ('INSERT' = ANY (allowed_ops)) AND 'UPDATE' = ANY (allowed_ops)
+            AND allowed_roles_insert = 'NONE' AND allowed_roles_update = 'ADMIN,OWNER'
+       FROM crud_models WHERE model_name = 'agri_rows'));
 SELECT pg_temp.ok('T35 PalmTelemetry: no DELETE, UPDATE only ADMIN',
     (SELECT NOT ('DELETE' = ANY (allowed_ops)) AND allowed_roles_update = 'ADMIN' AND allowed_roles_delete = 'NONE'
        FROM crud_models WHERE model_name = 'PalmTelemetry'));

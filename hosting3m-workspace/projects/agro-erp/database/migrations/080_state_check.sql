@@ -98,6 +98,11 @@ BEGIN
         IF EXISTS (SELECT 1 FROM crud_models WHERE model_name = ANY (v_models) AND 'DELETE' = ANY (allowed_ops)) THEN
             RAISE WARNING 'FAIL: an agri_* model allows DELETE'; v_failures := v_failures + 1;
         END IF;
+        IF EXISTS (SELECT 1 FROM crud_models WHERE model_name = 'agri_rows'
+                    AND ('INSERT' = ANY (allowed_ops) OR allowed_roles_insert <> 'NONE')) THEN
+            RAISE WARNING 'FAIL: agri_rows must not allow INSERT (rows only via sp_agri_bulk_create_rows)';
+            v_failures := v_failures + 1;
+        END IF;
         IF 'DELETE' = ANY (v_palm.allowed_ops) OR v_palm.allowed_roles_update <> 'ADMIN' OR v_palm.allowed_roles_delete <> 'NONE' THEN
             RAISE WARNING 'FAIL: PalmTelemetry not restricted (ops=% update=% delete=%)',
                 v_palm.allowed_ops, v_palm.allowed_roles_update, v_palm.allowed_roles_delete;

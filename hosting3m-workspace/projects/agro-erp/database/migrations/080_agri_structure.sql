@@ -857,10 +857,11 @@ VALUES
    '["id_company","plantation_id","lot_code","lot_name","area_ha","planting_date","planting_date_is_approx","variety_id","seed_supplier","planting_pattern","spacing_m","design_density_plants_ha","water_regime","soil_type","tenure","lessor_name","is_active","notes","metadata"]',
    NULL, '{}', '{SELECT,GETONE,GETALL,INSERT,UPDATE}', '{"pre":[],"post":[]}',
    'ADMIN,OWNER,EDITOR,CUSTOMER', 'ADMIN,OWNER', 'ADMIN,OWNER', 'NONE', '[]', false, true),
+  -- No INSERT: rows are created only by sp_agri_bulk_create_rows (planting_positions is not writable here).
   ('agri_rows', 'agri_rows', 'id',
    '["id_company","lot_id","row_number","is_active","notes","metadata"]',
-   NULL, '{}', '{SELECT,GETONE,GETALL,INSERT,UPDATE}', '{"pre":[],"post":[]}',
-   'ADMIN,OWNER,EDITOR,CUSTOMER', 'ADMIN,OWNER', 'ADMIN,OWNER', 'NONE', '[]', false, true),
+   NULL, '{}', '{SELECT,GETONE,GETALL,UPDATE}', '{"pre":[],"post":[]}',
+   'ADMIN,OWNER,EDITOR,CUSTOMER', 'NONE', 'ADMIN,OWNER', 'NONE', '[]', false, true),
   ('agri_row_census_history', 'agri_row_census_history', 'id',
    '["id_company","row_id","reason","changed_at"]',
    NULL, '{}', '{SELECT,GETONE,GETALL}', '{"pre":[],"post":[]}',
