@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { LoggerService } from '../../services/logger.service';
 import { AuthService, TenantService, CompanyContext } from 'core-auth';
 import { ThemeService } from '@core/services/theme.service';
+import { dashboardRouteFor } from '@shared/utils/business-domain.util';
 
 @Component({
   selector: 'app-login',
@@ -106,7 +107,9 @@ export class LoginComponent {
               business_type: activeCompany.business_type || 'ADMIN'
             });
           }
-          this.router.navigate(['/dashboard']);
+          // Land on the dashboard of the selected company's domain ('/dashboard' does not exist and the
+          // wildcard used to send palm companies to the livestock dashboard).
+          this.router.navigate([dashboardRouteFor(this.tenantService.activeTenant())]);
         }
       },
       error: (err) => {

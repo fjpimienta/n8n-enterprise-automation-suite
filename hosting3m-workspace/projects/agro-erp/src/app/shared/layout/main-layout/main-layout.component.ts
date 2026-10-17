@@ -8,6 +8,7 @@ import { HeaderComponent } from '../header/header.component';
 import { AiChatComponent } from 'ui-chat';
 import { LayoutService } from '@shared/services/layout.service';
 import { ToastContainerComponent } from '@shared/components/toast-container/toast-container.component';
+import { themeClassFor } from '@shared/utils/business-domain.util';
 
 @Component({
   selector: 'app-main-layout',
@@ -24,12 +25,8 @@ export class MainLayoutComponent implements OnInit {
   public currentTenant = this.tenantService.activeTenant;
   readonly showIosPrompt = signal<boolean>(false);
 
-  // Dynamic theme injection based on active tenant metadata
-  public themeClass = computed(() => {
-    const tenant = this.currentTenant();
-    const isAgri = tenant?.business_type === 'AGRICULTURE' || tenant?.industry?.toLowerCase().includes('agricultura');
-    return isAgri ? 'theme-palm' : 'theme-cattle';
-  });
+  // Dynamic theme injection based on the active company's business domain
+  public themeClass = computed(() => themeClassFor(this.currentTenant()));
 
   ngOnInit(): void {
     this.detectIosPlatform();

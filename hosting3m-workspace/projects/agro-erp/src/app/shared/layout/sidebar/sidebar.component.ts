@@ -4,6 +4,7 @@ import { RouterModule, Router } from '@angular/router';
 import { LayoutService } from '@shared/services/layout.service';
 import { AuthService, TenantService } from 'core-auth';
 import { ThemeService } from '@core/services/theme.service';
+import { isLivestockDomain, isPalmDomain } from '@shared/utils/business-domain.util';
 
 @Component({
   selector: 'app-sidebar',
@@ -24,16 +25,9 @@ export class SidebarComponent {
   isMobileMenuOpen = this.layoutService.mobileMenuOpen;
   isCollapsed = this.layoutService.sidebarCollapsed;
 
-  // 🚀 FIX: Programación defensiva para inferir el tipo de negocio
-  public isLivestock = computed(() => {
-    const t = this.tenantService.activeTenant();
-    return t?.business_type === 'LIVESTOCK' || t?.industry?.toLowerCase().includes('ganader');
-  });
-
-  public isAgriculture = computed(() => {
-    const t = this.tenantService.activeTenant();
-    return t?.business_type === 'AGRICULTURE' || t?.industry?.toLowerCase().includes('agricultura');
-  });
+  // Business domain of the active company (single rule: @shared/utils/business-domain.util)
+  public isLivestock = computed(() => isLivestockDomain(this.tenantService.activeTenant()));
+  public isAgriculture = computed(() => isPalmDomain(this.tenantService.activeTenant()));
 
   ngOnInit() {
     const currentRole = localStorage.getItem('role') || 'EDITOR';

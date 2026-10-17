@@ -2,6 +2,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router'; // 🚀 IMPORTANTE: Agregar Router
 import { TenantService } from 'core-auth';
+import { dashboardRouteFor } from '@shared/utils/business-domain.util';
 
 @Component({
   selector: 'app-tenant-selector',
@@ -27,11 +28,8 @@ export class TenantSelectorComponent implements OnInit {
     if (tenant) {
       this.tenantService.setActiveTenant(tenant);
 
-      // 🚀 FIX: Enrutamiento defensivo basado en la industria
-      const isAgri = tenant.business_type === 'AGRICULTURE' || tenant.industry?.toLowerCase().includes('agricultura');
-      const targetRoute = isAgri ? '/agricultura/dashboard' : '/ganaderia/dashboard';
-
-      this.router.navigate([targetRoute]);
+      // Each company lands on the dashboard of its own business domain.
+      this.router.navigate([dashboardRouteFor(tenant)]);
     }
   }
 }
