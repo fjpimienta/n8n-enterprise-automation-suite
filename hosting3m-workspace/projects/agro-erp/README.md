@@ -10,6 +10,38 @@ Desarrollada como una **Angular 21 SPA** estructurada por dominios (*Feature-Dri
 
 ---
 
+## 🚀 Key Features (v1.17.0) — Órdenes de venta
+
+*Base de datos y workflows en producción desde 2026-10-16; la fecha de liberación se fija al desplegar el frontend.*
+
+### 1. 🧾 Una orden para toda la venta
+* El capataz pide por chat o WhatsApp "Vendí los 30 becerros del lote Maceo, guía 7139696" o una lista
+  de aretes de varias UPP y empresas: el sistema arma **una sola orden** (`OV-000123`), muestra una vista
+  previa agrupada por empresa / UPP / guía y la crea solo con su "Sí". Todo o nada.
+* Cada animal queda como solicitud en **su propia empresa**; el ADMIN de cada empresa autoriza solo su parte.
+* Puede pedir cualquier miembro ADMIN o EDITOR de la empresa del animal, sin importar la UPP; "Solo lectura" no.
+
+### 2. 📦 Venta por lote sin dictar aretes
+* El lote se envía como un solo renglón y la **base de datos** lo expande; si la cantidad no coincide, avisa.
+  Mismo principio que la sanitización por voz de v1.13.0: lo que el modelo hace mal (elegir filtros,
+  listar decenas de aretes) se movió a código determinista.
+
+### 3. ✅ Aprobación por guía u orden
+* Panel agrupado por orden y guía, aprobación en lote con precio por cabeza o por kilo, confirmación del total,
+  progreso y resultado por animal. Aviso cuando la orden incluye animales de otras empresas.
+
+### 4. ✉️ Un correo por orden y empresa
+* Solo a los ADMIN activos de esa empresa, con resumen por guía y aretes. Revisión cada 5 minutos.
+
+### 5. 🔒 Una solicitud pendiente por animal
+* Trigger + índice único: un animal no puede tener a la vez una venta y una mortandad pendientes.
+
+### 🗄️ Migración 074
+`074_sale_orders.sql` (dry run por default), `074_tests.sql` (LOCAL, con `ROLLBACK`) y
+`074_rollback.sql` (sin DROP ni DELETE: deshabilita las órdenes y conserva los datos).
+
+---
+
 ## 🚀 Key Features (v1.16.1) — Hotfix de seguridad: Usuarios y Accesos
 
 *Parche sobre v1.16.0. La fecha de liberación se fija al desplegarse en producción.*
@@ -44,7 +76,8 @@ Desarrollada como una **Angular 21 SPA** estructurada por dominios (*Feature-Dri
 | `070` | Corrección de datos (tenant 6): seis ventas directas del 2026-10-03 autorizadas fuera del sistema |
 | `071` | Ingresos por venta: el capataz solicita, el ADMIN fija el precio al aprobar; precios de referencia |
 | `072` | Vencimiento de autorizaciones al final del día en hora de Ciudad de México |
-| `073` | **Hotfix de seguridad: Usuarios y Accesos** (esta versión) |
+| `073` | **Hotfix de seguridad: Usuarios y Accesos** (v1.16.1) |
+| `074` | **Órdenes de venta** (v1.17.0): `sale_orders`, venta por lote, una solicitud pendiente por animal |
 
 ---
 
@@ -287,8 +320,10 @@ ng build agro-erp --configuration=production
 - [ ] **Anulación de eventos sin reversión de estado:** `void_event` no revierte efectos secundarios sobre `cattle_livestock` (ej. categoría tras anular una castración) — decisión de producto pendiente sobre si corregirlo.
 - [ ] **Consulta de historial de eventos por animal:** no existe una tool MCP de lectura para reproducción/desparasitación/castración — las 8 tools nuevas de v1.16.0 son solo de escritura.
 - [x] **Hotfix de seguridad de Usuarios y Accesos (migración 073):** secuestro de cuentas entre empresas cerrado, Personal UPP vía procedimientos con alcance por membresía, desactivar en vez de eliminar, bitácora `access_audit_log` (v1.16.1; fecha de liberación al desplegarse).
-- [ ] **Usuarios y Accesos, fases 1–2 (migración 074+):** administrador de plataforma (`platform_admins`), alcance por UPP/lote (`user_scope`) y `fn_user_can_access`; además "Mi perfil" para que cualquier miembro cambie su propia contraseña.
+- [ ] **Usuarios y Accesos, fases 1–2 (migración 075+):** administrador de plataforma (`platform_admins`), alcance por UPP/lote (`user_scope`) y `fn_user_can_access`; además "Mi perfil" para que cualquier miembro cambie su propia contraseña.
 - [ ] **Usuarios y Accesos, fase 3:** aplicar rol y alcance en el Agente IA (WhatsApp/Chat Web), las tools MCP y los procedimientos existentes — hoy "Solo lectura" solo aplica en el panel web.
+- [x] **Órdenes de venta (migración 074):** una orden por venta, por lote o por aretes, a través de varias UPP y empresas; aprobación por guía/orden y un correo por orden y empresa (v1.17.0, 2026-10-16).
+- [ ] **Correo del solicitante en tools MCP desde la sesión, no desde el modelo:** parte de la garantía arquitectónica de `tenant_id`/`user_email` (ver punto de arriba).
 
 ---
 
