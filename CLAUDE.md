@@ -4,8 +4,8 @@
 **Nombre:** Hosting3M Automation Suite — n8n Enterprise Automation Suite
 **Arquitecto:** Francisco Jesus Pérez Pimienta (Senior Systems Architect | PMP)
 **Naturaleza:** Suite de 15 módulos self-hosted — workflows n8n (auth gateway, CRM, RAG news,
-WhatsApp, MCP servers) + monorepo Angular 21 (`dashboard`, `pista-hielo`, `hotel-website`,
-`agro-erp`, y las libs compartidas `ui-chat`, `ui-pdf-export`, `core-auth`).
+WhatsApp, MCP servers) + monorepo Angular 21 (`dashboard`, `pista-hielo` — legacy, fuera de
+uso —, `hotel-website`, `agro-erp`, y las libs compartidas `ui-chat`, `ui-pdf-export`, `core-auth`).
 
 **Este archivo es la raíz.** Cada proyecto del monorepo tiene su propio `CLAUDE.md` con
 detalle específico de su dominio — Claude Code los carga automáticamente por herencia
@@ -73,7 +73,9 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
 
 - `projects/dashboard/` — AdminHotel Intranet (Tabler UI, MetaCRUD Silent Error Shield)
 - `projects/hotel-website/` — SPA pública (Tailwind eco/tierra, LCP <1.2s)
-- `projects/pista-hielo/` — PWA operativa, motor de cobro "Midnight Crossing"
+- `projects/pista-hielo/` — ⚠️ **legacy, fuera de uso** (el proyecto no se llevó a cabo; nada en
+  producción depende de él, confirmado por el dueño 2026-10-17). Sus modelos `ph_*` siguen
+  registrados y sus datos siguen en la base — ver deuda abajo.
 - `projects/agro-erp/` — ERP ganadero/agrícola, cumplimiento SENASICA-SINIIGA/REEMO
 - `projects/ui-chat/` — widget de chat stateless (`CHAT_CONFIG_TOKEN`)
 - `projects/ui-pdf-export/` — motor fiscal PDF client-side (IVA 16%, ISH 2%)
@@ -85,6 +87,13 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
 - **Media Server (`upload-file`)** comparte `INTERNAL_SECRET`/`JWT_SECRET` con el Auth
   Gateway — ambos deben rotarse juntos, nunca uno sin el otro. No tiene número de módulo
   propio en el README; es infraestructura compartida.
+- **Dos gateways Meta-CRUD en producción, con seguridad muy distinta:** `agro-erp` usa
+  `crud/v6` (`v6/CRUD`: membresía en `user_companies`, tenant por `tenant_id`/`id_company`,
+  identificadores validados). El `dashboard` del hotel y `hotel-website` usan `crud/v5`
+  (`v5/CRUD`: rol del JWT, sin membresía, header de tenant opcional y solo `tenant_id`, `update`
+  por PK, `insert` como upsert). Desde la contención v1.17.1 (2026-10-17) `v5` solo atiende los
+  9 modelos del hotel (nodo `Model Allowlist` + regla WAF de Cloudflare para `crud/v5/`). Nunca
+  asumas que un endurecimiento de `v6` protege al hotel; ver deuda abajo.
 - **`core-auth`** protege tanto las APIs Meta-CRUD como el Media Server vía
   `apiUrl_upload` en `AUTH_ENV_CONFIG` — verifica esta librería antes de asumir que un
   problema de auth es local a una sola app.
@@ -118,14 +127,60 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
     PRODUCCIÓN que ambos nodos coinciden con el repo.
   - **`users` es global (migración 073):** una empresa nunca escribe directo en `users` ni en
     `user_companies`. Altas, cambios de rol y (des)activación van por `sp_access_*`, que impiden
-    modificar la cuenta de alguien que también pertenece a otra empresa. El gateway aplica la
-    misma regla al modelo `users` crudo (lo sigue usando el `dashboard` del hotel): `insert` sin
-    sobrescribir, `update` solo para miembros exclusivos y `delete` bloqueado.
+    modificar la cuenta de alguien que también pertenece a otra empresa. El gateway `v6` aplica la
+    misma regla al modelo `users` crudo: `insert` sin sobrescribir, `update` solo para miembros
+    exclusivos y `delete` bloqueado. ⚠️ **Corrección (2026-10-17):** esto **no** protegía al
+    `dashboard` del hotel, que usa `v5/CRUD` (sin estos guardias). Desde v1.17.1 `users` está
+    bloqueado en `v5` y la pantalla de usuarios del hotel queda sin servicio hasta migrarlo a `v6`.
 
 ## Deuda técnica activa a nivel suite
 
 - ⚠️ Rotación de `INTERNAL_SECRET` tras el incidente de exposición del 2026-08-13 — no
   confirmada en ambos servicios (Auth Gateway, Media Server) ni ambos ambientes.
+- 🔴 **Migrar el hotel (`dashboard`, `hotel-website`) de `v5/CRUD` a `v6/CRUD`.** La contención
+  v1.17.1 (2026-10-17) cerró en `v5` la inyección SQL (nombre de modelo en `Get Model Config`,
+  `sort_by`, campo de `getone`), el registro automático de tablas en `crud_models` y el acceso a
+  modelos ajenos al hotel, pero **no** su aislamiento: dentro de los 9 modelos permitidos, cualquier
+  JWT válido lee y escribe filas de cualquier empresa (header de tenant opcional, `update` por PK,
+  `insert` como upsert). Prioridad por datos personales: `hotel_guests` (nombre, teléfono, correo,
+  **fotos de INE**) → `users` → resto (`hotel_bookings`, `hotel_reviews`, `hotel_expenses`, …).
+  - La **pantalla de usuarios del `dashboard` queda sin servicio a propósito** (`users` bloqueado
+    en `v5`) hasta esta migración.
+  - En `v5`, `Security Validation` va directo a `Build Query`, sin `If Error`: un rechazo de
+    permisos solo "funciona" porque la ejecución termina en error. Los rechazos que lanza
+    `Build Query` responden **HTTP 200 con cuerpo vacío**, no `error:true`.
+- 🔴 **Errores de producción a un tema público de ntfy.sh.** El Global Error Handler
+  (`9SrVXdATmlrZemJT`, `errorWorkflow` de `v5` y `v6`, entre otros) publica en
+  `https://ntfy.sh/alertas_n8n_hosting3m` el workflow, el nodo, el **texto crudo del error** y el link
+  de la ejecución; cualquiera que conozca el tema puede suscribirse, y un error de Postgres puede
+  traer valores (p. ej. `Key (email)=(…) already exists`). Su `INSERT INTO n8n_error_logs` interpola
+  los valores escapando solo comillas simples. Propuesta (PR aparte): tema con token de acceso o
+  canal privado, nombre nuevo no adivinable, mandar solo workflow + nodo + link (nunca el mensaje),
+  y parametrizar el `INSERT` (`queryReplacement`). Nota: en n8n 2.x un workflow de errores
+  **inactivo no se ejecuta** ("is not active and cannot be executed"); en LOCAL está inactivo,
+  falta confirmar su estado en producción.
+- ⚠️ **`dashboard` y `hotel-website` apuntan a producción incluso en dev** (`environment.ts` con
+  `https://n8n.hosting3m.com/...crud/v5`, `v3/genera-token`): correr el hotel en local lee y
+  escribe la base de producción. `pista-hielo` igual (legacy).
+- ⚠️ **`pista-hielo` legacy con datos en la base:** siguen registrados 8 modelos (`ph_clients`,
+  `ph_instructores`, `ph_inventory`, `inventory`, `transactions`, `services`, `payments`,
+  `closures`; ya bloqueados en `v5`, todavía alcanzables por `v6` con membresía) y hay datos
+  personales (conteos LOCAL 2026-10-17: `ph_clients` 7 — 2 con `tutor_name`, posibles menores —,
+  `ph_instructores` 5, `ph_inventory` 12, `ph_transactions` 20). Propuesta (PR aparte): desactivar
+  los 8 modelos (`allowed_ops = '{}'`, roles `'NONE'`, patrón 073) y un script de anonimización con
+  respaldo previo. **La decisión de retención (conservar, anonimizar o eliminar) es del dueño.**
+- ⚠️ **Modelos con datos personales sin consumidor:** `livestock_producers_pii` (CURP/RFC
+  descifrados), `livestock_producers` y `employee_credentials` (`nombre`, `curp`, `email`; deja a
+  **EDITOR** leer CURP). En `v6` filtran por empresa (verificado 2026-10-17); en `v5` ya están
+  bloqueados. Propuesta (PR aparte): desactivarlos con `allowed_ops = '{}'`.
+- **Ruta pública de `companys`:** el `If` de `v5`/`v6` salta `Verify Token` para `companys getall`.
+  Desde v1.17.1 solo devuelve `id_company`/`company_name`. Ya no tiene consumidor (era el login de
+  `pista-hielo`; los logins de `agro-erp` y del hotel reciben la lista solo de `jwt-service` vía
+  `v3`/`v4/GeneraToken`, verificado 2026-10-17). Propuesta (PR aparte): quitarla en `v6` para que
+  `companys getall` exija token y membresía como cualquier modelo.
+- **Despliegue de workflows en n8n 2.x:** `n8n import:workflow` **desactiva** lo que importa y
+  `--activeState=fromJson` solo funciona en modo queue/multi-main; además cambia el `versionId`. En
+  producción, reemplazar el contenido desde el editor de n8n (mismo id y `webhookId`) y publicar.
 - `SECURITY.md` sigue con el placeholder genérico de GitHub — falta un proceso real de
   reporte de vulnerabilidades.
 
