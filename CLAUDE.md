@@ -128,6 +128,12 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
   confirmada en ambos servicios (Auth Gateway, Media Server) ni ambos ambientes.
 - `SECURITY.md` sigue con el placeholder genérico de GitHub — falta un proceso real de
   reporte de vulnerabilidades.
+- ⚠️ **`N8N_BLOCK_ENV_ACCESS_IN_NODE=false`:** cualquier workflow (y quien pueda editarlos) lee con
+  `$env` las variables de entorno del contenedor de n8n, incluidos `INTERNAL_SECRET`, `JWT_SECRET`,
+  las claves de OpenAI y la contraseña de la base. **No se cambia por ahora:** `GenerateToken` (`v3`/`v4`)
+  lee `INTERNAL_SECRET` con `$env`, y el Global Error Handler lee `NTFY_ALERT_URL` igual. Endurecerlo
+  exige pasar esos valores a credenciales de n8n antes de bloquear el acceso. Sin verificar todavía el
+  efecto real de `N8N_BLOCK_ENV_VARS_INCLUDE=INTERNAL_SECRET` (presente en `docker-compose.yml`).
 
 Para deuda específica de cada módulo, ver el `CLAUDE.md` de ese proyecto — no se duplica
 aquí para evitar que este archivo raíz cambie con cada actualización semanal de estado.
