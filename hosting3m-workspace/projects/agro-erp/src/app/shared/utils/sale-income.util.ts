@@ -92,6 +92,48 @@ export function suggestAmount(
   return reference.referenceAmount;
 }
 
+const toCents = (value: number): number => Math.round(value * 100);
+
+/**
+ * POR_KG `precio_venta` of one animal: weight × price per kg, rounded half-up to cents with exact
+ * integer arithmetic (both inputs have at most 2 decimals, so cents × cents is exact). Plain
+ * floating point would round e.g. 350.5 × 41.37 = 14500.185 down to 14500.18.
+ * Returns null unless both values are positive with at most 2 decimals.
+ */
+export function amountFromWeight(weightKg: number | null | undefined, pricePerKg: number | null | undefined): number | null {
+  if (!isPositiveTwoDecimals(weightKg) || !isPositiveTwoDecimals(pricePerKg)) return null;
+  const tenThousandths = toCents(weightKg) * toCents(pricePerKg); // amount × 10 000
+  return Math.floor((tenThousandths + 50) / 100) / 100;
+}
+
+/** Inputs of the automatic (not hand-edited) amount of one batch row. */
+export interface AutoAmountInput {
+  mode: SaleMode;
+  reference: SaleReferencePrice | null;
+  weightKg: number | null;
+  /** Batch "Precio por cabeza" (POR_PIEZA / POR_GENETICA). */
+  batchAmount: number | null;
+  /** Batch "Precio por kg" (POR_KG). */
+  batchPricePerKg: number | null;
+  /** "Aplicar a todas" was used for the batch price per kg: it overrides the reference prices. */
+  perKgForAll: boolean;
+}
+
+/**
+ * Amount a row shows while the ADMIN has not typed one by hand.
+ *  - POR_KG: weight × (batch $/kg when applied to all, else the reference $/kg, else the batch $/kg);
+ *    never a split of a lot total.
+ *  - Other modes: the reference amount, else the batch price per head.
+ */
+export function autoRowAmount(input: AutoAmountInput): number | null {
+  if (input.mode === 'POR_KG') {
+    const referencePerKg = input.reference?.referencePricePerKg ?? null;
+    const pricePerKg = input.perKgForAll ? input.batchPricePerKg : (referencePerKg ?? input.batchPricePerKg);
+    return amountFromWeight(input.weightKg, pricePerKg);
+  }
+  return suggestAmount(input.reference, input.mode, input.weightKg) ?? input.batchAmount;
+}
+
 /** Raw values of the sale form (single row, or shared fields + one batch row). */
 export interface SaleFormValue {
   mode: SaleMode;

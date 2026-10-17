@@ -76,10 +76,46 @@
             } @else {
 
             @if (activeTab() === 'PENDIENTES') {
+
+            <!-- Quick filters + view (sale orders, migration 074) -->
+            <div class="d-flex flex-wrap align-items-center gap-2 px-3 py-2 border-bottom">
+                <div class="btn-group btn-group-sm" role="group" aria-label="Vista">
+                    <button type="button" class="btn" [class.btn-primary]="pendingView() === 'AGRUPADA'"
+                        [class.btn-outline-primary]="pendingView() !== 'AGRUPADA'" (click)="setPendingView('AGRUPADA')">
+                        <i class="ti ti-stack-2 me-1"></i> Por orden y guía
+                    </button>
+                    <button type="button" class="btn" [class.btn-primary]="pendingView() === 'LISTA'"
+                        [class.btn-outline-primary]="pendingView() !== 'LISTA'" (click)="setPendingView('LISTA')">
+                        <i class="ti ti-list me-1"></i> Lista
+                    </button>
+                </div>
+                <select class="form-select form-select-sm w-auto" [value]="orderFilter()"
+                    (change)="orderFilter.set($any($event.target).value)" aria-label="Filtrar por orden">
+                    <option value="">Todas las órdenes</option>
+                    @for (code of orderOptions(); track code) { <option [value]="code">{{ code }}</option> }
+                </select>
+                <select class="form-select form-select-sm w-auto" [value]="guideFilter()"
+                    (change)="guideFilter.set($any($event.target).value)" aria-label="Filtrar por guía de tránsito">
+                    <option value="">Todas las guías</option>
+                    @for (g of guideOptions(); track g) { <option [value]="g">Guía {{ g }}</option> }
+                </select>
+                @if (filtersActive()) {
+                <button class="btn btn-link btn-sm" (click)="clearFilters()">Quitar filtros</button>
+                }
+            </div>
+
+            @if (foreignPendingCount() > 0) {
+            <div class="alert alert-warning m-3" role="alert">
+                Se recibieron {{ foreignPendingCount() }} solicitud(es) de otras empresas; no se muestran ni se pueden
+                resolver aquí. Su ADMIN las autoriza por separado.
+            </div>
+            }
+
+            @if (pendingView() === 'LISTA') {
             @if (selectableSaleRows().length > 0) {
             <div class="d-flex flex-wrap align-items-center gap-2 px-3 py-2 border-bottom">
                 @for (g of saleGuides(); track g.guide) {
-                <button class="btn btn-outline-primary btn-sm" (click)="selectGuide(g.guide)">
+                <button class="btn btn-outline-primary btn-sm" (click)="selectGuide(g.guide)" [disabled]="isSubmitting()">
                     Seleccionar todos de la guía {{ g.guide }} ({{ g.count }})
                 </button>
                 }
@@ -87,7 +123,7 @@
                     @if (selectedSaleRows().length > 0) {
                     <button class="btn btn-link btn-sm" (click)="clearSelection()">Limpiar selección</button>
                     }
-                    <button class="btn btn-success btn-sm" [disabled]="selectedSaleRows().length === 0"
+                    <button class="btn btn-success btn-sm" [disabled]="selectedSaleRows().length === 0 || isSubmitting()"
                         (click)="openBatchApproval()">
                         <i class="ti ti-checks"></i> Aprobar ventas seleccionadas ({{ selectedSaleRows().length }})
                     </button>
@@ -104,84 +140,112 @@
                                     [checked]="allSalesSelected()" (change)="toggleAllSales($any($event.target).checked)">
                                 }
                             </th>
+                            <th>Orden</th>
                             <th>Identificador</th>
                             <th>Categoría/Especie</th>
                             <th>Evento</th>
                             <th>Detalle</th>
                             <th>Solicitado por</th>
                             <th>Fecha solicitud</th>
-                            <th>Vence en</th>
+                            <th>Vencimiento</th>
                             <th class="w-1"></th>
                         </tr>
                     </thead>
                     <tbody>
                         @for (item of pendingRows(); track item.row.id) {
-                        <tr>
-                            <td>
-                                @if (item.row.tipo_evento === 'VENTA') {
-                                <span [attr.title]="item.expired ? expiredTooltip : null">
-                                    <input type="checkbox" class="form-check-input m-0" [disabled]="item.expired"
-                                        [checked]="!item.expired && isSelected(item.row.id)"
-                                        (change)="toggleSelected(item.row.id, $any($event.target).checked)">
-                                </span>
-                                }
-                            </td>
-                            <td class="font-monospace">{{ identifierFor(item.row) }}</td>
-                            <td class="text-muted">{{ categorySpeciesFor(item.row) }}</td>
-                            <td>{{ tipoEventoLabel(item.row.tipo_evento) }}</td>
-                            <td class="text-muted">
-                                @if (item.row.tipo_evento === 'BAJA_MORTANDAD') {
-                                <div>{{ item.row.payload.causa_mortandad || '—' }}</div>
-                                @if (item.row.payload.descripcion) {
-                                <div class="small">{{ item.row.payload.descripcion }}</div>
-                                }
-                                } @else if (item.row.tipo_evento === 'VENTA') {
-                                <div>Guía: {{ guideFor(item.row) || '—' }}</div>
-                                }
-                            </td>
-                            <td class="text-muted">{{ item.row.solicitado_por_email }}</td>
-                            <td class="text-muted">{{ formatTimestamp(item.row.fecha_solicitud) }}</td>
-                            <td>
-                                @if (item.expired) {
-                                <span class="badge bg-red-lt" [attr.title]="expiredTooltip">Vencida</span>
-                                } @else {
-                                <span class="badge" [ngClass]="severityBadgeClass(item.severity)"
-                                    [attr.title]="'Vence: ' + item.deadlineLabel + ' (hora del centro de México)'">
-                                    {{ item.countdownLabel }}
-                                </span>
-                                }
-                            </td>
-                            <td>
-                                <!-- Disabled buttons do not fire mouse events, so the tooltip lives on the wrapper. -->
-                                <div class="d-flex gap-1" [attr.title]="item.expired ? expiredTooltip : null">
-                                    <button class="btn btn-success btn-sm" [disabled]="item.expired" (click)="approve(item.row)">
-                                        <i class="ti ti-check"></i> Aprobar
-                                    </button>
-                                    <button class="btn btn-danger btn-sm" [disabled]="item.expired" (click)="openConfirm(item.row, 'RECHAZADO')">
-                                        <i class="ti ti-x"></i> Rechazar
-                                    </button>
-                                    @if (item.canCancel) {
-                                    <button class="btn btn-outline-secondary btn-sm" [disabled]="item.expired" (click)="openConfirm(item.row, 'CANCELAR')">
-                                        <i class="ti ti-ban"></i> Cancelar solicitud
-                                    </button>
-                                    }
-                                </div>
-                            </td>
-                        </tr>
+                        <ng-container *ngTemplateOutlet="pendingRowTpl; context: { $implicit: item, selectable: true }"></ng-container>
                         } @empty {
-                        <tr>
-                            <td colspan="9" class="text-center py-5">
-                                <div class="empty-state">
-                                    <div class="empty-img"><i class="ti ti-shield-check fs-1 text-muted"></i></div>
-                                    <p class="empty-title fs-3">No hay autorizaciones pendientes</p>
-                                    <p class="empty-subtitle text-muted">Las nuevas solicitudes de baja aparecerán aquí.</p>
-                                </div>
-                            </td>
-                        </tr>
+                        <ng-container *ngTemplateOutlet="emptyPendingTpl"></ng-container>
                         }
                     </tbody>
                 </table>
             </div>
+            } @else {
+
+            <!-- Grouped view: sale order → transit guide -->
+            @for (order of saleGrouping().orders; track order.saleOrderId) {
+            <div class="border-bottom">
+                <div class="d-flex flex-wrap align-items-center gap-2 px-3 py-2 bg-body-tertiary">
+                    <div>
+                        <span class="font-weight-bold">Orden {{ order.orderCode }}</span>
+                        <span class="text-muted small ms-2">{{ order.total }} animal(es) · Solicitó {{ order.requestedBy || '—' }}</span>
+                    </div>
+                    <div class="ms-auto d-flex gap-1">
+                        <button class="btn btn-success btn-sm" [disabled]="isSubmitting() || actionableIn(orderRequests(order)).length === 0"
+                            (click)="approveGroup('orden ' + order.orderCode, orderRequests(order))">
+                            <i class="ti ti-checks"></i> Aprobar orden ({{ actionableIn(orderRequests(order)).length }})
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" [disabled]="isSubmitting() || actionableIn(orderRequests(order)).length === 0"
+                            (click)="rejectGroup('orden ' + order.orderCode, orderRequests(order))">
+                            <i class="ti ti-x"></i> Rechazar orden
+                        </button>
+                    </div>
+                </div>
+                @if (otherCompaniesWarning(order); as warning) {
+                <div class="alert alert-warning mx-3 my-2 py-2 small" role="alert">{{ warning }}</div>
+                }
+
+                @for (guide of order.guides; track guide.guiaTransito) {
+                <div class="d-flex flex-wrap align-items-center gap-2 px-3 py-2 border-top">
+                    <div class="ps-2">
+                        <span class="font-weight-medium">Guía {{ guide.guiaTransito }}</span>
+                        <span class="text-muted small ms-2">{{ guide.requests.length }} animal(es) · {{ formatCategoryCounts(guide.categoryCounts) }}</span>
+                    </div>
+                    <div class="ms-auto d-flex gap-1">
+                        <button class="btn btn-outline-success btn-sm" [disabled]="isSubmitting() || actionableIn(guide.requests).length === 0"
+                            (click)="approveGroup(guideLabel(order, guide), guide.requests)">
+                            <i class="ti ti-check"></i> Aprobar guía ({{ actionableIn(guide.requests).length }})
+                        </button>
+                        <button class="btn btn-outline-danger btn-sm" [disabled]="isSubmitting() || actionableIn(guide.requests).length === 0"
+                            (click)="rejectGroup(guideLabel(order, guide), guide.requests)">
+                            <i class="ti ti-x"></i> Rechazar guía
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table card-table table-vcenter text-nowrap table-sm mb-0">
+                        <tbody>
+                            @for (item of rowsOf(guide.requests); track item.row.id) {
+                            <ng-container *ngTemplateOutlet="pendingRowTpl; context: { $implicit: item, selectable: false }"></ng-container>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                }
+            </div>
+            }
+
+            @if (ungroupedRows().length > 0 || saleGrouping().orders.length === 0) {
+            @if (saleGrouping().orders.length > 0) {
+            <div class="px-3 py-2 font-weight-bold border-bottom">Solicitudes sin orden de venta</div>
+            }
+            <div class="table-responsive">
+                <table class="table card-table table-vcenter text-nowrap datatable table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th class="w-1"></th>
+                            <th>Orden</th>
+                            <th>Identificador</th>
+                            <th>Categoría/Especie</th>
+                            <th>Evento</th>
+                            <th>Detalle</th>
+                            <th>Solicitado por</th>
+                            <th>Fecha solicitud</th>
+                            <th>Vencimiento</th>
+                            <th class="w-1"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (item of ungroupedRows(); track item.row.id) {
+                        <ng-container *ngTemplateOutlet="pendingRowTpl; context: { $implicit: item, selectable: false }"></ng-container>
+                        } @empty {
+                        <ng-container *ngTemplateOutlet="emptyPendingTpl"></ng-container>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            }
+            }
             }
 
             @if (activeTab() === 'HISTORIAL') {
@@ -259,10 +323,27 @@
 </app-confirm-action-modal>
 }
 
+@if (batchRejectConfig(); as cfg) {
+<app-confirm-action-modal
+    [title]="cfg.title"
+    [message]="cfg.message"
+    [confirmLabel]="cfg.confirmLabel"
+    [cancelLabel]="cfg.cancelLabel"
+    [variant]="cfg.variant"
+    [notesLabel]="cfg.notesLabel"
+    [notesRequired]="cfg.notesRequired"
+    [busy]="isSubmitting()"
+    [errorMessage]="null"
+    (confirm)="onBatchRejectConfirm($event)"
+    (cancel)="closeBatchReject()">
+</app-confirm-action-modal>
+}
+
 @if (saleModal(); as sale) {
 <app-sale-approval-modal
     [items]="sale.items"
     [variant]="sale.variant"
+    [title]="sale.title ?? null"
     [referencePrices]="referencePrices()"
     [submitting]="isSubmitting()"
     [errorMessage]="actionError()"
@@ -274,7 +355,7 @@
 @if (batchProgress(); as progress) {
 <div class="position-fixed bottom-0 end-0 m-3 alert alert-info shadow" style="z-index: 2000;" role="status">
     <span class="spinner-border spinner-border-sm me-2"></span>
-    Aprobando ventas: {{ progress.done }} de {{ progress.total }}
+    {{ progress.label }}: {{ progress.done }} / {{ progress.total }}
 </div>
 }
 
@@ -283,10 +364,20 @@
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable" role="document">
         <div class="modal-content shadow-lg border-0">
             <div class="modal-header">
-                <h5 class="modal-title font-weight-bold text-body">Resultado de la aprobación por lote</h5>
+                <h5 class="modal-title font-weight-bold text-body">Resultado del lote</h5>
                 <button type="button" class="btn-close" (click)="closeBatchResults()" aria-label="Cerrar"></button>
             </div>
             <div class="modal-body p-0">
+                @if (batchCounts(results); as counts) {
+                <div class="px-3 py-2 border-bottom small">
+                    <span class="text-success font-weight-bold">{{ counts.ok }} procesada(s)</span> ·
+                    <span class="text-danger font-weight-bold">{{ counts.failed }} con error</span> ·
+                    <span class="text-muted">{{ counts.pending }} siguen pendientes</span>
+                    @if (counts.failed + counts.pending > 0) {
+                    <div class="text-muted mt-1">Las que no se procesaron quedan PENDIENTES para resolverse individualmente.</div>
+                    }
+                </div>
+                }
                 <table class="table table-vcenter mb-0">
                     <tbody>
                         @for (r of results; track r.requestId) {
@@ -310,3 +401,79 @@
     </div>
 </div>
 }
+
+
+<!-- One pending request row, shared by the plain list and the grouped view. -->
+<ng-template #pendingRowTpl let-item let-selectable="selectable">
+    <tr>
+        <td>
+            @if (selectable && item.row.tipo_evento === 'VENTA') {
+            <span [attr.title]="item.expired ? expiredTooltip : null">
+                <input type="checkbox" class="form-check-input m-0" [disabled]="item.expired"
+                    [checked]="!item.expired && isSelected(item.row.id)"
+                    (change)="toggleSelected(item.row.id, $any($event.target).checked)">
+            </span>
+            }
+        </td>
+        <td class="font-monospace text-muted">{{ item.orderCode || '—' }}</td>
+        <td class="font-monospace">{{ identifierFor(item.row) }}</td>
+        <td class="text-muted">{{ categorySpeciesFor(item.row) }}</td>
+        <td>{{ tipoEventoLabel(item.row.tipo_evento) }}</td>
+        <td class="text-muted">
+            @if (item.row.tipo_evento === 'BAJA_MORTANDAD') {
+            <div>{{ item.row.payload.causa_mortandad || '—' }}</div>
+            @if (item.row.payload.descripcion) {
+            <div class="small">{{ item.row.payload.descripcion }}</div>
+            }
+            } @else if (item.row.tipo_evento === 'VENTA') {
+            <div>Guía: {{ guideFor(item.row) || '—' }}</div>
+            }
+        </td>
+        <td class="text-muted">{{ item.row.solicitado_por_email }}</td>
+        <td class="text-muted">{{ formatTimestamp(item.row.fecha_solicitud) }}</td>
+        <td>
+            @if (item.expired) {
+            <span class="badge bg-red-lt" [attr.title]="expiredTooltip">Vencida</span>
+            } @else {
+            <span class="badge" [ngClass]="severityBadgeClass(item.severity)"
+                [attr.title]="'Vence: ' + item.deadlineLabel + ' (hora CDMX)'">
+                {{ item.countdownLabel }}
+            </span>
+            <div class="small text-muted mt-1">{{ item.deadlineNotice }}</div>
+            }
+        </td>
+        <td>
+            <!-- Disabled buttons do not fire mouse events, so the tooltip lives on the wrapper. -->
+            <div class="d-flex gap-1" [attr.title]="item.expired ? expiredTooltip : null">
+                <button class="btn btn-success btn-sm" [disabled]="item.expired || isSubmitting()" (click)="approve(item.row)">
+                    <i class="ti ti-check"></i> Aprobar
+                </button>
+                <button class="btn btn-danger btn-sm" [disabled]="item.expired || isSubmitting()" (click)="openConfirm(item.row, 'RECHAZADO')">
+                    <i class="ti ti-x"></i> Rechazar
+                </button>
+                @if (item.canCancel) {
+                <button class="btn btn-outline-secondary btn-sm" [disabled]="item.expired || isSubmitting()" (click)="openConfirm(item.row, 'CANCELAR')">
+                    <i class="ti ti-ban"></i> Cancelar solicitud
+                </button>
+                }
+            </div>
+        </td>
+    </tr>
+</ng-template>
+
+<ng-template #emptyPendingTpl>
+    <tr>
+        <td colspan="10" class="text-center py-5">
+            <div class="empty-state">
+                <div class="empty-img"><i class="ti ti-shield-check fs-1 text-muted"></i></div>
+                @if (filtersActive()) {
+                <p class="empty-title fs-3">Ninguna solicitud coincide con los filtros</p>
+                <button class="btn btn-link" (click)="clearFilters()">Quitar filtros</button>
+                } @else {
+                <p class="empty-title fs-3">No hay autorizaciones pendientes</p>
+                <p class="empty-subtitle text-muted">Las nuevas solicitudes de baja aparecerán aquí.</p>
+                }
+            </div>
+        </td>
+    </tr>
+</ng-template>
