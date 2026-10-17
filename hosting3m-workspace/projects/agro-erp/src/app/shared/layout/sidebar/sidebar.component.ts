@@ -4,8 +4,7 @@ import { RouterModule, Router } from '@angular/router';
 import { LayoutService } from '@shared/services/layout.service';
 import { AuthService, TenantService } from 'core-auth';
 import { ThemeService } from '@core/services/theme.service';
-import { isLivestockDomain, isPalmDomain } from '@shared/utils/business-domain.util';
-import { canAdministerPalm } from '@features/agriculture/utils/agri.util';
+import { menuVisibility } from '@shared/utils/menu-visibility.util';
 
 @Component({
   selector: 'app-sidebar',
@@ -26,11 +25,16 @@ export class SidebarComponent {
   isMobileMenuOpen = this.layoutService.mobileMenuOpen;
   isCollapsed = this.layoutService.sidebarCollapsed;
 
-  // Business domain of the active company (single rule: @shared/utils/business-domain.util)
-  public isLivestock = computed(() => isLivestockDomain(this.tenantService.activeTenant()));
-  public isAgriculture = computed(() => isPalmDomain(this.tenantService.activeTenant()));
-  // Palm administration entries: role of the ACTIVE company (not the JWT role).
-  public canAdministerPalm = computed(() => canAdministerPalm(this.tenantService.activeTenant()?.role));
+  // Menu by business domain and active-company role (single rule: @shared/utils/menu-visibility.util).
+  private menu = computed(() => menuVisibility(this.tenantService.activeTenant()));
+  public isLivestock = computed(() => this.menu().livestockIntelligence);
+  public isAgriculture = computed(() => this.menu().palmIntelligence);
+  public canAdministerPalm = computed(() => this.menu().palmAdministration);
+  public isAdmin = computed(() => this.menu().sharedConfig);
+  public showLivestockConfig = computed(() => this.menu().livestockConfig);
+  public personalLabel = computed(() => this.menu().personalLabel);
+  public showIntelligenceSection = computed(() => this.menu().intelligenceSection);
+  public showConfigSection = computed(() => this.menu().configSection);
 
   ngOnInit() {
     const currentRole = localStorage.getItem('role') || 'EDITOR';
