@@ -37,6 +37,9 @@
   `CAMBIO_ARETE`); tres bugs reales corregidos en `register_livestock_purchase` (SQL inline
   en n8n, no un SP) — inferencia de UPP desde el lote, bug de tipos `number`/`null` en
   `current_weight_kg`, validación de identificador duplicado.
+- v1.17.0 (2026-10-16) — Órdenes de venta (migración 074): `sale_orders`,
+  `pending_authorizations.sale_order_id`, `sp_solicitar_venta_orden` (por aretes o por lote),
+  una sola solicitud PENDIENTE por animal (trigger + índice único parcial), `notified_at` versionada
 
 > ⚠️ **Nota de higiene de documentación (2026-08-14):** el `schema.sql` versionado en el
 > repo **no refleja ninguna tabla ni columna de v1.10.0** (verificado: cero coincidencias
@@ -646,6 +649,31 @@ decisiones de diseño completas (el "por qué"). Esta sección cubre el DDL.
   aprobar?" sin entrar al panel Web) y `review_pending_request` — ver "Gestión Avanzada de
   Hato vía Agente IA" más abajo para el wrapper de seguridad que esta última agrega sobre
   `sp_resolver_autorizacion`.
+
+### `sale_orders` (migración 074, v1.17.0)
+| Columna | Tipo | Notas |
+|---|---|---|
+| `id` | uuid PK | `gen_random_uuid()` |
+| `order_number` | bigint identity | puede tener huecos |
+| `order_code` | text generated | `'OV-' || lpad(order_number, 6, '0')` |
+| `requested_by_email` | varchar(255) | solicitante (cualquier ADMIN/EDITOR) |
+| `fecha_evento` | date | fecha de la venta |
+| `channel` | varchar(20) | `AGENTE` por default |
+| `created_at` | timestamp | UTC naive |
+
+Abarca empresas: **sin `id_company` y sin modelo en `crud_models`**; cada empresa ve su parte por
+`pending_authorizations.id_company`.
+
+**Cambios en `pending_authorizations` (074):** `sale_order_id uuid NULL REFERENCES sale_orders(id)` (+ índice),
+`notified_at timestamp NULL` versionada, trigger `trg_pending_auth_one_pending_guard` (BEFORE INSERT, P0036) e
+índice único parcial `uq_pending_auth_one_pending_per_animal (livestock_id) WHERE estado = 'PENDIENTE'`.
+Payload de una solicitud de orden: `fecha_evento`, `guia_transito`, `orden_venta`, `rfid_siniiga`,
+`numero_fuego`, `electronic_rfid`, `orden_total_animales`, `orden_total_empresas`.
+
+**`sp_solicitar_venta_orden(p_items jsonb, p_solicitado_por_email varchar, p_fecha_evento date DEFAULT NULL, p_preview boolean DEFAULT true, p_channel varchar DEFAULT 'AGENTE') RETURNS jsonb`**
+— vista previa o creación todo-o-nada; renglones por animal o por lote; resultado
+`{fecha_evento, total, validos, errores[], grupos[{empresa, upp, guia_transito, cantidad, por_categoria, aretes}]}`
+y, al crear, `order_id`, `orden_venta`, `solicitudes`. Códigos P0031–P0037 (ver CHANGELOG).
 
 ### `sp_procesar_baja_mortandad(p_electronic_rfid, p_rfid_siniiga, p_numero_fuego, p_tenant_id, p_causa_mortandad, p_fecha_evento, p_descripcion, p_reportado_por_email, p_autorizado_por_email, p_livestock_id)`
 * Mismo patrón de desambiguación multi-identificador que `sp_procesar_salida_ganado`
