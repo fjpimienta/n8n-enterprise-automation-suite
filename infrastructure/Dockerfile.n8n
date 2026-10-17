@@ -1,5 +1,5 @@
-# Pinned to stable version. DO NOT change to latest.
-FROM docker.n8n.io/n8nio/n8n:2.23.3
+# Pinned to n8n 2.29.0, the version running in production. DO NOT change to latest.
+FROM n8nio/n8n:2.29.0
 
 USER root
 
