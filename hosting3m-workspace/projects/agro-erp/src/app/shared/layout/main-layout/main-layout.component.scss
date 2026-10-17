@@ -10,10 +10,23 @@
     margin-left: 5rem !important;
 }
 
+/* The header lives outside .page-wrapper, so it needs the same offset or the fixed sidebar covers it. */
+.app-header {
+    display: block;
+    margin-left: 16rem;
+    transition: margin-left 0.3s ease-in-out;
+}
+
+.app-header.expanded-content {
+    margin-left: 5rem;
+}
+
 @media (max-width: 991.98px) {
 
     .page-wrapper,
-    .page-wrapper.expanded-content {
+    .page-wrapper.expanded-content,
+    .app-header,
+    .app-header.expanded-content {
         margin-left: 0 !important;
     }
 }

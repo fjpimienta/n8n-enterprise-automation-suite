@@ -7,6 +7,7 @@ import { AdminService } from '@features/admin/services/admin.service';
 import { UppFormModalComponent } from '../upp-form-modal/upp-form-modal.component';
 import { AuthService, TenantService, TenantContext } from 'core-auth';
 import { isPhantomRow } from '@core/utils/gateway-empty-row.util';
+import { isPalmDomain } from '@shared/utils/business-domain.util';
 
 @Component({
   selector: 'app-tenant-list',
@@ -47,6 +48,11 @@ export class TenantListComponent {
    */
   isActiveTenant(tenant: TenantContext): boolean {
     return Number(tenant.id_company) === Number(this.tenantService.activeTenantId());
+  }
+
+  /** Palm companies have no official UPPs / lots (livestock screens): their cards link to Plantaciones. */
+  isPalm(tenant: TenantContext): boolean {
+    return isPalmDomain(tenant);
   }
 
   async openModal(tenant: TenantContext | null = null) {

@@ -1,6 +1,12 @@
-import { Routes } from '@angular/router';
-import { authGuard } from 'core-auth';
+import { inject } from '@angular/core';
+import { RedirectFunction, Routes } from '@angular/router';
+import { authGuard, TenantService } from 'core-auth';
 import { LoginComponent } from '@features/admin/components/login/login.component';
+import { dashboardRouteFor } from '@shared/utils/business-domain.util';
+import { livestockDomainGuard } from '@shared/guards/livestock-domain.guard';
+
+/** Root and unknown URLs land on the dashboard of the active company's domain (palm or livestock). */
+const domainHome: RedirectFunction = () => dashboardRouteFor(inject(TenantService).activeTenant());
 
 export const routes: Routes = [
   // 1. Ruta pública de Autenticación (Permanece en el Gateway)
@@ -15,6 +21,7 @@ export const routes: Routes = [
       // 🐄 Aislamiento Ganadero (Lazy Loading del dominio completo)
       {
         path: 'ganaderia',
+        canActivate: [livestockDomainGuard],
         loadChildren: () => import('./features/livestock/livestock.routes').then(m => m.livestockRoutes)
       },
       // 🌴 Aislamiento Agrícola (Lazy Loading del dominio completo)
@@ -30,13 +37,14 @@ export const routes: Routes = [
       // 📋 Cumplimiento Normativo SENASICA-SINIIGA (solo lectura)
       {
         path: 'cumplimiento',
+        canActivate: [livestockDomainGuard],
         loadChildren: () => import('./features/compliance/compliance.routes').then(m => m.complianceRoutes)
       },
-      // Redirección por defecto si entran a la raíz
-      { path: '', redirectTo: 'ganaderia/dashboard', pathMatch: 'full' }
+      // Redirección por defecto si entran a la raíz: dashboard del dominio de la empresa activa
+      { path: '', redirectTo: domainHome, pathMatch: 'full' }
     ]
   },
 
-  // 3. Redirección comodín
-  { path: '**', redirectTo: 'ganaderia/dashboard' }
+  // 3. Redirección comodín (mismo criterio de dominio)
+  { path: '**', redirectTo: domainHome }
 ];

@@ -1,0 +1,191 @@
+<div class="container-fluid p-3 p-md-4">
+
+    @switch (context.status()) {
+    @case ('loading') {
+    <div class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Cargando plantaciones…</div>
+    }
+    @case ('error') {
+    <div class="alert alert-danger" role="alert"><i class="ti ti-alert-triangle me-2"></i>{{ context.error() }}</div>
+    }
+    @default {
+    @if (!plantation()) {
+    <div class="empty py-6">
+        <div class="empty-icon"><i class="ti ti-plant-off fs-1 text-muted"></i></div>
+        @if (canEdit()) {
+        <p class="empty-title">Registre una plantación</p>
+        <p class="empty-subtitle text-muted">Esta empresa aún no tiene plantaciones activas.</p>
+        <div class="empty-action">
+            <a class="btn btn-primary" routerLink="/agricultura/plantaciones"><i class="ti ti-square-rounded-plus me-2"></i>Ir a Plantaciones</a>
+        </div>
+        } @else {
+        <p class="empty-title">No hay plantaciones activas</p>
+        <p class="empty-subtitle text-muted">Pide a un administrador de la empresa que registre o reactive una plantación.</p>
+        }
+    </div>
+    } @else {
+
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h2 class="page-title mb-0"><i class="ti ti-layout-grid me-2 text-success"></i>Lotes · {{ plantation()!.name }}</h2>
+            <div class="text-muted small mt-1">{{ activeCount() }} activos / {{ lots().length }} totales · cambia de plantación arriba, junto a la empresa</div>
+        </div>
+        @if (canEdit()) {
+        <button class="btn btn-primary shadow-sm" (click)="openModal()"><i class="ti ti-square-rounded-plus me-2"></i>Nuevo lote</button>
+        }
+    </div>
+
+    @if (loadError()) {
+    <div class="alert alert-danger" role="alert"><i class="ti ti-alert-triangle me-2"></i>{{ loadError() }}</div>
+    }
+    @if (actionError()) {
+    <div class="alert alert-warning alert-dismissible" role="alert">
+        <i class="ti ti-alert-circle me-2"></i>{{ actionError() }}
+        <button type="button" class="btn-close" (click)="actionError.set(null)"></button>
+    </div>
+    }
+    @if (actionSuccess()) {
+    <div class="alert alert-success alert-dismissible" role="alert">
+        <i class="ti ti-check me-2"></i>{{ actionSuccess() }}
+        <button type="button" class="btn-close" (click)="actionSuccess.set(null)"></button>
+    </div>
+    }
+    @if (possiblyTruncated()) {
+    <div class="alert alert-warning" role="alert">
+        <i class="ti ti-alert-triangle me-2"></i>La lista llegó con el máximo de registros que entrega el servidor: los datos pueden estar incompletos.
+    </div>
+    }
+    @if (!canEdit()) {
+    <div class="alert alert-info" role="alert"><i class="ti ti-lock me-2"></i>Solo un administrador puede crear o modificar lotes. Abre las filas de un lote para registrar conteos.</div>
+    }
+
+    @if (isLoading() && lots().length === 0) {
+    <div class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Cargando lotes…</div>
+    } @else {
+    <div class="card shadow-sm border-0">
+        <div class="table-responsive">
+            <table class="table table-vcenter card-table">
+                <thead>
+                    <tr>
+                        <th>Lote</th>
+                        <th>Variedad · Siembra</th>
+                        <th>Etapa</th>
+                        <th>Tenencia</th>
+                        <th class="text-end">Superficie (ha)</th>
+                        <th class="text-end">Filas</th>
+                        <th class="text-end">Vivas / Puntos</th>
+                        <th class="text-end">Densidad real / diseño</th>
+                        <th>Estado</th>
+                        <th class="w-1">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (lot of lots(); track lot.id) {
+                    <tr [class.text-muted]="!lot.isActive">
+                        <td>
+                            <div class="fw-medium">{{ lot.code }}</div>
+                            @if (lot.name) { <div class="small text-muted">{{ lot.name }}</div> }
+                        </td>
+                        <td class="small">
+                            {{ lot.varietyName || 'Sin especificar' }}
+                            <div class="text-muted">{{ lot.plantingDate || 'Sin fecha' }}{{ lot.plantingDateIsApprox ? ' (aprox.)' : '' }}</div>
+                        </td>
+                        <td>
+                            <span class="badge" [class]="stageBadge(lot.productiveStage)">{{ stageLabel(lot.productiveStage) }}</span>
+                            @if (lot.ageYears !== null) { <div class="small text-muted">{{ lot.ageYears }} años</div> }
+                        </td>
+                        <td class="small">
+                            {{ tenureLabel(lot.effectiveTenure) }}
+                            @if (lot.effectiveLessorName) { <div class="text-muted">{{ lot.effectiveLessorName }}</div> }
+                        </td>
+                        <td class="text-end">{{ lot.areaHa | number: '1.0-2' }}</td>
+                        <td class="text-end">{{ lot.activeRows }}</td>
+                        <td class="text-end">
+                            {{ lot.alivePlants | number }} / {{ lot.plantingPositions | number }}
+                            @if (lot.missingPlants > 0) { <div class="small text-danger">{{ lot.missingPlants | number }} faltantes</div> }
+                        </td>
+                        <td class="text-end small">
+                            {{ lot.realDensityPlantsHa ?? '—' }} / {{ lot.designDensityPlantsHa ?? '—' }}
+                            @if (lot.densityPctOfDesign !== null) { <div class="text-muted">{{ lot.densityPctOfDesign }} % del diseño</div> }
+                        </td>
+                        <td>
+                            @if (lot.isActive) { <span class="badge bg-green-lt">Activo</span> }
+                            @else { <span class="badge bg-secondary-lt">Inactivo</span> }
+                        </td>
+                        <td>
+                            <div class="btn-list flex-nowrap">
+                                <a class="btn btn-icon btn-outline-primary btn-sm" title="Filas y conteos"
+                                    [routerLink]="['/agricultura/lotes', lot.id, 'filas']"><i class="ti ti-list-numbers"></i></a>
+                                @if (canEdit()) {
+                                <button class="btn btn-icon btn-outline-secondary btn-sm" title="Editar"
+                                    [disabled]="busyId() === lot.id" (click)="openModal(lot)"><i class="ti ti-edit"></i></button>
+                                @if (lot.isActive) {
+                                <button class="btn btn-icon btn-outline-danger btn-sm" title="Desactivar"
+                                    [disabled]="busyId() === lot.id" (click)="requestDeactivate(lot)"><i class="ti ti-archive"></i></button>
+                                } @else {
+                                <button class="btn btn-icon btn-outline-success btn-sm" title="Reactivar"
+                                    [disabled]="busyId() === lot.id" (click)="reactivate(lot)">
+                                    @if (busyId() === lot.id) { <span class="spinner-border spinner-border-sm" role="status"></span> }
+                                    @else { <i class="ti ti-refresh"></i> }
+                                </button>
+                                }
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                    } @empty {
+                    <tr>
+                        <td colspan="10" class="text-center py-5">
+                            <i class="ti ti-layout-grid fs-1 text-muted d-block mb-2"></i>
+                            <span class="text-muted">Esta plantación aún no tiene lotes registrados.</span>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="text-muted small mt-2">
+        <i class="ti ti-info-circle me-1"></i>
+        Etapas por años cumplidos desde la siembra (cortes orientativos, pendientes de confirmar). La tenencia mostrada es la del lote o, si no tiene, la de la plantación.
+    </div>
+    }
+    }
+    }
+    }
+</div>
+
+<app-agri-lot-form-modal [isOpen]="isModalOpen()" [editingId]="editingId()" [plantationName]="plantation()?.name ?? ''"
+    [plantationTenure]="plantation()?.tenure ?? null" [varieties]="varieties()" [today]="today"
+    [isSubmitting]="isSubmitting()" [errorMessage]="formError()" [(data)]="formData" (onClose)="closeModal()" (onSave)="save()">
+</app-agri-lot-form-modal>
+
+@if (toDeactivate(); as lot) {
+<div class="modal-backdrop fade show"></div>
+<div class="modal modal-blur fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-status bg-danger"></div>
+            <div class="modal-body text-center py-4">
+                <i class="ti ti-alert-triangle text-danger fs-1 mb-2 d-block"></i>
+                <h3>¿Desactivar el lote {{ lot.code }}?</h3>
+                <div class="text-muted">
+                    No se borra nada: el lote, sus {{ lot.activeRows }} filas y su historial de conteos se conservan. No podrás crear filas nuevas en él hasta reactivarlo.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div class="w-100">
+                    <div class="row">
+                        <div class="col"><button class="btn w-100" [disabled]="busyId()" (click)="cancelDeactivate()">Cancelar</button></div>
+                        <div class="col">
+                            <button class="btn btn-danger w-100" [disabled]="busyId()" (click)="confirmDeactivate()">
+                                @if (busyId()) { <span class="spinner-border spinner-border-sm me-2" role="status"></span> }
+                                Desactivar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+}
