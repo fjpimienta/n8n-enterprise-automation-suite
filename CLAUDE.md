@@ -149,16 +149,22 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
   - En `v5`, `Security Validation` va directo a `Build Query`, sin `If Error`: un rechazo de
     permisos solo "funciona" porque la ejecución termina en error. Los rechazos que lanza
     `Build Query` responden **HTTP 200 con cuerpo vacío**, no `error:true`.
-- 🔴 **Errores de producción a un tema público de ntfy.sh.** El Global Error Handler
-  (`9SrVXdATmlrZemJT`, `errorWorkflow` de `v5` y `v6`, entre otros) publica en
-  `https://ntfy.sh/alertas_n8n_hosting3m` el workflow, el nodo, el **texto crudo del error** y el link
-  de la ejecución; cualquiera que conozca el tema puede suscribirse, y un error de Postgres puede
-  traer valores (p. ej. `Key (email)=(…) already exists`). Su `INSERT INTO n8n_error_logs` interpola
-  los valores escapando solo comillas simples. Propuesta (PR aparte): tema con token de acceso o
-  canal privado, nombre nuevo no adivinable, mandar solo workflow + nodo + link (nunca el mensaje),
-  y parametrizar el `INSERT` (`queryReplacement`). Nota: en n8n 2.x un workflow de errores
-  **inactivo no se ejecuta** ("is not active and cannot be executed"); en LOCAL está inactivo,
-  falta confirmar su estado en producción.
+- ⚠️ **Errores de producción a un tema público de ntfy.sh — MITIGADO en producción el 2026-10-17,
+  corrección completa pendiente (PR `fix/error-handler-alerts`).** El Global Error Handler
+  (`9SrVXdATmlrZemJT`, `errorWorkflow` de `v5` y `v6`, entre otros; **activo** en producción) publicaba
+  en el tema público `https://ntfy.sh/alertas_n8n_hosting3m` (ya retirado) el workflow, el nodo, el
+  **texto crudo del error** y el link de la ejecución; cualquiera que conociera el tema podía
+  suscribirse, y un error de Postgres puede traer valores (p. ej. `Key (email)=(…) already exists`).
+  - **Mitigación aplicada a mano en producción (2026-10-17, dueño del proyecto):** tema nuevo, aleatorio
+    y no adivinable (el nombre no se comparte ni se versiona), y la alerta ya no incluye
+    `error_message`: solo workflow, nodo y link. Sigue siendo un tema sin token: quien conozca el
+    nombre puede leerlo.
+  - **Pendiente en `fix/error-handler-alerts`:** versionar el handler con la URL fuera del JSON
+    (`$env.NTFY_ALERT_URL`), parametrizar el `INSERT INTO n8n_error_logs` (hoy interpola y escapa
+    solo comillas simples; además truena si falta `failed_node`/`error_message`) y la propuesta de
+    tema protegido con token de acceso (credencial Bearer de n8n).
+  - Nota: en n8n 2.x un workflow de errores **inactivo no se ejecuta** ("is not active and cannot be
+    executed"); en LOCAL está inactivo.
 - ⚠️ **`dashboard` y `hotel-website` apuntan a producción incluso en dev** (`environment.ts` con
   `https://n8n.hosting3m.com/...crud/v5`, `v3/genera-token`): correr el hotel en local lee y
   escribe la base de producción. `pista-hielo` igual (legacy).
