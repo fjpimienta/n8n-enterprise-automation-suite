@@ -5,6 +5,39 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🔒 Global Error Handler: URL de ntfy fuera del repo e `INSERT` de errores parametrizado — v1.17.2
+
+*Workflow de n8n + una variable en `.env`; sin migración ni frontend. Se despliega **después** de la
+contención de `v5/CRUD` (v1.17.1).*
+
+**Origen:** el Global Error Handler (`9SrVXdATmlrZemJT`, `errorWorkflow` de `v5`/`v6` y otros, activo en
+producción) publicaba los errores en un tema público de ntfy.sh, con el texto crudo del error (un error
+de Postgres puede traer valores de filas). El 2026-10-17 el dueño lo **mitigó a mano en producción**:
+tema nuevo aleatorio y alerta sin `error_message`. Este cambio versiona esa versión de producción y la
+termina de corregir.
+
+**Cambios:**
+* La URL del tema ya no vive en el JSON: el nodo de alerta usa `={{ $env.NTFY_ALERT_URL }}`, definida
+  en `infrastructure/.env` (no versionado) de `n8n.hosting3m.com/n8n-compose`.
+* La alerta conserva el mensaje de producción (workflow, nodo y link; nunca el texto del error) y ya
+  no bloquea el registro: `onError: continueRegularOutput`, así que si falta la variable o ntfy no
+  responde, la fila en `n8n_error_logs` se escribe igual.
+* `INSERT INTO n8n_error_logs` con parámetros (`queryReplacement`) en vez de interpolar escapando solo
+  comillas; seguro ante nulos/vacíos (`workflow_name`, `execution_id` y `error_message` son `NOT NULL`;
+  antes un `failed_node` o `error_message` ausente hacía tronar el `.replace()`) y recortado al tamaño
+  de cada columna. `created_at` toma el `now()` de la base.
+* El JSON del repo (de enero, con un nodo `Insert rows in a table` que ya no existía) se reemplaza por
+  el export real de producción con estos cambios.
+* `workflows/00-global-error-handler/README.md`: configuración de `NTFY_ALERT_URL` y propuesta (no
+  implementada) de tema protegido con token de acceso en una credencial Bearer de n8n.
+
+**Validación (LOCAL, solo lectura):** las expresiones del `INSERT` probadas con un `SELECT` preparado:
+nulos, vacíos, comillas/`DROP TABLE` como texto literal y recorte a 255/255/100.
+
+**Deuda documentada:** `N8N_BLOCK_ENV_ACCESS_IN_NODE=false` deja a cualquier workflow leer todas las
+variables de entorno de n8n (incluido `INTERNAL_SECRET`); no se cambia porque `GenerateToken` depende de
+ello.
+
 ### 🔒 Contención de seguridad del gateway `v5/CRUD` y `companys` pública — v1.17.1
 
 *Workflows de n8n únicamente (sin migración ni frontend). Probado en LOCAL el 2026-10-17; la fecha de
