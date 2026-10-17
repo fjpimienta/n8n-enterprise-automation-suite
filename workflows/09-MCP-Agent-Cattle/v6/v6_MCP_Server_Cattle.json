@@ -9,10 +9,10 @@
       "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
       "typeVersion": 2,
       "position": [
-        512,
-        1088
+        1776,
+        1504
       ],
-      "id": "9a25245e-3ad9-4484-82c6-3fa4ea4e3df3",
+      "id": "1c0c85b6-4cdb-4274-8ab1-9e198093a0a9",
       "name": "MCP Server Cattle",
       "webhookId": "68e31c86-2f32-4234-be5d-32fd5260fd1c",
       "credentials": {
@@ -35,10 +35,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1008,
-        768
+        2272,
+        1184
       ],
-      "id": "01e3ce0c-9528-498d-9cbc-0999d2514a22",
+      "id": "9cfe5fea-0c39-4a2a-a02b-f51dd6e76f1c",
       "name": "get_table_metadata",
       "credentials": {
         "postgres": {
@@ -61,10 +61,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        112,
-        1120
+        1376,
+        1536
       ],
-      "id": "933a10de-e0cf-46ca-a363-b100b5a4f66d",
+      "id": "bdb26d2b-f8e5-4cf4-b7be-eeea5598e3a7",
       "name": "log_cattle_weight",
       "credentials": {
         "postgres": {
@@ -86,10 +86,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        -48,
-        1120
+        1216,
+        1536
       ],
-      "id": "40919612-33ee-407a-8955-2cfe68e5e859",
+      "id": "b758b2ea-709d-479b-9671-de97ed08b7ab",
       "name": "log_health_event",
       "credentials": {
         "postgres": {
@@ -111,10 +111,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        848,
-        768
+        2112,
+        1184
       ],
-      "id": "e777a45f-7034-41df-bdcd-94af044bce0e",
+      "id": "b0f69c34-16d9-4c5f-be23-6de9f2e3009e",
       "name": "get_livestock_info",
       "credentials": {
         "postgres": {
@@ -136,10 +136,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1184,
-        1312
+        2448,
+        1728
       ],
-      "id": "ad73d151-d618-4947-8101-f72186528162",
+      "id": "8291ce1c-eac0-4f21-839e-648d40c95802",
       "name": "register_ranch_expense",
       "credentials": {
         "postgres": {
@@ -161,10 +161,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        -208,
-        1120
+        1056,
+        1536
       ],
-      "id": "ae95858a-6d27-4beb-a0a7-d17066cf7574",
+      "id": "5e985c9e-4df5-49c0-99da-bb78b0cfe7cd",
       "name": "log_weaning_event",
       "credentials": {
         "postgres": {
@@ -186,10 +186,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        -208,
-        1312
+        1056,
+        1728
       ],
-      "id": "95ce9071-46b5-421e-b4cd-6267ce1b0b94",
+      "id": "0f75b4dd-1ca0-4884-aa73-6d9fb42d776b",
       "name": "log_mortality_event",
       "credentials": {
         "postgres": {
@@ -211,10 +211,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1184,
-        1136
+        2448,
+        1552
       ],
-      "id": "823192be-6603-450a-8927-8d9f09e0eccb",
+      "id": "2a29d856-3418-459a-bfe6-def2610ce405",
       "name": "request_livestock_sale",
       "credentials": {
         "postgres": {
@@ -236,10 +236,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1008,
-        1312
+        2272,
+        1728
       ],
-      "id": "514fa340-7f4e-42c1-b4cd-907fbead60c6",
+      "id": "989fb05d-8b58-4245-bf83-2377ff380909",
       "name": "register_birth_event",
       "credentials": {
         "postgres": {
@@ -261,10 +261,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1184,
-        768
+        2448,
+        1184
       ],
-      "id": "b6d1d52d-26a0-473d-b91f-c3c9621bdebb",
+      "id": "57be1b44-eed5-4a4f-aa8c-c7862c6aa882",
       "name": "find_calf_by_dam",
       "credentials": {
         "postgres": {
@@ -286,10 +286,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1184,
-        960
+        2448,
+        1376
       ],
-      "id": "7a4ef54a-5cb3-4d0a-b9e6-90d4d2b01225",
+      "id": "ad23d423-b39d-412e-87f6-186307e73229",
       "name": "count_livestock",
       "credentials": {
         "postgres": {
@@ -311,10 +311,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        848,
-        1312
+        2112,
+        1728
       ],
-      "id": "ef4669f4-b3d2-4fe3-9bb1-433d3a3f8f2c",
+      "id": "e42a984d-d76b-4552-aeb5-c05bdfed701c",
       "name": "register_livestock_purchase",
       "credentials": {
         "postgres": {
@@ -336,10 +336,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        -48,
-        1312
+        1216,
+        1728
       ],
-      "id": "0cba2452-626f-40d4-a3fd-6283140e76a5",
+      "id": "916b75cb-5179-4dcf-b558-3ae5d0be16b6",
       "name": "log_vaccination_event",
       "credentials": {
         "postgres": {
@@ -361,10 +361,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        112,
-        1312
+        1376,
+        1728
       ],
-      "id": "d3368b98-1ee6-4eae-8cc6-53d15849b115",
+      "id": "a5034fb3-c75b-4294-aa51-a985584fa571",
       "name": "log_supplement_event",
       "credentials": {
         "postgres": {
@@ -386,10 +386,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        288,
-        1312
+        1552,
+        1728
       ],
-      "id": "06d9cffd-f840-4459-bc2f-681989b493f5",
+      "id": "6864f025-0e3d-4b49-b313-784b325d00ca",
       "name": "log_palpation_event",
       "credentials": {
         "postgres": {
@@ -401,9 +401,9 @@
     {
       "parameters": {
         "descriptionType": "manual",
-        "toolDescription": "Use this tool to find an animal when the user describes it by characteristics\n(species, category/type, current status) instead of giving you its exact\near tag, fire number, or UUID. Common case: an animal with no SINIIGA tag\n(e.g. horses), where the user says things like \"la yegua preñada\", \"el\npotro que nació ayer\", etc.\n\nAll three filters (species, category, current_status) are optional — pass\nonly the ones the user gave you. species must be one of: BOVINO, BUFALO,\nBORREGO, EQUIDO. category must match the exact catalog value (YEGUA,\nCABALLO, POTRO, POTRANCA, VACA, TORO, NOVILLO, NOVILLONA, BECERRO, BECERRA,\nBUFALA, BUFALO, BUCERRO, BUCERRA, BORREGO, BORREGA, CABALLO_CASTRADO,\nBECERRO_TORETE — ask the user if unsure which one applies, never guess).\ncurrent_status must be one of: ACTIVO, EN_TRANSITO, VENDIDO, BAJA_MORTANDAD,\nPREÑADA, VACÍA, DESARROLLO, RIESGO, FINALIZADO, CUARENTENA,\nBAJA_DEPURACION_DATOS.\n\n🛑 CRÍTICO — cómo usar el resultado (la tool nunca decide por ti, tú decides\ncon base en total_matches):\n- Si total_matches = 1: usa el id/rfid_siniiga de ese único resultado para\n  la acción que el usuario pidió.\n- Si total_matches = 0: dile al usuario que no encontraste ningún animal\n  con esos criterios — no inventes un identificador ni asumas otro animal.\n- Si total_matches > 1: NUNCA elijas uno al azar ni asumas cuál quiso\n  decir. Lista los candidatos (arete o número de fuego de cada uno, con su\n  lote/UPP si ayuda a distinguirlos) y pídele al usuario que te diga a\n  cuál se refiere, o te dé más criterios para acotar. Acepta lot_name y production_unit_name para listar los animales de un lote o UPP (hasta 300); úsalo para obtener los aretes de una venta por lote.",
+        "toolDescription": "NO la uses para VENDER un lote: para una venta de un lote manda directo 'preview_livestock_sale_order' con {lote, categoria, cantidad, guia_transito}. Use this tool to find an animal when the user describes it by characteristics\n(species, category/type, current status) instead of giving you its exact\near tag, fire number, or UUID. Common case: an animal with no SINIIGA tag\n(e.g. horses), where the user says things like \"la yegua preñada\", \"el\npotro que nació ayer\", etc.\n\nAll three filters (species, category, current_status) are optional — pass\nonly the ones the user gave you. species must be one of: BOVINO, BUFALO,\nBORREGO, EQUIDO. category must match the exact catalog value (YEGUA,\nCABALLO, POTRO, POTRANCA, VACA, TORO, NOVILLO, NOVILLONA, BECERRO, BECERRA,\nBUFALA, BUFALO, BUCERRO, BUCERRA, BORREGO, BORREGA, CABALLO_CASTRADO,\nBECERRO_TORETE — ask the user if unsure which one applies, never guess).\ncurrent_status must be one of: ACTIVO, EN_TRANSITO, VENDIDO, BAJA_MORTANDAD,\nPREÑADA, VACÍA, DESARROLLO, RIESGO, FINALIZADO, CUARENTENA,\nBAJA_DEPURACION_DATOS.\n\n🛑 CRÍTICO — cómo usar el resultado (la tool nunca decide por ti, tú decides\ncon base en total_matches):\n- Si total_matches = 1: usa el id/rfid_siniiga de ese único resultado para\n  la acción que el usuario pidió.\n- Si total_matches = 0: dile al usuario que no encontraste ningún animal\n  con esos criterios — no inventes un identificador ni asumas otro animal.\n- Si total_matches > 1: NUNCA elijas uno al azar ni asumas cuál quiso\n  decir. Lista los candidatos (arete o número de fuego de cada uno, con su\n  lote/UPP si ayuda a distinguirlos) y pídele al usuario que te diga a\n  cuál se refiere, o te dé más criterios para acotar. Acepta lot_name y production_unit_name para listar los animales de un lote o UPP (hasta 300); úsalo para obtener los aretes de una venta por lote.",
         "operation": "executeQuery",
-        "query": "WITH params AS (\n  SELECT\n    $1::int AS tenant_id,\n    NULLIF(NULLIF($2::text, 'null'), 'undefined') AS species,\n    NULLIF(NULLIF($3::text, 'null'), 'undefined') AS category,\n    NULLIF(NULLIF($4::text, 'null'), 'undefined') AS current_status,\n    $5::text AS user_email,\n    NULLIF(NULLIF(NULLIF($6::text, 'null'), 'undefined'), '') AS lot_name,\n    NULLIF(NULLIF(NULLIF($7::text, 'null'), 'undefined'), '') AS production_unit_name\n),\nauth_check AS (\n  SELECT 1\n  FROM params p\n  JOIN user_companies uc ON uc.id_company = p.tenant_id AND uc.is_active = true\n  JOIN users u ON u.email = uc.email AND u.email = p.user_email\n),\nmatches AS (\n  SELECT l.id, l.rfid_siniiga, l.numero_fuego, l.species, l.category, l.current_status,\n         (SELECT pu.ranch_name FROM production_units pu WHERE pu.id = l.production_unit_id) AS upp,\n         (SELECT lot.lot_name FROM production_unit_lots lot WHERE lot.id = l.lot_id) AS lote\n  FROM cattle_livestock l, params p\n  WHERE EXISTS (SELECT 1 FROM auth_check)\n    AND l.tenant_id = p.tenant_id\n    AND (p.species IS NULL OR l.species = p.species)\n    AND (p.category IS NULL OR l.category = p.category)\n    AND (p.current_status IS NULL OR l.current_status = p.current_status)\n    AND (p.lot_name IS NULL OR EXISTS (SELECT 1 FROM production_unit_lots lot\n                                        WHERE lot.id = l.lot_id AND lot.id_company = l.tenant_id\n                                          AND lot.lot_name ILIKE '%' || p.lot_name || '%'))\n    AND (p.production_unit_name IS NULL OR EXISTS (SELECT 1 FROM production_units pu\n                                                    WHERE pu.id = l.production_unit_id AND pu.id_company = l.tenant_id\n                                                      AND pu.ranch_name ILIKE '%' || p.production_unit_name || '%'))\n),\nshown AS (\n  -- Up to 300 rows when filtering by lot / UPP (enough for a full sale order), 50 otherwise\n  SELECT * FROM matches ORDER BY rfid_siniiga NULLS LAST, numero_fuego NULLS LAST\n  LIMIT (SELECT CASE WHEN p.lot_name IS NOT NULL OR p.production_unit_name IS NOT NULL THEN 300 ELSE 50 END FROM params p)\n)\nSELECT\n  (SELECT count(*) FROM matches) AS total_matches,\n  COALESCE(jsonb_agg(to_jsonb(shown)), '[]'::jsonb) AS matches\nFROM shown;",
+        "query": "WITH params AS (\n  SELECT\n    $1::int AS tenant_id,\n    NULLIF(NULLIF($2::text, 'null'), 'undefined') AS species,\n    NULLIF(NULLIF($3::text, 'null'), 'undefined') AS category,\n    NULLIF(NULLIF($4::text, 'null'), 'undefined') AS current_status,\n    $5::text AS user_email,\n    NULLIF(NULLIF(NULLIF($6::text, 'null'), 'undefined'), '') AS lot_name,\n    NULLIF(NULLIF(NULLIF($7::text, 'null'), 'undefined'), '') AS production_unit_name\n),\nauth_check AS (\n  SELECT 1\n  FROM params p\n  JOIN user_companies uc ON uc.id_company = p.tenant_id AND uc.is_active = true\n  JOIN users u ON u.email = uc.email AND u.email = p.user_email\n),\nmatches AS (\n  SELECT l.id, l.rfid_siniiga, l.numero_fuego, l.species, l.category, l.current_status,\n         (SELECT pu.ranch_name FROM production_units pu WHERE pu.id = l.production_unit_id) AS upp,\n         (SELECT lot.lot_name FROM production_unit_lots lot WHERE lot.id = l.lot_id) AS lote\n  FROM cattle_livestock l, params p\n  WHERE EXISTS (SELECT 1 FROM auth_check)\n    AND l.tenant_id = p.tenant_id\n    AND (p.species IS NULL OR l.species = p.species)\n    AND (p.category IS NULL OR l.category = p.category)\n    AND (p.current_status IS NULL OR l.current_status = p.current_status)\n    AND (p.lot_name IS NULL OR EXISTS (SELECT 1 FROM production_unit_lots lot\n                                        WHERE lot.id = l.lot_id AND lot.id_company = l.tenant_id\n                                          AND translate(lot.lot_name, 'ÁÉÍÓÚÜÑáéíóúüñ', 'AEIOUUNaeiouun') ILIKE '%' || translate(p.lot_name, 'ÁÉÍÓÚÜÑáéíóúüñ', 'AEIOUUNaeiouun') || '%'))\n    AND (p.production_unit_name IS NULL\n         OR EXISTS (SELECT 1 FROM companys c WHERE c.id_company = p.tenant_id\n                     AND translate(c.company_name, 'ÁÉÍÓÚÜÑáéíóúüñ', 'AEIOUUNaeiouun') ILIKE '%' || translate(p.production_unit_name, 'ÁÉÍÓÚÜÑáéíóúüñ', 'AEIOUUNaeiouun') || '%')\n         OR EXISTS (SELECT 1 FROM production_units pu\n                                                    WHERE pu.id = l.production_unit_id AND pu.id_company = l.tenant_id\n                                                      AND translate(pu.ranch_name, 'ÁÉÍÓÚÜÑáéíóúüñ', 'AEIOUUNaeiouun') ILIKE '%' || translate(p.production_unit_name, 'ÁÉÍÓÚÜÑáéíóúüñ', 'AEIOUUNaeiouun') || '%'))\n    -- a company name sent as UPP (e.g. the selected company) is not a UPP filter\n\n),\nshown AS (\n  -- Up to 300 rows when filtering by lot / UPP (enough for a full sale order), 50 otherwise\n  SELECT * FROM matches ORDER BY rfid_siniiga NULLS LAST, numero_fuego NULLS LAST\n  LIMIT (SELECT CASE WHEN p.lot_name IS NOT NULL OR p.production_unit_name IS NOT NULL THEN 300 ELSE 50 END FROM params p)\n)\nSELECT\n  (SELECT count(*) FROM matches) AS total_matches,\n  COALESCE(jsonb_agg(to_jsonb(shown)), '[]'::jsonb) AS matches\nFROM shown;",
         "options": {
           "queryReplacement": "={{ (() => {\n  const empty = (v) => (v === '' || v === undefined) ? null : v;\n  return [\n    $fromAI('tenant_id', 'ID del rancho / tenant_id actual del usuario, tal como aparece en el contexto de sesión', 'number'),\n    empty($fromAI('species', 'Species filter: BOVINO, BUFALO, BORREGO, or EQUIDO. Omit if the user did not specify a species.', 'string', null)),\n    empty($fromAI('category', 'Category/type filter matching the catalog exactly (YEGUA, CABALLO, POTRO, POTRANCA, VACA, TORO, NOVILLO, NOVILLONA, BECERRO, BECERRA, BUFALA, BUFALO, BUCERRO, BUCERRA, BORREGO, BORREGA, CABALLO_CASTRADO, BECERRO_TORETE). Omit if the user did not specify one.', 'string', null)),\n    empty($fromAI('current_status', 'Status filter: ACTIVO, EN_TRANSITO, VENDIDO, BAJA_MORTANDAD, PREÑADA, VACÍA, DESARROLLO, RIESGO, FINALIZADO, CUARENTENA, or BAJA_DEPURACION_DATOS. Omit if the user did not specify one.', 'string', null)),\n    $fromAI('user_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies.', 'string'),\n    empty($fromAI('lot_name', 'Nombre del LOTE cuando el usuario dice la palabra lote (ej. lote Maceo -> Maceo). Si dijo lote, usa SIEMPRE este parámetro y nunca production_unit_name. Omite si no mencionó lote.', 'string', null)),\n    empty($fromAI('production_unit_name', 'Nombre de la UPP o rancho, SOLO si el usuario dijo UPP o rancho (ej. San José). Nunca pongas aquí el nombre de un lote. Omite si no lo mencionó.', 'string', null))\n  ];\n})() }}"
         }
@@ -411,10 +411,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1008,
-        960
+        2272,
+        1376
       ],
-      "id": "5622068d-0872-4ed2-bca4-26c7203e5984",
+      "id": "1f85499a-27f4-4d49-9b36-40fc1a4b5a84",
       "name": "find_livestock_by_criteria",
       "credentials": {
         "postgres": {
@@ -436,10 +436,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1008,
-        1136
+        2272,
+        1552
       ],
-      "id": "bebb3870-4c9d-4c25-a04e-eb4e464c0b7a",
+      "id": "971c421b-5e7c-403d-983b-b7eb0404065c",
       "name": "move_livestock",
       "credentials": {
         "postgres": {
@@ -461,10 +461,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1360,
-        960
+        2624,
+        1376
       ],
-      "id": "025a57e5-3e2a-4804-955a-1d6ebd5893c8",
+      "id": "5ef3501a-7762-443d-96c8-7b878405bfcf",
       "name": "list_pending_requests",
       "credentials": {
         "postgres": {
@@ -486,10 +486,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1360,
-        1136
+        2624,
+        1552
       ],
-      "id": "c7d93cc2-0b14-453e-b499-caefda458710",
+      "id": "c98ce33a-c61c-4b9f-9b01-ff7f42c6d761",
       "name": "review_pending_request",
       "credentials": {
         "postgres": {
@@ -511,10 +511,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        128,
-        928
+        1392,
+        1344
       ],
-      "id": "9b225c4f-57d0-44e3-828e-cd55d4b83359",
+      "id": "5b864fbc-ea88-4762-bf1c-d79ed981216a",
       "name": "log_breeding_event",
       "credentials": {
         "postgres": {
@@ -536,10 +536,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        -48,
-        928
+        1216,
+        1344
       ],
-      "id": "75cd803b-861d-4133-b7a8-6a246b1bffc8",
+      "id": "e1e933bd-2ec7-48af-a35b-cec41ee6778d",
       "name": "log_deworming_event",
       "credentials": {
         "postgres": {
@@ -561,10 +561,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1360,
-        1312
+        2624,
+        1728
       ],
-      "id": "9fe22ade-147b-4114-a9a3-7ca24b9ac712",
+      "id": "0b2283c7-ae6b-415f-baaf-eb9a98ce180f",
       "name": "update_livestock_tag",
       "credentials": {
         "postgres": {
@@ -586,10 +586,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        -208,
-        928
+        1056,
+        1344
       ],
-      "id": "913f68de-6c9e-48da-9159-d0b8b286a78a",
+      "id": "82370877-663e-4350-bae2-56d9bce914ce",
       "name": "log_castration_event",
       "credentials": {
         "postgres": {
@@ -611,10 +611,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        848,
-        1136
+        2112,
+        1552
       ],
-      "id": "8177c5a6-f1af-41ba-b66c-4188c0800701",
+      "id": "c6dd0f77-1ca0-4bc7-b5fa-5bceae3944fb",
       "name": "void_event",
       "credentials": {
         "postgres": {
@@ -636,10 +636,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        288,
-        1120
+        1552,
+        1536
       ],
-      "id": "3762e49a-fc4b-46d5-bb41-8cd603716f43",
+      "id": "969f9b15-e0fd-42ee-9ecc-7133445dcb93",
       "name": "log_palpation_event_batch",
       "credentials": {
         "postgres": {
@@ -661,10 +661,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        848,
-        960
+        2112,
+        1376
       ],
-      "id": "1759c897-0c49-487a-a64a-6561a2920ee7",
+      "id": "f22c3987-9439-46c7-abff-0b53a3eb896b",
       "name": "list_lots",
       "credentials": {
         "postgres": {
@@ -686,10 +686,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1344,
-        768
+        2608,
+        1184
       ],
-      "id": "69d02334-d241-4ba9-b7a6-6e0eed7ceb14",
+      "id": "bdc95c58-4551-44a8-afbd-f8511c3bcd8c",
       "name": "cancel_pending_request",
       "credentials": {
         "postgres": {
@@ -711,10 +711,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1184,
-        1336
+        2448,
+        1760
       ],
-      "id": "24f900ff-a52b-4cb8-b184-2a1f98ed7fd3",
+      "id": "55f99f9a-1699-4279-b366-51373a3debff",
       "name": "preview_livestock_sale_order",
       "credentials": {
         "postgres": {
@@ -736,10 +736,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1504,
-        1336
+        2768,
+        1760
       ],
-      "id": "f5ba8e2d-4ad9-43ad-b4f0-646351183300",
+      "id": "1707dc01-42ca-4eca-8b39-2cd145866652",
       "name": "request_livestock_sale_order",
       "credentials": {
         "postgres": {
@@ -1081,6 +1081,7 @@
     "timeSavedMode": "fixed",
     "timeSavedPerExecution": 3
   },
+  "versionId": "2d4bce43-1047-4778-95f3-712f219c8894",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"

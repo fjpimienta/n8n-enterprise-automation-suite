@@ -14,10 +14,10 @@
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.3,
       "position": [
-        0,
-        0
+        1280,
+        304
       ],
-      "id": "a5a8a5d9-ad4b-4582-8ce5-dfeda1a133f6",
+      "id": "7493d1d5-bddd-419f-bdc0-696cfd1f0be0",
       "name": "Schedule Trigger"
     },
     {
@@ -29,10 +29,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        224,
-        0
+        1504,
+        304
       ],
-      "id": "f769e721-5394-4db6-ac6e-ac02f0f0f248",
+      "id": "cd5ab43c-60a7-47d5-a34c-b45883320b6b",
       "name": "Buscar Pendientes Sin Notificar",
       "credentials": {
         "postgres": {
@@ -48,10 +48,10 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        448,
-        0
+        1728,
+        304
       ],
-      "id": "2feea8ea-4c73-4012-bfc1-f801e4d1a485",
+      "id": "939190ab-df51-4f64-9d91-2935b137f7eb",
       "name": "Preparar Contenido de Correo"
     },
     {
@@ -66,10 +66,10 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        672,
-        0
+        1952,
+        304
       ],
-      "id": "b9fdb3e1-9e65-4c80-803c-6929d1e291bc",
+      "id": "ee570c45-2961-462b-a940-6578f317115c",
       "name": "SMTP",
       "webhookId": "c9e15088-3a11-4982-98bb-f8fbe9795222",
       "credentials": {
@@ -90,10 +90,10 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        896,
-        0
+        2176,
+        304
       ],
-      "id": "3a5d8770-709f-44fe-b311-383fc7238f9f",
+      "id": "408e6593-e5c6-49a2-aa74-3a130a974e33",
       "name": "Marcar como Notificado",
       "credentials": {
         "postgres": {
@@ -150,7 +150,7 @@
       ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
     "executionOrder": "v1",
     "binaryMode": "separate",
@@ -159,10 +159,12 @@
     "errorWorkflow": "9SrVXdATmlrZemJT",
     "callerPolicy": "workflowsFromSameOwner"
   },
+  "versionId": "5f03838b-f622-4387-b36a-e2172e0d996a",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
   },
   "nodeGroups": [],
+  "id": "UrYaK5hHb9KLSp5L",
   "tags": []
 }
