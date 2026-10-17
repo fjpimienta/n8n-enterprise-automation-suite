@@ -845,4 +845,4 @@ Plantation Subsystem". Business rules: `CLAUDE.md`, Rule 18.
 Only `spConfigByModel` changes: `sp_agri_set_default_plantation`, `sp_agri_bulk_create_rows` and
 `sp_agri_record_row_census`, all with `tenantPosition: 0` and `actorEmailField: 'actor_email'` (actor
 always from the verified JWT). Build Query fingerprint with this change on top of `main` (`3a6fa5c`):
-`0aedcb746972f5a767b2d4c73ef898f4`; it changes when rebased over the v1.17.3 upsert hotfix.
+`0aedcb746972f5a767b2d4c73ef898f4`; it changes when the v1.18.1 upsert hotfix lands on top of it.
