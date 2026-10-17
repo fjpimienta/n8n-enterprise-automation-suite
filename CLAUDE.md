@@ -92,6 +92,15 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
   directamente — los `schema.sql`/seeds versionados en el repo se han desactualizado
   respecto a producción más de una vez (ver `projects/agro-erp/CLAUDE.md`, regla 7, para
   el caso documentado).
+- **Imagen de n8n: la única fuente válida en el VPS es `n8n.hosting3m.com/n8n-compose`**
+  (`infrastructure/Dockerfile.n8n` y `infrastructure/.env` de esa carpeta construyen y configuran el
+  n8n en ejecución; verificado 2026-10-17: `FROM n8nio/n8n:2.29.0`, igual que la capa de la imagen
+  en ejecución y que este repo). ⚠️ Deuda: en el VPS hay otras copias del repo con su propio
+  `Dockerfile.n8n` (`hotel`, `sanjose`, `admin.pistahielo`, `cattle`, `admin.sanjose`, `agroerp`,
+  `n8n-enterprise-new`), algunas con `latest` y otras con 2.23.3; **no construyen nada en ejecución**
+  y no deben usarse para reconstruir. Recomendación pendiente: pasar el `FROM` a
+  `docker.n8n.io/n8nio/n8n` en la próxima reconstrucción, para evitar el límite de descargas de
+  Docker Hub (`429`, ver `projects/agro-erp/CLAUDE.md`, regla 8).
 - **Manejo de `password` en el gateway CRUD — invariantes verificadas en vivo (LOCAL,
   `workflow_entity`) en `v5/CRUD` y `v6/CRUD` por igual el 2026-10-05, no solo en la versión
   que usa `agro-erp`:**
