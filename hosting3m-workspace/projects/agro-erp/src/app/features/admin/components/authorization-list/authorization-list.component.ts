@@ -24,9 +24,22 @@ import {
   formatInstantInCdmx,
   getCountdownSeverity,
   formatCountdown,
+  formatDeadlineNotice,
   isAuthorizationExpired,
   CountdownSeverity
 } from '@shared/utils/authorization-deadline.util';
+import {
+  SaleGuideGroup,
+  SaleOrderGroup,
+  distinctGuides,
+  distinctOrderCodes,
+  formatCategoryCounts,
+  groupSaleAuthorizations,
+  isOwnCompanyRow,
+  matchesSaleFilters,
+  orderCodeFor,
+  otherCompaniesWarning
+} from '@shared/utils/sale-order-grouping.util';
 import {
   ActionOutcome,
   canCancelRequest,
@@ -53,6 +66,10 @@ interface PendingRow {
   canCancel: boolean;
   /** Deadline passed: the SP rejects any action, so every button is disabled. */
   expired: boolean;
+  /** "Vence hoy a las 23:59 (hora CDMX)" (migration 072 rule). */
+  deadlineNotice: string;
+  /** `payload.orden_venta` (migration 074) or null. */
+  orderCode: string | null;
 }
 
 type ConfirmAction = DecisionAutorizacion | 'CANCELAR';
@@ -84,7 +101,17 @@ interface SanitaryExceptionOffer {
 interface SaleModalContext {
   variant: 'single' | 'batch';
   items: SaleApprovalItem[];
+  /** Batch heading, e.g. "Aprobar guía 14287 · OV-000003". */
+  title?: string;
 }
+
+/** "Rechazar guía/orden": same reason for every request of the group, resolved one by one. */
+interface BatchRejectContext {
+  label: string;
+  rows: PendingAuthorization[];
+}
+
+export type PendingView = 'AGRUPADA' | 'LISTA';
 
 /** Outcome of one `resolver_autorizacion` call, already interpreted. */
 type ResolveOutcome =
@@ -92,7 +119,7 @@ type ResolveOutcome =
   | { kind: 'pending'; motivo: string; exceptionAvailable: boolean }
   | { kind: 'error'; message: string };
 
-type BatchStatus = 'APROBADA' | 'APROBADA_CON_EXCEPCION' | 'PENDIENTE' | 'ERROR';
+type BatchStatus = 'APROBADA' | 'APROBADA_CON_EXCEPCION' | 'RECHAZADA' | 'PENDIENTE' | 'ERROR';
 
 interface BatchResult {
   requestId: string;
@@ -104,6 +131,7 @@ interface BatchResult {
 const BATCH_STATUS_LABEL: Record<BatchStatus, string> = {
   APROBADA: 'Aprobada',
   APROBADA_CON_EXCEPCION: 'Aprobada con excepción',
+  RECHAZADA: 'Rechazada',
   PENDIENTE: 'Pendiente',
   ERROR: 'Error'
 };
@@ -158,7 +186,15 @@ export class AuthorizationListComponent {
   public saleModal = signal<SaleModalContext | null>(null);
   private selectedIds = signal<ReadonlySet<string>>(new Set());
   public batchResults = signal<BatchResult[] | null>(null);
-  public batchProgress = signal<{ done: number; total: number } | null>(null);
+  public batchProgress = signal<{ label: string; done: number; total: number } | null>(null);
+  public batchReject = signal<BatchRejectContext | null>(null);
+
+  /** Quick filters ('' = any) and view of the Pendientes tab. */
+  public orderFilter = signal<string>('');
+  public guideFilter = signal<string>('');
+  public pendingView = signal<PendingView>('AGRUPADA');
+  readonly formatCategoryCounts = formatCategoryCounts;
+  readonly otherCompaniesWarning = otherCompaniesWarning;
 
   /** Email of the logged-in user, used only to show "Cancelar solicitud" on own requests. */
   private currentUserEmail = computed(() => resolveCurrentUserEmail(this.authService.currentUser() as any));
@@ -177,16 +213,45 @@ export class AuthorizationListComponent {
         this.saleModal.set(null);
         this.selectedIds.set(new Set());
         this.batchResults.set(null);
+        this.batchReject.set(null);
+        this.orderFilter.set('');
+        this.guideFilter.set('');
         this.adminService.loadAuthorizations();
         this.loadReferencePrices();
       }
     });
   }
 
+  private activeCompanyId = computed(() => Number(this.tenantService.activeTenantId()) || null);
+
+  /**
+   * Fail-closed: only requests of the active company are listed or resolved. The gateway already
+   * scopes the list by x-tenant-id; this is defense in depth.
+   */
+  private ownPending = computed(() => {
+    const active = this.activeCompanyId();
+    return this.adminService.pendingAuthorizations().filter(r => isOwnCompanyRow(r, active));
+  });
+
+  /** Rows of other companies received anyway (expected 0); they are never shown or resolved. */
+  public foreignPendingCount = computed(() =>
+    this.adminService.pendingAuthorizations().length - this.ownPending().length
+  );
+
+  public orderOptions = computed(() => distinctOrderCodes(this.ownPending()));
+  public guideOptions = computed(() => distinctGuides(this.ownPending()));
+  public filtersActive = computed(() => !!this.orderFilter() || !!this.guideFilter());
+
+  private filteredPending = computed(() => {
+    const order = this.orderFilter();
+    const guide = this.guideFilter();
+    return this.ownPending().filter(r => matchesSaleFilters(r, order, guide));
+  });
+
   public pendingRows = computed<PendingRow[]>(() => {
     const nowMs = this.now();
     const email = this.currentUserEmail();
-    return this.adminService.pendingAuthorizations().map(row => {
+    return this.filteredPending().map(row => {
       const deadline = getAuthorizationDeadline(row.fecha_solicitud);
       const msRemaining = deadline.getTime() - nowMs;
       return {
@@ -196,10 +261,59 @@ export class AuthorizationListComponent {
         countdownLabel: formatCountdown(msRemaining),
         deadlineLabel: formatInstantInCdmx(deadline),
         canCancel: canCancelRequest(row, email),
-        expired: isAuthorizationExpired(row.fecha_solicitud, nowMs)
+        expired: isAuthorizationExpired(row.fecha_solicitud, nowMs),
+        deadlineNotice: formatDeadlineNotice(row.fecha_solicitud, nowMs),
+        orderCode: orderCodeFor(row)
       };
     });
   });
+
+  private pendingRowById = computed(() => new Map(this.pendingRows().map(r => [r.row.id, r])));
+
+  /**
+   * Grouped view: VENTA requests by sale order → transit guide. Built from the raw list (filters
+   * applied) so an order can be flagged when another company's rows show up; the grouping itself
+   * returns only rows of the active company.
+   */
+  public saleGrouping = computed(() => {
+    const order = this.orderFilter();
+    const guide = this.guideFilter();
+    const rows = this.adminService.pendingAuthorizations().filter(r => matchesSaleFilters(r, order, guide));
+    // Visible animals of an order are counted over every request that reached the panel, any estado.
+    const scope = [...this.adminService.pendingAuthorizations(), ...this.adminService.authorizationHistory()];
+    return groupSaleAuthorizations(rows, this.activeCompanyId(), scope);
+  });
+
+  /** Requests without a sale order, rendered exactly as before under the order groups. */
+  public ungroupedRows = computed<PendingRow[]>(() => {
+    const byId = this.pendingRowById();
+    return this.saleGrouping().ungrouped.map(r => byId.get(r.id)).filter((r): r is PendingRow => !!r);
+  });
+
+  public rowsOf(requests: readonly PendingAuthorization[]): PendingRow[] {
+    const byId = this.pendingRowById();
+    return requests.map(r => byId.get(r.id)).filter((r): r is PendingRow => !!r);
+  }
+
+  /** Requests of a group a batch may take: pending, not expired, VENTA, active company. */
+  public actionableIn(requests: readonly PendingAuthorization[]): PendingAuthorization[] {
+    const nowMs = this.now();
+    const active = this.activeCompanyId();
+    return requests.filter(r => isOwnCompanyRow(r, active) && isSelectableForBatch(r, nowMs));
+  }
+
+  public orderRequests(order: SaleOrderGroup): PendingAuthorization[] {
+    return order.guides.flatMap(g => g.requests);
+  }
+
+  public setPendingView(view: PendingView): void {
+    this.pendingView.set(view);
+  }
+
+  public clearFilters(): void {
+    this.orderFilter.set('');
+    this.guideFilter.set('');
+  }
 
   public historyRows = computed(() => this.adminService.authorizationHistory());
 
@@ -265,7 +379,7 @@ export class AuthorizationListComponent {
   /** Pending, not yet expired VENTA rows of the active tenant: the only rows a batch can take. */
   public selectableSaleRows = computed(() => {
     const nowMs = this.now();
-    return this.adminService.pendingAuthorizations().filter(r => isSelectableForBatch(r, nowMs));
+    return this.ownPending().filter(r => isSelectableForBatch(r, nowMs));
   });
 
   /** Selection pruned against the current pending list (tenant switch, refresh, resolved rows). */
@@ -341,6 +455,7 @@ export class AuthorizationListComponent {
     switch (status) {
       case 'APROBADA': return 'bg-green-lt';
       case 'APROBADA_CON_EXCEPCION': return 'bg-yellow-lt';
+      case 'RECHAZADA': return 'bg-dark-lt';
       case 'PENDIENTE': return 'bg-secondary-lt';
       default: return 'bg-red-lt';
     }
@@ -367,6 +482,7 @@ export class AuthorizationListComponent {
     return {
       requestId: row.id,
       identifier: this.identifierFor(row),
+      fireNumber: (typeof row.payload?.numero_fuego === 'string' && row.payload.numero_fuego.trim()) || null,
       category: row.cattle_livestock_data?.category ?? null,
       species: row.cattle_livestock_data?.species ?? null,
       saleDate: saleDateFor(row.payload?.fecha_evento, row.fecha_solicitud),
@@ -390,6 +506,93 @@ export class AuthorizationListComponent {
     if (rows.length === 0) return;
     this.actionError.set(null);
     this.saleModal.set({ variant: 'batch', items: rows.map(r => this.saleItemFor(r)) });
+  }
+
+  /** "Aprobar guía" / "Aprobar orden": batch sale form over the group's actionable requests. */
+  public approveGroup(label: string, requests: readonly PendingAuthorization[]): void {
+    if (this.isSubmitting()) return;
+    const rows = this.actionableIn(requests);
+    if (rows.length === 0) return;
+    this.actionError.set(null);
+    this.saleModal.set({ variant: 'batch', items: rows.map(r => this.saleItemFor(r)), title: `Aprobar ${label}` });
+  }
+
+  /** "Rechazar guía" / "Rechazar orden": one mandatory reason, applied request by request. */
+  public rejectGroup(label: string, requests: readonly PendingAuthorization[]): void {
+    if (this.isSubmitting()) return;
+    const rows = this.actionableIn(requests);
+    if (rows.length === 0) return;
+    this.actionError.set(null);
+    this.batchReject.set({ label, rows });
+  }
+
+  public guideLabel(order: SaleOrderGroup, guide: SaleGuideGroup): string {
+    return `guía ${guide.guiaTransito} · ${order.orderCode}`;
+  }
+
+  public batchRejectConfig = computed<ConfirmModalConfig | null>(() => {
+    const ctx = this.batchReject();
+    if (!ctx) return null;
+    return {
+      title: `Rechazar ${ctx.label}`,
+      message: `¿Confirmas rechazar ${ctx.rows.length} solicitud(es) de venta? Se procesan una por una y las que no se puedan rechazar quedan pendientes. Esta acción es irreversible.`,
+      confirmLabel: `Rechazar ${ctx.rows.length}`,
+      cancelLabel: 'Cancelar',
+      variant: 'danger',
+      notesLabel: 'Motivo del rechazo (obligatorio)',
+      notesRequired: true
+    };
+  });
+
+  public closeBatchReject(): void {
+    if (this.isSubmitting()) return;
+    this.batchReject.set(null);
+  }
+
+  /** Strictly sequential rejection; a failed row never stops the rest and stays PENDIENTE. */
+  public async onBatchRejectConfirm(event: { notas?: string }): Promise<void> {
+    const ctx = this.batchReject();
+    const notas = (event.notas ?? '').trim();
+    if (!ctx || this.isSubmitting() || !notas) return;
+
+    const stillActionable = new Set(this.actionableIn(this.ownPending()).map(r => r.id));
+    const rows = ctx.rows.filter(r => stillActionable.has(r.id));
+    const results: BatchResult[] = [];
+
+    this.isSubmitting.set(true);
+    this.batchReject.set(null);
+    this.batchProgress.set({ label: 'Rechazando ventas', done: 0, total: rows.length });
+    try {
+      for (const row of rows) {
+        const identifier = this.identifierFor(row);
+        const outcome = await this.resolveOne(row.id, 'RECHAZADO', notas, undefined);
+        if (outcome.kind === 'approved') {
+          results.push({ requestId: row.id, identifier, status: 'RECHAZADA', message: null });
+          this.adminService.pendingAuthorizations.update(list => list.filter(r => r.id !== row.id));
+        } else if (outcome.kind === 'pending') {
+          results.push({ requestId: row.id, identifier, status: 'PENDIENTE', message: outcome.motivo });
+        } else {
+          results.push({ requestId: row.id, identifier, status: 'ERROR', message: outcome.message });
+        }
+        this.batchProgress.set({ label: 'Rechazando ventas', done: results.length, total: rows.length });
+      }
+    } finally {
+      this.isSubmitting.set(false);
+      this.batchProgress.set(null);
+      this.batchResults.set(results);
+      this.refresh();
+    }
+  }
+
+  /** Summary line of the results modal: counts per status. */
+  public batchCounts(results: readonly BatchResult[]): { ok: number; failed: number; pending: number } {
+    let ok = 0, failed = 0, pending = 0;
+    for (const r of results) {
+      if (r.status === 'ERROR') failed++;
+      else if (r.status === 'PENDIENTE') pending++;
+      else ok++;
+    }
+    return { ok, failed, pending };
   }
 
   public closeSaleModal(): void {
@@ -449,7 +652,7 @@ export class AuthorizationListComponent {
     const results: BatchResult[] = [];
 
     this.isSubmitting.set(true);
-    this.batchProgress.set({ done: 0, total: entries.length });
+    this.batchProgress.set({ label: 'Aprobando ventas', done: 0, total: entries.length });
     try {
       for (const entry of entries) {
         const identifier = items.get(entry.requestId)?.identifier ?? entry.requestId;
@@ -474,7 +677,7 @@ export class AuthorizationListComponent {
         } else {
           results.push({ requestId: entry.requestId, identifier, status: 'ERROR', message: outcome.message });
         }
-        this.batchProgress.set({ done: results.length, total: entries.length });
+        this.batchProgress.set({ label: 'Aprobando ventas', done: results.length, total: entries.length });
       }
     } finally {
       this.isSubmitting.set(false);

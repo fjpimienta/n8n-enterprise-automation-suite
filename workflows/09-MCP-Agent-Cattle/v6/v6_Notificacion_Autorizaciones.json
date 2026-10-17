@@ -1,0 +1,170 @@
+{
+  "name": "V6/Notificación de Autorizaciones Pendientes",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        1280,
+        304
+      ],
+      "id": "7493d1d5-bddd-419f-bdc0-696cfd1f0be0",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- One email per sale order and company (and one per request for any other event type).\n-- Recipients: ADMINs of the request's company only (user_companies.role), fail-closed by id_company.\nWITH p AS (\n    SELECT pa.id, pa.id_company, pa.tipo_evento, pa.payload, pa.solicitado_por_email, pa.fecha_solicitud,\n           pa.sale_order_id, so.order_code,\n           cl.rfid_siniiga, cl.numero_fuego, cl.electronic_rfid, cl.category, cl.species\n    FROM pending_authorizations pa\n    JOIN cattle_livestock cl ON cl.id = pa.livestock_id AND cl.tenant_id = pa.id_company\n    LEFT JOIN sale_orders so ON so.id = pa.sale_order_id\n    WHERE pa.estado = 'PENDIENTE'\n      AND pa.notified_at IS NULL\n),\ng AS (\n    SELECT COALESCE(p.sale_order_id::text, p.id::text)                         AS group_key,\n           p.id_company,\n           p.tipo_evento,\n           max(p.order_code)                                                   AS order_code,\n           string_agg(DISTINCT p.solicitado_por_email, ', ')                   AS solicitado_por,\n           to_char((min(p.fecha_solicitud) AT TIME ZONE 'UTC') AT TIME ZONE 'America/Mexico_City',\n                   'DD/MM/YYYY HH24:MI')                                       AS fecha_solicitud_cdmx,\n           to_char((min(p.fecha_solicitud) AT TIME ZONE 'UTC') AT TIME ZONE 'America/Mexico_City',\n                   'DD/MM/YYYY')                                               AS vence_dia_cdmx,\n           string_agg(p.id::text, ',' ORDER BY p.id)                           AS request_ids,\n           count(*)                                                            AS total,\n           jsonb_agg(jsonb_build_object(\n               'request_id',      p.id,\n               'rfid_siniiga',    p.rfid_siniiga,\n               'numero_fuego',    p.numero_fuego,\n               'electronic_rfid', p.electronic_rfid,\n               'category',        COALESCE(p.category, p.species),\n               'guia_transito',   p.payload->>'guia_transito',\n               'fecha_evento',    p.payload->>'fecha_evento',\n               'causa_mortandad', p.payload->>'causa_mortandad',\n               'descripcion',     p.payload->>'descripcion'\n           ) ORDER BY p.payload->>'guia_transito', p.rfid_siniiga)            AS animales\n    FROM p\n    GROUP BY 1, 2, 3\n)\nSELECT g.*,\n       c.company_name,\n       (SELECT string_agg(DISTINCT u.email, ',')\n          FROM user_companies uc\n          JOIN users u ON u.email = uc.email\n         WHERE uc.id_company = g.id_company\n           AND uc.role = 'ADMIN'\n           AND uc.is_active = true\n           AND u.is_active = true)                                             AS admin_emails\nFROM g\nJOIN companys c ON c.id_company = g.id_company\nORDER BY g.id_company, g.order_code NULLS LAST;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1504,
+        304
+      ],
+      "id": "cd5ab43c-60a7-47d5-a34c-b45883320b6b",
+      "name": "Buscar Pendientes Sin Notificar",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Builds one email per group (sale order + company, or a single non-sale request).\n// Groups without an active ADMIN in that company are skipped (never sent to anyone else);\n// they stay unnotified and expire at 23:59 CDMX like any other pending request.\nconst esc = (v) => String(v ?? '').replace(/[&<>\"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;', \"'\": '&#39;' }[ch]));\nconst PANEL_URL = 'https://agroerp.hosting3m.com/admin/autorizaciones';\n\nconst out = [];\nfor (const item of $input.all()) {\n  const d = item.json;\n  if (!d.admin_emails) continue;\n\n  const animales = typeof d.animales === 'string' ? JSON.parse(d.animales) : (d.animales || []);\n  const isSale = d.tipo_evento === 'VENTA';\n  const tipoLegible = isSale ? 'Baja por Venta' : 'Baja por Mortandad';\n  const total = Number(d.total) || animales.length;\n\n  // Summary per transit guide\n  const porGuia = {};\n  for (const a of animales) {\n    const key = a.guia_transito || 'Sin guía';\n    porGuia[key] = porGuia[key] || {};\n    const cat = a.category || 'N/D';\n    porGuia[key][cat] = (porGuia[key][cat] || 0) + 1;\n  }\n  const resumenGuias = Object.entries(porGuia).map(([guia, cats]) => {\n    const n = Object.values(cats).reduce((s, x) => s + x, 0);\n    const detalle = Object.entries(cats).map(([c, x]) => `${x} ${esc(c)}`).join(', ');\n    return `<li><strong>Guía ${esc(guia)}:</strong> ${n} animal(es) — ${detalle}</li>`;\n  }).join('');\n\n  const filas = animales.map((a, i) => `\n      <tr>\n        <td style=\"padding:4px 8px;border:1px solid #ddd;\">${i + 1}</td>\n        <td style=\"padding:4px 8px;border:1px solid #ddd;\">${esc(a.rfid_siniiga || a.electronic_rfid || '—')}</td>\n        <td style=\"padding:4px 8px;border:1px solid #ddd;\">${esc(a.numero_fuego || '—')}</td>\n        <td style=\"padding:4px 8px;border:1px solid #ddd;\">${esc(a.category || '—')}</td>\n        <td style=\"padding:4px 8px;border:1px solid #ddd;\">${esc(a.guia_transito || '—')}</td>\n      </tr>`).join('');\n\n  let detalleMortandad = '';\n  if (d.tipo_evento === 'BAJA_MORTANDAD' && animales[0]) {\n    const a = animales[0];\n    detalleMortandad = `\n      <li><strong>Causa:</strong> ${esc(a.causa_mortandad || 'N/A')}</li>\n      <li><strong>Fecha del evento:</strong> ${esc(a.fecha_evento || 'N/A')}</li>\n      <li><strong>Descripción:</strong> ${esc(a.descripcion || 'Sin descripción')}</li>`;\n  }\n\n  const fechaEvento = animales.find((a) => a.fecha_evento)?.fecha_evento;\n  const titulo = d.order_code ? `Orden de venta ${esc(d.order_code)}` : tipoLegible;\n\n  const html = `\n    <h2>🐄 ${titulo} — ${esc(d.company_name)}</h2>\n    <p><strong>Tipo:</strong> ${esc(tipoLegible)} · <strong>Animales de esta empresa:</strong> ${total}</p>\n    <ul>\n      <li><strong>Solicitado por:</strong> ${esc(d.solicitado_por)}</li>\n      <li><strong>Fecha de solicitud:</strong> ${esc(d.fecha_solicitud_cdmx)} (hora CDMX)</li>\n      ${fechaEvento ? `<li><strong>Fecha del evento:</strong> ${esc(fechaEvento)}</li>` : ''}\n      ${detalleMortandad}\n    </ul>\n    ${isSale ? `<p><strong>Resumen por guía de tránsito:</strong></p><ul>${resumenGuias}</ul>` : ''}\n    <table style=\"border-collapse:collapse;font-size:13px;\">\n      <thead><tr style=\"background:#f4f6fa;\">\n        <th style=\"padding:4px 8px;border:1px solid #ddd;\">#</th>\n        <th style=\"padding:4px 8px;border:1px solid #ddd;\">Arete SINIIGA / RFID</th>\n        <th style=\"padding:4px 8px;border:1px solid #ddd;\">Fuego</th>\n        <th style=\"padding:4px 8px;border:1px solid #ddd;\">Categoría</th>\n        <th style=\"padding:4px 8px;border:1px solid #ddd;\">Guía</th>\n      </tr></thead>\n      <tbody>${filas}</tbody>\n    </table>\n    ${d.order_code ? '<p>Si la orden incluye animales de otras empresas, cada empresa recibe su propio correo y su ADMIN autoriza solo su parte.</p>' : ''}\n    <p>⚠️ ${total > 1 ? 'Estas solicitudes vencen' : 'Esta solicitud vence'} el ${esc(d.vence_dia_cdmx)} a las 23:59 (hora CDMX) si no se autoriza${total > 1 ? 'n' : ''}. El precio y la forma de pago se capturan al aprobar en el panel.</p>\n    <p><a href=\"${PANEL_URL}\" style=\"background:#2fb344;color:#fff;padding:10px 20px;text-decoration:none;border-radius:4px;\">Ir a Autorizaciones Pendientes</a></p>\n  `;\n\n  const subject = d.order_code\n    ? `[Agro ERP] ${d.order_code} — ${total} animal(es) por autorizar — ${d.company_name}`\n    : `[Agro ERP] Autorización pendiente: ${tipoLegible} — ${animales[0]?.rfid_siniiga || animales[0]?.numero_fuego || animales[0]?.electronic_rfid || 'Sin identificador'}`;\n\n  out.push({ json: { request_ids: d.request_ids, to: d.admin_emails, subject, html } });\n}\nreturn out;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1728,
+        304
+      ],
+      "id": "939190ab-df51-4f64-9d91-2935b137f7eb",
+      "name": "Preparar Contenido de Correo"
+    },
+    {
+      "parameters": {
+        "fromEmail": "agroerp@hosting3m.com",
+        "toEmail": "={{ $json.to }}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "=html",
+        "html": "={{ $json.html }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1952,
+        304
+      ],
+      "id": "ee570c45-2961-462b-a940-6578f317115c",
+      "name": "SMTP",
+      "webhookId": "c9e15088-3a11-4982-98bb-f8fbe9795222",
+      "credentials": {
+        "smtp": {
+          "id": "TU8COxDQra9yzeFy",
+          "name": "Mail Agro ERP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE pending_authorizations\nSET notified_at = now()\nWHERE id = ANY(string_to_array($1, ',')::uuid[])\n  AND estado = 'PENDIENTE'\n  AND notified_at IS NULL;",
+        "options": {
+          "queryReplacement": "={{ [$('Preparar Contenido de Correo').item.json.request_ids] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2176,
+        304
+      ],
+      "id": "408e6593-e5c6-49a2-aa74-3a130a974e33",
+      "name": "Marcar como Notificado",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Buscar Pendientes Sin Notificar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar Pendientes Sin Notificar": {
+      "main": [
+        [
+          {
+            "node": "Preparar Contenido de Correo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar Contenido de Correo": {
+      "main": [
+        [
+          {
+            "node": "SMTP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SMTP": {
+      "main": [
+        [
+          {
+            "node": "Marcar como Notificado",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "9SrVXdATmlrZemJT",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "5f03838b-f622-4387-b36a-e2172e0d996a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
+  },
+  "nodeGroups": [],
+  "id": "UrYaK5hHb9KLSp5L",
+  "tags": []
+}

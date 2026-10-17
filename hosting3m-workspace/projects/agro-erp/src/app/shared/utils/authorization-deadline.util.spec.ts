@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   formatAuthorizationTimestamp,
+  formatDeadlineNotice,
   formatInstantInCdmx,
   authorizationLocalDate,
   getAuthorizationDeadline,
@@ -114,5 +115,20 @@ describe('expiry with the shape the gateway really sends', () => {
 describe('formatInstantInCdmx', () => {
   it('formats a real instant without the gateway correction', () => {
     expect(formatInstantInCdmx(new Date('2026-10-10T05:59:59.999Z'))).toContain('23:59');
+  });
+});
+
+describe('formatDeadlineNotice (migration 072 wording)', () => {
+  // fecha_solicitud is naive UTC: 2026-10-16T16:00:00 = 10:00 CDMX on 2026-10-16.
+  const requested = '2026-10-16T16:00:00';
+
+  it('says "vence hoy a las 23:59 (hora CDMX)" during the CDMX request day', () => {
+    expect(formatDeadlineNotice(requested, Date.parse('2026-10-16T17:00:00Z'))).toBe('Vence hoy a las 23:59 (hora CDMX)');
+    // 23:30 CDMX = 05:30 UTC of the next UTC day: still "today" in CDMX.
+    expect(formatDeadlineNotice(requested, Date.parse('2026-10-17T05:30:00Z'))).toBe('Vence hoy a las 23:59 (hora CDMX)');
+  });
+
+  it('says "Vencida" from 00:00 CDMX of the following day', () => {
+    expect(formatDeadlineNotice(requested, Date.parse('2026-10-17T06:00:01Z'))).toBe('Vencida');
   });
 });

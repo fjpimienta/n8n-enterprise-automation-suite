@@ -9,10 +9,10 @@
       "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
       "typeVersion": 2,
       "position": [
-        2912,
-        1264
+        1776,
+        1504
       ],
-      "id": "d0d5cc20-a489-4e9c-8d70-1e46e14da90a",
+      "id": "1c0c85b6-4cdb-4274-8ab1-9e198093a0a9",
       "name": "MCP Server Cattle",
       "webhookId": "68e31c86-2f32-4234-be5d-32fd5260fd1c",
       "credentials": {
@@ -35,10 +35,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3408,
-        944
+        2272,
+        1184
       ],
-      "id": "44dcc00a-9ddd-4a51-b583-987b2bb6ef3a",
+      "id": "9cfe5fea-0c39-4a2a-a02b-f51dd6e76f1c",
       "name": "get_table_metadata",
       "credentials": {
         "postgres": {
@@ -61,10 +61,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2512,
-        1296
+        1376,
+        1536
       ],
-      "id": "13bd85ed-da88-442f-9407-e19a7b6832ba",
+      "id": "bdb26d2b-f8e5-4cf4-b7be-eeea5598e3a7",
       "name": "log_cattle_weight",
       "credentials": {
         "postgres": {
@@ -86,10 +86,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2352,
-        1296
+        1216,
+        1536
       ],
-      "id": "1bef289b-7a05-4503-8cb7-03c0203b5d9c",
+      "id": "b758b2ea-709d-479b-9671-de97ed08b7ab",
       "name": "log_health_event",
       "credentials": {
         "postgres": {
@@ -111,10 +111,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3248,
-        944
+        2112,
+        1184
       ],
-      "id": "94f17040-ec2d-4a27-9956-5bfaa7c3f44f",
+      "id": "b0f69c34-16d9-4c5f-be23-6de9f2e3009e",
       "name": "get_livestock_info",
       "credentials": {
         "postgres": {
@@ -136,10 +136,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3584,
-        1488
+        2448,
+        1728
       ],
-      "id": "7bae7c09-a4e2-495a-8677-3fb730622bdc",
+      "id": "8291ce1c-eac0-4f21-839e-648d40c95802",
       "name": "register_ranch_expense",
       "credentials": {
         "postgres": {
@@ -161,10 +161,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2192,
-        1296
+        1056,
+        1536
       ],
-      "id": "ea527ecf-e0fc-4446-8723-1d8ae9c52de1",
+      "id": "5e985c9e-4df5-49c0-99da-bb78b0cfe7cd",
       "name": "log_weaning_event",
       "credentials": {
         "postgres": {
@@ -186,10 +186,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2192,
-        1488
+        1056,
+        1728
       ],
-      "id": "47214c09-667e-4e2e-8346-645f32a23856",
+      "id": "0f75b4dd-1ca0-4884-aa73-6d9fb42d776b",
       "name": "log_mortality_event",
       "credentials": {
         "postgres": {
@@ -201,7 +201,7 @@
     {
       "parameters": {
         "descriptionType": "manual",
-        "toolDescription": "Registers a REQUEST to sell/check-out (dar de baja por venta) a live animal — this does NOT immediately finalize the sale. It creates a pending authorization that an ADMIN/owner must approve from the web panel before the animal's status changes to VENDIDO. Requires the animal's identifier — accepts electronic_rfid, rfid_siniiga, or numero_fuego. Also requires tenant_id and user_email from the current session context.\n\n🛑 CONFIRM BEFORE EXECUTING: Never call this tool in the same turn the user first mentions a sale. Repeat back the animal identifier (and the sale date and transit guide folio(s), if the user gave them) and only call this tool after the user gives an explicit affirmative confirmation in the immediately following turn — same protocol as log_mortality_event.\n\nAfter calling this tool successfully, tell the user their sale request was submitted for authorization and that an ADMIN/owner of the ranch must approve it TODAY BEFORE 6:00 PM Mexico City time or it will expire automatically — do NOT tell the user the animal has been sold, since the actual TB/Brucelosis compliance check and status change only happen once approved.\n\nOptional parameters: fecha_evento (YYYY-MM-DD, the day the sale/movement happened) and guia_transito (transit guide folio(s), comma-separated). Pass them ONLY if the user stated them; never invent or infer them. They are stored in the request so the ADMIN sees them when authorizing. In a batch sale, pass the same values on every call.",
+        "toolDescription": "LEGACY single-animal sale request. For ANY sale use preview_livestock_sale_order + request_livestock_sale_order instead; use this tool only for a newborn calf without ear tag resolved with find_calf_by_dam (livestock_id).\n\nRegisters a REQUEST to sell/check-out (dar de baja por venta) a live animal — this does NOT immediately finalize the sale. It creates a pending authorization that an ADMIN/owner must approve from the web panel before the animal's status changes to VENDIDO. Requires the animal's identifier — accepts electronic_rfid, rfid_siniiga, or numero_fuego. Also requires tenant_id and user_email from the current session context.\n\n🛑 CONFIRM BEFORE EXECUTING: Never call this tool in the same turn the user first mentions a sale. Repeat back the animal identifier (and the sale date and transit guide folio(s), if the user gave them) and only call this tool after the user gives an explicit affirmative confirmation in the immediately following turn — same protocol as log_mortality_event.\n\nAfter calling this tool successfully, tell the user their sale request was submitted for authorization and that an ADMIN/owner of the ranch must approve it before 23:59 (Mexico City time) of today or it will expire automatically — do NOT tell the user the animal has been sold, since the actual TB/Brucelosis compliance check and status change only happen once approved.\n\nOptional parameters: fecha_evento (YYYY-MM-DD, the day the sale/movement happened) and guia_transito (transit guide folio(s), comma-separated). Pass them ONLY if the user stated them; never invent or infer them. They are stored in the request so the ADMIN sees them when authorizing. In a batch sale, pass the same values on every call.",
         "operation": "executeQuery",
         "query": "WITH inp AS (\n  SELECT\n    NULLIF(NULLIF($1::text, 'null'), 'undefined') AS electronic_rfid,\n    NULLIF(NULLIF($2::text, 'null'), 'undefined') AS rfid_siniiga,\n    NULLIF(NULLIF($3::text, 'null'), 'undefined') AS numero_fuego,\n    $4::int AS tenant_id,\n    NULLIF(NULLIF($5::text, 'null'), 'undefined')::uuid AS livestock_id,\n    $6::text AS solicitado_por_email,\n    NULLIF(NULLIF($7::text, 'null'), 'undefined') AS fecha_txt,\n    NULLIF(NULLIF($8::text, 'null'), 'undefined') AS guia_txt\n),\nparams AS (\n  SELECT i.*,\n    jsonb_strip_nulls(jsonb_build_object(\n      'fecha_evento', CASE\n          WHEN i.fecha_txt IS NULL THEN NULL\n          WHEN i.fecha_txt ~ '^\\d{4}-\\d{2}-\\d{2}$' THEN to_char(i.fecha_txt::date, 'YYYY-MM-DD')\n          ELSE (i.fecha_txt || ' (use YYYY-MM-DD)')::date::text\n        END,\n      'guia_transito', left(trim(i.guia_txt), 40)\n    )) AS payload\n  FROM inp i\n),\nauth_check AS (\n  SELECT 1\n  FROM params p\n  JOIN user_companies uc ON uc.id_company = p.tenant_id AND uc.is_active = true\n  JOIN users u ON u.email = uc.email AND u.email = p.solicitado_por_email\n)\nSELECT sp.*\nFROM params p,\nLATERAL sp_solicitar_autorizacion(\n    p_electronic_rfid      := p.electronic_rfid,\n    p_rfid_siniiga         := p.rfid_siniiga,\n    p_numero_fuego         := p.numero_fuego,\n    p_tenant_id            := p.tenant_id,\n    p_tipo_evento          := 'VENTA',\n    p_payload              := p.payload,\n    p_livestock_id         := p.livestock_id,\n    p_solicitado_por_email := p.solicitado_por_email\n) sp\nWHERE EXISTS (SELECT 1 FROM auth_check);",
         "options": {
@@ -211,10 +211,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3584,
-        1312
+        2448,
+        1552
       ],
-      "id": "1bfeee86-ff8f-4af5-b5bc-0f51a9acbd0a",
+      "id": "2a29d856-3418-459a-bfe6-def2610ce405",
       "name": "request_livestock_sale",
       "credentials": {
         "postgres": {
@@ -236,10 +236,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3408,
-        1488
+        2272,
+        1728
       ],
-      "id": "93ceb642-54e8-415c-9c6b-488405a4c482",
+      "id": "989fb05d-8b58-4245-bf83-2377ff380909",
       "name": "register_birth_event",
       "credentials": {
         "postgres": {
@@ -261,10 +261,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3584,
-        944
+        2448,
+        1184
       ],
-      "id": "616a3b2d-a19c-4b71-b9de-dfa25e1bed85",
+      "id": "57be1b44-eed5-4a4f-aa8c-c7862c6aa882",
       "name": "find_calf_by_dam",
       "credentials": {
         "postgres": {
@@ -286,10 +286,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3584,
-        1136
+        2448,
+        1376
       ],
-      "id": "e5e2ac4d-79f9-412a-8cd4-58a2900a9b60",
+      "id": "ad23d423-b39d-412e-87f6-186307e73229",
       "name": "count_livestock",
       "credentials": {
         "postgres": {
@@ -311,10 +311,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3248,
-        1488
+        2112,
+        1728
       ],
-      "id": "dc92c507-41a8-420d-9303-cab1dd666a53",
+      "id": "e42a984d-d76b-4552-aeb5-c05bdfed701c",
       "name": "register_livestock_purchase",
       "credentials": {
         "postgres": {
@@ -336,10 +336,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2352,
-        1488
+        1216,
+        1728
       ],
-      "id": "0172e37e-e819-446d-8252-fb01f1e9bbc0",
+      "id": "916b75cb-5179-4dcf-b558-3ae5d0be16b6",
       "name": "log_vaccination_event",
       "credentials": {
         "postgres": {
@@ -361,10 +361,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2512,
-        1488
+        1376,
+        1728
       ],
-      "id": "74bc4259-a7dc-4bc8-ba23-60a357658ccc",
+      "id": "a5034fb3-c75b-4294-aa51-a985584fa571",
       "name": "log_supplement_event",
       "credentials": {
         "postgres": {
@@ -386,10 +386,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2688,
-        1488
+        1552,
+        1728
       ],
-      "id": "4e8d0e6a-7ebc-4418-b07c-fe51b66e1653",
+      "id": "6864f025-0e3d-4b49-b313-784b325d00ca",
       "name": "log_palpation_event",
       "credentials": {
         "postgres": {
@@ -401,20 +401,20 @@
     {
       "parameters": {
         "descriptionType": "manual",
-        "toolDescription": "Use this tool to find an animal when the user describes it by characteristics\n(species, category/type, current status) instead of giving you its exact\near tag, fire number, or UUID. Common case: an animal with no SINIIGA tag\n(e.g. horses), where the user says things like \"la yegua preñada\", \"el\npotro que nació ayer\", etc.\n\nAll three filters (species, category, current_status) are optional — pass\nonly the ones the user gave you. species must be one of: BOVINO, BUFALO,\nBORREGO, EQUIDO. category must match the exact catalog value (YEGUA,\nCABALLO, POTRO, POTRANCA, VACA, TORO, NOVILLO, NOVILLONA, BECERRO, BECERRA,\nBUFALA, BUFALO, BUCERRO, BUCERRA, BORREGO, BORREGA, CABALLO_CASTRADO,\nBECERRO_TORETE — ask the user if unsure which one applies, never guess).\ncurrent_status must be one of: ACTIVO, EN_TRANSITO, VENDIDO, BAJA_MORTANDAD,\nPREÑADA, VACÍA, DESARROLLO, RIESGO, FINALIZADO, CUARENTENA,\nBAJA_DEPURACION_DATOS.\n\n🛑 CRÍTICO — cómo usar el resultado (la tool nunca decide por ti, tú decides\ncon base en total_matches):\n- Si total_matches = 1: usa el id/rfid_siniiga de ese único resultado para\n  la acción que el usuario pidió.\n- Si total_matches = 0: dile al usuario que no encontraste ningún animal\n  con esos criterios — no inventes un identificador ni asumas otro animal.\n- Si total_matches > 1: NUNCA elijas uno al azar ni asumas cuál quiso\n  decir. Lista los candidatos (arete o número de fuego de cada uno, con su\n  lote/UPP si ayuda a distinguirlos) y pídele al usuario que te diga a\n  cuál se refiere, o te dé más criterios para acotar.",
+        "toolDescription": "NO la uses para VENDER un lote: para una venta de un lote manda directo 'preview_livestock_sale_order' con {lote, categoria, cantidad, guia_transito}. Use this tool to find an animal when the user describes it by characteristics\n(species, category/type, current status) instead of giving you its exact\near tag, fire number, or UUID. Common case: an animal with no SINIIGA tag\n(e.g. horses), where the user says things like \"la yegua preñada\", \"el\npotro que nació ayer\", etc.\n\nAll three filters (species, category, current_status) are optional — pass\nonly the ones the user gave you. species must be one of: BOVINO, BUFALO,\nBORREGO, EQUIDO. category must match the exact catalog value (YEGUA,\nCABALLO, POTRO, POTRANCA, VACA, TORO, NOVILLO, NOVILLONA, BECERRO, BECERRA,\nBUFALA, BUFALO, BUCERRO, BUCERRA, BORREGO, BORREGA, CABALLO_CASTRADO,\nBECERRO_TORETE — ask the user if unsure which one applies, never guess).\ncurrent_status must be one of: ACTIVO, EN_TRANSITO, VENDIDO, BAJA_MORTANDAD,\nPREÑADA, VACÍA, DESARROLLO, RIESGO, FINALIZADO, CUARENTENA,\nBAJA_DEPURACION_DATOS.\n\n🛑 CRÍTICO — cómo usar el resultado (la tool nunca decide por ti, tú decides\ncon base en total_matches):\n- Si total_matches = 1: usa el id/rfid_siniiga de ese único resultado para\n  la acción que el usuario pidió.\n- Si total_matches = 0: dile al usuario que no encontraste ningún animal\n  con esos criterios — no inventes un identificador ni asumas otro animal.\n- Si total_matches > 1: NUNCA elijas uno al azar ni asumas cuál quiso\n  decir. Lista los candidatos (arete o número de fuego de cada uno, con su\n  lote/UPP si ayuda a distinguirlos) y pídele al usuario que te diga a\n  cuál se refiere, o te dé más criterios para acotar. Acepta lot_name y production_unit_name para listar los animales de un lote o UPP (hasta 300); úsalo para obtener los aretes de una venta por lote.",
         "operation": "executeQuery",
-        "query": "WITH params AS (\n  SELECT\n    $1::int AS tenant_id,\n    NULLIF(NULLIF($2::text, 'null'), 'undefined') AS species,\n    NULLIF(NULLIF($3::text, 'null'), 'undefined') AS category,\n    NULLIF(NULLIF($4::text, 'null'), 'undefined') AS current_status,\n    $5::text AS user_email\n),\nauth_check AS (\n  SELECT 1\n  FROM params p\n  JOIN user_companies uc ON uc.id_company = p.tenant_id AND uc.is_active = true\n  JOIN users u ON u.email = uc.email AND u.email = p.user_email\n),\nmatches AS (\n  SELECT l.id, l.rfid_siniiga, l.numero_fuego, l.species, l.category,\n         l.current_status, l.production_unit_id, l.lot_id\n  FROM cattle_livestock l, params p\n  WHERE EXISTS (SELECT 1 FROM auth_check)\n    AND l.tenant_id = p.tenant_id\n    AND (p.species IS NULL OR l.species = p.species)\n    AND (p.category IS NULL OR l.category = p.category)\n    AND (p.current_status IS NULL OR l.current_status = p.current_status)\n),\nshown AS (\n  SELECT * FROM matches ORDER BY rfid_siniiga NULLS LAST, numero_fuego NULLS LAST LIMIT 50\n)\nSELECT\n  (SELECT count(*) FROM matches) AS total_matches,\n  COALESCE(jsonb_agg(to_jsonb(shown)), '[]'::jsonb) AS matches\nFROM shown;",
+        "query": "WITH params AS (\n  SELECT\n    $1::int AS tenant_id,\n    NULLIF(NULLIF($2::text, 'null'), 'undefined') AS species,\n    NULLIF(NULLIF($3::text, 'null'), 'undefined') AS category,\n    NULLIF(NULLIF($4::text, 'null'), 'undefined') AS current_status,\n    $5::text AS user_email,\n    NULLIF(NULLIF(NULLIF($6::text, 'null'), 'undefined'), '') AS lot_name,\n    NULLIF(NULLIF(NULLIF($7::text, 'null'), 'undefined'), '') AS production_unit_name\n),\nauth_check AS (\n  SELECT 1\n  FROM params p\n  JOIN user_companies uc ON uc.id_company = p.tenant_id AND uc.is_active = true\n  JOIN users u ON u.email = uc.email AND u.email = p.user_email\n),\nmatches AS (\n  SELECT l.id, l.rfid_siniiga, l.numero_fuego, l.species, l.category, l.current_status,\n         (SELECT pu.ranch_name FROM production_units pu WHERE pu.id = l.production_unit_id) AS upp,\n         (SELECT lot.lot_name FROM production_unit_lots lot WHERE lot.id = l.lot_id) AS lote\n  FROM cattle_livestock l, params p\n  WHERE EXISTS (SELECT 1 FROM auth_check)\n    AND l.tenant_id = p.tenant_id\n    AND (p.species IS NULL OR l.species = p.species)\n    AND (p.category IS NULL OR l.category = p.category)\n    AND (p.current_status IS NULL OR l.current_status = p.current_status)\n    AND (p.lot_name IS NULL OR EXISTS (SELECT 1 FROM production_unit_lots lot\n                                        WHERE lot.id = l.lot_id AND lot.id_company = l.tenant_id\n                                          AND translate(lot.lot_name, 'ÁÉÍÓÚÜÑáéíóúüñ', 'AEIOUUNaeiouun') ILIKE '%' || translate(p.lot_name, 'ÁÉÍÓÚÜÑáéíóúüñ', 'AEIOUUNaeiouun') || '%'))\n    AND (p.production_unit_name IS NULL\n         OR EXISTS (SELECT 1 FROM companys c WHERE c.id_company = p.tenant_id\n                     AND translate(c.company_name, 'ÁÉÍÓÚÜÑáéíóúüñ', 'AEIOUUNaeiouun') ILIKE '%' || translate(p.production_unit_name, 'ÁÉÍÓÚÜÑáéíóúüñ', 'AEIOUUNaeiouun') || '%')\n         OR EXISTS (SELECT 1 FROM production_units pu\n                                                    WHERE pu.id = l.production_unit_id AND pu.id_company = l.tenant_id\n                                                      AND translate(pu.ranch_name, 'ÁÉÍÓÚÜÑáéíóúüñ', 'AEIOUUNaeiouun') ILIKE '%' || translate(p.production_unit_name, 'ÁÉÍÓÚÜÑáéíóúüñ', 'AEIOUUNaeiouun') || '%'))\n    -- a company name sent as UPP (e.g. the selected company) is not a UPP filter\n\n),\nshown AS (\n  -- Up to 300 rows when filtering by lot / UPP (enough for a full sale order), 50 otherwise\n  SELECT * FROM matches ORDER BY rfid_siniiga NULLS LAST, numero_fuego NULLS LAST\n  LIMIT (SELECT CASE WHEN p.lot_name IS NOT NULL OR p.production_unit_name IS NOT NULL THEN 300 ELSE 50 END FROM params p)\n)\nSELECT\n  (SELECT count(*) FROM matches) AS total_matches,\n  COALESCE(jsonb_agg(to_jsonb(shown)), '[]'::jsonb) AS matches\nFROM shown;",
         "options": {
-          "queryReplacement": "={{ (() => {\n  const empty = (v) => (v === '' || v === undefined) ? null : v;\n  return [\n    $fromAI('tenant_id', 'ID del rancho / tenant_id actual del usuario, tal como aparece en el contexto de sesión', 'number'),\n    empty($fromAI('species', 'Species filter: BOVINO, BUFALO, BORREGO, or EQUIDO. Omit if the user did not specify a species.', 'string', null)),\n    empty($fromAI('category', 'Category/type filter matching the catalog exactly (YEGUA, CABALLO, POTRO, POTRANCA, VACA, TORO, NOVILLO, NOVILLONA, BECERRO, BECERRA, BUFALA, BUFALO, BUCERRO, BUCERRA, BORREGO, BORREGA, CABALLO_CASTRADO, BECERRO_TORETE). Omit if the user did not specify one.', 'string', null)),\n    empty($fromAI('current_status', 'Status filter: ACTIVO, EN_TRANSITO, VENDIDO, BAJA_MORTANDAD, PREÑADA, VACÍA, DESARROLLO, RIESGO, FINALIZADO, CUARENTENA, or BAJA_DEPURACION_DATOS. Omit if the user did not specify one.', 'string', null)),\n    $fromAI('user_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies.', 'string')\n  ];\n})() }}"
+          "queryReplacement": "={{ (() => {\n  const empty = (v) => (v === '' || v === undefined) ? null : v;\n  return [\n    $fromAI('tenant_id', 'ID del rancho / tenant_id actual del usuario, tal como aparece en el contexto de sesión', 'number'),\n    empty($fromAI('species', 'Species filter: BOVINO, BUFALO, BORREGO, or EQUIDO. Omit if the user did not specify a species.', 'string', null)),\n    empty($fromAI('category', 'Category/type filter matching the catalog exactly (YEGUA, CABALLO, POTRO, POTRANCA, VACA, TORO, NOVILLO, NOVILLONA, BECERRO, BECERRA, BUFALA, BUFALO, BUCERRO, BUCERRA, BORREGO, BORREGA, CABALLO_CASTRADO, BECERRO_TORETE). Omit if the user did not specify one.', 'string', null)),\n    empty($fromAI('current_status', 'Status filter: ACTIVO, EN_TRANSITO, VENDIDO, BAJA_MORTANDAD, PREÑADA, VACÍA, DESARROLLO, RIESGO, FINALIZADO, CUARENTENA, or BAJA_DEPURACION_DATOS. Omit if the user did not specify one.', 'string', null)),\n    $fromAI('user_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies.', 'string'),\n    empty($fromAI('lot_name', 'Nombre del LOTE cuando el usuario dice la palabra lote (ej. lote Maceo -> Maceo). Si dijo lote, usa SIEMPRE este parámetro y nunca production_unit_name. Omite si no mencionó lote.', 'string', null)),\n    empty($fromAI('production_unit_name', 'Nombre de la UPP o rancho, SOLO si el usuario dijo UPP o rancho (ej. San José). Nunca pongas aquí el nombre de un lote. Omite si no lo mencionó.', 'string', null))\n  ];\n})() }}"
         }
       },
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3408,
-        1136
+        2272,
+        1376
       ],
-      "id": "ba320ec8-5838-437f-a131-d7917e7b6334",
+      "id": "1f85499a-27f4-4d49-9b36-40fc1a4b5a84",
       "name": "find_livestock_by_criteria",
       "credentials": {
         "postgres": {
@@ -436,10 +436,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3408,
-        1312
+        2272,
+        1552
       ],
-      "id": "bbd8c51c-6768-4045-8b61-8e2f4f558af5",
+      "id": "971c421b-5e7c-403d-983b-b7eb0404065c",
       "name": "move_livestock",
       "credentials": {
         "postgres": {
@@ -461,10 +461,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3760,
-        1136
+        2624,
+        1376
       ],
-      "id": "6784c097-cfe9-41db-b0b2-432269e40e4a",
+      "id": "5ef3501a-7762-443d-96c8-7b878405bfcf",
       "name": "list_pending_requests",
       "credentials": {
         "postgres": {
@@ -486,10 +486,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3760,
-        1312
+        2624,
+        1552
       ],
-      "id": "95310ef6-afb3-45d0-8139-7e721a2604a3",
+      "id": "c98ce33a-c61c-4b9f-9b01-ff7f42c6d761",
       "name": "review_pending_request",
       "credentials": {
         "postgres": {
@@ -511,10 +511,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2528,
-        1104
+        1392,
+        1344
       ],
-      "id": "209520c1-5634-4884-885d-3783e5e7f591",
+      "id": "5b864fbc-ea88-4762-bf1c-d79ed981216a",
       "name": "log_breeding_event",
       "credentials": {
         "postgres": {
@@ -536,10 +536,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2352,
-        1104
+        1216,
+        1344
       ],
-      "id": "a9019858-b509-4edd-8897-be1b8d0e7044",
+      "id": "e1e933bd-2ec7-48af-a35b-cec41ee6778d",
       "name": "log_deworming_event",
       "credentials": {
         "postgres": {
@@ -561,10 +561,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3760,
-        1488
+        2624,
+        1728
       ],
-      "id": "344dbd76-d117-4dd8-aa5c-6df3cfed2e89",
+      "id": "0b2283c7-ae6b-415f-baaf-eb9a98ce180f",
       "name": "update_livestock_tag",
       "credentials": {
         "postgres": {
@@ -586,10 +586,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2192,
-        1104
+        1056,
+        1344
       ],
-      "id": "54e60cc3-9cfe-4a04-a9d5-2bcc1bad3d03",
+      "id": "82370877-663e-4350-bae2-56d9bce914ce",
       "name": "log_castration_event",
       "credentials": {
         "postgres": {
@@ -611,10 +611,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3248,
-        1312
+        2112,
+        1552
       ],
-      "id": "6cb2f3ef-9bcf-4af2-9441-2ae0b36ce65d",
+      "id": "c6dd0f77-1ca0-4bc7-b5fa-5bceae3944fb",
       "name": "void_event",
       "credentials": {
         "postgres": {
@@ -636,10 +636,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2688,
-        1296
+        1552,
+        1536
       ],
-      "id": "0df4d505-a6a4-4b4b-9b03-41bae5dfda69",
+      "id": "969f9b15-e0fd-42ee-9ecc-7133445dcb93",
       "name": "log_palpation_event_batch",
       "credentials": {
         "postgres": {
@@ -661,10 +661,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3248,
-        1136
+        2112,
+        1376
       ],
-      "id": "013cbfc2-f3d6-466c-9275-0e08a99d0991",
+      "id": "f22c3987-9439-46c7-abff-0b53a3eb896b",
       "name": "list_lots",
       "credentials": {
         "postgres": {
@@ -686,11 +686,61 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        3744,
-        944
+        2608,
+        1184
       ],
-      "id": "530495fd-c126-4572-bf0c-4fd2af5fe07e",
+      "id": "bdc95c58-4551-44a8-afbd-f8511c3bcd8c",
       "name": "cancel_pending_request",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "READ-ONLY preview of a SALE ORDER (orden de venta). Use it FIRST whenever the user asks to sell one or more animals, before showing the confirmation summary. It looks up every identifier ONLY among the companies the user belongs to (any UPP or lot); a lot item ({lote, categoria, cantidad, guia_transito}) is expanded to all its available animals, and fails if cantidad does not match; and returns: total, validos, errores (identifier + reason, e.g. 'No existe en tus empresas', 'Ya tiene una solicitud pendiente', 'Estatus VENDIDO', 'Falta la guía de tránsito') and grupos (empresa, upp, guia_transito, cantidad, por_categoria, aretes). Nothing is written. Build the confirmation summary ONLY from this result, grouped by empresa / UPP / guía. Never ask for or mention prices.",
+        "operation": "executeQuery",
+        "query": "SELECT sp_solicitar_venta_orden(\n    $1::jsonb,\n    $2::varchar,\n    NULLIF(NULLIF(NULLIF($3::text, 'null'), 'undefined'), '')::date,\n    true,\n    'AGENTE'\n) AS result;",
+        "options": {
+          "queryReplacement": "={{ [ $fromAI('items_json', 'JSON array (as text). Two kinds of objects, in the order the user gave them. (A) One animal: {\\\"identificador\\\": \\\"<ear tag / RFID / fire number exactly as written>\\\", \\\"guia_transito\\\": \\\"<guide>\\\"}. (B) A WHOLE LOT when the user names a lot instead of ear tags, e.g. los 30 becerros del lote Maceo: {\\\"lote\\\": \\\"Maceo\\\", \\\"categoria\\\": \\\"BECERRO\\\", \\\"cantidad\\\": 30, \\\"guia_transito\\\": \\\"7139696\\\"}; categoria and cantidad only if the user said them. Never list ear tags yourself for a lot. Every object needs guia_transito; never invent identifiers or guides.', 'string'), $fromAI('user_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string'), $fromAI('fecha_evento', 'Sale date YYYY-MM-DD, ONLY if the user said it (\\\"ayer\\\" = the day before HOY ES). Omit otherwise (today is used).', 'string', null) ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        2448,
+        1760
+      ],
+      "id": "55f99f9a-1699-4279-b366-51373a3debff",
+      "name": "preview_livestock_sale_order",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Creates a SALE ORDER (orden de venta): one pending authorization per animal, each in the company where the animal lives, all linked by the same order code (OV-000123). Call it ONLY after preview_livestock_sale_order returned no errors AND the user explicitly confirmed (\"Sí\") the summary in the immediately following turn, with EXACTLY the same items_json and fecha_evento used in the preview. It is all-or-nothing: if any animal fails, nothing is created and the error lists each identifier with its reason; relay it literally. On success report: orden_venta, number of animals per empresa/UPP/guía, status PENDIENTE, and that an ADMIN of EACH company must approve its part in the web panel before 23:59 (Mexico City) of today, where the price is captured. Never say the animals were sold. This tool does NOT take prices.",
+        "operation": "executeQuery",
+        "query": "SELECT sp_solicitar_venta_orden(\n    $1::jsonb,\n    $2::varchar,\n    NULLIF(NULLIF(NULLIF($3::text, 'null'), 'undefined'), '')::date,\n    false,\n    'AGENTE'\n) AS result;",
+        "options": {
+          "queryReplacement": "={{ [ $fromAI('items_json', 'JSON array (as text). Two kinds of objects, in the order the user gave them. (A) One animal: {\\\"identificador\\\": \\\"<ear tag / RFID / fire number exactly as written>\\\", \\\"guia_transito\\\": \\\"<guide>\\\"}. (B) A WHOLE LOT when the user names a lot instead of ear tags, e.g. los 30 becerros del lote Maceo: {\\\"lote\\\": \\\"Maceo\\\", \\\"categoria\\\": \\\"BECERRO\\\", \\\"cantidad\\\": 30, \\\"guia_transito\\\": \\\"7139696\\\"}; categoria and cantidad only if the user said them. Never list ear tags yourself for a lot. Every object needs guia_transito; never invent identifiers or guides.', 'string'), $fromAI('user_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string'), $fromAI('fecha_evento', 'Sale date YYYY-MM-DD, ONLY if the user said it (\\\"ayer\\\" = the day before HOY ES). Omit otherwise (today is used).', 'string', null) ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        2768,
+        1760
+      ],
+      "id": "1707dc01-42ca-4eca-8b39-2cd145866652",
+      "name": "request_livestock_sale_order",
       "credentials": {
         "postgres": {
           "id": "BQrod4uGVzM1nvLw",
@@ -997,6 +1047,28 @@
           }
         ]
       ]
+    },
+    "preview_livestock_sale_order": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "request_livestock_sale_order": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -1009,7 +1081,7 @@
     "timeSavedMode": "fixed",
     "timeSavedPerExecution": 3
   },
-  "versionId": "dc9d541c-f5d8-497d-8a71-56a8d1f902b2",
+  "versionId": "2d4bce43-1047-4778-95f3-712f219c8894",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
@@ -1018,16 +1090,10 @@
   "id": "pJ3CEaO70QEiGL0C",
   "tags": [
     {
-      "updatedAt": "2025-12-31T16:55:06.301Z",
-      "createdAt": "2025-12-31T16:55:06.301Z",
-      "id": "ts9FABk8F02a5xrA",
-      "name": "Agent IA"
-    },
-    {
-      "updatedAt": "2025-12-23T12:12:58.230Z",
-      "createdAt": "2025-12-23T12:12:58.230Z",
-      "id": "MKrwsTVnLLBXLfUP",
-      "name": "Chat"
+      "updatedAt": "2026-06-02T17:44:17.958Z",
+      "createdAt": "2026-06-02T17:44:17.958Z",
+      "id": "6NGDwjjesOlJeGQr",
+      "name": "v6"
     },
     {
       "updatedAt": "2025-12-23T12:12:28.399Z",
@@ -1036,10 +1102,16 @@
       "name": "AI Agent"
     },
     {
-      "updatedAt": "2026-06-02T17:44:17.958Z",
-      "createdAt": "2026-06-02T17:44:17.958Z",
-      "id": "6NGDwjjesOlJeGQr",
-      "name": "v6"
+      "updatedAt": "2025-12-23T12:12:58.230Z",
+      "createdAt": "2025-12-23T12:12:58.230Z",
+      "id": "MKrwsTVnLLBXLfUP",
+      "name": "Chat"
+    },
+    {
+      "updatedAt": "2025-12-31T16:55:06.301Z",
+      "createdAt": "2025-12-31T16:55:06.301Z",
+      "id": "ts9FABk8F02a5xrA",
+      "name": "Agent IA"
     }
   ]
 }

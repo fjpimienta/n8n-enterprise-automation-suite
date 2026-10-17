@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import type { SaleIncome, SaleReferencePrice } from '@core/models/sale.model';
 import {
+  amountFromWeight,
+  autoRowAmount,
   batchTotal,
   buildSaleData,
   computePricePerKg,
@@ -206,5 +208,59 @@ describe('validateReferencePriceInput', () => {
 
   it('requires category and valid_from', () => {
     expect(validateReferencePriceInput({ ...valid, category: '', validFrom: '' })).toHaveLength(2);
+  });
+});
+
+describe('amountFromWeight (POR_KG precio_venta = weight × $/kg, 2 decimals)', () => {
+  it('rounds half-up to cents exactly, where floating point would round down', () => {
+    // 350.5 × 41.37 = 14500.185 → 14500.19 (Math.round(14500.185 * 100) / 100 gives 14500.18)
+    expect(amountFromWeight(350.5, 41.37)).toBe(14500.19);
+    expect(amountFromWeight(1.05, 1.5)).toBe(1.58);   // 1.575 → 1.58
+    expect(amountFromWeight(0.01, 0.01)).toBe(0);    // 0.0001 → 0.00 (then rejected as amount ≤ 0 by validateSaleData)
+  });
+
+  it('keeps exact products unchanged', () => {
+    expect(amountFromWeight(350, 52)).toBe(18200);
+    expect(amountFromWeight(412.75, 48.2)).toBe(19894.55);
+  });
+
+  it('returns null unless both values are positive with at most 2 decimals', () => {
+    expect(amountFromWeight(null, 50)).toBeNull();
+    expect(amountFromWeight(300, null)).toBeNull();
+    expect(amountFromWeight(0, 50)).toBeNull();
+    expect(amountFromWeight(300, -1)).toBeNull();
+    expect(amountFromWeight(300.123, 50)).toBeNull();
+    expect(amountFromWeight(300, 50.001)).toBeNull();
+  });
+
+  it('produces an amount accepted by validateSaleData', () => {
+    const data = buildSaleData({ mode: 'POR_KG', amount: amountFromWeight(350.5, 41.37), weightKg: 350.5,
+      buyer: 'Comprador', paymentMethod: 'EFECTIVO', invoiced: false, invoiceFolio: '' });
+    expect(data.precio_venta).toBe(14500.19);
+    expect(validateSaleData(data)).toEqual([]);
+  });
+});
+
+describe('autoRowAmount', () => {
+  const base = { reference: null, weightKg: null, batchAmount: null, batchPricePerKg: null, perKgForAll: false } as const;
+
+  it('POR_KG uses weight × batch $/kg when there is no reference $/kg', () => {
+    expect(autoRowAmount({ ...base, mode: 'POR_KG', weightKg: 350.5, batchPricePerKg: 41.37 })).toBe(14500.19);
+    expect(autoRowAmount({ ...base, mode: 'POR_KG', weightKg: null, batchPricePerKg: 41.37 })).toBeNull();
+  });
+
+  it('POR_KG prefers the reference $/kg unless the batch $/kg was applied to all rows', () => {
+    const reference = ref({ saleMode: 'POR_KG', referencePricePerKg: 50 });
+    expect(autoRowAmount({ ...base, mode: 'POR_KG', reference, weightKg: 300, batchPricePerKg: 45 })).toBe(15000);
+    expect(autoRowAmount({ ...base, mode: 'POR_KG', reference, weightKg: 300, batchPricePerKg: 45, perKgForAll: true })).toBe(13500);
+  });
+
+  it('POR_KG never falls back to a per-head amount (no split of a lot total)', () => {
+    expect(autoRowAmount({ ...base, mode: 'POR_KG', weightKg: 300, batchAmount: 15000 })).toBeNull();
+  });
+
+  it('per-head modes use the reference amount, else the batch price per head', () => {
+    expect(autoRowAmount({ ...base, mode: 'POR_PIEZA', batchAmount: 12000 })).toBe(12000);
+    expect(autoRowAmount({ ...base, mode: 'POR_PIEZA', reference: ref({}), batchAmount: 12000 })).toBe(15000);
   });
 });
