@@ -131,6 +131,27 @@ BEGIN
     RAISE NOTICE 'T11b %: unique index present',
         CASE WHEN to_regclass('public.uq_pending_auth_one_pending_per_animal') IS NOT NULL THEN 'OK' ELSE 'WARN (not created)' END;
 
+    -- T12: a whole lot as one item (no ear tags): lot Maceo = 30 BECERRO, guide 7139696
+    v_res := sp_solicitar_venta_orden('[{"lote":"maceo","categoria":"BECERRO","cantidad":30,"guia_transito":"7139696"}]',
+                                      v_user, DATE '2026-10-09', true, 'TEST');
+    RAISE NOTICE 'T12 %: validos=% grupos=% errores=%',
+        CASE WHEN (v_res->>'validos')::int = 30 AND jsonb_array_length(v_res->'grupos') = 1
+              AND jsonb_array_length(v_res->'errores') = 0 THEN 'OK' ELSE 'FAIL' END,
+        v_res->>'validos', jsonb_array_length(v_res->'grupos'), v_res->'errores';
+
+    -- T12b: wrong quantity for the lot is reported, nothing expanded
+    v_res := sp_solicitar_venta_orden('[{"lote":"Maceo","categoria":"BECERRO","cantidad":29,"guia_transito":"7139696"}]',
+                                      v_user, DATE '2026-10-09', true, 'TEST');
+    RAISE NOTICE 'T12b %: %',
+        CASE WHEN (v_res->>'validos')::int = 0 AND v_res->'errores'->0->>'error' LIKE 'El lote Maceo tiene 30 animal(es) BECERRO disponibles, no 29'
+             THEN 'OK' ELSE 'FAIL' END, v_res->'errores'->0->>'error';
+
+    -- T12c: unknown lot
+    v_res := sp_solicitar_venta_orden('[{"lote":"No Existe","guia_transito":"1"}]', v_user, NULL, true, 'TEST');
+    RAISE NOTICE 'T12c %: %',
+        CASE WHEN v_res->'errores'->0->>'error' = 'No existe ese lote en tus empresas' THEN 'OK' ELSE 'FAIL' END,
+        v_res->'errores'->0->>'error';
+
     -- T9: unknown requester
     BEGIN
         PERFORM sp_solicitar_venta_orden(v_8, 'nadie@ejemplo.com', NULL, true, 'TEST');

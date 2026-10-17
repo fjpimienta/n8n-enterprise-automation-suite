@@ -138,6 +138,13 @@ DECLARE
     v_n          int;
     v_animal     cattle_livestock%ROWTYPE;
     v_ro_companies int[];
+    e            record;
+    v_pos        int := 0;
+    v_guia       text;
+    v_lote       text;
+    v_cat        text;
+    v_qty        int;
+    v_avail      int;
 BEGIN
     -- Requester: active user with at least one active membership
     IF v_email = '' THEN
@@ -175,9 +182,62 @@ BEGIN
     END IF;
     TRUNCATE tmp_sale_order_items;
 
-    INSERT INTO tmp_sale_order_items (pos, identificador, guia)
-    SELECT e.ord, nullif(btrim(e.val->>'identificador'), ''), left(nullif(btrim(e.val->>'guia_transito'), ''), 40)
-      FROM jsonb_array_elements(p_items) WITH ORDINALITY AS e(val, ord);
+    -- Each item is either ONE animal  {"identificador", "guia_transito"}
+    --                 or a WHOLE LOT   {"lote", "categoria"?, "cantidad"?, "guia_transito"}.
+    -- Lots are expanded here (exact lot name, writer companies only, animals not sold/dead), so the agent never
+    -- has to list ear tags. "cantidad", when given, must match the animals available or the item fails.
+    FOR e IN SELECT x.val FROM jsonb_array_elements(p_items) WITH ORDINALITY AS x(val, ord) ORDER BY x.ord LOOP
+        v_guia := left(nullif(btrim(e.val->>'guia_transito'), ''), 40);
+        v_lote := nullif(btrim(e.val->>'lote'), '');
+        IF v_lote IS NULL THEN
+            v_pos := v_pos + 1;
+            INSERT INTO tmp_sale_order_items (pos, identificador, guia)
+            VALUES (v_pos, nullif(btrim(e.val->>'identificador'), ''), v_guia);
+            CONTINUE;
+        END IF;
+
+        v_cat := upper(nullif(btrim(e.val->>'categoria'), ''));
+        v_qty := CASE WHEN btrim(coalesce(e.val->>'cantidad', '')) ~ '^\d+$' THEN btrim(e.val->>'cantidad')::int END;
+        SELECT count(*) INTO v_n FROM production_unit_lots lt
+         WHERE lt.id_company = ANY (v_companies) AND lower(btrim(lt.lot_name)) = lower(v_lote);
+        IF v_n <> 1 THEN
+            v_pos := v_pos + 1;
+            INSERT INTO tmp_sale_order_items (pos, identificador, guia, error)
+            VALUES (v_pos, 'lote ' || v_lote, v_guia,
+                    CASE WHEN v_n = 0 THEN 'No existe ese lote en tus empresas'
+                         ELSE 'Hay ' || v_n || ' lotes con ese nombre; da los aretes' END);
+            CONTINUE;
+        END IF;
+
+        SELECT count(*) INTO v_avail
+          FROM cattle_livestock l JOIN production_unit_lots lt ON lt.id = l.lot_id AND lt.id_company = l.tenant_id
+         WHERE l.tenant_id = ANY (v_companies) AND lower(btrim(lt.lot_name)) = lower(v_lote)
+           AND (v_cat IS NULL OR l.category = v_cat)
+           AND l.current_status NOT IN ('VENDIDO', 'BAJA_MORTANDAD', 'BAJA_DEPURACION_DATOS', 'FINALIZADO');
+        IF v_avail = 0 OR (v_qty IS NOT NULL AND v_qty <> v_avail) THEN
+            v_pos := v_pos + 1;
+            INSERT INTO tmp_sale_order_items (pos, identificador, guia, error)
+            VALUES (v_pos, 'lote ' || v_lote, v_guia,
+                    'El lote ' || v_lote || ' tiene ' || v_avail || ' animal(es)' || coalesce(' ' || v_cat, '')
+                    || ' disponibles' || CASE WHEN v_qty IS NOT NULL THEN ', no ' || v_qty ELSE '' END);
+            CONTINUE;
+        END IF;
+
+        INSERT INTO tmp_sale_order_items (pos, identificador, guia, livestock_id, id_company, arete, numero_fuego,
+                                          categoria, estatus)
+        SELECT v_pos + row_number() OVER (ORDER BY l.rfid_siniiga NULLS LAST, l.numero_fuego NULLS LAST, l.id),
+               coalesce(l.rfid_siniiga, l.numero_fuego, l.electronic_rfid, l.id::text), v_guia,
+               l.id, l.tenant_id, l.rfid_siniiga, l.numero_fuego, l.category, l.current_status
+          FROM cattle_livestock l JOIN production_unit_lots lt ON lt.id = l.lot_id AND lt.id_company = l.tenant_id
+         WHERE l.tenant_id = ANY (v_companies) AND lower(btrim(lt.lot_name)) = lower(v_lote)
+           AND (v_cat IS NULL OR l.category = v_cat)
+           AND l.current_status NOT IN ('VENDIDO', 'BAJA_MORTANDAD', 'BAJA_DEPURACION_DATOS', 'FINALIZADO');
+        v_pos := v_pos + v_avail;
+    END LOOP;
+
+    IF v_pos > 300 THEN
+        RAISE EXCEPTION 'La orden no puede tener más de 300 animales (tiene %)', v_pos USING ERRCODE = 'P0032';
+    END IF;
 
     UPDATE tmp_sale_order_items SET error = 'Falta el identificador del animal' WHERE identificador IS NULL;
     UPDATE tmp_sale_order_items SET error = 'Falta la guía de tránsito'          WHERE error IS NULL AND guia IS NULL;
@@ -185,7 +245,7 @@ BEGIN
      WHERE error IS NULL AND (SELECT count(*) FROM tmp_sale_order_items x WHERE x.identificador = t.identificador) > 1;
 
     -- Resolve each identifier ONLY inside the requester's companies
-    FOR r IN SELECT * FROM tmp_sale_order_items WHERE error IS NULL ORDER BY pos LOOP
+    FOR r IN SELECT * FROM tmp_sale_order_items WHERE error IS NULL AND livestock_id IS NULL ORDER BY pos LOOP
         SELECT count(*) INTO v_n
           FROM cattle_livestock l
          WHERE l.tenant_id = ANY (v_companies)
@@ -216,6 +276,9 @@ BEGIN
         END IF;
     END LOOP;
 
+    UPDATE tmp_sale_order_items t SET error = 'Animal repetido en la orden'
+     WHERE error IS NULL AND livestock_id IS NOT NULL
+       AND (SELECT count(*) FROM tmp_sale_order_items x WHERE x.livestock_id = t.livestock_id) > 1;
     UPDATE tmp_sale_order_items
        SET error = 'Estatus ' || estatus || ': no se puede vender'
      WHERE error IS NULL AND estatus IN ('VENDIDO', 'BAJA_MORTANDAD', 'BAJA_DEPURACION_DATOS', 'FINALIZADO');
