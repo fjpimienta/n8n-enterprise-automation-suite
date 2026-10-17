@@ -18,6 +18,10 @@
                     cargados</span>
                 }
             </div>
+            <!-- Active plantation (palm companies only; the component renders nothing otherwise) -->
+            <div class="me-3">
+                <app-plantation-selector></app-plantation-selector>
+            </div>
             <div class="d-none d-md-flex me-3">
                 <a href="javascript:void(0)" class="nav-link px-0 hide-theme-dark" title="Cambiar a tema oscuro"
                     (click)="themeService.toggleTheme()">
