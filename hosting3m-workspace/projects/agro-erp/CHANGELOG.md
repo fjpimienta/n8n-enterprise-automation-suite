@@ -8,7 +8,21 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 ### 🌴 Palma, fase 1: plantaciones, lotes y filas (migración 080) — versión por asignar
 
 *Base de datos y `v6/CRUD` (Build Query: solo `spConfigByModel`). Aplicada y probada solo en LOCAL
-(2026-10-17). La versión se asigna al desplegar, después de v1.17.3. El frontend (Paso 3) va aparte.*
+(2026-10-17). La versión se asigna al desplegar, después de v1.17.3. El frontend va en la misma rama (ver abajo).*
+
+**Frontend (`agro-erp`):**
+* Detección de dominio centralizada en `@shared/utils/business-domain.util` (layout, sidebar, selector de
+  empresa y login); el login, la raíz y las URLs desconocidas llevan al dashboard del dominio. Se quitó el
+  link roto `/agricultura/telemetria`.
+* `PlantationContextService` y selector de plantación junto a la empresa (última elección por empresa →
+  predeterminada → otra activa; fail-closed; `localStorage` por empresa con try/catch; el cierre de sesión
+  limpia el contexto).
+* Pantallas: Plantaciones (ADMIN/OWNER), Lotes de la plantación activa, Filas (alta individual y masiva por
+  SP, conteo con motivo para ADMIN/OWNER/EDITOR, cambio de puntos solo ADMIN/OWNER, historial) y Tablero de
+  Palma de solo lectura. Guards locales por el rol de la empresa activa (`roleGuard` de `core-auth` intacto).
+* Specs de Vitest standalone para las utilidades puras; `ng build agro-erp --configuration=production` sin
+  errores. Probado a mano en LOCAL con la empresa 10 como ADMIN y como EDITOR (2026-10-17).
+
 
 **Jerarquía:** Empresa → Plantación (≈ UPP del dominio palma) → Lote → Fila, con conteo de plantas por
 fila. Varias plantaciones por empresa; plantas individuales, pagos, inventario, cosecha y alcance por

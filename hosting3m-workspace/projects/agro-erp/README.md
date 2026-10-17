@@ -298,7 +298,7 @@ ng build agro-erp --configuration=production
 * [x] **Catálogos Globales de Parametrización:** razas y etapas de vida, validados con el cliente (v1.11.0).
 * [x] **Subsistema de Autorización Asíncrona:** mortandad y venta vía Agente IA requieren aprobación humana diferida, con notificación por correo y expiración diaria automática (v1.11.0).
 * [x] **Palma, fase 1 — estructura de plantación activa (migración 080, LOCAL):** plantaciones, lotes, filas y conteos con historia, aislados por empresa.
-* [ ] **Palma, fase 1 — frontend:** contexto y selector de plantación, pantallas de plantaciones/lotes/filas/conteos, tablero de Palma.
+* [x] **Palma, fase 1 — frontend (LOCAL, probado a mano):** contexto y selector de plantación, pantallas de plantaciones/lotes/filas/conteos, tablero de Palma.
 * [ ] **Palma, fases 2+:** pagos de personal (registro, sin nómina formal); inventario de activos e insumos; cosecha de RFF (racimos de fruta fresca); telemetría por lote (sustituye a `PalmTelemetry` por zona); alcance por usuario y plantación (`user_scope`); Agente IA de palma (conteos y cosecha por chat/WhatsApp).
 * [ ] **Motor Financiero (Fase 4):** Integración transversal del OPEX para calcular costo por kilo de biomasa vs. costo por litro de agroquímico.
 * [ ] **Dashboards Consolidados (Fase 5):** Estabilización final y pruebas E2E.
