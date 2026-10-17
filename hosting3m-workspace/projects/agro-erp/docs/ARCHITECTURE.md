@@ -816,7 +816,7 @@ Plantation Subsystem". Business rules: `CLAUDE.md`, Rule 18.
 | `agri_variety_catalog` | `agri_variety_catalog` (global) | SELECT, GETONE, GETALL, INSERT, UPDATE | ADMIN |
 | `agri_plantations` | `agri_plantations` | SELECT, GETONE, GETALL, INSERT, UPDATE | ADMIN, OWNER |
 | `agri_lots` | `agri_lots` | SELECT, GETONE, GETALL, INSERT, UPDATE | ADMIN, OWNER |
-| `agri_rows` | `agri_rows` | SELECT, GETONE, GETALL, INSERT, UPDATE | ADMIN, OWNER (rows are created by procedure) |
+| `agri_rows` | `agri_rows` | SELECT, GETONE, GETALL, UPDATE (no INSERT: rows only via `sp_agri_bulk_create_rows`) | ADMIN, OWNER (update of `row_number`/`is_active`/`notes`/`metadata`) |
 | `agri_row_census_history` | `agri_row_census_history` | SELECT, GETONE, GETALL | — |
 | `agri_lot_summary` / `agri_plantation_summary` | `vw_agri_lot_summary` / `vw_agri_plantation_summary` | SELECT, GETONE, GETALL | — |
 | `agri_set_default_plantation` | `sp_agri_set_default_plantation` (`call_sp`) | INSERT | ADMIN, OWNER |

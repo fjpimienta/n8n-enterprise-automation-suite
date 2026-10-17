@@ -1240,8 +1240,9 @@ All timestamps are naive UTC (`timestamp`, `now() AT TIME ZONE 'UTC'`); "today" 
 
 ### `crud_models` (10 models, none with `id` in `allowed_fields`, none with a DELETE op)
 `agri_variety_catalog` (select all roles, write ADMIN), `agri_plantations` / `agri_lots` (select
-ADMIN/OWNER/EDITOR/CUSTOMER, write ADMIN/OWNER), `agri_rows` (same; `planting_positions`,
-`alive_plants`, `last_census_date` not writable), `agri_row_census_history` (select ADMIN/OWNER/EDITOR),
+ADMIN/OWNER/EDITOR/CUSTOMER, write ADMIN/OWNER), `agri_rows` (no INSERT: rows only via
+`sp_agri_bulk_create_rows`; UPDATE ADMIN/OWNER; `planting_positions`, `alive_plants`,
+`last_census_date` not writable), `agri_row_census_history` (select ADMIN/OWNER/EDITOR),
 `agri_lot_summary` / `agri_plantation_summary` (read only), and the `call_sp` models
 `agri_set_default_plantation`, `agri_bulk_create_rows` (ADMIN/OWNER), `agri_record_row_census`
 (ADMIN/OWNER/EDITOR). `PalmTelemetry` (id 45): DELETE op removed, `UPDATE` only ADMIN (restored by the
