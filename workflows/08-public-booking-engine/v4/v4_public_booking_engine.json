@@ -10,31 +10,89 @@
           "allowedOrigins": "*"
         }
       },
-      "id": "26308cab-8e24-4ae9-ab5b-e5603e23ff09",
+      "id": "0370f92a-76b6-4534-80fc-9c33a3ffdf14",
       "name": "Webhook Availability",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [
-        -624,
-        -48
+        0,
+        0
       ],
       "webhookId": "1ce1fe4e-0c12-44cc-9e08-02d7c41b8182"
     },
     {
       "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7609966a-34d7-5e73-b8f0-dfd8dc9c1ec9",
+              "name": "id_company",
+              "value": 1,
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        256
+      ],
+      "id": "e464cc5d-9c50-5bb4-9e85-60543068d54e",
+      "name": "Site Config"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2f8e8043-fe9f-5893-b278-03d09607438a",
+              "leftValue": "={{ $('Webhook Capture Lead').isExecuted }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        256
+      ],
+      "id": "ee01ee72-0546-5c7b-8308-f2e2a094f3f0",
+      "name": "Is Lead Request?"
+    },
+    {
+      "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT type, COUNT(id) as available_count, MAX(price_night) as price FROM hotel_rooms WHERE id NOT IN (SELECT room_id FROM hotel_bookings WHERE status IN ('confirmed', 'checked_in') AND check_in::date < $2::date AND check_out::date > $1::date) AND status != 'maintenance' GROUP BY type;",
+        "query": "SELECT type, COUNT(id) AS available_count, MAX(price_night) AS price FROM hotel_rooms WHERE id_company = $3::int AND id NOT IN (SELECT room_id FROM hotel_bookings WHERE id_company = $3::int AND status IN ('confirmed', 'checked_in') AND check_in::date < $2::date AND check_out::date > $1::date) AND status != 'maintenance' GROUP BY type;",
         "options": {
-          "queryReplacement": "={{ $json.body.checkin }}, {{ $json.body.checkout }}"
+          "queryReplacement": "={{ [ $json.body.checkin, $json.body.checkout, $('Site Config').item.json.id_company ].map(v => v === null || v === undefined ? null : (typeof v === 'object' ? JSON.stringify(v) : String(v))) }}"
         }
       },
-      "id": "835a46b7-8352-47b1-9ccc-6b3882a05063",
+      "id": "a3200e73-3394-421e-aeb2-138030591b99",
       "name": "Check Availability SQL",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        -400,
-        -48
+        672,
+        0
       ],
       "credentials": {
         "postgres": {
@@ -51,13 +109,13 @@
           "responseCode": 200
         }
       },
-      "id": "e12059c6-1706-48d9-accc-11d7c111b3bf",
+      "id": "eed091a1-b6ea-4058-8312-066e6054acde",
       "name": "Respond Availability",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        -176,
-        -48
+        896,
+        0
       ]
     },
     {
@@ -69,13 +127,13 @@
           "allowedOrigins": "*"
         }
       },
-      "id": "8f340caf-6cf6-40b5-bb57-64ca9c181517",
+      "id": "47800a5c-15cd-437b-b951-1f81b771c310",
       "name": "Webhook Capture Lead",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [
-        -624,
-        464
+        0,
+        512
       ],
       "webhookId": "c1838c16-a10c-459c-b211-476a3ce6daea"
     },
@@ -83,13 +141,13 @@
       "parameters": {
         "jsCode": "const email = $input.first().json.body.email || '';\n// Regex estricto para validar formato de correo\nconst isValid = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$/.test(email);\n\nreturn [{ json: { ...$input.first().json, is_email_valid: isValid } }];"
       },
-      "id": "2b9ed32b-0f9f-40c2-8d71-fa9be72b7162",
+      "id": "6380a2e3-d299-4b09-aa41-c47e4d131266",
       "name": "Validate Email Format",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        -400,
-        464
+        672,
+        512
       ]
     },
     {
@@ -117,13 +175,13 @@
         },
         "options": {}
       },
-      "id": "a213c1f0-c7cf-46fa-8bb6-5f3591bd8e6c",
+      "id": "c84c506d-6431-4061-aad0-81b8a0a0b4f8",
       "name": "Is Email Valid?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        -176,
-        464
+        896,
+        512
       ]
     },
     {
@@ -134,30 +192,30 @@
           "responseCode": 400
         }
       },
-      "id": "40c77234-1081-4fa2-b8f2-903aa059555f",
+      "id": "00e62ffe-1890-42ac-a477-eee458216a3f",
       "name": "Respond Bad Request",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        48,
-        560
+        1120,
+        608
       ]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT id FROM hotel_rooms WHERE type ILIKE $3 || '%' AND id NOT IN (SELECT room_id FROM hotel_bookings WHERE status IN ('confirmed', 'checked_in') AND check_in::date < $2::date AND check_out::date > $1::date) AND status != 'maintenance' LIMIT 1;",
+        "query": "SELECT id FROM hotel_rooms WHERE id_company = $4::int AND type = $3::text AND id NOT IN (SELECT room_id FROM hotel_bookings WHERE id_company = $4::int AND status IN ('confirmed', 'checked_in') AND check_in::date < $2::date AND check_out::date > $1::date) AND status != 'maintenance' LIMIT 1;",
         "options": {
-          "queryReplacement": "={{ $json.body.checkin }}, {{ $json.body.checkout }}, {{ $json.body.room_type }}"
+          "queryReplacement": "={{ [ $json.body.checkin, $json.body.checkout, $json.body.room_type, $('Site Config').item.json.id_company ].map(v => v === null || v === undefined ? null : (typeof v === 'object' ? JSON.stringify(v) : String(v))) }}"
         }
       },
-      "id": "d3935097-b4d9-4d6a-a88a-a5136d4b3194",
+      "id": "af30e026-4862-4931-a10e-a51458d89fab",
       "name": "Get Specific Room SQL",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        48,
-        368
+        1120,
+        416
       ],
       "alwaysOutputData": true,
       "credentials": {
@@ -192,13 +250,13 @@
         },
         "options": {}
       },
-      "id": "ef3977fa-1b3a-4621-adfd-0ce3fefec338",
+      "id": "128a3381-ac27-4a0a-9175-e17cfbcb70ba",
       "name": "Is Room Free?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        272,
-        368
+        1344,
+        416
       ]
     },
     {
@@ -209,30 +267,30 @@
           "responseCode": 409
         }
       },
-      "id": "9683f31b-91ac-4375-a103-1682fe95743e",
+      "id": "f42d4108-3085-4d87-ab28-07c7db011f6a",
       "name": "Respond Sold Out",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        496,
-        464
+        1568,
+        512
       ]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "WITH new_guest AS ( INSERT INTO hotel_guests (full_name, phone, email, id_company) VALUES ($1, $2, $3, 1) ON CONFLICT (email) DO UPDATE SET phone = EXCLUDED.phone RETURNING id ) INSERT INTO hotel_bookings (room_id, guest_id, check_in, check_out, status, payment_status, id_company, notes) VALUES ($4, (SELECT id FROM new_guest), $5, $6, 'pending', 'pending', 1, 'Web Lead: ' || $7) RETURNING *;",
+        "query": "WITH new_guest AS ( INSERT INTO hotel_guests (full_name, phone, email, id_company) VALUES ($1::text, NULLIF($2::text, ''), $3::text, $8::int) ON CONFLICT (email) DO UPDATE SET email = hotel_guests.email RETURNING id ) INSERT INTO hotel_bookings (room_id, guest_id, check_in, check_out, status, payment_status, id_company, notes) VALUES ($4::int, (SELECT id FROM new_guest), $5::date, $6::date, 'pending', 'pending', $8::int, 'Web Lead: ' || COALESCE($7::text, '')) RETURNING *;",
         "options": {
-          "queryReplacement": "={{ $('Webhook Capture Lead').item.json.body.name }}, {{ $('Webhook Capture Lead').item.json.body.phone }}, {{ $('Webhook Capture Lead').item.json.body.email }}, {{ $json.id }}, {{ $('Webhook Capture Lead').item.json.body.checkin }}, {{ $('Webhook Capture Lead').item.json.body.checkout }}, {{ $('Webhook Capture Lead').item.json.body.guests }} huéspedes"
+          "queryReplacement": "={{ [ $('Webhook Capture Lead').item.json.body.name, $('Webhook Capture Lead').item.json.body.phone, $('Webhook Capture Lead').item.json.body.email, $json.id, $('Webhook Capture Lead').item.json.body.checkin, $('Webhook Capture Lead').item.json.body.checkout, $('Webhook Capture Lead').item.json.body.guests, $('Site Config').item.json.id_company ].map(v => v === null || v === undefined ? null : (typeof v === 'object' ? JSON.stringify(v) : String(v))) }}"
         }
       },
-      "id": "cb2a9d30-cf6f-415f-8375-e2199d5011ac",
+      "id": "7a207575-5a5b-4efd-840c-9d58a1f2de62",
       "name": "Upsert Guest & Book",
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        496,
-        272
+        1568,
+        320
       ],
       "credentials": {
         "postgres": {
@@ -249,19 +307,19 @@
         "html": "=<div style=\"font-family: sans-serif; color: #333;\">\n  <h2>¡Hola {{ $('Webhook Capture Lead').first().json.body.name }}!</h2>\n  <p>Hemos recibido tu solicitud de reserva en el <strong>Hotel San José</strong> del <strong>{{ $('Webhook Capture Lead').first().json.body.checkin }}</strong> al <strong>{{ $('Webhook Capture Lead').first().json.body.checkout }}</strong>.</p>\n  <div style=\"background-color: #f2f6f4; padding: 15px; border-radius: 8px; border: 1px solid #e1ede5;\">\n    <h3 style=\"color: #4a7c59; margin-top: 0;\">Para confirmar tu reserva:</h3>\n    <p>Realiza tu depósito o transferencia a los siguientes datos:</p>\n    <ul>\n      <li><strong>Banco:</strong> BBVA</li>\n      <li><strong>Titular:</strong> Diana Perez Pimienta</li>\n      <li><strong>CLABE:</strong> 012180015615151108</li>\n      <li><strong>Cuenta:</strong> 1561515110</li>\n    </ul>\n  </div>\n  <p>Una vez realizado el pago, responde a este correo con tu comprobante adjunto para asegurar tu habitación.</p>\n  <p>¡Te esperamos!</p>\n</div>",
         "options": {}
       },
-      "id": "8171d7a8-570c-4ae6-a181-4f6d49e6d650",
+      "id": "b7c25048-2dcd-4a5b-af89-8a89336a51ca",
       "name": "Send Email",
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        720,
-        272
+        1792,
+        320
       ],
       "webhookId": "9ac3f95c-7ebf-4d2a-9765-e78b533ae3f7",
       "credentials": {
         "smtp": {
-          "id": "7hZ9JouQ2VczURBE",
-          "name": "reservas@hosting3m.com"
+          "id": "k7AtXNG9Gp9Jjzyg",
+          "name": "SMTP account"
         }
       },
       "onError": "continueRegularOutput"
@@ -290,13 +348,13 @@
         },
         "options": {}
       },
-      "id": "c5f5ee3a-950b-4613-bc9c-0b8851840abf",
+      "id": "8e305689-feb5-411f-8a52-94ae1e0ac509",
       "name": "Did Email Fail?",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        944,
-        272
+        2016,
+        320
       ]
     },
     {
@@ -307,13 +365,13 @@
           "responseCode": 422
         }
       },
-      "id": "7b46776b-78ea-4634-ad3f-18a22c84faaf",
+      "id": "9292b2e8-f874-46fb-9d28-dc77b791d0a1",
       "name": "Respond Email Bounce",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        1168,
-        176
+        2240,
+        224
       ]
     },
     {
@@ -324,13 +382,13 @@
           "responseCode": 200
         }
       },
-      "id": "1ca705b2-6583-4fb2-a3ef-abb0d12b68b0",
+      "id": "516f0469-95a0-41c9-93b5-2f40fe744c53",
       "name": "Respond Success",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        1168,
-        368
+        2240,
+        416
       ]
     }
   ],
@@ -340,7 +398,7 @@
       "main": [
         [
           {
-            "node": "Check Availability SQL",
+            "node": "Site Config",
             "type": "main",
             "index": 0
           }
@@ -362,7 +420,7 @@
       "main": [
         [
           {
-            "node": "Validate Email Format",
+            "node": "Site Config",
             "type": "main",
             "index": 0
           }
@@ -466,6 +524,35 @@
           }
         ]
       ]
+    },
+    "Site Config": {
+      "main": [
+        [
+          {
+            "node": "Is Lead Request?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Lead Request?": {
+      "main": [
+        [
+          {
+            "node": "Validate Email Format",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Availability SQL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -476,13 +563,14 @@
     "timeSavedMode": "fixed",
     "errorWorkflow": "9SrVXdATmlrZemJT",
     "callerPolicy": "workflowsFromSameOwner",
-    "timeSavedPerExecution": 2
+    "timeSavedPerExecution": 3
   },
-  "versionId": "a229061e-56c3-420b-bd63-af69ae05b073",
+  "versionId": "62109c27-c7b8-471c-afbc-f6a00686e832",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
   },
-  "id": "zTVZqQbvOS-WsyXdOQdET",
+  "nodeGroups": [],
+  "id": "FImcPayB8gqFlxwq",
   "tags": []
 }
