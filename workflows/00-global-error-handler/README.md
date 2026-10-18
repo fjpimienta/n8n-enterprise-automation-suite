@@ -1,13 +1,21 @@
 # Global Error Handler (`9SrVXdATmlrZemJT`)
 
 Error workflow (`settings.errorWorkflow`) of `v5/CRUD`, `v6/CRUD` and other workflows. On every failed
-execution it formats the error and, in parallel:
+execution it formats the error and then runs two branches, **alert first** (with `executionOrder: v1`
+n8n runs branches top to bottom by canvas position, so the alert node must stay above the SQL node):
 
 1. **Alerta (Webhook/HTTP)** — posts a short alert to ntfy: workflow, failed node and execution link.
    The raw error text is **never** sent (Postgres errors can carry row values, e.g.
-   `Key (email)=(…) already exists`).
+   `Key (email)=(…) already exists`). `onError: continueRegularOutput`, so a ntfy failure never blocks the log.
 2. **Execute a SQL query** — inserts the full error into `n8n_error_logs` (`hosting3m_db`), with bound
-   parameters (`queryReplacement`), `NULL`/empty-safe and truncated to the column sizes.
+   parameters (`queryReplacement`), `NULL`/empty-safe and truncated to the column sizes. If it fails, the
+   alert has already gone out.
+
+> **Parameters are text in both layers (v1.18.2).** n8n passes an array `queryReplacement` with its JS
+> types and pg-promise formats the query client-side, so a number goes in unquoted: the Error Trigger's
+> manual-mode example data (`execution.id: 231`) turned `NULLIF($2, '')` into `NULLIF(231, '')` →
+> `invalid input syntax for type integer: ""`. The query casts `$1::text … $4::text` and the expression
+> maps every value to `String(...)` (objects to JSON, `null`/`undefined` to `null`, never dropped).
 
 > n8n 2.x only runs an error workflow that is **active**. An inactive handler is skipped
 > ("is not active and cannot be executed"): no alert and no `n8n_error_logs` row.
