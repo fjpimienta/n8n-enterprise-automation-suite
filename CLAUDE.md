@@ -142,6 +142,28 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
     `dashboard` del hotel, que usa `v5/CRUD` (sin estos guardias). Desde v1.17.1 `users` está
     bloqueado en `v5` y la pantalla de usuarios del hotel queda sin servicio hasta migrarlo a `v6`.
 
+## 🚀 Despliegue (aplica a toda la suite)
+
+- **`main` despliega solo los frontends:** Plesk publica desde `main` (agro-erp y también los sitios del hotel).
+  Un PR que dependa de base de datos o de n8n **no llega a `main` hasta tener listo su runbook**: orden de
+  despliegue, huellas antes/después, pruebas en producción con empresas de pruebas y rollback. Si el frontend no
+  depende del cambio, el runbook lo dice explícitamente (p. ej. v1.18.1).
+- **Workflows en n8n 2.x:** `n8n import:workflow` **desactiva** lo que importa y `--activeState=fromJson` solo
+  funciona en modo queue/multi-main; además cambia el `versionId`. En producción, reemplazar el contenido desde el
+  editor de n8n (mismo id y `webhookId`) y publicar.
+- **Runbook estándar de un workflow:** (1) descargar el export de producción y sacar su huella
+  (`python3 -I ~/node_fingerprints.py <archivo>`; detenerse si no coincide con la huella "antes" esperada);
+  (2) importar desde el editor, revisar webhook y credenciales, guardar y **Publish**; (3) **descargar de nuevo y
+  verificar con la huella "después" antes de dar el workflow por desplegado** — el editor puede dejar una versión
+  guardada sin publicar (pasó en v1.18.1, 2026-10-17: la primera importación no se publicó y solo la huella lo
+  detectó); (4) solo entonces, pruebas. Rollback: reimportar el export del paso 1 y publicar.
+- **Una consulta parametrizada de n8n se prueba ejecutando el nodo con datos reales, no solo con SQL preparado.**
+  El nodo Postgres pasa un `queryReplacement` de tipo arreglo con sus tipos de JS y pg-promise arma la consulta del
+  lado del cliente (un número entra sin comillas); uno de tipo texto se parte por comas y descarta los vacíos. Un
+  `PREPARE`/`SELECT` suelto no ve nada de eso: v1.17.2 pasó esa validación y falló en producción con un
+  `execution.id` numérico (2026-10-17, corregido en v1.18.2). Probar en LOCAL con valores numéricos, vacíos,
+  nulos y con comas, y forzar texto en las dos capas (`$n::text` y `String(...)`) cuando el tipo no sea seguro.
+
 ## Deuda técnica activa a nivel suite
 
 - ⚠️ Rotación de `INTERNAL_SECRET` tras el incidente de exposición del 2026-08-13 — no
@@ -158,27 +180,21 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
   - En `v5`, `Security Validation` va directo a `Build Query`, sin `If Error`: un rechazo de
     permisos solo "funciona" porque la ejecución termina en error. Los rechazos que lanza
     `Build Query` responden **HTTP 200 con cuerpo vacío**, no `error:true`.
-- ⚠️ **Errores de producción a un tema público de ntfy.sh — MITIGADO en producción el 2026-10-17,
-  corrección completa pendiente (v1.18.2).** v1.17.2 (`fix/error-handler-alerts`, #809) se desplegó el
-  2026-10-17 y **se revirtió el mismo día**: al probarla, el `INSERT` falló con `invalid input syntax for type
-  integer: ""` (un `execution.id` numérico entraba sin comillas) y, como el nodo SQL corría antes que la alerta,
-  tampoco salía la alerta. Producción quedó con la versión de la mañana (URL literal, alerta sin texto del error,
-  SQL `1f72bc10…`); `NTFY_ALERT_URL` ya está en el `.env`. v1.18.2 corrige ambos puntos. El Global Error Handler
-  (`9SrVXdATmlrZemJT`, `errorWorkflow` de `v5` y `v6`, entre otros; **activo** en producción) publicaba
-  en el tema público `https://ntfy.sh/alertas_n8n_hosting3m` (ya retirado) el workflow, el nodo, el
-  **texto crudo del error** y el link de la ejecución; cualquiera que conociera el tema podía
-  suscribirse, y un error de Postgres puede traer valores (p. ej. `Key (email)=(…) already exists`).
-  - **Mitigación aplicada a mano en producción (2026-10-17, dueño del proyecto):** tema nuevo, aleatorio
-    y no adivinable (el nombre no se comparte ni se versiona), y la alerta ya no incluye
-    `error_message`: solo workflow, nodo y link. Sigue siendo un tema sin token: quien conozca el
-    nombre puede leerlo.
-  - **Pendiente (v1.18.2):** desplegar el handler con la URL fuera del JSON (`$env.NTFY_ALERT_URL`) y el
-    `INSERT INTO n8n_error_logs` parametrizado (en producción todavía interpola y escapa solo comillas simples;
-    además truena si falta `failed_node`/`error_message`).
+- ✅ **Errores de producción a un tema público de ntfy.sh — CERRADO (v1.18.2 en producción, 2026-10-17
+  CDMX).** El Global Error Handler (`9SrVXdATmlrZemJT`, `errorWorkflow` de `v5` y `v6`, entre otros) publicaba en
+  el tema público `https://ntfy.sh/alertas_n8n_hosting3m` (ya retirado) el workflow, el nodo, el **texto crudo del
+  error** y el link de la ejecución.
+  - **Historia:** mitigación a mano (tema aleatorio no versionado, alerta sin `error_message`) → v1.17.2 (#809:
+    URL desde `$env.NTFY_ALERT_URL`, `INSERT` parametrizado), desplegada y **revertida** el mismo día porque un
+    `execution.id` numérico rompía el `INSERT` y la alerta no salía → v1.18.2 (#824: parámetros como texto en
+    las dos capas y alerta antes que el registro).
+  - **Verificado en producción (v1.18.2):** handler activo, nodos Alerta y SQL idénticos a `main` (SQL
+    `1dac24ed…`), Alerta arriba del SQL. "Execute workflow" con los datos de ejemplo del Error Trigger
+    (`execution_id` numérico): alerta recibida solo con Falló / Nodo / Link y fila 1773 en `n8n_error_logs`
+    (`Example Workflow`, `'231'`, `Node With Error`, 2026-10-18 03:24:33 UTC; fila de prueba).
   - **Riesgo residual aceptado (decisión del dueño, 2026-10-17):** el tema no tiene token; quien conozca el
     nombre puede leerlo. Propuesta no implementada: tema protegido con token de acceso (credencial Bearer de n8n).
-  - Nota: en n8n 2.x un workflow de errores **inactivo no se ejecuta** ("is not active and cannot be
-    executed"); en LOCAL está inactivo.
+  - Nota: en n8n 2.x un workflow de errores **inactivo no se ejecuta** ("is not active and cannot be executed").
 - ⚠️ **`dashboard` y `hotel-website` apuntan a producción incluso en dev** (`environment.ts` con
   `https://n8n.hosting3m.com/...crud/v5`, `v3/genera-token`): correr el hotel en local lee y
   escribe la base de producción. `pista-hielo` igual (legacy).
@@ -198,9 +214,6 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
   `pista-hielo`; los logins de `agro-erp` y del hotel reciben la lista solo de `jwt-service` vía
   `v3`/`v4/GeneraToken`, verificado 2026-10-17). Propuesta (PR aparte): quitarla en `v6` para que
   `companys getall` exija token y membresía como cualquier modelo.
-- **Despliegue de workflows en n8n 2.x:** `n8n import:workflow` **desactiva** lo que importa y
-  `--activeState=fromJson` solo funciona en modo queue/multi-main; además cambia el `versionId`. En
-  producción, reemplazar el contenido desde el editor de n8n (mismo id y `webhookId`) y publicar.
 - `SECURITY.md` sigue con el placeholder genérico de GitHub — falta un proceso real de
   reporte de vulnerabilidades.
 - ⚠️ **`N8N_BLOCK_ENV_ACCESS_IN_NODE=false`:** cualquier workflow (y quien pueda editarlos) lee con
