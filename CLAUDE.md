@@ -157,6 +157,12 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
   verificar con la huella "después" antes de dar el workflow por desplegado** — el editor puede dejar una versión
   guardada sin publicar (pasó en v1.18.1, 2026-10-17: la primera importación no se publicó y solo la huella lo
   detectó); (4) solo entonces, pruebas. Rollback: reimportar el export del paso 1 y publicar.
+- **Una consulta parametrizada de n8n se prueba ejecutando el nodo con datos reales, no solo con SQL preparado.**
+  El nodo Postgres pasa un `queryReplacement` de tipo arreglo con sus tipos de JS y pg-promise arma la consulta del
+  lado del cliente (un número entra sin comillas); uno de tipo texto se parte por comas y descarta los vacíos. Un
+  `PREPARE`/`SELECT` suelto no ve nada de eso: v1.17.2 pasó esa validación y falló en producción con un
+  `execution.id` numérico (2026-10-17, corregido en v1.18.2). Probar en LOCAL con valores numéricos, vacíos,
+  nulos y con comas, y forzar texto en las dos capas (`$n::text` y `String(...)`) cuando el tipo no sea seguro.
 
 ## Deuda técnica activa a nivel suite
 
