@@ -204,7 +204,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT id FROM hotel_rooms WHERE id_company = $4::int AND type ILIKE $3::text || '%' AND id NOT IN (SELECT room_id FROM hotel_bookings WHERE id_company = $4::int AND status IN ('confirmed', 'checked_in') AND check_in::date < $2::date AND check_out::date > $1::date) AND status != 'maintenance' LIMIT 1;",
+        "query": "SELECT id FROM hotel_rooms WHERE id_company = $4::int AND type = $3::text AND id NOT IN (SELECT room_id FROM hotel_bookings WHERE id_company = $4::int AND status IN ('confirmed', 'checked_in') AND check_in::date < $2::date AND check_out::date > $1::date) AND status != 'maintenance' LIMIT 1;",
         "options": {
           "queryReplacement": "={{ [ $json.body.checkin, $json.body.checkout, $json.body.room_type, $('Site Config').item.json.id_company ].map(v => v === null || v === undefined ? null : (typeof v === 'object' ? JSON.stringify(v) : String(v))) }}"
         }
