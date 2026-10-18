@@ -85,7 +85,7 @@
       "typeVersion": 4.1,
       "position": [
         48,
-        160
+        -32
       ],
       "id": "f142fdff-0dbc-43b2-a3a8-6b5f674a44d2",
       "name": "Alerta (Webhook/HTTP)",
@@ -94,16 +94,16 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "INSERT INTO n8n_error_logs (workflow_name, execution_id, failed_node, error_message)\nVALUES (\n  LEFT(COALESCE(NULLIF($1, ''), '(desconocido)'), 255),\n  LEFT(COALESCE(NULLIF($2, ''), '(sin id)'), 100),\n  LEFT(NULLIF($3, ''), 255),\n  COALESCE(NULLIF($4, ''), '(sin mensaje)')\n);",
+        "query": "INSERT INTO n8n_error_logs (workflow_name, execution_id, failed_node, error_message)\nVALUES (\n  LEFT(COALESCE(NULLIF($1::text, ''), '(desconocido)'), 255),\n  LEFT(COALESCE(NULLIF($2::text, ''), '(sin id)'), 100),\n  LEFT(NULLIF($3::text, ''), 255),\n  COALESCE(NULLIF($4::text, ''), '(sin mensaje)')\n);",
         "options": {
-          "queryReplacement": "={{ [ $json.workflow_name ?? null, $json.execution_id ?? null, $json.failed_node ?? null, $json.error_message ?? null ] }}"
+          "queryReplacement": "={{ [ $json.workflow_name, $json.execution_id, $json.failed_node, $json.error_message ].map(v => v === null || v === undefined ? null : (typeof v === 'object' ? JSON.stringify(v) : String(v))) }}"
         }
       },
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
         48,
-        -32
+        160
       ],
       "id": "6c97ed4e-b484-44da-bd62-0781bddb2cb2",
       "name": "Execute a SQL query",

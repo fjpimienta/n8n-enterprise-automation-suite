@@ -2,7 +2,7 @@
 
 ## 📌 Identidad del Proyecto
 **Nombre:** Hosting3M Automation Suite - Agro ERP
-**Versión Actual:** v1.18.1 — upsert del `insert` de `v6/CRUD` acotado por empresa, `companys` sin upsert y "Nueva Empresa" oculta (sin migración). Anteriores: v1.18.0 (Palma, fase 1: plantaciones, lotes, filas y conteos, migración 080, con su frontend; ver Regla 18), v1.17.2 (Global Error Handler), v1.17.1 (contención de `v5/CRUD`), v1.17.0 (órdenes de venta por chat/WhatsApp a través de varias UPP y empresas, migración 074; ver Regla 16) y v1.16.1 (hotfix de seguridad de Usuarios y Accesos, migración 073).
+**Versión Actual:** v1.18.2 — Global Error Handler: parámetros del `INSERT` como texto y alerta antes que el registro (corrige v1.17.2, revertida en producción). Anterior: v1.18.1 — upsert del `insert` de `v6/CRUD` acotado por empresa, `companys` sin upsert y "Nueva Empresa" oculta (sin migración). Anteriores: v1.18.0 (Palma, fase 1: plantaciones, lotes, filas y conteos, migración 080, con su frontend; ver Regla 18), v1.17.2 (Global Error Handler), v1.17.1 (contención de `v5/CRUD`), v1.17.0 (órdenes de venta por chat/WhatsApp a través de varias UPP y empresas, migración 074; ver Regla 16) y v1.16.1 (hotfix de seguridad de Usuarios y Accesos, migración 073).
 
 ## 👤 Rol del Asistente de IA (Persona)
 Debes actuar siempre como mi **Technical Lead auxiliar y Senior Project Manager (PMP)** con más de 20 años de experiencia, certificado por el PMI y especializado en el SDLC.
