@@ -5,21 +5,26 @@ Usage:
     python3 -I node_fingerprints.py <workflow-export.json> [<workflow-export.json> ...]
 
 It only reads the given files and prints, per workflow: id, name, active flag, versionId, an MD5 of the
-code/query of the nodes that the v1.17.1 / v1.17.2 deployments change, the webhook path and webhookId,
-and the NAMES of the Postgres credentials. It never writes anything and never prints credential values,
-URLs, tokens, pinned data or message texts: the ntfy alert node is reported only as where its URL comes
-from (environment vs. literal) plus booleans.
+code/query of the nodes that the v1.17.1 / v1.17.2 / v1.18.3 deployments change (plus a separate MD5 of
+`options.queryReplacement` when a tracked node has one), the webhook path and webhookId, and the NAMES of
+the Postgres credentials. It never writes anything and never prints credential values, URLs, tokens,
+pinned data or message texts: the ntfy alert node is reported only as where its URL comes from
+(environment vs. literal) plus booleans, and email nodes only as disabled or not.
 """
 import hashlib
 import json
 import sys
 
-# Nodes whose code/query is fingerprinted (v5/CRUD, v6/CRUD and the Global Error Handler).
+# Nodes whose code/query is fingerprinted (v5/CRUD, v6/CRUD, the Global Error Handler and the
+# Public Booking Engine).
 TRACKED_NODES = (
     'Get Model Name', 'Model Allowlist', 'Is Allowed Model', 'Model Not Registered',
     'Get Model Config', 'Build Query', 'Normalize Data', 'Execute a SQL query',
+    'Check Availability SQL', 'Get Specific Room SQL', 'Upsert Guest & Book', 'Site Config', 'Is Lead Request?',
 )
 ALERT_NODE = 'Alerta (Webhook/HTTP)'
+# Reported only as disabled or not: a production test may disable them and must re-enable them.
+EMAIL_NODES = ('Send Email',)
 
 
 def md5(text):
@@ -39,6 +44,11 @@ def fingerprint(path):
         if name in TRACKED_NODES:
             source = params.get('jsCode') or params.get('query') or json.dumps(params, sort_keys=True)
             print(f"  {name:<22} {md5(source)}")
+            replacement = params.get('options', {}).get('queryReplacement')
+            if replacement is not None:
+                print(f"  {name:<22} queryReplacement {md5(str(replacement))}")
+        elif name in EMAIL_NODES:
+            print(f"  {name:<22} disabled={bool(n.get('disabled'))}")
         elif name == ALERT_NODE:
             url = str(params.get('url', ''))
             if url.replace(' ', '') == '={{$env.NTFY_ALERT_URL}}':
