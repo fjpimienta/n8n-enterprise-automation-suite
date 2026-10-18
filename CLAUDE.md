@@ -142,6 +142,22 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
     `dashboard` del hotel, que usa `v5/CRUD` (sin estos guardias). Desde v1.17.1 `users` está
     bloqueado en `v5` y la pantalla de usuarios del hotel queda sin servicio hasta migrarlo a `v6`.
 
+## 🚀 Despliegue (aplica a toda la suite)
+
+- **`main` despliega solo los frontends:** Plesk publica desde `main` (agro-erp y también los sitios del hotel).
+  Un PR que dependa de base de datos o de n8n **no llega a `main` hasta tener listo su runbook**: orden de
+  despliegue, huellas antes/después, pruebas en producción con empresas de pruebas y rollback. Si el frontend no
+  depende del cambio, el runbook lo dice explícitamente (p. ej. v1.18.1).
+- **Workflows en n8n 2.x:** `n8n import:workflow` **desactiva** lo que importa y `--activeState=fromJson` solo
+  funciona en modo queue/multi-main; además cambia el `versionId`. En producción, reemplazar el contenido desde el
+  editor de n8n (mismo id y `webhookId`) y publicar.
+- **Runbook estándar de un workflow:** (1) descargar el export de producción y sacar su huella
+  (`python3 -I ~/node_fingerprints.py <archivo>`; detenerse si no coincide con la huella "antes" esperada);
+  (2) importar desde el editor, revisar webhook y credenciales, guardar y **Publish**; (3) **descargar de nuevo y
+  verificar con la huella "después" antes de dar el workflow por desplegado** — el editor puede dejar una versión
+  guardada sin publicar (pasó en v1.18.1, 2026-10-17: la primera importación no se publicó y solo la huella lo
+  detectó); (4) solo entonces, pruebas. Rollback: reimportar el export del paso 1 y publicar.
+
 ## Deuda técnica activa a nivel suite
 
 - ⚠️ Rotación de `INTERNAL_SECRET` tras el incidente de exposición del 2026-08-13 — no
@@ -198,9 +214,6 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
   `pista-hielo`; los logins de `agro-erp` y del hotel reciben la lista solo de `jwt-service` vía
   `v3`/`v4/GeneraToken`, verificado 2026-10-17). Propuesta (PR aparte): quitarla en `v6` para que
   `companys getall` exija token y membresía como cualquier modelo.
-- **Despliegue de workflows en n8n 2.x:** `n8n import:workflow` **desactiva** lo que importa y
-  `--activeState=fromJson` solo funciona en modo queue/multi-main; además cambia el `versionId`. En
-  producción, reemplazar el contenido desde el editor de n8n (mismo id y `webhookId`) y publicar.
 - `SECURITY.md` sigue con el placeholder genérico de GitHub — falta un proceso real de
   reporte de vulnerabilidades.
 - ⚠️ **`N8N_BLOCK_ENV_ACCESS_IN_NODE=false`:** cualquier workflow (y quien pueda editarlos) lee con
