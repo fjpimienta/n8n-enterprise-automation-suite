@@ -22,10 +22,68 @@
     },
     {
       "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7609966a-34d7-5e73-b8f0-dfd8dc9c1ec9",
+              "name": "id_company",
+              "value": 1,
+              "type": "number"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        256
+      ],
+      "id": "e464cc5d-9c50-5bb4-9e85-60543068d54e",
+      "name": "Site Config"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2f8e8043-fe9f-5893-b278-03d09607438a",
+              "leftValue": "={{ $('Webhook Capture Lead').isExecuted }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        256
+      ],
+      "id": "ee01ee72-0546-5c7b-8308-f2e2a094f3f0",
+      "name": "Is Lead Request?"
+    },
+    {
+      "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT type, COUNT(id) as available_count, MAX(price_night) as price FROM hotel_rooms WHERE id NOT IN (SELECT room_id FROM hotel_bookings WHERE status IN ('confirmed', 'checked_in') AND check_in::date < $2::date AND check_out::date > $1::date) AND status != 'maintenance' GROUP BY type;",
+        "query": "SELECT type, COUNT(id) AS available_count, MAX(price_night) AS price FROM hotel_rooms WHERE id_company = $3::int AND id NOT IN (SELECT room_id FROM hotel_bookings WHERE id_company = $3::int AND status IN ('confirmed', 'checked_in') AND check_in::date < $2::date AND check_out::date > $1::date) AND status != 'maintenance' GROUP BY type;",
         "options": {
-          "queryReplacement": "={{ $json.body.checkin }}, {{ $json.body.checkout }}"
+          "queryReplacement": "={{ [ $json.body.checkin, $json.body.checkout, $('Site Config').item.json.id_company ].map(v => v === null || v === undefined ? null : (typeof v === 'object' ? JSON.stringify(v) : String(v))) }}"
         }
       },
       "id": "a3200e73-3394-421e-aeb2-138030591b99",
@@ -33,7 +91,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        224,
+        672,
         0
       ],
       "credentials": {
@@ -56,7 +114,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        448,
+        896,
         0
       ]
     },
@@ -88,7 +146,7 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        224,
+        672,
         512
       ]
     },
@@ -122,7 +180,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        448,
+        896,
         512
       ]
     },
@@ -139,16 +197,16 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        672,
+        1120,
         608
       ]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT id FROM hotel_rooms WHERE type ILIKE $3 || '%' AND id NOT IN (SELECT room_id FROM hotel_bookings WHERE status IN ('confirmed', 'checked_in') AND check_in::date < $2::date AND check_out::date > $1::date) AND status != 'maintenance' LIMIT 1;",
+        "query": "SELECT id FROM hotel_rooms WHERE id_company = $4::int AND type ILIKE $3::text || '%' AND id NOT IN (SELECT room_id FROM hotel_bookings WHERE id_company = $4::int AND status IN ('confirmed', 'checked_in') AND check_in::date < $2::date AND check_out::date > $1::date) AND status != 'maintenance' LIMIT 1;",
         "options": {
-          "queryReplacement": "={{ $json.body.checkin }}, {{ $json.body.checkout }}, {{ $json.body.room_type }}"
+          "queryReplacement": "={{ [ $json.body.checkin, $json.body.checkout, $json.body.room_type, $('Site Config').item.json.id_company ].map(v => v === null || v === undefined ? null : (typeof v === 'object' ? JSON.stringify(v) : String(v))) }}"
         }
       },
       "id": "af30e026-4862-4931-a10e-a51458d89fab",
@@ -156,7 +214,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        672,
+        1120,
         416
       ],
       "alwaysOutputData": true,
@@ -197,7 +255,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        896,
+        1344,
         416
       ]
     },
@@ -214,16 +272,16 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        1120,
+        1568,
         512
       ]
     },
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "WITH new_guest AS ( INSERT INTO hotel_guests (full_name, phone, email, id_company) VALUES ($1, $2, $3, 1) ON CONFLICT (email) DO UPDATE SET phone = EXCLUDED.phone RETURNING id ) INSERT INTO hotel_bookings (room_id, guest_id, check_in, check_out, status, payment_status, id_company, notes) VALUES ($4, (SELECT id FROM new_guest), $5, $6, 'pending', 'pending', 1, 'Web Lead: ' || $7) RETURNING *;",
+        "query": "WITH new_guest AS ( INSERT INTO hotel_guests (full_name, phone, email, id_company) VALUES ($1::text, NULLIF($2::text, ''), $3::text, $8::int) ON CONFLICT (email) DO UPDATE SET phone = EXCLUDED.phone RETURNING id ) INSERT INTO hotel_bookings (room_id, guest_id, check_in, check_out, status, payment_status, id_company, notes) VALUES ($4::int, (SELECT id FROM new_guest), $5::date, $6::date, 'pending', 'pending', $8::int, 'Web Lead: ' || COALESCE($7::text, '')) RETURNING *;",
         "options": {
-          "queryReplacement": "={{ $('Webhook Capture Lead').item.json.body.name }}, {{ $('Webhook Capture Lead').item.json.body.phone }}, {{ $('Webhook Capture Lead').item.json.body.email }}, {{ $json.id }}, {{ $('Webhook Capture Lead').item.json.body.checkin }}, {{ $('Webhook Capture Lead').item.json.body.checkout }}, {{ $('Webhook Capture Lead').item.json.body.guests }} huéspedes"
+          "queryReplacement": "={{ [ $('Webhook Capture Lead').item.json.body.name, $('Webhook Capture Lead').item.json.body.phone, $('Webhook Capture Lead').item.json.body.email, $json.id, $('Webhook Capture Lead').item.json.body.checkin, $('Webhook Capture Lead').item.json.body.checkout, $('Webhook Capture Lead').item.json.body.guests, $('Site Config').item.json.id_company ].map(v => v === null || v === undefined ? null : (typeof v === 'object' ? JSON.stringify(v) : String(v))) }}"
         }
       },
       "id": "7a207575-5a5b-4efd-840c-9d58a1f2de62",
@@ -231,7 +289,7 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        1120,
+        1568,
         320
       ],
       "credentials": {
@@ -254,7 +312,7 @@
       "type": "n8n-nodes-base.emailSend",
       "typeVersion": 2.1,
       "position": [
-        1344,
+        1792,
         320
       ],
       "webhookId": "9ac3f95c-7ebf-4d2a-9765-e78b533ae3f7",
@@ -295,7 +353,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.3,
       "position": [
-        1568,
+        2016,
         320
       ]
     },
@@ -312,7 +370,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        1792,
+        2240,
         224
       ]
     },
@@ -329,7 +387,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        1792,
+        2240,
         416
       ]
     }
@@ -340,7 +398,7 @@
       "main": [
         [
           {
-            "node": "Check Availability SQL",
+            "node": "Site Config",
             "type": "main",
             "index": 0
           }
@@ -362,7 +420,7 @@
       "main": [
         [
           {
-            "node": "Validate Email Format",
+            "node": "Site Config",
             "type": "main",
             "index": 0
           }
@@ -461,6 +519,35 @@
         [
           {
             "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Site Config": {
+      "main": [
+        [
+          {
+            "node": "Is Lead Request?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Lead Request?": {
+      "main": [
+        [
+          {
+            "node": "Validate Email Format",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Check Availability SQL",
             "type": "main",
             "index": 0
           }
