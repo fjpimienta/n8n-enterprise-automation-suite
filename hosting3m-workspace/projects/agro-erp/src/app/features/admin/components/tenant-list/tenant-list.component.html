@@ -10,6 +10,7 @@
                 <div class="text-muted small mt-1">Empresas (ranchos) a las que tienes acceso. Cada una agrupa sus UPP oficiales SENASICA y sus lotes.</div>
             </div>
         </div>
+        @if (canCreateCompany) {
         <div>
             <button class="btn btn-primary shadow-sm" (click)="openModal()">
                 <i class="ti ti-square-rounded-plus me-2"></i>
@@ -17,6 +18,7 @@
                 <span class="d-inline d-sm-none">Nueva</span>
             </button>
         </div>
+        }
     </div>
 
     <div class="row g-2 mb-3 align-items-center">
@@ -127,10 +129,14 @@
             <div class="empty-state">
                 <div class="empty-img"><i class="ti ti-building-off fs-1 text-muted"></i></div>
                 <p class="empty-title fs-3">No tienes empresas registradas</p>
+                @if (canCreateCompany) {
                 <p class="empty-subtitle text-muted">Da de alta tu primer rancho para comenzar a operar.</p>
                 <button class="btn btn-primary mt-3" (click)="openModal()">
                     <i class="ti ti-square-rounded-plus me-2"></i> Nueva Empresa
                 </button>
+                } @else {
+                <p class="empty-subtitle text-muted">Pide al administrador de la plataforma que dé de alta tu empresa.</p>
+                }
             </div>
         </div>
         }
