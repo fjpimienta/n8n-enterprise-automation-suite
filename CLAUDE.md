@@ -159,7 +159,11 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
     permisos solo "funciona" porque la ejecución termina en error. Los rechazos que lanza
     `Build Query` responden **HTTP 200 con cuerpo vacío**, no `error:true`.
 - ⚠️ **Errores de producción a un tema público de ntfy.sh — MITIGADO en producción el 2026-10-17,
-  corrección completa pendiente (PR `fix/error-handler-alerts`).** El Global Error Handler
+  corrección completa pendiente (v1.18.2).** v1.17.2 (`fix/error-handler-alerts`, #809) se desplegó el
+  2026-10-17 y **se revirtió el mismo día**: al probarla, el `INSERT` falló con `invalid input syntax for type
+  integer: ""` (un `execution.id` numérico entraba sin comillas) y, como el nodo SQL corría antes que la alerta,
+  tampoco salía la alerta. Producción quedó con la versión de la mañana (URL literal, alerta sin texto del error,
+  SQL `1f72bc10…`); `NTFY_ALERT_URL` ya está en el `.env`. v1.18.2 corrige ambos puntos. El Global Error Handler
   (`9SrVXdATmlrZemJT`, `errorWorkflow` de `v5` y `v6`, entre otros; **activo** en producción) publicaba
   en el tema público `https://ntfy.sh/alertas_n8n_hosting3m` (ya retirado) el workflow, el nodo, el
   **texto crudo del error** y el link de la ejecución; cualquiera que conociera el tema podía
@@ -168,10 +172,11 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
     y no adivinable (el nombre no se comparte ni se versiona), y la alerta ya no incluye
     `error_message`: solo workflow, nodo y link. Sigue siendo un tema sin token: quien conozca el
     nombre puede leerlo.
-  - **Pendiente en `fix/error-handler-alerts`:** versionar el handler con la URL fuera del JSON
-    (`$env.NTFY_ALERT_URL`), parametrizar el `INSERT INTO n8n_error_logs` (hoy interpola y escapa
-    solo comillas simples; además truena si falta `failed_node`/`error_message`) y la propuesta de
-    tema protegido con token de acceso (credencial Bearer de n8n).
+  - **Pendiente (v1.18.2):** desplegar el handler con la URL fuera del JSON (`$env.NTFY_ALERT_URL`) y el
+    `INSERT INTO n8n_error_logs` parametrizado (en producción todavía interpola y escapa solo comillas simples;
+    además truena si falta `failed_node`/`error_message`).
+  - **Riesgo residual aceptado (decisión del dueño, 2026-10-17):** el tema no tiene token; quien conozca el
+    nombre puede leerlo. Propuesta no implementada: tema protegido con token de acceso (credencial Bearer de n8n).
   - Nota: en n8n 2.x un workflow de errores **inactivo no se ejecuta** ("is not active and cannot be
     executed"); en LOCAL está inactivo.
 - ⚠️ **`dashboard` y `hotel-website` apuntan a producción incluso en dev** (`environment.ts` con

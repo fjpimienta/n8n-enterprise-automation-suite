@@ -5,6 +5,39 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🔒 Global Error Handler: parámetros como texto y alerta primero — v1.18.2
+
+*Workflow de n8n únicamente (sin migración ni frontend). Corrige v1.17.2, que se desplegó y se revirtió en
+producción el 2026-10-17. Huella del nodo SQL: `1f72bc10…` (producción hoy) → `1dac24ed…`.*
+
+**Origen:** al probar v1.17.2 en producción con "Execute step", el nodo `Execute a SQL query` falló con
+`invalid input syntax for type integer: ""`. Con un `queryReplacement` de tipo arreglo, n8n pasa cada valor con
+su tipo de JS y pg-promise arma la consulta del lado del cliente: un número entra sin comillas, así que el
+`execution.id: 231` de los datos de ejemplo del Error Trigger dejó `NULLIF(231, '')`. Además, con
+`executionOrder: v1` la rama SQL (más arriba en el lienzo) corría antes que la alerta, y un `INSERT` fallido
+detenía la ejecución **sin enviar la alerta**. La validación de v1.17.2 había sido un `SELECT` preparado, nunca
+una ejecución real del nodo.
+
+**Cambios:**
+* La consulta usa `$1::text … $4::text` y el `queryReplacement` convierte cada valor con `String(...)` (objetos
+  a JSON, `null`/`undefined` a `null`).
+* La alerta queda arriba del nodo SQL en el lienzo: sale primero, y con `continueRegularOutput` nunca bloquea el
+  registro.
+* El resto de v1.17.2 se conserva: URL desde `$env.NTFY_ALERT_URL`, alerta sin el texto del error, `INSERT`
+  parametrizado y recortado al tamaño de cada columna.
+
+**Pruebas (n8n LOCAL, ejecutando los nodos):**
+* Con los nodos de `main` (v1.17.2), el caso numérico reproduce el error y la alerta no sale.
+* Con v1.18.2, un arnés con los mismos nodos del handler (Manual Trigger + payload del Error Trigger) cubrió
+  5 casos: `execution.id` numérico (los datos de ejemplo exactos), vacíos, nulos, campos ausentes, y comillas
+  con `$1` y `DROP TABLE` como texto y longitudes de más de 255. Cada caso escribió su fila (vacíos y nulos
+  → `(desconocido)`/`(sin id)`/`(sin mensaje)`; recorte a 255/100/255) y envió su alerta a un tema de prueba.
+* El handler real, activo, como `errorWorkflow` de un webhook que falla: la fila llegó con `execution_id`
+  en texto y la alerta llegó.
+
+**Hallazgo pendiente, sin cambiar:** ntfy recibe el cuerpo JSON completo como texto del mensaje y no aplica
+la prioridad `high` (el JSON se publica en la URL del tema, no en la raíz).
+
 ### 🔒 Upsert del `insert` acotado por empresa (`v6/CRUD`) y "Nueva Empresa" oculta — v1.18.1
 
 *Workflow `v6/CRUD` y frontend; sin migración. Probado en LOCAL el 2026-10-17. Huellas: Build Query
