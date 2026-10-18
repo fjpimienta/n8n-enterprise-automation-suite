@@ -198,6 +198,20 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
 - ⚠️ **`dashboard` y `hotel-website` apuntan a producción incluso en dev** (`environment.ts` con
   `https://n8n.hosting3m.com/...crud/v5`, `v3/genera-token`): correr el hotel en local lee y
   escribe la base de producción. `pista-hielo` igual (legacy).
+- ⚠️ **El hotel vive en la empresa 1 ("Hosting3m"), no en la 2 ("Hotel San Jose").** Todos sus datos y
+  usuarios están en `id_company = 1`, y el Public Booking Engine lo toma de `Site Config` (v1.18.3). Mover el
+  hotel a la empresa 2 es una migración aparte (datos, usuarios, `Site Config`), por decidir.
+- ⚠️ **Public Booking Engine (`/public/lead`, sin autenticación):**
+  - Un tercero puede crear reservas `pending` a nombre de un correo ajeno. Desde v1.18.3 el huésped existente
+    ya no se modifica, pero la reserva queda ligada a él; y como `hotel_guests.email` es UNIQUE **global**, ese
+    huésped puede pertenecer a otra empresa.
+  - 🔴 **Prioritaria — `hotel-website` esconde reservas perdidas.** Trata cualquier 2xx como éxito, y una
+    ejecución fallida de n8n responde HTTP 200 **vacío**: si el workflow falla, el visitante ve "reserva
+    recibida" y no se guarda nada (pasaba con nombres con coma o teléfono vacío hasta v1.18.3). Propuesta (PR
+    aparte, solo frontend): en `submitForm()` dar éxito solo si `res?.status === 'success' && res?.booking_id`
+    y, si no, `formStatus = 'error'` (el mensaje de error ya existe); en disponibilidad, un `!res` debe avisar
+    error en vez de solo apagar el indicador. Opcional del lado de n8n: salida de error en los nodos SQL hacia
+    un `Respond` 500.
 - ⚠️ **`pista-hielo` legacy con datos en la base:** siguen registrados 8 modelos (`ph_clients`,
   `ph_instructores`, `ph_inventory`, `inventory`, `transactions`, `services`, `payments`,
   `closures`; ya bloqueados en `v5`, todavía alcanzables por `v6` con membresía) y hay datos

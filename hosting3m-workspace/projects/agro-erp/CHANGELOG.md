@@ -5,6 +5,45 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🔒 Public Booking Engine (B2C): parámetros como arreglo, filtro por empresa y huésped existente intacto — v1.18.3
+
+*Workflow de n8n únicamente (`v4/Public Booking Engine (B2C)`, `FImcPayB8gqFlxwq`); sin migración ni frontend.
+Probado en LOCAL el 2026-10-17. Pendiente de desplegar: runbook y huellas en
+`workflows/08-public-booking-engine/v4/README.md`.*
+
+**Origen:** los nodos `Check Availability SQL`, `Get Specific Room SQL` y `Upsert Guest & Book` usaban
+`queryReplacement` como texto; n8n lo parte por comas y descarta los vacíos. Es un endpoint público que escribe
+datos personales.
+
+**Repo sincronizado con producción:** el export del repo tenía otro id de workflow
+(`zTVZqQbvOS-WsyXdOQdET`) y otra credencial SMTP. Los nodos, consultas y conexiones eran iguales al export vivo,
+que ahora reemplaza al del repo antes del cambio.
+
+**Cambios:**
+* `queryReplacement` como arreglo, cada valor con `String(...)` (`null`/`undefined` → `null`) y casts explícitos
+  en las tres consultas (`$n::text`, `::date`, `::int`). Teléfono vacío → `NULL`.
+* `id_company` sale de un solo nodo (`Site Config`, valor `1`) y las consultas de `hotel_rooms` y
+  `hotel_bookings` filtran por él. Antes no filtraban: en LOCAL, una petición con `room_type` recorrido reservó
+  una habitación de otra empresa.
+* `ON CONFLICT (email)` ya no sobrescribe el teléfono (ni nada) del huésped existente; solo recupera su id.
+* `room_type` por igualdad exacta (`type = $3::text`) en vez de `ILIKE $3 || '%'`. `hotel-website` devuelve el
+  `type` exacto de la respuesta de disponibilidad.
+
+**Pruebas (n8n LOCAL, arneses con rutas propias, empresa 3, `Send Email` desactivado y sin `errorWorkflow`):**
+* Versión anterior: nombre con coma → `invalid input syntax for type integer: "<correo>"`; teléfono vacío o
+  ausente → `there is no parameter $7`. **No se escribe nada y el sitio muestra éxito** (la ejecución fallida
+  responde HTTP 200 vacío). Un `room_type` con coma reservó otro tipo; un correo existente sobrescribió el
+  teléfono.
+* v1.18.3, dos corridas completas: nombre con coma, teléfono vacío y ausente (`NULL`), comillas y `$1`/`DROP
+  TABLE` como texto, acentos, 28→29 de febrero, salida y entrada el mismo día, traslape con reserva
+  `confirmed` (409), habitación inexistente (409), tipo de otra empresa (409), `room_type` con coma (409),
+  correo vacío (400), correo existente (teléfono intacto, mismo huésped). Todas las filas con empresa 3 y
+  habitación de la empresa 3. Fecha vacía en disponibilidad → error de `date` (antes, `there is no parameter $2`).
+* `room_type`: con `ILIKE`, `%`, `QA%`, `QA_Doble`, `qa sencilla` y el prefijo `QA` reservaron; por igualdad
+  exacta dan 409 y los tipos exactos reservan. Tercera corrida completa de la batería sin cambios en el resultado.
+* Consultas para producción (README) validadas en LOCAL: conteos de campos recorridos (0 en los datos
+  históricos) y ejecuciones fallidas con su nodo, sin texto del error.
+
 ### 🔒 Global Error Handler: parámetros como texto y alerta primero — v1.18.2
 
 *Workflow de n8n únicamente (sin migración ni frontend). Corrige v1.17.2, que se desplegó y se revirtió en
