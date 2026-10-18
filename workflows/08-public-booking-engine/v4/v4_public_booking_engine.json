@@ -279,7 +279,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "WITH new_guest AS ( INSERT INTO hotel_guests (full_name, phone, email, id_company) VALUES ($1::text, NULLIF($2::text, ''), $3::text, $8::int) ON CONFLICT (email) DO UPDATE SET phone = EXCLUDED.phone RETURNING id ) INSERT INTO hotel_bookings (room_id, guest_id, check_in, check_out, status, payment_status, id_company, notes) VALUES ($4::int, (SELECT id FROM new_guest), $5::date, $6::date, 'pending', 'pending', $8::int, 'Web Lead: ' || COALESCE($7::text, '')) RETURNING *;",
+        "query": "WITH new_guest AS ( INSERT INTO hotel_guests (full_name, phone, email, id_company) VALUES ($1::text, NULLIF($2::text, ''), $3::text, $8::int) ON CONFLICT (email) DO UPDATE SET email = hotel_guests.email RETURNING id ) INSERT INTO hotel_bookings (room_id, guest_id, check_in, check_out, status, payment_status, id_company, notes) VALUES ($4::int, (SELECT id FROM new_guest), $5::date, $6::date, 'pending', 'pending', $8::int, 'Web Lead: ' || COALESCE($7::text, '')) RETURNING *;",
         "options": {
           "queryReplacement": "={{ [ $('Webhook Capture Lead').item.json.body.name, $('Webhook Capture Lead').item.json.body.phone, $('Webhook Capture Lead').item.json.body.email, $json.id, $('Webhook Capture Lead').item.json.body.checkin, $('Webhook Capture Lead').item.json.body.checkout, $('Webhook Capture Lead').item.json.body.guests, $('Site Config').item.json.id_company ].map(v => v === null || v === undefined ? null : (typeof v === 'object' ? JSON.stringify(v) : String(v))) }}"
         }
