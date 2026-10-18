@@ -2,7 +2,7 @@
 
 ## 📌 Identidad del Proyecto
 **Nombre:** Hosting3M Automation Suite - Agro ERP
-**Versión Actual:** v1.17.0 — órdenes de venta por chat/WhatsApp a través de varias UPP y empresas (migración 074), venta por lote, aprobación por guía/orden y un correo por orden y empresa. Ver Regla 16. (v1.16.1: hotfix de seguridad de Usuarios y Accesos, migración 073.)
+**Versión Actual:** v1.18.0 — Palma, fase 1: plantaciones, lotes, filas y conteos (migración 080) con su frontend; ver Regla 18. Anteriores: v1.17.2 (Global Error Handler), v1.17.1 (contención de `v5/CRUD`), v1.17.0 (órdenes de venta por chat/WhatsApp a través de varias UPP y empresas, migración 074; ver Regla 16) y v1.16.1 (hotfix de seguridad de Usuarios y Accesos, migración 073).
 
 ## 👤 Rol del Asistente de IA (Persona)
 Debes actuar siempre como mi **Technical Lead auxiliar y Senior Project Manager (PMP)** con más de 20 años de experiencia, certificado por el PMI y especializado en el SDLC.
@@ -163,7 +163,8 @@ Debes actuar siempre como mi **Technical Lead auxiliar y Senior Project Manager 
 * Gateway (`v6/CRUD`, Build Query): `users` sin `password` en ningún SELECT/RETURNING, `insert` con DO NOTHING, `delete` bloqueado; `user_companies` de solo lectura.
 * ⚠️ Estos guardias son **solo de `v6`**. El `dashboard` del hotel usa `v5/CRUD`, que no los tiene; desde v1.17.1 `users` está bloqueado en `v5` (ver `CLAUDE.md` raíz).
 
-### 18. Palma — estructura de plantación (migración 080, aplicada solo en LOCAL al 2026-10-17)
+### 18. Palma — estructura de plantación (migración 080, v1.18.0)
+* ⚠️ **Orden de despliegue obligatorio: base de datos (080) → n8n (`v6/CRUD` con los SP de palma en `spConfigByModel`) → frontend.** El 2026-10-17 el frontend salió primero y las pantallas de palma fallaron ("El servidor no confirmó la operación") hasta completar la base y el `v6`.
 * **Jerarquía:** Empresa (`companys`) → Plantación (`agri_plantations`, ≈ UPP del dominio palma) → Lote (`agri_lots`) → Fila (`agri_rows`, con `planting_positions` y `alive_plants`). Varias plantaciones por empresa. Plantas individuales, pagos de personal, inventario de activos/insumos, cosecha RFF, telemetría por lote y alcance por usuario son **fases posteriores**.
 * **El límite de seguridad es `id_company`.** La plantación activa es solo un filtro de alcance de la UI (`PlantationContextService` + selector junto a la empresa; última elección por empresa → predeterminada → otra activa). Cada hijo lleva el `id_company` del padre: triggers `BEFORE` con mensajes que nunca dicen de quién es el registro (`P0080`) **y** llaves foráneas compuestas `(padre, id_company)`. Padre e `id_company` son inmutables (`P0082`); nada se crea ni se reactiva bajo un padre inactivo (`P0081`); nada se borra físicamente.
 * **Plantación predeterminada:** una sola activa por empresa. La primera plantación activa queda como predeterminada sola; después solo cambia con `sp_agri_set_default_plantation` (ADMIN/OWNER). Desactivarla limpia la marca y el frontend elige otra activa.

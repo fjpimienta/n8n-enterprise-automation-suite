@@ -5,10 +5,15 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
-### 🌴 Palma, fase 1: plantaciones, lotes y filas (migración 080) — versión por asignar
+### 🌴 Palma, fase 1: plantaciones, lotes y filas (migración 080) — v1.18.0
 
 *Base de datos y `v6/CRUD` (Build Query: solo `spConfigByModel`). Aplicada y probada solo en LOCAL
-(2026-10-17). La versión se asigna al desplegar, después de v1.17.3. El frontend va en la misma rama (ver abajo).*
+(2026-10-17). El frontend va en la misma rama (ver abajo). El hotfix del upsert de `v6` pasa a v1.18.1.*
+
+⚠️ **Despliegue fuera de orden (2026-10-17):** el frontend se publicó en producción antes que la base de datos y
+el `v6`; mientras tanto las pantallas de palma mostraban "El servidor no confirmó la operación" (los modelos
+`agri_*` no existían) y ganadería siguió funcionando. El orden correcto es **base de datos → n8n → frontend**
+(misma lección que v1.17.0, Regla 16).
 
 **Frontend (`agro-erp`):**
 * Detección de dominio centralizada en `@shared/utils/business-domain.util` (layout, sidebar, selector de
