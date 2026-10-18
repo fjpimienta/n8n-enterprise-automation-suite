@@ -5,6 +5,40 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🔒 Upsert del `insert` acotado por empresa (`v6/CRUD`) y "Nueva Empresa" oculta — v1.18.1
+
+*Workflow `v6/CRUD` y frontend; sin migración. Probado en LOCAL el 2026-10-17. Huellas: Build Query
+`0aedcb74…` → `856b743c…`, Normalize Data `05153e7f…` → `b7741e5e…`; los demás nodos no cambian.*
+
+**Origen:** el `insert` de `v6` es un upsert (`ON CONFLICT (pk) DO UPDATE SET …`) y su `SET` incluía la
+columna de tenant. Un `insert` con el `id` de un registro de otra empresa (cualquier modelo con la PK en
+`allowed_fields`, columna de tenant e `INSERT`: 36 modelos, p. ej. `cattle_livestock`, `production_units`,
+`cattle_expenses`) lo sobrescribía **y lo pasaba a la empresa de quien llamaba**. Aparte, en `companys` el
+`id_company` es PK y columna de tenant a la vez: el Build Query le inyectaba el header y "Nueva Empresa"
+sobrescribía la empresa **activa** en vez de crear una.
+
+**Cambios:**
+* **Build Query (`insert`):** las columnas de tenant ya no entran al `DO UPDATE SET`; en modelos con columna
+  de tenant el `DO UPDATE` lleva `WHERE <tabla>.<tenant> = EXCLUDED.<tenant>` (siempre la empresa del header)
+  y exige el header. Un `id` de otra empresa ya no toca nada.
+* **Normalize Data:** ese `insert` acotado que no devuelve filas responde `error:true` ("No se guardó el
+  registro: el identificador no es válido para la empresa activa."). Los caminos `DO NOTHING` (`users`, de la
+  073, e inserts solo con PK) conservan su contrato (`error:false`, 0 filas).
+* **`companys`:** en `insert` el `id_company` nunca se inyecta ni se acepta, y la sentencia es un
+  `INSERT … RETURNING *` simple (el id sale de la secuencia).
+* **Frontend:** "Nueva Empresa" queda oculto en `/admin/tenants` (`canCreateCompany = false`, también en
+  `openModal()`) hasta que exista el administrador de la plataforma (Usuarios y Accesos fases 1–2, migraciones
+  075–079). Mientras tanto, las empresas nuevas se crean con un script tipo seed (dry run por default, como
+  `080_qa_palm_tenant_seed.sql`).
+
+**Pruebas (LOCAL):** harness fuera de línea con las configuraciones reales de `crud_models` (SQL antes/después);
+`EXPLAIN` sin `ANALYZE` en transacción de solo lectura para cada forma nueva; `curl` contra el `v6` LOCAL: `insert`
+con el `id` de un registro temporal de la empresa 6 desde la 3 → `error:true` y la fila sin cambios (md5);
+`insert`, upsert y `update` de la misma empresa funcionan; "Nueva Empresa" con `id_company: 3` en el body crea
+una empresa nueva y deja la 3 sin cambios (md5); regresiones de `agri_lots`, `production_unit_lots` y `users`
+(`DO NOTHING`) en verde. Los registros de prueba quedaron desactivados, no borrados. Build de producción sin
+errores; Vitest 176/176.
+
 ### 🌴 Palma, fase 1: plantaciones, lotes y filas (migración 080) — v1.18.0
 
 *Base de datos y `v6/CRUD` (Build Query: solo `spConfigByModel`). Aplicada y probada solo en LOCAL

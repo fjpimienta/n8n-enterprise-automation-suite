@@ -846,3 +846,13 @@ Only `spConfigByModel` changes: `sp_agri_set_default_plantation`, `sp_agri_bulk_
 `sp_agri_record_row_census`, all with `tenantPosition: 0` and `actorEmailField: 'actor_email'` (actor
 always from the verified JWT). Build Query fingerprint with this change on top of `main` (`3a6fa5c`):
 `0aedcb746972f5a767b2d4c73ef898f4`; it changes when the v1.18.1 upsert hotfix lands on top of it.
+
+### Tenant-scoped insert upsert (`v6/CRUD`, v1.18.1)
+* The `insert` upsert never writes tenant columns, and for models with a tenant column its `DO UPDATE`
+  carries `WHERE <table>.<tenant> = EXCLUDED.<tenant>` (EXCLUDED always holds the header tenant). An `id`
+  of another company's row matches nothing; Build Query flags the statement `require_row` and Normalize
+  Data answers `error:true` when it returns 0 rows. The `DO NOTHING` paths (`users`, PK-only inserts) keep
+  `error:false` with 0 rows.
+* `companys` insert never takes `id_company` (it is both PK and tenant column) and is a plain `INSERT`.
+* Fingerprints: Build Query `856b743c27c3dabb10d2a3b5fcb00b18`, Normalize Data
+  `b7741e5edb892a7a6898c731871331eb` (before: `0aedcb74…`, `05153e7f…`).

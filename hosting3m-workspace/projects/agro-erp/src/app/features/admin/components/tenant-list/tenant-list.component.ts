@@ -46,6 +46,14 @@ export class TenantListComponent {
    * always sends the active tenant as `x-tenant-id`, so any other card would show the
    * wrong tenant's data. Switching tenants stays an explicit action of the tenant selector.
    */
+  /**
+   * "Nueva Empresa" is hidden until the platform administrator exists (Usuarios y Accesos phases 1-2,
+   * migrations 075-079): today any company ADMIN could create companies, and the creator gets no membership
+   * (user_companies is read-only since 073). Until then new companies are created with a seed-style script
+   * (dry run by default, like 080_qa_palm_tenant_seed.sql).
+   */
+  readonly canCreateCompany = false;
+
   isActiveTenant(tenant: TenantContext): boolean {
     return Number(tenant.id_company) === Number(this.tenantService.activeTenantId());
   }
@@ -56,6 +64,7 @@ export class TenantListComponent {
   }
 
   async openModal(tenant: TenantContext | null = null) {
+    if (!tenant && !this.canCreateCompany) return;
     if (tenant) {
       this.isLoadingDetail.set(true);
       this.isReadOnlyMode.set(!this.canEdit(tenant));
