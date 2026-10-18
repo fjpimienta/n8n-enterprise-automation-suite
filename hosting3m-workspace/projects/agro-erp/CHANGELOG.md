@@ -10,6 +10,11 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 *Workflow de n8n únicamente (sin migración ni frontend). Corrige v1.17.2, que se desplegó y se revirtió en
 producción el 2026-10-17. Huella del nodo SQL: `1f72bc10…` (producción hoy) → `1dac24ed…`.*
 
+✅ **Desplegada en producción el 2026-10-17 (CDMX)**, importada desde el editor: handler activo, nodos Alerta y
+SQL idénticos a `main`, Alerta arriba del SQL. "Execute workflow" con los datos de ejemplo del Error Trigger
+(`execution_id` numérico): alerta recibida solo con Falló / Nodo / Link, y la fila de prueba 1773 en
+`n8n_error_logs` (`Example Workflow`, `'231'`).
+
 **Origen:** al probar v1.17.2 en producción con "Execute step", el nodo `Execute a SQL query` falló con
 `invalid input syntax for type integer: ""`. Con un `queryReplacement` de tipo arreglo, n8n pasa cada valor con
 su tipo de JS y pg-promise arma la consulta del lado del cliente: un número entra sin comillas, así que el
@@ -136,6 +141,9 @@ la empresa 7 es cliente real.
   y sin cambios en la base; sin membresía o sin header → 403. `v5` no atiende ningún `agri_*`.
 
 ### 🔒 Global Error Handler: URL de ntfy fuera del repo e `INSERT` de errores parametrizado — v1.17.2
+
+⚠️ **Desplegada y revertida en producción el 2026-10-17:** el `INSERT` fallaba con un `execution.id` numérico
+y la alerta no salía. Se corrigió en v1.18.2 (arriba).
 
 *Workflow de n8n + una variable en `.env`; sin migración ni frontend. Se despliega **después** de la
 contención de `v5/CRUD` (v1.17.1).*
