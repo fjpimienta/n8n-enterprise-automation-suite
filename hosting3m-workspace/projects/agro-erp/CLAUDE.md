@@ -192,6 +192,15 @@ Debes actuar siempre como mi **Technical Lead auxiliar y Senior Project Manager 
 ## Deuda técnica activa (ver `docs/DOCS_DELTA_v1.9.0_FINAL.md`, `docs/DATABASE_SCHEMA_DELTA_v1.10.0.md` y `docs/INVENTARIO_COMPLETITUD.md` para detalle completo)
 
 **Urgente:**
+- 🔴 **Las tools de escritura de ganadería aceptan empresas de palma** (2026-10-20). El chat (Web y WhatsApp) se
+  muestra en todos los dominios, `Resolver Empresa Chat`/`Get User Role` no miran el dominio y
+  `register_ranch_expense` solo pide membresía: con una empresa de palma activa, un gasto agrícola dictado al chat
+  termina en `cattle_expenses` (la empresa 7 es cliente real). **Primer paso de la Fase 2b:** validar en el SQL de
+  `register_ranch_expense` y de cada tool de escritura de ganadería que `fn_company_business_domain(tenant)` (081)
+  no sea `PALM`, con un mensaje claro. Mismo cambio aparte para ganadería: B5 del `systemMessage` impide tomar
+  categoría y descripción del mensaje (3 preguntas antes de registrar, prueba del 2026-10-20), `expense_date` se
+  guarda en UTC (después de las 18:00 de CDMX queda al día siguiente), la cantidad se pierde y `CUSTOMER` puede
+  registrar gastos.
 - ⚠️ **Rotación de `INTERNAL_SECRET` no confirmada** tras la exposición del 2026-08-13 (ver regla 8). Verificar en ambos servicios (`n8n-jwt-service`, `upload-file`) y ambos ambientes (espejo local, VPS) antes de tratar el subsistema de archivos como seguro.
 - ✅ **Fuga de aislamiento multi-tenant en `production_unit_lots` — RESUELTA Y VERIFICADA, 2026-09-21.** (Antes 🔴 urgente, confirmada con evidencia en vivo el 2026-09-20 18:47 UTC.) Causa raíz: el parche "Zero-Trust" del `Build Query` (`v6/crud`) solo inyectaba el tenant del header cuando la columna se llamaba literalmente `tenant_id` (`modelHasTenantId = allowed_fields.includes('tenant_id')`); `production_unit_lots` usa `id_company`, así que nunca se filtraba — mismo patrón de bug ya corregido antes para `users` (Regla 9, `HOTFIX ARQUITECTÓNICO 2`), pero sin ese hotfix aquí.
   **Fix aplicado:** se generalizó la inyección de tenant en `Build Query` para reconocer también `id_company` (`modelHasIdCompany`), cubriendo `getall`/`insert`/`update` vía el objeto `fields` compartido. Adicionalmente se detectó y cerró un **segundo hallazgo, previamente indocumentado**: `getone` y `delete` no pasaban por `fields` en absoluto y no aplicaban ningún filtro de tenant, sin importar el nombre de la columna — se agregó el mismo filtro explícito a ambos casos (excluyendo el modelo `users`, que resuelve tenant vía la tabla pivote `user_companies`, no por columna directa).
@@ -239,6 +248,11 @@ Debes actuar siempre como mi **Technical Lead auxiliar y Senior Project Manager 
 - ⚠️ **`sp_upsert_producer_pii(p_producer_id, p_curp, p_rfc)` no recibe tenant** (2026-10-17): cualquiera que conozca el `uuid` de un productor puede escribir su CURP/RFC, sea de la empresa que sea. Además el modelo `producer_pii` está roto (`table_name` = el SP con op `INSERT`, sin entrada en `spConfigByModel`), así que hoy no es alcanzable. Antes de usarlo (Regla 4), envolverlo en un `sp_*` con `p_tenant_id` que valide la empresa del productor y registrarlo en `spConfigByModel`.
 - ⚠️ **`curp`/`rfc` en texto plano en `companys.metadata`** (modal de `/admin/tenants`, `upp-form-modal`; en LOCAL solo la empresa 3, de pruebas). Opción elegida (PR aparte): quitar los campos del modal y del modelo `Company`, quitar esas llaves del `metadata` antes de guardar (si no, el `getone` las vuelve a mandar) y limpiar con respaldo previo (`metadata - 'curp' - 'rfc'`, UPDATE, no DELETE).
 - ⚠️ **Palma (080) — pendientes:** (1) Frontend del Paso 3 implementado y probado a mano en LOCAL el 2026-10-17 con la empresa 10, como ADMIN y como EDITOR (`qa-editor-palma@example.test`, dato de prueba): dominio y login, selector de plantación, Plantaciones, Lotes, Filas/conteos/historial, Tablero y permisos. Pendiente: desplegar. (2) `agriculture_telemetry` conserva su FK `ON DELETE CASCADE` hacia `companys` (no se tocó en 080). (3) `agri_rows` no tiene `INSERT` (decisión 2026-10-17): las filas solo se crean por `sp_agri_bulk_create_rows`.
+- ⏸️ **ESTADO TEMPORAL — restauración diaria de LOCAL PAUSADA desde el 2026-10-20, mientras dura Palma Fase 2a**
+  (gastos agrícolas, migración 081 aplicada en LOCAL y `v6` en preparación). LOCAL ya **no** es copia de
+  producción: tiene la 081 y lo que se cargue a mano. El timer está detenido pero sigue `enabled`, así que vuelve a
+  arrancar al reiniciar la sesión o el equipo; revisar con `systemctl --user list-timers pg-backup-restore.timer`.
+  Al terminar la 2a, reactivar con `systemctl --user start pg-backup-restore.timer` y quitar este punto.
 - ✅ **Restauración diaria de LOCAL reactivada (2026-10-17).** `pg-backup-restore.timer` (usuario; ejecuta `backup_postgres_vps_to_local.sh` a las 07:00) estuvo pausado durante el frontend de Palma; LOCAL vuelve a ser un clon diario de producción (base y n8n), así que lo cargado a mano en LOCAL (p. ej. un `v6` sin desplegar) se pierde en la siguiente restauración. Revisar con `systemctl --user list-timers pg-backup-restore.timer`.
 - Gateway compartido (`v5`/`v6`), hotel, ntfy, `pista-hielo` legacy y modelos con PII sin consumidor (`livestock_producers_pii`, `livestock_producers`, `employee_credentials`): ver la deuda a nivel suite en el `CLAUDE.md` raíz (contención v1.17.1, 2026-10-17).
 
