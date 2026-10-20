@@ -168,6 +168,15 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
 
 - ⚠️ Rotación de `INTERNAL_SECRET` tras el incidente de exposición del 2026-08-13 — no
   confirmada en ambos servicios (Auth Gateway, Media Server) ni ambos ambientes.
+  - 🔴 **`JWT_SECRET` es el mismo en LOCAL y en PRODUCCIÓN** (verificado 2026-10-20 comparando hashes SHA-256,
+    nunca los valores, de `printenv` en `n8n-jwt-service`, `upload-file` y `n8n-enterprise-core` de los dos
+    ambientes). Un token emitido en un ambiente es válido en el otro: ese día, tokens emitidos en producción
+    fueron aceptados por el `v6` de LOCAL. Y al revés: quien tenga el `.env` de LOCAL puede firmar tokens que
+    producción acepta. Rotarlo **solo en LOCAL** (nuevo `JWT_SECRET` en su `.env` y reinicio de los 3
+    contenedores) separa los ambientes sin tocar producción; si el valor de LOCAL salió alguna vez del equipo,
+    tratarlo como comprometido y rotar también en producción (los 3 servicios juntos).
+  - `INTERNAL_SECRET` sí es distinto entre ambientes, y en producción es igual en los 3 contenedores. En LOCAL,
+    `upload-file` tiene un valor distinto al de `n8n-jwt-service` y n8n (2026-10-20): alinear al rotar.
 - 🔴 **Migrar el hotel (`dashboard`, `hotel-website`) de `v5/CRUD` a `v6/CRUD`.** La contención
   v1.17.1 (2026-10-17) cerró en `v5` la inyección SQL (nombre de modelo en `Get Model Config`,
   `sort_by`, campo de `getone`), el registro automático de tablas en `crud_models` y el acceso a

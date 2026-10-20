@@ -88,6 +88,12 @@ const CONSTRAINT_MESSAGES: ReadonlyArray<[RegExp, string]> = [
   [/longitude_check/i, 'La longitud debe estar entre -180 y 180.'],
   [/area_check/i, 'La superficie debe ser mayor que 0.'],
   [/alive_within_positions/i, 'Las plantas vivas no pueden superar los puntos de plantación.'],
+  // Expenses (migration 081)
+  [/uq_agri_expense_categories_code_active/i, 'Ya existe una categoría activa con esa clave.'],
+  [/uq_agri_expense_categories_name_active/i, 'Ya existe una categoría activa con ese nombre.'],
+  [/agri_expense_categories_code_format/i, 'La clave solo admite letras sin acento, números y guion bajo.'],
+  [/invalid input syntax for type numeric/i, 'El monto o la cantidad no tienen un formato numérico válido.'],
+  [/invalid input syntax for type (uuid|date)/i, 'Uno de los datos enviados no es válido. Vuelve a cargar la pantalla e inténtalo de nuevo.'],
 ];
 
 /** Constraint / technical messages become Spanish; procedure messages (already Spanish) pass through. */

@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { palmAdminGuard, palmDomainGuard } from './guards/palm.guards';
+import { palmAdminGuard, palmDomainGuard, palmExpenseGuard } from './guards/palm.guards';
 
 export const agricultureRoutes: Routes = [
     {
@@ -25,6 +25,12 @@ export const agricultureRoutes: Routes = [
         path: 'lotes/:lotId/filas',
         canActivate: [palmDomainGuard],
         loadComponent: () => import('./rows/agri-row-list.component').then(m => m.AgriRowListComponent)
+    },
+    {
+        // Expenses: capture for ADMIN / OWNER / EDITOR; balance, list and categories only ADMIN / OWNER (inside).
+        path: 'gastos',
+        canActivate: [palmExpenseGuard],
+        loadComponent: () => import('./expenses/expense-page.component').then(m => m.ExpensePageComponent)
     },
     { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
 ];
