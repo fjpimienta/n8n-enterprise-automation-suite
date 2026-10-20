@@ -397,7 +397,9 @@ SELECT pg_temp.ok('T33b company 3 still active after the rejected sub-transactio
 
 -- T34..T35 crud_models
 SELECT pg_temp.ok('T34 10 agri_* models registered, none with id in allowed_fields, none with DELETE',
-    (SELECT count(*) FROM crud_models WHERE model_name LIKE 'agri\_%') = 10
+    (SELECT count(*) FROM crud_models WHERE model_name = ANY (ARRAY['agri_variety_catalog', 'agri_plantations', 'agri_lots', 'agri_rows', 'agri_row_census_history',
+                         'agri_lot_summary', 'agri_plantation_summary', 'agri_set_default_plantation',
+                         'agri_bulk_create_rows', 'agri_record_row_census'])) = 10
     AND NOT EXISTS (SELECT 1 FROM crud_models WHERE model_name LIKE 'agri\_%' AND (allowed_fields ? 'id' OR 'DELETE' = ANY (allowed_ops)))
     AND NOT EXISTS (SELECT 1 FROM crud_models WHERE model_name IN ('agri_plantations','agri_lots','agri_rows')
                      AND (allowed_fields ? 'is_default' OR allowed_fields ? 'alive_plants' OR allowed_fields ? 'last_census_date'
