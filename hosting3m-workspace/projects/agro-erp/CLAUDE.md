@@ -2,7 +2,7 @@
 
 ## 📌 Identidad del Proyecto
 **Nombre:** Hosting3M Automation Suite - Agro ERP
-**Versión Actual:** v1.18.3 — Public Booking Engine (B2C) del hotel: parámetros como arreglo de texto, filtro por empresa, huésped existente intacto y `room_type` exacto (verificada en producción 2026-10-19). Anterior: v1.18.2 — Global Error Handler: parámetros del `INSERT` como texto y alerta antes que el registro (corrige v1.17.2, revertida en producción). Anterior: v1.18.1 — upsert del `insert` de `v6/CRUD` acotado por empresa, `companys` sin upsert y "Nueva Empresa" oculta (sin migración). Anteriores: v1.18.0 (Palma, fase 1: plantaciones, lotes, filas y conteos, migración 080, con su frontend; ver Regla 18), v1.17.2 (Global Error Handler), v1.17.1 (contención de `v5/CRUD`), v1.17.0 (órdenes de venta por chat/WhatsApp a través de varias UPP y empresas, migración 074; ver Regla 16) y v1.16.1 (hotfix de seguridad de Usuarios y Accesos, migración 073).
+**Versión Actual:** v1.19.0 — Palma, fase 2a: gastos agrícolas (migración 081, `v6/CRUD` con `spConfigByModel` y corrección de fechas del `getall`, pantalla "Gastos"; producción 2026-10-20; ver Regla 19). Anterior: v1.18.3 — Public Booking Engine (B2C) del hotel: parámetros como arreglo de texto, filtro por empresa, huésped existente intacto y `room_type` exacto (verificada en producción 2026-10-19). Anterior: v1.18.2 — Global Error Handler: parámetros del `INSERT` como texto y alerta antes que el registro (corrige v1.17.2, revertida en producción). Anterior: v1.18.1 — upsert del `insert` de `v6/CRUD` acotado por empresa, `companys` sin upsert y "Nueva Empresa" oculta (sin migración). Anteriores: v1.18.0 (Palma, fase 1: plantaciones, lotes, filas y conteos, migración 080, con su frontend; ver Regla 18), v1.17.2 (Global Error Handler), v1.17.1 (contención de `v5/CRUD`), v1.17.0 (órdenes de venta por chat/WhatsApp a través de varias UPP y empresas, migración 074; ver Regla 16) y v1.16.1 (hotfix de seguridad de Usuarios y Accesos, migración 073).
 
 ## 👤 Rol del Asistente de IA (Persona)
 Debes actuar siempre como mi **Technical Lead auxiliar y Senior Project Manager (PMP)** con más de 20 años de experiencia, certificado por el PMI y especializado en el SDLC.
@@ -179,6 +179,24 @@ Debes actuar siempre como mi **Technical Lead auxiliar y Senior Project Manager 
 * **Guards de dominio = experiencia de uso, no seguridad.** `palmDomainGuard` (rutas `/agricultura/*`: solo empresas de palma) y `livestockDomainGuard` (`/ganaderia/*`, `/cumplimiento/*`, `/admin/razas`, `/admin/etapas-vida`, `/admin/precios-referencia`, `/admin/autorizaciones` y las UPP oficiales `/admin/tenants/:id/production-units[...]`: palma va a `/agricultura/dashboard`; ganadería y dominio desconocido pasan, como antes). `/admin/tenants` y `/admin/personal` son comunes. El aislamiento real sigue siendo `id_company` en el gateway (`Get Membresia` + filtros del Build Query); un guard nunca sustituye eso. El sidebar usa la misma regla (`@shared/utils/menu-visibility.util`) y oculta secciones vacías.
 * ⚠️ **Deuda conocida:** las rutas `admin/*` de ganadería siguen dependiendo del rol del **JWT** (`roleGuard` de `core-auth`, que además no reconoce `OWNER`), no del rol de la empresa activa. Las pantallas de Palma usan `palmAdminGuard` (rol de `tenantService.activeTenant()`). `roleGuard` no se modifica porque lo usa el hotel.
 * Códigos de error `P0080`–`P0089`: ver `docs/DATABASE_SCHEMA.md`, "Palm Plantation Subsystem".
+
+### 19. Palma — gastos agrícolas (migración 081, v1.19.0)
+* **Escritura solo por SP:** `sp_agri_record_expense` (ADMIN/OWNER/EDITOR; solo empresas de palma, `P0093`) y
+  `sp_agri_void_expense` (ADMIN/OWNER, motivo obligatorio). El `insert` genérico del gateway no llena el email del
+  JWT; `call_sp` sí (`actorEmailField`). Un gasto nunca se modifica ni se borra (`P0090`): se anula y se captura de
+  nuevo.
+* **Montos solo ADMIN/OWNER** (`agri_expenses` → `vw_agri_expense_list`, `agri_expense_summary`,
+  `agri_expense_balance`). El EDITOR solo recibe "Gasto registrado": la respuesta del SP no trae monto. El balance
+  es una lectura por `call_sp`, así que su permiso va en `allowed_roles_insert`.
+* **Todo total sale de SQL** (`sp_agri_expense_balance`, `vw_agri_expense_summary`); la lista no muestra sumas. El
+  frontend ajusta el rango a periodos completos para que ambas fuentes coincidan.
+* **Categorías por empresa:** se siembran 13 con la **primera plantación** (trigger), no por `industry`; clave e
+  `id_company` inmutables. Unidades: catálogo global de solo lectura (crece solo por migración).
+* `fn_company_business_domain(id_company)` replica en SQL la regla de `business-domain.util.ts`; es la base para que
+  las tools de ganadería del chat rechacen empresas de palma (Fase 2b, deuda urgente).
+* **Gateway:** uuids opcionales como `null` (nunca `""`) y montos sin comas (el frontend normaliza). Un filtro de
+  `getall` solo es fecha si es `AAAA-MM-DD[Thh:mm…]` (antes cualquier texto con "T" se trataba como fecha).
+* Errores `P0090`–`P0093`: ver la cabecera de `081_agri_expenses.sql`.
 
 ## Contrato Meta-CRUD (verificado en producción)
 - Payload: `{ entity, table_name, operation (minúsculas), filters|fields, id }`

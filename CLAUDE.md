@@ -148,6 +148,14 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
   Un PR que dependa de base de datos o de n8n **no llega a `main` hasta tener listo su runbook**: orden de
   despliegue, huellas antes/después, pruebas en producción con empresas de pruebas y rollback. Si el frontend no
   depende del cambio, el runbook lo dice explícitamente (p. ej. v1.18.1).
+- ⛔ **Todo runbook que toque base de datos o n8n abre, antes de cualquier otro texto, con este recuadro** (y el
+  comentario del PR lo repite en su primera línea):
+
+  > ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (base de datos y n8n, verificadas con sus huellas).
+  > `main` despliega el frontend solo (Plesk): si se mergea antes, la pantalla nueva falla en producción.
+
+  Motivo: el frontend llegó a `main` antes que la base **dos veces** (v1.18.0 el 2026-10-17 y v1.19.0 el
+  2026-10-20). La parte del frontend es siempre la última del runbook y empieza con "solo si 1 y 2 están OK".
 - **Workflows en n8n 2.x:** `n8n import:workflow` **desactiva** lo que importa y `--activeState=fromJson` solo
   funciona en modo queue/multi-main; además cambia el `versionId`. En producción, reemplazar el contenido desde el
   editor de n8n (mismo id y `webhookId`) y publicar.
