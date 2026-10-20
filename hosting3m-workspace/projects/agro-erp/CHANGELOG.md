@@ -8,8 +8,17 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 ### 🔒 Public Booking Engine (B2C): parámetros como arreglo, filtro por empresa y huésped existente intacto — v1.18.3
 
 *Workflow de n8n únicamente (`v4/Public Booking Engine (B2C)`, `FImcPayB8gqFlxwq`); sin migración ni frontend.
-Probado en LOCAL el 2026-10-17. Pendiente de desplegar: runbook y huellas en
-`workflows/08-public-booking-engine/v4/README.md`.*
+Probado en LOCAL el 2026-10-17. Runbook y huellas en `workflows/08-public-booking-engine/v4/README.md`.*
+
+✅ **Desplegada en producción el 2026-10-17 y verificada el 2026-10-19 (CDMX)**, importada desde el editor: activa,
+nodos iguales a `main`, webhooks sin cambio (`public/availability`, `public/lead`); respaldo previo guardado.
+* Disponibilidad: responde los 4 tipos de habitación del hotel (consulta nueva, filtrada por empresa).
+* Reserva de prueba por `public/lead` con nombre `Prueba, QA`, sin teléfono y el correo del operador:
+  `{"status":"success","booking_id":1409}`; en la base, `full_name` completo con la coma, sin teléfono,
+  `pending`, `check_in` 2027-02-10 00:00 UTC. Cancelada después desde el `dashboard`.
+* Un primer intento sin `name` falló en `Upsert Guest & Book` (`n8n_error_logs` 1779, registrado por el
+  handler) y respondió HTTP 200 vacío: falta validar campos obligatorios (deuda en el `CLAUDE.md` raíz).
+* 0 errores del booking engine entre el despliegue y la verificación.
 
 **Origen:** los nodos `Check Availability SQL`, `Get Specific Room SQL` y `Upsert Guest & Book` usaban
 `queryReplacement` como texto; n8n lo parte por comas y descarta los vacíos. Es un endpoint público que escribe

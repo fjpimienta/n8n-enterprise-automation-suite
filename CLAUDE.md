@@ -205,13 +205,39 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
   - Un tercero puede crear reservas `pending` a nombre de un correo ajeno. Desde v1.18.3 el huésped existente
     ya no se modifica, pero la reserva queda ligada a él; y como `hotel_guests.email` es UNIQUE **global**, ese
     huésped puede pertenecer a otra empresa.
+  - ⚠️ **No valida campos obligatorios antes del `INSERT`** (solo el correo, con 400). Sin `name` la ejecución
+    falla en `Upsert Guest & Book` (`full_name` es `NOT NULL`); confirmado en producción el 2026-10-19
+    (`n8n_error_logs` 1779). Propuesta: validar `name`, `checkin`, `checkout` (fechas válidas, salida después de
+    la entrada) y `room_type` en `Validate Email Format` y responder 400 como con el correo.
   - 🔴 **Prioritaria — `hotel-website` esconde reservas perdidas.** Trata cualquier 2xx como éxito, y una
     ejecución fallida de n8n responde HTTP 200 **vacío**: si el workflow falla, el visitante ve "reserva
-    recibida" y no se guarda nada (pasaba con nombres con coma o teléfono vacío hasta v1.18.3). Propuesta (PR
+    recibida" y no se guarda nada (pasaba con nombres con coma o teléfono vacío hasta v1.18.3; **confirmado en
+    producción el 2026-10-19** con el intento sin `name`: HTTP 200 vacío, error 1779). Propuesta (PR
     aparte, solo frontend): en `submitForm()` dar éxito solo si `res?.status === 'success' && res?.booking_id`
     y, si no, `formStatus = 'error'` (el mensaje de error ya existe); en disponibilidad, un `!res` debe avisar
     error en vez de solo apagar el indicador. Opcional del lado de n8n: salida de error en los nodos SQL hacia
     un `Respond` 500.
+- ⚠️ **Fechas de reserva a medianoche UTC (no es regresión de v1.18.3).** El Public Booking Engine guarda
+  `check_in`/`check_out` como `$n::date` en una base con `TimeZone = UTC` → 00:00 UTC = **18:00 del día anterior
+  en CDMX**. Igual que antes de v1.18.3 (las 2 reservas web previas) y que 317 reservas `direct` (LOCAL
+  2026-10-19); las del `dashboard` guardan la hora real. Efecto mixto:
+  - Bien (día correcto): pantallas que toman la parte de fecha del texto (`split(/[ T]/)[0]`) o usan
+    `date:…:'UTC'` (`reservation-manager`), y `report.service` (pasa 00:00 UTC a 15:00Z a propósito).
+  - Mal (día anterior): el filtro del gateway `v5` (`(check_in - INTERVAL '6 hours')::date`; una llegada del día
+    10 aparece el 9), `toLocaleDateString()` / `date:'dd/MM HH:mm'` sin zona (`daily-report-modal`, confirmación
+    de `reservation-manager`) y `new Date(check_in).setHours(0,0,0,0)` en `booking.service` (traslapes).
+  - Propuesta (PR aparte): una sola convención, p. ej. guardar la llegada a las 15:00 y la salida a las 12:00
+    hora de CDMX (`($n::date + time '15:00') AT TIME ZONE 'America/Mexico_City'`) en el booking engine y el
+    `dashboard`, con migración de las filas a 00:00 UTC; revisar luego el `- INTERVAL '6 hours'` del gateway.
+- ⚠️ **Reseñas de `hotel-website` rotas en `v5` (preexistente, no por la contención).** `hotel-website` llama
+  `hotel_reviews` (`getall` al cargar, `insert` al enviar) **sin token**; `Security Validation` rechaza y, como en
+  `v5` va directo a `Build Query` sin `If Error`, la ejecución termina en `Normalize Data` con
+  `TypeError: Cannot read properties of undefined (reading 'toLowerCase')` (no trae `operation`). El sitio
+  recibe 200 vacío y no muestra reseñas. El envío (`insert`, también sin token) no está verificado: el sitio dice
+  "¡Gracias por tu reseña!" con cualquier 2xx, se guarde o no. En el clon: 11
+  ejecuciones así del 9 al 16 de octubre (antes de v1.17.1), todas `hotel_reviews getall`; 156 en
+  `n8n_error_logs`. Cada una dispara además una alerta de ntfy. Decidir si las reseñas son públicas (ruta
+  pública acotada como la de `companys`, solo `is_approved = true` en lectura) o se retiran del sitio.
 - ⚠️ **`pista-hielo` legacy con datos en la base:** siguen registrados 8 modelos (`ph_clients`,
   `ph_instructores`, `ph_inventory`, `inventory`, `transactions`, `services`, `payments`,
   `closures`; ya bloqueados en `v5`, todavía alcanzables por `v6` con membresía) y hay datos
