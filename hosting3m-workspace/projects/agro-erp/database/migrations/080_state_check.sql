@@ -76,7 +76,11 @@ BEGIN
         IF v_objects <> 7 THEN
             RAISE WARNING 'FAIL: expected 5 tables + 2 views, found %', v_objects; v_failures := v_failures + 1;
         END IF;
-        SELECT count(*) INTO v_n FROM pg_trigger WHERE tgname LIKE 'trg_agri_%' AND NOT tgisinternal;
+        -- Explicit names: later migrations (081) add their own trg_agri_* triggers.
+        SELECT count(*) INTO v_n FROM pg_trigger
+         WHERE NOT tgisinternal AND tgname = ANY (ARRAY['trg_agri_plantations_guard', 'trg_agri_plantations_updated_at', 'trg_agri_lots_guard',
+                         'trg_agri_lots_updated_at', 'trg_agri_rows_guard', 'trg_agri_rows_updated_at',
+                         'trg_agri_rows_census_history', 'trg_agri_census_history_guard', 'trg_agri_census_history_no_truncate']);
         IF v_n <> 9 THEN RAISE WARNING 'FAIL: expected 9 triggers, found %', v_n; v_failures := v_failures + 1; END IF;
         SELECT count(*) INTO v_n FROM pg_proc
          WHERE pronamespace = 'public'::regnamespace AND proname = ANY (string_to_array(PROCEDURE_CHECK, ','));
