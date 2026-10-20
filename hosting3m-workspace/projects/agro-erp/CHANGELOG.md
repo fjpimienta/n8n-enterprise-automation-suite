@@ -24,6 +24,25 @@ despliegue: base de datos → n8n → frontend.*
   `7e9456ec…`, `user_companies_data` `d90a7e1c…`, `agri_structure_data` `2535f38d…`, `cattle_expenses_data`
   `e34148ef…`). LOCAL queda con la 081 aplicada.
 
+### 🐛 `v6/CRUD`: filtros de texto con "T" tratados como fecha (va en el mismo despliegue que la 081)
+
+*Cambio solo en el nodo `Build Query` del `v6`; ningún otro nodo cambia.* En el `getall`, un valor de filtro se
+consideraba fecha si contenía una `T` mayúscula (`includes('T')`): la columna se convertía a `date` y el valor se
+cortaba en la `T`. Cualquier filtro de texto con `T` fallaba con `invalid input syntax for type date`
+(`grain: 'MONTH'` llegaba como `'MON'`; también `unit_code: 'TON'` o `current_status: 'ACTIVO'`). El cliente
+recibía `error:true`. Encontrado en las pruebas `curl` de la 081 (C10b). Ahora solo es fecha un valor que cumple
+exactamente `AAAA-MM-DD` o `AAAA-MM-DDThh:mm[:ss[.fff]][Z|±hh:mm]` (regex anclada), en la rama de operadores
+(`_gte`/`_lte`/…) y en la de igualdad.
+
+Huellas del `Build Query`: producción (v1.18.1) `856b743c27c3dabb10d2a3b5fcb00b18` → con la 081
+`aa741446695d6438d1e30f8383bbc767` → con esta corrección **`92fd290c2aa41ce57c24e750def90a0b`** (publicada en el
+n8n LOCAL, `n8n_db_prod_clone`, el 2026-10-20).
+
+Verificado en LOCAL por `curl` (2026-10-20, ADMIN, 7/7): `agri_expense_summary` con `grain: 'MONTH'` y `'WEEK'`;
+`agri_expenses` con `unit_code: 'TON'`, con fecha simple, con `_gte`/`_lte` y con fecha ISO con hora y zona
+(`…T00:00:00-06:00`, `…T23:59:59.999Z`), que se siguen tratando como fecha; y `vw_cattle_kpi` de la empresa 3
+con `current_status: 'ACTIVO'` (21 animales, antes fallaba).
+
 ### 🧪 Migración 080: verificaciones independientes de objetos `agri_*` posteriores
 
 *Sin cambio en ninguna DDL ni en ningún dato que crea la 080: solo cambian sus verificaciones.* Contaban los
