@@ -249,11 +249,16 @@ Debes actuar siempre como mi **Technical Lead auxiliar y Senior Project Manager 
 - ⚠️ **`curp`/`rfc` en texto plano en `companys.metadata`** (modal de `/admin/tenants`, `upp-form-modal`; en LOCAL solo la empresa 3, de pruebas). Opción elegida (PR aparte): quitar los campos del modal y del modelo `Company`, quitar esas llaves del `metadata` antes de guardar (si no, el `getone` las vuelve a mandar) y limpiar con respaldo previo (`metadata - 'curp' - 'rfc'`, UPDATE, no DELETE).
 - ⚠️ **Palma (080) — pendientes:** (1) Frontend del Paso 3 implementado y probado a mano en LOCAL el 2026-10-17 con la empresa 10, como ADMIN y como EDITOR (`qa-editor-palma@example.test`, dato de prueba): dominio y login, selector de plantación, Plantaciones, Lotes, Filas/conteos/historial, Tablero y permisos. Pendiente: desplegar. (2) `agriculture_telemetry` conserva su FK `ON DELETE CASCADE` hacia `companys` (no se tocó en 080). (3) `agri_rows` no tiene `INSERT` (decisión 2026-10-17): las filas solo se crean por `sp_agri_bulk_create_rows`.
 - ⏸️ **ESTADO TEMPORAL — restauración diaria de LOCAL PAUSADA desde el 2026-10-20, mientras dura Palma Fase 2a**
-  (gastos agrícolas, migración 081 aplicada en LOCAL y `v6` en preparación). LOCAL ya **no** es copia de
-  producción: tiene la 081 y lo que se cargue a mano. El timer está detenido pero sigue `enabled`, así que vuelve a
-  arrancar al reiniciar la sesión o el equipo; revisar con `systemctl --user list-timers pg-backup-restore.timer`.
-  Al terminar la 2a, reactivar con `systemctl --user start pg-backup-restore.timer` y quitar este punto.
-- ✅ **Restauración diaria de LOCAL reactivada (2026-10-17).** `pg-backup-restore.timer` (usuario; ejecuta `backup_postgres_vps_to_local.sh` a las 07:00) estuvo pausado durante el frontend de Palma; LOCAL vuelve a ser un clon diario de producción (base y n8n), así que lo cargado a mano en LOCAL (p. ej. un `v6` sin desplegar) se pierde en la siguiente restauración. Revisar con `systemctl --user list-timers pg-backup-restore.timer`.
+  (gastos agrícolas: migración 081 aplicada en LOCAL y `v6` con `spConfigByModel` de la 081 publicado en el n8n
+  LOCAL). LOCAL ya **no** es copia de producción: tiene la 081 y lo que se cargue a mano. El timer está
+  deshabilitado (`disable`), así que no vuelve a arrancar aunque se reinicie el equipo. Al terminar la 2a,
+  reactivar con `systemctl --user enable --now pg-backup-restore.timer` y quitar este punto.
+- ⚠️ **El n8n de LOCAL no se restaura desde producción** (hallazgo 2026-10-20). `infrastructure/docker-compose.override.yml`
+  apunta el contenedor `n8n-enterprise-core` a la base `n8n_db_prod_clone`, y `backup_postgres_vps_to_local.sh` solo
+  restaura `n8n_db` (copia de producción: workflows y ejecuciones reales, útil para leer) y `hosting3m_db`. Los
+  workflows que corren en LOCAL son los de `n8n_db_prod_clone`, cargados a mano. Antes de una prueba, verificar
+  la huella del workflow en `n8n_db_prod_clone`, no en `n8n_db`.
+- ✅ **Restauración diaria de LOCAL reactivada (2026-10-17).** `pg-backup-restore.timer` (usuario; ejecuta `backup_postgres_vps_to_local.sh` a las 07:00) estuvo pausado durante el frontend de Palma; la base de LOCAL vuelve a ser un clon diario de producción (el n8n de LOCAL no: ver el punto anterior), así que lo cargado a mano en `hosting3m_db` se pierde en la siguiente restauración. Revisar con `systemctl --user list-timers pg-backup-restore.timer`.
 - Gateway compartido (`v5`/`v6`), hotel, ntfy, `pista-hielo` legacy y modelos con PII sin consumidor (`livestock_producers_pii`, `livestock_producers`, `employee_credentials`): ver la deuda a nivel suite en el `CLAUDE.md` raíz (contención v1.17.1, 2026-10-17).
 
 ## Event authorization matrix (source of truth, set by the project owner 2026-10-06)
