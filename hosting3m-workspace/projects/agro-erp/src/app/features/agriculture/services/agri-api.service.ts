@@ -20,6 +20,18 @@ import {
   Variety,
 } from '@core/models/agri.model';
 import {
+  AgriExpense,
+  CategoryInput,
+  ExpenseBalance,
+  ExpenseBalanceQuery,
+  ExpenseCategory,
+  ExpenseGrain,
+  ExpenseInput,
+  ExpenseSummaryRow,
+  ExpenseUnit,
+} from '@core/models/agri-expense.model';
+import { buildCategoryFields, buildExpenseFields, parseExpenseBalance } from '../utils/expense.util';
+import {
   UNCONFIRMED_MESSAGE,
   buildLotFields,
   buildPlantationFields,
@@ -246,6 +258,113 @@ export class AgriApiService {
   }
 
   // ------------------------------------------------------------------------------------------------
+  // Expenses (migration 081). Amounts: ADMIN / OWNER only (the gateway answers 403 to anyone else).
+  // ------------------------------------------------------------------------------------------------
+
+  /** Global, read-only unit catalog (active units only). */
+  async getExpenseUnits(): Promise<ExpenseUnit[]> {
+    this.requireTenant();
+    const res = await this.post('agri_unit_catalog', { operation: 'getall', filters: { is_active: true } });
+    return stripPhantomRows(this.rows(res), 'unit_code')
+      .filter(r => toBool(r['is_active']))
+      .map(r => ({ code: r['unit_code'], name: r['unit_name'] ?? r['unit_code'], sortOrder: toInt(r['sort_order'], 100) }))
+      .sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
+  }
+
+  /** Expense categories of the active company (EDITOR reads them to capture). */
+  async getExpenseCategories(): Promise<ListResult<ExpenseCategory>> {
+    const tenant = this.requireTenant();
+    const res = await this.post('agri_expense_categories', { operation: 'getall', filters: { id_company: tenant } });
+    const raw = stripPhantomRows(this.rows(res), 'id');
+    const items = raw.filter(r => toInt(r['id_company']) === tenant).map(r => this.mapCategory(r))
+      .sort((a, b) => Number(b.isActive) - Number(a.isActive) || a.sortOrder - b.sortOrder
+        || a.name.localeCompare(b.name, 'es', { sensitivity: 'base' }));
+    return { items, possiblyTruncated: isPossiblyTruncated(raw.length) };
+  }
+
+  async createExpenseCategory(input: CategoryInput): Promise<void> {
+    const tenant = this.requireTenant();
+    const res = await this.post('agri_expense_categories', {
+      operation: 'insert', fields: { ...buildCategoryFields(input, true), id_company: tenant },
+    });
+    if (isPhantomRow(this.rows(res)[0], 'id')) throw new Error(UNCONFIRMED_MESSAGE);
+  }
+
+  /** Name and order only: the code is immutable (P0082). */
+  async updateExpenseCategory(id: string, input: CategoryInput): Promise<void> {
+    const current = await this.getOwned('agri_expense_categories', id, 'La categoría no existe o no pertenece a la empresa activa.');
+    await this.post('agri_expense_categories', { operation: 'update', id: current['id'], fields: buildCategoryFields(input, false) });
+  }
+
+  async setExpenseCategoryActive(id: string, isActive: boolean): Promise<void> {
+    const current = await this.getOwned('agri_expense_categories', id, 'La categoría no existe o no pertenece a la empresa activa.');
+    await this.post('agri_expense_categories', { operation: 'update', id: current['id'], fields: { is_active: isActive } });
+  }
+
+  /**
+   * Records an expense through sp_agri_record_expense. Plantation and lot are re-validated against the
+   * session company first (the ids from the form are never trusted). The answer carries no amount.
+   */
+  async recordExpense(input: ExpenseInput): Promise<{ expenseId: string }> {
+    const fields = buildExpenseFields(input);
+    if (fields['plantation_id']) {
+      const plantation = await this.getPlantation(String(fields['plantation_id']));
+      if (!plantation.isActive) throw new AgriTenantContextError('La plantación está inactiva: no se le pueden registrar gastos.');
+    }
+    if (fields['lot_id']) {
+      const lot = await this.getLot(String(fields['lot_id']));
+      if (lot.plantationId !== fields['plantation_id']) throw new AgriTenantContextError('El lote no pertenece a la plantación seleccionada.');
+    }
+    const data = await this.callSp('agri_record_expense', fields);
+    return { expenseId: String(data['expense_id'] ?? '') };
+  }
+
+  /** Expense list (ADMIN / OWNER) between two dates, optionally filtered; voided rows included and flagged. */
+  async getExpenses(query: { dateFrom: string; dateTo: string; plantationId: string | null; lotId: string | null; categoryId: string | null }):
+    Promise<ListResult<AgriExpense>> {
+    const tenant = this.requireTenant();
+    const filters: Record<string, unknown> = { id_company: tenant, expense_date: { _gte: query.dateFrom, _lte: query.dateTo } };
+    if (query.plantationId) filters['plantation_id'] = query.plantationId;
+    if (query.lotId) filters['lot_id'] = query.lotId;
+    if (query.categoryId) filters['category_id'] = query.categoryId;
+    const res = await this.post('agri_expenses', { operation: 'getall', filters, limit: 2000, sort_by: 'expense_date' });
+    const raw = stripPhantomRows(this.rows(res), 'id');
+    const items = raw.filter(r => toInt(r['id_company']) === tenant).map(r => this.mapExpense(r))
+      .sort((a, b) => b.expenseDate.localeCompare(a.expenseDate) || b.createdAt.localeCompare(a.createdAt));
+    return { items, possiblyTruncated: isPossiblyTruncated(raw.length) };
+  }
+
+  async voidExpense(id: string, reason: string): Promise<void> {
+    const current = await this.getOwned('agri_expenses', id, 'El gasto no existe o no pertenece a la empresa activa.');
+    await this.callSp('agri_void_expense', { expense_id: current['id'], reason: reason.trim() });
+  }
+
+  /** Totals of any filter combination, computed by sp_agri_expense_balance (ADMIN / OWNER). */
+  async getExpenseBalance(query: Partial<ExpenseBalanceQuery> = {}): Promise<ExpenseBalance> {
+    const data = await this.callSp('agri_expense_balance', {
+      date_from: query.dateFrom ?? null, date_to: query.dateTo ?? null, grain: query.grain ?? null,
+      plantation_id: query.plantationId ?? null, lot_id: query.lotId ?? null, category_id: query.categoryId ?? null,
+    });
+    return parseExpenseBalance(data);
+  }
+
+  /** Detail rows of vw_agri_expense_summary for whole periods between dateFrom (a period start) and dateTo. */
+  async getExpenseSummary(query: ExpenseBalanceQuery): Promise<ListResult<ExpenseSummaryRow>> {
+    const tenant = this.requireTenant();
+    const filters: Record<string, unknown> = {
+      id_company: tenant, grain: query.grain, period_start: { _gte: query.dateFrom, _lte: query.dateTo },
+    };
+    if (query.plantationId) filters['plantation_id'] = query.plantationId;
+    if (query.lotId) filters['lot_id'] = query.lotId;
+    if (query.categoryId) filters['category_id'] = query.categoryId;
+    const res = await this.post('agri_expense_summary', { operation: 'getall', filters, limit: 2000, sort_by: 'period_start' });
+    const raw = stripPhantomRows(this.rows(res), 'id');
+    const items = raw.filter(r => toInt(r['id_company']) === tenant && r['grain'] === query.grain).map(r => this.mapSummary(r))
+      .sort((a, b) => a.periodStart.localeCompare(b.periodStart) || b.totalAmount - a.totalAmount);
+    return { items, possiblyTruncated: isPossiblyTruncated(raw.length) };
+  }
+
+  // ------------------------------------------------------------------------------------------------
   // Plumbing
   // ------------------------------------------------------------------------------------------------
 
@@ -355,6 +474,41 @@ export class AgriApiService {
       alivePlants: toInt(r['alive_plants']),
       lastCensusDate: r['last_census_date'] ? String(r['last_census_date']).slice(0, 10) : null,
       isActive: toBool(r['is_active']), notes: r['notes'] ?? null,
+    };
+  }
+
+  private mapCategory(r: Row): ExpenseCategory {
+    return {
+      id: r['id'], idCompany: toInt(r['id_company']), code: r['category_code'] ?? '', name: r['category_name'] ?? '',
+      sortOrder: toInt(r['sort_order'], 100), isActive: toBool(r['is_active']),
+    };
+  }
+
+  private mapExpense(r: Row): AgriExpense {
+    const date = (v: unknown) => (v ? String(v).slice(0, 10) : '');
+    return {
+      id: r['id'], idCompany: toInt(r['id_company']),
+      plantationId: r['plantation_id'] ?? null, plantationCode: r['plantation_code'] ?? null, plantationName: r['plantation_name'] ?? null,
+      lotId: r['lot_id'] ?? null, lotCode: r['lot_code'] ?? null, lotName: r['lot_name'] ?? null,
+      categoryId: r['category_id'], categoryCode: r['category_code'] ?? '', categoryName: r['category_name'] ?? '',
+      expenseDate: date(r['expense_date']), amount: toNumber(r['amount']) ?? 0, quantity: toNumber(r['quantity']),
+      unitCode: r['unit_code'] ?? null, unitName: r['unit_name'] ?? null,
+      supplierName: r['supplier_name'] ?? null, description: r['description'] ?? null,
+      isInvoiced: toBool(r['is_invoiced']), invoiceFolio: r['invoice_folio'] ?? null,
+      reportedByEmail: r['reported_by_email'] ?? '', isVoid: toBool(r['is_void']), voidReason: r['void_reason'] ?? null,
+      voidedByEmail: r['voided_by_email'] ?? null, voidedAt: r['voided_at'] ?? null, createdAt: r['created_at'] ?? '',
+    };
+  }
+
+  private mapSummary(r: Row): ExpenseSummaryRow {
+    const date = (v: unknown) => (v ? String(v).slice(0, 10) : '');
+    return {
+      id: r['id'], idCompany: toInt(r['id_company']), grain: r['grain'] as ExpenseGrain,
+      periodStart: date(r['period_start']), periodEnd: date(r['period_end']),
+      plantationId: r['plantation_id'] ?? null, plantationCode: r['plantation_code'] ?? null, plantationName: r['plantation_name'] ?? null,
+      lotId: r['lot_id'] ?? null, lotCode: r['lot_code'] ?? null, lotName: r['lot_name'] ?? null,
+      categoryId: r['category_id'], categoryCode: r['category_code'] ?? '', categoryName: r['category_name'] ?? '',
+      totalAmount: toNumber(r['total_amount']) ?? 0, expenseCount: toInt(r['expense_count']),
     };
   }
 

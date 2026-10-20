@@ -30,6 +30,7 @@ export class SidebarComponent {
   public isLivestock = computed(() => this.menu().livestockIntelligence);
   public isAgriculture = computed(() => this.menu().palmIntelligence);
   public canAdministerPalm = computed(() => this.menu().palmAdministration);
+  public showPalmExpenses = computed(() => this.menu().palmExpenses);
   public isAdmin = computed(() => this.menu().sharedConfig);
   public showLivestockConfig = computed(() => this.menu().livestockConfig);
   public personalLabel = computed(() => this.menu().personalLabel);

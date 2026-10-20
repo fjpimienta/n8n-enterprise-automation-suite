@@ -1,0 +1,150 @@
+<div class="card shadow-sm border-0 mb-3">
+    <div class="card-body">
+        <div class="row g-2 align-items-end">
+            <div class="col-6 col-md-2">
+                <label class="form-label small">Desde</label>
+                <input type="date" class="form-control" [ngModel]="dateFrom()" (ngModelChange)="dateFrom.set($event)">
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small">Hasta</label>
+                <input type="date" class="form-control" [ngModel]="dateTo()" (ngModelChange)="dateTo.set($event)">
+            </div>
+            <div class="col-6 col-md-3">
+                <label class="form-label small">Plantación</label>
+                <select class="form-select" [ngModel]="plantationId()" (ngModelChange)="setPlantation($event)">
+                    <option value="">Todas (incluye generales)</option>
+                    @for (p of context.allPlantations(); track p.id) {
+                    <option [value]="p.id">{{ p.code }} · {{ p.name }}{{ p.isActive ? '' : ' (inactiva)' }}</option>
+                    }
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small">Lote</label>
+                <select class="form-select" [disabled]="!plantationId()" [ngModel]="lotId()" (ngModelChange)="lotId.set($event)">
+                    <option value="">Todos</option>
+                    @for (l of lots(); track l.id) { <option [value]="l.id">{{ l.code }}{{ l.isActive ? '' : ' (inactivo)' }}</option> }
+                </select>
+            </div>
+            <div class="col-6 col-md-2">
+                <label class="form-label small">Categoría</label>
+                <select class="form-select" [ngModel]="categoryId()" (ngModelChange)="categoryId.set($event)">
+                    <option value="">Todas</option>
+                    @for (c of categories(); track c.id) { <option [value]="c.id">{{ c.name }}{{ c.isActive ? '' : ' (inactiva)' }}</option> }
+                </select>
+            </div>
+            <div class="col-6 col-md-1">
+                <button class="btn btn-primary w-100" [disabled]="isLoading()" (click)="load()">
+                    @if (isLoading()) { <span class="spinner-border spinner-border-sm" role="status"></span> } @else { Buscar }
+                </button>
+            </div>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
+            <label class="form-check mb-0">
+                <input type="checkbox" class="form-check-input" [ngModel]="showVoided()" (ngModelChange)="showVoided.set($event)">
+                <span class="form-check-label">Mostrar anulados ({{ voidedCount() }})</span>
+            </label>
+            <button class="btn btn-outline-success btn-sm" [disabled]="!visible().length" (click)="exportCsv()">
+                <i class="ti ti-file-spreadsheet me-1"></i>Exportar CSV
+            </button>
+        </div>
+        @if (filterError()) {
+        <div class="alert alert-warning mt-3 mb-0" role="alert"><i class="ti ti-alert-circle me-2"></i>{{ filterError() }}</div>
+        }
+    </div>
+</div>
+
+@if (loadError()) {
+<div class="alert alert-danger" role="alert"><i class="ti ti-alert-triangle me-2"></i>{{ loadError() }}</div>
+}
+@if (actionSuccess()) {
+<div class="alert alert-success alert-dismissible" role="alert">
+    <i class="ti ti-check me-2"></i>{{ actionSuccess() }}
+    <button type="button" class="btn-close" (click)="actionSuccess.set(null)"></button>
+</div>
+}
+@if (possiblyTruncated()) {
+<div class="alert alert-warning" role="alert">
+    <i class="ti ti-alert-triangle me-2"></i>La lista llegó con el máximo de registros que entrega el servidor: reduce el rango de fechas.
+</div>
+}
+
+<div class="card shadow-sm border-0">
+    <div class="table-responsive">
+        <table class="table table-vcenter card-table table-sm">
+            <thead>
+                <tr>
+                    <th>Fecha</th><th>Plantación · Lote</th><th>Categoría</th><th>Descripción</th>
+                    <th class="text-end">Cantidad</th><th class="text-end">Monto</th><th>Factura</th><th>Capturó</th><th>Estado</th><th class="w-1"></th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (e of visible(); track e.id) {
+                <tr [class.text-muted]="e.isVoid">
+                    <td class="text-nowrap">{{ e.expenseDate }}</td>
+                    <td>{{ place(e) }}</td>
+                    <td>{{ e.categoryName }}</td>
+                    <td class="small">
+                        {{ e.description || '—' }}
+                        @if (e.supplierName) { <div class="text-muted">Proveedor: {{ e.supplierName }}</div> }
+                    </td>
+                    <td class="text-end text-nowrap">{{ e.quantity !== null ? e.quantity + ' ' + (e.unitName || e.unitCode) : '—' }}</td>
+                    <td class="text-end text-nowrap" [class.text-decoration-line-through]="e.isVoid">{{ money(e.amount) }}</td>
+                    <td class="small">{{ e.isInvoiced ? (e.invoiceFolio || 'Sí') : 'No' }}</td>
+                    <td class="small">{{ e.reportedByEmail }}</td>
+                    <td>
+                        @if (e.isVoid) {
+                        <span class="badge bg-secondary-lt" [title]="'Motivo: ' + e.voidReason + ' · ' + (e.voidedByEmail ?? '')">Anulado</span>
+                        <div class="small text-muted">{{ e.voidReason }}</div>
+                        } @else { <span class="badge bg-green-lt">Vigente</span> }
+                    </td>
+                    <td>
+                        @if (!e.isVoid) {
+                        <button class="btn btn-icon btn-outline-danger btn-sm" title="Anular" (click)="requestVoid(e)"><i class="ti ti-ban"></i></button>
+                        }
+                    </td>
+                </tr>
+                } @empty {
+                <tr>
+                    <td colspan="10" class="text-center py-5 text-muted">
+                        @if (isLoading()) { <span class="spinner-border spinner-border-sm me-2" role="status"></span>Cargando gastos… }
+                        @else { No hay gastos con esos filtros. }
+                    </td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+<div class="text-muted small mt-2"><i class="ti ti-info-circle me-1"></i>Los totales están en la pestaña Balance. Un gasto no se edita ni se borra: se anula y se captura de nuevo.</div>
+
+@if (toVoid(); as e) {
+<div class="modal-backdrop fade show"></div>
+<div class="modal modal-blur fade show d-block" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-status bg-danger"></div>
+            <div class="modal-body py-4">
+                <h3 class="mb-2"><i class="ti ti-ban text-danger me-2"></i>¿Anular este gasto?</h3>
+                <div class="mb-3">
+                    <div><strong>{{ money(e.amount) }}</strong> · {{ e.categoryName }} · {{ e.expenseDate }}</div>
+                    <div class="text-muted small">{{ place(e) }}{{ e.description ? ' · ' + e.description : '' }}</div>
+                </div>
+                <div class="text-muted small mb-3">No se borra: queda en la lista como anulado, con el motivo y quién lo anuló, y deja de contar en el balance. No se puede deshacer.</div>
+                @if (voidError()) {
+                <div class="alert alert-danger" role="alert"><i class="ti ti-alert-triangle me-2"></i>{{ voidError() }}</div>
+                }
+                <label class="form-label fw-bold">Motivo <span class="text-danger">*</span></label>
+                <textarea class="form-control" rows="2" maxlength="500" placeholder="Ej. Capturado dos veces" [disabled]="isVoiding()"
+                    [ngModel]="voidReason()" (ngModelChange)="voidReason.set($event)"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" [disabled]="isVoiding()" (click)="cancelVoid()">Cancelar</button>
+                <button class="btn btn-danger" [disabled]="isVoiding() || !voidReason().trim()" (click)="confirmVoid()">
+                    @if (isVoiding()) { <span class="spinner-border spinner-border-sm me-2" role="status"></span> }
+                    Anular gasto
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+}

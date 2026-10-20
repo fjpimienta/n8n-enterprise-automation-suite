@@ -5,6 +5,67 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🌴 Palma, Fase 2a: gastos agrícolas — migración 081 (en desarrollo, sin desplegar)
+
+*Versión por asignar al desplegar. Incluye la migración, `v6/CRUD` (`spConfigByModel` y la corrección de fechas,
+Build Query `92fd290c…`) y el frontend (pantalla "Gastos" y tarjeta "Gasto del mes"). Orden de despliegue: base de
+datos → n8n → frontend; runbook en `database/migrations/081_RUNBOOK.md`.*
+* `agri_expenses`: gasto general, por plantación o por lote; categoría del catálogo de la empresa, fecha (no
+  futura en CDMX), monto, cantidad y unidad, proveedor, descripción, factura y folio. Nunca se modifica ni se
+  borra: se anula con motivo (`sp_agri_void_expense`, ADMIN/OWNER).
+* Captura solo por `sp_agri_record_expense` (ADMIN, OWNER y EDITOR; solo empresas de palma); quien captura sale
+  del JWT. Los montos los leen solo ADMIN/OWNER (`vw_agri_expense_list`, `vw_agri_expense_summary`,
+  `sp_agri_expense_balance`).
+* Catálogo de categorías por empresa (13 iniciales, al crear la primera plantación; la 081 solo siembra las
+  empresas que ya tienen plantación) y catálogo global de unidades de solo lectura.
+* `fn_company_business_domain`: dominio de la empresa en SQL, con la misma regla del frontend.
+* Pruebas LOCAL 2026-10-20: `081_tests.sql` 72/72, `080_tests.sql` 74/74 y dry run. Ciclo completo con
+  `apply=true` en LOCAL (before → apply → applied → rollback → rolled_back → re-apply → applied): todos los
+  `state_check` OK y las 5 huellas iguales en cada paso (`other_crud_models` `7afa6009…`, `companys_data`
+  `7e9456ec…`, `user_companies_data` `d90a7e1c…`, `agri_structure_data` `2535f38d…`, `cattle_expenses_data`
+  `e34148ef…`). LOCAL queda con la 081 aplicada.
+* Pruebas `curl` contra el `v6` de LOCAL (Build Query `92fd290c…`), 2026-10-20, todas OK:
+  * ADMIN (C1–C13): catálogos; captura con monto número/texto y actor del JWT aunque el cliente mande otro; lote
+    sin plantación; `""` en uuid y `"10,000"` → `error:true` (el frontend manda `null` y montos sin comas);
+    P0080/P0083/P0092/P0093; empresa sin membresía → 403; balance, lista y resumen; anulación;
+    `insert`/`update`/`delete` genéricos → 403; categorías por CRUD genérico con clave inmutable.
+  * EDITOR `qa-editor-palma@example.test` (C14): captura (respuesta sin monto; `reported_by_email` del JWT) y lee
+    categorías y unidades; recibe 403 al listar gastos, leer el resumen o el balance, anular y crear categorías.
+  * `v5` (C15): el nodo `Model Allowlist` rechaza los 7 modelos de la 081 (`MODEL_NOT_ALLOWED`).
+
+### 🐛 `v6/CRUD`: filtros de texto con "T" tratados como fecha (va en el mismo despliegue que la 081)
+
+*Cambio solo en el nodo `Build Query` del `v6`; ningún otro nodo cambia.* En el `getall`, un valor de filtro se
+consideraba fecha si contenía una `T` mayúscula (`includes('T')`): la columna se convertía a `date` y el valor se
+cortaba en la `T`. Cualquier filtro de texto con `T` fallaba con `invalid input syntax for type date`
+(`grain: 'MONTH'` llegaba como `'MON'`; también `unit_code: 'TON'` o `current_status: 'ACTIVO'`). El cliente
+recibía `error:true`. Encontrado en las pruebas `curl` de la 081 (C10b). Ahora solo es fecha un valor que cumple
+exactamente `AAAA-MM-DD` o `AAAA-MM-DDThh:mm[:ss[.fff]][Z|±hh:mm]` (regex anclada), en la rama de operadores
+(`_gte`/`_lte`/…) y en la de igualdad.
+
+Huellas del `Build Query`: producción (v1.18.1) `856b743c27c3dabb10d2a3b5fcb00b18` → con la 081
+`aa741446695d6438d1e30f8383bbc767` → con esta corrección **`92fd290c2aa41ce57c24e750def90a0b`** (publicada en el
+n8n LOCAL, `n8n_db_prod_clone`, el 2026-10-20).
+
+Verificado en LOCAL por `curl` (2026-10-20, ADMIN, 7/7): `agri_expense_summary` con `grain: 'MONTH'` y `'WEEK'`;
+`agri_expenses` con `unit_code: 'TON'`, con fecha simple, con `_gte`/`_lte` y con fecha ISO con hora y zona
+(`…T00:00:00-06:00`, `…T23:59:59.999Z`), que se siguen tratando como fecha; y `vw_cattle_kpi` de la empresa 3
+con `current_status: 'ACTIVO'` (21 animales, antes fallaba).
+
+### 🧪 Migración 080: verificaciones independientes de objetos `agri_*` posteriores
+
+*Sin cambio en ninguna DDL ni en ningún dato que crea la 080: solo cambian sus verificaciones.* Contaban los
+triggers con `LIKE 'trg_agri_%'` y los modelos con `LIKE 'agri\_%'`, así que fallarían con la 081 aplicada
+(agrega 5 triggers y 7 modelos `agri_*`). Ahora cuentan por nombre los 9 triggers y los 10 modelos de la 080.
+Verificado en LOCAL: `080_tests.sql` 74/74 y `080_state_check.sql -v expect=applied` OK, y la 080 se vuelve a
+aplicar sin error con la 081 cargada.
+
+| Archivo | md5 en producción / `main` | md5 nuevo |
+|---|---|---|
+| `080_agri_structure.sql` | `b47cc5971d7db09f7fdcb7c27074faab` | `3f9b1aade997787b5bbce30109e0d5cb` |
+| `080_state_check.sql` | `4e45ffb9f21c71b415a146739230feb3` | `25d5aa29f7407a9db397eb6b56277f2b` |
+| `080_tests.sql` | `f700ccb6174ad5dcfa1a18f797b5039c` | `e545f93d3a2e39ce6c7d126b2fe4fbda` |
+
 ### 🔒 Public Booking Engine (B2C): parámetros como arreglo, filtro por empresa y huésped existente intacto — v1.18.3
 
 *Workflow de n8n únicamente (`v4/Public Booking Engine (B2C)`, `FImcPayB8gqFlxwq`); sin migración ni frontend.

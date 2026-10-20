@@ -3,14 +3,17 @@ import { DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { TenantService } from 'core-auth';
 import { LotSummary, PlantationSummary, STAGE_OPTIONS } from '@core/models/agri.model';
+import { ExpenseBalance } from '@core/models/agri-expense.model';
 import { AgriApiService } from '../../../services/agri-api.service';
 import { PlantationContextService } from '../../../services/plantation-context.service';
 import { canAdministerPalm } from '../../../utils/agri.util';
+import { formatMoney, periodLabel } from '../../../utils/expense.util';
 import { densityComparison, lotsByStage, plantTotals } from '../../../utils/palm-dashboard.util';
 
 /**
  * Palm dashboard (read-only) for the ACTIVE plantation, from vw_agri_plantation_summary and
- * vw_agri_lot_summary. No financial data in this phase.
+ * vw_agri_lot_summary. The only financial figure is the "Gasto del mes" card, for ADMIN / OWNER only, from
+ * sp_agri_expense_balance (current month in America/Mexico_City, computed by the database).
  */
 @Component({
   selector: 'app-palm-dashboard',
@@ -40,6 +43,19 @@ export class PalmDashboardComponent {
   density = computed(() => densityComparison(this.lots()));
   maxStageLots = computed(() => Math.max(1, ...this.stages().map(s => s.lots)));
 
+  readonly money = formatMoney;
+  monthBalance = signal<ExpenseBalance | null>(null);
+  monthLoading = signal(false);
+  monthError = signal<string | null>(null);
+  private monthSeq = 0;
+  monthLabel = computed(() => {
+    const b = this.monthBalance();
+    return b ? periodLabel('MONTH', b.dateFrom, b.dateTo) : '';
+  });
+  /** This plantation's share, as returned by the balance (by_plantation); null = no expenses this month. */
+  monthPlantation = computed(() =>
+    this.monthBalance()?.byPlantation.find(p => p.plantationId === this.context.activePlantationId()) ?? null);
+
   constructor() {
     effect(() => {
       const plantationId = this.context.activePlantationId();
@@ -49,10 +65,37 @@ export class PalmDashboardComponent {
         if (plantationId) void this.load(plantationId);
       });
     });
+    // "Gasto del mes": ADMIN / OWNER only; re-evaluated when the company or its role changes.
+    effect(() => {
+      const tenantId = this.tenantService.activeTenantId();
+      const canSee = this.canAdminister();
+      untracked(() => {
+        this.monthSeq++;
+        this.monthBalance.set(null);
+        this.monthError.set(null);
+        if (tenantId && canSee) void this.loadMonth();
+      });
+    });
   }
 
   stageLabel(value: string) { return STAGE_OPTIONS.find(s => s.value === value)?.label ?? value; }
   stageBadge(value: string) { return STAGE_OPTIONS.find(s => s.value === value)?.badge ?? 'bg-secondary-lt'; }
+
+  async loadMonth() {
+    const seq = ++this.monthSeq;
+    this.monthLoading.set(true);
+    try {
+      const balance = await this.api.getExpenseBalance();
+      if (seq === this.monthSeq) this.monthBalance.set(balance);
+    } catch (error: any) {
+      if (seq !== this.monthSeq) return;
+      // Its own error: the rest of the dashboard stays usable, and an error is never shown as $0.
+      console.error('[Agro-ERP] Error al cargar el gasto del mes:', error);
+      this.monthError.set(error?.message || 'No se pudo cargar el gasto del mes.');
+    } finally {
+      if (seq === this.monthSeq) this.monthLoading.set(false);
+    }
+  }
 
   async load(plantationId: string) {
     this.isLoading.set(true);
