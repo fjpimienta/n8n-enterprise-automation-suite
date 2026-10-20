@@ -23,6 +23,14 @@ despliegue: base de datos → n8n → frontend.*
   `state_check` OK y las 5 huellas iguales en cada paso (`other_crud_models` `7afa6009…`, `companys_data`
   `7e9456ec…`, `user_companies_data` `d90a7e1c…`, `agri_structure_data` `2535f38d…`, `cattle_expenses_data`
   `e34148ef…`). LOCAL queda con la 081 aplicada.
+* Pruebas `curl` contra el `v6` de LOCAL (Build Query `92fd290c…`), 2026-10-20, todas OK:
+  * ADMIN (C1–C13): catálogos; captura con monto número/texto y actor del JWT aunque el cliente mande otro; lote
+    sin plantación; `""` en uuid y `"10,000"` → `error:true` (el frontend manda `null` y montos sin comas);
+    P0080/P0083/P0092/P0093; empresa sin membresía → 403; balance, lista y resumen; anulación;
+    `insert`/`update`/`delete` genéricos → 403; categorías por CRUD genérico con clave inmutable.
+  * EDITOR `qa-editor-palma@example.test` (C14): captura (respuesta sin monto; `reported_by_email` del JWT) y lee
+    categorías y unidades; recibe 403 al listar gastos, leer el resumen o el balance, anular y crear categorías.
+  * `v5` (C15): el nodo `Model Allowlist` rechaza los 7 modelos de la 081 (`MODEL_NOT_ALLOWED`).
 
 ### 🐛 `v6/CRUD`: filtros de texto con "T" tratados como fecha (va en el mismo despliegue que la 081)
 
