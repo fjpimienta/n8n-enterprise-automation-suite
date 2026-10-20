@@ -16,6 +16,8 @@ export interface MenuVisibility {
   livestockIntelligence: boolean;
   palmIntelligence: boolean;
   palmAdministration: boolean;
+  /** "Gastos": capture for ADMIN / OWNER / EDITOR; balance and catalog only ADMIN / OWNER (inside the screen). */
+  palmExpenses: boolean;
   /** Empresas, Personal: shared by both domains. */
   sharedConfig: boolean;
   /** Catálogo de Raza, Etapas de Vida, Precios de referencia, Autorizaciones Pendientes. */
@@ -34,6 +36,7 @@ export function menuVisibility(tenant: MenuTenant | null | undefined): MenuVisib
   const livestockIntelligence = domain === 'LIVESTOCK';
   const palmIntelligence = palm;
   const palmAdministration = palm && (role === 'ADMIN' || role === 'OWNER');
+  const palmExpenses = palm && (role === 'ADMIN' || role === 'OWNER' || role === 'EDITOR');
   const sharedConfig = isAdmin;
   const livestockConfig = isAdmin && !palm;
 
@@ -41,6 +44,7 @@ export function menuVisibility(tenant: MenuTenant | null | undefined): MenuVisib
     livestockIntelligence,
     palmIntelligence,
     palmAdministration,
+    palmExpenses,
     sharedConfig,
     livestockConfig,
     intelligenceSection: livestockIntelligence || palmIntelligence,

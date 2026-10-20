@@ -1,0 +1,64 @@
+<div class="container-fluid p-3 p-md-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h2 class="page-title mb-0"><i class="ti ti-receipt me-2 text-success"></i>Gastos</h2>
+            <div class="text-muted small mt-1">
+                @if (canRead()) { Captura, balance y catálogo de categorías de la empresa activa }
+                @else { Captura de gastos de campo }
+            </div>
+        </div>
+        <button class="btn btn-primary shadow-sm" [disabled]="catalogsLoading()" (click)="openCapture()">
+            <i class="ti ti-square-rounded-plus me-2"></i>Registrar gasto
+        </button>
+    </div>
+
+    @if (successMessage()) {
+    <div class="alert alert-success alert-dismissible" role="alert">
+        <i class="ti ti-check me-2"></i>{{ successMessage() }}
+        <button type="button" class="btn-close" (click)="successMessage.set(null)"></button>
+    </div>
+    }
+    @if (catalogError() && !isModalOpen()) {
+    <div class="alert alert-warning" role="alert"><i class="ti ti-alert-circle me-2"></i>{{ catalogError() }}</div>
+    }
+
+    @if (!canRead()) {
+    <div class="card shadow-sm border-0">
+        <div class="card-body text-center py-5">
+            <i class="ti ti-receipt fs-1 text-success d-block mb-2"></i>
+            <h3 class="mb-1">Registra los gastos de campo</h3>
+            <p class="text-muted mb-3">
+                Insumos, mano de obra, combustible, fletes… Elige la plantación y, si aplica, el lote.
+                Solo un administrador de la empresa ve montos y reportes.
+            </p>
+            <button class="btn btn-primary" [disabled]="catalogsLoading()" (click)="openCapture()">
+                <i class="ti ti-square-rounded-plus me-2"></i>Registrar gasto
+            </button>
+        </div>
+    </div>
+    } @else {
+
+    <ul class="nav nav-tabs mb-3">
+        @for (tab of tabs(); track tab) {
+        <li class="nav-item">
+            <a class="nav-link" [class.active]="activeTab() === tab" style="cursor: pointer;" (click)="activeTab.set(tab)">{{ tabLabels[tab] }}</a>
+        </li>
+        }
+    </ul>
+
+    @switch (activeTab()) {
+    @case ('BALANCE') { <app-expense-balance [categories]="categories()" [refreshToken]="refreshToken()"></app-expense-balance> }
+    @case ('GASTOS') {
+    <app-expense-list [categories]="categories()" [refreshToken]="refreshToken()" (onVoided)="refreshToken.update(n => n + 1)"></app-expense-list>
+    }
+    @case ('CATEGORIAS') { <app-expense-category-list (onChanged)="onCategoriesChanged()"></app-expense-category-list> }
+    }
+    }
+</div>
+
+<app-expense-form-modal [isOpen]="isModalOpen()" [plantations]="context.availablePlantations()" [lots]="formLots()"
+    [lotsLoading]="formLotsLoading()" [categories]="activeCategories()" [units]="units()" [today]="today()"
+    [isSubmitting]="isSubmitting()" [errorMessage]="formError()" [catalogError]="catalogError()" [(data)]="formData"
+    (plantationChange)="loadFormLots($event)" (onClose)="closeCapture()" (onSave)="saveCapture()">
+</app-expense-form-modal>
