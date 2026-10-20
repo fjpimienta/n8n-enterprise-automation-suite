@@ -7,8 +7,9 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ### 🌴 Palma, Fase 2a: gastos agrícolas — migración 081 (en desarrollo, sin desplegar)
 
-*Versión por asignar al desplegar. Pendiente: `v6/CRUD` (`spConfigByModel`), frontend y runbook. Orden de
-despliegue: base de datos → n8n → frontend.*
+*Versión por asignar al desplegar. Incluye la migración, `v6/CRUD` (`spConfigByModel` y la corrección de fechas,
+Build Query `92fd290c…`) y el frontend (pantalla "Gastos" y tarjeta "Gasto del mes"). Orden de despliegue: base de
+datos → n8n → frontend; runbook en `database/migrations/081_RUNBOOK.md`.*
 * `agri_expenses`: gasto general, por plantación o por lote; categoría del catálogo de la empresa, fecha (no
   futura en CDMX), monto, cantidad y unidad, proveedor, descripción, factura y folio. Nunca se modifica ni se
   borra: se anula con motivo (`sp_agri_void_expense`, ADMIN/OWNER).
