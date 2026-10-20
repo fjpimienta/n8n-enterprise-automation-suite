@@ -5,11 +5,23 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
-### 🌴 Palma, Fase 2a: gastos agrícolas — migración 081 (en desarrollo, sin desplegar)
+### 🌴 Palma, fase 2a: gastos agrícolas (migración 081, `v6/CRUD` y frontend) — v1.19.0
 
-*Versión por asignar al desplegar. Incluye la migración, `v6/CRUD` (`spConfigByModel` y la corrección de fechas,
-Build Query `92fd290c…`) y el frontend (pantalla "Gastos" y tarjeta "Gasto del mes"). Orden de despliegue: base de
-datos → n8n → frontend; runbook en `database/migrations/081_RUNBOOK.md`.*
+*Incluye la migración 081, `v6/CRUD` (`spConfigByModel` y la corrección de fechas de abajo) y el frontend (pantalla
+"Gastos" y tarjeta "Gasto del mes"). Runbook: `database/migrations/081_RUNBOOK.md`. PR #833.*
+
+✅ **Desplegada en producción el 2026-10-20 (CDMX).**
+* ⚠️ **El frontend llegó a `main` antes que la base de datos** (segunda vez, tras v1.18.0 el 2026-10-17); la base y
+  el `v6` se completaron de inmediato. Desde entonces cada runbook abre con el recuadro "⛔ NO MERGEAR A `main`"
+  (regla en el `CLAUDE.md` raíz, sección "Despliegue").
+* Base de datos: respaldo `hosting3m_db_pre081_20261020_1057.dump` (956K); `081_state_check before` OK, con las 5
+  huellas iguales a las de LOCAL; dry run OK; `081_tests.sql` 72/72; `081 COMMITTED` (empresa 10 → 13
+  categorías); `081_state_check applied` OK, con las mismas huellas.
+* n8n `v6/CRUD`: antes `versionId` `59010f50…`, Build Query `856b743c…`; después `versionId` `c8bb4fe0…`, Build
+  Query `92fd290c…`, `Normalize Data` `b7741e5e…` sin cambio.
+* Pruebas de pantalla en producción (empresa 10: tablero, captura, balance, anulación y ganadería): **pendiente de
+  registrar el resultado.**
+
 * `agri_expenses`: gasto general, por plantación o por lote; categoría del catálogo de la empresa, fecha (no
   futura en CDMX), monto, cantidad y unidad, proveedor, descripción, factura y folio. Nunca se modifica ni se
   borra: se anula con motivo (`sp_agri_void_expense`, ADMIN/OWNER).
@@ -33,7 +45,7 @@ datos → n8n → frontend; runbook en `database/migrations/081_RUNBOOK.md`.*
     categorías y unidades; recibe 403 al listar gastos, leer el resumen o el balance, anular y crear categorías.
   * `v5` (C15): el nodo `Model Allowlist` rechaza los 7 modelos de la 081 (`MODEL_NOT_ALLOWED`).
 
-### 🐛 `v6/CRUD`: filtros de texto con "T" tratados como fecha (va en el mismo despliegue que la 081)
+### 🐛 `v6/CRUD`: filtros de texto con "T" tratados como fecha — v1.19.0
 
 *Cambio solo en el nodo `Build Query` del `v6`; ningún otro nodo cambia.* En el `getall`, un valor de filtro se
 consideraba fecha si contenía una `T` mayúscula (`includes('T')`): la columna se convertía a `date` y el valor se
@@ -45,14 +57,14 @@ exactamente `AAAA-MM-DD` o `AAAA-MM-DDThh:mm[:ss[.fff]][Z|±hh:mm]` (regex ancla
 
 Huellas del `Build Query`: producción (v1.18.1) `856b743c27c3dabb10d2a3b5fcb00b18` → con la 081
 `aa741446695d6438d1e30f8383bbc767` → con esta corrección **`92fd290c2aa41ce57c24e750def90a0b`** (publicada en el
-n8n LOCAL, `n8n_db_prod_clone`, el 2026-10-20).
+n8n LOCAL, `n8n_db_prod_clone`, y en producción el 2026-10-20, junto con la 081).
 
 Verificado en LOCAL por `curl` (2026-10-20, ADMIN, 7/7): `agri_expense_summary` con `grain: 'MONTH'` y `'WEEK'`;
 `agri_expenses` con `unit_code: 'TON'`, con fecha simple, con `_gte`/`_lte` y con fecha ISO con hora y zona
 (`…T00:00:00-06:00`, `…T23:59:59.999Z`), que se siguen tratando como fecha; y `vw_cattle_kpi` de la empresa 3
 con `current_status: 'ACTIVO'` (21 animales, antes fallaba).
 
-### 🧪 Migración 080: verificaciones independientes de objetos `agri_*` posteriores
+### 🧪 Migración 080: verificaciones independientes de objetos `agri_*` posteriores — v1.19.0
 
 *Sin cambio en ninguna DDL ni en ningún dato que crea la 080: solo cambian sus verificaciones.* Contaban los
 triggers con `LIKE 'trg_agri_%'` y los modelos con `LIKE 'agri\_%'`, así que fallarían con la 081 aplicada
