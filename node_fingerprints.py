@@ -10,6 +10,11 @@ code/query of the nodes that the v1.17.1 / v1.17.2 / v1.18.3 deployments change 
 the Postgres credentials. It never writes anything and never prints credential values, URLs, tokens,
 pinned data or message texts: the ntfy alert node is reported only as where its URL comes from
 (environment vs. literal) plus booleans, and email nodes only as disabled or not.
+
+Chat / MCP workflows (palm phase 2b): every Postgres tool of an MCP server (`postgresTool`, by name) gets an MD5 of
+its query and of its queryReplacement; every AI Agent an MD5 of its systemMessage; every MCP client only the KIND of
+endpoint it calls (production / localhost / other), never the URL; MCP triggers their path. Workflows with an AI Agent
+also get an MD5 of their connections (routing changes, such as the palm short-circuit, are connection changes).
 """
 import hashlib
 import json
@@ -21,7 +26,24 @@ TRACKED_NODES = (
     'Get Model Name', 'Model Allowlist', 'Is Allowed Model', 'Model Not Registered',
     'Get Model Config', 'Build Query', 'Normalize Data', 'Execute a SQL query',
     'Check Availability SQL', 'Get Specific Room SQL', 'Upsert Guest & Book', 'Site Config', 'Is Lead Request?',
+    # Web Chat / WhatsApp agents (palm phase 2b)
+    'Resolver Empresa Chat', 'Get User Role', 'Resolver Tenant', 'Set Prompt Final',
+    'Es Empresa de Palma', 'Respond Empresa Palma', 'Set - Mensaje Empresa Palma',
+    'Simple Memory',  # session key of the agents (Web Chat: per sessionId and company)
 )
+TOOL_TYPE = 'n8n-nodes-base.postgresTool'
+AGENT_TYPE = '@n8n/n8n-nodes-langchain.agent'
+MCP_CLIENT_TYPE = '@n8n/n8n-nodes-langchain.mcpClientTool'
+MCP_TRIGGER_TYPE = '@n8n/n8n-nodes-langchain.mcpTrigger'
+
+
+def endpoint_kind(url):
+    url = str(url or '')
+    if 'n8n.hosting3m.com' in url:
+        return 'production'
+    if 'localhost' in url or '127.0.0.1' in url:
+        return 'localhost'
+    return 'other'
 ALERT_NODE = 'Alerta (Webhook/HTTP)'
 # Reported only as disabled or not: a production test may disable them and must re-enable them.
 EMAIL_NODES = ('Send Email',)
@@ -47,6 +69,16 @@ def fingerprint(path):
             replacement = params.get('options', {}).get('queryReplacement')
             if replacement is not None:
                 print(f"  {name:<22} queryReplacement {md5(str(replacement))}")
+        elif n.get('type') == TOOL_TYPE:
+            print(f"  tool {name:<30} {md5(params.get('query', ''))}")
+            print(f"  tool {name:<30} queryReplacement {md5(str(params.get('options', {}).get('queryReplacement', '')))}")
+        elif n.get('type') == AGENT_TYPE:
+            system = params.get('options', {}).get('systemMessage', params.get('systemMessage', ''))
+            print(f"  {name:<22} systemMessage {md5(str(system))}")
+        elif n.get('type') == MCP_CLIENT_TYPE:
+            print(f"  {name:<22} endpoint={endpoint_kind(params.get('endpointUrl'))}")
+        elif n.get('type') == MCP_TRIGGER_TYPE:
+            print(f"  {name:<22} mcp path={params.get('path')}")
         elif name in EMAIL_NODES:
             print(f"  {name:<22} disabled={bool(n.get('disabled'))}")
         elif name == ALERT_NODE:
@@ -76,6 +108,14 @@ def fingerprint(path):
     })
     pg_count = sum(1 for n in nodes if n.get('type') == 'n8n-nodes-base.postgres')
     print(f"  postgres nodes={pg_count} credential names={pg_creds}")
+
+    if any(n.get('type') == AGENT_TYPE for n in nodes):
+        print(f"  connections {md5(json.dumps(wf.get('connections', {}), sort_keys=True))}")
+
+    tools = [n for n in nodes if n.get('type') == TOOL_TYPE]
+    if tools:
+        tool_creds = sorted({str((n.get('credentials') or {}).get('postgres', {}).get('name')) for n in tools})
+        print(f"  postgres tools={len(tools)} credential names={tool_creds}")
 
 
 if __name__ == '__main__':
