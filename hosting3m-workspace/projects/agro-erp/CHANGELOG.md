@@ -5,6 +5,45 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🔒 Palma, fase 2b, etapa 1: el chat de ganadería rechaza empresas de palma (migración 082) — en desarrollo, sin desplegar
+
+*Versión por asignar al desplegar. Runbook: `database/migrations/082_RUNBOOK.md` (orden estricto base → n8n).*
+
+**Incidente (producción, 2026-10-21):** con la empresa 10 (palma, de pruebas) activa, el Chat Web llamó a
+`register_ranch_expense` con `tenant_id: 10` y guardó en `cattle_expenses` el gasto
+`3f294c48-c509-42bd-8d3e-2dcfdf6b7913` ($1,300, "MANTENIMIENTO"). La empresa 7 (cliente real de palma) estaba expuesta a
+lo mismo. **Ese gasto se conserva como evidencia** del incidente (decisión del dueño, 2026-10-23); es de la empresa de
+pruebas.
+* Migración 082: `fn_reject_palm_company(id_company)` (`STABLE`) lanza `P0094` ("Esta empresa es de palma; usa el
+  registro de palma…") para empresas de palma (`fn_company_business_domain`, 081) y devuelve `true` en cualquier otro
+  caso. Rollback sin DROP: la deja devolviendo `true`.
+* `v6/MCP Server Cattle`: 26 de 29 tools la llaman como primera condición del `WHERE` de la sentencia que lee o
+  escribe (plan con `One-Time Filter`: se evalúa antes de cualquier fila). `log_cattle_weight` / `log_health_event`
+  usan la empresa del animal. Sin tocar: `get_table_metadata` (prohibida por el prompt) y las dos de órdenes de venta
+  (no reciben empresa; una empresa de palma no tiene animales).
+* Chat Web y WhatsApp: el dominio de la empresa entra al contexto verificado (`Resolver Empresa Chat`;
+  `Get User Role` + `Resolver Tenant`). Con una empresa de palma el workflow **no llama al agente**: un IF
+  `Es Empresa de Palma` responde un mensaje fijo (Chat Web: `Respond Empresa Palma`, `code: PALM_COMPANY`; WhatsApp:
+  `Set - Mensaje Empresa Palma` → `Send Message Tenant`). Se queda además la regla "🌴 EMPRESA DE PALMA" en ambos
+  prompts. Provisional hasta el agente de palma de la etapa 2, que reemplaza este IF por el `Switch`.
+  Motivo del IF: en LOCAL, con solo la regla del prompt, el modelo la siguió en 1 de 3 mensajes (pidió la categoría
+  del gasto y filtros para contar animales).
+* Con el IF en medio, las expresiones `$('Nodo').item` del agente y de su memoria dejaron de resolverse cuando el agente
+  vuelve después de una tool ("Key parameter is empty" en `Simple Memory`, "No prompt specified" en `AI Agent`). En
+  Chat Web y WhatsApp pasan a `.first()` (cada ejecución procesa un solo mensaje).
+* `node_fingerprints.py`: cubre tools, `systemMessage`, tipo de endpoint MCP, ruta MCP y credenciales de las tools; la
+  salida de los workflows ya cubiertos no cambia.
+* Pruebas LOCAL (2026-10-21): `082_tests.sql` 11/11; SQL real de las 26 tools con empresa 10 → 26/26 `P0094`, con
+  empresa 3 → ninguna rechaza; lecturas de ganadería con datos reales idénticas a `main` (mismo md5).
+* Prueba por Chat Web en LOCAL (2026-10-23, webhook real `v6/ai/chat-cattle`, ADMIN de las empresas 10 y 3):
+  empresa 10 → el gasto de la bomba ($1,300), "¿Cuántos animales hay?" y un intento de forzar
+  `register_ranch_expense` reciben el mensaje fijo en 0–2 s (`PALM_COMPANY`, sin pasar por el agente); ninguna fila
+  nueva en `cattle_expenses` ni en `agri_expenses`. Empresa 3 (con el arreglo de `.first()`) → "¿Cuántos animales hay
+  en total?" (30, por la tool `count_livestock`), "¿Y de esos cuántos son becerras?" en la misma conversación (5: la
+  memoria funciona después de una tool) y el arete `9999000007` (becerro, UPP Testing, lote La Tuza); ningún error en
+  `n8n_error_logs`. Antes se repitió con la imagen local de n8n reconstruida (un archivo corrupto rompía la CLI) y con
+  el DNS del contenedor corregido (no resolvía nombres externos tras un apagado brusco del equipo).
+
 ### 🌴 Palma, fase 2a: gastos agrícolas (migración 081, `v6/CRUD` y frontend) — v1.19.0
 
 *Incluye la migración 081, `v6/CRUD` (`spConfigByModel` y la corrección de fechas de abajo) y el frontend (pantalla
