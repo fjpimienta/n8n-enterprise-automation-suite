@@ -263,14 +263,18 @@ Debes actuar siempre como mi **Technical Lead auxiliar y Senior Project Manager 
 - **No existe tool MCP de consulta de historial de eventos por animal** (reproducción/desparasitación/castración) — solo tools de escritura y `vw_cattle_event_log` a nivel dashboard. Ver Regla 15.
 - **`user_email` de las tools de órdenes de venta lo llena el modelo (`$fromAI`)** y la base lo usa para decidir qué empresas puede tocar — misma deuda de sesión del agente (Regla 6); resolverlo junto con `agent_active_sessions`. Ver Regla 16.
 - **CORS del webhook del chat en producción incluye `http://localhost:4200`** (preexistente, detectado 2026-10-16).
+- **`Resolver Empresa Chat` (Chat Web) falla con "Query Parameters must be a string of comma-separated values or an array of values"** cuando el token no trae usuario (visto en LOCAL, `n8n_error_logs` 1782, 2026-10-21): el `queryReplacement` recibe `undefined`. Preexistente, fuera de la Fase 2b; corregirlo con `String(... ?? '')` en el primer parámetro, como ya hace el segundo.
 - ⚠️ **`sp_upsert_producer_pii(p_producer_id, p_curp, p_rfc)` no recibe tenant** (2026-10-17): cualquiera que conozca el `uuid` de un productor puede escribir su CURP/RFC, sea de la empresa que sea. Además el modelo `producer_pii` está roto (`table_name` = el SP con op `INSERT`, sin entrada en `spConfigByModel`), así que hoy no es alcanzable. Antes de usarlo (Regla 4), envolverlo en un `sp_*` con `p_tenant_id` que valide la empresa del productor y registrarlo en `spConfigByModel`.
 - ⚠️ **`curp`/`rfc` en texto plano en `companys.metadata`** (modal de `/admin/tenants`, `upp-form-modal`; en LOCAL solo la empresa 3, de pruebas). Opción elegida (PR aparte): quitar los campos del modal y del modelo `Company`, quitar esas llaves del `metadata` antes de guardar (si no, el `getone` las vuelve a mandar) y limpiar con respaldo previo (`metadata - 'curp' - 'rfc'`, UPDATE, no DELETE).
 - ⚠️ **Palma (080) — pendientes:** (1) Frontend del Paso 3 implementado y probado a mano en LOCAL el 2026-10-17 con la empresa 10, como ADMIN y como EDITOR (`qa-editor-palma@example.test`, dato de prueba): dominio y login, selector de plantación, Plantaciones, Lotes, Filas/conteos/historial, Tablero y permisos. Pendiente: desplegar. (2) `agriculture_telemetry` conserva su FK `ON DELETE CASCADE` hacia `companys` (no se tocó en 080). (3) `agri_rows` no tiene `INSERT` (decisión 2026-10-17): las filas solo se crean por `sp_agri_bulk_create_rows`.
-- ⏸️ **ESTADO TEMPORAL — restauración diaria de LOCAL PAUSADA desde el 2026-10-20, mientras dura Palma Fase 2a**
-  (gastos agrícolas: migración 081 aplicada en LOCAL y `v6` con `spConfigByModel` de la 081 publicado en el n8n
-  LOCAL). LOCAL ya **no** es copia de producción: tiene la 081 y lo que se cargue a mano. El timer está
-  deshabilitado (`disable`), así que no vuelve a arrancar aunque se reinicie el equipo. Al terminar la 2a,
-  reactivar con `systemctl --user enable --now pg-backup-restore.timer` y quitar este punto.
+- ⏸️ **ESTADO TEMPORAL — restauración diaria de LOCAL PAUSADA desde el 2026-10-22, mientras dura Palma Fase 2b**
+  (Etapa 1: migración 082 aplicada en LOCAL y `v6/MCP Server Cattle` + `v6/ai/chat cattle` con el bloqueo de palma
+  publicados en el n8n LOCAL). La última restauración fue el 2026-10-21 a las 07:10 (antes del incidente del gasto
+  `3f294c48…`, que por eso no está en LOCAL). LOCAL ya **no** es copia de producción. El timer está deshabilitado
+  (`disable`), así que no vuelve a arrancar aunque se reinicie el equipo. ⚠️ Si se reactiva antes de desplegar la 082,
+  la restauración quita la función de la base de LOCAL pero el n8n de LOCAL (`n8n_db_prod_clone`, que no se
+  restaura) sigue llamándola: **todas** las tools de ganadería de LOCAL fallarían hasta volver a aplicar la 082. Al
+  terminar, reactivar con `systemctl --user enable --now pg-backup-restore.timer` y quitar este punto.
 - ⚠️ **El n8n de LOCAL no se restaura desde producción** (hallazgo 2026-10-20). `infrastructure/docker-compose.override.yml`
   apunta el contenedor `n8n-enterprise-core` a la base `n8n_db_prod_clone`, y `backup_postgres_vps_to_local.sh` solo
   restaura `n8n_db` (copia de producción: workflows y ejecuciones reales, útil para leer) y `hosting3m_db`. Los
