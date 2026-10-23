@@ -13,12 +13,13 @@ pinned data or message texts: the ntfy alert node is reported only as where its 
 
 Chat / MCP workflows (palm phase 2b): every Postgres tool of an MCP server (`postgresTool`, by name) gets an MD5 of
 its query and of its queryReplacement; every AI Agent an MD5 of its systemMessage; every MCP client only the KIND of
-endpoint it calls (production / localhost / other), never the URL; MCP triggers their path. Workflows with an AI Agent
+endpoint it calls (production / localhost / unknown, by exact host), never the URL; MCP triggers their path. Workflows with an AI Agent
 also get an MD5 of their connections (routing changes, such as the palm short-circuit, are connection changes).
 """
 import hashlib
 import json
 import sys
+from urllib.parse import urlparse
 
 # Nodes whose code/query is fingerprinted (v5/CRUD, v6/CRUD, the Global Error Handler and the
 # Public Booking Engine).
@@ -37,13 +38,29 @@ MCP_CLIENT_TYPE = '@n8n/n8n-nodes-langchain.mcpClientTool'
 MCP_TRIGGER_TYPE = '@n8n/n8n-nodes-langchain.mcpTrigger'
 
 
+PRODUCTION_HOSTS = frozenset({'n8n.hosting3m.com'})
+LOCAL_HOSTS = frozenset({'localhost', '127.0.0.1', 'n8n-enterprise-core'})
+NTFY_HOSTS = frozenset({'ntfy.sh'})
+
+
+def url_host(url):
+    """Exact, lower-case host of a URL ('' when there is none). A leading '=' (n8n expression marker) is ignored."""
+    text = str(url or '').strip()
+    if text.startswith('='):
+        text = text[1:].strip()
+    try:
+        return (urlparse(text).hostname or '').lower()
+    except ValueError:
+        return ''
+
+
 def endpoint_kind(url):
-    url = str(url or '')
-    if 'n8n.hosting3m.com' in url:
+    host = url_host(url)
+    if host in PRODUCTION_HOSTS:
         return 'production'
-    if 'localhost' in url or '127.0.0.1' in url:
+    if host in LOCAL_HOSTS:
         return 'localhost'
-    return 'other'
+    return 'unknown'
 ALERT_NODE = 'Alerta (Webhook/HTTP)'
 # Reported only as disabled or not: a production test may disable them and must re-enable them.
 EMAIL_NODES = ('Send Email',)
@@ -85,7 +102,7 @@ def fingerprint(path):
             url = str(params.get('url', ''))
             if url.replace(' ', '') == '={{$env.NTFY_ALERT_URL}}':
                 url_source = 'env:NTFY_ALERT_URL'
-            elif 'ntfy' in url:
+            elif url_host(url) in NTFY_HOSTS:
                 url_source = 'LITERAL-NTFY-URL'
             else:
                 url_source = 'other'
