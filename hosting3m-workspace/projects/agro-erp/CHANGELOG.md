@@ -20,6 +20,13 @@ El mensaje fijo para empresas de palma se reemplaza por un **agente de palma** c
 * **Hallazgo (LOCAL, 2026-10-24):** los chats importados en LOCAL no coincidían con `main`: el de Chat Web traía el prompt de
   mortandad anterior a #846 y el endpoint MCP a `localhost`; el de WhatsApp era anterior a la etapa 1 (sin ruta de palma,
   inactivo). Hay que importar `main` a LOCAL antes de probar la etapa 2 (y conservar el endpoint MCP local).
+* **Probado en LOCAL (2026-10-24)** por el webhook real del Chat Web con tokens reales de ADMIN y EDITOR de la empresa 10, y por
+  `n8n execute` (WhatsApp, con el envío anulado): una sola confirmación, sin monto, lote inexistente, fecha futura, conteo,
+  balance (ADMIN con total, EDITOR rechazado sin cifras), anti-duplicado y su forzado, anulación (el EDITOR no puede),
+  memoria tras una tool, "registra en la empresa 5" ignorado y empresa 3 sin cambios. Ajustes de prompt a raíz de las
+  pruebas: proponer la categoría con alternativas en el resumen, preguntar solo lo obligatorio, volver a llamar a la
+  herramienta para cualquier cifra y copiar el motivo de anulación. Limitación conocida: gpt-4.1-mini a veces pregunta
+  datos opcionales cuando el mensaje pide cambiar de empresa (no escribe nada); no se sube de modelo porque la confirmación nunca falló.
 * Pendiente de producción: runbook completo (base → n8n → pruebas por el canal real con ADMIN y EDITOR de la empresa 10).
 
 ### 📌 Deuda técnica — captura del agente de ganadería: preguntas repetidas (para la etapa 2/3 de la fase 2b)

@@ -37,6 +37,7 @@ las funciones: las deja contestando `{"status":"disabled"}`, así que el orden i
   para WhatsApp, con su teléfono; (b) filas en el lote `L-01` (Lotes y conteos, p. ej. filas 1–5 con 22 puntos);
   (c) un segundo lote de la misma plantación con nombre parecido (para la ambigüedad). **No se cambia el rol de ninguna
   cuenta existente.**
+- Los scripts `083_qa_palm_chat_seed_local.sql` y su rollback son **solo LOCAL**; no se corren en producción.
 - Línea base (solo lectura), para comparar al final:
 
   ```sql
@@ -105,7 +106,7 @@ Descargar los dos exports de producción a `~/claude-backups/<fecha>_prod-export
 
    ```
      AI Agent               systemMessage 8e135376de06b45369df0066a78d0f4b
-     AI Agent Palma         systemMessage c4b3dac91ae511024be2282262cc832d
+     AI Agent Palma         systemMessage ba86d8e380676a2cab665d809fbdb62d
      Catálogo Palma         6b98fdaa89225e90307073d3c0b6bfef
      Catálogo Palma         queryReplacement 68900057ccbacc5862cec517dd6739dc
      Dominio                7c459db29a18a1c553a9bf3cfe38fd59
@@ -140,7 +141,7 @@ Igual que 2.1 con `v6_WhatsApp_Agent_Cattle.json`, `OpenAI Chat Model Palma` con
 
    ```
      AI Agent               systemMessage fdd277b9f09c38a26b31b1f431c19baa
-     AI Agent Palma         systemMessage a0cc058fc009dc30c34e1ac6c4699e12
+     AI Agent Palma         systemMessage 80e89ea6642f4aa42ca4a20b5cfb9f44
      Catálogo Palma         6b98fdaa89225e90307073d3c0b6bfef
      Catálogo Palma         queryReplacement 4739c7ac4aacb1bbcc74c9c978aa2aad
      Dominio                738b3e47b55bb07b9bdde5b805415d90
@@ -183,10 +184,11 @@ ADMIN y EDITOR de la empresa 10 (el EDITOR del paso 0). WhatsApp con el teléfon
 "Plantación de Pruebas" si el teléfono tiene varias empresas.
 
 1. **Gasto completo (ADMIN):** "Compré material para la bomba de agua por 1,300, incluye mano de obra" → una sola
-   confirmación con el resumen completo (categoría propuesta, $1,300, hoy, alcance general); "Sí" → "Gasto registrado".
+   confirmación con el resumen completo (categoría propuesta —p. ej. Mantenimiento de maquinaria— con 1 o 2 alternativas,
+   $1,300, hoy, alcance general); "Sí" → "Gasto registrado".
    En BD: una fila nueva en `agri_expenses` de la 10, `reported_by_email` = el ADMIN, descripción con "incluye mano de obra".
 2. **Sin monto:** "Compré diésel para el tractor" → pregunta **solo** el monto.
-3. **Categoría ambigua:** un gasto cuyo concepto encaje en dos categorías → ofrece 2–3 opciones numeradas.
+3. **Categoría ambigua:** un gasto cuyo concepto encaje en dos categorías → propone la más probable con 1–2 alternativas dentro de la misma confirmación (no hace una pregunta aparte).
 4. **Lote inexistente / fecha futura:** explica y ofrece los lotes; rechaza la fecha futura. Nada escrito.
 5. **Conteo:** "Conteo de la fila 3 del lote L-01: 18 plantas vivas." → resumen antes → después; "Sí" → registrado, con
    fila nueva en `agri_row_census_history` (actor = quien escribe). Un conteo mayor a los puntos de la fila → rechazo.
