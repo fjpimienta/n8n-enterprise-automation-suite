@@ -5,22 +5,53 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
-### 🐛 Chat de ganadería: la baja por mortandad ya no exige estatus ACTIVO (corrección aplicada a mano en producción)
+### 📌 Deuda técnica — captura del agente de ganadería: preguntas repetidas (para la etapa 2/3 de la fase 2b)
+
+*Comportamiento previo, no introducido por la 082.* En producción (2026-10-24) el agente pidió filtros **dos veces**
+antes de contar ("¿Cuántos animales hay?"), y el 2026-10-20 pidió categoría y descripción tres veces antes de registrar
+un gasto. Causas **probables** en el `systemMessage` de ganadería (sin comprobar para el conteo): la regla B5 (prohíbe
+inferir `category`, `description` y cualquier parámetro faltante, así que pregunta por todo), la falta de una
+instrucción de usar `count_livestock` sin filtros para consultas generales (esa tool ya devuelve el hato completo con
+`grand_total`) y la falta de una sola confirmación con el resumen completo.
+* Propuesta: reglas de captura como las del agente de palma (extraer todo del mensaje, preguntar en un solo mensaje solo
+  lo que falte, una confirmación Sí/No, nunca inventar montos ni cantidades) y consultas generales sin pedir filtros.
+  Va junto con la etapa 2 (agente de palma) o en un cambio aparte de ganadería.
+* Pendientes de `register_ranch_expense` en el mismo cambio: `expense_date` se guarda en UTC (después de las 18:00 de
+  CDMX queda al día siguiente), la cantidad dictada se pierde (la tool no tiene campo) y `CUSTOMER` puede registrar.
+
+### 🐛 Chat de ganadería: la baja por mortandad ya no exige estatus ACTIVO (corrección aplicada a mano en producción) — v1.19.1
 
 *Solo el `systemMessage` del `AI Agent` de `v6/ai/chat cattle` y `v6/WhatsApp Agent Catlte`; ningún otro nodo.*
 El 2026-10-24 se corrigió **a mano en producción** (editor de n8n) la regla de mortandad (sección D1) de los dos
 chats: decía "si su estatus no es ACTIVO, no lo incluyas", así que el agente se negaba a reportar la muerte de una
 vaca `VACÍA` o `PREÑADA`. Ahora solo excluye `VENDIDO` y `BAJA_MORTANDAD` (ya no forman parte del hato); `VACÍA` y
-`PREÑADA` son estados reproductivos y sí pueden darse de baja. Este cambio la lleva a `main` para que importar los chats
-con la 082 no la pierda.
+`PREÑADA` son estados reproductivos y sí pueden darse de baja. Se llevó a `main` (#846) para que importar los chats
+con la 082 no la perdiera.
+
+✅ **Desplegada en producción el 2026-10-24**, junto con la 082: los dos chats importados desde el editor ya la traen.
 * Verificado contra los exports de producción del 2026-10-24: frente a `35bd8d6` (versión anterior a la 082), en los dos
   workflows solo cambia esa línea del `systemMessage` (Chat Web `cc83ed83…` → `5fa6e565…`; WhatsApp `a1f7d03e…` →
   `7b02d524…`); nodos, conexiones y settings iguales.
 * Sobre `main` (con la 082): `systemMessage` Chat Web `85c4ee44…` → `8e135376…`; WhatsApp `e8d5ba2d…` → `fdd277b9…`.
 
-### 🔒 Palma, fase 2b, etapa 1: el chat de ganadería rechaza empresas de palma (migración 082) — en desarrollo, sin desplegar
+### 🔒 Palma, fase 2b, etapa 1: el chat de ganadería rechaza empresas de palma (migración 082) — v1.19.1
 
-*Versión por asignar al desplegar. Runbook: `database/migrations/082_RUNBOOK.md` (orden estricto base → n8n).*
+*Runbook: `database/migrations/082_RUNBOOK.md` (orden estricto base → n8n). PR #842 y #844.*
+
+✅ **Desplegada y verificada en producción el 2026-10-24.**
+* Base de datos: `082 COMMITTED`; `082_state_check applied` OK con las mismas 4 huellas de antes (`crud_models`
+  `64e2eba3…`, `companys_data` `d0b639e3…`, `cattle_expenses_data` `6184b037…`, `agri_expenses_data` `d41d8cd9…`).
+* n8n, importados desde el editor, todos iguales a `main` por huella: `v6/MCP Server Cattle` `versionId` `da104ed6…`;
+  Chat Web (`v6/ai/chat cattle`) `eac4bbd1…`; WhatsApp (`v6/WhatsApp Agent Catlte`) `1a91cd02…`. Los chats incluyen la
+  corrección de mortandad del mismo día (entrada anterior) y el desvío fijo para empresas de palma.
+* Pruebas en producción, por el canal real:
+  * Chat Web, empresa 10 (palma): mensaje fijo en el mismo minuto, sin llamar al agente.
+  * Chat Web, empresa 3 (ganadería): conteo de becerras = 5 con la tool; la baja por mortandad de `5551400` llegó hasta
+    el resumen de confirmación sin objetar el estatus; la memoria funcionó después de usar la tool.
+  * Sin registrar en esta entrada (quedaron en blanco al pasarme los datos; completar con el resultado real): consulta
+    del arete `9999000007`; WhatsApp empresa 3; WhatsApp empresa 10; conteo de `cattle_expenses` por empresa después de
+    las pruebas (esperado: sin filas nuevas para las empresas 7 y 10); y qué pasó con la solicitud de baja de `5551400`
+    (si quedó `PENDIENTE` vence a las 23:59 de ese día, Regla 10).
 
 **Incidente (producción, 2026-10-21):** con la empresa 10 (palma, de pruebas) activa, el Chat Web llamó a
 `register_ranch_expense` con `tenant_id: 10` y guardó en `cattle_expenses` el gasto
