@@ -214,9 +214,8 @@ Debes actuar siempre como mi **Technical Lead auxiliar y Senior Project Manager 
   del 2026-10-21: con la empresa 10 (palma) activa, el Chat Web guardó un gasto en `cattle_expenses` (`3f294c48…`, se
   conserva como evidencia). Ahora `fn_reject_palm_company` (P0094) es la primera condición del `WHERE` de 26 de las 29
   tools y, con una empresa de palma, Chat Web y WhatsApp responden un mensaje fijo sin llamar al agente. Detalle y
-  pruebas: CHANGELOG v1.19.1 y `database/migrations/082_RUNBOOK.md`. Verificado en producción el 2026-10-24; **falta
-  probar WhatsApp con la empresa 10**. Queda el agente de palma (etapa 2), que reemplaza ese desvío por un `Switch` por
-  dominio.
+  pruebas: CHANGELOG v1.19.1 y `database/migrations/082_RUNBOOK.md`. Verificado por completo en producción el 2026-10-24 (Chat Web y WhatsApp,
+  empresas 10 y 3). Queda el agente de palma (etapa 2), que reemplaza ese desvío por un `Switch` por dominio.
 - ⚠️ **Captura del agente de ganadería (pendiente, etapa 2/3 de la fase 2b):** pide datos de más (B5 del `systemMessage`
   le impide tomar categoría y descripción del mensaje: 3 preguntas antes de registrar un gasto el 2026-10-20; pidió
   filtros dos veces antes de contar el 2026-10-24), `register_ranch_expense` guarda `expense_date` en UTC (después de las
