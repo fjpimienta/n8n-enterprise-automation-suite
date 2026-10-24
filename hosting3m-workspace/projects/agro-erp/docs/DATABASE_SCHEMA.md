@@ -1247,3 +1247,38 @@ ADMIN/OWNER/EDITOR/CUSTOMER, write ADMIN/OWNER), `agri_rows` (no INSERT: rows on
 `agri_set_default_plantation`, `agri_bulk_create_rows` (ADMIN/OWNER), `agri_record_row_census`
 (ADMIN/OWNER/EDITOR). `PalmTelemetry` (id 45): DELETE op removed, `UPDATE` only ADMIN (restored by the
 rollback). Rollback backup table: `crud_models_backup_20261017_080`.
+
+
+## 🌴 Palm Chat Agent Wrappers (migration 083)
+*Added in migration 083 (2026-10-24, LOCAL only until deployed). Functions only: no table, view or `crud_models`
+change. Files: `083_agri_chat_wrappers.sql`, `083_tests.sql` (116 checks, always rolled back), `083_rollback.sql`
+(no DROP: the tools answer `disabled`), `083_state_check.sql` (read-only), `083_RUNBOOK.md`.*
+
+Each tool of the palm chat agent (Web Chat and WhatsApp, `postgresTool` wired straight to the AI Agent) is one
+`SELECT` of one wrapper. `p_tenant_id` and `p_actor_email` (always the first two parameters, `text`) come from an n8n
+expression over the verified session, never from the model. Every parameter is `text`; the wrapper parses it.
+
+**Gate on every call (`fn_agri_chat_ctx`)**, in this order: tenant is `^[0-9]{1,9}$` → `fn_agri_actor_role` finds an
+active membership (and the company is active) → `fn_company_business_domain = 'PALM'` → role allowed for the tool.
+Otherwise the answer is `{"status":"forbidden"|"not_palm"}` and nothing is read or written.
+
+| Function (n8n tool) | Roles | Notes |
+|---|---|---|
+| `sp_agri_chat_catalog` (prompt context) | any member | `company_name`, real `role`, categories, units, plantations with lots; names cut to 60 chars, no line breaks |
+| `sp_agri_chat_structure` (`list_plantations_and_lots`) | any member | views `vw_agri_plantation_summary` / `vw_agri_lot_summary`, no amounts |
+| `sp_agri_chat_lot_summary` (`get_lot_summary`) | any member | one lot; ambiguity never guessed |
+| `sp_agri_chat_record_expense` (`register_palm_expense`) | ADMIN, OWNER, EDITOR | 2 steps (`confirmed`), 2-minute duplicate guard (`p_force_duplicate`), calls `sp_agri_record_expense`; the answer never has an amount |
+| `sp_agri_chat_void_expense` (`void_palm_expense`) | ADMIN, OWNER | `p_expense_ref` = first 8+ hex characters of the id; reason required; 2 steps; calls `sp_agri_void_expense` |
+| `sp_agri_chat_recent_expenses` (`list_recent_palm_expenses`) | ADMIN, OWNER | last 1–10 non-voided expenses with amount and `ref` |
+| `sp_agri_chat_expense_balance` (`palm_expense_balance`) | ADMIN, OWNER | periods `TODAY, THIS_WEEK, THIS_MONTH, LAST_MONTH, THIS_YEAR, CUSTOM` (CDMX); whole-company totals; other roles are refused before any read |
+| `sp_agri_chat_record_row_census` (`record_row_census`) | ADMIN, OWNER, EDITOR | lot + row number + alive plants, 2 steps, `preview` shows before → after; never changes `planting_positions` |
+
+Helpers: `fn_agri_chat_txt` (NULL for `''`/`null`/`undefined`), `fn_agri_chat_key` (accent/case/punctuation-insensitive
+key), `fn_agri_chat_num` (accepts `1,300` and `$1,300.50`), `fn_agri_chat_date` (`AAAA-MM-DD` only),
+`fn_agri_chat_ctx` (the gate) and `fn_agri_chat_resolve_scope` (plantation/lot by code or name: exact first, then partial).
+
+**Answer contract:** `status` ∈ `preview | recorded | voided | ok | need_info | duplicate_recent | already_void |
+not_found | invalid | forbidden | not_palm | disabled`. `need_info` carries `issues[]` (`type` = `missing | ambiguous |
+not_found | invalid`, `field`, `message`, `options`/`candidates`) so the agent asks everything that is missing in one
+message. Errors `P00xx` raised by the 080/081 procedures come back as `invalid` with `code` and the Spanish message.
+No new error codes.

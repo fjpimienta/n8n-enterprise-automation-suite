@@ -5,6 +5,23 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🌴 Palma, fase 2b, etapa 2: agente de palma en Chat Web y WhatsApp (migración 083) — v1.20.0
+
+*Runbook: `database/migrations/083_RUNBOOK.md` (⛔ orden estricto base → n8n; sin cambios de frontend). Diseño y decisiones: `docs/PALM_2B_STAGE2_DESIGN.md`. **Sin desplegar**: solo LOCAL (base y n8n sin tocar al escribir esto).*
+El mensaje fijo para empresas de palma se reemplaza por un **agente de palma** con solo herramientas de palma; ganadería no cambia.
+* **Base (083, solo funciones):** `sp_agri_chat_catalog`, `_structure`, `_lot_summary`, `_record_expense`, `_void_expense`,
+  `_recent_expenses`, `_expense_balance` y `_record_row_census`, más las ayudas `fn_agri_chat_*`. Revalidan en cada llamada
+  empresa, membresía, dominio palma y rol; resuelven plantación/lote/categoría/unidad por nombre sin adivinar; las
+  escrituras son de dos pasos (`preview` → `confirmed`); anti-duplicado de 2 minutos. Rollback sin DROP (`disabled`).
+  116 pruebas SQL en LOCAL, todas con rollback.
+* **n8n:** `Es Empresa de Palma` → Switch `Dominio`; `PALM` → `Catálogo Palma` → `AI Agent Palma` con 7 `postgresTool`
+  conectadas directo al agente. **`tenant_id` y correo salen de la sesión por expresión, nunca del modelo** (probado por
+  `n8n execute` y por el webhook real de LOCAL). `Set Prompt Final` (WhatsApp) agrega `prompt_raw` sin la regla de juntar dígitos.
+* **Hallazgo (LOCAL, 2026-10-24):** los chats importados en LOCAL no coincidían con `main`: el de Chat Web traía el prompt de
+  mortandad anterior a #846 y el endpoint MCP a `localhost`; el de WhatsApp era anterior a la etapa 1 (sin ruta de palma,
+  inactivo). Hay que importar `main` a LOCAL antes de probar la etapa 2 (y conservar el endpoint MCP local).
+* Pendiente de producción: runbook completo (base → n8n → pruebas por el canal real con ADMIN y EDITOR de la empresa 10).
+
 ### 📌 Deuda técnica — captura del agente de ganadería: preguntas repetidas (para la etapa 2/3 de la fase 2b)
 
 *Comportamiento previo, no introducido por la 082.* En producción (2026-10-24) el agente pidió filtros **dos veces**
