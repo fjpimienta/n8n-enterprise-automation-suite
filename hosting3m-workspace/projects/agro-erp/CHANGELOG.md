@@ -59,8 +59,11 @@ con la 082 no la perdiera.
     * dígitos dictados ("5 5 5 1 4 0 0"): reconocidos.
   * `cattle_expenses` por empresa después de las pruebas: 3→9, 5→6, 6→3, 10→1. La empresa 10 sigue solo con el gasto de
     evidencia del 2026-10-21: no entró nada nuevo de palma.
-  * ⏳ **Pendiente de probar en producción:** WhatsApp con la empresa 10 (palma), es decir, el desvío fijo de WhatsApp.
-    Etapa 1 verificada en producción **salvo ese caso**.
+  * WhatsApp, empresa 10 (palma), 2026-10-24 12:05 CST: "Plantación de Pruebas: compré material para la bomba de agua
+    por 1,300" respondió el mensaje fijo de palma (variante de WhatsApp) sin llamar al agente. (El conteo de
+    `cattle_expenses` posterior a esta prueba no se incluyó en el reporte; el último conteo registrado, con la empresa 10
+    en 1, es el de arriba.)
+  * ✅ **Etapa 1 verificada por completo en producción** (Chat Web y WhatsApp, empresas 10 y 3).
 * Observación (comportamiento previo, no de este cambio): en WhatsApp el agente pidió categoría y descripción aunque el
   mensaje del gasto las traía (ver la deuda de captura, arriba).
 
