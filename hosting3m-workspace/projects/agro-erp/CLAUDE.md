@@ -198,6 +198,11 @@ Debes actuar siempre como mi **Technical Lead auxiliar y Senior Project Manager 
   `getall` solo es fecha si es `AAAA-MM-DD[Thh:mm…]` (antes cualquier texto con "T" se trataba como fecha).
 * Errores `P0090`–`P0093`: ver la cabecera de `081_agri_expenses.sql`.
 
+### 20. Workflows n8n de los agentes (chat y WhatsApp)
+Dos reglas del `CLAUDE.md` raíz, sección "Despliegue", aplican a los workflows de agro-erp: (1) comparar producción
+contra `main` por huella antes de importar, porque producción puede traer cambios manuales; (2) con un IF delante
+de un AI Agent, usar `.first()` en lugar de `.item` en `$('Node')`.
+
 ## Contrato Meta-CRUD (verificado en producción)
 - Payload: `{ entity, table_name, operation (minúsculas), filters|fields, id }`
 - Errores de Postgres llegan como HTTP 200 con `error:true` — inspeccionar siempre, nunca confiar solo en el status HTTP
