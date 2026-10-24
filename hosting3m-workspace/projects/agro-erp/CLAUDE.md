@@ -2,7 +2,7 @@
 
 ## 📌 Identidad del Proyecto
 **Nombre:** Hosting3M Automation Suite - Agro ERP
-**Versión Actual:** v1.19.1 — Palma, fase 2b, etapa 1: las tools del chat de ganadería rechazan empresas de palma (migración 082) y la baja por mortandad acepta `VACÍA`/`PREÑADA` (producción 2026-10-24; ver el CHANGELOG). Anterior: v1.19.0 — Palma, fase 2a: gastos agrícolas (migración 081, `v6/CRUD` con `spConfigByModel` y corrección de fechas del `getall`, pantalla "Gastos"; producción 2026-10-20; ver Regla 19). Anterior: v1.18.3 — Public Booking Engine (B2C) del hotel: parámetros como arreglo de texto, filtro por empresa, huésped existente intacto y `room_type` exacto (verificada en producción 2026-10-19). Anterior: v1.18.2 — Global Error Handler: parámetros del `INSERT` como texto y alerta antes que el registro (corrige v1.17.2, revertida en producción). Anterior: v1.18.1 — upsert del `insert` de `v6/CRUD` acotado por empresa, `companys` sin upsert y "Nueva Empresa" oculta (sin migración). Anteriores: v1.18.0 (Palma, fase 1: plantaciones, lotes, filas y conteos, migración 080, con su frontend; ver Regla 18), v1.17.2 (Global Error Handler), v1.17.1 (contención de `v5/CRUD`), v1.17.0 (órdenes de venta por chat/WhatsApp a través de varias UPP y empresas, migración 074; ver Regla 16) y v1.16.1 (hotfix de seguridad de Usuarios y Accesos, migración 073).
+**Versión Actual:** v1.19.1 (en desarrollo, **sin desplegar**: v1.20.0 — Palma, fase 2b, etapa 2: agente de palma en Chat Web y WhatsApp, migración 083; ver Regla 21) — Palma, fase 2b, etapa 1: las tools del chat de ganadería rechazan empresas de palma (migración 082) y la baja por mortandad acepta `VACÍA`/`PREÑADA` (producción 2026-10-24; ver el CHANGELOG). Anterior: v1.19.0 — Palma, fase 2a: gastos agrícolas (migración 081, `v6/CRUD` con `spConfigByModel` y corrección de fechas del `getall`, pantalla "Gastos"; producción 2026-10-20; ver Regla 19). Anterior: v1.18.3 — Public Booking Engine (B2C) del hotel: parámetros como arreglo de texto, filtro por empresa, huésped existente intacto y `room_type` exacto (verificada en producción 2026-10-19). Anterior: v1.18.2 — Global Error Handler: parámetros del `INSERT` como texto y alerta antes que el registro (corrige v1.17.2, revertida en producción). Anterior: v1.18.1 — upsert del `insert` de `v6/CRUD` acotado por empresa, `companys` sin upsert y "Nueva Empresa" oculta (sin migración). Anteriores: v1.18.0 (Palma, fase 1: plantaciones, lotes, filas y conteos, migración 080, con su frontend; ver Regla 18), v1.17.2 (Global Error Handler), v1.17.1 (contención de `v5/CRUD`), v1.17.0 (órdenes de venta por chat/WhatsApp a través de varias UPP y empresas, migración 074; ver Regla 16) y v1.16.1 (hotfix de seguridad de Usuarios y Accesos, migración 073).
 
 ## 👤 Rol del Asistente de IA (Persona)
 Debes actuar siempre como mi **Technical Lead auxiliar y Senior Project Manager (PMP)** con más de 20 años de experiencia, certificado por el PMI y especializado en el SDLC.
@@ -202,6 +202,33 @@ Debes actuar siempre como mi **Technical Lead auxiliar y Senior Project Manager 
 Dos reglas del `CLAUDE.md` raíz, sección "Despliegue", aplican a los workflows de agro-erp: (1) comparar producción
 contra `main` por huella antes de importar, porque producción puede traer cambios manuales; (2) con un IF delante
 de un AI Agent, usar `.first()` en lugar de `.item` en `$('Node')`.
+
+### 21. Palma — agente de chat (migración 083, v1.20.0, sin desplegar)
+* **Dos agentes, un Switch.** En `v6/ai/chat cattle` y `v6/WhatsApp Agent Catlte` el IF `Es Empresa de Palma` pasó a un
+  Switch `Dominio`: `PALM` → `Catálogo Palma` → `AI Agent Palma` (memoria y modelo propios, solo tools de palma);
+  cualquier otro dominio → `AI Agent` de ganadería, **sin cambios**. Diseño completo y decisiones:
+  `docs/PALM_2B_STAGE2_DESIGN.md`. Runbook (⛔ base → n8n): `database/migrations/083_RUNBOOK.md`.
+* **El tenant y el correo nunca los pasa el modelo.** Las 7 tools son `postgresTool` conectadas **directo** al agente (sin
+  MCP) y toman `tenant_id` y correo por expresión de la sesión verificada (`$('Resolver Empresa Chat').first()` +
+  `$('Validar Token').first()` en Chat Web; `$('Resolver Tenant').first()` en WhatsApp); no tienen parámetros para ellos.
+  Verificado en LOCAL por `n8n execute` y por el webhook real (2026-10-24), con un Switch delante, varias llamadas en un
+  turno y memoria. Esto cierra, **solo para palma**, el hallazgo de la Regla 6 (tenant "prompt-enforced"); las tools MCP
+  de ganadería siguen igual. Usar siempre `.first()` (no `.item`) y `String(...)` + `$n::text` en las dos capas.
+* **La lógica vive en SQL** (`083_agri_chat_wrappers.sql`, solo funciones; rollback sin DROP: las deja contestando
+  `{"status":"disabled"}`). Cada función revalida en cada llamada: empresa numérica → membresía activa en empresa activa →
+  dominio `PALM` → rol. Resuelve plantación/lote por código o nombre (exacto primero, luego parcial; la ambigüedad nunca
+  se adivina), valida categoría contra el catálogo de la empresa y unidad contra `agri_unit_catalog`, y responde un
+  `status` (`preview`, `recorded`, `need_info` con `issues[]`, `duplicate_recent`, `forbidden`, `not_palm`, …) en vez de
+  lanzar excepciones esperables. Las de escritura son de **dos pasos** (`confirmed` distinto de `true` solo valida y
+  responde `preview`); el Sí del usuario lo exige el prompt (como en ganadería, no es una garantía criptográfica).
+* **Montos solo ADMIN/OWNER:** `palm_expense_balance` y `list_recent_palm_expenses` rechazan a otro rol antes de leer;
+  `recorded` nunca trae monto (el EDITOR solo lee "Gasto registrado"). El balance es de **toda la empresa**.
+* **Anti-duplicado:** mismo actor, categoría, monto, fecha y alcance en 2 minutos → `duplicate_recent`; se fuerza con
+  `force_duplicate = true` solo si el usuario confirma que es otro gasto.
+* **WhatsApp:** el agente de palma recibe `prompt_raw` (sin la regla que junta dígitos sueltos, que convertiría
+  "filas 3 4 5" en "345"); si dictan un folio largo, el prompt lo pide por texto. Su memoria se separa por tenant
+  (`<teléfono>:palm:<tenant>`).
+* Códigos de error: la 083 no define nuevos; reutiliza `P0080`–`P0094` de los SP que llama.
 
 ## Contrato Meta-CRUD (verificado en producción)
 - Payload: `{ entity, table_name, operation (minúsculas), filters|fields, id }`

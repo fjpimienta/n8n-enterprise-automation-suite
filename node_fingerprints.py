@@ -31,6 +31,8 @@ TRACKED_NODES = (
     'Resolver Empresa Chat', 'Get User Role', 'Resolver Tenant', 'Set Prompt Final',
     'Es Empresa de Palma', 'Respond Empresa Palma', 'Set - Mensaje Empresa Palma',
     'Simple Memory',  # session key of the agents (Web Chat: per sessionId and company)
+    # Palm agent (phase 2b, stage 2): domain Switch, catalog query and the palm agent's own memory
+    'Dominio', 'Catálogo Palma', 'Simple Memory Palma',
 )
 TOOL_TYPE = 'n8n-nodes-base.postgresTool'
 AGENT_TYPE = '@n8n/n8n-nodes-langchain.agent'
