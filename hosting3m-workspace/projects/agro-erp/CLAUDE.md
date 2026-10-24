@@ -214,8 +214,9 @@ Debes actuar siempre como mi **Technical Lead auxiliar y Senior Project Manager 
   del 2026-10-21: con la empresa 10 (palma) activa, el Chat Web guardó un gasto en `cattle_expenses` (`3f294c48…`, se
   conserva como evidencia). Ahora `fn_reject_palm_company` (P0094) es la primera condición del `WHERE` de 26 de las 29
   tools y, con una empresa de palma, Chat Web y WhatsApp responden un mensaje fijo sin llamar al agente. Detalle y
-  pruebas: CHANGELOG v1.19.1 y `database/migrations/082_RUNBOOK.md`. Queda el agente de palma (etapa 2), que reemplaza
-  ese desvío por un `Switch` por dominio.
+  pruebas: CHANGELOG v1.19.1 y `database/migrations/082_RUNBOOK.md`. Verificado en producción el 2026-10-24; **falta
+  probar WhatsApp con la empresa 10**. Queda el agente de palma (etapa 2), que reemplaza ese desvío por un `Switch` por
+  dominio.
 - ⚠️ **Captura del agente de ganadería (pendiente, etapa 2/3 de la fase 2b):** pide datos de más (B5 del `systemMessage`
   le impide tomar categoría y descripción del mensaje: 3 preguntas antes de registrar un gasto el 2026-10-20; pidió
   filtros dos veces antes de contar el 2026-10-24), `register_ranch_expense` guarda `expense_date` en UTC (después de las
@@ -273,7 +274,7 @@ Debes actuar siempre como mi **Technical Lead auxiliar y Senior Project Manager 
   restaura `n8n_db` (copia de producción: workflows y ejecuciones reales, útil para leer) y `hosting3m_db`. Los
   workflows que corren en LOCAL son los de `n8n_db_prod_clone`, cargados a mano. Antes de una prueba, verificar
   la huella del workflow en `n8n_db_prod_clone`, no en `n8n_db`.
-- ✅ **Restauración diaria de LOCAL (`pg-backup-restore.timer`, usuario, 07:00).** Estuvo pausada durante el frontend de Palma (2026-10-17), la fase 2a (2026-10-20) y la etapa 1 de la 2b (2026-10-22); se reactiva al desplegar la 082 (2026-10-24). La siguiente restauración deja la base de LOCAL (`hosting3m_db`) **igual a producción, con 080, 081 y 082**, y lo cargado a mano en ella se pierde. El n8n de LOCAL (`n8n_db_prod_clone`) **no** se restaura (punto anterior): sus workflows se cargan a mano, con el endpoint MCP del chat apuntando a `localhost`. Comprobar con `systemctl --user list-timers pg-backup-restore.timer`; si no muestra próxima ejecución, `systemctl --user enable --now pg-backup-restore.timer`.
+- ✅ **Restauración diaria de LOCAL (`pg-backup-restore.timer`, usuario, 07:00).** Estuvo pausada durante el frontend de Palma (2026-10-17), la fase 2a (2026-10-20) y la etapa 1 de la 2b (2026-10-22 al 2026-10-24). Se reactivó el 2026-10-24 a las 10:50 (CST): **al activar el timer se dispara una restauración inmediata** (esa terminó a las 10:59) y desde entonces corre cada día a las 07:00. Tras una restauración, la base de LOCAL (`hosting3m_db`) queda **igual a producción, con 080, 081 y 082**, y lo cargado a mano en ella se pierde. El n8n de LOCAL (`n8n_db_prod_clone`) **no** se restaura (punto anterior): sus workflows se cargan a mano, con el endpoint MCP del chat apuntando a `localhost`. Comprobar con `systemctl --user list-timers pg-backup-restore.timer`; si no muestra próxima ejecución, `systemctl --user enable --now pg-backup-restore.timer`.
 - Gateway compartido (`v5`/`v6`), hotel, ntfy, `pista-hielo` legacy y modelos con PII sin consumidor (`livestock_producers_pii`, `livestock_producers`, `employee_credentials`): ver la deuda a nivel suite en el `CLAUDE.md` raíz (contención v1.17.1, 2026-10-17).
 
 ## Event authorization matrix (source of truth, set by the project owner 2026-10-06)
