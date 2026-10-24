@@ -171,6 +171,13 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
   `PREPARE`/`SELECT` suelto no ve nada de eso: v1.17.2 pasó esa validación y falló en producción con un
   `execution.id` numérico (2026-10-17, corregido en v1.18.2). Probar en LOCAL con valores numéricos, vacíos,
   nulos y con comas, y forzar texto en las dos capas (`$n::text` y `String(...)`) cuando el tipo no sea seguro.
+- **Antes de importar un workflow, compara producción contra `main` por huella:** producción puede traer
+  cambios manuales. Caso 2026-10-24: la corrección de mortandad (VACÍA/PREÑADA sí pueden darse de baja) se hizo a
+  mano en los prompts de los dos chats; importar `main` la habría borrado. Si difieren, primero se incorpora el
+  cambio a `main` y solo después se importa.
+- **Con un IF delante de un AI Agent, `$('Node').item` deja de resolverse** cuando el agente vuelve a evaluar
+  después de una tool (síntomas: "Key parameter is empty" en Simple Memory y "No prompt specified" en AI Agent).
+  Usa `$('Node').first()`.
 
 ## Deuda técnica activa a nivel suite
 
