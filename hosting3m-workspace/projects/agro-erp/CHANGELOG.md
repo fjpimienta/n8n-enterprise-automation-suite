@@ -5,6 +5,19 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🐛 Chat de ganadería: la baja por mortandad ya no exige estatus ACTIVO (corrección aplicada a mano en producción)
+
+*Solo el `systemMessage` del `AI Agent` de `v6/ai/chat cattle` y `v6/WhatsApp Agent Catlte`; ningún otro nodo.*
+El 2026-10-24 se corrigió **a mano en producción** (editor de n8n) la regla de mortandad (sección D1) de los dos
+chats: decía "si su estatus no es ACTIVO, no lo incluyas", así que el agente se negaba a reportar la muerte de una
+vaca `VACÍA` o `PREÑADA`. Ahora solo excluye `VENDIDO` y `BAJA_MORTANDAD` (ya no forman parte del hato); `VACÍA` y
+`PREÑADA` son estados reproductivos y sí pueden darse de baja. Este cambio la lleva a `main` para que importar los chats
+con la 082 no la pierda.
+* Verificado contra los exports de producción del 2026-10-24: frente a `35bd8d6` (versión anterior a la 082), en los dos
+  workflows solo cambia esa línea del `systemMessage` (Chat Web `cc83ed83…` → `5fa6e565…`; WhatsApp `a1f7d03e…` →
+  `7b02d524…`); nodos, conexiones y settings iguales.
+* Sobre `main` (con la 082): `systemMessage` Chat Web `85c4ee44…` → `8e135376…`; WhatsApp `e8d5ba2d…` → `fdd277b9…`.
+
 ### 🔒 Palma, fase 2b, etapa 1: el chat de ganadería rechaza empresas de palma (migración 082) — en desarrollo, sin desplegar
 
 *Versión por asignar al desplegar. Runbook: `database/migrations/082_RUNBOOK.md` (orden estricto base → n8n).*
