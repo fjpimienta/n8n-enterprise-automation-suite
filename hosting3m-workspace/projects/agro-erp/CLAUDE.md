@@ -2,7 +2,7 @@
 
 ## 📌 Identidad del Proyecto
 **Nombre:** Hosting3M Automation Suite - Agro ERP
-**Versión Actual:** v1.19.0 — Palma, fase 2a: gastos agrícolas (migración 081, `v6/CRUD` con `spConfigByModel` y corrección de fechas del `getall`, pantalla "Gastos"; producción 2026-10-20; ver Regla 19). Anterior: v1.18.3 — Public Booking Engine (B2C) del hotel: parámetros como arreglo de texto, filtro por empresa, huésped existente intacto y `room_type` exacto (verificada en producción 2026-10-19). Anterior: v1.18.2 — Global Error Handler: parámetros del `INSERT` como texto y alerta antes que el registro (corrige v1.17.2, revertida en producción). Anterior: v1.18.1 — upsert del `insert` de `v6/CRUD` acotado por empresa, `companys` sin upsert y "Nueva Empresa" oculta (sin migración). Anteriores: v1.18.0 (Palma, fase 1: plantaciones, lotes, filas y conteos, migración 080, con su frontend; ver Regla 18), v1.17.2 (Global Error Handler), v1.17.1 (contención de `v5/CRUD`), v1.17.0 (órdenes de venta por chat/WhatsApp a través de varias UPP y empresas, migración 074; ver Regla 16) y v1.16.1 (hotfix de seguridad de Usuarios y Accesos, migración 073).
+**Versión Actual:** v1.19.1 — Palma, fase 2b, etapa 1: las tools del chat de ganadería rechazan empresas de palma (migración 082) y la baja por mortandad acepta `VACÍA`/`PREÑADA` (producción 2026-10-24; ver el CHANGELOG). Anterior: v1.19.0 — Palma, fase 2a: gastos agrícolas (migración 081, `v6/CRUD` con `spConfigByModel` y corrección de fechas del `getall`, pantalla "Gastos"; producción 2026-10-20; ver Regla 19). Anterior: v1.18.3 — Public Booking Engine (B2C) del hotel: parámetros como arreglo de texto, filtro por empresa, huésped existente intacto y `room_type` exacto (verificada en producción 2026-10-19). Anterior: v1.18.2 — Global Error Handler: parámetros del `INSERT` como texto y alerta antes que el registro (corrige v1.17.2, revertida en producción). Anterior: v1.18.1 — upsert del `insert` de `v6/CRUD` acotado por empresa, `companys` sin upsert y "Nueva Empresa" oculta (sin migración). Anteriores: v1.18.0 (Palma, fase 1: plantaciones, lotes, filas y conteos, migración 080, con su frontend; ver Regla 18), v1.17.2 (Global Error Handler), v1.17.1 (contención de `v5/CRUD`), v1.17.0 (órdenes de venta por chat/WhatsApp a través de varias UPP y empresas, migración 074; ver Regla 16) y v1.16.1 (hotfix de seguridad de Usuarios y Accesos, migración 073).
 
 ## 👤 Rol del Asistente de IA (Persona)
 Debes actuar siempre como mi **Technical Lead auxiliar y Senior Project Manager (PMP)** con más de 20 años de experiencia, certificado por el PMI y especializado en el SDLC.
@@ -210,15 +210,17 @@ Debes actuar siempre como mi **Technical Lead auxiliar y Senior Project Manager 
 ## Deuda técnica activa (ver `docs/DOCS_DELTA_v1.9.0_FINAL.md`, `docs/DATABASE_SCHEMA_DELTA_v1.10.0.md` y `docs/INVENTARIO_COMPLETITUD.md` para detalle completo)
 
 **Urgente:**
-- 🔴 **Las tools de escritura de ganadería aceptan empresas de palma** (2026-10-20). El chat (Web y WhatsApp) se
-  muestra en todos los dominios, `Resolver Empresa Chat`/`Get User Role` no miran el dominio y
-  `register_ranch_expense` solo pide membresía: con una empresa de palma activa, un gasto agrícola dictado al chat
-  termina en `cattle_expenses` (la empresa 7 es cliente real). **Primer paso de la Fase 2b:** validar en el SQL de
-  `register_ranch_expense` y de cada tool de escritura de ganadería que `fn_company_business_domain(tenant)` (081)
-  no sea `PALM`, con un mensaje claro. Mismo cambio aparte para ganadería: B5 del `systemMessage` impide tomar
-  categoría y descripción del mensaje (3 preguntas antes de registrar, prueba del 2026-10-20), `expense_date` se
-  guarda en UTC (después de las 18:00 de CDMX queda al día siguiente), la cantidad se pierde y `CUSTOMER` puede
-  registrar gastos.
+- ✅ **Las tools de ganadería aceptaban empresas de palma — CERRADO (migración 082, producción 2026-10-24).** Incidente
+  del 2026-10-21: con la empresa 10 (palma) activa, el Chat Web guardó un gasto en `cattle_expenses` (`3f294c48…`, se
+  conserva como evidencia). Ahora `fn_reject_palm_company` (P0094) es la primera condición del `WHERE` de 26 de las 29
+  tools y, con una empresa de palma, Chat Web y WhatsApp responden un mensaje fijo sin llamar al agente. Detalle y
+  pruebas: CHANGELOG v1.19.1 y `database/migrations/082_RUNBOOK.md`. Verificado en producción el 2026-10-24; **falta
+  probar WhatsApp con la empresa 10**. Queda el agente de palma (etapa 2), que reemplaza ese desvío por un `Switch` por
+  dominio.
+- ⚠️ **Captura del agente de ganadería (pendiente, etapa 2/3 de la fase 2b):** pide datos de más (B5 del `systemMessage`
+  le impide tomar categoría y descripción del mensaje: 3 preguntas antes de registrar un gasto el 2026-10-20; pidió
+  filtros dos veces antes de contar el 2026-10-24), `register_ranch_expense` guarda `expense_date` en UTC (después de las
+  18:00 de CDMX queda al día siguiente), pierde la cantidad dictada y deja registrar a `CUSTOMER`.
 - ⚠️ **Rotación de `INTERNAL_SECRET` no confirmada** tras la exposición del 2026-08-13 (ver regla 8). Verificar en ambos servicios (`n8n-jwt-service`, `upload-file`) y ambos ambientes (espejo local, VPS) antes de tratar el subsistema de archivos como seguro.
 - ✅ **Fuga de aislamiento multi-tenant en `production_unit_lots` — RESUELTA Y VERIFICADA, 2026-09-21.** (Antes 🔴 urgente, confirmada con evidencia en vivo el 2026-09-20 18:47 UTC.) Causa raíz: el parche "Zero-Trust" del `Build Query` (`v6/crud`) solo inyectaba el tenant del header cuando la columna se llamaba literalmente `tenant_id` (`modelHasTenantId = allowed_fields.includes('tenant_id')`); `production_unit_lots` usa `id_company`, así que nunca se filtraba — mismo patrón de bug ya corregido antes para `users` (Regla 9, `HOTFIX ARQUITECTÓNICO 2`), pero sin ese hotfix aquí.
   **Fix aplicado:** se generalizó la inyección de tenant en `Build Query` para reconocer también `id_company` (`modelHasIdCompany`), cubriendo `getall`/`insert`/`update` vía el objeto `fields` compartido. Adicionalmente se detectó y cerró un **segundo hallazgo, previamente indocumentado**: `getone` y `delete` no pasaban por `fields` en absoluto y no aplicaban ningún filtro de tenant, sin importar el nombre de la columna — se agregó el mismo filtro explícito a ambos casos (excluyendo el modelo `users`, que resuelve tenant vía la tabla pivote `user_companies`, no por columna directa).
@@ -267,20 +269,12 @@ Debes actuar siempre como mi **Technical Lead auxiliar y Senior Project Manager 
 - ⚠️ **`sp_upsert_producer_pii(p_producer_id, p_curp, p_rfc)` no recibe tenant** (2026-10-17): cualquiera que conozca el `uuid` de un productor puede escribir su CURP/RFC, sea de la empresa que sea. Además el modelo `producer_pii` está roto (`table_name` = el SP con op `INSERT`, sin entrada en `spConfigByModel`), así que hoy no es alcanzable. Antes de usarlo (Regla 4), envolverlo en un `sp_*` con `p_tenant_id` que valide la empresa del productor y registrarlo en `spConfigByModel`.
 - ⚠️ **`curp`/`rfc` en texto plano en `companys.metadata`** (modal de `/admin/tenants`, `upp-form-modal`; en LOCAL solo la empresa 3, de pruebas). Opción elegida (PR aparte): quitar los campos del modal y del modelo `Company`, quitar esas llaves del `metadata` antes de guardar (si no, el `getone` las vuelve a mandar) y limpiar con respaldo previo (`metadata - 'curp' - 'rfc'`, UPDATE, no DELETE).
 - ⚠️ **Palma (080) — pendientes:** (1) Frontend del Paso 3 implementado y probado a mano en LOCAL el 2026-10-17 con la empresa 10, como ADMIN y como EDITOR (`qa-editor-palma@example.test`, dato de prueba): dominio y login, selector de plantación, Plantaciones, Lotes, Filas/conteos/historial, Tablero y permisos. Pendiente: desplegar. (2) `agriculture_telemetry` conserva su FK `ON DELETE CASCADE` hacia `companys` (no se tocó en 080). (3) `agri_rows` no tiene `INSERT` (decisión 2026-10-17): las filas solo se crean por `sp_agri_bulk_create_rows`.
-- ⏸️ **ESTADO TEMPORAL — restauración diaria de LOCAL PAUSADA desde el 2026-10-22, mientras dura Palma Fase 2b**
-  (Etapa 1: migración 082 aplicada en LOCAL y `v6/MCP Server Cattle` + `v6/ai/chat cattle` con el bloqueo de palma
-  publicados en el n8n LOCAL). La última restauración fue el 2026-10-21 a las 07:10 (antes del incidente del gasto
-  `3f294c48…`, que por eso no está en LOCAL). LOCAL ya **no** es copia de producción. El timer está deshabilitado
-  (`disable`), así que no vuelve a arrancar aunque se reinicie el equipo. ⚠️ Si se reactiva antes de desplegar la 082,
-  la restauración quita la función de la base de LOCAL pero el n8n de LOCAL (`n8n_db_prod_clone`, que no se
-  restaura) sigue llamándola: **todas** las tools de ganadería de LOCAL fallarían hasta volver a aplicar la 082. Al
-  terminar, reactivar con `systemctl --user enable --now pg-backup-restore.timer` y quitar este punto.
 - ⚠️ **El n8n de LOCAL no se restaura desde producción** (hallazgo 2026-10-20). `infrastructure/docker-compose.override.yml`
   apunta el contenedor `n8n-enterprise-core` a la base `n8n_db_prod_clone`, y `backup_postgres_vps_to_local.sh` solo
   restaura `n8n_db` (copia de producción: workflows y ejecuciones reales, útil para leer) y `hosting3m_db`. Los
   workflows que corren en LOCAL son los de `n8n_db_prod_clone`, cargados a mano. Antes de una prueba, verificar
   la huella del workflow en `n8n_db_prod_clone`, no en `n8n_db`.
-- ✅ **Restauración diaria de LOCAL reactivada (2026-10-17).** `pg-backup-restore.timer` (usuario; ejecuta `backup_postgres_vps_to_local.sh` a las 07:00) estuvo pausado durante el frontend de Palma; la base de LOCAL vuelve a ser un clon diario de producción (el n8n de LOCAL no: ver el punto anterior), así que lo cargado a mano en `hosting3m_db` se pierde en la siguiente restauración. Revisar con `systemctl --user list-timers pg-backup-restore.timer`.
+- ✅ **Restauración diaria de LOCAL (`pg-backup-restore.timer`, usuario, 07:00).** Estuvo pausada durante el frontend de Palma (2026-10-17), la fase 2a (2026-10-20) y la etapa 1 de la 2b (2026-10-22 al 2026-10-24). Se reactivó el 2026-10-24 a las 10:50 (CST): **al activar el timer se dispara una restauración inmediata** (esa terminó a las 10:59) y desde entonces corre cada día a las 07:00. Tras una restauración, la base de LOCAL (`hosting3m_db`) queda **igual a producción, con 080, 081 y 082**, y lo cargado a mano en ella se pierde. El n8n de LOCAL (`n8n_db_prod_clone`) **no** se restaura (punto anterior): sus workflows se cargan a mano, con el endpoint MCP del chat apuntando a `localhost`. Comprobar con `systemctl --user list-timers pg-backup-restore.timer`; si no muestra próxima ejecución, `systemctl --user enable --now pg-backup-restore.timer`.
 - Gateway compartido (`v5`/`v6`), hotel, ntfy, `pista-hielo` legacy y modelos con PII sin consumidor (`livestock_producers_pii`, `livestock_producers`, `employee_credentials`): ver la deuda a nivel suite en el `CLAUDE.md` raíz (contención v1.17.1, 2026-10-17).
 
 ## Event authorization matrix (source of truth, set by the project owner 2026-10-06)
