@@ -138,7 +138,8 @@ Antes:
      postgres tools=29 credential names=['Postgres account']
 ```
 
-Después (cambian las 26 líneas `tool …` de consulta; ningún `queryReplacement`):
+Después (cambian las 26 líneas `tool …` de consulta; ningún `queryReplacement`). ✅ Desplegado el 2026-10-24:
+`versionId` `da104ed6…`.
 
 ```
    workflow pJ3CEaO70QEiGL0C v6/MCP Server Cattle active=True   (versionId cambia)
@@ -224,11 +225,13 @@ Antes:
 Después: `AI Agent` (`systemMessage` con dominio y regla de palma; texto y contexto con `.first()`), `Resolver Empresa
 Chat`, `Simple Memory` (clave de sesión con `.first()`), los nodos nuevos `Es Empresa de Palma` y `Respond Empresa
 Palma`, y `connections` (`Empresa Valida` → `Es Empresa de Palma` → palma: `Respond Empresa Palma` / otra: `AI Agent`).
-`endpoint=production` debe seguir igual:
+`endpoint=production` debe seguir igual. ✅ Desplegado el 2026-10-24: `versionId` `eac4bbd1…`. El `systemMessage` incluye la
+corrección de mortandad (D1: `VACÍA`/`PREÑADA` sí se pueden dar de baja). ⚠️ Ese día producción ya la traía hecha a mano
+(`systemMessage` `5fa6e565…` en vez del `cc83ed83…` de "Antes"; el resto de las líneas de "Antes" coincidía):
 
 ```
    workflow RM60Dm0e3r03dvnp v6/ai/chat cattle active=True   (versionId cambia)
-     AI Agent               systemMessage 85c4ee445503c04625d6886fd58b0ccf
+     AI Agent               systemMessage 8e135376de06b45369df0066a78d0f4b
      Es Empresa de Palma    d75238bf98c027f9ee98c8d0c2ec6fa3
      MCP Cattle Management  endpoint=production
      Resolver Empresa Chat  9df861e269cf4d478aae9d9acd49a846
@@ -260,11 +263,12 @@ Antes:
 Después: `AI Agent` (`systemMessage` con dominio y regla; texto y contexto con `.first()`), `Get User Role`,
 `Resolver Tenant`, los nodos nuevos `Es Empresa de Palma` y `Set - Mensaje Empresa Palma`, y `connections`
 (`Set Prompt Final` → `Es Empresa de Palma` → palma: `Set - Mensaje Empresa Palma` → `Send Message Tenant` / otra:
-`AI Agent`):
+`AI Agent`). ✅ Desplegado el 2026-10-24: `versionId` `1a91cd02…`. El `systemMessage` incluye la corrección de mortandad;
+producción ya la traía hecha a mano (`systemMessage` `7b02d524…` en vez del `a1f7d03e…` de "Antes"):
 
 ```
    workflow lqgFIeTbSdPRT8zz v6/WhatsApp Agent Catlte active=True   (versionId cambia)
-     AI Agent               systemMessage e8d5ba2db1b1c4766b06fd67d9d17016
+     AI Agent               systemMessage fdd277b9f09c38a26b31b1f431c19baa
      Es Empresa de Palma    cf24c296cb71c68d6545fcc1cc2eaa4d
      Get User Role          c75f2321f0c310aa0855febbccef8097
      Get User Role          queryReplacement e4fd0c0f9b459349ccfbb8eecef52cc8
