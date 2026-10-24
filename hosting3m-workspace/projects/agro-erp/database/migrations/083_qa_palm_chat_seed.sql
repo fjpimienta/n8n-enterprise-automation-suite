@@ -1,11 +1,12 @@
--- 083_qa_palm_chat_seed_local.sql — QA data for the palm chat agent tests. LOCAL ONLY. Company 10 only
--- ("Plantación de Pruebas", the palm test tenant; NEVER company 7, a real client).
+-- 083_qa_palm_chat_seed.sql — QA data for the palm chat agent tests. For LOCAL and for PRODUCTION, company 10 ONLY
+-- ("Plantación de Pruebas", the palm test tenant; NEVER company 7, a real client): it aborts if company 10 is not that
+-- tenant, if L-01 is missing, or if the seed (rows in L-01 or a lot L-02) already exists. The actor is the company's ADMIN.
 -- Creates: rows 1-5 (22 planting positions each) in lot L-01 and a second lot L-02 "Catazaja Alto" with rows 1-3
 -- (20 positions), in plantation PLM-01. Everything is tagged metadata.qa_seed = '083' so 083_qa_palm_chat_seed_rollback.sql
--- can find it. In production the owner creates equivalent data from the web (see 083_RUNBOOK.md, step 0).
+-- can find it. Run it as in 083_RUNBOOK.md, part 3 (dry run first).
 --
---   psql -v ON_ERROR_STOP=1 -f 083_qa_palm_chat_seed_local.sql                -> dry run
---   psql -v ON_ERROR_STOP=1 -v apply=true -f 083_qa_palm_chat_seed_local.sql  -> commit
+--   psql -v ON_ERROR_STOP=1 -f 083_qa_palm_chat_seed.sql                -> dry run
+--   psql -v ON_ERROR_STOP=1 -v apply=true -f 083_qa_palm_chat_seed.sql  -> commit
 \set ON_ERROR_STOP on
 \if :{?apply}
 \else

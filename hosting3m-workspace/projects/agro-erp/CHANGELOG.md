@@ -25,9 +25,9 @@ El mensaje fijo para empresas de palma se reemplaza por un **agente de palma** c
   balance (ADMIN con total, EDITOR rechazado sin cifras), anti-duplicado y su forzado, anulación (el EDITOR no puede),
   memoria tras una tool, "registra en la empresa 5" ignorado y empresa 3 sin cambios. Ajustes de prompt a raíz de las
   pruebas: proponer la categoría con alternativas en el resumen, preguntar solo lo obligatorio, volver a llamar a la
-  herramienta para cualquier cifra y copiar el motivo de anulación. Limitación conocida: gpt-4.1-mini a veces pregunta
-  datos opcionales cuando el mensaje pide cambiar de empresa (no escribe nada); no se sube de modelo porque la confirmación nunca falló.
-* Pendiente de producción: runbook completo (base → n8n → pruebas por el canal real con ADMIN y EDITOR de la empresa 10).
+  herramienta para cualquier cifra, copiar el motivo de anulación y, si piden operar otra empresa, un solo aviso de una
+  frase y seguir con la solicitud sin preguntas opcionales (el ejemplo explícito evitó que "empresa 5" se leyera como lote).
+* Pendiente de producción: runbook completo (base → n8n → datos de prueba de la empresa 10 → pruebas por el canal real con ADMIN y EDITOR, incluido WhatsApp con el número real y la confirmación "Sí").
 
 ### 📌 Deuda técnica — captura del agente de ganadería: preguntas repetidas (para la etapa 2/3 de la fase 2b)
 
