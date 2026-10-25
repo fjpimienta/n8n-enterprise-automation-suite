@@ -7,7 +7,7 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ### 🌴 Palma, fase 2b, etapa 2: agente de palma en Chat Web y WhatsApp (migración 083) — v1.20.0
 
-*Runbook: `database/migrations/083_RUNBOOK.md` (⛔ orden estricto base → n8n; sin cambios de frontend). Diseño y decisiones: `docs/PALM_2B_STAGE2_DESIGN.md`. **Sin desplegar**: solo LOCAL (base y n8n sin tocar al escribir esto).*
+*Runbook: `database/migrations/083_RUNBOOK.md` (⛔ orden estricto base → n8n; sin cambios de frontend). Diseño y decisiones: `docs/PALM_2B_STAGE2_DESIGN.md`. **Mergeada (#854, #855); pruebas en producción en curso** (ver el último punto).*
 El mensaje fijo para empresas de palma se reemplaza por un **agente de palma** con solo herramientas de palma; ganadería no cambia.
 * **Base (083, solo funciones):** `sp_agri_chat_catalog`, `_structure`, `_lot_summary`, `_record_expense`, `_void_expense`,
   `_recent_expenses`, `_expense_balance` y `_record_row_census`, más las ayudas `fn_agri_chat_*`. Revalidan en cada llamada
@@ -27,7 +27,8 @@ El mensaje fijo para empresas de palma se reemplaza por un **agente de palma** c
   pruebas: proponer la categoría con alternativas en el resumen, preguntar solo lo obligatorio, volver a llamar a la
   herramienta para cualquier cifra, copiar el motivo de anulación y, si piden operar otra empresa, un solo aviso de una
   frase y seguir con la solicitud sin preguntas opcionales (el ejemplo explícito evitó que "empresa 5" se leyera como lote).
-* Pendiente de producción: runbook completo (base → n8n → datos de prueba de la empresa 10 → pruebas por el canal real con ADMIN y EDITOR, incluido WhatsApp con el número real y la confirmación "Sí").
+* **Producción (2026-10-24/25):** verificados por el canal real la captura de un gasto por un EDITOR en el chat de palma y el rechazo del balance para EDITOR (amable y sin cifras). El gasto de 80 ("cinta aislante") quedó a nombre de `qa-073-prod@example.test` por una membresía accidental en la empresa 10 (error de autocompletado al crear al EDITOR; `access_audit_log` `USER_ADDED` 2026-10-25 00:19 UTC, membresía real y activa, sin hallazgo de seguridad): es dato de prueba y el dueño desactiva la membresía desde Personal. Pendiente opcional: captura con `qa-editor-palma`. Detalle: `083_RUNBOOK.md`, "Datos de prueba que quedaron en producción".
+* Plan original del runbook: runbook completo (base → n8n → datos de prueba de la empresa 10 → pruebas por el canal real con ADMIN y EDITOR, incluido WhatsApp con el número real y la confirmación "Sí").
 
 ### 📌 Deuda técnica — captura del agente de ganadería: preguntas repetidas (para la etapa 2/3 de la fase 2b)
 
