@@ -246,6 +246,8 @@ de palma); la base puede quedarse. Nunca borrar las funciones. Datos de prueba: 
 
 ✅ **Desplegada en producción el 2026-10-24:** base (083 `COMMITTED`, `state_check applied` OK, 6 huellas iguales, pruebas 116/116), Chat Web (`versionId` `c8d530a0…`) y WhatsApp (`versionId` `e260e402…`), ambos iguales a `main` por huella.
 
+Verificadas por el canal real el 2026-10-24: Chat Web ADMIN (gasto con una sola confirmación, balance, conteo 22→18 con 'Sí', intento de otra empresa ignorado), WhatsApp empresa 10 (diésel $300 con 'Sí'), EDITOR (captura y rechazo del balance sin cifras) y ganadería empresa 3 sin cambios. Pendiente opcional: captura con qa-editor-palma.
+
 ## Datos de prueba que quedaron en producción (empresa 10, de pruebas; nunca la 7)
 
 - **Gasto de 80 ("cinta aislante")**, capturado por chat con un EDITOR, quedó a nombre de `qa-073-prod@example.test` (empresa 10).
