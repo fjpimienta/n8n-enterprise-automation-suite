@@ -241,3 +241,21 @@ cambio). No hay frontend: el merge solo lleva los archivos al repositorio.
 
 n8n (parte 2) y/o base (parte 1), en cualquier orden. Si algo falla en producción: revertir primero n8n (vuelve el mensaje fijo
 de palma); la base puede quedarse. Nunca borrar las funciones. Datos de prueba: parte 3, punto 3.
+
+## Estado del despliegue
+
+✅ **Desplegada en producción el 2026-10-24:** base (083 `COMMITTED`, `state_check applied` OK, 6 huellas iguales, pruebas 116/116), Chat Web (`versionId` `c8d530a0…`) y WhatsApp (`versionId` `e260e402…`), ambos iguales a `main` por huella.
+
+Verificadas por el canal real el 2026-10-24: Chat Web ADMIN (gasto con una sola confirmación, balance, conteo 22→18 con 'Sí', intento de otra empresa ignorado), WhatsApp empresa 10 (diésel $300 con 'Sí'), EDITOR (captura y rechazo del balance sin cifras) y ganadería empresa 3 sin cambios. Pendiente opcional: captura con qa-editor-palma.
+
+## Datos de prueba que quedaron en producción (empresa 10, de pruebas; nunca la 7)
+
+- **Gasto de 80 ("cinta aislante")**, capturado por chat con un EDITOR, quedó a nombre de `qa-073-prod@example.test` (empresa 10).
+  **Es dato de prueba**: se conserva como evidencia de la captura por EDITOR; si estorba en el balance, se anula (ADMIN, motivo
+  "prueba 083"); nunca se borra.
+- **Membresía accidental:** `qa-073-prod@example.test` quedó como miembro activo de la empresa 10 por un error del autocompletado al
+  crear al EDITOR. Consta en `access_audit_log`: `USER_ADDED` por `fjpimienta@gmail.com` el 2026-10-25 00:19 UTC (el EDITOR
+  `qa-editor-palma@example.test` se creó a las 23:58 UTC). Es una membresía real y activa, no un hallazgo de seguridad: el correo
+  del gasto sale de la sesión autenticada, no del mensaje. **El dueño la desactiva desde Personal** (no se borra).
+- **Verificado en producción (2026-10-24, hora de CDMX):** captura de un gasto por un EDITOR en el chat de palma y rechazo del
+  balance para EDITOR (respuesta amable, sin cifras, 6:24 PM). **Pendiente (opcional):** repetir la captura con `qa-editor-palma`.
