@@ -242,6 +242,10 @@ cambio). No hay frontend: el merge solo lleva los archivos al repositorio.
 n8n (parte 2) y/o base (parte 1), en cualquier orden. Si algo falla en producción: revertir primero n8n (vuelve el mensaje fijo
 de palma); la base puede quedarse. Nunca borrar las funciones. Datos de prueba: parte 3, punto 3.
 
+## Estado del despliegue
+
+✅ **Desplegada en producción el 2026-10-24:** base (083 `COMMITTED`, `state_check applied` OK, 6 huellas iguales, pruebas 116/116), Chat Web (`versionId` `c8d530a0…`) y WhatsApp (`versionId` `e260e402…`), ambos iguales a `main` por huella.
+
 ## Datos de prueba que quedaron en producción (empresa 10, de pruebas; nunca la 7)
 
 - **Gasto de 80 ("cinta aislante")**, capturado por chat con un EDITOR, quedó a nombre de `qa-073-prod@example.test` (empresa 10).

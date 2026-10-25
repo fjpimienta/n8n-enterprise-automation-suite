@@ -5,9 +5,9 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
-### 🌴 Palma, fase 2b, etapa 2: agente de palma en Chat Web y WhatsApp (migración 083) — v1.20.0
+### 🌴 Palma, fase 2b, etapa 2: agente de palma en Chat Web y WhatsApp (migración 083) — v1.20.0 (desplegada 2026-10-24)
 
-*Runbook: `database/migrations/083_RUNBOOK.md` (⛔ orden estricto base → n8n; sin cambios de frontend). Diseño y decisiones: `docs/PALM_2B_STAGE2_DESIGN.md`. **Mergeada (#854, #855); pruebas en producción en curso** (ver el último punto).*
+*Runbook: `database/migrations/083_RUNBOOK.md` (⛔ orden estricto base → n8n; sin cambios de frontend). Diseño y decisiones: `docs/PALM_2B_STAGE2_DESIGN.md`. ✅ **Desplegada en producción el 2026-10-24** (PR #854 y #855): base (083 `COMMITTED`, `state_check applied` OK, 6 huellas iguales, pruebas 116/116), Chat Web (`versionId` `c8d530a0…`) y WhatsApp (`versionId` `e260e402…`), ambos iguales a `main` por huella. Pruebas por el canal real en curso (ver el último punto).*
 El mensaje fijo para empresas de palma se reemplaza por un **agente de palma** con solo herramientas de palma; ganadería no cambia.
 * **Base (083, solo funciones):** `sp_agri_chat_catalog`, `_structure`, `_lot_summary`, `_record_expense`, `_void_expense`,
   `_recent_expenses`, `_expense_balance` y `_record_row_census`, más las ayudas `fn_agri_chat_*`. Revalidan en cada llamada
