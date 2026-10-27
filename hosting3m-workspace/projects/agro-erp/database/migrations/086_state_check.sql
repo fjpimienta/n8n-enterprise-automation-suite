@@ -112,7 +112,7 @@ DECLARE
                               'sp_repro_list_unmapped_uterine_codes', 'sp_repro_condition_code_set'];
     v_reads   text[] := ARRAY['sp_repro_list_palpation_due', 'sp_repro_list_upcoming_calvings', 'sp_repro_list_unmapped_uterine_codes'];
     v_helpers text[] := ARRAY['fn_repro_norm_code', 'fn_uterine_split', 'fn_parse_uterine_code', 'fn_repro_palpations',
-                              'fn_trg_palp_details_tenant'];
+                              'fn_repro_diagnosis_kind', 'fn_trg_palp_details_tenant'];
     v_tables  text[] := ARRAY['repro_condition_codes', 'palpation_repro_details'];
     v_found   integer;
     v_company integer;
@@ -147,7 +147,7 @@ BEGIN
 
     IF v_found <> 5 THEN RAISE EXCEPTION 'FAIL: expected 5 phase-3 tool functions, found %', v_found; END IF;
     SELECT count(*) INTO v_found FROM pg_proc WHERE pronamespace = 'public'::regnamespace AND proname = ANY (v_helpers);
-    IF v_found <> 5 THEN RAISE EXCEPTION 'FAIL: expected 5 helper functions, found %', v_found; END IF;
+    IF v_found <> 6 THEN RAISE EXCEPTION 'FAIL: expected 6 helper functions, found %', v_found; END IF;
     IF EXISTS (SELECT 1 FROM unnest(v_tables) t WHERE to_regclass('public.' || t) IS NULL) THEN
         RAISE EXCEPTION 'FAIL: a phase-3 table is missing';
     END IF;
@@ -201,6 +201,10 @@ BEGIN
     IF pr.mapping_status <> 'UNMAPPED' OR pr.repro_condition IS NOT NULL THEN RAISE EXCEPTION 'FAIL: parser(UNE/NR) must be UNMAPPED with a NULL condition'; END IF;
     SELECT * INTO pr FROM fn_parse_uterine_code('VACÍA Estática', NULL);
     IF pr.mapping_status <> 'EXPLICIT' OR pr.repro_condition <> 'ESTATICA' THEN RAISE EXCEPTION 'FAIL: parser(explicit word) is wrong'; END IF;
+
+    IF fn_repro_diagnosis_kind('PREÑDA', NULL) <> 'UNRECOGNIZED' OR fn_repro_diagnosis_kind('PREÑADA 2 MESES', NULL) <> 'PRENADA' THEN
+        RAISE EXCEPTION 'FAIL: fn_repro_diagnosis_kind probes are wrong';
+    END IF;
 
     -- A real member of a non-palm company to probe the tools (read-only calls; nothing is shown but the company number).
     SELECT uc.id_company, uc.email INTO v_company, v_email

@@ -3,7 +3,7 @@
 -- written, and the agent tells the user the function is off.
 -- LEFT IN PLACE on purpose: the tables repro_condition_codes and palpation_repro_details with all their rows and triggers
 -- (the details are append-only records of what staff reported, and the only copy), and the helpers fn_repro_norm_code,
--- fn_uterine_split, fn_parse_uterine_code, fn_repro_palpations, fn_trg_palp_details_tenant.
+-- fn_uterine_split, fn_parse_uterine_code, fn_repro_diagnosis_kind, fn_repro_palpations, fn_trg_palp_details_tenant.
 -- 086 never touched an existing table, column, trigger, crud_models, a pre-existing function (sp_log_palpation_event
 -- included) or any existing row, so there is nothing to restore. The existing log_palpation_event and
 -- log_palpation_event_batch tools keep working exactly as before, with or without 086.

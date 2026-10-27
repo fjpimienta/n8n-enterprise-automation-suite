@@ -312,6 +312,28 @@ SELECT pg_temp.ok('A the parser never raises: huge, binary, odd and empty-token 
 SELECT pg_temp.ok('A the normaliser is accent- and case-insensitive without extensions',
     fn_repro_norm_code(' ñandú  Áéíóú ') = 'NANDU AEIOU' AND fn_repro_norm_code('') IS NULL AND fn_repro_norm_code(NULL) IS NULL);
 
+SELECT pg_temp.ok('A diagnosis kind: PREÑADA / VACIA words, explicit words and uterine codes are accepted (accent and case insensitive)',
+    fn_repro_diagnosis_kind('PREÑADA 02 MESES', pg_temp.cx('A')::integer) = 'PRENADA' AND fn_repro_diagnosis_kind('prenada', pg_temp.cx('A')::integer) = 'PRENADA'
+    AND fn_repro_diagnosis_kind('VACÍA', pg_temp.cx('A')::integer) = 'VACIA' AND fn_repro_diagnosis_kind('vacia UNE/NR', pg_temp.cx('A')::integer) = 'VACIA'
+    AND fn_repro_diagnosis_kind('VACÍA IF 1S', pg_temp.cx('A')::integer) = 'VACIA' AND fn_repro_diagnosis_kind('VACÍA No apto', pg_temp.cx('A')::integer) = 'VACIA'
+    AND fn_repro_diagnosis_kind('ciclando', pg_temp.cx('A')::integer) = 'VACIA' AND fn_repro_diagnosis_kind('Estática', pg_temp.cx('A')::integer) = 'VACIA'
+    AND fn_repro_diagnosis_kind('UNE', pg_temp.cx('A')::integer) = 'CODE' AND fn_repro_diagnosis_kind('UTCL2/OI', pg_temp.cx('A')::integer) = 'CODE'
+    AND fn_repro_diagnosis_kind('RP', pg_temp.cx('A')::integer) = 'CODE' AND fn_repro_diagnosis_kind('NR', pg_temp.cx('A')::integer) = 'CODE'
+    AND fn_repro_diagnosis_kind('UTC2', pg_temp.cx('A')::integer) = 'CODE' AND fn_repro_diagnosis_kind('UNE/NR', pg_temp.cx('A')::integer) = 'CODE');
+SELECT pg_temp.ok('A diagnosis kind: a misspelled PREÑADA, random text, a multi-word unknown phrase without a result word, N/A, empty and NULL are UNRECOGNIZED; PREÑADA with VACIA or an explicit word is a CONFLICT',
+    fn_repro_diagnosis_kind('PREÑDA', pg_temp.cx('A')::integer) = 'UNRECOGNIZED' AND fn_repro_diagnosis_kind('PRENDA', pg_temp.cx('A')::integer) = 'UNRECOGNIZED'
+    AND fn_repro_diagnosis_kind('hola mundo', pg_temp.cx('A')::integer) = 'UNRECOGNIZED' AND fn_repro_diagnosis_kind('no hay nada', pg_temp.cx('A')::integer) = 'UNRECOGNIZED'
+    AND fn_repro_diagnosis_kind('Matriz ocupada', pg_temp.cx('A')::integer) = 'UNRECOGNIZED' AND fn_repro_diagnosis_kind('No apto', pg_temp.cx('A')::integer) = 'UNRECOGNIZED'
+    AND fn_repro_diagnosis_kind('VACIAS', pg_temp.cx('A')::integer) = 'UNRECOGNIZED' AND fn_repro_diagnosis_kind('N/A', pg_temp.cx('A')::integer) = 'UNRECOGNIZED'
+    AND fn_repro_diagnosis_kind('', pg_temp.cx('A')::integer) = 'UNRECOGNIZED' AND fn_repro_diagnosis_kind(NULL, pg_temp.cx('A')::integer) = 'UNRECOGNIZED'
+    AND fn_repro_diagnosis_kind('OI', pg_temp.cx('A')::integer) = 'UNRECOGNIZED'
+    AND fn_repro_diagnosis_kind('PREÑADA VACIA', pg_temp.cx('A')::integer) = 'CONFLICT' AND fn_repro_diagnosis_kind('PREÑADA ciclando', pg_temp.cx('A')::integer) = 'CONFLICT');
+INSERT INTO repro_condition_codes (id_company, code, repro_condition, source, confirmed_by, confirmed_at)
+VALUES (pg_temp.cx('A')::integer, 'NO APTO', 'OTRO', 'T086', 'T086', now());
+SELECT pg_temp.ok('A ... once confirmed for A, "No apto" is a CODE for A and still UNRECOGNIZED for B (isolation of the mapping)',
+    fn_repro_diagnosis_kind('No apto', pg_temp.cx('A')::integer) = 'CODE' AND fn_repro_diagnosis_kind('No apto', pg_temp.cx('B')::integer) = 'UNRECOGNIZED');
+DELETE FROM repro_condition_codes WHERE id_company = pg_temp.cx('A')::integer AND code = 'NO APTO';
+
 -- =============================================================================================================
 -- PART B. sp_repro_condition_code_set
 -- =============================================================================================================
@@ -473,6 +495,28 @@ SELECT pg_temp.ok('C bad input is an answer, not an error: not JSON, not an arra
     AND sp_repro_log_palpation_batch(pg_temp.cx('A'), pg_temp.cx('u1'), '[{"identifier":"T086-A-V7","raw_diagnosis":"VACÍA"}]', to_char(fn_repro_today() - 400, 'YYYY-MM-DD'))->>'code' = 'BAD_DATE'
     AND pg_temp.n_logs() = (SELECT logs FROM t_base3) AND pg_temp.n_det() = (SELECT dets FROM t_base3));
 
+-- an unrecognised diagnosis is NEVER defaulted to VACÍA: it rejects the whole batch with the per-item issues
+SELECT pg_temp.plog('c4b', $j$[
+  {"identifier":"T086-A-V10","raw_diagnosis":"PREÑDA"},
+  {"identifier":"T086-A-V7","raw_diagnosis":"hola mundo"},
+  {"identifier":"T086-A-V8","raw_diagnosis":"PREÑADA vacia"},
+  {"identifier":"T086-A-V9","raw_diagnosis":"N/A"},
+  {"identifier":"T086-A-P5","raw_diagnosis":"VACÍA"}
+]$j$);
+SELECT pg_temp.ok('C DIAGNOSIS: a misspelled PREÑADA, random text and N/A are DIAGNOSIS_UNRECOGNIZED, PREÑADA + vacia is DIAGNOSIS_CONFLICT, the valid item does not save the batch; nothing written, nobody defaulted to VACÍA',
+    pg_temp.rs('c4b')->>'status' = 'rejected' AND (pg_temp.rs('c4b')->>'written')::int = 0
+    AND (SELECT count(*) FROM jsonb_array_elements(pg_temp.rs('c4b')->'issues') e WHERE e->>'code' = 'DIAGNOSIS_UNRECOGNIZED') = 3
+    AND (SELECT count(*) FROM jsonb_array_elements(pg_temp.rs('c4b')->'issues') e WHERE e->>'code' = 'DIAGNOSIS_CONFLICT') = 1
+    AND jsonb_array_length(pg_temp.rs('c4b')->'issues') = 4
+    AND pg_temp.n_logs() = (SELECT logs FROM t_base3) AND pg_temp.n_det() = (SELECT dets FROM t_base3)
+    AND pg_temp.status_of('A-V10') = 'ACTIVO' AND pg_temp.status_of('A-V9') = 'ACTIVO' AND pg_temp.status_of('A-P5') = 'ACTIVO',
+    pg_temp.rs('c4b')::text);
+SELECT pg_temp.plog('c4c', '[{"identifier":"T086-A-V10","raw_diagnosis":"UNE"},{"identifier":"T086-A-P5","raw_diagnosis":"RP"}]');
+SELECT pg_temp.ok('C DIAGNOSIS: a bare uterine code is accepted: UNE (confirmed) -> VACÍA, MAPPED ESTATICA; RP (looks like a code, unconfirmed) -> VACÍA, UNMAPPED with the raw code',
+    pg_temp.rs('c4c')->>'status' = 'recorded'
+    AND pg_temp.status_of('A-V10') = 'VACÍA' AND pg_temp.det('A-V10')->>'mapping_status' = 'MAPPED' AND pg_temp.det('A-V10')->>'repro_condition' = 'ESTATICA'
+    AND pg_temp.status_of('A-P5') = 'VACÍA' AND pg_temp.det('A-P5')->>'mapping_status' = 'UNMAPPED' AND pg_temp.det('A-P5')->>'raw_code' = 'RP',
+    pg_temp.rs('c4c')::text);
 SELECT pg_temp.plog('c5', '[{"identifier":"T086-A-V7","raw_diagnosis":"VACÍA UTCL1/OD"},{"identifier":"T086-A-V8","raw_diagnosis":"VACÍA UNE"}]',
                     to_char(fn_repro_today() - 3, 'YYYY-MM-DD'), 'Dr. Fecha');
 SELECT pg_temp.ok('C a past date is the event_date of the palpation (and the technician is passed through)',
@@ -760,12 +804,12 @@ SELECT pg_temp.ok('G the list is by TOKEN, not by whole value: NR (from UNE/NR),
     AND (SELECT count(*) FROM jsonb_array_elements(pg_temp.rs('g1')->'unmapped') e WHERE e->>'code' IN ('NR', 'RP', 'NO APTO')) = 3
     AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(pg_temp.rs('g1')->'unmapped') e WHERE e->>'code' IN ('UNE', 'UTCL1', 'UTCL2', 'CICLANDO', 'ESTATICA')),
     pg_temp.rs('g1')::text);
-SELECT pg_temp.ok('G counts split by origin: NO APTO 2 from the bulk load (case-insensitive); NR 1 logged (C: V3) + 1 bulk load (G3) + 20 import rows (UNE/NR)',
+SELECT pg_temp.ok('G counts split by origin: NO APTO 2 from the bulk load (case-insensitive); NR 1 logged (C: V3) + 1 bulk load (G3) + 20 import rows (UNE/NR); RP logged twice (C: V5, P5)',
     (SELECT (e->>'palpations')::int = 2 AND (e->>'from_bulk_load')::int = 2 AND (e->>'from_logged')::int = 0
        FROM jsonb_array_elements(pg_temp.rs('g1')->'unmapped') e WHERE e->>'code' = 'NO APTO')
     AND (SELECT (e->>'from_logged')::int = 1 AND (e->>'from_bulk_load')::int = 21 AND (e->>'palpations')::int = 22
        FROM jsonb_array_elements(pg_temp.rs('g1')->'unmapped') e WHERE e->>'code' = 'NR')
-    AND (SELECT (e->>'palpations')::int = 1 FROM jsonb_array_elements(pg_temp.rs('g1')->'unmapped') e WHERE e->>'code' = 'RP'));
+    AND (SELECT (e->>'palpations')::int = 2 AND (e->>'from_logged')::int = 2 FROM jsonb_array_elements(pg_temp.rs('g1')->'unmapped') e WHERE e->>'code' = 'RP'));
 SELECT pg_temp.ok('G the confirmed mappings of the company are returned for the vets (UNE, UTCL1..3, UTCL9) with who confirmed them',
     (SELECT count(*) FROM jsonb_array_elements(pg_temp.rs('g1')->'confirmed') e WHERE e->>'code' IN ('UNE', 'UTCL1', 'UTCL2', 'UTCL3', 'UTCL9')) = 5
     AND jsonb_array_length(pg_temp.rs('g1')->'confirmed') = 5);

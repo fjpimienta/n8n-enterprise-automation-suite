@@ -9,7 +9,8 @@
 --              palpation_repro_details   APPEND-ONLY side table of cattle_health_logs (which has no tenant column):
 --                                        id_company on every row, raw code, mapped condition, ovary side, mapping_status
 --   triggers   append-only guard (UPDATE / DELETE / TRUNCATE raise P0095) and tenant guard (P0096) on the side table
---   helpers    fn_repro_norm_code, fn_uterine_split (pure), fn_parse_uterine_code (never raises), fn_repro_palpations
+--   helpers    fn_repro_norm_code, fn_uterine_split (pure), fn_parse_uterine_code (never raises), fn_repro_diagnosis_kind,
+--              fn_repro_palpations
 --   tools      sp_repro_log_palpation_batch          -> log_palpation_with_condition   (write, all-or-nothing)
 --              sp_repro_list_palpation_due           -> list_palpation_due             (read)
 --              sp_repro_list_upcoming_calvings       -> list_upcoming_calvings         (read)
@@ -29,10 +30,14 @@
 --     remaining token must be KNOWN (an explicit word, or a code confirmed for the company) with one single condition,
 --     otherwise the WHOLE value is UNMAPPED and the condition stays NULL (so UNE/NR stays NULL while NR is unconfirmed).
 --     Explicit free words typed by staff (ciclando, estatica / estática ...) map directly: mapping_status EXPLICIT.
---   * The wrapper does not change the result semantics of the existing batch: ILIKE 'PRE%ADA%' -> PREÑADA, anything else
---     -> VACÍA; months ('02 MESES') x 30 -> gestation days. It adds validation BEFORE any write, so a bad item rejects the
---     whole batch with nothing written (status 'rejected' + issues), and the details row is written by the same function
---     call (same transaction) as the palpation.
+--   * The wrapper does NOT default an unrecognised diagnosis to VACÍA (the existing batch tool does). A diagnosis is accepted
+--     only if, accent- and case-insensitively, it contains a PREÑADA word (PRENADA), a VACIA word, an explicit word
+--     (ciclando / estatica), or is made only of uterine code tokens (a code confirmed for the company, or one that LOOKS like
+--     a code: 1-3 letters, or up to 5 letters + 1-2 digits; unknown ones are stored UNMAPPED). Anything else ('PREÑDA',
+--     random text, N/A, empty) is rejected per item (DIAGNOSIS_UNRECOGNIZED / DIAGNOSIS_CONFLICT when a PREÑADA word comes
+--     with a VACIA or explicit word). Months ('02 MESES') x 30 -> gestation days. All checks run BEFORE any write, so a bad
+--     item rejects the whole batch with nothing written (status 'rejected' + issues), and the details row is written by the
+--     same function call (same transaction) as the palpation.
 --   * Palpations are read from cattle_health_logs JOINED THROUGH cattle_livestock for the company: both JSON key sets
 --     (result / resultado, gestation_days / dias_gestacion), both spellings (VACIA / VACÍA, PRENADA / PREÑADA), the date is
 --     event_date.
@@ -283,6 +288,45 @@ EXCEPTION WHEN OTHERS THEN
 END;
 $$;
 
+-- Classifies the free-text diagnosis of a palpation for ONE company. Never raises.
+--   PRENADA | VACIA | CODE   accepted (see the header for the rules)
+--   CONFLICT                 a PREÑADA word together with a VACIA or explicit word
+--   UNRECOGNIZED             anything else, including empty and N/A
+CREATE OR REPLACE FUNCTION public.fn_repro_diagnosis_kind(p_text text, p_tenant integer)
+RETURNS text
+LANGUAGE plpgsql
+STABLE
+AS $$
+DECLARE
+    n   text := public.fn_repro_norm_code(p_text);
+    pre boolean;
+    vac boolean;
+    ex  boolean;
+    sp  record;
+    tk  text;
+BEGIN
+    IF n IS NULL THEN RETURN 'UNRECOGNIZED'; END IF;
+    pre := n ~ '\mPREN?ADA\M';
+    vac := n ~ '\mVACIA\M';
+    ex  := n ~ '\m(CICLANDO|ESTATICA|ESTATICO)\M';
+    IF pre AND (vac OR ex) THEN RETURN 'CONFLICT'; END IF;
+    IF pre THEN RETURN 'PRENADA'; END IF;
+    IF vac OR ex THEN RETURN 'VACIA'; END IF;
+
+    SELECT * INTO sp FROM public.fn_uterine_split(p_text);
+    IF sp.is_empty OR cardinality(sp.tokens) = 0 THEN RETURN 'UNRECOGNIZED'; END IF;
+    FOREACH tk IN ARRAY sp.tokens LOOP
+        IF NOT (tk ~ '^[A-Z]{1,3}$' OR tk ~ '^[A-Z]{1,5}[0-9]{1,2}$'
+                OR EXISTS (SELECT 1 FROM public.repro_condition_codes cc WHERE cc.id_company = p_tenant AND cc.code = tk)) THEN
+            RETURN 'UNRECOGNIZED';
+        END IF;
+    END LOOP;
+    RETURN 'CODE';
+EXCEPTION WHEN OTHERS THEN
+    RETURN 'UNRECOGNIZED';
+END;
+$$;
+
 -- Every palpation of ONE company: cattle_health_logs JOINED THROUGH cattle_livestock (no tenant column on the logs).
 -- Both JSON key sets, both spellings, date = event_date. result is NULL when the stored value is not PREÑADA / VACÍA.
 -- INTERNAL: no access control; the callers are the tools below, after fn_repro_ctx.
@@ -341,6 +385,7 @@ DECLARE
     v_days    text;
     v_gest    integer;
     v_gnote   text;
+    v_kind    text;
     p         record;
     r         jsonb;
     x         record;
@@ -424,8 +469,18 @@ BEGIN
         END IF;
         v_seen := v_seen || v_lid;
 
-        -- result and gestation: the same rule as the existing batch tool (no result word => VACÍA)
-        IF v_diag ILIKE 'PRE%ADA%' THEN
+        -- result and gestation: a diagnosis that is not recognised is NEVER defaulted to VACÍA
+        v_kind := public.fn_repro_diagnosis_kind(v_diag, v_tenant);
+        IF v_kind = 'CONFLICT' THEN
+            v_issues := v_issues || jsonb_build_object('index', i, 'identifier', v_ident, 'code', 'DIAGNOSIS_CONFLICT',
+                'message', 'El diagnostico "' || v_diag || '" mezcla PREÑADA con VACIA o con una condicion; aclara cual es.');
+            CONTINUE;
+        ELSIF v_kind = 'UNRECOGNIZED' THEN
+            v_issues := v_issues || jsonb_build_object('index', i, 'identifier', v_ident, 'code', 'DIAGNOSIS_UNRECOGNIZED',
+                'message', 'No se reconoce el diagnostico "' || v_diag || '": debe decir PREÑADA o VACIA, ciclando / estatica, o un codigo uterino. No se adivina el resultado.');
+            CONTINUE;
+        END IF;
+        IF v_kind = 'PRENADA' THEN
             v_result := 'PREÑADA';
             v_months := substring(v_diag FROM '(?i)(\d{1,2})\s*mes');
             v_days   := substring(v_diag FROM '(?i)(\d{2,3})\s*d[ií]as');
@@ -808,7 +863,7 @@ DECLARE
 BEGIN
     SELECT string_agg(f, ', ') INTO v_missing
       FROM unnest(ARRAY['fn_repro_norm_code', 'fn_uterine_split', 'fn_parse_uterine_code', 'fn_repro_palpations',
-                        'fn_trg_palp_details_tenant',
+                        'fn_repro_diagnosis_kind', 'fn_trg_palp_details_tenant',
                         'sp_repro_log_palpation_batch', 'sp_repro_list_palpation_due', 'sp_repro_list_upcoming_calvings',
                         'sp_repro_list_unmapped_uterine_codes', 'sp_repro_condition_code_set']) f
      WHERE NOT EXISTS (SELECT 1 FROM pg_proc p WHERE p.pronamespace = 'public'::regnamespace AND p.proname = f);
