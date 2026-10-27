@@ -184,6 +184,11 @@ BEGIN
                            'ck_palp_det_condition', 'ck_palp_det_side', 'ck_palp_det_result')) <> 6 THEN
         RAISE EXCEPTION 'FAIL: a check constraint of palpation_repro_details is missing';
     END IF;
+    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'repro_condition_codes'
+                      AND column_name = 'repro_condition' AND is_nullable = 'YES')
+       OR NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ck_cond_code_confirmed' AND conrelid = 'public.repro_condition_codes'::regclass) THEN
+        RAISE EXCEPTION 'FAIL: repro_condition_codes must allow a NULL (pending) condition and keep ck_cond_code_confirmed';
+    END IF;
     IF EXISTS (SELECT 1 FROM public.palpation_repro_details WHERE repro_condition IS NOT NULL AND result <> 'VACÍA') THEN
         RAISE EXCEPTION 'FAIL: a condition exists on a result that is not VACÍA';
     END IF;
@@ -202,7 +207,7 @@ BEGIN
     SELECT * INTO pr FROM fn_parse_uterine_code('VACÍA Estática', NULL);
     IF pr.mapping_status <> 'EXPLICIT' OR pr.repro_condition <> 'ESTATICA' THEN RAISE EXCEPTION 'FAIL: parser(explicit word) is wrong'; END IF;
 
-    IF fn_repro_diagnosis_kind('PREÑDA', NULL) <> 'UNRECOGNIZED' OR fn_repro_diagnosis_kind('PREÑADA 2 MESES', NULL) <> 'PRENADA' THEN
+    IF fn_repro_diagnosis_kind('PREÑDA', NULL) <> 'UNRECOGNIZED' OR fn_repro_diagnosis_kind('UNE', NULL) <> 'UNRECOGNIZED' OR fn_repro_diagnosis_kind('PREÑADA 2 MESES', NULL) <> 'PRENADA' THEN
         RAISE EXCEPTION 'FAIL: fn_repro_diagnosis_kind probes are wrong';
     END IF;
 

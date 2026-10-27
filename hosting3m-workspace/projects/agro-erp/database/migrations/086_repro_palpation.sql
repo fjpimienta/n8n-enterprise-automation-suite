@@ -5,7 +5,8 @@
 -- repro_empadre_entries / repro_empadre_voids, fn_trg_empadre_append_only). It aborts if they are not applied.
 --
 -- What it adds (all in public; nothing existing is altered, replaced or dropped):
---   tables     repro_condition_codes     per-company mapping  uterine code -> CICLANDO | ESTATICA | OTRO  (config, not history)
+--   tables     repro_condition_codes     per-company mapping  uterine code -> CICLANDO | ESTATICA | OTRO  (config, not history);
+--                                        a NULL condition = code known but still pending veterinarian confirmation
 --              palpation_repro_details   APPEND-ONLY side table of cattle_health_logs (which has no tenant column):
 --                                        id_company on every row, raw code, mapped condition, ovary side, mapping_status
 --   triggers   append-only guard (UPDATE / DELETE / TRUNCATE raise P0095) and tenant guard (P0096) on the side table
@@ -32,10 +33,11 @@
 --     Explicit free words typed by staff (ciclando, estatica / estática ...) map directly: mapping_status EXPLICIT.
 --   * The wrapper does NOT default an unrecognised diagnosis to VACÍA (the existing batch tool does). A diagnosis is accepted
 --     only if, accent- and case-insensitively, it contains a PREÑADA word (PRENADA), a VACIA word, an explicit word
---     (ciclando / estatica), or is made only of uterine code tokens (a code confirmed for the company, or one that LOOKS like
---     a code: 1-3 letters, or up to 5 letters + 1-2 digits; unknown ones are stored UNMAPPED). Anything else ('PREÑDA',
---     random text, N/A, empty) is rejected per item (DIAGNOSIS_UNRECOGNIZED / DIAGNOSIS_CONFLICT when a PREÑADA word comes
---     with a VACIA or explicit word). Months ('02 MESES') x 30 -> gestation days. All checks run BEFORE any write, so a bad
+--     (ciclando / estatica), or is made only of code tokens that ALREADY EXIST in repro_condition_codes for the company (a
+--     row with a NULL condition = "known but pending veterinarian confirmation" counts; the shape of a token never does).
+--     With an explicit PREÑADA / VACIA word, unknown tokens are accepted and stored UNMAPPED. Anything else ('PREÑDA',
+--     'ok', 'pre', random text, an unknown bare code, N/A, empty) is rejected per item (DIAGNOSIS_UNRECOGNIZED /
+--     DIAGNOSIS_CONFLICT when a PREÑADA word comes with a VACIA or explicit word). Months ('02 MESES') x 30 -> gestation days. All checks run BEFORE any write, so a bad
 --     item rejects the whole batch with nothing written (status 'rejected' + issues), and the details row is written by the
 --     same function call (same transaction) as the palpation.
 --   * Palpations are read from cattle_health_logs JOINED THROUGH cattle_livestock for the company: both JSON key sets
@@ -165,12 +167,28 @@ $$;
 CREATE TABLE IF NOT EXISTS public.repro_condition_codes (
     id_company       integer NOT NULL REFERENCES public.companys (id_company),
     code             text    NOT NULL CONSTRAINT ck_cond_code_norm CHECK (code = public.fn_repro_norm_code(code) AND length(code) <= 40),
-    repro_condition  text    NOT NULL CONSTRAINT ck_cond_code_value CHECK (repro_condition IN ('CICLANDO', 'ESTATICA', 'OTRO')),
+    -- NULL = the code is known but its meaning is pending veterinarian confirmation (it maps to nothing: UNMAPPED)
+    repro_condition  text    CONSTRAINT ck_cond_code_value CHECK (repro_condition IN ('CICLANDO', 'ESTATICA', 'OTRO')),
     source           text    NOT NULL,
-    confirmed_by     text    NOT NULL,
-    confirmed_at     timestamptz NOT NULL DEFAULT now(),
-    CONSTRAINT pk_repro_condition_codes PRIMARY KEY (id_company, code)
+    confirmed_by     text,
+    confirmed_at     timestamptz DEFAULT now(),
+    CONSTRAINT pk_repro_condition_codes PRIMARY KEY (id_company, code),
+    CONSTRAINT ck_cond_code_confirmed CHECK (repro_condition IS NULL OR (confirmed_by IS NOT NULL AND confirmed_at IS NOT NULL))
 );
+
+-- A database that got the first version of this table (condition / confirmed_by / confirmed_at NOT NULL) is brought to
+-- the same shape. Idempotent; it relaxes constraints only, nothing is dropped and no row changes.
+ALTER TABLE public.repro_condition_codes ALTER COLUMN repro_condition DROP NOT NULL;
+ALTER TABLE public.repro_condition_codes ALTER COLUMN confirmed_by DROP NOT NULL;
+ALTER TABLE public.repro_condition_codes ALTER COLUMN confirmed_at DROP NOT NULL;
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ck_cond_code_confirmed'
+                      AND conrelid = 'public.repro_condition_codes'::regclass) THEN
+        ALTER TABLE public.repro_condition_codes ADD CONSTRAINT ck_cond_code_confirmed
+            CHECK (repro_condition IS NULL OR (confirmed_by IS NOT NULL AND confirmed_at IS NOT NULL));
+    END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS public.palpation_repro_details (
     id                   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -194,7 +212,7 @@ CREATE TABLE IF NOT EXISTS public.palpation_repro_details (
 CREATE INDEX IF NOT EXISTS idx_palp_details_company ON public.palpation_repro_details (id_company, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_palp_details_animal  ON public.palpation_repro_details (id_company, livestock_id);
 
-COMMENT ON TABLE public.repro_condition_codes IS '086: per-company mapping uterine code -> repro_condition. Written only by sp_repro_condition_code_set (ADMIN) or by the owner''s seed file. Not in crud_models.';
+COMMENT ON TABLE public.repro_condition_codes IS '086: per-company mapping uterine code -> repro_condition (NULL condition = known code pending veterinarian confirmation). Written only by sp_repro_condition_code_set (ADMIN) or by the owner''s seed file. Not in crud_models.';
 COMMENT ON TABLE public.palpation_repro_details IS '086: append-only side table of cattle_health_logs palpations (P0095 on UPDATE / DELETE / TRUNCATE). A condition snapshot taken when the palpation was logged: re-mapping a code later does not rewrite it. Written only by sp_repro_log_palpation_batch. Not in crud_models.';
 
 -- 3) Triggers -------------------------------------------------------------------------------------------------
@@ -315,9 +333,10 @@ BEGIN
 
     SELECT * INTO sp FROM public.fn_uterine_split(p_text);
     IF sp.is_empty OR cardinality(sp.tokens) = 0 THEN RETURN 'UNRECOGNIZED'; END IF;
+    -- no result word: every token must already exist for the company (any condition, NULL = pending). Never by shape.
     FOREACH tk IN ARRAY sp.tokens LOOP
-        IF NOT (tk ~ '^[A-Z]{1,3}$' OR tk ~ '^[A-Z]{1,5}[0-9]{1,2}$'
-                OR EXISTS (SELECT 1 FROM public.repro_condition_codes cc WHERE cc.id_company = p_tenant AND cc.code = tk)) THEN
+        IF p_tenant IS NULL
+           OR NOT EXISTS (SELECT 1 FROM public.repro_condition_codes cc WHERE cc.id_company = p_tenant AND cc.code = tk) THEN
             RETURN 'UNRECOGNIZED';
         END IF;
     END LOOP;
@@ -784,18 +803,22 @@ BEGIN
          CROSS JOIN LATERAL public.fn_uterine_split(v.val) s
          CROSS JOIN LATERAL unnest(s.tokens) AS t(token)
     ), unk AS (
-        SELECT * FROM tok
+        -- a code is "unmapped" unless it has a CONFIRMED condition; a row with a NULL condition is known but pending
+        SELECT tok.*, EXISTS (SELECT 1 FROM public.repro_condition_codes cp
+                               WHERE cp.id_company = v_tenant AND cp.code = tok.token AND cp.repro_condition IS NULL) AS pending
+          FROM tok
          WHERE token NOT IN ('CICLANDO', 'ESTATICA', 'ESTATICO')
-           AND NOT EXISTS (SELECT 1 FROM public.repro_condition_codes cc WHERE cc.id_company = v_tenant AND cc.code = tok.token)
+           AND NOT EXISTS (SELECT 1 FROM public.repro_condition_codes cc
+                            WHERE cc.id_company = v_tenant AND cc.code = tok.token AND cc.repro_condition IS NOT NULL)
     ), agg AS (
-        SELECT token, sum(n) AS palpations,
+        SELECT token, bool_or(pending) AS known_pending, sum(n) AS palpations,
                coalesce(sum(n) FILTER (WHERE src = 'CARGA_MASIVA'), 0) AS from_bulk_load,
                coalesce(sum(n) FILTER (WHERE src = 'REGISTRO'), 0) AS from_logged,
                (array_agg(DISTINCT val ORDER BY val))[1:5] AS example_values
           FROM unk GROUP BY token
     )
     SELECT (SELECT count(*) FROM agg),
-           coalesce((SELECT jsonb_agg(jsonb_build_object('code', a.token, 'palpations', a.palpations,
+           coalesce((SELECT jsonb_agg(jsonb_build_object('code', a.token, 'known_pending', a.known_pending, 'palpations', a.palpations,
                                                          'from_bulk_load', a.from_bulk_load, 'from_logged', a.from_logged,
                                                          'example_values', to_jsonb(a.example_values))
                                       ORDER BY a.palpations DESC, a.token)
@@ -803,12 +826,12 @@ BEGIN
            coalesce((SELECT jsonb_agg(jsonb_build_object('code', cc.code, 'repro_condition', cc.repro_condition,
                                                          'source', cc.source, 'confirmed_by', cc.confirmed_by,
                                                          'confirmed_at', cc.confirmed_at) ORDER BY cc.code)
-                       FROM public.repro_condition_codes cc WHERE cc.id_company = v_tenant), '[]'::jsonb)
+                       FROM public.repro_condition_codes cc WHERE cc.id_company = v_tenant AND cc.repro_condition IS NOT NULL), '[]'::jsonb)
       INTO v_total, v_codes, v_conf;
 
     RETURN jsonb_build_object('status', 'ok', 'unmapped_total', v_total, 'unmapped', v_codes, 'confirmed', v_conf,
         'note', 'Codigos (o partes de un codigo compuesto como UNE/NR) sin significado confirmado para esta empresa. '
-                || 'Los veterinarios los confirman; un ADMIN los registra. Mientras tanto la condicion queda vacia (UNMAPPED), nunca adivinada.');
+                || 'known_pending = el codigo ya esta registrado pero su significado espera la confirmacion del veterinario. Los veterinarios los confirman; un ADMIN los registra. Mientras tanto la condicion queda vacia (UNMAPPED), nunca adivinada.');
 END;
 $$;
 
@@ -825,6 +848,7 @@ DECLARE
     v_code   text := public.fn_repro_norm_code(p_code);
     v_cond   text := upper(public.fn_repro_txt(p_repro_condition));
     v_prev   text;
+    v_exists boolean;
 BEGIN
     IF public.fn_repro_member_role(v_tenant, p_user_email) IS DISTINCT FROM 'ADMIN' THEN
         RETURN jsonb_build_object('status', 'forbidden', 'message', 'Solo un ADMIN de la empresa puede confirmar el significado de un codigo.');
@@ -840,7 +864,7 @@ BEGIN
         RETURN jsonb_build_object('status', 'invalid', 'message', 'Ese texto ya tiene un significado fijo y no se puede redefinir.');
     END IF;
 
-    SELECT cc.repro_condition INTO v_prev FROM public.repro_condition_codes cc WHERE cc.id_company = v_tenant AND cc.code = v_code;
+    SELECT true, cc.repro_condition INTO v_exists, v_prev FROM public.repro_condition_codes cc WHERE cc.id_company = v_tenant AND cc.code = v_code;
     INSERT INTO public.repro_condition_codes AS cc (id_company, code, repro_condition, source, confirmed_by, confirmed_at)
     VALUES (v_tenant, v_code, v_cond, coalesce(public.fn_repro_txt(p_source), 'ADMIN_CONFIRMED'),
             lower(public.fn_repro_txt(p_user_email)), now())
@@ -849,7 +873,7 @@ BEGIN
            confirmed_by = excluded.confirmed_by, confirmed_at = excluded.confirmed_at
      WHERE cc.id_company = v_tenant;
 
-    RETURN jsonb_build_object('status', CASE WHEN v_prev IS NULL THEN 'created' ELSE 'updated' END,
+    RETURN jsonb_build_object('status', CASE WHEN coalesce(v_exists, false) THEN 'updated' ELSE 'created' END,
                               'code', v_code, 'repro_condition', v_cond, 'previous_condition', v_prev,
                               'message', 'Codigo confirmado. Aplica a las palpaciones que se registren de ahora en adelante.');
 END;

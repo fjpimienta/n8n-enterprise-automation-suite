@@ -318,12 +318,28 @@ SELECT pg_temp.ok('A diagnosis kind: PREÑADA / VACIA words, explicit words and 
     AND fn_repro_diagnosis_kind('VACÍA IF 1S', pg_temp.cx('A')::integer) = 'VACIA' AND fn_repro_diagnosis_kind('VACÍA No apto', pg_temp.cx('A')::integer) = 'VACIA'
     AND fn_repro_diagnosis_kind('ciclando', pg_temp.cx('A')::integer) = 'VACIA' AND fn_repro_diagnosis_kind('Estática', pg_temp.cx('A')::integer) = 'VACIA'
     AND fn_repro_diagnosis_kind('UNE', pg_temp.cx('A')::integer) = 'CODE' AND fn_repro_diagnosis_kind('UTCL2/OI', pg_temp.cx('A')::integer) = 'CODE'
-    AND fn_repro_diagnosis_kind('RP', pg_temp.cx('A')::integer) = 'CODE' AND fn_repro_diagnosis_kind('NR', pg_temp.cx('A')::integer) = 'CODE'
-    AND fn_repro_diagnosis_kind('UTC2', pg_temp.cx('A')::integer) = 'CODE' AND fn_repro_diagnosis_kind('UNE/NR', pg_temp.cx('A')::integer) = 'CODE');
+    AND fn_repro_diagnosis_kind('UTCL1/UTCL3', pg_temp.cx('A')::integer) = 'CODE'
+    AND fn_repro_diagnosis_kind('VACÍA ZQ9', pg_temp.cx('A')::integer) = 'VACIA' AND fn_repro_diagnosis_kind('PREÑADA RP', pg_temp.cx('A')::integer) = 'PRENADA');
+SELECT pg_temp.ok('A diagnosis kind: a bare token is NEVER accepted by its shape - ok, pre, RP, NR, UTC2, ZQ9, UNE/NR (NR unknown) are UNRECOGNIZED while the company has no such code',
+    fn_repro_diagnosis_kind('ok', pg_temp.cx('A')::integer) = 'UNRECOGNIZED' AND fn_repro_diagnosis_kind('OK', pg_temp.cx('A')::integer) = 'UNRECOGNIZED'
+    AND fn_repro_diagnosis_kind('pre', pg_temp.cx('A')::integer) = 'UNRECOGNIZED' AND fn_repro_diagnosis_kind('RP', pg_temp.cx('A')::integer) = 'UNRECOGNIZED'
+    AND fn_repro_diagnosis_kind('NR', pg_temp.cx('A')::integer) = 'UNRECOGNIZED' AND fn_repro_diagnosis_kind('UTC2', pg_temp.cx('A')::integer) = 'UNRECOGNIZED'
+    AND fn_repro_diagnosis_kind('ZQ9', pg_temp.cx('A')::integer) = 'UNRECOGNIZED' AND fn_repro_diagnosis_kind('UNE/NR', pg_temp.cx('A')::integer) = 'UNRECOGNIZED'
+    AND fn_repro_diagnosis_kind('UNE', NULL) = 'UNRECOGNIZED');
+INSERT INTO repro_condition_codes (id_company, code, repro_condition, source, confirmed_by, confirmed_at)
+VALUES (pg_temp.cx('A')::integer, 'RP', NULL, 'pending veterinarian confirmation', NULL, NULL),
+       (pg_temp.cx('A')::integer, 'NR', NULL, 'pending veterinarian confirmation', NULL, NULL);
+SELECT pg_temp.ok('A a KNOWN-BUT-PENDING code (row with a NULL condition) is accepted bare (RP, NR, UNE/NR, RP/OI) but still maps to nothing (UNMAPPED, condition NULL); an unknown one next to it is not accepted (RP/ZQ9)',
+    fn_repro_diagnosis_kind('RP', pg_temp.cx('A')::integer) = 'CODE' AND fn_repro_diagnosis_kind('UNE/NR', pg_temp.cx('A')::integer) = 'CODE'
+    AND fn_repro_diagnosis_kind('rp/oi', pg_temp.cx('A')::integer) = 'CODE' AND fn_repro_diagnosis_kind('RP/ZQ9', pg_temp.cx('A')::integer) = 'UNRECOGNIZED'
+    AND pg_temp.pc('RP', pg_temp.cx('A')) = 'RP|||UNMAPPED' AND pg_temp.pc('UNE/NR', pg_temp.cx('A')) = 'UNE/NR|||UNMAPPED'
+    AND fn_repro_diagnosis_kind('RP', pg_temp.cx('B')::integer) = 'UNRECOGNIZED');
+DELETE FROM repro_condition_codes WHERE id_company = pg_temp.cx('A')::integer AND code IN ('RP', 'NR');
 SELECT pg_temp.ok('A diagnosis kind: a misspelled PREÑADA, random text, a multi-word unknown phrase without a result word, N/A, empty and NULL are UNRECOGNIZED; PREÑADA with VACIA or an explicit word is a CONFLICT',
     fn_repro_diagnosis_kind('PREÑDA', pg_temp.cx('A')::integer) = 'UNRECOGNIZED' AND fn_repro_diagnosis_kind('PRENDA', pg_temp.cx('A')::integer) = 'UNRECOGNIZED'
     AND fn_repro_diagnosis_kind('hola mundo', pg_temp.cx('A')::integer) = 'UNRECOGNIZED' AND fn_repro_diagnosis_kind('no hay nada', pg_temp.cx('A')::integer) = 'UNRECOGNIZED'
     AND fn_repro_diagnosis_kind('Matriz ocupada', pg_temp.cx('A')::integer) = 'UNRECOGNIZED' AND fn_repro_diagnosis_kind('No apto', pg_temp.cx('A')::integer) = 'UNRECOGNIZED'
+    AND fn_repro_diagnosis_kind('xyz', pg_temp.cx('A')::integer) = 'UNRECOGNIZED'
     AND fn_repro_diagnosis_kind('VACIAS', pg_temp.cx('A')::integer) = 'UNRECOGNIZED' AND fn_repro_diagnosis_kind('N/A', pg_temp.cx('A')::integer) = 'UNRECOGNIZED'
     AND fn_repro_diagnosis_kind('', pg_temp.cx('A')::integer) = 'UNRECOGNIZED' AND fn_repro_diagnosis_kind(NULL, pg_temp.cx('A')::integer) = 'UNRECOGNIZED'
     AND fn_repro_diagnosis_kind('OI', pg_temp.cx('A')::integer) = 'UNRECOGNIZED'
@@ -360,6 +376,19 @@ SELECT pg_temp.ok('B validation: bad condition, empty code, slash, 41 characters
 SELECT pg_temp.ok('B the table rejects a code that is not normalised (direct INSERT)',
     pg_temp.raises(format('INSERT INTO repro_condition_codes (id_company, code, repro_condition, source, confirmed_by) VALUES (%L, ''utcl7'', ''OTRO'', ''x'', ''x'')', pg_temp.cx('A')), '23514')
     AND pg_temp.raises(format('INSERT INTO repro_condition_codes (id_company, code, repro_condition, source, confirmed_by) VALUES (%L, ''UTCL7'', ''MAYBE'', ''x'', ''x'')', pg_temp.cx('A')), '23514'));
+
+INSERT INTO repro_condition_codes (id_company, code, repro_condition, source, confirmed_by, confirmed_at)
+VALUES (pg_temp.cx('A')::integer, 'ZPEND', NULL, 'pending veterinarian confirmation', NULL, NULL);
+SELECT pg_temp.ok('B the table allows a NULL condition (known, pending veterinarian confirmation) with no confirmed_by / confirmed_at; a CONFIRMED condition without who / when is refused (23514)',
+    (SELECT repro_condition IS NULL AND confirmed_by IS NULL AND confirmed_at IS NULL FROM repro_condition_codes
+      WHERE id_company = pg_temp.cx('A')::integer AND code = 'ZPEND')
+    AND pg_temp.raises(format('INSERT INTO repro_condition_codes (id_company, code, repro_condition, source, confirmed_by, confirmed_at) VALUES (%L, ''ZBAD'', ''OTRO'', ''x'', NULL, NULL)', pg_temp.cx('A')), '23514'));
+SELECT pg_temp.call('b_pend', format('SELECT sp_repro_condition_code_set(%L, %L, %L, %L)', pg_temp.cx('A'), pg_temp.cx('u1'), 'zpend', 'estatica'));
+SELECT pg_temp.ok('B an ADMIN can confirm a pending code: status updated, previous_condition NULL, who / when now filled',
+    pg_temp.rs('b_pend')->>'status' = 'updated' AND pg_temp.rs('b_pend')->>'previous_condition' IS NULL
+    AND (SELECT repro_condition = 'ESTATICA' AND confirmed_by IS NOT NULL AND confirmed_at IS NOT NULL FROM repro_condition_codes
+          WHERE id_company = pg_temp.cx('A')::integer AND code = 'ZPEND'));
+DELETE FROM repro_condition_codes WHERE id_company = pg_temp.cx('A')::integer AND code = 'ZPEND';
 
 SELECT pg_temp.setrole(pg_temp.cx('u1'), pg_temp.cx('A'), 'EDITOR');
 SELECT pg_temp.ok('B a non-ADMIN member (EDITOR) is forbidden and nothing is written',
@@ -511,11 +540,31 @@ SELECT pg_temp.ok('C DIAGNOSIS: a misspelled PREÑADA, random text and N/A are D
     AND pg_temp.n_logs() = (SELECT logs FROM t_base3) AND pg_temp.n_det() = (SELECT dets FROM t_base3)
     AND pg_temp.status_of('A-V10') = 'ACTIVO' AND pg_temp.status_of('A-V9') = 'ACTIVO' AND pg_temp.status_of('A-P5') = 'ACTIVO',
     pg_temp.rs('c4b')::text);
-SELECT pg_temp.plog('c4c', '[{"identifier":"T086-A-V10","raw_diagnosis":"UNE"},{"identifier":"T086-A-P5","raw_diagnosis":"RP"}]');
-SELECT pg_temp.ok('C DIAGNOSIS: a bare uterine code is accepted: UNE (confirmed) -> VACÍA, MAPPED ESTATICA; RP (looks like a code, unconfirmed) -> VACÍA, UNMAPPED with the raw code',
+SELECT pg_temp.plog('c4d', $j$[
+  {"identifier":"T086-A-V10","raw_diagnosis":"ok"},
+  {"identifier":"T086-A-V9","raw_diagnosis":"pre"},
+  {"identifier":"T086-A-P5","raw_diagnosis":"RP"},
+  {"identifier":"T086-A-V8","raw_diagnosis":"UNE/NR"}
+]$j$);
+SELECT pg_temp.ok('C DIAGNOSIS: bare ok, pre, an unknown code (RP) and a compound with an unknown part (UNE/NR) are DIAGNOSIS_UNRECOGNIZED when the company has no such code; nothing written',
+    pg_temp.rs('c4d')->>'status' = 'rejected' AND jsonb_array_length(pg_temp.rs('c4d')->'issues') = 4
+    AND (SELECT count(*) FROM jsonb_array_elements(pg_temp.rs('c4d')->'issues') e WHERE e->>'code' = 'DIAGNOSIS_UNRECOGNIZED') = 4
+    AND pg_temp.n_logs() = (SELECT logs FROM t_base3) AND pg_temp.n_det() = (SELECT dets FROM t_base3),
+    pg_temp.rs('c4d')::text);
+SELECT pg_temp.plog('c4e', '[{"identifier":"T086-A-P5","raw_diagnosis":"VACÍA ZQ9"}]');
+SELECT pg_temp.ok('C DIAGNOSIS: the SAME kind of unknown code WITH an explicit VACÍA word is accepted and stored UNMAPPED with its raw code',
+    pg_temp.rs('c4e')->>'status' = 'recorded' AND pg_temp.det('A-P5')->>'raw_code' = 'ZQ9' AND pg_temp.det('A-P5')->>'mapping_status' = 'UNMAPPED'
+    AND pg_temp.det('A-P5')->>'repro_condition' IS NULL AND pg_temp.status_of('A-P5') = 'VACÍA',
+    pg_temp.rs('c4e')::text);
+-- RP becomes KNOWN BUT PENDING (a row with a NULL condition) for company A, as the tenant-5 seed does
+INSERT INTO repro_condition_codes (id_company, code, repro_condition, source, confirmed_by, confirmed_at)
+VALUES (pg_temp.cx('A')::integer, 'RP', NULL, 'pending veterinarian confirmation', NULL, NULL);
+SELECT pg_temp.plog('c4c', '[{"identifier":"T086-A-V10","raw_diagnosis":"UNE"},{"identifier":"T086-A-OLD","raw_diagnosis":"rp"}]');
+SELECT pg_temp.ok('C DIAGNOSIS: a bare code that EXISTS for the company is accepted: UNE (confirmed) -> VACÍA, MAPPED ESTATICA; rp (known but pending) -> VACÍA, UNMAPPED, condition NULL, raw code RP',
     pg_temp.rs('c4c')->>'status' = 'recorded'
     AND pg_temp.status_of('A-V10') = 'VACÍA' AND pg_temp.det('A-V10')->>'mapping_status' = 'MAPPED' AND pg_temp.det('A-V10')->>'repro_condition' = 'ESTATICA'
-    AND pg_temp.status_of('A-P5') = 'VACÍA' AND pg_temp.det('A-P5')->>'mapping_status' = 'UNMAPPED' AND pg_temp.det('A-P5')->>'raw_code' = 'RP',
+    AND pg_temp.status_of('A-OLD') = 'VACÍA' AND pg_temp.det('A-OLD')->>'mapping_status' = 'UNMAPPED' AND pg_temp.det('A-OLD')->>'raw_code' = 'RP'
+    AND pg_temp.det('A-OLD')->>'repro_condition' IS NULL,
     pg_temp.rs('c4c')::text);
 SELECT pg_temp.plog('c5', '[{"identifier":"T086-A-V7","raw_diagnosis":"VACÍA UTCL1/OD"},{"identifier":"T086-A-V8","raw_diagnosis":"VACÍA UNE"}]',
                     to_char(fn_repro_today() - 3, 'YYYY-MM-DD'), 'Dr. Fecha');
@@ -804,19 +853,24 @@ SELECT pg_temp.ok('G the list is by TOKEN, not by whole value: NR (from UNE/NR),
     AND (SELECT count(*) FROM jsonb_array_elements(pg_temp.rs('g1')->'unmapped') e WHERE e->>'code' IN ('NR', 'RP', 'NO APTO')) = 3
     AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(pg_temp.rs('g1')->'unmapped') e WHERE e->>'code' IN ('UNE', 'UTCL1', 'UTCL2', 'CICLANDO', 'ESTATICA')),
     pg_temp.rs('g1')::text);
-SELECT pg_temp.ok('G counts split by origin: NO APTO 2 from the bulk load (case-insensitive); NR 1 logged (C: V3) + 1 bulk load (G3) + 20 import rows (UNE/NR); RP logged twice (C: V5, P5)',
+SELECT pg_temp.ok('G counts split by origin: NO APTO 2 from the bulk load (case-insensitive); NR 1 logged (C: V3) + 1 bulk load (G3) + 20 import rows (UNE/NR); RP logged twice (C: V5 with a VACÍA word, OLD as a bare known-pending code)',
     (SELECT (e->>'palpations')::int = 2 AND (e->>'from_bulk_load')::int = 2 AND (e->>'from_logged')::int = 0
        FROM jsonb_array_elements(pg_temp.rs('g1')->'unmapped') e WHERE e->>'code' = 'NO APTO')
     AND (SELECT (e->>'from_logged')::int = 1 AND (e->>'from_bulk_load')::int = 21 AND (e->>'palpations')::int = 22
        FROM jsonb_array_elements(pg_temp.rs('g1')->'unmapped') e WHERE e->>'code' = 'NR')
     AND (SELECT (e->>'palpations')::int = 2 AND (e->>'from_logged')::int = 2 FROM jsonb_array_elements(pg_temp.rs('g1')->'unmapped') e WHERE e->>'code' = 'RP'));
-SELECT pg_temp.ok('G the confirmed mappings of the company are returned for the vets (UNE, UTCL1..3, UTCL9) with who confirmed them',
+SELECT pg_temp.ok('G known-pending codes are flagged: RP has a row with a NULL condition (known_pending true), NR and NO APTO have no row (false); ZQ9 (stored by C) is listed too',
+    (SELECT (e->>'known_pending')::boolean FROM jsonb_array_elements(pg_temp.rs('g1')->'unmapped') e WHERE e->>'code' = 'RP')
+    AND NOT (SELECT (e->>'known_pending')::boolean FROM jsonb_array_elements(pg_temp.rs('g1')->'unmapped') e WHERE e->>'code' = 'NR')
+    AND NOT (SELECT (e->>'known_pending')::boolean FROM jsonb_array_elements(pg_temp.rs('g1')->'unmapped') e WHERE e->>'code' = 'NO APTO')
+    AND EXISTS (SELECT 1 FROM jsonb_array_elements(pg_temp.rs('g1')->'unmapped') e WHERE e->>'code' = 'ZQ9'));
+SELECT pg_temp.ok('G the confirmed mappings of the company are returned for the vets (UNE, UTCL1..3, UTCL9) with who confirmed them; the pending RP row is NOT among them',
     (SELECT count(*) FROM jsonb_array_elements(pg_temp.rs('g1')->'confirmed') e WHERE e->>'code' IN ('UNE', 'UTCL1', 'UTCL2', 'UTCL3', 'UTCL9')) = 5
     AND jsonb_array_length(pg_temp.rs('g1')->'confirmed') = 5);
 SELECT pg_temp.call('g2', format('SELECT sp_repro_condition_code_set(%L, %L, %L, %L)', pg_temp.cx('A'), pg_temp.cx('u1'), 'rp', 'OTRO'));
 SELECT pg_temp.call('g3', format('SELECT sp_repro_list_unmapped_uterine_codes(%L, %L)', pg_temp.cx('A'), pg_temp.cx('u1')));
-SELECT pg_temp.ok('G once an ADMIN confirms RP it leaves the list, and the next palpation of RP is MAPPED (as OTRO)',
-    pg_temp.rs('g2')->>'status' = 'created'
+SELECT pg_temp.ok('G once an ADMIN confirms the pending RP (status updated, previous condition NULL) it leaves the list, and the next palpation of RP is MAPPED (as OTRO)',
+    pg_temp.rs('g2')->>'status' = 'updated' AND pg_temp.rs('g2')->>'previous_condition' IS NULL
     AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(pg_temp.rs('g3')->'unmapped') e WHERE e->>'code' = 'RP')
     AND pg_temp.pc('VACÍA RP', pg_temp.cx('A')) = 'RP||OTRO|MAPPED'
     AND pg_temp.det('A-V5')->>'mapping_status' = 'UNMAPPED');
