@@ -213,28 +213,28 @@ $$;
 
 DO $$
 DECLARE
-    a integer := pg_temp.cx('A')::integer;
-    b integer := pg_temp.cx('B')::integer;
-    id uuid;
-    k text;
+    v_a integer := pg_temp.cx('A')::integer;
+    v_b integer := pg_temp.cx('B')::integer;
+    v_id uuid;
+    v_k text;
 BEGIN
     -- company A: animals the wrapper will palpate
-    FOREACH k IN ARRAY ARRAY['V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'P1', 'P2', 'P3', 'P4', 'P5'] LOOP
-        id := pg_temp.mk(a, 'A-' || k, NULL, 'VACA', 'ACTIVO');
-        INSERT INTO t_ctx VALUES (k, id::text);
+    FOREACH v_k IN ARRAY ARRAY['V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'P1', 'P2', 'P3', 'P4', 'P5'] LOOP
+        v_id := pg_temp.mk(v_a, 'A-' || v_k, NULL, 'VACA', 'ACTIVO');
+        INSERT INTO t_ctx VALUES (v_k, v_id::text);
     END LOOP;
-    id := pg_temp.mk(a, 'A-DUP1', 'T086DUP', 'VACA', 'ACTIVO');  INSERT INTO t_ctx VALUES ('dup1', id::text);
-    id := pg_temp.mk(a, 'A-DUP2', 'T086DUP', 'VACA', 'ACTIVO');  INSERT INTO t_ctx VALUES ('dup2', id::text);
-    id := pg_temp.mk(a, 'A-SOLD', NULL, 'VACA', 'VENDIDO');       INSERT INTO t_ctx VALUES ('sold', id::text);
-    id := pg_temp.mk(a, 'A-ED', NULL, 'VACA', 'ACTIVO');          INSERT INTO t_ctx VALUES ('ed', id::text);
-    id := pg_temp.mk(a, 'A-RET', NULL, 'VACA', 'ACTIVO');         INSERT INTO t_ctx VALUES ('ret', id::text);
-    id := pg_temp.mk(a, 'A-OLD', NULL, 'VACA', 'ACTIVO');         INSERT INTO t_ctx VALUES ('old', id::text);
+    v_id := pg_temp.mk(v_a, 'A-DUP1', 'T086DUP', 'VACA', 'ACTIVO');  INSERT INTO t_ctx VALUES ('dup1', v_id::text);
+    v_id := pg_temp.mk(v_a, 'A-DUP2', 'T086DUP', 'VACA', 'ACTIVO');  INSERT INTO t_ctx VALUES ('dup2', v_id::text);
+    v_id := pg_temp.mk(v_a, 'A-SOLD', NULL, 'VACA', 'VENDIDO');       INSERT INTO t_ctx VALUES ('sold', v_id::text);
+    v_id := pg_temp.mk(v_a, 'A-ED', NULL, 'VACA', 'ACTIVO');          INSERT INTO t_ctx VALUES ('ed', v_id::text);
+    v_id := pg_temp.mk(v_a, 'A-RET', NULL, 'VACA', 'ACTIVO');         INSERT INTO t_ctx VALUES ('ret', v_id::text);
+    v_id := pg_temp.mk(v_a, 'A-OLD', NULL, 'VACA', 'ACTIVO');         INSERT INTO t_ctx VALUES ('old', v_id::text);
     -- a health log that is NOT a palpation (for the tenant-guard test)
-    id := pg_temp.mk(a, 'A-VAX', NULL, 'VACA', 'ACTIVO');         INSERT INTO t_ctx VALUES ('vax', id::text);
+    v_id := pg_temp.mk(v_a, 'A-VAX', NULL, 'VACA', 'ACTIVO');         INSERT INTO t_ctx VALUES ('vax', v_id::text);
     -- company B
-    id := pg_temp.mk(b, 'B-V1', NULL, 'VACA', 'ACTIVO');          INSERT INTO t_ctx VALUES ('bv1', id::text);
-    id := pg_temp.mk(b, 'B-V2', NULL, 'VACA', 'ACTIVO');          INSERT INTO t_ctx VALUES ('bv2', id::text);
-    id := pg_temp.mk(b, 'B-P1', NULL, 'VACA', 'PREÑADA');         INSERT INTO t_ctx VALUES ('bp1', id::text);
+    v_id := pg_temp.mk(v_b, 'B-V1', NULL, 'VACA', 'ACTIVO');          INSERT INTO t_ctx VALUES ('bv1', v_id::text);
+    v_id := pg_temp.mk(v_b, 'B-V2', NULL, 'VACA', 'ACTIVO');          INSERT INTO t_ctx VALUES ('bv2', v_id::text);
+    v_id := pg_temp.mk(v_b, 'B-P1', NULL, 'VACA', 'PREÑADA');         INSERT INTO t_ctx VALUES ('bp1', v_id::text);
 END $$;
 
 -- =============================================================================================================
@@ -552,28 +552,28 @@ SELECT pg_temp.ok('D sp_log_palpation_event does not mention the new objects (it
 
 DO $$
 DECLARE
-    a integer := pg_temp.cx('A')::integer;
-    b integer := pg_temp.cx('B')::integer;
-    id uuid;
+    v_a integer := pg_temp.cx('A')::integer;
+    v_b integer := pg_temp.cx('B')::integer;
+    v_id uuid;
 BEGIN
-    id := pg_temp.mk(a, 'A-D1', NULL, 'VACA', 'PREÑADA');     INSERT INTO t_ctx VALUES ('d1', id::text);    -- 120 days, English keys
-    PERFORM pg_temp.pal(id, 120, 'en', 'PREÑADA', '100');
-    id := pg_temp.mk(a, 'A-D2', NULL, 'VACA', 'PREÑADA');     INSERT INTO t_ctx VALUES ('d2', id::text);    -- 30 days: not due
-    PERFORM pg_temp.pal(id, 30, 'en', 'PREÑADA', '100');
-    id := pg_temp.mk(a, 'A-D3', NULL, 'NOVILLONA', 'ACTIVO'); INSERT INTO t_ctx VALUES ('d3', id::text);    -- empadre, never palpated
-    id := pg_temp.mk(a, 'A-D4', NULL, 'VACA', 'PREÑADA');     INSERT INTO t_ctx VALUES ('d4', id::text);    -- 200 days, Spanish keys, no accent
-    PERFORM pg_temp.pal(id, 200, 'es', 'PRENADA', '90');
-    id := pg_temp.mk(a, 'A-D5', NULL, 'NOVILLONA', 'ACTIVO'); INSERT INTO t_ctx VALUES ('d5', id::text);    -- empadre, palpated 100 days ago (VACIA)
-    PERFORM pg_temp.pal(id, 100, 'en', 'VACIA');
-    id := pg_temp.mk(a, 'A-D6', NULL, 'VACA', 'VACÍA');       INSERT INTO t_ctx VALUES ('d6', id::text);    -- open cow, old palpation, NOT in empadre
-    PERFORM pg_temp.pal(id, 300, 'es', 'VACIA');
-    id := pg_temp.mk(a, 'A-D7', NULL, 'VACA', 'VENDIDO');     INSERT INTO t_ctx VALUES ('d7', id::text);    -- sold
-    PERFORM pg_temp.pal(id, 300, 'en', 'PREÑADA', '100');
-    id := pg_temp.mk(a, 'A-D8', NULL, 'NOVILLONA', 'ACTIVO'); INSERT INTO t_ctx VALUES ('d8', id::text);    -- empadre entry that gets VOIDED
-    id := pg_temp.mk(a, 'A-D9', NULL, 'NOVILLONA', 'ACTIVO'); INSERT INTO t_ctx VALUES ('d9', id::text);    -- empadre first, PREÑADA afterwards; palpated before the entry
-    PERFORM pg_temp.pal(id, 150, 'en', 'PREÑADA', '100');
-    id := pg_temp.mk(b, 'B-D1', NULL, 'VACA', 'PREÑADA');     INSERT INTO t_ctx VALUES ('bd1', id::text);   -- company B
-    PERFORM pg_temp.pal(id, 150, 'en', 'PREÑADA', '100');
+    v_id := pg_temp.mk(v_a, 'A-D1', NULL, 'VACA', 'PREÑADA');     INSERT INTO t_ctx VALUES ('d1', v_id::text);    -- 120 days, English keys
+    PERFORM pg_temp.pal(v_id, 120, 'en', 'PREÑADA', '100');
+    v_id := pg_temp.mk(v_a, 'A-D2', NULL, 'VACA', 'PREÑADA');     INSERT INTO t_ctx VALUES ('d2', v_id::text);    -- 30 days: not due
+    PERFORM pg_temp.pal(v_id, 30, 'en', 'PREÑADA', '100');
+    v_id := pg_temp.mk(v_a, 'A-D3', NULL, 'NOVILLONA', 'ACTIVO'); INSERT INTO t_ctx VALUES ('d3', v_id::text);    -- empadre, never palpated
+    v_id := pg_temp.mk(v_a, 'A-D4', NULL, 'VACA', 'PREÑADA');     INSERT INTO t_ctx VALUES ('d4', v_id::text);    -- 200 days, Spanish keys, no accent
+    PERFORM pg_temp.pal(v_id, 200, 'es', 'PRENADA', '90');
+    v_id := pg_temp.mk(v_a, 'A-D5', NULL, 'NOVILLONA', 'ACTIVO'); INSERT INTO t_ctx VALUES ('d5', v_id::text);    -- empadre, palpated 100 days ago (VACIA)
+    PERFORM pg_temp.pal(v_id, 100, 'en', 'VACIA');
+    v_id := pg_temp.mk(v_a, 'A-D6', NULL, 'VACA', 'VACÍA');       INSERT INTO t_ctx VALUES ('d6', v_id::text);    -- open cow, old palpation, NOT in empadre
+    PERFORM pg_temp.pal(v_id, 300, 'es', 'VACIA');
+    v_id := pg_temp.mk(v_a, 'A-D7', NULL, 'VACA', 'VENDIDO');     INSERT INTO t_ctx VALUES ('d7', v_id::text);    -- sold
+    PERFORM pg_temp.pal(v_id, 300, 'en', 'PREÑADA', '100');
+    v_id := pg_temp.mk(v_a, 'A-D8', NULL, 'NOVILLONA', 'ACTIVO'); INSERT INTO t_ctx VALUES ('d8', v_id::text);    -- empadre entry that gets VOIDED
+    v_id := pg_temp.mk(v_a, 'A-D9', NULL, 'NOVILLONA', 'ACTIVO'); INSERT INTO t_ctx VALUES ('d9', v_id::text);    -- empadre first, PREÑADA afterwards; palpated before the entry
+    PERFORM pg_temp.pal(v_id, 150, 'en', 'PREÑADA', '100');
+    v_id := pg_temp.mk(v_b, 'B-D1', NULL, 'VACA', 'PREÑADA');     INSERT INTO t_ctx VALUES ('bd1', v_id::text);   -- company B
+    PERFORM pg_temp.pal(v_id, 150, 'en', 'PREÑADA', '100');
 END $$;
 
 SELECT pg_temp.call('e1', format('SELECT sp_repro_log_empadre_entry(%L, %L, %L)', pg_temp.cx('A'), pg_temp.cx('u1'), 'T086-A-D3'));
@@ -623,14 +623,14 @@ SELECT pg_temp.ok('E stale_import_date is false for a company with few palpation
     sp_repro_list_palpation_due(pg_temp.cx('B'), pg_temp.cx('u2'))->'stale_import_date'->>'flag' = 'false');
 DO $$
 DECLARE
-    a integer := pg_temp.cx('A')::integer;
-    id uuid;
-    g integer;
+    v_a integer := pg_temp.cx('A')::integer;
+    v_id uuid;
+    v_g integer;
 BEGIN
-    FOR g IN 1..40 LOOP
-        id := pg_temp.mk(a, 'A-IMP' || g, NULL, 'VACA', 'PREÑADA');
-        PERFORM pg_temp.pal(id, 300, 'es', 'PREÑADA', '100', CASE WHEN g % 2 = 0 THEN 'UNE/NR' ELSE 'UTCL1' END);
-        IF g = 1 THEN INSERT INTO t_ctx VALUES ('imp1', id::text); END IF;
+    FOR v_g IN 1..40 LOOP
+        v_id := pg_temp.mk(v_a, 'A-IMP' || v_g, NULL, 'VACA', 'PREÑADA');
+        PERFORM pg_temp.pal(v_id, 300, 'es', 'PREÑADA', '100', CASE WHEN v_g % 2 = 0 THEN 'UNE/NR' ELSE 'UTCL1' END);
+        IF v_g = 1 THEN INSERT INTO t_ctx VALUES ('imp1', v_id::text); END IF;
     END LOOP;
 END $$;
 SELECT pg_temp.ok('E stale_import_date: the most common date covers more than 50% of A''s palpations -> flag true with the date, share and total; the rows carry date_is_stale_import',
@@ -655,41 +655,41 @@ SELECT pg_temp.ok('E fn_repro_palpations is scoped by company: A''s function nev
 
 DO $$
 DECLARE
-    a integer := pg_temp.cx('A')::integer;
-    b integer := pg_temp.cx('B')::integer;
-    id uuid;
+    v_a integer := pg_temp.cx('A')::integer;
+    v_b integer := pg_temp.cx('B')::integer;
+    v_id uuid;
 BEGIN
-    id := pg_temp.mk(a, 'A-C1', NULL, 'VACA', 'PREÑADA'); INSERT INTO t_ctx VALUES ('c_up', id::text);       -- est = today + 20 (palpation)
-    PERFORM pg_temp.pal(id, 100, 'en', 'PREÑADA', '163');
-    id := pg_temp.mk(a, 'A-C2', NULL, 'VACA', 'PREÑADA'); INSERT INTO t_ctx VALUES ('c_far', id::text);      -- est = today + 120
-    PERFORM pg_temp.pal(id, 100, 'en', 'PREÑADA', '63');
-    id := pg_temp.mk(a, 'A-C3', NULL, 'VACA', 'PREÑADA'); INSERT INTO t_ctx VALUES ('c_over', id::text);     -- est = today - 10 (overdue)
-    PERFORM pg_temp.pal(id, 100, 'en', 'PREÑADA', '193');
-    id := pg_temp.mk(a, 'A-C4', NULL, 'VACA', 'PREÑADA'); INSERT INTO t_ctx VALUES ('c_stale', id::text);    -- est = today - 100 (stale data)
-    PERFORM pg_temp.pal(id, 300, 'en', 'PREÑADA', '83');
-    id := pg_temp.mk(a, 'A-C5', NULL, 'VACA', 'PREÑADA'); INSERT INTO t_ctx VALUES ('c_svc', id::text);      -- no palpation: service 263 days ago => today + 20
-    INSERT INTO cattle_breeding_events (livestock_id, tenant_id, breeding_date, method) VALUES (id, a, fn_repro_today() - 263, 'MONTA_NATURAL');
-    id := pg_temp.mk(a, 'A-C6', NULL, 'VACA', 'PREÑADA'); INSERT INTO t_ctx VALUES ('c_span', id::text);     -- Spanish keys, no accent, gestation as text
-    PERFORM pg_temp.pal(id, 100, 'es', 'PRENADA', '163');
-    id := pg_temp.mk(a, 'A-C7', NULL, 'VACA', 'PREÑADA'); INSERT INTO t_ctx VALUES ('c_conf', id::text);     -- PREÑADA then a newer VACÍA: status conflict
-    PERFORM pg_temp.pal(id, 100, 'en', 'PREÑADA', '163');
-    PERFORM pg_temp.pal(id, 10, 'en', 'VACÍA');
-    id := pg_temp.mk(a, 'A-C8', NULL, 'VACA', 'PREÑADA'); INSERT INTO t_ctx VALUES ('c_none', id::text);     -- nothing to estimate from
-    id := pg_temp.mk(a, 'A-C9', NULL, 'VACA', 'PREÑADA'); INSERT INTO t_ctx VALUES ('c_void', id::text);     -- only a VOIDED service
-    INSERT INTO cattle_breeding_events (livestock_id, tenant_id, breeding_date, method) VALUES (id, a, fn_repro_today() - 263, 'MONTA_NATURAL');
+    v_id := pg_temp.mk(v_a, 'A-C1', NULL, 'VACA', 'PREÑADA'); INSERT INTO t_ctx VALUES ('c_up', v_id::text);       -- est = today + 20 (palpation)
+    PERFORM pg_temp.pal(v_id, 100, 'en', 'PREÑADA', '163');
+    v_id := pg_temp.mk(v_a, 'A-C2', NULL, 'VACA', 'PREÑADA'); INSERT INTO t_ctx VALUES ('c_far', v_id::text);      -- est = today + 120
+    PERFORM pg_temp.pal(v_id, 100, 'en', 'PREÑADA', '63');
+    v_id := pg_temp.mk(v_a, 'A-C3', NULL, 'VACA', 'PREÑADA'); INSERT INTO t_ctx VALUES ('c_over', v_id::text);     -- est = today - 10 (overdue)
+    PERFORM pg_temp.pal(v_id, 100, 'en', 'PREÑADA', '193');
+    v_id := pg_temp.mk(v_a, 'A-C4', NULL, 'VACA', 'PREÑADA'); INSERT INTO t_ctx VALUES ('c_stale', v_id::text);    -- est = today - 100 (stale data)
+    PERFORM pg_temp.pal(v_id, 300, 'en', 'PREÑADA', '83');
+    v_id := pg_temp.mk(v_a, 'A-C5', NULL, 'VACA', 'PREÑADA'); INSERT INTO t_ctx VALUES ('c_svc', v_id::text);      -- no palpation: service 263 days ago => today + 20
+    INSERT INTO cattle_breeding_events (livestock_id, tenant_id, breeding_date, method) VALUES (v_id, v_a, fn_repro_today() - 263, 'MONTA_NATURAL');
+    v_id := pg_temp.mk(v_a, 'A-C6', NULL, 'VACA', 'PREÑADA'); INSERT INTO t_ctx VALUES ('c_span', v_id::text);     -- Spanish keys, no accent, gestation as text
+    PERFORM pg_temp.pal(v_id, 100, 'es', 'PRENADA', '163');
+    v_id := pg_temp.mk(v_a, 'A-C7', NULL, 'VACA', 'PREÑADA'); INSERT INTO t_ctx VALUES ('c_conf', v_id::text);     -- PREÑADA then a newer VACÍA: status conflict
+    PERFORM pg_temp.pal(v_id, 100, 'en', 'PREÑADA', '163');
+    PERFORM pg_temp.pal(v_id, 10, 'en', 'VACÍA');
+    v_id := pg_temp.mk(v_a, 'A-C8', NULL, 'VACA', 'PREÑADA'); INSERT INTO t_ctx VALUES ('c_none', v_id::text);     -- nothing to estimate from
+    v_id := pg_temp.mk(v_a, 'A-C9', NULL, 'VACA', 'PREÑADA'); INSERT INTO t_ctx VALUES ('c_void', v_id::text);     -- only a VOIDED service
+    INSERT INTO cattle_breeding_events (livestock_id, tenant_id, breeding_date, method) VALUES (v_id, v_a, fn_repro_today() - 263, 'MONTA_NATURAL');
     INSERT INTO event_voids (tenant_id, event_table, event_id, voided_by_email, voided_reason)
-    SELECT a, 'cattle_breeding_events', be.id, 'T086', 'T086 fixture' FROM cattle_breeding_events be WHERE be.livestock_id = id;
-    id := pg_temp.mk(a, 'A-C10', NULL, 'VACA', 'PREÑADA'); INSERT INTO t_ctx VALUES ('c_nogest', id::text);  -- palpation without gestation days + service => SERVICIO
-    PERFORM pg_temp.pal(id, 100, 'en', 'PREÑADA');
-    INSERT INTO cattle_breeding_events (livestock_id, tenant_id, breeding_date, method) VALUES (id, a, fn_repro_today() - 263, 'MONTA_NATURAL');
-    id := pg_temp.mk(a, 'A-C11', NULL, 'VACA', 'PREÑADA'); INSERT INTO t_ctx VALUES ('c_300', id::text);     -- gestation 300 > 283: unusable
-    PERFORM pg_temp.pal(id, 100, 'en', 'PREÑADA', '300');
-    id := pg_temp.mk(a, 'A-C12', NULL, 'VACA', 'VENDIDO'); INSERT INTO t_ctx VALUES ('c_sold', id::text);    -- sold: never listed
-    PERFORM pg_temp.pal(id, 100, 'en', 'PREÑADA', '163');
-    id := pg_temp.mk(a, 'A-C13', NULL, 'VACA', 'VACÍA');   INSERT INTO t_ctx VALUES ('c_open', id::text);    -- not PREÑADA: never listed
-    PERFORM pg_temp.pal(id, 100, 'en', 'PREÑADA', '163');
-    id := pg_temp.mk(b, 'B-C1', NULL, 'VACA', 'PREÑADA');  INSERT INTO t_ctx VALUES ('bc1', id::text);      -- company B, est = today + 20
-    PERFORM pg_temp.pal(id, 100, 'en', 'PREÑADA', '163');
+    SELECT v_a, 'cattle_breeding_events', be.id, 'T086', 'T086 fixture' FROM cattle_breeding_events be WHERE be.livestock_id = v_id;
+    v_id := pg_temp.mk(v_a, 'A-C10', NULL, 'VACA', 'PREÑADA'); INSERT INTO t_ctx VALUES ('c_nogest', v_id::text);  -- palpation without gestation days + service => SERVICIO
+    PERFORM pg_temp.pal(v_id, 100, 'en', 'PREÑADA');
+    INSERT INTO cattle_breeding_events (livestock_id, tenant_id, breeding_date, method) VALUES (v_id, v_a, fn_repro_today() - 263, 'MONTA_NATURAL');
+    v_id := pg_temp.mk(v_a, 'A-C11', NULL, 'VACA', 'PREÑADA'); INSERT INTO t_ctx VALUES ('c_300', v_id::text);     -- gestation 300 > 283: unusable
+    PERFORM pg_temp.pal(v_id, 100, 'en', 'PREÑADA', '300');
+    v_id := pg_temp.mk(v_a, 'A-C12', NULL, 'VACA', 'VENDIDO'); INSERT INTO t_ctx VALUES ('c_sold', v_id::text);    -- sold: never listed
+    PERFORM pg_temp.pal(v_id, 100, 'en', 'PREÑADA', '163');
+    v_id := pg_temp.mk(v_a, 'A-C13', NULL, 'VACA', 'VACÍA');   INSERT INTO t_ctx VALUES ('c_open', v_id::text);    -- not PREÑADA: never listed
+    PERFORM pg_temp.pal(v_id, 100, 'en', 'PREÑADA', '163');
+    v_id := pg_temp.mk(v_b, 'B-C1', NULL, 'VACA', 'PREÑADA');  INSERT INTO t_ctx VALUES ('bc1', v_id::text);      -- company B, est = today + 20
+    PERFORM pg_temp.pal(v_id, 100, 'en', 'PREÑADA', '163');
 END $$;
 
 SELECT pg_temp.ok('F palpation estimate: last PREÑADA palpation + (283 - gestation days) = today + 20 -> upcoming, source PALPACION, days_to_calving 20',
@@ -744,14 +744,14 @@ SELECT pg_temp.ok('F ISOLATION: B lists its own cow (+20) and none of A''s; A ne
 -- bulk-loaded style values (Spanish key condicion_utero) on top of what Part C logged: 'No apto' x2, UNE/NR once more, VACIA/UNE (mapped)
 DO $$
 DECLARE
-    a integer := pg_temp.cx('A')::integer;
-    id uuid;
+    v_a integer := pg_temp.cx('A')::integer;
+    v_id uuid;
 BEGIN
-    id := pg_temp.mk(a, 'A-G1', NULL, 'VACA', 'VACÍA'); PERFORM pg_temp.pal(id, 400, 'es', 'VACIA', NULL, 'No apto');
-    id := pg_temp.mk(a, 'A-G2', NULL, 'VACA', 'VACÍA'); PERFORM pg_temp.pal(id, 400, 'es', 'VACIA', NULL, 'NO APTO');
-    id := pg_temp.mk(a, 'A-G3', NULL, 'VACA', 'VACÍA'); PERFORM pg_temp.pal(id, 400, 'es', 'VACIA', NULL, 'UNE/NR');
-    id := pg_temp.mk(a, 'A-G4', NULL, 'VACA', 'VACÍA'); PERFORM pg_temp.pal(id, 400, 'es', 'VACIA', NULL, 'VACIA/UNE');
-    id := pg_temp.mk(a, 'A-G5', NULL, 'VACA', 'VACÍA'); PERFORM pg_temp.pal(id, 400, 'es', 'VACIA', NULL, 'ciclando');
+    v_id := pg_temp.mk(v_a, 'A-G1', NULL, 'VACA', 'VACÍA'); PERFORM pg_temp.pal(v_id, 400, 'es', 'VACIA', NULL, 'No apto');
+    v_id := pg_temp.mk(v_a, 'A-G2', NULL, 'VACA', 'VACÍA'); PERFORM pg_temp.pal(v_id, 400, 'es', 'VACIA', NULL, 'NO APTO');
+    v_id := pg_temp.mk(v_a, 'A-G3', NULL, 'VACA', 'VACÍA'); PERFORM pg_temp.pal(v_id, 400, 'es', 'VACIA', NULL, 'UNE/NR');
+    v_id := pg_temp.mk(v_a, 'A-G4', NULL, 'VACA', 'VACÍA'); PERFORM pg_temp.pal(v_id, 400, 'es', 'VACIA', NULL, 'VACIA/UNE');
+    v_id := pg_temp.mk(v_a, 'A-G5', NULL, 'VACA', 'VACÍA'); PERFORM pg_temp.pal(v_id, 400, 'es', 'VACIA', NULL, 'ciclando');
 END $$;
 
 SELECT pg_temp.call('g1', format('SELECT sp_repro_list_unmapped_uterine_codes(%L, %L)', pg_temp.cx('A'), pg_temp.cx('u1')));
