@@ -61,6 +61,15 @@ EXCEPTION WHEN OTHERS THEN
     RETURN SQLSTATE = p_state;
 END $$;
 
+CREATE FUNCTION pg_temp.raises_any(p_sql text, p_states text[]) RETURNS boolean
+LANGUAGE plpgsql AS $$
+BEGIN
+    EXECUTE p_sql;
+    RETURN false;
+EXCEPTION WHEN OTHERS THEN
+    RETURN SQLSTATE = ANY (p_states);
+END $$;
+
 -- 'YYYY-MM-DD' of the Mexico City day n days ago
 CREATE FUNCTION pg_temp.dago(p_days integer) RETURNS text
 LANGUAGE sql AS $$ SELECT to_char(fn_repro_today() - p_days, 'YYYY-MM-DD') $$;
@@ -547,10 +556,11 @@ SELECT pg_temp.ok('E list: by dam; voided rows hidden unless asked; company B se
     AND (SELECT count(*) FROM jsonb_array_elements(pg_temp.rs('hl3')->'historical_births') e WHERE e->>'dam_id' IN (SELECT dam_id::text FROM repro_historical_births WHERE id_company = pg_temp.cx('A')::integer)) = 0
     AND sp_repro_list_historical_births(pg_temp.cx('A'), pg_temp.cx('u1'), 'T087-A-H8')->>'total' = '0');
 
-SELECT pg_temp.ok('E append-only: UPDATE, DELETE and TRUNCATE of both historical tables raise P0095',
+SELECT pg_temp.ok('E append-only: UPDATE and DELETE of both historical tables raise P0095; TRUNCATE of the voids table raises P0095; TRUNCATE of the PARENT table is refused by its foreign key from the voids table (0A000, checked before the trigger) or by the trigger (P0095), and TRUNCATE ... CASCADE reaches the triggers (P0095)',
     pg_temp.raises('UPDATE repro_historical_births SET notes = ''x''', 'P0095') AND pg_temp.raises('DELETE FROM repro_historical_births', 'P0095')
-    AND pg_temp.raises('TRUNCATE repro_historical_births', 'P0095') AND pg_temp.raises('UPDATE repro_historical_birth_voids SET reason = ''xxx''', 'P0095')
-    AND pg_temp.raises('DELETE FROM repro_historical_birth_voids', 'P0095') AND pg_temp.raises('TRUNCATE repro_historical_birth_voids', 'P0095'));
+    AND pg_temp.raises_any('TRUNCATE repro_historical_births', ARRAY['P0095', '0A000']) AND pg_temp.raises('TRUNCATE repro_historical_births CASCADE', 'P0095')
+    AND pg_temp.raises('UPDATE repro_historical_birth_voids SET reason = ''xxx''', 'P0095')
+    AND pg_temp.raises('DELETE FROM repro_historical_birth_voids', 'P0095') AND pg_temp.raises('TRUNCATE repro_historical_birth_voids', 'P0095')));
 SELECT pg_temp.ok('E tenant guards: a historical birth whose company is not the dam''s company raises P0096; a void of another company''s birth raises P0096',
     pg_temp.raises(format('INSERT INTO repro_historical_births (id_company, dam_id, birth_date, date_precision, entered_by_email) VALUES (%L, %L, CURRENT_DATE, ''DAY'', ''x'')',
                           pg_temp.cx('B'), pg_temp.cx('h1')), 'P0096')
