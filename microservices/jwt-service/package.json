@@ -16,6 +16,7 @@
     "qs": "^6.16.0"
   },
   "overrides": {
-    "ip-address": "^10.2.1"
+    "ip-address": "^10.7.4",
+    "body-parser": "^2.4.0"
   }
 }
