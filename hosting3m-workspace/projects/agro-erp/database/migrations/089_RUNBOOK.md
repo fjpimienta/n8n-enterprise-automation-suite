@@ -28,6 +28,12 @@ Conventions used below
 P='docker exec -i n8n-enterprise-db psql -U n8n_user -d hosting3m_db -v ON_ERROR_STOP=1'
 ```
 
+**The intended psql command, for every apply and every rollback in this runbook: `$P -v apply=true -f <file>` - WITHOUT `--single-transaction`.** Each file opens and
+commits its own transaction (`BEGIN` ... `COMMIT`) and `ON_ERROR_STOP` stops it at the first error *before* the `COMMIT`, so nothing is left half-applied. Adding
+`--single-transaction` opens a second one: psql prints `WARNING: there is already a transaction in progress` at the file's `BEGIN` and
+`WARNING: there is no transaction in progress` at the file's own final `COMMIT` - harmless, but noisy. Without `-v apply=true` the file is a dry run (it ends in `ROLLBACK`).
+The `*_state_check.sql` files open `BEGIN READ ONLY` and end in `ROLLBACK` themselves; they need no flag either.
+
 ---
 
 ## Test database (LOCAL only — never production)
@@ -75,6 +81,21 @@ if their `T089` fixtures already exist (if the schema-only copy has no `crud_mod
    Expected: one `OK` line per test and a final `passed | failed | total` with **`failed = 0`**, ending in `*** 089 tests: everything rolled back ***`.
    (`089_tests_output.txt` is a local file: do not commit it.) Any `FAIL` line stops the rollout.
 
+   **The run keeps going after a failed assertion**: after the fixtures are built, every assertion runs inside `pg_temp.t()`, which records an error (with its SQLSTATE) as a `FAIL`
+   line instead of aborting, a tool call that raises is stored as `{"__error", "__sqlstate"}`, and psql rolls back only the failing statement (`ON_ERROR_ROLLBACK`). An `ERROR:` line
+   printed *outside* the results table is an unexpected error in a fixture or helper statement - report it. The script still exits non-zero at the end when any assertion failed.
+   (Why this was needed: `WHEN OTHERS` in PL/pgSQL does not catch `assert_failure`, SQLSTATE `P0004`, which the legacy procedures use for "ambiguous identifier".)
+
+   **About a `WARNING: there is no transaction in progress` near the start of the output.** psql prints it when a `COMMIT` / `ROLLBACK` runs with no open transaction. Reading the
+   included files, every one honours `embedded` and issues no `COMMIT` / `ROLLBACK` inside the tests' transaction, so I could not locate its source by reading alone; it is harmless
+   **only if nothing was committed**, and the run proves it twice: the last test (`ran inside ONE transaction`) fails if the transaction id changed, and after the run this query must return 0:
+
+   ```bash
+   docker exec n8n-enterprise-db psql -U n8n_user -d hosting3m_test089 -tA -c "SELECT count(*) FROM cattle_livestock WHERE rfid_siniiga LIKE 'T0%'"
+   ```
+
+   If either check fails, stop and send the first 20 lines of the output.
+
 4. **Clean up** when done: `docker exec n8n-enterprise-db dropdb -U n8n_user hosting3m_test089`.
 
 
@@ -121,12 +142,12 @@ if their `T089` fixtures already exist (if the schema-only copy has no `crud_mod
    `$P -v expect=before -f /tmp/m089/089_state_check.sql > /root/089_state_before.txt 2>&1` → `089 state check (before): OK`.
 3. **Dry run:** `$P -f /tmp/m089/089_disable_nacimiento_gateway.sql > /root/089_dryrun.txt 2>&1` — it prints the row BEFORE / AFTER and ends in `DRY RUN`.
 4. **Tests ran on the throwaway database**, never here.
-5. **Apply:** `$P --single-transaction -v apply=true -f /tmp/m089/089_disable_nacimiento_gateway.sql > /root/089_apply.txt 2>&1` → `089: OK` and `*** 089 COMMITTED ***`.
+5. **Apply:** `$P -v apply=true -f /tmp/m089/089_disable_nacimiento_gateway.sql > /root/089_apply.txt 2>&1` → `089: OK` and `*** 089 COMMITTED ***`.
 6. **State after:** `$P -v expect=applied -f /tmp/m089/089_state_check.sql > /root/089_state_after.txt 2>&1` → `089 state check (applied): OK`; `diff` before / after: only the `ROW 70` / NOTICE / `BACKUP_ROWS` lines
    differ, **never a `FINGERPRINT` line** (`crud_models_without_row_70` proves no other model changed).
 7. **Check through the real gateway** (an ADMIN token of the owner's test company 3): `POST /webhook/crud/v6/nacimiento` with any `insert` body must answer **403 "Operación no permitida para este modelo."** and create no row. Other models keep working.
 
-**Rollback:** `$P --single-transaction -v apply=true -f /tmp/m089/089_rollback.sql > /root/089_rollback.txt 2>&1`, then `-v expect=rolled_back` (it checks that the row is **identical** to the backed-up original). It drops and deletes nothing; the backup table keeps its rows (`DISABLE` + `RESTORE` entries).
+**Rollback:** `$P -v apply=true -f /tmp/m089/089_rollback.sql > /root/089_rollback.txt 2>&1`, then `-v expect=rolled_back` (it checks that the row is **identical** to the backed-up original). It drops and deletes nothing; the backup table keeps its rows (`DISABLE` + `RESTORE` entries).
 
 ## Part 2. n8n
 
@@ -143,7 +164,7 @@ Nothing. (No consumer of the model was found; if the pre-check shows one, do not
 | File | md5 |
 |---|---|
 | `089_disable_nacimiento_gateway.sql` | `4f52348630b514c4de86b8da030db556` |
-| `089_tests.sql` | `b9fac4e406f0e8da20af744bcdaaad64` |
+| `089_tests.sql` | `47d2f145e4e4cfa23554b2c5235e31ce` |
 | `089_rollback.sql` | `04315d056abfbc9b8b4043f535477a7f` |
 | `089_state_check.sql` | `12e7ede521226451319c08e9b0cc8aa6` |
 

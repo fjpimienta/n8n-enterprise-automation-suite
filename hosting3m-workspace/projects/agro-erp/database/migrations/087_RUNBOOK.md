@@ -46,6 +46,12 @@ Conventions used below
 P='docker exec -i n8n-enterprise-db psql -U n8n_user -d hosting3m_db -v ON_ERROR_STOP=1'
 ```
 
+**The intended psql command, for every apply and every rollback in this runbook: `$P -v apply=true -f <file>` - WITHOUT `--single-transaction`.** Each file opens and
+commits its own transaction (`BEGIN` ... `COMMIT`) and `ON_ERROR_STOP` stops it at the first error *before* the `COMMIT`, so nothing is left half-applied. Adding
+`--single-transaction` opens a second one: psql prints `WARNING: there is already a transaction in progress` at the file's `BEGIN` and
+`WARNING: there is no transaction in progress` at the file's own final `COMMIT` - harmless, but noisy. Without `-v apply=true` the file is a dry run (it ends in `ROLLBACK`).
+The `*_state_check.sql` files open `BEGIN READ ONLY` and end in `ROLLBACK` themselves; they need no flag either.
+
 ---
 
 ## Test database (LOCAL only — never production)
@@ -92,6 +98,21 @@ if their `T087` fixtures already exist (the tests also create a production unit,
 
    Expected: one `OK` line per test and a final `passed | failed | total` with **`failed = 0`**, ending in `*** 087 tests: everything rolled back ***`.
    (`087_tests_output.txt` is a local file: do not commit it.) Any `FAIL` line stops the rollout.
+
+   **The run keeps going after a failed assertion**: after the fixtures are built, every assertion runs inside `pg_temp.t()`, which records an error (with its SQLSTATE) as a `FAIL`
+   line instead of aborting, a tool call that raises is stored as `{"__error", "__sqlstate"}`, and psql rolls back only the failing statement (`ON_ERROR_ROLLBACK`). An `ERROR:` line
+   printed *outside* the results table is an unexpected error in a fixture or helper statement - report it. The script still exits non-zero at the end when any assertion failed.
+   (Why this was needed: `WHEN OTHERS` in PL/pgSQL does not catch `assert_failure`, SQLSTATE `P0004`, which the legacy procedures use for "ambiguous identifier".)
+
+   **About a `WARNING: there is no transaction in progress` near the start of the output.** psql prints it when a `COMMIT` / `ROLLBACK` runs with no open transaction. Reading the
+   included files, every one honours `embedded` and issues no `COMMIT` / `ROLLBACK` inside the tests' transaction, so I could not locate its source by reading alone; it is harmless
+   **only if nothing was committed**, and the run proves it twice: the last test (`ran inside ONE transaction`) fails if the transaction id changed, and after the run this query must return 0:
+
+   ```bash
+   docker exec n8n-enterprise-db psql -U n8n_user -d hosting3m_test087 -tA -c "SELECT count(*) FROM cattle_livestock WHERE rfid_siniiga LIKE 'T0%'"
+   ```
+
+   If either check fails, stop and send the first 20 lines of the output.
 
 4. **Clean up** when done: `docker exec n8n-enterprise-db dropdb -U n8n_user hosting3m_test087`.
 
@@ -145,10 +166,10 @@ Everything in this part runs **on the VPS, in production**, as read-only checks;
 2. **State before** was taken in Part 0 (`/root/087_state_before.txt`). Keep its `FINGERPRINT` and `LEGACY_BIRTH` lines.
 3. **Dry run** (rolls back): `$P -f /tmp/m087/087_repro_births.sql > /root/087_dryrun.txt 2>&1` → `087: OK` and `DRY RUN`.
 4. **Tests ran on the throwaway database** (section above), never here.
-5. **Apply** (single transaction, `ON_ERROR_STOP`; psql may print a harmless *"there is already a transaction in progress"* warning):
+5. **Apply** (the file commits its own transaction; no `--single-transaction`, see the conventions above):
 
    ```bash
-   $P --single-transaction -v apply=true -f /tmp/m087/087_repro_births.sql > /root/087_apply.txt 2>&1
+   $P -v apply=true -f /tmp/m087/087_repro_births.sql > /root/087_apply.txt 2>&1
    tail -5 /root/087_apply.txt     # expect: 087: OK  and  *** 087 COMMITTED ***
    ```
 
@@ -177,7 +198,7 @@ Everything in this part runs **on the VPS, in production**, as read-only checks;
 
    When `without_reporter` stays 0 after 089, the NULL e-mail path of `sp_register_birth_event` can be closed (backlog item; separate decision and PR).
 
-**Rollback:** `$P --single-transaction -v apply=true -f /tmp/m087/087_rollback.sql > /root/087_rollback.txt 2>&1`, then the `-v expect=rolled_back` state check.
+**Rollback:** `$P -v apply=true -f /tmp/m087/087_rollback.sql > /root/087_rollback.txt 2>&1`, then the `-v expect=rolled_back` state check.
 It drops nothing: the original body of `sp_register_birth_event` (md5 `8eaf6f52…`) is restored — the state check verifies the md5 — the 8 tools answer `disabled`,
 and `birth_events.reported_by_email`, the tables and every row stay. Re-apply is the same command as step 5 and keeps the rows.
 
@@ -191,13 +212,13 @@ docker exec n8n-enterprise-db rm -rf /tmp/m087 && docker cp hosting3m-workspace/
 # 084 and 085 first (skip each one already applied: its state check says so)
 $P -v expect=before  -f /tmp/m087/087_state_check.sql > 087_local_before.txt 2>&1
 $P -f /tmp/m087/087_repro_births.sql                                   # dry run
-$P --single-transaction -v apply=true -f /tmp/m087/087_repro_births.sql
+$P -v apply=true -f /tmp/m087/087_repro_births.sql
 $P -v expect=applied -f /tmp/m087/087_state_check.sql > 087_local_after.txt 2>&1
 diff 087_local_before.txt 087_local_after.txt                           # only NOTICE / OK / LEGACY_BIRTH / PHASE4A_ROWS lines
 # rollback rehearsal, then re-apply (rows must survive: compare the PHASE4A_ROWS line)
-$P --single-transaction -v apply=true -f /tmp/m087/087_rollback.sql
+$P -v apply=true -f /tmp/m087/087_rollback.sql
 $P -v expect=rolled_back -f /tmp/m087/087_state_check.sql
-$P --single-transaction -v apply=true -f /tmp/m087/087_repro_births.sql
+$P -v apply=true -f /tmp/m087/087_repro_births.sql
 $P -v expect=applied -f /tmp/m087/087_state_check.sql
 ```
 
@@ -225,7 +246,7 @@ Nothing.
 | File | md5 |
 |---|---|
 | `087_repro_births.sql` | `9b6a37ff583cd1c05c619bd87f2d9bdc` |
-| `087_tests.sql` | `682fc225573b64e65bb93f15de2b830f` |
+| `087_tests.sql` | `dd64a49d3b6aa8547d890191e286892d` |
 | `087_rollback.sql` | `23e723a27e02e38db3bf6ba183933a62` |
 | `087_state_check.sql` | `d54a87ec1c444f474283bcf8aaaa6db8` |
 | `repro_phase4_tools.json` | `177d47123840fbdad81d7fe11daae378` |

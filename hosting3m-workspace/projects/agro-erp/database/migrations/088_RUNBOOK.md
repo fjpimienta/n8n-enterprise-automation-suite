@@ -41,6 +41,12 @@ Conventions used below
 P='docker exec -i n8n-enterprise-db psql -U n8n_user -d hosting3m_db -v ON_ERROR_STOP=1'
 ```
 
+**The intended psql command, for every apply and every rollback in this runbook: `$P -v apply=true -f <file>` - WITHOUT `--single-transaction`.** Each file opens and
+commits its own transaction (`BEGIN` ... `COMMIT`) and `ON_ERROR_STOP` stops it at the first error *before* the `COMMIT`, so nothing is left half-applied. Adding
+`--single-transaction` opens a second one: psql prints `WARNING: there is already a transaction in progress` at the file's `BEGIN` and
+`WARNING: there is no transaction in progress` at the file's own final `COMMIT` - harmless, but noisy. Without `-v apply=true` the file is a dry run (it ends in `ROLLBACK`).
+The `*_state_check.sql` files open `BEGIN READ ONLY` and end in `ROLLBACK` themselves; they need no flag either.
+
 ---
 
 ## Test database (LOCAL only — never production)
@@ -88,6 +94,21 @@ if their `T088` fixtures already exist **or if the two companies already have pa
    Expected: one `OK` line per test and a final `passed | failed | total` with **`failed = 0`**, ending in `*** 088 tests: everything rolled back ***`.
    (`088_tests_output.txt` is a local file: do not commit it.) Any `FAIL` line stops the rollout.
 
+   **The run keeps going after a failed assertion**: after the fixtures are built, every assertion runs inside `pg_temp.t()`, which records an error (with its SQLSTATE) as a `FAIL`
+   line instead of aborting, a tool call that raises is stored as `{"__error", "__sqlstate"}`, and psql rolls back only the failing statement (`ON_ERROR_ROLLBACK`). An `ERROR:` line
+   printed *outside* the results table is an unexpected error in a fixture or helper statement - report it. The script still exits non-zero at the end when any assertion failed.
+   (Why this was needed: `WHEN OTHERS` in PL/pgSQL does not catch `assert_failure`, SQLSTATE `P0004`, which the legacy procedures use for "ambiguous identifier".)
+
+   **About a `WARNING: there is no transaction in progress` near the start of the output.** psql prints it when a `COMMIT` / `ROLLBACK` runs with no open transaction. Reading the
+   included files, every one honours `embedded` and issues no `COMMIT` / `ROLLBACK` inside the tests' transaction, so I could not locate its source by reading alone; it is harmless
+   **only if nothing was committed**, and the run proves it twice: the last test (`ran inside ONE transaction`) fails if the transaction id changed, and after the run this query must return 0:
+
+   ```bash
+   docker exec n8n-enterprise-db psql -U n8n_user -d hosting3m_test088 -tA -c "SELECT count(*) FROM cattle_livestock WHERE rfid_siniiga LIKE 'T0%'"
+   ```
+
+   If either check fails, stop and send the first 20 lines of the output.
+
 4. **Clean up** when done: `docker exec n8n-enterprise-db dropdb -U n8n_user hosting3m_test088`.
 
 **What the run proves.** Part A: the link (exactly one candidate, ambiguous = never guessed, voided and already-linked services excluded, window edges 238 / 328 days in and 237 / 329 out,
@@ -128,7 +149,7 @@ service refused with the birth, one void per event, whitelist, no side effects).
 2. **State before** was taken in Part 0. Keep its `FINGERPRINT`, `LEGACY_BREEDING` / `LEGACY_VOID` lines.
 3. **Dry run:** `$P -f /tmp/m088/088_repro_services.sql > /root/088_dryrun.txt 2>&1` → `088: OK` and `DRY RUN`.
 4. **Tests ran on the throwaway database**, never here.
-5. **Apply:** `$P --single-transaction -v apply=true -f /tmp/m088/088_repro_services.sql > /root/088_apply.txt 2>&1`; `tail -5` must show `088: OK` and `*** 088 COMMITTED ***`.
+5. **Apply:** `$P -v apply=true -f /tmp/m088/088_repro_services.sql > /root/088_apply.txt 2>&1`; `tail -5` must show `088: OK` and `*** 088 COMMITTED ***`.
 6. **State after:** `$P -v expect=applied -f /tmp/m088/088_state_check.sql > /root/088_state_after.txt 2>&1` → `088 state check (applied): OK`; `diff` of before / after must differ
    **only** in NOTICE / OK / `LEGACY_*` / `PHASE4B_ROWS` lines, **never in a `FINGERPRINT` line**.
 7. **Read-only smoke test:** `SELECT sp_repro_get_dam_history('5','<owner email>','<a real arete SINIIGA of company 5>')->'quality_flags';` (read-only). From a user who is **not** a member of company 5 it must
@@ -136,7 +157,7 @@ service refused with the birth, one void per event, whitelist, no side effects).
    **Do not call a write tool in production** except with the owner's test company 3 and its `9999…` animals.
 8. **Check what the link did** (read-only, after the first real births): `SELECT count(*) FILTER (WHERE birth_event_id IS NOT NULL) AS linked, count(*) AS services FROM cattle_breeding_events;`
 
-**Rollback:** `$P --single-transaction -v apply=true -f /tmp/m088/088_rollback.sql > /root/088_rollback.txt 2>&1`, then `-v expect=rolled_back`. It drops nothing: the **original bodies**
+**Rollback:** `$P -v apply=true -f /tmp/m088/088_rollback.sql > /root/088_rollback.txt 2>&1`, then `-v expect=rolled_back`. It drops nothing: the **original bodies**
 of both procedures are restored (the state check verifies their md5), the history tool answers `disabled`, and the column, the guard trigger, the helpers and **every link already made stay**
 (a link is a fact about a birth; after the rollback `sp_void_event` no longer knows the "linked" rule, but the guard trigger still blocks any other change of a service row). Re-apply keeps the links.
 
@@ -160,7 +181,7 @@ Nothing.
 | File | md5 |
 |---|---|
 | `088_repro_services.sql` | `575e793936da9b46be3beee3651b795a` |
-| `088_tests.sql` | `4e4fac9cee26a2c2026b1101733bb1f4` |
+| `088_tests.sql` | `dbc1935d7b7c830be47ca80b64f4d8d7` |
 | `088_rollback.sql` | `6cf3fedc9da852523e5ced1ff789dcdc` |
 | `088_state_check.sql` | `beae0c4e4574e7895b5109f81b307e08` |
 
