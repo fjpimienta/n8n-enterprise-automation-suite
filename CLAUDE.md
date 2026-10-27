@@ -178,20 +178,32 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
 - **Con un IF delante de un AI Agent, `$('Node').item` deja de resolverse** cuando el agente vuelve a evaluar
   después de una tool (síntomas: "Key parameter is empty" en Simple Memory y "No prompt specified" en AI Agent).
   Usa `$('Node').first()`.
+- **Rotación de secretos (lecciones del 2026-10-25):**
+  1. `docker restart` **no** relee el `.env`: hay que recrear el contenedor con
+     `docker compose up -d --force-recreate --no-deps <servicio>`.
+  2. Antes de rotar, compara la huella del valor del archivo `.env` contra la del contenedor en ejecución
+     (`printenv` → SHA-256); en LOCAL no coincidían, así que el archivo no reflejaba lo que corría.
+  3. `sed -i` puede cambiar el dueño del archivo: verifica el dueño y los permisos después de editar el `.env`.
+  4. Cerrar las sesiones al rotar `JWT_SECRET` es esperado y no pierde datos.
 
 ## Deuda técnica activa a nivel suite
 
-- ⚠️ Rotación de `INTERNAL_SECRET` tras el incidente de exposición del 2026-08-13 — no
-  confirmada en ambos servicios (Auth Gateway, Media Server) ni ambos ambientes.
-  - 🔴 **`JWT_SECRET` es el mismo en LOCAL y en PRODUCCIÓN** (verificado 2026-10-20 comparando hashes SHA-256,
-    nunca los valores, de `printenv` en `n8n-jwt-service`, `upload-file` y `n8n-enterprise-core` de los dos
-    ambientes). Un token emitido en un ambiente es válido en el otro: ese día, tokens emitidos en producción
-    fueron aceptados por el `v6` de LOCAL. Y al revés: quien tenga el `.env` de LOCAL puede firmar tokens que
-    producción acepta. Rotarlo **solo en LOCAL** (nuevo `JWT_SECRET` en su `.env` y reinicio de los 3
-    contenedores) separa los ambientes sin tocar producción; si el valor de LOCAL salió alguna vez del equipo,
-    tratarlo como comprometido y rotar también en producción (los 3 servicios juntos).
-  - `INTERNAL_SECRET` sí es distinto entre ambientes, y en producción es igual en los 3 contenedores. En LOCAL,
-    `upload-file` tiene un valor distinto al de `n8n-jwt-service` y n8n (2026-10-20): alinear al rotar.
+- ✅ **Rotación de `JWT_SECRET` e `INTERNAL_SECRET` — CERRADA (2026-10-25).** Cubre la exposición del
+  2026-08-13 y el `JWT_SECRET` compartido entre LOCAL y producción (hallado el 2026-10-20: un token emitido en un
+  ambiente era válido en el otro). Se rotaron ambos secretos en los dos ambientes; los tres servicios (n8n,
+  `jwt-service`, `upload-file`) quedaron con el mismo valor dentro de cada ambiente, y los ambientes quedaron
+  separados entre sí. Registro (solo huellas SHA-256 de 8 caracteres, nunca los valores):
+
+  | Ambiente   | `JWT_SECRET` | `INTERNAL_SECRET` |
+  |------------|--------------|-------------------|
+  | LOCAL      | `40927141`   | `aa7fedd1`        |
+  | PRODUCCIÓN | `15544c7c`   | `1f86740a`        |
+
+  - Las sesiones abiertas se cerraron (esperado, sin pérdida de datos); los usuarios inician sesión de nuevo.
+  - Pendientes abiertos tras el cierre:
+    - ⚠️ `.env.local` en LOCAL: copia con otras credenciales; nada la referencia. Revisar y retirar o rotar.
+    - ⚠️ `plesk-portainer` tiene variables con esos nombres; es ajeno al proyecto y no se tocó.
+    - ⚠️ No se revisó si otros workflows de n8n usan `JWT_SECRET` más allá de los tres servicios.
 - 🔴 **Migrar el hotel (`dashboard`, `hotel-website`) de `v5/CRUD` a `v6/CRUD`.** La contención
   v1.17.1 (2026-10-17) cerró en `v5` la inyección SQL (nombre de modelo en `Get Model Config`,
   `sort_by`, campo de `getone`), el registro automático de tablas en `crud_models` y el acceso a

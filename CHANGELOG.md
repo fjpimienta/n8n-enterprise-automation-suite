@@ -14,6 +14,17 @@ Todos los cambios notables en esta suite de automatización serán documentados 
 
 ---
 
+## [2026-10-25]
+
+### 🔐 Rotación de `JWT_SECRET` e `INTERNAL_SECRET` (solo operación, sin versión de código)
+
+Se rotaron ambos secretos en LOCAL y producción, con el mismo valor en n8n, `jwt-service` y `upload-file`
+dentro de cada ambiente y valores distintos entre ambientes. Cierra la deuda abierta tras la exposición del
+2026-08-13 y el `JWT_SECRET` compartido entre ambientes. Las sesiones abiertas se cerraron. Huellas y pendientes
+en `CLAUDE.md` (sección "Deuda técnica activa").
+
+---
+
 ## [2026-08-14]
 
 ### 🚚 Agro ERP: Motor de Movimientos SENASICA-REEMO & Endurecimiento de Almacenamiento
