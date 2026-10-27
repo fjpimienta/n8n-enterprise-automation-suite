@@ -10,7 +10,7 @@ The seed is a **separate file that only the owner applies**, after 086 is applie
 
 **What changes**
 - **Database (086):** 2 new tables (`repro_condition_codes`, `palpation_repro_details`; every row has `id_company`; the details are
-  append-only and a condition is only allowed on a VACÍA result), 3 triggers on the details, 5 internal helper functions and 5 `sp_*`
+  append-only and a condition is only allowed on a VACÍA result), 3 triggers on the details, 6 internal helper functions and 5 `sp_*`
   functions. It writes **no rows**. Nothing existing is altered, replaced or dropped: `sp_log_palpation_event` (which the new wrapper
   *calls*), `sp_void_event`, `sp_register_birth_event`, `sp_log_breeding_event`, the 084 and 085 objects, `vw_cattle_kpi`,
   `crud_models` and the gateway are untouched (the state check fingerprints all of them).
@@ -23,6 +23,12 @@ The seed is a **separate file that only the owner applies**, after 086 is applie
 
 ⚠️ **Strict order: database → n8n.** If the tools reach n8n first they fail with `function sp_repro_… does not exist` (harmless today:
 the agent does not know them). The database rollback drops nothing: the tools answer `{"status":"disabled"}`, so the reverse order is safe too.
+
+⚠️ **The wrapper never guesses the result.** Unlike `log_palpation_event_batch` (which stores anything without a "PRE…ADA" word as `VACÍA`),
+`log_palpation_with_condition` accepts a diagnosis only if it contains a PREÑADA word, a VACIA word, an explicit word (ciclando / estática) or is
+made only of uterine-code tokens (confirmed for the company, or looking like a code: 1–3 letters, or up to 5 letters + 1–2 digits). Anything else
+(`PREÑDA`, free text, `N/A`, empty) rejects the whole batch with `DIAGNOSIS_UNRECOGNIZED` per item, and `PREÑADA` together with `VACIA` or an
+explicit word is `DIAGNOSIS_CONFLICT`. A multi-word code that is not confirmed (`Matriz ocupada`, `No apto`) needs the VACIA word (`VACÍA No apto`).
 
 ⚠️ **A palpation logged through the new tool keeps the condition it had when it was logged** (`palpation_repro_details` is a snapshot,
 append-only). Confirming or changing a code later does **not** rewrite old rows; there is no backfill of the 214 bulk-loaded
@@ -87,7 +93,7 @@ palpations** (the import-date test counts them): use a schema-only copy, as belo
    those migrations are already applied in the throwaway database. (`086_tests_output.txt` is a local file: do not commit it.)
 
 4. **What the run proves.** Part A: the parser (UNE, UNE/NR, UTCL2/OI, `VACIA UNE`, `No apto`, N/A, empty, explicit words, never raises).
-   Part C: the wrapper, including the all-or-nothing rejection, the idempotent retry and the cross-company attempt. Parts B, C, E, F, G, H
+   Part C: the wrapper, including the all-or-nothing rejection, the unrecognised-diagnosis rejection (`PREÑDA`, random text), the idempotent retry and the cross-company attempt. Parts B, C, E, F, G, H
    each contain `ISOLATION` / `raises P0001` checks: a member of company A gets an **error** (never rows) for company B on every tool,
    company B never sees A's mapping, a stranger / blank e-mail / bad tenant is refused, a palm company raises `P0094` (skipped with a note
    if the database has no palm company), and the append-only and company-guard triggers refuse direct writes. Any `FAIL` line stops the rollout.
@@ -246,11 +252,11 @@ Palpations already logged keep the condition they were given.
 
 | File | md5 |
 |---|---|
-| `086_repro_palpation.sql` | `3f3acd079cffefb6393d27f3221ba546` |
-| `086_tests.sql` | `7da15337f709221ee04f58047a5d77b0` |
-| `086_rollback.sql` | `1875de6dfd2c1bda4f7ee3045f7ce516` |
-| `086_state_check.sql` | `0d31f3376a8a8286256d705d1e2d9e05` |
+| `086_repro_palpation.sql` | `eecb75007332c44827ed10190cad0d07` |
+| `086_tests.sql` | `3f225b12b2aa5b3974b551cccd320cd6` |
+| `086_rollback.sql` | `ef48d0ceb28d652e22d39eadec7b298a` |
+| `086_state_check.sql` | `79f842caa4d232e3baf4398ee5061ae0` |
 | `086_seed_tenant5_uterine_codes.sql` | `4cb75d7bb9dd56746d3a66966cce89d2` |
-| `repro_phase3_tools.json` | `41b09665d423afb6851f2032de5bc24a` |
+| `repro_phase3_tools.json` | `7e3ac3eb9b8fcffede58c22dea5b9d60` |
 
 (Recompute with `md5sum` if any file is edited after this runbook was written. `084_*` and `085_*` have their own tables in `084_RUNBOOK.md` / `085_RUNBOOK.md`.)
