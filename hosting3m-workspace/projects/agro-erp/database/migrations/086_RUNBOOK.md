@@ -9,7 +9,7 @@ production order is: **084 (its runbook) → 085 (its runbook) → 086 → n8n p
 The seed is a **separate file that only the owner applies**, after 086 is applied and verified.
 
 **What changes**
-- **Database (086):** 2 new tables (`repro_condition_codes`, `palpation_repro_details`; every row has `id_company`; the details are
+- **Database (086):** 2 new tables (`repro_condition_codes` — a NULL condition is allowed for pending codes —, `palpation_repro_details`; every row has `id_company`; the details are
   append-only and a condition is only allowed on a VACÍA result), 3 triggers on the details, 6 internal helper functions and 5 `sp_*`
   functions. It writes **no rows**. Nothing existing is altered, replaced or dropped: `sp_log_palpation_event` (which the new wrapper
   *calls*), `sp_void_event`, `sp_register_birth_event`, `sp_log_breeding_event`, the 084 and 085 objects, `vw_cattle_kpi`,
@@ -17,18 +17,21 @@ The seed is a **separate file that only the owner applies**, after 086 is applie
 - **n8n:** 4 `postgresTool` nodes added to `v6/MCP Server Cattle` (`workflows/09-MCP-Agent-Cattle/v6/repro-phase3/`). They stay
   invisible to the agent until the two system prompts list them (phase 5). The existing `log_palpation_event` and
   `log_palpation_event_batch` tools are **not modified**. `sp_repro_condition_code_set` (ADMIN only) has **no** tool on purpose.
-- **Seed (separate, owner only):** `086_seed_tenant5_uterine_codes.sql` inserts 4 rows for company 5: UNE → ESTATICA; UTCL1, UTCL2,
-  UTCL3 → CICLANDO. `RP`, `UTC2`, `NR`, `No apto` and `Matriz ocupada` stay UNMAPPED.
+- **Seed (separate, owner only):** `086_seed_tenant5_uterine_codes.sql` inserts 9 rows for company 5: UNE → ESTATICA; UTCL1, UTCL2,
+  UTCL3 → CICLANDO; and `RP`, `UTC2`, `NR`, `NO APTO`, `MATRIZ OCUPADA` as *known but pending* (`repro_condition` NULL, `confirmed_by` /
+  `confirmed_at` NULL, source `pending veterinarian confirmation`): they still map to nothing (UNMAPPED).
 - **Frontend:** nothing.
 
 ⚠️ **Strict order: database → n8n.** If the tools reach n8n first they fail with `function sp_repro_… does not exist` (harmless today:
 the agent does not know them). The database rollback drops nothing: the tools answer `{"status":"disabled"}`, so the reverse order is safe too.
 
 ⚠️ **The wrapper never guesses the result.** Unlike `log_palpation_event_batch` (which stores anything without a "PRE…ADA" word as `VACÍA`),
-`log_palpation_with_condition` accepts a diagnosis only if it contains a PREÑADA word, a VACIA word, an explicit word (ciclando / estática) or is
-made only of uterine-code tokens (confirmed for the company, or looking like a code: 1–3 letters, or up to 5 letters + 1–2 digits). Anything else
-(`PREÑDA`, free text, `N/A`, empty) rejects the whole batch with `DIAGNOSIS_UNRECOGNIZED` per item, and `PREÑADA` together with `VACIA` or an
-explicit word is `DIAGNOSIS_CONFLICT`. A multi-word code that is not confirmed (`Matriz ocupada`, `No apto`) needs the VACIA word (`VACÍA No apto`).
+`log_palpation_with_condition` accepts a diagnosis only if it contains a PREÑADA word, a VACIA word or an explicit word (ciclando / estática), **or**
+is made only of code tokens that **already exist in `repro_condition_codes` for the company** (the shape of a token never counts; a row with a
+NULL condition = "known, pending veterinarian confirmation" counts). With a PREÑADA / VACIA word, an unknown token is still stored, UNMAPPED.
+Anything else (`PREÑDA`, `ok`, `pre`, free text, an unknown bare code, `N/A`, empty) rejects the whole batch with `DIAGNOSIS_UNRECOGNIZED` per
+item, and `PREÑADA` together with `VACIA` or an explicit word is `DIAGNOSIS_CONFLICT`. Consequence: a bare `RP` or `NR` is accepted for company 5
+only after the seed has registered them as pending; before that it needs the word (`VACÍA RP`).
 
 ⚠️ **A palpation logged through the new tool keeps the condition it had when it was logged** (`palpation_repro_details` is a snapshot,
 append-only). Confirming or changing a code later does **not** rewrite old rows; there is no backfill of the 214 bulk-loaded
@@ -93,7 +96,7 @@ palpations** (the import-date test counts them): use a schema-only copy, as belo
    those migrations are already applied in the throwaway database. (`086_tests_output.txt` is a local file: do not commit it.)
 
 4. **What the run proves.** Part A: the parser (UNE, UNE/NR, UTCL2/OI, `VACIA UNE`, `No apto`, N/A, empty, explicit words, never raises).
-   Part C: the wrapper, including the all-or-nothing rejection, the unrecognised-diagnosis rejection (`PREÑDA`, random text), the idempotent retry and the cross-company attempt. Parts B, C, E, F, G, H
+   Part C: the wrapper, including the all-or-nothing rejection, the unrecognised-diagnosis rejection (`PREÑDA`, `ok`, `pre`, random text, an unknown bare code), the idempotent retry and the cross-company attempt. Parts B, C, E, F, G, H
    each contain `ISOLATION` / `raises P0001` checks: a member of company A gets an **error** (never rows) for company B on every tool,
    company B never sees A's mapping, a stranger / blank e-mail / bad tenant is refused, a palm company raises `P0094` (skipped with a note
    if the database has no palm company), and the append-only and company-guard triggers refuse direct writes. Any `FAIL` line stops the rollout.
@@ -169,7 +172,7 @@ on your local machine (there `/root` does not exist or is not yours, and a LOCAL
 
    Expected from the measurements of 2026-10-27 (tenant 5): the 214 bulk-loaded palpations share **2023-07-20**, so `stale_import.flag`
    is `true` with that date; `calvings_stale` is high (most of the 82 PREÑADA cows) and `calvings_upcoming` is low; before the seed
-   `unmapped_codes` counts every code, after the seed it no longer lists `UNE`, `UTCL1`, `UTCL2`, `UTCL3`. From a user who is **not** a
+   `unmapped_codes` counts every code, after the seed it no longer lists `UNE`, `UTCL1`, `UTCL2`, `UTCL3` (the pending codes stay listed, flagged `known_pending`). From a user who is **not** a
    member of company 5, `SELECT sp_repro_list_palpation_due('5','<other company user>')` must **raise** `P0001`.
    **Do not call `sp_repro_log_palpation_batch` in production** except with a test company and animals (the owner's test tenant 3
    "Rancho El Palomar", `rfid_siniiga` `9999…`): it changes `current_status` through the existing procedure and the details are
@@ -228,7 +231,7 @@ Nothing. (The "only if 1 and 2 are OK" rule applies to later phases.)
 
 ## Part 4. Tenant-5 uterine-code seed (owner only, after Part 1 is `applied`)
 
-`086_seed_tenant5_uterine_codes.sql` is data, not schema, and is applied separately. It only inserts 4 rows for company 5
+`086_seed_tenant5_uterine_codes.sql` is data, not schema, and is applied separately. It only inserts 9 rows for company 5 (4 confirmed, 5 pending)
 (`ON CONFLICT DO NOTHING`: an existing row is never overwritten), aborts if 086 is not applied or company 5 is missing / not a livestock company, and is a dry
 run unless `-v apply=true`. `confirmed_by` records who confirmed the mapping with the veterinarians.
 
@@ -236,13 +239,13 @@ run unless `-v apply=true`. `confirmed_by` records who confirmed the mapping wit
 # in the container, from the folder that holds the files
 $P -v confirmed_by='<owner email>' -f /tmp/m086/086_seed_tenant5_uterine_codes.sql                   # dry run: shows BEFORE / AFTER
 $P --single-transaction -v confirmed_by='<owner email>' -v apply=true -f /tmp/m086/086_seed_tenant5_uterine_codes.sql
-$P -c "SELECT code, repro_condition, source, confirmed_by FROM repro_condition_codes WHERE id_company = 5 ORDER BY code;"   # 4 rows
+$P -c "SELECT code, repro_condition, source, confirmed_by FROM repro_condition_codes WHERE id_company = 5 ORDER BY code;"   # 9 rows (5 with a NULL condition)
 ```
 
 Check: the `rows of OTHER companies` section is empty (or unchanged), and `sp_repro_list_unmapped_uterine_codes('5','<owner email>')` no longer
-lists UNE / UTCL1..3 but still lists `NR`, `RP`, `UTC2`, `NO APTO`, `MATRIZ OCUPADA` (the vets' ambiguous answers).
+lists UNE / UTCL1..3 but still lists `NR`, `RP`, `UTC2`, `NO APTO`, `MATRIZ OCUPADA` with `known_pending: true` (the vets' ambiguous answers).
 
-**Undo (only the 4 seed rows, by exact key and source; take a backup of `repro_condition_codes` first):**
+**Undo (only the 9 seed rows, by exact key and source — the 5 pending ones only while their condition is still NULL; take a backup of `repro_condition_codes` first):**
 `$P -v confirmed_by='<owner email>' -v undo=true -f /tmp/m086/086_seed_tenant5_uterine_codes.sql` (dry run), then add `-v apply=true`.
 Palpations already logged keep the condition they were given.
 
@@ -252,11 +255,12 @@ Palpations already logged keep the condition they were given.
 
 | File | md5 |
 |---|---|
-| `086_repro_palpation.sql` | `eecb75007332c44827ed10190cad0d07` |
-| `086_tests.sql` | `3f225b12b2aa5b3974b551cccd320cd6` |
+| `086_repro_palpation.sql` | `3f8c236bc0432d5f0d0bad9699b7d6d1` |
+| `086_tests.sql` | `ca9892bf4489dfaa173f30691f1ecc55` |
 | `086_rollback.sql` | `ef48d0ceb28d652e22d39eadec7b298a` |
-| `086_state_check.sql` | `79f842caa4d232e3baf4398ee5061ae0` |
-| `086_seed_tenant5_uterine_codes.sql` | `4cb75d7bb9dd56746d3a66966cce89d2` |
-| `repro_phase3_tools.json` | `7e3ac3eb9b8fcffede58c22dea5b9d60` |
+| `086_state_check.sql` | `52d5bd629942829dac222f60aad416b3` |
+| `086_seed_tenant5_uterine_codes.sql` | `c9654b54a959e5b4bb0b3738ff50af88` |
+| `repro_phase3_tools.json` | `3e5bd3c1b7bf32c86aeacb7ff8f1e91c` |
+
 
 (Recompute with `md5sum` if any file is edited after this runbook was written. `084_*` and `085_*` have their own tables in `084_RUNBOOK.md` / `085_RUNBOOK.md`.)
