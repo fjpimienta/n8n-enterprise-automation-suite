@@ -7,17 +7,21 @@
 --   UTCL2 -> CICLANDO     (cuerpo luteo maduro)
 --   UTCL3 -> CICLANDO     (cuerpo luteo tardio / en regresion)
 --
--- NOT seeded (the veterinarians gave ambiguous answers; they stay UNMAPPED): RP, UTC2, NR, 'No apto', 'Matriz ocupada'.
--- Consequently 'UNE/NR' keeps a NULL condition until NR is confirmed.
+-- Registered as KNOWN BUT PENDING (repro_condition NULL, confirmed_by / confirmed_at NULL, source 'pending veterinarian
+-- confirmation'; the veterinarians gave ambiguous answers, so they map to nothing and stay UNMAPPED):
+--   RP, UTC2, NR, 'NO APTO', 'MATRIZ OCUPADA'
+-- Registering them lets a bare code (without a PREÑADA / VACIA word) be accepted by log_palpation_with_condition and
+-- lists them as pending in list_unmapped_uterine_codes. 'UNE/NR' keeps a NULL condition until NR is confirmed.
 --
--- Safe by construction: it only INSERTs the 4 rows; an existing row for the same (company, code) is NEVER overwritten
+-- Safe by construction: it only INSERTs 9 rows; an existing row for the same (company, code) is NEVER overwritten
 -- (ON CONFLICT DO NOTHING). It aborts when 086 is not applied, when the company does not exist / is not active, or when
 -- the company is a palm company. It touches no other table.
 --
--- Usage (dry run is the default; the e-mail is who confirms the mapping, recorded in confirmed_by):
+-- Usage (dry run is the default; the e-mail is who confirms the 4 confirmed codes, recorded in their confirmed_by):
 --   psql -v ON_ERROR_STOP=1 -v confirmed_by='owner@example.com' -f 086_seed_tenant5_uterine_codes.sql                 -> dry run
 --   psql -v ON_ERROR_STOP=1 -v confirmed_by='owner@example.com' -v apply=true -f 086_seed_tenant5_uterine_codes.sql   -> commit
--- Undo (only the 4 rows this file inserted; dry run by default; take a backup first, see 086_RUNBOOK.md):
+-- Undo (only the 9 rows this file inserted and that nobody has changed since: the 4 confirmed ones by their seed source, the 5
+-- pending ones only while their condition is still NULL; dry run by default; take a backup first, see 086_RUNBOOK.md):
 --   psql -v ON_ERROR_STOP=1 -v undo=true [-v apply=true] -f 086_seed_tenant5_uterine_codes.sql
 -- Palpations logged while the mapping existed keep the condition they were given (palpation_repro_details is a snapshot).
 
@@ -60,11 +64,20 @@ SELECT code, repro_condition, source, confirmed_by, confirmed_at FROM public.rep
 \if :undo
     -- Exact keys AND the seed source: a row someone re-confirmed through sp_repro_condition_code_set is never touched.
     DELETE FROM public.repro_condition_codes
-     WHERE id_company = 5 AND source = 'SEED_086_VET_CONFIRMED' AND code IN ('UNE', 'UTCL1', 'UTCL2', 'UTCL3');
+     WHERE id_company = 5
+       AND ((source = 'SEED_086_VET_CONFIRMED' AND code IN ('UNE', 'UTCL1', 'UTCL2', 'UTCL3'))
+         OR (source = 'pending veterinarian confirmation' AND repro_condition IS NULL
+             AND code IN ('RP', 'UTC2', 'NR', 'NO APTO', 'MATRIZ OCUPADA')));
 \else
     INSERT INTO public.repro_condition_codes (id_company, code, repro_condition, source, confirmed_by, confirmed_at)
     SELECT 5, v.code, v.cond, 'SEED_086_VET_CONFIRMED', lower(btrim(:'confirmed_by')), now()
       FROM (VALUES ('UNE', 'ESTATICA'), ('UTCL1', 'CICLANDO'), ('UTCL2', 'CICLANDO'), ('UTCL3', 'CICLANDO')) AS v (code, cond)
+    ON CONFLICT (id_company, code) DO NOTHING;
+
+    -- known but pending: no condition, nobody has confirmed anything (confirmed_by / confirmed_at stay NULL)
+    INSERT INTO public.repro_condition_codes (id_company, code, repro_condition, source, confirmed_by, confirmed_at)
+    SELECT 5, v.code, NULL::text, 'pending veterinarian confirmation', NULL::text, NULL::timestamptz
+      FROM (VALUES ('RP'), ('UTC2'), ('NR'), ('NO APTO'), ('MATRIZ OCUPADA')) AS v (code)
     ON CONFLICT (id_company, code) DO NOTHING;
 \endif
 
