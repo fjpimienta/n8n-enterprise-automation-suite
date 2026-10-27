@@ -30,6 +30,8 @@ sync_dbs.sh
 # Excepción: las migraciones versionadas de agro-erp SÍ deben trackearse
 # (no son dumps/backups, son el historial de cambios de esquema del proyecto)
 !hosting3m-workspace/projects/agro-erp/database/migrations/*.sql
+# Read-only discovery scripts are versioned too; their output (database/discovery/out/) holds real tenant data and must never be committed.
+!hosting3m-workspace/projects/agro-erp/database/discovery/*.sql
 
 # --- Node.js / Microservicios (General) ---
 node_modules/

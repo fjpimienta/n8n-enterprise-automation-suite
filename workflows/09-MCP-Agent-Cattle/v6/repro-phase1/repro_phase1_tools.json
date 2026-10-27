@@ -1,0 +1,186 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Lista los partos registrados en un rango de fechas (por omisión, los últimos 30 días), del más reciente al más antiguo: madre (arete, número de fuego, RFID), cría si ya tiene registro, fecha, sexo, peso al nacer y UPP. Solo lectura, no requiere confirmación. Úsala cuando pregunten '¿ha parido alguna vaca?', '¿cuántos partos hubo este mes?' o '¿de qué vaca nació tal becerro?'. Paginada: si 'has_more' es true, ofrece ver más y vuelve a llamar con 'offset'. Nunca inventes partos: muestra solo lo que regrese la herramienta; si 'total' es 0, dilo así.",
+        "operation": "executeQuery",
+        "query": "SELECT public.sp_repro_list_births($1::text, $2::text, $3::text, $4::text, $5::text, $6::text) AS result;",
+        "options": {
+          "queryReplacement": "={{ (() => { const s = (v) => (v === undefined || v === null) ? '' : String(v); return [\n  String($fromAI('tenant_id', 'Numeric tenant/company id (id_company) of the current user, copied EXACTLY from the session context in the system prompt. Never guess, infer or default it.', 'number')),\n  String($fromAI('user_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato.', 'string')),\n  s($fromAI('date_from', \"Fecha inicial AAAA-MM-DD. Omite si el usuario no pidió un rango (se usan los últimos 30 días).\", 'string', null)),\n  s($fromAI('date_to', \"Fecha final AAAA-MM-DD. Omite si el usuario no la dio (se usa hoy).\", 'string', null)),\n  s($fromAI('limit', \"Máximo de partos a regresar (por omisión 50, tope 100). Omite si no es necesario.\", 'number', null)),\n  s($fromAI('offset', \"Cuántos partos saltar para ver la siguiente página (0 por omisión).\", 'number', null))\n]; })() }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        2800,
+        1700
+      ],
+      "id": "6939f81c-e65e-4356-aac4-0beba70b0983",
+      "name": "list_births",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Regresa todos los partos de UNA vaca (madre): fechas, sexo, cría y peso al nacer. Identifica a la madre con su arete SINIIGA, número de fuego o RFID, tal como el usuario lo escribió. Solo lectura. Si regresa status 'ambiguous', el identificador corresponde a varios animales (el número de fuego puede repetirse): muestra los 'candidates' (categoría, estatus, lote) y pide al usuario que indique cuál; NUNCA elijas uno. Si regresa 'not_found', dilo y no inventes datos.",
+        "operation": "executeQuery",
+        "query": "SELECT public.sp_repro_dam_birth_history($1::text, $2::text, $3::text) AS result;",
+        "options": {
+          "queryReplacement": "={{ (() => { const s = (v) => (v === undefined || v === null) ? '' : String(v); return [\n  String($fromAI('tenant_id', 'Numeric tenant/company id (id_company) of the current user, copied EXACTLY from the session context in the system prompt. Never guess, infer or default it.', 'number')),\n  String($fromAI('user_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato.', 'string')),\n  s($fromAI('animal_identifier', \"Arete SINIIGA, RFID electrónico o número de fuego de la madre, exactamente como lo escribió el usuario.\", 'string', null))\n]; })() }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        3136,
+        1700
+      ],
+      "id": "9127bd32-f486-4d0a-9db4-5f994ab6d8c8",
+      "name": "get_dam_birth_history",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Cuenta los partos por mes (por omisión, los últimos 12 meses) o por día (por omisión, los últimos 30 días), con machos y hembras. Solo lectura. Úsala para '¿cuántos partos llevamos este año?' o 'partos por mes'. Para rangos por día el máximo es un año.",
+        "operation": "executeQuery",
+        "query": "SELECT public.sp_repro_births_summary($1::text, $2::text, $3::text, $4::text, $5::text) AS result;",
+        "options": {
+          "queryReplacement": "={{ (() => { const s = (v) => (v === undefined || v === null) ? '' : String(v); return [\n  String($fromAI('tenant_id', 'Numeric tenant/company id (id_company) of the current user, copied EXACTLY from the session context in the system prompt. Never guess, infer or default it.', 'number')),\n  String($fromAI('user_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato.', 'string')),\n  s($fromAI('group_by', \"'month' (por omisión) o 'day'.\", 'string', null)),\n  s($fromAI('date_from', \"Fecha inicial AAAA-MM-DD. Omite si el usuario no pidió un rango.\", 'string', null)),\n  s($fromAI('date_to', \"Fecha final AAAA-MM-DD. Omite si el usuario no la dio.\", 'string', null))\n]; })() }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        3472,
+        1700
+      ],
+      "id": "3edc3117-13ac-4786-8dcc-6fd88a7842c1",
+      "name": "get_births_summary",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "REPORTE, no registra nada: lista las crías que tienen madre asignada pero NO tienen un registro de parto, con la madre, la cría y la fecha de nacimiento estimada (con su fuente y precisión: REGISTRADA o ESTIMADA_NUMERO_FUEGO; MONTH o YEAR_ONLY). Solo lectura. Úsala cuando pregunten por partos históricos sin registrar. Explica que la fecha estimada sale del número de fuego y que un número antiguo (4 dígitos) solo da el año, no el mes. Nunca ofrezcas registrarlos automáticamente.",
+        "operation": "executeQuery",
+        "query": "SELECT public.sp_repro_list_unregistered_historical_births($1::text, $2::text, $3::text, $4::text) AS result;",
+        "options": {
+          "queryReplacement": "={{ (() => { const s = (v) => (v === undefined || v === null) ? '' : String(v); return [\n  String($fromAI('tenant_id', 'Numeric tenant/company id (id_company) of the current user, copied EXACTLY from the session context in the system prompt. Never guess, infer or default it.', 'number')),\n  String($fromAI('user_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato.', 'string')),\n  s($fromAI('limit', \"Máximo de filas (por omisión 50, tope 100).\", 'number', null)),\n  s($fromAI('offset', \"Cuántas filas saltar para la siguiente página (0 por omisión).\", 'number', null))\n]; })() }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        2800,
+        1892
+      ],
+      "id": "cda311ea-a890-4ad1-849e-e982bd9a17f7",
+      "name": "list_unregistered_historical_births",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Reporte de calidad de identificadores de los animales activos: números de fuego repetidos, aretes SINIIGA que no son de exactamente 10 dígitos, números de fuego de los que no se puede deducir la edad, animales sin RFID electrónico y RFID guardado como texto vacío. Solo lectura, no corrige nada. Úsala cuando pregunten por duplicados o por la calidad de los datos de identificación. Presenta los conteos y ejemplos tal cual los regresa la herramienta.",
+        "operation": "executeQuery",
+        "query": "SELECT public.sp_repro_identifier_quality_report($1::text, $2::text) AS result;",
+        "options": {
+          "queryReplacement": "={{ (() => { const s = (v) => (v === undefined || v === null) ? '' : String(v); return [\n  String($fromAI('tenant_id', 'Numeric tenant/company id (id_company) of the current user, copied EXACTLY from the session context in the system prompt. Never guess, infer or default it.', 'number')),\n  String($fromAI('user_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato.', 'string'))\n]; })() }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        3136,
+        1892
+      ],
+      "id": "19750fd0-b274-4a8c-aa07-5e3ac65553ba",
+      "name": "identifier_quality_report",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "list_births": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_dam_birth_history": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_births_summary": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "list_unregistered_historical_births": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "identifier_quality_report": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
