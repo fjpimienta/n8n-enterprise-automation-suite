@@ -166,6 +166,30 @@ of both procedures are restored (the state check verifies their md5), the histor
 Same shape as `087_RUNBOOK.md` Part 1b with `/tmp/m088`: 084 – 087 first (skip each one already applied), then `088_state_check.sql -v expect=before`, the dry run, the apply, `expect=applied`, the
 `diff`, the rollback, `expect=rolled_back`, the re-apply and `expect=applied`. Compare the `PHASE4B_ROWS` line: it must be identical after rollback + re-apply.
 
+### Smoke script on the LOCAL copy (tenant 5) — `087_088_smoke_local.sql`
+
+> ⚠️ **LOCAL ONLY. Never run it against production.** Part B writes (births, calves, a service, a historical birth) inside one transaction that ends in `ROLLBACK`; even so, a
+> rolled-back write still takes locks and fires triggers, and SQL cannot tell the local copy from production - the script prints a "WHERE AM I" block first: read it.
+
+After 087 and 088 are applied and verified on the local `hosting3m_db`, run the real tools once against tenant 5's data (no e-mail is hardcoded: it picks a real ADMIN member of tenant 5 itself and
+**never prints an e-mail**; every answer goes through a scrubber that hides any `*email*` key and any text containing `@`):
+
+```bash
+docker exec -i n8n-enterprise-db psql -U n8n_user -d hosting3m_db -X -v ON_ERROR_STOP=1   < hosting3m-workspace/projects/agro-erp/database/migrations/087_088_smoke_local.sql > /tmp/smoke_087_088.txt 2>&1
+```
+
+(no `--single-transaction`; the output is plain text). It does **not** need 089.
+- **Part A (`BEGIN READ ONLY` ... `ROLLBACK`):** births config defaults; the dam history of a PREÑADA dam with a stale imported palpation, of a VACÍA dam, and of a **duplicated fire number** (must answer
+  `ambiguous` with candidates and no history); `births_batch_preview` with a valid, an ambiguous, a not_found and (if one exists) a possible_duplicate line; the historical list.
+- **Part B (one transaction, `ROLLBACK` at the end):** a single birth, its exact retry (`duplicate_skipped`), the same dam again (`possible_duplicate`, then with `force`), the service of that dam linking to the birth
+  (built inside the transaction with `sp_log_breeding_event`), the 50-line cap with 51 lines, a two-line batch (and its retry, and a batch with an ambiguous line that writes nothing), a historical birth and its void,
+  and a non-member user / a wrong tenant / a non-numeric tenant / the legacy procedure with a non-member e-mail all raising.
+- **The proof:** it prints the counts (births, calves, linked services, historical births and voids, weights, voids, a checksum of tenant 5's statuses) **before** and **after** the `ROLLBACK`, and **raises an error (psql exits non-zero) if they differ**.
+  If the script stops earlier with an error, the connection closes and PostgreSQL rolls the open transaction back; run the counts check by hand to be sure.
+- Whatever it cannot find in the local data it prints as `skipped: <what is missing>` (no PREÑADA dam on the stale date, no duplicated fire number, no registered birth for the possible_duplicate line, fewer than five "fresh" dams, ...);
+  nothing is invented except one deliberately non-existent identifier for the not_found line, which it first checks matches nothing. `EXPECT OK` / `EXPECT MISMATCH` lines are information, not failures.
+- If a statement fails, PostgreSQL's error context may print the statement text, e-mail included: read it before pasting it anywhere.
+
 ## Part 2. n8n
 
 Import `get_dam_reproductive_history` as described in `087_RUNBOOK.md`, Part 2 (the whole file is one import; the 7 tools of 087 need 087, this one needs 088). **Do not edit** `log_breeding_event` / `void_event`.
@@ -184,5 +208,6 @@ Nothing.
 | `088_tests.sql` | `dbc1935d7b7c830be47ca80b64f4d8d7` |
 | `088_rollback.sql` | `6cf3fedc9da852523e5ced1ff789dcdc` |
 | `088_state_check.sql` | `beae0c4e4574e7895b5109f81b307e08` |
+| `087_088_smoke_local.sql` | `5f883c38aa4566e1eff8f5401edd9354` |
 
 (Recompute with `md5sum` if any file is edited after this runbook was written.)
