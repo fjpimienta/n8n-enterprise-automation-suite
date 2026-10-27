@@ -1,0 +1,150 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Registra en un solo lote los resultados de una sesión de palpación (varios animales) Y la condición uterina que el veterinario dictó. Hace lo mismo que log_palpation_event_batch (usa el mismo procedimiento de palpación) y además guarda la condición: CICLANDO, ESTATICA u OTRO cuando el código está confirmado para la empresa, o solo el código en bruto cuando todavía no lo está. Parámetros compartidos: technician_name y palpation_date (AAAA-MM-DD, hoy si se omite; no puede ser futura ni de hace más de un año). 'animals_json' es un arreglo JSON (como texto), UN objeto por animal en el MISMO ORDEN en que el usuario los dio: {\"identifier\": \"...\", \"raw_diagnosis\": \"...\"}.\n\n🛑 CRÍTICO — NUNCA clasifiques, corrijas ni interpretes raw_diagnosis: cópialo EXACTAMENTE como lo dictó o escribió el usuario, con el código uterino incluido (ej. \"VACÍA UNE\", \"VACIA UTCL2/OI\", \"VACÍA UNE/NR\", \"PREÑADA 02 MESES\", \"VACÍA ciclando\"). La base decide PREÑADA/VACÍA, los días de gestación y la condición, y NO adivina: un diagnóstico sin palabra PREÑADA o VACÍA y sin 'ciclando'/'estática' solo se acepta si es un código uterino que YA está registrado para la empresa (lo confirmado o lo pendiente de confirmar); un texto como 'PREÑDA', 'ok', 'pre', texto libre o un código desconocido sin la palabra VACÍA se rechaza, nunca se guarda como VACÍA (con la palabra VACÍA o PREÑADA, un código desconocido se guarda sin condición); pide al usuario que lo aclare y no lo corrijas tú. Nunca inventes un código ni completes un dato que el usuario no dio.\n\n🛑 Es TODO O NADA: si CUALQUIER renglón tiene problema (animal no encontrado, identificador ambiguo, animal vendido o muerto, animal repetido en el lote, renglón sin identifier o sin raw_diagnosis, o un diagnóstico que no se reconoce: DIAGNOSIS_UNRECOGNIZED, o que mezcla PREÑADA con VACÍA/condición: DIAGNOSIS_CONFLICT) regresa status 'rejected' con 'issues' por renglón (index, identifier, code, message; los ambiguos traen 'candidates') y NO se guarda ninguno. Explica cuáles fallaron, dile al usuario que no se guardó nada del lote y deja que corrija y repita el lote COMPLETO; en 'ambiguous' muestra los candidatos y pide cuál, nunca elijas. Si regresa 'recorded', revisa 'results' renglón por renglón y resume cuántas quedaron PREÑADA y cuántas VACÍA; señala 'duplicate_skipped' (ya estaba registrada, no es nueva) y cualquier 'gestation_note' (los meses/días de gestación estaban fuera de rango y no se guardaron).\n\n🛑 Si 'unmapped_codes' no está vacío, díselo al usuario: esos códigos quedaron guardados tal cual pero SIN condición, porque los veterinarios aún no han confirmado su significado (no los interpretes tú). Cada resultado trae mapping_status: MAPPED (código confirmado), EXPLICIT (el usuario escribió 'ciclando' o 'estática'), UNMAPPED (código sin confirmar), NOT_APPLICABLE (sin código, o PREÑADA). ANTES de llamarla resume lo que se va a registrar y pide al usuario que confirme con Sí/No; llámala solo tras el Sí (regla del prompt, Fase 5).",
+        "operation": "executeQuery",
+        "query": "SELECT public.sp_repro_log_palpation_batch($1::text, $2::text, $3::text, $4::text, $5::text) AS result;",
+        "options": {
+          "queryReplacement": "={{ (() => { const s = (v) => (v === undefined || v === null) ? '' : String(v); return [\n  String($fromAI('tenant_id', \"Numeric tenant/company id (id_company) of the current user, copied EXACTLY from the session context in the system prompt. Never guess, infer or default it.\", 'number')),\n  String($fromAI('user_email', \"Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato.\", 'string')),\n  s($fromAI('animals_json', \"Arreglo JSON, como texto, con UN objeto por animal, en el MISMO ORDEN en que aparecen en el mensaje del usuario. Cada objeto: {\\\"identifier\\\": \\\"<arete SINIIGA, RFID o número de fuego, exactamente como lo escribió el usuario>\\\", \\\"raw_diagnosis\\\": \\\"<el diagnóstico con su código uterino, verbatim>\\\"}. NUNCA interpretes, clasifiques ni corrijas el diagnóstico. NUNCA inventes ni omitas un renglón. Máximo 100.\", 'string', null)),\n  s($fromAI('palpation_date', \"Fecha de TODAS las palpaciones del lote, AAAA-MM-DD. Omite para usar hoy.\", 'string', null)),\n  s($fromAI('technician_name', \"Nombre del técnico o veterinario que hizo todas las palpaciones del lote, si el usuario lo dijo. Omite si no.\", 'string', null))\n]; })() }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        2800,
+        3900
+      ],
+      "id": "de7176c9-4aea-496b-183e-a1b9f71a1c4a",
+      "name": "log_palpation_with_condition",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Lista las hembras que ya toca palpar: las PREÑADA y las que están en un empadre vigente cuya ÚLTIMA palpación es más antigua que N días (por omisión 90; configurable de 90 a 120). Las nunca palpadas salen primero (never_palpated) y luego las de palpación más antigua. Para cada una regresa el motivo (PREÑADA, EMPADRE o PREÑADA_Y_EMPADRE), la fecha y resultado de la última palpación y los días transcurridos. Solo lectura. Paginada: si 'has_more' es true ofrece ver más con 'offset'.\n\n🛑 Revisa 'stale_import_date': si 'flag' es true, la mayoría de las palpaciones de la empresa comparten UNA fecha porque vienen de una carga masiva (no son palpaciones hechas ese día). Díselo al usuario y NO presentes esa fecha como la fecha real de la palpación ni calcules plazos con ella como si fuera real; los renglones afectados traen date_is_stale_import = true. Muestra solo lo que regrese la herramienta.",
+        "operation": "executeQuery",
+        "query": "SELECT public.sp_repro_list_palpation_due($1::text, $2::text, $3::text, $4::text, $5::text) AS result;",
+        "options": {
+          "queryReplacement": "={{ (() => { const s = (v) => (v === undefined || v === null) ? '' : String(v); return [\n  String($fromAI('tenant_id', \"Numeric tenant/company id (id_company) of the current user, copied EXACTLY from the session context in the system prompt. Never guess, infer or default it.\", 'number')),\n  String($fromAI('user_email', \"Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato.\", 'string')),\n  s($fromAI('days', \"Días desde la última palpación para considerar que toca palpar (por omisión 90; de 90 a 120).\", 'string', null)),\n  s($fromAI('limit', \"Máximo de hembras (por omisión 50, tope 100).\", 'string', null)),\n  s($fromAI('offset', \"Cuántas saltar para la siguiente página (0 por omisión).\", 'string', null))\n]; })() }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        2800,
+        4120
+      ],
+      "id": "90c53541-cf06-ded3-e3b1-7b77c45a81b8",
+      "name": "list_palpation_due",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Lista las hembras PREÑADA con fecha estimada de parto en los próximos N días (por omisión 60; de 1 a 300), de la más cercana a la más lejana. La fecha estimada es la fecha de la última palpación PREÑADA + (283 - días de gestación de esa palpación); si no hay días de gestación, el último servicio + 283 días. Solo lectura. Regresa varias listas: 'upcoming' (próximos partos), 'overdue' (estimados vencidos hasta 60 días), 'stale_data' (estimados vencidos por MÁS de 60 días), 'no_estimate' (PREÑADA sin base para estimar) y los totales de cada una.\n\n🛑 'stale_data' son datos viejos o sin actualizar (por ejemplo palpaciones de una carga masiva que nunca se volvieron a revisar): NUNCA los anuncies como partos próximos ni atrasados; di solo cuántas hay y que su palpación necesita revisarse. Si 'stale_import_date.flag' es true, la fecha de esas palpaciones es la de una carga masiva, no una palpación real. Un renglón con status_conflict = true tiene una palpación VACÍA más reciente que la PREÑADA: su estatus necesita revisión. Muestra solo lo que regrese la herramienta. Paginada con 'offset'.",
+        "operation": "executeQuery",
+        "query": "SELECT public.sp_repro_list_upcoming_calvings($1::text, $2::text, $3::text, $4::text, $5::text) AS result;",
+        "options": {
+          "queryReplacement": "={{ (() => { const s = (v) => (v === undefined || v === null) ? '' : String(v); return [\n  String($fromAI('tenant_id', \"Numeric tenant/company id (id_company) of the current user, copied EXACTLY from the session context in the system prompt. Never guess, infer or default it.\", 'number')),\n  String($fromAI('user_email', \"Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato.\", 'string')),\n  s($fromAI('days', \"Ventana en días hacia adelante (por omisión 60; de 1 a 300).\", 'string', null)),\n  s($fromAI('limit', \"Máximo de hembras por lista (por omisión 50, tope 100).\", 'string', null)),\n  s($fromAI('offset', \"Cuántas saltar para la siguiente página (0 por omisión).\", 'string', null))\n]; })() }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        2800,
+        4340
+      ],
+      "id": "7090addc-2523-685c-6405-06be7167f9ac",
+      "name": "list_upcoming_calvings",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Lista los códigos uterinos que aparecen en las palpaciones de la empresa y NO tienen todavía un significado confirmado (CICLANDO, ESTATICA u OTRO), con cuántas palpaciones los traen y valores de ejemplo, para que los veterinarios los completen. Se listan por código individual: 'UNE/NR' aporta 'NR' si 'UNE' ya está confirmado. Cada código trae 'known_pending': true si ya está registrado pero espera la confirmación del veterinario. También regresa 'confirmed', los códigos ya confirmados con quién los confirmó. Solo lectura. Tú NO puedes confirmar ni cambiar un significado: un ADMIN lo hace desde el panel. Nunca interpretes un código sin confirmar.",
+        "operation": "executeQuery",
+        "query": "SELECT public.sp_repro_list_unmapped_uterine_codes($1::text, $2::text, $3::text) AS result;",
+        "options": {
+          "queryReplacement": "={{ (() => { const s = (v) => (v === undefined || v === null) ? '' : String(v); return [\n  String($fromAI('tenant_id', \"Numeric tenant/company id (id_company) of the current user, copied EXACTLY from the session context in the system prompt. Never guess, infer or default it.\", 'number')),\n  String($fromAI('user_email', \"Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato.\", 'string')),\n  s($fromAI('limit', \"Máximo de códigos (por omisión 100, tope 200).\", 'string', null))\n]; })() }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        2800,
+        4560
+      ],
+      "id": "334afb1b-e04d-cdb5-4fae-99ac9d3e1274",
+      "name": "list_unmapped_uterine_codes",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "log_palpation_with_condition": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "list_palpation_due": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "list_upcoming_calvings": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "list_unmapped_uterine_codes": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
