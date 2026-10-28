@@ -467,11 +467,17 @@ SELECT pg_temp.t('B NO APTO alone on a non-PREÑADA animal: VACÍA, condition NU
     $qq$pg_temp.rs('b14')::text$qq$);
 SELECT pg_temp.snap('b15');
 SELECT pg_temp.plog('b15', pg_temp.items('A-NP2', 'No apto'));
+-- the "nothing written" check of b15 must run BEFORE the next call writes (b15b legitimately writes one palpation)
+SELECT pg_temp.t('B NO APTO alone on a PREÑADA animal is rejected (needs_explicit_result): nothing written, the animal stays PREÑADA',
+    $qq$pg_temp.rs('b15')->>'status' = 'rejected' AND pg_temp.iss('b15', 'A-NP2')->>'code' = 'NEEDS_EXPLICIT_RESULT' AND pg_temp.iss('b15', 'A-NP2')->>'line_status' = 'needs_explicit_result'
+        AND pg_temp.status_of('A-NP2') = 'PREÑADA' AND pg_temp.same('b15')$qq$,
+    $qq$pg_temp.rs('b15')::text$qq$);
 SELECT pg_temp.plog('b15b', pg_temp.items('A-NP3', 'vacía NO APTO'));
-SELECT pg_temp.t('B NO APTO alone on a PREÑADA animal is rejected (needs_explicit_result); "vacía NO APTO" on a PREÑADA animal is accepted',
-    $qq$pg_temp.rs('b15')->>'status' = 'rejected' AND pg_temp.iss('b15', 'A-NP2')->>'code' = 'NEEDS_EXPLICIT_RESULT' AND pg_temp.status_of('A-NP2') = 'PREÑADA' AND pg_temp.same('b15')
-        AND pg_temp.rs('b15b')->>'status' = 'recorded' AND pg_temp.rl('b15b', 'A-NP3')->>'vet_flag' = 'UNFIT' AND pg_temp.status_of('A-NP3') = 'VACÍA'$qq$,
-    $qq$pg_temp.rs('b15')::text || ' / ' || pg_temp.rs('b15b')::text$qq$);
+SELECT pg_temp.t('B "vacía NO APTO" on a PREÑADA animal is accepted: recorded, 1 written, VACÍA, vet_flag UNFIT, NOT_APPLICABLE, condition NULL, the animal becomes VACÍA',
+    $qq$pg_temp.rs('b15b')->>'status' = 'recorded' AND (pg_temp.rs('b15b')->>'written')::integer = 1 AND pg_temp.rl('b15b', 'A-NP3')->>'result_used' = 'VACÍA'
+        AND pg_temp.rl('b15b', 'A-NP3')->>'vet_flag' = 'UNFIT' AND pg_temp.rl('b15b', 'A-NP3')->>'mapping_status' = 'NOT_APPLICABLE'
+        AND pg_temp.rl('b15b', 'A-NP3')->>'repro_condition' IS NULL AND pg_temp.status_of('A-NP3') = 'VACÍA'$qq$,
+    $qq$pg_temp.rs('b15b')::text || ' status=' || coalesce(pg_temp.status_of('A-NP3'), 'NULL')$qq$);
 
 -- B16 the RP birth flag
 SELECT pg_temp.plog('b16', pg_temp.items('A-RPB1', 'RP', 'A-RPB2', 'RP'));
@@ -566,17 +572,17 @@ SELECT pg_temp.t('C list_palpation_due shows the last palpation''s code and vet_
         AND pg_temp.row_of('c1', 'cows', 'A-DU1')->>'last_palpation_code_means_pregnant' = 'false'
         AND pg_temp.row_of('c1', 'cows', 'A-DU2')->>'last_palpation_code' = 'MATRIZ OCUPADA' AND pg_temp.row_of('c1', 'cows', 'A-DU2')->>'last_palpation_code_means_pregnant' = 'true'
         AND pg_temp.row_of('c1', 'cows', 'A-DU2')->>'last_palpation_vet_flag' IS NULL$qq$,
-    $qq$coalesce(pg_temp.row_of('c1', 'cows', 'A-DU1')::text, 'DU1 not listed') || ' / ' || coalesce(pg_temp.row_of('c1', 'cows', 'A-DU2')::text, 'DU2 not listed') || ' / ' || left(pg_temp.rs('c1')::text, 300)$qq$);
+    $qq$coalesce(pg_temp.row_of('c1', 'cows', 'A-DU1')::text, 'DU1 not listed') || ' / ' || coalesce(pg_temp.row_of('c1', 'cows', 'A-DU2')::text, 'DU2 not listed') || ' / ' || left(pg_temp.rs('c1')::text, 20000)$qq$);
 SELECT pg_temp.t('C list_palpation_due keeps its old keys (status, total, cows, stale_import_date) and lists nothing of company B',
     $qq$pg_temp.rs('c1')->>'status' = 'ok' AND pg_temp.rs('c1') ? 'total' AND pg_temp.rs('c1') ? 'stale_import_date'
         AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(pg_temp.rs('c1')->'cows') e JOIN cattle_livestock l ON l.id = (e->>'livestock_id')::uuid WHERE l.tenant_id <> pg_temp.cx('A')::integer)$qq$,
-    $qq$left(pg_temp.rs('c1')::text, 300)$qq$);
+    $qq$left(pg_temp.rs('c1')::text, 20000)$qq$);
 
 SELECT pg_temp.call('c2', format('SELECT sp_repro_list_upcoming_calvings(%L, %L)', pg_temp.cx('A'), pg_temp.cx('u1')));
 SELECT pg_temp.t('C list_upcoming_calvings shows the newest palpation''s code / vet_flag next to the status conflict (CV1: PREÑADA 100 days ago, then VACÍA RP 10 days ago)',
     $qq$pg_temp.row_of('c2', 'overdue', 'A-CV1')->>'status_conflict' = 'true' AND pg_temp.row_of('c2', 'overdue', 'A-CV1')->>'last_palpation_vet_flag' = 'POSTPARTUM'
         AND pg_temp.row_of('c2', 'overdue', 'A-CV1')->>'last_palpation_code' = 'RP'$qq$,
-    $qq$coalesce(pg_temp.row_of('c2', 'overdue', 'A-CV1')::text, 'CV1 not in overdue') || ' / ' || left(pg_temp.rs('c2')::text, 300)$qq$);
+    $qq$coalesce(pg_temp.row_of('c2', 'overdue', 'A-CV1')::text, 'CV1 not in overdue') || ' / ' || left(pg_temp.rs('c2')::text, 20000)$qq$);
 
 SELECT pg_temp.snap('c3');
 SELECT pg_temp.call('h1', format('SELECT sp_repro_get_dam_history(%L, %L, ''T090-A-HD1'')', pg_temp.cx('A'), pg_temp.cx('u1')));
@@ -588,14 +594,14 @@ SELECT pg_temp.t('C dam history: a stored code that means PREÑADA next to a sto
     $qq$pg_temp.rs('h1')->>'status' = 'ok' AND pg_temp.rs('h1')->'palpations'->0->>'code_contradicts_result' = 'true' AND pg_temp.rs('h1')->'palpations'->0->>'code_means_pregnant' = 'true'
         AND pg_temp.rs('h1')->'palpations'->0->>'uterine_code' = 'MATRIZ OCUPADA' AND pg_temp.rs('h1')->'palpations'->0->>'result' = 'VACÍA'
         AND (pg_temp.rs('h1')->'quality_flags'->>'palpation_code_contradicts_result')::integer = 1$qq$,
-    $qq$left(pg_temp.rs('h1')::text, 600)$qq$);
+    $qq$left(pg_temp.rs('h1')::text, 20000)$qq$);
 SELECT pg_temp.t('C dam history: RP shows vet_flag POSTPARTUM without a contradiction; N/A shows no code and no flag (unchanged); UNE/NR is marked as a composite; bare NR is NOT_EXAMINED',
     $qq$pg_temp.rs('h2')->'palpations'->0->>'vet_flag' = 'POSTPARTUM' AND pg_temp.rs('h2')->'palpations'->0->>'code_contradicts_result' = 'false'
         AND (pg_temp.rs('h2')->'quality_flags'->>'palpations_with_vet_flag')::integer = 1 AND (pg_temp.rs('h2')->'quality_flags'->>'palpation_code_contradicts_result')::integer = 0
         AND pg_temp.rs('h3')->'palpations'->0->>'uterine_code' IS NULL AND pg_temp.rs('h3')->'palpations'->0->>'vet_flag' IS NULL AND pg_temp.rs('h3')->'palpations'->0->>'code_contradicts_result' = 'false'
         AND pg_temp.rs('h4')->'palpations'->0->>'code_nr_composite' = 'true' AND pg_temp.rs('h4')->'palpations'->0->>'vet_flag' IS NULL
         AND pg_temp.rs('h5')->'palpations'->0->>'vet_flag' = 'NOT_EXAMINED'$qq$,
-    $qq$left(pg_temp.rs('h2')::text, 300) || ' / ' || left(pg_temp.rs('h3')::text, 300) || ' / ' || left(pg_temp.rs('h4')::text, 300) || ' / ' || left(pg_temp.rs('h5')::text, 300)$qq$);
+    $qq$left(pg_temp.rs('h2')::text, 20000) || ' / ' || left(pg_temp.rs('h3')::text, 20000) || ' / ' || left(pg_temp.rs('h4')::text, 20000) || ' / ' || left(pg_temp.rs('h5')::text, 20000)$qq$);
 SELECT pg_temp.t('C the history tool wrote nothing (no row anywhere changed)', $qq$pg_temp.same('c3')$qq$);
 
 SELECT pg_temp.call('u1', format('SELECT sp_repro_list_unmapped_uterine_codes(%L, %L)', pg_temp.cx('A'), pg_temp.cx('u1')));
@@ -705,8 +711,13 @@ SELECT pg_temp.t('090 tests ran inside ONE transaction: no included file committ
 
 \echo === RESULTS
 -- Any ERROR line printed above (outside this table) is an unexpected error in a fixture / helper statement, not a failed assertion.
-SELECT n, CASE WHEN ok THEN 'OK  ' ELSE 'FAIL' END AS result, test, CASE WHEN ok THEN NULL ELSE left(detail, 600) END AS detail FROM t_result ORDER BY n;
+SELECT n, CASE WHEN ok THEN 'OK  ' ELSE 'FAIL' END AS result, test, CASE WHEN ok THEN NULL ELSE detail END AS detail FROM t_result ORDER BY n;
 SELECT count(*) FILTER (WHERE ok) AS passed, count(*) FILTER (WHERE NOT ok) AS failed, count(*) AS total FROM t_result;
+-- Every failure with its WHOLE detail, one field per line (the table above can be wider than the terminal):
+\echo === FAILURES (full detail, expanded)
+\x on
+SELECT n, test, detail FROM t_result WHERE NOT ok ORDER BY n;
+\x off
 \set ON_ERROR_STOP on
 \set ON_ERROR_ROLLBACK off
 DO $$
