@@ -83,6 +83,9 @@ Expected: one `OK` line per test, a final `passed | failed | total` with **`fail
 087 / 088 tests: `pg_temp.t()`, `__error` answers, `ON_ERROR_ROLLBACK`); **every `FAIL` line has its `detail` column filled**. An `ERROR:` line printed *outside* the results table is an unexpected error in a fixture or
 helper statement - report it. After the run this must return 0: `SELECT count(*) FROM cattle_livestock WHERE rfid_siniiga LIKE 'T0%'`. Clean up: `dropdb -U n8n_user hosting3m_test090`.
 
+**A failure always shows its whole answer:** the results table prints the `detail` column untruncated and, right after the totals, a `=== FAILURES (full detail, expanded)` block repeats every failed test with its detail one field per line.
+`090_diag_t28.sql` is a LOCAL-only diagnostic (it builds one fixture inside a transaction that ends in `ROLLBACK`, prints two answers in full and leaves nothing behind); run it the same way as the tests, from the migrations folder inside the container.
+
 **If only the tests or this runbook change later, re-run only `090_tests.sql`. If `090_repro_vet_code_semantics.sql` changes, rebuild the throwaway database first.**
 
 **What the run proves.** Part A: the pure functions (the phrase, conflicts, NR alone / composite, RP / NO APTO kinds, the helpers, **the parser and N/A untouched**, the two CHECKs). Part B: the wrapper — every row of the table above,
@@ -212,7 +215,8 @@ Reuse verbatim. Everything is a key of the jsonb the tool returns; the agent rel
 | File | md5 |
 |---|---|
 | `090_repro_vet_code_semantics.sql` | `1297f97ca2d9945d546197547d02f014` |
-| `090_tests.sql` | `f3d6aee254e943d54f07e91dc9078cac` |
+| `090_tests.sql` | `fcab49a22876ff7f7c020d7c9b6a316c` |
+| `090_diag_t28.sql` | `495abcec62c902547b37efcf70a09358` |
 | `090_rollback.sql` | `6298fabaffa857917c7052f00809e572` |
 | `090_state_check.sql` | `420d1c74100e3332102302175dcdf1bc` |
 | `090_seed_tenant5_vet_code_meanings.sql` | `4ab1bd94f5df1970250311094ccd291c` |
