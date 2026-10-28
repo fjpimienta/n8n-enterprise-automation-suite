@@ -1,0 +1,22 @@
+OK    node count  30 -> 54
+OK    connection count  29 -> 53
+OK    names unique
+OK    ids unique
+OK    existing nodes changed: exactly ["list_lots"]  ['list_lots']
+OK    removed nodes: none
+OK    the 28 other existing nodes + trigger byte-identical  29 identical
+OK    existing connections unchanged
+OK    new nodes are the 24 expected
+OK    every new node is connected to the MCP trigger
+OK    every connection source and target exists
+OK    top-level "name" unchanged
+OK    top-level "pinData" unchanged
+OK    top-level "active" unchanged
+OK    top-level "settings" unchanged
+OK    top-level "versionId" unchanged
+OK    top-level "meta" unchanged
+OK    new nodes use the same credential as the existing tools
+OK    list_lots SQL: only the select list grew (2 new keys at the end)
+OK    list_lots other parameters unchanged
+OK    list_lots toolDescription only grew at the end
+OK    JSON round-trips
