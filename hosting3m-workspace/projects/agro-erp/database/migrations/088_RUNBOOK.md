@@ -59,7 +59,7 @@ if their `T088` fixtures already exist **or if the two companies already have pa
 > The commands below are the same **reconstructed** ones as in `085_RUNBOOK.md` / `086_RUNBOOK.md` (schema-only dump into a new database,
 > copy `companys` and two users); replace them with the exact commands you use if they differ.
 
-1. **Create the throwaway database with the schema only** (from the LOCAL `hosting3m_db`, the daily copy of production):
+1. **Create the throwaway database with the schema only** (from the LOCAL `hosting3m_db`, the daily copy of production; it can hold leftover objects of 084-090 that are absent from the dump, so a schema-only copy of it may not be a clean base: prefer a fresh base from a production dump, see `workflows/09-MCP-Agent-Cattle/v6/repro-phase5/rehearsal/README.md`, "Evidence"):
 
    ```bash
    docker exec n8n-enterprise-db createdb -U n8n_user hosting3m_test088

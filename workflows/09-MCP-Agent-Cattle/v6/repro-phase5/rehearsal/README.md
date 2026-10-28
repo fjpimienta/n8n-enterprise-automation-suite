@@ -3,7 +3,7 @@
 A dress rehearsal, in the **LOCAL** container `n8n-enterprise-db`, of `docs/REPRO_PRODUCTION_RUNBOOK.md` steps 2 and 3, plus the QA fixtures dry run and the `list_lots` diff.
 It never touches the VPS, production or n8n. **The rehearsal scripts have not been run by their author** (they need your local database): the first run is yours. `test_rehearsal_helpers.sh` (offline, no database) has been run.
 
-> ⚠️ **Do not use the local `hosting3m_db` for the rehearsal.** The local copy is **not a clean base**: objects of 084-090 (new functions and tables) survive the daily local refresh while replaced procedures and tables are restored to the production state, so the state checks find no known state and the rollback script cannot help. The scripts **refuse** `hosting3m_db`. Use a **fresh database restored from a production dump** (next section).
+> ⚠️ **Do not use the local `hosting3m_db` for the rehearsal.** The local copy is **not a clean base**: objects of 084-090 (new functions and tables) survive the daily local refresh while replaced procedures and tables are restored to the production state, so the state checks find no known state and the rollback script cannot help. (This is **inferred from three observations on 2026-10-28, not a documented behaviour of the refresh tool**: see "Evidence" at the end.) The scripts **refuse** `hosting3m_db`. Use a **fresh database restored from a production dump** (next section).
 
 ## Create the rehearsal database (once; from a production dump)
 You need a custom-format dump of the production `hosting3m_db`, for example the one taken in Step 1 of the runbook (taken on 2026-10-28: 1088844 bytes, 1053 TOC entries). The name `hosting3m_rehearsal` is only an example: any name matching `^hosting3m_[a-z0-9_]+$` other than `hosting3m_db` works.
@@ -73,3 +73,17 @@ NN  STEP                                       RESULT
 - The scripts copy the migrations folder into a **new** folder of the container, `/tmp/reh_STAMP`; nothing is removed (no `rm -rf` anywhere).
 - The rollbacks of 084-090 keep their tables, columns and helpers **by design**: "back as it was" means the old behaviour, not an identical schema. A truly clean start is a **new database restored from a production dump**, not the rollback and not the daily local refresh.
 - The restored dump holds real client data (companies 5, 6 ...). The rehearsal writes only the migration objects and the 9 seed rows of company 5 into `REHEARSAL_DB`; the fixtures are dry run only. The seed undos delete only the rows the seeds inserted.
+
+## Evidence
+"The local refresh leaves a mixed state" is **inferred from three observations made on 2026-10-28**. It is **not** a documented behaviour of the refresh tool: its script (`~/scripts/backup_postgres_vps_to_local.sh`) lives outside this repository and was not read for this rehearsal.
+1. The local `hosting3m_db` held objects of 084-090 (new functions and tables) that are **absent** from the production dump, while the tables and the replaced procedures that **are** in the dump were back in the production state.
+2. On that mixed base the state checks found **no known state** (`before`, `applied` or `rolled_back`), so the rehearsal could not start and the rollback script could not help.
+3. A **fresh database restored from a production dump** (`hosting3m_rehearsal`) ran the whole sequence cleanly:
+
+| Run | Script | Result |
+|---|---|---|
+| 1 | `rehearse_local.sh` (fresh base) | **42 of 42** steps OK |
+| 2 | `rehearse_local_rollback.sh` | **10 of 10** steps OK |
+| 3 | `rehearse_local.sh` again (re-apply from the `rolled_back` state) | **42 of 42** steps OK |
+
+The dump used was taken on **production on 2026-10-28**: 1088844 bytes, 1053 TOC entries (`pg_restore --list`), 35 GB free on the VPS at the time (Step 1a of `docs/REPRO_PRODUCTION_RUNBOOK.md`). The step counts are the lines of the summary table: 4 setup steps, 5 per migration for 6 migrations, 4 seed steps, 2 verifications, the fixtures dry run and the `list_lots` diff (42); and 2 setup steps, 2 seed undos and 6 rollbacks (10).
