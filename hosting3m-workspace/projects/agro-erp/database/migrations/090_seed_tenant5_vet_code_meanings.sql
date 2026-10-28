@@ -79,10 +79,11 @@ SELECT id_company, count(*) AS n, md5(string_agg(concat_ws('|', code, repro_cond
 \else
     DO $$
     BEGIN
-        IF EXISTS (SELECT 1 FROM public.repro_condition_codes
-                    WHERE id_company = 5 AND code IN ('NR', 'RP', 'NO APTO')
-                      AND (repro_condition IS NOT NULL
-                           OR (meaning IS NOT NULL AND meaning IS DISTINCT FROM CASE code WHEN 'NR' THEN 'NOT_EXAMINED' WHEN 'RP' THEN 'POSTPARTUM' ELSE 'UNFIT' END))) THEN
+        IF EXISTS (SELECT 1
+                     FROM public.repro_condition_codes c
+                     JOIN (VALUES ('NR', 'NOT_EXAMINED'), ('RP', 'POSTPARTUM'), ('NO APTO', 'UNFIT')) AS m (code, meaning) ON m.code = c.code
+                    WHERE c.id_company = 5
+                      AND (c.repro_condition IS NOT NULL OR (c.meaning IS NOT NULL AND c.meaning <> m.meaning))) THEN
             RAISE EXCEPTION 'ABORT: NR / RP / NO APTO already has a condition or a different meaning in company 5. Nothing is overwritten; review it by hand.';
         END IF;
     END $$;

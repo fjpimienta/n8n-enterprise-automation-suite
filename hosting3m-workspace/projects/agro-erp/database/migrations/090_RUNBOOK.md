@@ -218,8 +218,8 @@ Reuse verbatim. Everything is a key of the jsonb the tool returns; the agent rel
 | `090_tests.sql` | `fcab49a22876ff7f7c020d7c9b6a316c` |
 | `090_diag_t28.sql` | `495abcec62c902547b37efcf70a09358` |
 | `090_rollback.sql` | `6298fabaffa857917c7052f00809e572` |
-| `090_state_check.sql` | `420d1c74100e3332102302175dcdf1bc` |
-| `090_seed_tenant5_vet_code_meanings.sql` | `4ab1bd94f5df1970250311094ccd291c` |
+| `090_state_check.sql` | `7ef4d3de8ede12c994bb2e9c36eed691` |
+| `090_seed_tenant5_vet_code_meanings.sql` | `23d8cfa6f3cf10e77afcadb6b1f40a64` |
 
 (Recompute with `md5sum` if any file is edited after this runbook was written.)
 

@@ -101,6 +101,8 @@ DECLARE
                               '79927c5b2478ae8f31307b9eb89d97d7'];
     v_helpers text[] := ARRAY['fn_repro_code_meaning', 'fn_repro_palp_text', 'fn_repro_palp_code_info'];
     i         integer;
+    v_want    integer;
+    v_have    integer;
     v_oid     oid;
     v_col     boolean;
     v_found   integer;
@@ -131,8 +133,12 @@ BEGIN
             END IF;
         END IF;
     END LOOP;
-    IF (SELECT count(*) FROM pg_proc WHERE pronamespace = 'public'::regnamespace AND prosrc LIKE '%090:vet-codes-v1%') <> CASE WHEN v_expect = 'applied' THEN 7 ELSE 0 END THEN
-        RAISE EXCEPTION 'FAIL: the number of bodies carrying the 090 marker is wrong for state %', v_expect;
+    -- (no CASE inside an IF condition: PL/pgSQL ends the condition at the first top-level THEN, which would be the CASE's own THEN)
+    v_want := 0;
+    IF v_expect = 'applied' THEN v_want := 7; END IF;
+    SELECT count(*) INTO v_have FROM pg_proc WHERE pronamespace = 'public'::regnamespace AND prosrc LIKE '%090:vet-codes-v1%';
+    IF v_have <> v_want THEN
+        RAISE EXCEPTION 'FAIL: % bodies carry the 090 marker, expected % for state %', v_have, v_want, v_expect;
     END IF;
 
     IF v_expect = 'before' THEN
