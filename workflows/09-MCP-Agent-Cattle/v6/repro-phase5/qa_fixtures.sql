@@ -66,15 +66,15 @@ BEGIN
         RAISE EXCEPTION 'ABORT: migrations 084 - 088 and 090 must be applied here first.';
     END IF;
     -- rfid_siniiga is UNIQUE across ALL companies: this scans the WHOLE table (no tenant filter), not only company 3. It counts every animal whose tag is
-    -- 10 characters long and lies in the run's string range 9999<run>00001 .. 9999<run>00099, or is one of the two synthetic S/N tags of the run.
+    -- 10 characters long and lies in the run's string range 9999<run>00001 .. 9999<run>00038 (the 38 tags the kit creates), or is one of the two synthetic S/N tags of the run.
     -- The message reports what it really found; this block writes nothing and the rest of the file has not run yet when it aborts.
     SELECT count(*), string_agg(DISTINCT tenant_id::text, ', ' ORDER BY tenant_id::text)
       INTO v_n, v_tenants
-      FROM public.cattle_livestock WHERE (length(rfid_siniiga) = 10 AND rfid_siniiga >= '9999' || v_run || '00001' AND rfid_siniiga <= '9999' || v_run || '00099')
+      FROM public.cattle_livestock WHERE (length(rfid_siniiga) = 10 AND rfid_siniiga >= '9999' || v_run || '00001' AND rfid_siniiga <= '9999' || v_run || '00038')
                                                            OR rfid_siniiga IN ('S/N-QA5R' || v_run || '-1450-1', 'S/N-QA5R' || v_run || '-1450-2');
     IF v_n > 0 THEN
         SELECT string_agg(q.t, ', ' ORDER BY q.t) INTO v_list
-          FROM (SELECT rfid_siniiga || ' (tenant ' || tenant_id || ')' AS t FROM public.cattle_livestock WHERE (length(rfid_siniiga) = 10 AND rfid_siniiga >= '9999' || v_run || '00001' AND rfid_siniiga <= '9999' || v_run || '00099')
+          FROM (SELECT rfid_siniiga || ' (tenant ' || tenant_id || ')' AS t FROM public.cattle_livestock WHERE (length(rfid_siniiga) = 10 AND rfid_siniiga >= '9999' || v_run || '00001' AND rfid_siniiga <= '9999' || v_run || '00038')
                                                            OR rfid_siniiga IN ('S/N-QA5R' || v_run || '-1450-1', 'S/N-QA5R' || v_run || '-1450-2')
                  ORDER BY rfid_siniiga LIMIT 5) q;
         RAISE EXCEPTION 'ABORT: % tag(s) of the QA range of run % already exist in cattle_livestock (rfid_siniiga is UNIQUE across ALL companies); found in tenant_id: %; first (up to 5): %. They may be older test animals, not fixtures of this kit. Nothing was written and the rest of this file did not run. Use another -v run=N.', v_n, v_run, v_tenants, v_list;

@@ -22,7 +22,9 @@ and run with `bash stepN.sh` — **never pasted line by line**, so a failed chec
 OWNER_EMAIL=''              # e-mail of a member of company 5 AND of company 3 (read-only smoke checks)
 CONFIRMED_BY_086=''         # the confirmed_by value of the 086 seed — the owner states it before step 3
 COMPANY5_ARETE=''           # one real arete SINIIGA of company 5 (read-only smoke check)
-QA_MEMBER_EMAIL=''          # an active member of company 3 (list_lots diff, QA)
+QA_MEMBER_EMAIL=''          # the ADMIN QA tester: an active member of company 3 (list_lots diff, QA)
+QA_EDITOR_EMAIL=''          # the EDITOR QA tester of company 3 (dialog Q37)
+TEST_PHONE10=''             # the WhatsApp tester's phone: the LAST 10 DIGITS only, no +52 (how the agent matches users.phone)
 STAMP=''                    # one timestamp for the whole rollout, e.g. 2026-10-28_1500 (backup file names)
 VPS_SSH=''                  # user@host of the VPS, used from your machine to copy the dumps off
 LOCAL_BACKUP_DIR=''         # folder on your machine that receives the dumps
@@ -94,7 +96,7 @@ After step 4 the MCP server says `OBSOLETA` on the two legacy tools **while the 
 | `repro-phase5/compare_workflow_export.py` | `7071aa8d17c0e6ef1cde545ab16e37ed` |
 | `repro-phase5/check_repro_consistency.js` | `78b66693cf462cefd51d5e87b7def16c` |
 | `repro-phase5/list_lots_diff.py` | `fcf70c0c7fd6d911c347727370327683` |
-| `repro-phase5/qa_fixtures.sql` | `45422c6d2ccaa0540b145a231075a64e` |
+| `repro-phase5/qa_fixtures.sql` | `9de4bc89e6b4577748bacb42056ce25e` |
 | `repro-phase5/REPRO_QA_SCRIPT.md` | `6a75f8c794b60ee4fcd3cc7762156364` |
 
 (Recompute with `md5sum` if a file is edited after this runbook was written. The per-migration runbooks `0NN_RUNBOOK.md` hold the detail of each migration and their own md5 tables.)
@@ -318,6 +320,41 @@ Then one read-only message per channel on company 3, **through the real channel*
 **ROLLBACK of step 5 = rollback of steps 5 AND 4, together.** Import `live_before_chat.json`, `live_before_whatsapp.json` **and `live_before_mcp.json`**, Publish each, re-export each and compare with the saved export (`IDENTICAL`). **The MCP server must NOT stay on the new export:** its legacy tool descriptions say `OBSOLETA` while the previous prompts still tell the agents to use `register_birth_event` and `log_palpation_event_batch`. (The database stays.)
 
 ## Step 6 — QA on the owner's test company (company 3, never company 5)
+
+**6.0 Preconditions — read-only, ⚠️ UNTESTED — run them BEFORE the fixtures and the dialogs. STOP if any fails.** The point: a tester whose account also belongs to another company (company 5 above all) could have the agent resolve THAT company, and a QA write would land in a real tenant.
+- **(a) The tester users belong to company 3 and to NO other company.** Every active membership of the ADMIN and EDITOR testers must be company 3; both must have one:
+```bash
+set -euo pipefail
+. ./repro_vars.sh
+need QA_MEMBER_EMAIL QA_EDITOR_EMAIL
+OTHER=$($P -X -At -v admin="$QA_MEMBER_EMAIL" -v editor="$QA_EDITOR_EMAIL" -f - <<'SQL'
+SELECT count(*) FROM users u JOIN user_companies uc ON uc.email = u.email
+ WHERE u.email IN (:'admin', :'editor') AND uc.is_active AND uc.id_company <> 3;
+SQL
+)
+MINE=$($P -X -At -v admin="$QA_MEMBER_EMAIL" -v editor="$QA_EDITOR_EMAIL" -f - <<'SQL'
+SELECT count(DISTINCT uc.email) FROM user_companies uc
+ WHERE uc.email IN (:'admin', :'editor') AND uc.is_active AND uc.id_company = 3;
+SQL
+)
+echo "memberships in other companies: $OTHER (must be 0); testers that are members of company 3: $MINE (must be 2)"
+[ "$OTHER" = 0 ] && [ "$MINE" = 2 ]
+```
+  (If you also run the optional CUSTOMER dialog Q39, check that tester the same way.)
+- **(b) WhatsApp — the tester's phone.** Run the phone check that is already written in `REPRO_QA_SCRIPT.md`, "Antes de empezar", item 4 (not repeated here): it must return a row with `id_company = 3`, `company_role = ADMIN`, `is_active = t` and **no row of any other company**. Then verify there is **no saved choice for another company** (the agent reuses `user_tenant_selection` when a phone has several companies):
+```bash
+set -euo pipefail
+. ./repro_vars.sh
+need TEST_PHONE10
+SAVED=$($P -X -At -v phone="$TEST_PHONE10" -f - <<'SQL'
+SELECT count(*) FROM user_tenant_selection WHERE phone = :'phone' AND id_company <> 3;
+SQL
+)
+echo "saved choices pointing at another company: $SAVED (must be 0)"
+[ "$SAVED" = 0 ]
+```
+- **(c) Chat Web — the selected company is 3 before the first message.** By hand, with the ADMIN tester signed in: the company selector of the platform shows **Rancho El Palomar** (company 3) and nothing else is selected; repeat with the EDITOR tester for Q37. **STOP if** it shows another company: change it from the selector (the agent cannot change it).
+
 Files: `REPRO_QA_SCRIPT.md` (40 dialogs, the exact messages, the expected tool and reply shape, a WhatsApp subset of 10) and `qa_fixtures.sql`. ⚠️ UNTESTED, all of it. **The kit uses run 2:** company 3 already holds 6 older test calves with tags `9999100001`..`9999100006`, so run 1 can never be applied there.
 1. **Fixtures — LOCAL first**, then production. The file is applied from inside the container, so copy it first:
    ```bash
