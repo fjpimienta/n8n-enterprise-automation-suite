@@ -131,11 +131,10 @@ on your local machine (there `/root` does not exist or is not yours, and a LOCAL
 2. **State before** was taken in Part 0 (`/root/085_state_before.txt`, must end with `085 state check (before): OK`). Keep the `FINGERPRINT` lines.
 3. **Dry run** (rolls back): `$P -f /tmp/m085/085_repro_empadre.sql > /root/085_dryrun.txt 2>&1` → `085: OK` and `DRY RUN`.
 4. **Tests ran on the throwaway database** (section above), never here.
-5. **Apply** (single transaction, `ON_ERROR_STOP`; the file also opens / commits its own transaction, so psql may print a harmless
-   *"there is already a transaction in progress"* warning):
+5. **Apply** (the repo convention: `-v apply=true -f FILE`, **no `--single-transaction`**; each file owns its `BEGIN` ... `COMMIT` and `ON_ERROR_STOP` stops it at the first error before the `COMMIT`, so nothing is left half-applied; the flag would only add the warnings *"there is already a transaction in progress"* / *"there is no transaction in progress"*):
 
    ```bash
-   $P --single-transaction -v apply=true -f /tmp/m085/085_repro_empadre.sql > /root/085_apply.txt 2>&1
+   $P -v apply=true -f /tmp/m085/085_repro_empadre.sql > /root/085_apply.txt 2>&1
    tail -5 /root/085_apply.txt     # expect: 085: OK  and  *** 085 COMMITTED ***
    ```
 
@@ -154,7 +153,7 @@ on your local machine (there `/root` does not exist or is not yours, and a LOCAL
    **Do not call a write tool in production** except with a test company and animals (the owner's test tenant 3 "Rancho El Palomar",
    `rfid_siniiga` `9999…`), and void the test entry afterwards.
 
-**Rollback:** `$P --single-transaction -v apply=true -f /tmp/m085/085_rollback.sql > /root/085_rollback.txt 2>&1`, then
+**Rollback:** `$P -v apply=true -f /tmp/m085/085_rollback.sql > /root/085_rollback.txt 2>&1`, then
 `-v expect=rolled_back` state check. It drops nothing: the 8 tools answer `disabled`; the tables **and any entries already recorded stay**
 (they are the only copy of what staff reported). Re-apply is the same command as step 5 (`CREATE OR REPLACE` / `IF NOT EXISTS`) and keeps the rows.
 Removing the tables would be a separate, explicit decision of the owner (with a backup first); this runbook never does it.
@@ -168,18 +167,18 @@ P='docker exec -i n8n-enterprise-db psql -U n8n_user -d hosting3m_db -v ON_ERROR
 docker exec n8n-enterprise-db rm -rf /tmp/m085 && docker cp hosting3m-workspace/projects/agro-erp/database/migrations n8n-enterprise-db:/tmp/m085
 # 084 first (skip if already applied: its state check says so)
 $P -v expect=before  -f /tmp/m085/084_state_check.sql
-$P --single-transaction -v apply=true -f /tmp/m085/084_repro_births_age.sql
+$P -v apply=true -f /tmp/m085/084_repro_births_age.sql
 $P -v expect=applied -f /tmp/m085/084_state_check.sql
 # then 085
 $P -v expect=before  -f /tmp/m085/085_state_check.sql > 085_local_before.txt 2>&1
 $P -f /tmp/m085/085_repro_empadre.sql                                   # dry run
-$P --single-transaction -v apply=true -f /tmp/m085/085_repro_empadre.sql
+$P -v apply=true -f /tmp/m085/085_repro_empadre.sql
 $P -v expect=applied -f /tmp/m085/085_state_check.sql > 085_local_after.txt 2>&1
 diff 085_local_before.txt 085_local_after.txt                           # only NOTICE / OK / EMPADRE_ROWS lines
 # rollback rehearsal, then re-apply (rows must survive: compare the EMPADRE_ROWS line)
-$P --single-transaction -v apply=true -f /tmp/m085/085_rollback.sql
+$P -v apply=true -f /tmp/m085/085_rollback.sql
 $P -v expect=rolled_back -f /tmp/m085/085_state_check.sql
-$P --single-transaction -v apply=true -f /tmp/m085/085_repro_empadre.sql
+$P -v apply=true -f /tmp/m085/085_repro_empadre.sql
 $P -v expect=applied -f /tmp/m085/085_state_check.sql
 ```
 

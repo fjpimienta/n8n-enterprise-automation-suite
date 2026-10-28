@@ -256,6 +256,59 @@ If a gateway model exists for caller 3, adding the membership check to the 13-pa
 - **md5 verification:** the owner's 7 LOCAL md5s of the 086 / 088 bodies were reproduced exactly from the repo files (by rebuilding `pg_get_functiondef` text), so the LOCAL database was not edited by hand and the guards use those values.
 - **Backlog:** items 16–22 added; item 15 (guard for every bare code) was done in 090 itself. Seed order (owner): in the phase 5 production runbook the 086 seed and the 090 seed run back to back BEFORE the palpation tools are connected to the agents; locally the 090 seed runs right after 090. The 90-day RP window (symmetric) is a documented assumption.
 
+### Phase 5 — tool inventory (agent tools of phases 1-4 and 3b)
+All 24 nodes live in `workflows/09-MCP-Agent-Cattle/v6/repro-phase{1..4}/repro_phase*_tools.json` and are added to `v6_MCP_Server_Cattle.json` by `repro-phase5/add_repro_tools.py`. Every one takes `tenant_id` and `user_email` from `$fromAI` (same level as the 29 existing tools; the database validates membership, Rule 6). NIVEL: 1 = read, no confirmation; 2 = routine write, no confirmation; 3 = summary and an explicit "Sí" in the next turn. Roles: every role may capture these events (including CUSTOMER); only death and sale requests need ADMIN authorization, as today.
+
+| Phase | Tool (= node name) | SQL function | Read / write | NIVEL | Prompts that list it |
+|---|---|---|---|---|---|
+| 1 | `list_births` | `sp_repro_list_births` | read | 1 | chat + WhatsApp (node `AI Agent`) |
+| 1 | `get_dam_birth_history` | `sp_repro_dam_birth_history` | read | 1 | chat + WhatsApp (node `AI Agent`) |
+| 1 | `get_births_summary` | `sp_repro_births_summary` | read | 1 | chat + WhatsApp (node `AI Agent`) |
+| 1 | `list_unregistered_historical_births` | `sp_repro_list_unregistered_historical_births` | read | 1 | chat + WhatsApp (node `AI Agent`) |
+| 1 | `identifier_quality_report` | `sp_repro_identifier_quality_report` | read | 1 | chat + WhatsApp (node `AI Agent`) |
+| 2 | `get_empadre_config` | `sp_repro_empadre_get_config` | read | 1 | chat + WhatsApp (node `AI Agent`) |
+| 2 | `list_heifers_eligible_for_empadre` | `sp_repro_list_heifers_eligible_for_empadre` | read | 1 | chat + WhatsApp (node `AI Agent`) |
+| 2 | `log_empadre_entry` | `sp_repro_log_empadre_entry` | WRITE | 2 | chat + WhatsApp (node `AI Agent`) |
+| 2 | `log_empadre_entry_batch` | `sp_repro_log_empadre_entry_batch` | WRITE | 2 | chat + WhatsApp (node `AI Agent`) |
+| 2 | `void_empadre_entry` | `sp_void_empadre_entry` | WRITE | 3 | chat + WhatsApp (node `AI Agent`) |
+| 2 | `list_empadre_entries` | `sp_repro_list_empadre_entries` | read | 1 | chat + WhatsApp (node `AI Agent`) |
+| 2 | `list_open_cows` | `sp_repro_list_open_cows` | read | 1 | chat + WhatsApp (node `AI Agent`) |
+| 3 | `log_palpation_with_condition` | `sp_repro_log_palpation_batch` | WRITE | 2 | chat + WhatsApp (node `AI Agent`) |
+| 3 | `list_palpation_due` | `sp_repro_list_palpation_due` | read | 1 | chat + WhatsApp (node `AI Agent`) |
+| 3 | `list_upcoming_calvings` | `sp_repro_list_upcoming_calvings` | read | 1 | chat + WhatsApp (node `AI Agent`) |
+| 3 | `list_unmapped_uterine_codes` | `sp_repro_list_unmapped_uterine_codes` | read | 1 | chat + WhatsApp (node `AI Agent`) |
+| 4 | `register_birth_checked` | `sp_repro_register_birth` | WRITE | 2 | chat + WhatsApp (node `AI Agent`) |
+| 4 | `births_batch_preview` | `sp_repro_births_batch_preview` | read | 1 | chat + WhatsApp (node `AI Agent`) |
+| 4 | `births_batch_register` | `sp_repro_births_batch_register` | WRITE | 3 | chat + WhatsApp (node `AI Agent`) |
+| 4 | `register_historical_birth` | `sp_repro_register_historical_birth` | WRITE | 3 | chat + WhatsApp (node `AI Agent`) |
+| 4 | `void_historical_birth` | `sp_repro_void_historical_birth` | WRITE | 3 | chat + WhatsApp (node `AI Agent`) |
+| 4 | `list_historical_births` | `sp_repro_list_historical_births` | read | 1 | chat + WhatsApp (node `AI Agent`) |
+| 4 | `get_births_config` | `sp_repro_births_get_config` | read | 1 | chat + WhatsApp (node `AI Agent`) |
+| 4 | `get_dam_reproductive_history` | `sp_repro_get_dam_history` | read | 1 | chat + WhatsApp (node `AI Agent`) |
+
+**Not exposed to the agent (no node):** `sp_repro_condition_code_set`, `sp_repro_empadre_set_config`, `sp_repro_births_set_config` (SQL / ADMIN only).
+
+**Leave the dictionary, keep the node (rollback path):** `register_birth_event` (replaced by `register_birth_checked`) and `log_palpation_event_batch` (replaced by `log_palpation_with_condition`). Their node `toolDescription` (only that) now starts with `OBSOLETA: no la uses. Usa <replacement>.`. `log_palpation_event` (single) stays in the dictionary, for an explicit result WITHOUT a code; with a vet code even a single animal goes through `log_palpation_with_condition` with ONE element.
+- What the two legacy nodes call (read from the MCP export): `register_birth_event` → `sp_register_birth_event` (13 parameters), resolving lot / UPP names with a partial `ILIKE … LIMIT 1` and no ambiguity check; `log_palpation_event_batch` → `sp_log_palpation_event` once per animal, turning any text without a `PRE…ADA` word into VACÍA. **That batch can overwrite a PREÑADA animal with VACÍA and has no `NEEDS_EXPLICIT_RESULT` guard** (the guard is in `sp_repro_log_palpation_batch`, i.e. the wrapper); the single `log_palpation_event` needs an explicit result from the model.
+
+**Existing tools whose answers changed** (the tools themselves were not edited; the prompts must relay the new answers):
+
+| Tool | Changed by | What it answers now |
+|---|---|---|
+| `log_breeding_event` | 088 | Rejections are ANSWERS, not SQL errors: `{success:false, status:'ambiguous', candidates}` (several sires/females match), `{success:false, status:'rejected', message}` (the sire is not a TORO / BECERRO_TORETE, or is the female herself); warnings `sire_not_resolved` (the sire name matches no animal of the company; kept as free text) and `semen_batch_missing` (artificial insemination without batch); exact retry within 5 minutes → `{success:true, duplicate_skipped:true}`. A NULL / non-member e-mail raises (`P0001`). |
+| `void_event` | 088 | A service linked to a birth answers `{success:false, status:'rejected', code:'LINKED_TO_BIRTH', birth_event_id}`; a non-member / NULL e-mail raises (`P0001`). |
+| `register_birth_event` (legacy, leaves the dictionary) | 087 | An exact retry answers `{success:true, duplicate_skipped:true, …}`; adds `service_link` (`linked` / `no_candidate` / `ambiguous`); a non-member e-mail raises. Replaced in the dictionary by `register_birth_checked`. |
+| `log_palpation_event_batch` (legacy, leaves the dictionary) | — | Unchanged (still defaults any text without a PRE…ADA word to VACÍA: backlog 4). Replaced by `log_palpation_with_condition`. |
+| `log_palpation_with_condition` (new wrapper, 086 + 090) | 090 | `status: recorded | rejected | invalid`; `rejected` carries `issues[]` per line (`NEEDS_EXPLICIT_RESULT` / `line_status: needs_explicit_result`, `DIAGNOSIS_CONFLICT`, `DIAGNOSIS_UNRECOGNIZED`, …) and nothing is written; `recorded` carries `results[]` with `line_status` (`recorded` / `duplicate_skipped`), `vet_flag`, `rp_without_registered_birth`, and `not_examined_lines[]` (`line_status: not_examined`) for NR alone. Full reference with one example each: `database/migrations/090_RUNBOOK.md`, last section. |
+| `list_lots` | Phase 5 | **Two NEW keys per row, `lot_id` and `production_unit_id`** (additive, read-only, same tenant filter; no key removed or renamed). The agent uses them internally to pass `lot_id` / `production_unit_id` to `register_birth_checked` and never shows them (A6). |
+
+**Backlog added in phase 5**
+23. **Inject `tenant_id` and the e-mail from the trusted context instead of letting the model fill them, for ALL MCP tools** (a later phase). Today the 29 + 24 tools take them from `$fromAI` (Rule 6); the database validates membership, but the prompt is the only thing that makes the model copy the verified values.
+24. **Delete the `register_birth_event` node** from the MCP server in **step 6b of `docs/REPRO_PRODUCTION_RUNBOOK.md`**, after the QA passed and the n8n executions of the QA show that no execution called it. This PR keeps the node in the repo export; a **follow-up commit** replaces the export with the 6b file (51 tools) once 6b is verified live, and `check_repro_consistency.js` then expects 51 tools and drops its two legacy exceptions.
+25. **Delete the `log_palpation_event_batch` node** in the same step 6b, with the same condition and the same follow-up commit (replaced by `log_palpation_with_condition`; the legacy batch can overwrite a PREÑADA animal with VACÍA).
+26. **QA leaves residue in company 3 (the test company):** births, empadre entries and historical births are append-only; the QA events cannot be deleted. Fixture rows carry a QA marker in their identifiers.
+27. **Measure tool selection on `gpt-4.1-mini` with 53 tools:** the rollout requires at least 90 % first-try correct tool choice in the QA; if not met, trim the dictionary or move the agent to a stronger model (see `REPRO_PRODUCTION_RUNBOOK.md`).
+
 ### Git (decided 2026-10-27)
 Migrations were already excepted in `.gitignore` (line 35); only `database/discovery/*.sql` was missing. Prepared as **its own `chore` commit, before the feature commits** (one-line change in `.gitignore`); `database/discovery/out/` stays excluded by `.git/info/exclude` and must never be committed. Exact commands are in the hand-over message.
 
