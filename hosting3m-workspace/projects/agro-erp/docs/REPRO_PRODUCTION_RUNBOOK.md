@@ -90,11 +90,19 @@ After step 4 the MCP server says `OBSOLETA` on the two legacy tools **while the 
 
 | Phase 5 tools and QA | md5 |
 |---|---|
+<<<<<<< HEAD
 | `repro-phase5/add_repro_tools.py` | `be04b4c572e9da6d9fdf68424a2f2e29` |
 | `repro-phase5/update_tool_descriptions.py` | `cea76c3b2ac17de1fd9eaeaa12584e90` |
 | `repro-phase5/update_prompts.py` | `2f25efef60c8df2202cb76467a4aab8c` |
 | `repro-phase5/compare_workflow_export.py` | `7071aa8d17c0e6ef1cde545ab16e37ed` |
 | `repro-phase5/check_repro_consistency.js` | `749f50cbc7b72e7dfe937f024c62441e` |
+=======
+| `repro-phase5/add_repro_tools.py` | `69a2bc534bdf8c501130874e4ea14f5e` |
+| `repro-phase5/update_tool_descriptions.py` | `1cd01a0d2a7934484a1d5463167b9f7b` |
+| `repro-phase5/update_prompts.py` | `704271602e6cfc0c43242f3049114c16` |
+| `repro-phase5/compare_workflow_export.py` | `6f81f284607d5d643701b25defa353c4` |
+| `repro-phase5/check_repro_consistency.js` | `78b66693cf462cefd51d5e87b7def16c` |
+>>>>>>> cf45667 (fix(agro-erp): treat n8n node ids as volatile in the workflow export comparison (#882))
 | `repro-phase5/list_lots_diff.py` | `fcf70c0c7fd6d911c347727370327683` |
 | `repro-phase5/qa_fixtures.sql` | `9de4bc89e6b4577748bacb42056ce25e` |
 | `repro-phase5/births_names_check.sql` | `613b1e7e275c4f6ee2613ccafc715775` |
@@ -270,7 +278,7 @@ SQL
 ## Step 4 — n8n: export, diff against the repo, import the MCP server
 The repo export is **assumed equal to the live workflow**. This step proves it before importing anything. **Do steps 4 and 5 in the same window** (see "Why 4 and 5 are one unit").
 
-**4a. Diff the live workflows against the repo files as they were before this change** (⚠️ UNTESTED on the real exports; the script itself was run by the author on the repo files). `compare_workflow_export.py` exits 1 on any real difference, so the script stops:
+**4a. Diff the live workflows against the repo files as they were before this change** (✅ **EXECUTED on production on 2026-10-28:** the three live workflows were exported (MCP Server Cattle, ai/chat cattle, WhatsApp Agent Catlte) and compared with the repo files at `14dd60c`. Result: the same node and connection counts (30/29, 23/21, 42/38) and **every node differs only in the key `id`** — n8n regenerates node ids when a workflow is pasted into the canvas. The script of that run still counted ids as a difference (`DIFFERENT`); this version treats node ids as volatile. ⚠️ The corrected script has been run on synthetic exports and on the repo files with regenerated ids, **not yet on the live exports themselves**.) `compare_workflow_export.py` exits 1 on any real difference, so the script stops:
 ```bash
 set -euo pipefail
 . ./repro_vars.sh
@@ -283,7 +291,7 @@ python3 "$V/repro-phase5/compare_workflow_export.py" live_before_mcp.json repo_b
 python3 "$V/repro-phase5/compare_workflow_export.py" live_before_chat.json repo_before_chat.json
 python3 "$V/repro-phase5/compare_workflow_export.py" live_before_whatsapp.json repo_before_whatsapp.json
 ```
-Each prints `RESULT: IDENTICAL`. **STOP if** any is `DIFFERENT`: production has manual changes (precedent: 2026-10-24, the mortality fix made by hand in the prompts). First incorporate the live change into the repo file, review it, and only then continue. Position-only differences are reported as info and are fine.
+Each prints `RESULT: IDENTICAL (nodes, connections, settings)`, preceded by the line `info: node ids differ in N nodes (volatile)` (on 2026-10-28 N was every node of the workflow: expected). **Any other line is a STOP**, in particular `DIFFERENT`, `ONLY IN A/B`, `NODES WITH DIFFERENT CONTENT`, `CONNECTIONS DIFFER` or `DUPLICATE NODE NAME(S)`; the only lines that are not a STOP are the `nodes:` count line and the other `info:` lines (nodes only moved, top-level `versionId`/`tags`...). `--strict-ids` restores the old behaviour (a node id that differs is `DIFFERENT`). If `DIFFERENT`, production has manual changes (precedent: 2026-10-24, the mortality fix made by hand in the prompts). First incorporate the live change into the repo file, review it, and only then continue. Position-only differences are reported as info and are fine.
 
 **What the live-vs-repo comparison will show after the import:** four EXISTING nodes differ in content — `list_lots` (SQL + description), and `register_birth_event`, `log_palpation_event_batch`, `log_palpation_event` (**toolDescription only**; `add_repro_tools.py` proves it) — plus the 24 new nodes and their connections. Anything else is a surprise: STOP.
 
@@ -303,12 +311,16 @@ The new tools are connected to the MCP trigger but **no agent mentions them yet*
 ```bash
 python3 workflows/09-MCP-Agent-Cattle/v6/repro-phase5/compare_workflow_export.py live_after_mcp.json workflows/09-MCP-Agent-Cattle/v6/v6_MCP_Server_Cattle.json
 ```
-→ `IDENTICAL` (and `Publish` really applied: the editor can leave a saved but unpublished version — the re-export shows it). In the editor the trigger must list 53 tools. The endpoint URL of the agents' `MCP Cattle Management` / `MCP Client` nodes stays `https://n8n.hosting3m.com/mcp/v6/cattle-management` (production) in the repo.
-**STOP if** the import fails, the credential is missing, or the re-export differs. **ROLLBACK of step 4 alone (before step 5 starts):** import `live_before_mcp.json` (the export of step 1) the same way, Publish, re-export and compare it with `live_before_mcp.json` → `IDENTICAL`. The database changes of steps 2-3 stay (they are additive and the old tools still work with them).
+→ `RESULT: IDENTICAL (nodes, connections, settings)` plus the info line `node ids differ in N nodes (volatile)` (**the re-export after the import has new node ids**, so that line is expected; any other line is a STOP) (and `Publish` really applied: the editor can leave a saved but unpublished version — the re-export shows it). In the editor the trigger must list 53 tools. The endpoint URL of the agents' `MCP Cattle Management` / `MCP Client` nodes stays `https://n8n.hosting3m.com/mcp/v6/cattle-management` (production) in the repo.
+**STOP if** the import fails, the credential is missing, or the re-export differs. **ROLLBACK of step 4 alone (before step 5 starts):** import `live_before_mcp.json` (the export of step 1) the same way, Publish, re-export and compare it with `live_before_mcp.json` → `IDENTICAL` (plus the node ids info line). The database changes of steps 2-3 stay (they are additive and the old tools still work with them).
 
 ## Step 5 — n8n: the two agent prompts (right after step 4, same window)
 Import the two agent workflows the same way (4c) from `v6_ai_chat_cattle.json` and `v6_WhatsApp_Agent_Cattle.json`. They differ from the live ones **only** in the `systemMessage` of the node `AI Agent` (proved offline by `check_repro_consistency.js`). Do WhatsApp last. ⚠️ UNTESTED.
+<<<<<<< HEAD
 Verify: re-export both and compare with the repo files (`IDENTICAL`); from the repo, run the offline check (✅ executed by the author on the repo files; **187 passed, 0 failed** at the last run):
+=======
+Verify: re-export both and compare with the repo files (`RESULT: IDENTICAL (nodes, connections, settings)` plus `info: node ids differ in N nodes (volatile)` for each: the re-export has new node ids; any other line is a STOP); from the repo, run the offline check (✅ executed by the author on the repo files; **75 passed, 0 failed** at the last run):
+>>>>>>> cf45667 (fix(agro-erp): treat n8n node ids as volatile in the workflow export comparison (#882))
 ```bash
 set -euo pipefail
 V=workflows/09-MCP-Agent-Cattle/v6
@@ -318,7 +330,7 @@ node "$V/repro-phase5/check_repro_consistency.js"        # exit 0, no FAIL (187 
 ```
 Then one read-only message per channel on company 3, **through the real channel** (never the editor's Chat / Test panel — Rules 6 and 11): "¿Cuántos partos hubo en los últimos 30 días?" → a total.
 **STOP if** the import fails, a re-export differs, or the smoke message answers with a technical error.
-**ROLLBACK of step 5 = rollback of steps 5 AND 4, together.** Import `live_before_chat.json`, `live_before_whatsapp.json` **and `live_before_mcp.json`**, Publish each, re-export each and compare with the saved export (`IDENTICAL`). **The MCP server must NOT stay on the new export:** its legacy tool descriptions say `OBSOLETA` while the previous prompts still tell the agents to use `register_birth_event` and `log_palpation_event_batch`. (The database stays.)
+**ROLLBACK of step 5 = rollback of steps 5 AND 4, together.** Import `live_before_chat.json`, `live_before_whatsapp.json` **and `live_before_mcp.json`**, Publish each, re-export each and compare with the saved export (`IDENTICAL`, plus the node ids info line). **The MCP server must NOT stay on the new export:** its legacy tool descriptions say `OBSOLETA` while the previous prompts still tell the agents to use `register_birth_event` and `log_palpation_event_batch`. (The database stays.)
 
 ## Step 6 — QA on the owner's test company (company 3, never company 5)
 
