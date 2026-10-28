@@ -39,12 +39,12 @@ const REQUIRED_G_WORDS = ['not_examined', 'needs_explicit_result', 'NEEDS_EXPLIC
   'rp_without_registered_birth', 'palpation_code_contradicts_result', 'known_meanings', 'composite_unconfirmed', 'known_pending', 'possible_duplicate', "force='true'",
   'duplicate_skipped', 'S/N-1450-16', 'stale_data', 'date_is_stale_import', 'sire_not_resolved', 'semen_batch_missing', 'can_register', 'nunca digas que un veterinario los confirmó',
   'date_precision', 'list_lots', 'lot_id', 'production_unit_id', '15 meses o 300 kg',
-  'lot_id_resolved', 'production_unit_id_resolved', 'dam_status_warning', 'no se resolvió ningún lote/UPP', 'pregunta primero por el lote/UPP',
+  'lot_id_resolved', 'production_unit_id_resolved', 'dam_status_warning', 'no se resolvió ningún lote/UPP',
   'Interpreta RP, NR, NO APTO y MATRIZ OCUPADA solo como lo devuelve la herramienta (vet_flag, not_examined, unmapped_codes)'];
 
 // phase 5 review: single animal with a vet code goes through the wrapper; legacy nodes are marked obsolete
 const SINGLE_RULE = 'Si el usuario dicta un código (UNE, UTCL1, RP, NR, NO APTO, MATRIZ OCUPADA...), usa log_palpation_with_condition con UN solo elemento en animals_json, aunque sea un solo animal. log_palpation_event es solo para un resultado explícito sin código.';
-const OBSOLETE_PREFIX = { register_birth_event: 'OBSOLETA: no la uses. Usa register_birth_checked.', log_palpation_event_batch: 'OBSOLETA: no la uses. Usa log_palpation_with_condition.' };
+const OBSOLETE_PREFIX = { register_birth_event: 'OBSOLETA: no la uses. Usa register_birth_checked, que NO acepta lot_name ni production_unit_name', log_palpation_event_batch: 'OBSOLETA: no la uses. Usa log_palpation_with_condition.' };
 
 let fails = 0, passes = 0, skips = 0;
 const ok = (label, cond, detail) => {
@@ -173,6 +173,85 @@ for (const n of toolNodes.filter((x) => phaseNames.includes(x.name))) {
 }
 ok('the 24 new tools use no e-mail/tenant parameter other than user_email and tenant_id', setEq([...newToolParams].sort(), ['tenant_id', 'user_email']), [...newToolParams].join(', '));
 
+
+// A5, per tool: the e-mail parameter NAME that A5 gives each tool must be the one its node defines (round 1 of the local QA, F1)
+const emailKeyOf = (n) => {
+  const q = (n.parameters.options && n.parameters.options.queryReplacement) || '';
+  return [...new Set([...q.matchAll(/\$fromAI\(\s*['"]([A-Za-z_]+)['"]/g)].map((m) => m[1]).filter((k) => /email/i.test(k)))];
+};
+for (const ch of Object.keys(AGENTS)) {
+  const a5 = (sys[ch].match(/A5\.[^\n]+/) || [''])[0];
+  const mp = a5.match(/por herramienta: (.+?); TODAS las demás → user_email, incluidas estas 24 herramientas de REPRODUCCIÓN, que solo reciben user_email y tenant_id: ([a-z_, ]+)\./);
+  ok(`${ch}: A5 has the per-tool e-mail parameter map (exceptions + the list of the 24 reproduction tools)`, !!mp);
+  if (!mp) continue;
+  const said = {};
+  for (const seg of mp[1].split(';')) {
+    const m = seg.trim().match(/^(.+?) → ([a-z_]+_email)$/);
+    if (!m) { said['<unparsed: ' + seg.trim() + '>'] = '?'; continue; }
+    for (const t of m[1].split(/ y |, /)) said[t.trim()] = m[2];
+  }
+  const listed24 = mp[2].split(',').map((x) => x.trim()).filter(Boolean);
+  ok(`${ch}: A5 names exactly the 24 new reproduction tools (the nodes of repro-phase1..4)`, setEq(listed24, phaseNames), fmt(diff(listed24, phaseNames)));
+  ok(`${ch}: no tool is both an A5 exception and one of the 24`, listed24.every((t) => !(t in said)));
+  const bad = [], seen = [];
+  for (const n of toolNodes) {
+    if (LEGACY_KEPT_AS_NODE.includes(n.name) || FORBIDDEN_TOOL.includes(n.name)) continue;
+    const keys = emailKeyOf(n);
+    if (keys.length !== 1) { bad.push(`${n.name}: node defines [${keys.join(', ')}]`); continue; }
+    const told = said[n.name] || 'user_email';
+    seen.push(n.name);
+    if (told !== keys[0]) bad.push(`${n.name}: A5 says ${told}, node defines ${keys[0]}`);
+  }
+  ok(`${ch}: for each of the ${seen.length} tools in the dictionary, the e-mail parameter A5 gives is the one the node defines`, bad.length === 0, bad.join('; '));
+  ok(`${ch}: every A5 exception names a tool that exists and defines that parameter`, Object.entries(said).every(([t, k]) => toolNodes.some((n) => n.name === t && emailKeyOf(n)[0] === k)));
+  ok(`${ch}: A5 explains that log_breeding_event and void_event are NOT part of the 24`, a5.includes('log_breeding_event (G9) y void_event NO son de esas 24'));
+}
+
+// round 1 of the local QA (F2-F6): wording of E and G, and the birth node
+const LOTNAME = /lot_name|production_unit_name/g;
+const rbc = toolNodes.find((n) => n.name === 'register_birth_checked');
+const rbcKeys = [...((rbc.parameters.options.queryReplacement).matchAll(/\$fromAI\(\s*['"]([A-Za-z_]+)['"]/g))].map((m) => m[1]);
+ok('register_birth_checked defines lot_id and production_unit_id and NOT lot_name / production_unit_name', rbcKeys.includes('lot_id') && rbcKeys.includes('production_unit_id') && !rbcKeys.some((k) => /_name$/.test(k)), rbcKeys.join(', '));
+ok('list_lots returns lot_id and production_unit_id next to upp / lote', /lot\.id AS lot_id, pu\.id AS production_unit_id/.test(toolNodes.find((n) => n.name === 'list_lots').parameters.query));
+ok('register_birth_checked description: ids from list_lots, never names, notes only dictated, reporta (not confirma), one birth only',
+  ['NUNCA lot_name ni production_unit_name', 'MISMA fila de list_lots', 'notes lleva SOLO palabras que el usuario dictó', "reporta con los datos que trae", 'births_batch_preview'].every((w) => descOf('register_birth_checked').includes(w)));
+const hint = (k) => (rbc.parameters.options.queryReplacement.match(new RegExp("\\$fromAI\\('" + k + "', \"([^\"]*)\"")) || [])[1] || '';
+ok('register_birth_checked lot_id / production_unit_id / notes hints: list_lots column, never a name, only dictated notes',
+  /lot_id de la fila de list_lots/.test(hint('lot_id')) && /NUNCA un nombre/.test(hint('lot_id')) && /production_unit_id de la MISMA fila/.test(hint('production_unit_id')) && /NUNCA un nombre/.test(hint('production_unit_id')) && /SOLO palabras que el usuario dictó/.test(hint('notes')));
+ok('legacy register_birth_event description says register_birth_checked has NO lot_name / production_unit_name', /^OBSOLETA[^\n]*NO acepta lot_name ni production_unit_name/.test(descOf('register_birth_event')));
+// the rules themselves quote the forbidden question ("NUNCA ... preguntes '¿Confirmas?'", "confirmar un gemelo" in force): drop those quotes before looking for a real ask
+const noProhibition = (t) => t.replace(/preguntes "¿Confirmas\?" ni "Sí\/No"/g, '').replace(/confirmar un gemelo/g, '');
+const ASK_CONFIRM = /confirma (SOLO|ÚNICAMENTE|con los)|Confirma ÚNICAMENTE|Al confirmar|¿Confirmas/i;
+ok('NIVEL 2 tools register_birth_checked, log_breeding_event, log_palpation_with_condition, log_empadre_entry: no description reads as "ask the user to confirm"',
+  ['register_birth_checked', 'log_breeding_event', 'log_palpation_with_condition', 'log_empadre_entry'].every((t) => !ASK_CONFIRM.test(descOf(t))));
+for (const ch of Object.keys(AGENTS)) {
+  const G = parts[ch].G, E = parts[ch].E;
+  const g = (id) => section(G, '\n' + id + '. ', '\nG' + (parseInt(id.slice(1), 10) + 1) + '. ') || section(G, '\n' + id + '. ', null);
+  const birthEntry = E.split('\n').find((l) => l.startsWith("- Nacimiento: 'register_birth_checked'")) || '';
+  ok(`${ch}: E birth entry: NIVEL 2 without Sí/No, ids from the SAME list_lots row, NUNCA lot_name / production_unit_name, notes only dictated, reporta`,
+    ['NIVEL 2: ejecútala en cuanto conozcas la madre y el sexo de la cría, sin resumen ni Sí/No', 'MISMA fila de \'list_lots\'', 'NUNCA lot_name ni production_unit_name', 'SOLO palabras que el usuario dictó', 'Reporta ÚNICAMENTE'].every((w) => birthEntry.includes(w)) && !ASK_CONFIRM.test(birthEntry));
+  const lotRefs = (G.match(LOTNAME) || []).length, neverRefs = (G.match(/NUNCA lot_name ni production_unit_name/g) || []).length;
+  ok(`${ch}: in section G, lot_name / production_unit_name appear only inside "NUNCA lot_name ni production_unit_name"`, lotRefs === neverRefs * 2 && neverRefs >= 1, `${lotRefs} mentions, ${neverRefs} prohibitions`);
+  ok(`${ch}: E birth entry mentions lot_name / production_unit_name only inside the prohibition`, (birthEntry.match(LOTNAME) || []).length === 2 * (birthEntry.match(/NUNCA lot_name ni production_unit_name/g) || []).length);
+  const G3 = g('G3'), G4 = g('G4'), G9 = g('G9'), G10 = g('G10');
+  ok(`${ch}: G3 NIVEL 2 rules (execute once dam and sex are known; no summary / ¿Confirmas?; no date, weight, notes questions; do not re-ask; "sin lote"; ask lot ONCE; ambiguity)`,
+    ['ejecútala en cuanto conozcas la madre y el sexo de la cría', 'NUNCA escribas un resumen ni preguntes "¿Confirmas?" ni "Sí/No"', 'No preguntes la fecha (por omisión hoy), el peso ni las notas', 'no vuelvas a preguntar lo que ya dijo',
+     'omite lot_id y production_unit_id y registra, sin más preguntas', 'pregunta por el lote/UPP UNA sola vez', 'deja clara la elección, úsala; si no, pregunta'].every((w) => G3.includes(w)), G3.slice(0, 80));
+  ok(`${ch}: G3 takes both ids from the SAME list_lots row that matches the lot name AND the UPP name, and never passes names`,
+    G3.includes('MISMA fila') && G3.includes('coincide con el nombre del lote Y con el de la UPP') && G3.includes('NUNCA lot_name ni production_unit_name'));
+  ok(`${ch}: G3 and G9 say notes carries only words the user dictated as a note`, G3.includes('NOTES: solo con palabras que el usuario dictó como nota; nunca comentarios tuyos') && G9.includes('notes solo con palabras que el usuario dictó como nota; nunca comentarios tuyos'));
+  ok(`${ch}: G3 "recorded" says REPORTA (no "confirma") and G3 / G9 / E contain no phrase that reads as asking the user to confirm`,
+    G3.includes("'recorded' → REPORTA SOLO") && !ASK_CONFIRM.test(noProhibition(G3)) && !ASK_CONFIRM.test(noProhibition(G9)) && !ASK_CONFIRM.test(noProhibition(E.split('\n').filter((l) => /register_birth_checked|log_breeding_event/.test(l)).join('\n'))));
+  ok(`${ch}: G3 sends two or more births to G4, and G4 forbids repeated register_birth_checked calls and the block-or-one-by-one question`,
+    G3.includes('si el mensaje trae dos o más, sigue SIEMPRE G4') && G4.includes('NUNCA llamadas sueltas repetidas') && G4.includes('births_batch_preview') && G4.includes('"¿Confirmas?"') && G4.includes('No preguntes si lo quiere en bloque o uno por uno'));
+  ok(`${ch}: G9 is NIVEL 2 (no summary, no Sí/No; no date / sire / semen / notes questions) and names registered_by_email`,
+    ['NIVEL 2', 'NUNCA escribas un resumen ni preguntes "¿Confirmas?" ni "Sí/No"', 'No preguntes la fecha (por omisión hoy), el semental, el lote de semen ni las notas', 'registered_by_email, no user_email'].every((w) => G9.includes(w)));
+  const calv = E.split('\n').find((l) => l.startsWith("- 'list_palpation_due'")) || '';
+  const FIVE = ['pregnant_total', 'upcoming_total', 'stale_data_total', 'no_estimate_total', 'later_total'];
+  ok(`${ch}: E list_upcoming_calvings entry and G10 make the model report the five totals and call again with a larger days instead of reusing the output`,
+    FIVE.every((w) => calv.includes(w) && G10.includes(w)) && calv.includes('hasta 300') && G10.includes('hasta 300') && calv.includes('no contestes con la salida anterior') && G10.includes('en vez de contestar con la salida anterior'));
+}
+
 // section G content
 for (const ch of Object.keys(AGENTS)) {
   const miss = REQUIRED_G_WORDS.filter((w) => !parts[ch].G.includes(w));
@@ -181,8 +260,8 @@ for (const ch of Object.keys(AGENTS)) {
   ok(`${ch}: the shared prompt carries no ranch-specific fact about the foreman ("capataz")`, !/capataz/i.test(sys[ch]));
   ok(`${ch}: single-animal-with-a-code rule is in the log_palpation_event dictionary entry AND in G6`,
     parts[ch].E.split('\n').some((l) => l.includes("'log_palpation_event'") && l.includes(SINGLE_RULE)) && parts[ch].G.includes(SINGLE_RULE));
-  ok(`${ch}: B5 says to ask for the lot/UPP first and only omit it when the user does not know / it does not apply`,
-    sys[ch].includes('Pregunta primero por el lote/UPP. Solo si el usuario dice que no sabe o que no aplica, omite lot_id y production_unit_id (la cría hereda los de la madre).'));
+  ok(`${ch}: B5 says to ask for the lot/UPP ONCE, only when not mentioned, and to omit both ids on "sin lote" with no further question`,
+    sys[ch].includes('Pregunta por el lote/UPP UNA sola vez, y solo si el usuario no lo mencionó. Si dice que no sabe, que no aplica o "sin lote", omite lot_id y production_unit_id y registra, sin más preguntas (la cría hereda los de la madre).'));
   ok(`${ch}: get_births_config has no ADMIN / SQL wording in the prompt`,
     !/get_births_config[^\n]{0,160}(ADMIN|SQL)/.test(sys[ch]));
   ok(`${ch}: section G adds no role restriction (no "solo un ADMIN" outside the death / sale authorization)`, !/solo (un )?ADMIN (puede )?(registr|captur)/i.test(parts[ch].G));
@@ -202,6 +281,9 @@ for (const [ch, f] of Object.entries(AGENTS)) {
   ok(`${ch}: "AI Agent Palma" is untouched`, pp === docs[f].nodes.find((n) => n.name === 'AI Agent Palma').parameters.options.systemMessage);
   const pt = prev.nodes.find((n) => n.name === 'AI Agent').parameters.text;
   ok(`${ch}: the "text" input expression of "AI Agent" is untouched`, pt === docs[f].nodes.find((n) => n.name === 'AI Agent').parameters.text);
+  const agentNow = docs[f].nodes.find((n) => n.name === 'AI Agent'), agentPrev = prev.nodes.find((n) => n.name === 'AI Agent');
+  const strip = (n) => { const c = JSON.parse(JSON.stringify(n)); delete c.parameters.options.systemMessage; return JSON.stringify(c); };
+  ok(`${ch}: in the node "AI Agent" ONLY options.systemMessage changed (model, tools wiring, memory and every other parameter identical to ${REF})`, strip(agentNow) === strip(agentPrev));
   const others = prev.nodes.filter((n) => n.name !== 'AI Agent');
   ok(`${ch}: no other node of the workflow changed (${others.length} nodes)`, others.every((n) => JSON.stringify(n) === JSON.stringify(docs[f].nodes.find((x) => x.name === n.name))));
 }

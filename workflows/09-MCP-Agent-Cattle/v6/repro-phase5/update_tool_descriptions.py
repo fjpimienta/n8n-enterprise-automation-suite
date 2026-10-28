@@ -7,7 +7,8 @@ Why: the descriptions written in phases 1-4 predate the owner's decisions (confi
     keep that sentence.
   * three descriptions say an ADMIN changes settings / codes "from the panel": there is no panel, it is SQL.
   * the palpation description must teach the 090 answers (not_examined, needs_explicit_result, vet_flag ...).
-Every replacement must match EXACTLY ONCE (the script aborts otherwise) and nothing but `toolDescription` is touched.
+Every replacement must match EXACTLY ONCE (the script aborts otherwise) and nothing but `toolDescription` is touched (round 1 of the local QA
+also edits the `$fromAI` hint texts of lot_id / production_unit_id / notes of register_birth_checked, see QR_EDITS).
 Idempotent: a second run finds nothing to replace and changes nothing.
 
 Usage (from the v6 folder):  python3 repro-phase5/update_tool_descriptions.py [--check]
@@ -31,11 +32,24 @@ P090 = (' 🛑 Respuestas de la migración 090: (1) renglón con NR SOLO: aparec
 SINGLE_RULE = ('Si el usuario dicta un código (UNE, UTCL1, RP, NR, NO APTO, MATRIZ OCUPADA...), usa log_palpation_with_condition con UN solo elemento '
                'en animals_json, aunque sea un solo animal. log_palpation_event es solo para un resultado explícito sin código.')
 
+# round 1 of the local QA (2026-10-28): register_birth_checked
+BIRTH_LOT_OLD = (' Para asignar lote o UPP usa los campos lot_id y production_unit_id de list_lots, buscando el nombre EXACTO que dio el usuario '
+                 '(nunca los inventes ni se los muestres al usuario); si no dijo ninguno, la cría hereda de la madre.')
+BIRTH_LOT_NEW = (' Para asignar lote o UPP pasa lot_id y production_unit_id tomados de la MISMA fila de list_lots, la que coincide con el nombre del lote Y con el de la UPP '
+                 'que dio el usuario (nunca los inventes ni se los muestres al usuario). NUNCA lot_name ni production_unit_name: esta herramienta no tiene esos parámetros. '
+                 'Si no dijo ninguno o dijo "sin lote", omite lot_id y production_unit_id y la cría hereda de la madre. '
+                 'notes lleva SOLO palabras que el usuario dictó como nota; nunca comentarios tuyos, identificadores ni observaciones sobre el lote.')
+BIRTH_NIVEL2_EXTRA = (' Ejecútala en cuanto conozcas la madre y el sexo de la cría; no preguntes la fecha (por omisión hoy), el peso ni las notas si el usuario no los mencionó, '
+                      'ni vuelvas a preguntar lo que ya dijo. Es para UN parto: con dos o más partos en el mismo mensaje usa births_batch_preview.')
+
 # descriptions to strip entirely (the sentence said an ADMIN changes the births window "desde el panel" / "por SQL": not wanted in the node)
 REMOVE = [
     (4, 'get_births_config', [' Solo un ADMIN la cambia desde el panel; tú no puedes cambiarla.',
                               ' Solo un ADMIN la cambia por SQL (no hay pantalla); tú no puedes cambiarla.']),
 ]
+
+# an edit whose result a LATER edit rewrote counts as applied when the later text is present (key: node name, old text)
+DONE_ALSO = {('register_birth_checked', CONFIRM): (BIRTH_LOT_NEW,)}
 
 # (file phase, node name, old, new)
 EDITS = [
@@ -57,6 +71,20 @@ EDITS = [
      'Estos valores solo los cambia un ADMIN por SQL (no hay pantalla); tú no puedes cambiarlos.'),
     # insertion: the wrapper is also THE tool for one animal with a code (new text CONTAINS the old one, so the "already applied" test is `new in d`)
     (3, 'log_palpation_with_condition', ' 🛑 Respuestas de la migración 090: (1)', ' ' + SINGLE_RULE + ' 🛑 Respuestas de la migración 090: (1)'),
+    # round 1 of the local QA: "confirma" reads as "ask the user to confirm" -> "reporta"; ids from list_lots; never names; notes; one birth
+    (4, 'register_birth_checked', "Si regresa 'recorded', confirma con los datos que trae", "Si regresa 'recorded', reporta con los datos que trae"),
+    (4, 'register_birth_checked', BIRTH_LOT_OLD, BIRTH_LOT_NEW),
+    (4, 'register_birth_checked', NIVEL2, NIVEL2 + BIRTH_NIVEL2_EXTRA),
+]
+
+# (file phase, node name, old, new) inside options.queryReplacement: the hint texts of the $fromAI keys (no double quotes inside them)
+QR_EDITS = [
+    (4, 'register_birth_checked', '$fromAI(\'lot_id\', "UUID del lote, solo si ya lo resolviste. Omite si no."',
+     '$fromAI(\'lot_id\', "UUID del lote: la columna lot_id de la fila de list_lots que coincide con el lote Y la UPP que dio el usuario. NUNCA un nombre de lote. Omite si no hay lote."'),
+    (4, 'register_birth_checked', '$fromAI(\'production_unit_id\', "UUID de la UPP, solo si ya lo resolviste. Omite si no."',
+     '$fromAI(\'production_unit_id\', "UUID de la UPP: la columna production_unit_id de la MISMA fila de list_lots. NUNCA un nombre de UPP. Omite si no hay UPP."'),
+    (4, 'register_birth_checked', '$fromAI(\'notes\', "Notas del usuario. Omite si no hay."',
+     '$fromAI(\'notes\', "SOLO palabras que el usuario dictó como nota. Nunca comentarios tuyos, identificadores ni observaciones sobre el lote. Omite si no dictó ninguna."'),
 ]
 
 
@@ -68,8 +96,8 @@ def main(argv):
         n = [x for x in data[ph]['nodes'] if x['name'] == node]
         assert len(n) == 1, 'node %s not found exactly once in phase %d' % (node, ph)
         d = n[0]['parameters']['toolDescription']
-        if new in d:
-            continue                                     # already applied
+        if new in d or any(m in d for m in DONE_ALSO.get((node, old), ())):
+            continue                                     # already applied (or superseded by a later edit of the same text)
         if old in d:
             assert d.count(old) == 1, 'replacement matches more than once in %s' % node
             pending += 1
@@ -77,6 +105,16 @@ def main(argv):
                 n[0]['parameters']['toolDescription'] = d.replace(old, new)
         else:
             raise SystemExit('ABORT: neither the old nor the new text is in %s (edited by hand?)' % node)
+    for ph, node, old, new in QR_EDITS:
+        n = [x for x in data[ph]['nodes'] if x['name'] == node]
+        assert len(n) == 1, 'node %s not found exactly once in phase %d' % (node, ph)
+        q = n[0]['parameters']['options']['queryReplacement']
+        if new in q:
+            continue
+        assert q.count(old) == 1, 'queryReplacement hint of %s not found exactly once (edited by hand?)' % node
+        pending += 1
+        if not check:
+            n[0]['parameters']['options']['queryReplacement'] = q.replace(old, new)
     for ph, node, candidates in REMOVE:
         n = [x for x in data[ph]['nodes'] if x['name'] == node]
         assert len(n) == 1
