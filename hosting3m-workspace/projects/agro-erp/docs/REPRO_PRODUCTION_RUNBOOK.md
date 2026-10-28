@@ -106,7 +106,7 @@ After step 4 the MCP server says `OBSOLETA` on the two legacy tools **while the 
 ## Step 1 — Full backup, and a copy OFF the VPS
 **STOP if** disk space is short, a dump is empty or cannot be listed, the copy is missing, or its md5 differs. **ROLLBACK:** nothing was changed yet.
 
-**1a. On the VPS** — ⚠️ UNTESTED on production (the `pg_dump` shape was executed on LOCAL in the per-migration rehearsals; the n8n database name `n8n_db` was verified with `pg_database` on the server, the dump command for it is UNTESTED). `df -h` runs first; the dump file names are variables (no glob in any redirect):
+**1a. On the VPS** — ✅ EXECUTED on production on 2026-10-28: the `pg_dump -Fc` of `hosting3m_db` and the `pg_restore --list` check of that dump (1088844 bytes, 1053 TOC entries, 35 GB free at the time). ⚠️ UNTESTED: the `n8n_db` dump command (the name `n8n_db` was verified with `pg_database` on the server) and the rest of the block as a script (size query, the `read` gate, the md5 file). `df -h` runs first; the dump file names are variables (no glob in any redirect):
 ```bash
 set -euo pipefail
 . ./repro_vars.sh

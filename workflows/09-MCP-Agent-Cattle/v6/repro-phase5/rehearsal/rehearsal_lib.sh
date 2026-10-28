@@ -8,6 +8,10 @@
 # also requires: an explicit flag, a non-root user (the runbook runs as root on the VPS), a LOCAL docker socket, and a database that
 # exists only in the LOCAL cluster (n8n_db_prod_clone: the local n8n points at it; see agro-erp/CLAUDE.md, "El n8n de LOCAL no se
 # restaura desde producción"). If the marker is not there the script aborts instead of guessing.
+#
+# The database the run WRITES to is REHEARSAL_DB (default hosting3m_db). The default is REFUSED on purpose: the local hosting3m_db is
+# NOT a clean base (objects of 084-090 survive the daily local refresh, so the state checks find no known state). Create a fresh
+# database restored from a production dump and point REHEARSAL_DB at it (README, "Create the rehearsal database").
 
 REH_HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO="$(git -C "$REH_HERE" rev-parse --show-toplevel)"
@@ -16,8 +20,11 @@ MIG_DIR="$REPO/hosting3m-workspace/projects/agro-erp/database/migrations"
 V6="$REPO/workflows/09-MCP-Agent-Cattle/v6"
 REH_OUT="${REHEARSAL_OUT:-/tmp/rehearsal}"
 LOCAL_CONTAINER="n8n-enterprise-db"
-LOCAL_DB="hosting3m_db"
-LOCAL_P='docker exec -i n8n-enterprise-db psql -U n8n_user -d hosting3m_db -v ON_ERROR_STOP=1'
+REHEARSAL_DB="${REHEARSAL_DB:-hosting3m_db}"
+# the P string of the runbook (production): used only to detect that the runbook's variables block changed
+PRODUCTION_P='docker exec -i n8n-enterprise-db psql -U n8n_user -d hosting3m_db -v ON_ERROR_STOP=1'
+# the P of the rehearsal: built by guard_local AFTER REHEARSAL_DB was validated (empty until then, so nothing can use it by mistake)
+LOCAL_P=""
 MARKER_DB="${REHEARSAL_MARKER_DB:-n8n_db_prod_clone}"
 
 # the migrations of step 2, in order, with the file each one applies (the same table as the runbook)
@@ -31,16 +38,40 @@ refuse() {
 }
 
 # ---------------------------------------------------------------------------------------------------------------------------
-# MANDATORY FIRST ACTION of both scripts. Nothing may run unless every layer passes. Prints the database host and name it found.
+# The name of the database the run writes to. Pure (no docker): returns 0 if it is acceptable, 1 with a message otherwise.
+#   * must match ^hosting3m_[a-z0-9_]+$   (so no space, no semicolon, no quote, nothing that could be read as SQL or as a shell word)
+#   * postgres, template0, template1 and hosting3m_db are rejected by name: hosting3m_db is the local copy, which is NOT a clean base
+# ---------------------------------------------------------------------------------------------------------------------------
+validate_rehearsal_db() {
+  local n="$1"
+  case "$n" in
+    postgres|template0|template1)
+      echo "REHEARSAL_DB='${n}' is a system database" >&2
+      return 1 ;;
+    hosting3m_db)
+      echo "REHEARSAL_DB='hosting3m_db' is the local copy: it is NOT a clean base (objects of 084-090 survive the daily local refresh and the state checks find no known state). Use a fresh database restored from a production dump: see README, 'Create the rehearsal database', and set REHEARSAL_DB (for example hosting3m_rehearsal)" >&2
+      return 1 ;;
+  esac
+  if [[ ! "$n" =~ ^hosting3m_[a-z0-9_]+$ ]]; then
+    echo "REHEARSAL_DB='${n}' does not match ^hosting3m_[a-z0-9_]+\$" >&2
+    return 1
+  fi
+  return 0
+}
+
+# ---------------------------------------------------------------------------------------------------------------------------
+# MANDATORY FIRST ACTION of both scripts. Nothing may run unless every layer passes. Prints the database host and the database it
+# will write to.
 # ---------------------------------------------------------------------------------------------------------------------------
 guard_local() {
-  local flag=0 a endpoint dbname dockerhost marker_count
+  local flag=0 a endpoint dbname dockerhost exists marker_count why
   for a in "$@"; do
     if [ "$a" = "--i-know-this-is-local" ]; then flag=1; fi
   done
-  echo "== LOCAL GUARD: this script writes to the database it points at (migrations, seeds); it must be the LOCAL copy =="
+  echo "== LOCAL GUARD: this script writes to the database it points at (migrations, seeds); it must be a database of the LOCAL container =="
   if [ "$flag" != 1 ]; then refuse "pass --i-know-this-is-local (and only on the developer machine)"; fi
   if [ "$(id -u)" = 0 ]; then refuse "running as root: the production runbook runs as root on the VPS; this rehearsal is for the developer machine"; fi
+  if ! why="$(validate_rehearsal_db "$REHEARSAL_DB" 2>&1)"; then refuse "$why"; fi
   case "${DOCKER_HOST-}" in
     ''|unix://*) ;;
     *) refuse "DOCKER_HOST points at a remote docker daemon: ${DOCKER_HOST}" ;;
@@ -53,16 +84,23 @@ guard_local() {
   if ! docker inspect -f '{{.State.Running}}' "$LOCAL_CONTAINER" 2>/dev/null | grep -qx true; then
     refuse "container ${LOCAL_CONTAINER} is not running on this docker daemon"
   fi
-  dbname="$(docker exec -i "$LOCAL_CONTAINER" psql -U n8n_user -d "$LOCAL_DB" -X -Atc 'SELECT current_database()' 2>/dev/null || true)"
   dockerhost="$(docker info --format '{{.Name}}' 2>/dev/null || echo unknown)"
+  # the name was validated above, so it is safe inside this literal; the check runs on the 'postgres' database of the cluster
+  exists="$(docker exec -i "$LOCAL_CONTAINER" psql -U n8n_user -d postgres -X -Atc "SELECT count(*) FROM pg_database WHERE datname = '${REHEARSAL_DB}'" 2>/dev/null || true)"
+  if [ "$exists" != 1 ]; then
+    refuse "database '${REHEARSAL_DB}' does not exist in container ${LOCAL_CONTAINER}: create it first (README, 'Create the rehearsal database')"
+  fi
+  dbname="$(docker exec -i "$LOCAL_CONTAINER" psql -U n8n_user -d "$REHEARSAL_DB" -X -Atc 'SELECT current_database()' 2>/dev/null || true)"
   echo "database host : container '${LOCAL_CONTAINER}' on docker daemon '${dockerhost}' (${endpoint}); this machine is '$(hostname)'"
   echo "database name : '${dbname}'"
-  if [ "$dbname" != "$LOCAL_DB" ]; then refuse "the database is '${dbname}', expected '${LOCAL_DB}'"; fi
-  marker_count="$(docker exec -i "$LOCAL_CONTAINER" psql -U n8n_user -d "$LOCAL_DB" -X -Atc "SELECT count(*) FROM pg_database WHERE datname = '${MARKER_DB}'" 2>/dev/null || true)"
+  if [ "$dbname" != "$REHEARSAL_DB" ]; then refuse "connected to '${dbname}' instead of '${REHEARSAL_DB}'"; fi
+  marker_count="$(docker exec -i "$LOCAL_CONTAINER" psql -U n8n_user -d postgres -X -Atc "SELECT count(*) FROM pg_database WHERE datname = '${MARKER_DB}'" 2>/dev/null || true)"
   if [ "$marker_count" != 1 ]; then
-    refuse "the local-only marker database '${MARKER_DB}' does not exist in this cluster, so this may NOT be the local copy (set REHEARSAL_MARKER_DB to another database that exists only locally if you know better)"
+    refuse "the local-only marker database '${MARKER_DB}' does not exist in this cluster, so this may NOT be the local container (set REHEARSAL_MARKER_DB to another database that exists only locally if you know better)"
   fi
-  echo "guard passed: flag given, non-root, local docker socket, database ${LOCAL_DB} in container ${LOCAL_CONTAINER}, local-only marker '${MARKER_DB}' present"
+  LOCAL_P="docker exec -i ${LOCAL_CONTAINER} psql -U n8n_user -d ${REHEARSAL_DB} -v ON_ERROR_STOP=1"
+  echo "THIS RUN WRITES TO DATABASE '${REHEARSAL_DB}' in container '${LOCAL_CONTAINER}'"
+  echo "guard passed: flag given, non-root, local docker socket, container ${LOCAL_CONTAINER}, database ${REHEARSAL_DB} (valid name, exists, not hosting3m_db), local-only marker '${MARKER_DB}' present"
 }
 
 # ---------------------------------------------------------------------------------------------------------------------------
@@ -82,8 +120,9 @@ load_vars() {
   extract_vars_block
   # shellcheck disable=SC1091
   . "$REH_OUT/repro_vars.sh"
-  if [ "$P" != "$LOCAL_P" ]; then echo "note: the runbook's P differs from the local one; the local one is used"; fi
-  P="$LOCAL_P"
+  if [ -z "$LOCAL_P" ]; then refuse "guard_local has not run (LOCAL_P is empty)"; fi
+  if [ "$P" != "$PRODUCTION_P" ]; then echo "note: the runbook's P is no longer the production string expected by the rehearsal; check the variables block" >&2; fi
+  P="$LOCAL_P"          # the runbook's P names hosting3m_db; the rehearsal writes to REHEARSAL_DB instead
   CONFIRMED_BY_086="${env_cb:-veterinarios del rancho (interpretacion verbal, nombre pendiente)}"
   STAMP="${env_stamp:-$(date +%F_%H%M%S)}"
   if [ -n "$env_owner" ]; then
@@ -144,7 +183,7 @@ run_step() {
 print_summary() {
   local i fails=0
   echo
-  echo "== SUMMARY (output files in ${REH_OUT}) =="
+  echo "== SUMMARY (database ${REHEARSAL_DB}; output files in ${REH_OUT}) =="
   printf '%-3s %-42s %-6s\n' NN STEP RESULT
   for i in "${!STEP_LABELS[@]}"; do
     printf '%02d  %-42s %-6s\n' "$((i + 1))" "${STEP_LABELS[$i]}" "${STEP_RESULTS[$i]}"
@@ -231,6 +270,6 @@ state_before_any() { # MIG: the state before applying is 'before' (pristine) or 
     printf '%s\n' "$out2"; echo "BASE_STATE=rolled_back"; return 0
   fi
   printf '%s\n--- and with expect=rolled_back:\n%s\n' "$out" "$out2"
-  echo "STOP: ${mig} is neither in the 'before' nor in the 'rolled_back' state (already applied?). Restore the local copy (the 07:00 restore) or run rehearse_local_rollback.sh first."
+  echo "STOP: ${mig} is neither in the 'before' nor in the 'rolled_back' state (already applied?). Use a fresh database restored from a production dump (README, 'Create the rehearsal database') or, if only this rehearsal applied it, run rehearse_local_rollback.sh first."
   return 1
 }

@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 # rehearse_local.sh — LOCAL rehearsal of docs/REPRO_PRODUCTION_RUNBOOK.md, steps 2 and 3, plus the fixtures dry run and the list_lots diff.
 #
-# It writes to the LOCAL database (applies migrations 084-090 and the two seeds). It NEVER touches the VPS, production or n8n.
-# Usage:   bash rehearse_local.sh --i-know-this-is-local
-# Env:     CONFIRMED_BY_086   confirmed_by of the 086 seed (default: veterinarios del rancho (interpretacion verbal, nombre pendiente))
+# It writes to the database named by REHEARSAL_DB in the LOCAL container (applies migrations 084-090 and the two seeds). It NEVER touches
+# the VPS, production or n8n. Use a FRESH database restored from a production dump (README, "Create the rehearsal database"):
+# the local hosting3m_db is not a clean base and is refused.
+# Usage:   REHEARSAL_DB=hosting3m_rehearsal bash rehearse_local.sh --i-know-this-is-local
+# Env:     REHEARSAL_DB       the database to write to (^hosting3m_[a-z0-9_]+$, must exist; hosting3m_db and system databases are refused)
+#          CONFIRMED_BY_086   confirmed_by of the 086 seed (default: veterinarios del rancho (interpretacion verbal, nombre pendiente))
 #          OWNER_EMAIL        a member of company 5 (default: discovered read-only from the local database; it is never printed)
 #          STAMP              suffix of the folder created inside the container (default: date and time)
-# Undo:    bash rehearse_local_rollback.sh --i-know-this-is-local
+# Undo:    REHEARSAL_DB=hosting3m_rehearsal bash rehearse_local_rollback.sh --i-know-this-is-local
 # Nothing here has been run by its author: the first real run is yours (UNTESTED).
 set -euo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/rehearsal_lib.sh"
@@ -150,6 +153,6 @@ list_lots_diff() {
 run_step list_lots_diff list_lots_diff
 
 echo
-echo "All steps passed. The local database now has migrations 084-090 and both seeds applied."
-echo "To leave it as it was:  bash rehearse_local_rollback.sh --i-know-this-is-local"
+echo "All steps passed. Database ${REHEARSAL_DB} now has migrations 084-090 and both seeds applied."
+echo "To undo:  REHEARSAL_DB=${REHEARSAL_DB} bash rehearse_local_rollback.sh --i-know-this-is-local"
 # (g) the summary table is printed by the EXIT trap

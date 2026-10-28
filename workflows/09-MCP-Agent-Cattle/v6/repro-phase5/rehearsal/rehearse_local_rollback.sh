@@ -2,12 +2,14 @@
 # rehearse_local_rollback.sh — the reverse sequence of rehearse_local.sh, to leave the LOCAL database as it was:
 #   seed undos (090 first, then 086), then the rollbacks 090, 088, 087, 086, 085, 084, each checked with expect=rolled_back.
 #
-# Same guard as rehearse_local.sh (it refuses to run unless the database is the local copy and --i-know-this-is-local is given).
+# Same guard as rehearse_local.sh (it refuses to run unless --i-know-this-is-local is given and REHEARSAL_DB names an existing,
+# valid rehearsal database of the local container; hosting3m_db itself is refused).
 # A migration that is not applied (for example because the rehearsal stopped half way) is SKIPPED, not forced: the point is to end in
 # a consistent state wherever the rehearsal stopped. Nothing is dropped or deleted: the rollbacks of 084-090 keep their tables,
 # columns and helpers BY DESIGN (see each NNN_rollback.sql), so "as it was" means "functionally as before", not "schema identical".
-# A full reset of the local copy is the daily 07:00 restore from production.
-# Usage:   bash rehearse_local_rollback.sh --i-know-this-is-local
+# The local copy (hosting3m_db) is NOT a clean base and the daily local refresh does not wipe everything, so a full reset means a
+# FRESH database restored from a production dump (README, "Create the rehearsal database").
+# Usage:   REHEARSAL_DB=hosting3m_rehearsal bash rehearse_local_rollback.sh --i-know-this-is-local
 # Nothing here has been run by its author: the first real run is yours (UNTESTED).
 set -euo pipefail
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/rehearsal_lib.sh"
@@ -83,6 +85,6 @@ for mig in 090 088 087 086 085 084; do
 done
 
 echo
-echo "Rollback finished. The local database is back to the pre-rehearsal behaviour (objects kept by design; the 07:00 restore resets everything)."
-echo "You can run rehearse_local.sh again: it accepts the 'rolled_back' state as its starting point."
+echo "Rollback finished on database ${REHEARSAL_DB}: back to the pre-rehearsal behaviour (objects are kept by design)."
+echo "You can run rehearse_local.sh again on it: it accepts the 'rolled_back' state as its starting point; for a clean start create a new database from a production dump."
 # the summary table is printed by the EXIT trap
