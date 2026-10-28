@@ -12,7 +12,7 @@ Production order: **084 → 085 → 086 → 087 → 088 → (089 any time after 
 
 ⚠️ **The seed is part of the rollout, not an extra, and the order matters.** Without the meanings, a company whose pending codes were registered by the 086 seed (`RP`, `NR`, `NO APTO`, `MATRIZ OCUPADA`, `UTC2`) accepts a
 bare `NR` / `RP` / `NO APTO` as an inferred VACÍA exactly as 086 did (the defect this phase fixes; `MATRIZ OCUPADA` is fixed by 090 itself). Decided by the owner:
-- **LOCAL:** the 090 seed runs **right after 090** (the LOCAL copy already has the 086 seed; it is restored from production every day at 07:00, so re-run it after a restore).
+- **LOCAL:** the 090 seed runs **right after 090** (the LOCAL copy may already have the 086 seed; a local refresh may or may not remove the seed rows (inferred from three observations on 2026-10-28, not documented behaviour of the refresh tool), so check with the verify SELECT of `docs/REPRO_PRODUCTION_RUNBOOK.md`, Step 3, before and after, and re-run a seed only if its rows are missing).
 - **Production (the phase 5 rollout runbook):** the **086 seed and the 090 seed run back to back, BEFORE the palpation tools are connected to the agents**, so no agent can ever call the tool while the codes are pending without their meaning.
 - The 090 seed is always run with `-v confirmed_by='capataz (sin confirmacion veterinaria)'`: the foreman confirmed these meanings, not a veterinarian. The 086 seed (UNE, UTCL1-3) keeps its own `confirmed_by` (the veterinarians').
 
@@ -156,7 +156,7 @@ database error; undo the seed first if you want the meanings gone.)
 
 Same shape as `088_RUNBOOK.md` Part 1b with `/tmp/m090`: 084 – 088 first (skip each one already applied), then `090_state_check.sql -v expect=before`, the dry run, the apply, `expect=applied`, the `diff`, the seed
 (dry run, then apply), the rollback, `expect=rolled_back`, the re-apply and `expect=applied`. The `FINGERPRINT` lines must be identical at every step; the `PHASE3B_ROWS` line must be identical after rollback + re-apply.
-After the seed on LOCAL, try the three imported codes of tenant 5 **through the read tools only** (the smoke test above). The LOCAL copy is restored from production every day at 07:00, so the seed has to be re-run after a restore.
+After the seed on LOCAL, try the three imported codes of tenant 5 **through the read tools only** (the smoke test above). A local refresh may or may not remove the seed rows (inferred from three observations on 2026-10-28, not documented behaviour of the refresh tool; see `workflows/09-MCP-Agent-Cattle/v6/repro-phase5/rehearsal/README.md`, "Evidence"): check with the verify SELECT of `docs/REPRO_PRODUCTION_RUNBOOK.md`, Step 3, and re-run the seed only if the rows are missing.
 
 ⚠️ After 090 the older state checks (`086_state_check.sql`, `088_state_check.sql`) report a different `phase3_palpation_functions` fingerprint: expected, those are the 7 functions 090 replaces. Use `090_state_check.sql` from here on.
 

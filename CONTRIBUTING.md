@@ -23,7 +23,7 @@ npm install
 ```
 
 El espejo local de la base de datos (`n8n-enterprise-db`) se restaura automáticamente
-todos los días desde el VPS vía `~/scripts/backup_postgres_vps_to_local.sh`. **Antes de
+todos los días desde el VPS vía `~/scripts/backup_postgres_vps_to_local.sh` (no deja una base limpia de forma fiable: puede conservar objetos que el volcado no contiene; inferido de tres observaciones del 2026-10-28, no es un comportamiento documentado de la herramienta; para una base limpia ver `workflows/09-MCP-Agent-Cattle/v6/repro-phase5/rehearsal/README.md`). **Antes de
 proponer cualquier cambio de esquema, valida contra ese clon local** — `schema.sql` y los
 seeds versionados en el repo se han desactualizado respecto a producción más de una vez.
 No los uses como única fuente de verdad.

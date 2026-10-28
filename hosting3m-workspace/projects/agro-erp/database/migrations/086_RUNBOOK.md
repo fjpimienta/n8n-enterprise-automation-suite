@@ -57,7 +57,7 @@ palpations** (the import-date test counts them): use a schema-only copy, as belo
 > The commands below were **reconstructed from the description of the 084 run** (schema-only dump into a new database, copy
 > `companys` and two users), the same as in `085_RUNBOOK.md`. Adjust the container / database names if yours differ.
 
-1. **Create the throwaway database with the schema only** (from the LOCAL `hosting3m_db`, which is the daily copy of production):
+1. **Create the throwaway database with the schema only** (from the LOCAL `hosting3m_db`, the daily copy of production; it can hold leftover objects of 084-090 that are absent from the dump, so a schema-only copy of it may not be a clean base: prefer a fresh base from a production dump, see `workflows/09-MCP-Agent-Cattle/v6/repro-phase5/rehearsal/README.md`, "Evidence"):
 
    ```bash
    docker exec n8n-enterprise-db createdb -U n8n_user hosting3m_test086
@@ -185,7 +185,7 @@ the owner (with a backup first); this runbook never does it.
 
 ## Part 1b. LOCAL rehearsal on a copy with data (before production)
 
-On the LOCAL `hosting3m_db` (daily restored from production, so it has real data). 086 needs 084 and 085 there too:
+On the LOCAL `hosting3m_db` (it has real data but is NOT a reliable clean base: see the note below). 086 needs 084 and 085 there too:
 
 ```bash
 P='docker exec -i n8n-enterprise-db psql -U n8n_user -d hosting3m_db -v ON_ERROR_STOP=1'
@@ -209,7 +209,7 @@ $P -v expect=applied -f /tmp/m086/086_state_check.sql
 ```
 
 Then rehearse the **seed** on the same copy (see Part 4) and run the read-only smoke test of Part 1 step 7 against real data
-(tenant 5 exists in the LOCAL copy). The daily LOCAL restore (07:00) wipes what you applied there; that is expected.
+(tenant 5 exists in the LOCAL copy). The daily local refresh does **not** reliably wipe what you applied there: it leaves objects that are absent from the production dump (new functions and tables) and restores tables and replaced procedures that are in it (inferred from three observations on 2026-10-28, not documented behaviour of the refresh tool; see `workflows/09-MCP-Agent-Cattle/v6/repro-phase5/rehearsal/README.md`, "Evidence"). Use a fresh database restored from a production dump, or the rollback scripts.
 
 ## Part 2. n8n (`v6/MCP Server Cattle`) — only if Part 1 state check is `applied`
 

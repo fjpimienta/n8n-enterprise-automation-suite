@@ -64,7 +64,7 @@ if their `T087` fixtures already exist (the tests also create a production unit,
 > The commands below are the same **reconstructed** ones as in `085_RUNBOOK.md` / `086_RUNBOOK.md` (schema-only dump into a new database,
 > copy `companys` and two users); replace them with the exact commands you use if they differ.
 
-1. **Create the throwaway database with the schema only** (from the LOCAL `hosting3m_db`, the daily copy of production):
+1. **Create the throwaway database with the schema only** (from the LOCAL `hosting3m_db`, the daily copy of production; it can hold leftover objects of 084-090 that are absent from the dump, so a schema-only copy of it may not be a clean base: prefer a fresh base from a production dump, see `workflows/09-MCP-Agent-Cattle/v6/repro-phase5/rehearsal/README.md`, "Evidence"):
 
    ```bash
    docker exec n8n-enterprise-db createdb -U n8n_user hosting3m_test087
@@ -204,7 +204,7 @@ and `birth_events.reported_by_email`, the tables and every row stay. Re-apply is
 
 ## Part 1b. LOCAL rehearsal on a copy with data (before production)
 
-On the LOCAL `hosting3m_db` (daily restored from production, so it has the verified body). 087 needs 084 and 085 there too:
+On the LOCAL `hosting3m_db` (it should hold the verified body, but it is NOT a reliable clean base: see the note below; the md5 guard of 087 tells you). 087 needs 084 and 085 there too:
 
 ```bash
 P='docker exec -i n8n-enterprise-db psql -U n8n_user -d hosting3m_db -v ON_ERROR_STOP=1'
@@ -222,7 +222,7 @@ $P -v apply=true -f /tmp/m087/087_repro_births.sql
 $P -v expect=applied -f /tmp/m087/087_state_check.sql
 ```
 
-The daily LOCAL restore (07:00) wipes what you applied there; that is expected.
+The daily local refresh does **not** reliably wipe what you applied there: it leaves objects that are absent from the production dump (new functions and tables) and restores tables and replaced procedures that are in it (inferred from three observations on 2026-10-28, not documented behaviour of the refresh tool; see `workflows/09-MCP-Agent-Cattle/v6/repro-phase5/rehearsal/README.md`, "Evidence"). Use a fresh database restored from a production dump, or the rollback scripts.
 
 ## Part 2. n8n (`v6/MCP Server Cattle`) — only if Part 1 state check is `applied`
 
