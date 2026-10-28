@@ -99,3 +99,14 @@ SELECT public.sp_repro_list_unmapped_uterine_codes($1::text, $2::text, $3::text)
   s($fromAI('limit', "Máximo de códigos (por omisión 100, tope 200).", 'string', null))
 ]; })() }}
 ```
+
+## Después de la migración 090 (significado de códigos del capataz) — sin cambios en los nodos
+
+Los 4 nodos **no se editan**: la 090 reemplaza los cuerpos de las funciones SQL (mismo nombre y firma) y solo **agrega llaves** a sus respuestas. Lo que el agente (Fase 5) debe aprender a relatar:
+
+- `log_palpation_with_condition`: cada renglón de `results` trae `line_status` (`recorded` / `duplicate_skipped`); `not_examined` y `not_examined_lines` (renglones con **NR solo**: se validaron pero **no se guardó nada**, no es un error); `rp_without_registered_birth` (renglones **RP** de animales sin parto registrado cerca de la fecha: avisar que el parto pudo no capturarse); `vet_flag` (`POSTPARTUM` / `UNFIT`). Un renglón con solo un código (**RP**, **NO APTO**, **UTC2**, **UNE**, **UTCL1-3**… sin decir VACÍA ni PREÑADA) sobre un animal **PREÑADA** se rechaza con `NEEDS_EXPLICIT_RESULT` (`line_status: needs_explicit_result`): el agente debe pedir al usuario que lo repita diciendo explícitamente el resultado ("VACÍA RP", "PREÑADA UNE"); nunca lo reintenta por su cuenta.
+- **"Matriz ocupada" es PREÑADA** (frase fija para toda empresa): el agente copia `raw_diagnosis` tal cual, igual que antes.
+- `list_palpation_due`, `list_upcoming_calvings` y `get_dam_reproductive_history`: `last_palpation_code` / `last_palpation_vet_flag` (y, en el historial, `uterine_code`, `vet_flag`, `code_contradicts_result`, `quality_flags.palpation_code_contradicts_result`). Son informativos; **no corrigen nada**.
+- `list_unmapped_uterine_codes`: `known_meanings` (ya no son desconocidos), `composite_unconfirmed` (NR junto a otro código, p. ej. `UNE/NR`: significado sin confirmar) y `meanings_configured` (quién confirmó cada significado: el capataz, no un veterinario).
+
+⚠️ Los significados de NR, RP, NO APTO y "matriz ocupada" los confirmó el **capataz**, no un veterinario; el agente no debe presentarlos como diagnóstico veterinario.
