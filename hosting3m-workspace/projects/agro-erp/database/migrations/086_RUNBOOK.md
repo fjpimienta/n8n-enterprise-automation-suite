@@ -148,11 +148,10 @@ on your local machine (there `/root` does not exist or is not yours, and a LOCAL
 2. **State before** was taken in Part 0 (`/root/086_state_before.txt`, must end with `086 state check (before): OK`). Keep the `FINGERPRINT` lines.
 3. **Dry run** (rolls back): `$P -f /tmp/m086/086_repro_palpation.sql > /root/086_dryrun.txt 2>&1` → `086: OK` and `DRY RUN`.
 4. **Tests ran on the throwaway database** (section above), never here.
-5. **Apply** (single transaction, `ON_ERROR_STOP`; the file also opens / commits its own transaction, so psql may print a harmless
-   *"there is already a transaction in progress"* warning):
+5. **Apply** (the repo convention: `-v apply=true -f FILE`, **no `--single-transaction`**; each file owns its `BEGIN` ... `COMMIT` and `ON_ERROR_STOP` stops it at the first error before the `COMMIT`, so nothing is left half-applied; the flag would only add the warnings *"there is already a transaction in progress"* / *"there is no transaction in progress"*):
 
    ```bash
-   $P --single-transaction -v apply=true -f /tmp/m086/086_repro_palpation.sql > /root/086_apply.txt 2>&1
+   $P -v apply=true -f /tmp/m086/086_repro_palpation.sql > /root/086_apply.txt 2>&1
    tail -5 /root/086_apply.txt     # expect: 086: OK  and  *** 086 COMMITTED ***
    ```
 
@@ -178,7 +177,7 @@ on your local machine (there `/root` does not exist or is not yours, and a LOCAL
    "Rancho El Palomar", `rfid_siniiga` `9999…`): it changes `current_status` through the existing procedure and the details are
    append-only (a test palpation cannot be deleted, only left as test data).
 
-**Rollback:** `$P --single-transaction -v apply=true -f /tmp/m086/086_rollback.sql > /root/086_rollback.txt 2>&1`, then
+**Rollback:** `$P -v apply=true -f /tmp/m086/086_rollback.sql > /root/086_rollback.txt 2>&1`, then
 `-v expect=rolled_back` state check. It drops nothing: the 5 procedures answer `disabled`; the tables **and any rows already recorded stay**
 (the details are the only copy of what staff reported). The existing palpation tools keep working throughout. Re-apply is the same
 command as step 5 (`CREATE OR REPLACE` / `IF NOT EXISTS`) and keeps the rows. Removing the tables would be a separate, explicit decision of
@@ -193,19 +192,19 @@ P='docker exec -i n8n-enterprise-db psql -U n8n_user -d hosting3m_db -v ON_ERROR
 docker exec n8n-enterprise-db rm -rf /tmp/m086 && docker cp hosting3m-workspace/projects/agro-erp/database/migrations n8n-enterprise-db:/tmp/m086
 # 084 and 085 first (skip each one that is already applied: its state check says so)
 $P -v expect=before  -f /tmp/m086/084_state_check.sql
-$P --single-transaction -v apply=true -f /tmp/m086/084_repro_births_age.sql
+$P -v apply=true -f /tmp/m086/084_repro_births_age.sql
 $P -v expect=before  -f /tmp/m086/085_state_check.sql
-$P --single-transaction -v apply=true -f /tmp/m086/085_repro_empadre.sql
+$P -v apply=true -f /tmp/m086/085_repro_empadre.sql
 # then 086
 $P -v expect=before  -f /tmp/m086/086_state_check.sql > 086_local_before.txt 2>&1
 $P -f /tmp/m086/086_repro_palpation.sql                                   # dry run
-$P --single-transaction -v apply=true -f /tmp/m086/086_repro_palpation.sql
+$P -v apply=true -f /tmp/m086/086_repro_palpation.sql
 $P -v expect=applied -f /tmp/m086/086_state_check.sql > 086_local_after.txt 2>&1
 diff 086_local_before.txt 086_local_after.txt                           # only NOTICE / OK / PHASE3_ROWS lines
 # rollback rehearsal, then re-apply (rows must survive: compare the PHASE3_ROWS line)
-$P --single-transaction -v apply=true -f /tmp/m086/086_rollback.sql
+$P -v apply=true -f /tmp/m086/086_rollback.sql
 $P -v expect=rolled_back -f /tmp/m086/086_state_check.sql
-$P --single-transaction -v apply=true -f /tmp/m086/086_repro_palpation.sql
+$P -v apply=true -f /tmp/m086/086_repro_palpation.sql
 $P -v expect=applied -f /tmp/m086/086_state_check.sql
 ```
 
@@ -238,7 +237,7 @@ run unless `-v apply=true`. `confirmed_by` records who confirmed the mapping wit
 ```bash
 # in the container, from the folder that holds the files
 $P -v confirmed_by='<owner email>' -f /tmp/m086/086_seed_tenant5_uterine_codes.sql                   # dry run: shows BEFORE / AFTER
-$P --single-transaction -v confirmed_by='<owner email>' -v apply=true -f /tmp/m086/086_seed_tenant5_uterine_codes.sql
+$P -v confirmed_by='<owner email>' -v apply=true -f /tmp/m086/086_seed_tenant5_uterine_codes.sql
 $P -c "SELECT code, repro_condition, source, confirmed_by FROM repro_condition_codes WHERE id_company = 5 ORDER BY code;"   # 9 rows (5 with a NULL condition)
 ```
 

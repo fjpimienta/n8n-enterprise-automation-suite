@@ -51,11 +51,10 @@ Nothing in this runbook is run by the assistant. Production is touched only by t
 4. **Dry run** (rolls back): `$P -f /tmp/m084/084_repro_births_age.sql > /root/084_dryrun.txt 2>&1` → `084: OK` and `DRY RUN`.
 5. **Tests — LOCAL or a throwaway copy only, never production** (they insert fixtures and roll back; they refuse to run if
    `T084` fixtures or an `electronic_rfid = ''` already exist): `…/084_tests.sql` → `passed | failed | total` with `failed = 0`.
-6. **Apply** (single transaction, `ON_ERROR_STOP`; the file also opens/commits its own transaction, so psql may print a harmless
-   *"there is already a transaction in progress"* warning):
+6. **Apply** (the repo convention: `-v apply=true -f FILE`, **no `--single-transaction`**; each file owns its `BEGIN` ... `COMMIT` and `ON_ERROR_STOP` stops it at the first error before the `COMMIT`, so nothing is left half-applied; the flag would only add the warnings *"there is already a transaction in progress"* / *"there is no transaction in progress"*):
 
    ```bash
-   $P --single-transaction -v apply=true -f /tmp/m084/084_repro_births_age.sql > /root/084_apply.txt 2>&1
+   $P -v apply=true -f /tmp/m084/084_repro_births_age.sql > /root/084_apply.txt 2>&1
    tail -5 /root/084_apply.txt     # expect: 084: OK  and  *** 084 COMMITTED ***
    ```
 
@@ -70,7 +69,7 @@ Nothing in this runbook is run by the assistant. Production is touched only by t
 
    and, from a user of another company, `SELECT sp_repro_list_births('5','<other company user>')` must **raise** `P0001`.
 
-**Rollback:** `$P --single-transaction -v apply=true -f /tmp/m084/084_rollback.sql > /root/084_rollback.txt 2>&1`, then
+**Rollback:** `$P -v apply=true -f /tmp/m084/084_rollback.sql > /root/084_rollback.txt 2>&1`, then
 `-v expect=rolled_back` state check. Re-apply is the same command as step 6 (idempotent, `CREATE OR REPLACE`).
 
 ## Part 2. n8n (`v6/MCP Server Cattle`) — only if Part 1 state check is `applied`

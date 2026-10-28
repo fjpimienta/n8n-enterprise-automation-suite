@@ -12,8 +12,9 @@
 --   * 2 production units (QA5R<run> UPP Norte / UPP Sur) and 4 lots: "QA5R<run> Lote Maternidad" (Norte), "QA5R<run> Lote Repetido" (in BOTH
 --     UPPs, to test a name repeated across production units), "QA5R<run> Lote Sur" (Sur);
 --   * 38 animals (dams, a synthetic S/N pair, a PREÑADA stale-calving cow, palpation animals, bulls, heifers ...); see the output table.
---     The two S/N animals share a fire number and carry rfid_siniiga = 'S/N-<numero_fuego>-<n>' (the real pattern of the local data:
---     rfid_siniiga is NOT NULL and UNIQUE, so a NULL tag is impossible). Checked by reading the repo: cattle_livestock_rfid_siniiga_key and
+--     The two S/N animals share a fire number and carry rfid_siniiga = 'S/N-<numero_fuego>-<n>' (the real pattern: on production
+--     rfid_siniiga is NULLABLE and UNIQUE (cattle_livestock_rfid_siniiga_key); 644 rows there: 24 NULL, 206 'S/N-%'. The stale
+--     database/schema.sql in the repo says NOT NULL: do not trust it, Rule 7). From the repo: cattle_livestock_rfid_siniiga_key and
 --     cattle_livestock_electronic_rfid_key are the only unique constraints (numero_fuego may repeat on purpose: vw_duplicate_fire_numbers);
 --     trg_cattle_livestock_identifier_history is AFTER UPDATE only, so inserting writes no history row (the weight trigger later UPDATEs
 --     current_weight_kg, which changes no identifier and so also writes none);
@@ -24,9 +25,12 @@
 -- database; running them against company 3 of production is what is UNTESTED.
 --
 -- Usage (dry run is the default; each run number 1-9 creates a NEW set of fixtures; the tags of run N are 9999N#####):
---   psql -v ON_ERROR_STOP=1 -v run=1 -f qa_fixtures.sql                 -> dry run (rolled back; prints the table of identifiers)
---   psql -v ON_ERROR_STOP=1 -v run=1 -v apply=true -f qa_fixtures.sql   -> commit
--- The QA documents (REPRO_QA_SCRIPT.md) use run 1. For another run replace the 5th digit of every tag and the "R1" in names with the run.
+--   psql -v ON_ERROR_STOP=1 -v run=2 -f qa_fixtures.sql                 -> dry run (rolled back; prints the table of identifiers)
+--   psql -v ON_ERROR_STOP=1 -v run=2 -v apply=true -f qa_fixtures.sql   -> commit
+-- The QA documents (REPRO_QA_SCRIPT.md) use run 2. For another run replace the 5th digit of every tag and the "R2" in names with the run.
+-- WHY NOT RUN 1: company 3 (in production and in the local copy) already holds 6 older test calves with rfid_siniiga 9999100001 .. 9999100006
+-- (category BECERRO, status VENDIDO, tenant 3). They fall inside the run-1 tag range and rfid_siniiga is UNIQUE, so run 1 can never be applied there;
+-- the abort below says so. Run 2 uses 9999200001 .. 9999200038 (and S/N-QA5R2-1450-1 / -2).
 
 \set ON_ERROR_STOP on
 \if :{?apply}
@@ -46,6 +50,9 @@ DECLARE
     v_run  integer := current_setting('qa5.run')::integer;
     v_co   integer := 3;                 -- the test company; this file has no other company anywhere
     v_name text;
+    v_n       bigint;
+    v_tenants text;
+    v_list    text;
 BEGIN
     IF v_run NOT BETWEEN 1 AND 9 THEN RAISE EXCEPTION 'ABORT: run must be 1..9'; END IF;
     SELECT company_name INTO v_name FROM public.companys WHERE id_company = v_co AND is_active IS TRUE;
@@ -58,10 +65,19 @@ BEGIN
        OR NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'repro_condition_codes' AND column_name = 'meaning') THEN
         RAISE EXCEPTION 'ABORT: migrations 084 - 088 and 090 must be applied here first.';
     END IF;
-    -- rfid_siniiga is UNIQUE across ALL companies: check the whole table, not only company 3
-    IF EXISTS (SELECT 1 FROM public.cattle_livestock WHERE (length(rfid_siniiga) = 10 AND rfid_siniiga >= '9999' || v_run || '00001' AND rfid_siniiga <= '9999' || v_run || '00099')
-                                                           OR rfid_siniiga IN ('S/N-QA5R' || v_run || '-1450-1', 'S/N-QA5R' || v_run || '-1450-2')) THEN
-        RAISE EXCEPTION 'ABORT: the fixtures of run % already exist in company 3. Use another -v run=N.', v_run;
+    -- rfid_siniiga is UNIQUE across ALL companies: this scans the WHOLE table (no tenant filter), not only company 3. It counts every animal whose tag is
+    -- 10 characters long and lies in the run's string range 9999<run>00001 .. 9999<run>00099, or is one of the two synthetic S/N tags of the run.
+    -- The message reports what it really found; this block writes nothing and the rest of the file has not run yet when it aborts.
+    SELECT count(*), string_agg(DISTINCT tenant_id::text, ', ' ORDER BY tenant_id::text)
+      INTO v_n, v_tenants
+      FROM public.cattle_livestock WHERE (length(rfid_siniiga) = 10 AND rfid_siniiga >= '9999' || v_run || '00001' AND rfid_siniiga <= '9999' || v_run || '00099')
+                                                           OR rfid_siniiga IN ('S/N-QA5R' || v_run || '-1450-1', 'S/N-QA5R' || v_run || '-1450-2');
+    IF v_n > 0 THEN
+        SELECT string_agg(q.t, ', ' ORDER BY q.t) INTO v_list
+          FROM (SELECT rfid_siniiga || ' (tenant ' || tenant_id || ')' AS t FROM public.cattle_livestock WHERE (length(rfid_siniiga) = 10 AND rfid_siniiga >= '9999' || v_run || '00001' AND rfid_siniiga <= '9999' || v_run || '00099')
+                                                           OR rfid_siniiga IN ('S/N-QA5R' || v_run || '-1450-1', 'S/N-QA5R' || v_run || '-1450-2')
+                 ORDER BY rfid_siniiga LIMIT 5) q;
+        RAISE EXCEPTION 'ABORT: % tag(s) of the QA range of run % already exist in cattle_livestock (rfid_siniiga is UNIQUE across ALL companies); found in tenant_id: %; first (up to 5): %. They may be older test animals, not fixtures of this kit. Nothing was written and the rest of this file did not run. Use another -v run=N.', v_n, v_run, v_tenants, v_list;
     END IF;
 END $$;
 
@@ -128,7 +144,7 @@ BEGIN
     (37, 'X2', 'VACA', 'ACTIVO', 'QA5R{r}-X2', NULL::text),
     (38, 'P9', 'VACA', 'ACTIVO', 'QA5R{r}-P9', NULL::text)
     ) AS a (idx, k, category, status, fuego, rfid_txt) ORDER BY idx LOOP
-        -- rfid_siniiga is NOT NULL and globally UNIQUE: the numeric QA tag, or the real synthetic pattern 'S/N-<numero_fuego>-<n>' for the S/N animals
+        -- rfid_siniiga is nullable but globally UNIQUE: the numeric QA tag, or the real synthetic pattern 'S/N-<numero_fuego>-<n>' for the S/N animals
         v_tag := CASE WHEN r.rfid_txt IS NULL THEN '9999' || v_run || lpad(r.idx::text, 5, '0') ELSE replace(r.rfid_txt, '{r}', v_run::text) END;
         INSERT INTO public.cattle_livestock (tenant_id, rfid_siniiga, business_model, category, current_status, numero_fuego)
         VALUES (v_co, v_tag, 'CRIA', r.category, r.status, replace(r.fuego, '{r}', v_run::text))

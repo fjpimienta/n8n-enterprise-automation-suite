@@ -304,10 +304,10 @@ All 24 nodes live in `workflows/09-MCP-Agent-Cattle/v6/repro-phase{1..4}/repro_p
 
 **Backlog added in phase 5**
 23. **Inject `tenant_id` and the e-mail from the trusted context instead of letting the model fill them, for ALL MCP tools** (a later phase). Today the 29 + 24 tools take them from `$fromAI` (Rule 6); the database validates membership, but the prompt is the only thing that makes the model copy the verified values.
-24. **Delete the `register_birth_event` node and its dictionary text** from the MCP server once the checked births tool is verified in production (it stays now as the rollback path of 087).
-25. **Delete the `log_palpation_event_batch` node** from the MCP server after the rollout is verified (same reason; replaced by `log_palpation_with_condition`).
+24. **Delete the `register_birth_event` node** from the MCP server in **step 6b of `docs/REPRO_PRODUCTION_RUNBOOK.md`**, after the QA passed and the n8n executions of the QA show that no execution called it. This PR keeps the node in the repo export; a **follow-up commit** replaces the export with the 6b file (51 tools) once 6b is verified live, and `check_repro_consistency.js` then expects 51 tools and drops its two legacy exceptions.
+25. **Delete the `log_palpation_event_batch` node** in the same step 6b, with the same condition and the same follow-up commit (replaced by `log_palpation_with_condition`; the legacy batch can overwrite a PREÑADA animal with VACÍA).
 26. **QA leaves residue in company 3 (the test company):** births, empadre entries and historical births are append-only; the QA events cannot be deleted. Fixture rows carry a QA marker in their identifiers.
-27. **Measure tool selection on `gpt-4.1-mini` with ~51 tools:** the rollout requires at least 90 % first-try correct tool choice in the QA; if not met, trim the dictionary or move the agent to a stronger model (see `REPRO_PRODUCTION_RUNBOOK.md`).
+27. **Measure tool selection on `gpt-4.1-mini` with 53 tools:** the rollout requires at least 90 % first-try correct tool choice in the QA; if not met, trim the dictionary or move the agent to a stronger model (see `REPRO_PRODUCTION_RUNBOOK.md`).
 
 ### Git (decided 2026-10-27)
 Migrations were already excepted in `.gitignore` (line 35); only `database/discovery/*.sql` was missing. Prepared as **its own `chore` commit, before the feature commits** (one-line change in `.gitignore`); `database/discovery/out/` stays excluded by `.git/info/exclude` and must never be committed. Exact commands are in the hand-over message.
