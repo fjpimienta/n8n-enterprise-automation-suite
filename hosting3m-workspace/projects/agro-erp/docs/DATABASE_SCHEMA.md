@@ -832,13 +832,10 @@ anterior de este archivo — no son nuevos de v1.11.0, solo su documentación lo
 * Inserta en `birth_events` con `source = 'MOBILE_APP'` para altas capturadas por este
   camino (distinto de `'FIELD_NOTEBOOK'`/`'SPREADSHEET_IMPORT'` usados en backfill histórico).
 
-### ⚠️ Dos versiones sobrecargadas en producción, confirmado vía `pg_get_functiondef` (2026-09-16)
+### ⚠️ Una sola firma en producción (13 parámetros) — CORREGIDO 2026-10-28
 
-`sp_register_birth_event` existe en **dos firmas simultáneas**:
+Esta sección decía (2026-09-16) que `sp_register_birth_event` existía en **dos firmas simultáneas**. Una consulta de solo lectura en el servidor de producción el 2026-10-28 mostró **una sola función, la de 13 parámetros** (md5 de `pg_get_functiondef` `8eaf6f52716165a6bc59f8f4a6a7ce4a`). La versión de 12 parámetros (sin `p_lot_id`), cuya lógica se describía aquí como `COALESCE(v_dam_production_unit, p_production_unit_id)`, **no existe** en producción; una llamada de 12 argumentos (la del gateway `nacimiento`) resuelve a la de 13 porque `p_reported_by_email` tiene `DEFAULT NULL`. Desde la migración 087 la función lleva además una comprobación de membresía (cuando llega el correo), detección de reintento exacto y guarda `birth_events.reported_by_email`.
 
-* **Versión de 12 parámetros** (sin `p_lot_id`): resuelve ubicación solo con
-  `COALESCE(v_dam_production_unit, p_production_unit_id)` — lote heredado de la madre o
-  nada.
 * **Versión de 13 parámetros** (con `p_lot_id uuid DEFAULT NULL`, la vigente para la tool
   MCP `register_birth_event`, ver más abajo): agrega la tabla **`production_unit_lots`**
   (documentada arriba, sección "Regulatory Registry Subsystem"). Si `p_lot_id` viene

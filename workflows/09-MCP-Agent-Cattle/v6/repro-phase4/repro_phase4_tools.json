@@ -1,0 +1,294 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Registra UN parto con validación completa: crea la cría, liga la madre y, si la madre estaba PREÑADA, la pasa a VACÍA (misma lógica que register_birth_event, que es el escritor). Identifica a la madre por su arete SINIIGA/RFID o número a fuego tal como el usuario lo dio (dam_identifier) o por su id (dam_id). 🛑 NUNCA elijas entre varios animales: si regresa status 'ambiguous', muestra los 'candidates' (arete, fuego, categoría, estatus) y pide cuál; no se registró nada. 'not_found' = esa madre no existe en la empresa. 'invalid' trae un 'code' y un 'message' (sexo, fecha, peso, madre vendida o muerta, madre que no es hembra, lote o UPP que no son de la empresa): explícalo y no reintentes con otros datos inventados. 'duplicate_skipped' = ya estaba registrado hace minutos (reintento): díselo, no es un parto nuevo. 'possible_duplicate' = la madre YA tiene un parto dentro de la ventana (por omisión 240 días) o un parto histórico cercano: muestra 'existing' (fecha, origen BIRTH/HISTORICAL) y NO registres nada; solo si el usuario confirma que es otro parto (por ejemplo un gemelo) repite la llamada con force = true. Si regresa 'recorded', confirma con los datos que trae (calf_id, category, dam_status_updated_to_vacia) y, si trae 'service_link', di si se ligó un servicio (status linked) o no (no_candidate / ambiguous: se deja sin ligar). Nunca digas que se registró si el status no es 'recorded'. ANTES de llamarla resume lo que se va a registrar y pide al usuario que confirme con Sí/No; llámala solo tras el Sí (regla del prompt, Fase 5).",
+        "operation": "executeQuery",
+        "query": "SELECT public.sp_repro_register_birth($1::text, $2::text, $3::text, $4::text, $5::text, $6::text, $7::text, $8::text, $9::text, $10::text, $11::text, $12::text, $13::text) AS result;",
+        "options": {
+          "queryReplacement": "={{ (() => { const s = (v) => (v === undefined || v === null) ? '' : String(v); return [\n  String($fromAI('tenant_id', \"Numeric tenant/company id (id_company) of the current user, copied EXACTLY from the session context in the system prompt. Never guess, infer or default it.\", 'number')),\n  String($fromAI('user_email', \"Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato.\", 'string')),\n  s($fromAI('calf_sex', \"Sexo de la cría: MACHO o HEMBRA, tal como lo dijo el usuario.\", 'string', null)),\n  s($fromAI('dam_identifier', \"Arete SINIIGA, RFID o número a fuego de la MADRE, exactamente como lo dio el usuario. Omite si das dam_id.\", 'string', null)),\n  s($fromAI('dam_id', \"UUID de la madre, solo si ya lo tienes de una respuesta anterior (por ejemplo al resolver una ambigüedad). Omite si das dam_identifier.\", 'string', null)),\n  s($fromAI('birth_date', \"Fecha del parto AAAA-MM-DD. Omite para usar hoy. No puede ser futura ni de hace más de un año (para partos antiguos usa register_historical_birth).\", 'string', null)),\n  s($fromAI('birth_weight_kg', \"Peso al nacer en kg, sin comas (ej. 36.5). Omite si el usuario no lo dio.\", 'string', null)),\n  s($fromAI('lot_id', \"UUID del lote, solo si ya lo resolviste. Omite si no.\", 'string', null)),\n  s($fromAI('production_unit_id', \"UUID de la UPP, solo si ya lo resolviste. Omite si no.\", 'string', null)),\n  s($fromAI('paddock_id', \"UUID del potrero, solo si ya lo resolviste. Omite si no.\", 'string', null)),\n  s($fromAI('species', \"BOVINO (por omisión), BORREGO, BUFALO o EQUIDO. Omite para bovino.\", 'string', null)),\n  s($fromAI('notes', \"Notas del usuario. Omite si no hay.\", 'string', null)),\n  s($fromAI('force', \"'true' SOLO si el usuario ya confirmó, después de un possible_duplicate o duplicate_skipped, que es otro parto (gemelo). Omite en cualquier otro caso.\", 'string', null))\n]; })() }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        2800,
+        4700
+      ],
+      "id": "61fba733-7438-75c6-dab4-380c00fce3f9",
+      "name": "register_birth_checked",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "VISTA PREVIA de un bloque de partos (hasta 50 renglones): no guarda nada. 'items' es un arreglo JSON (como texto) con UN objeto por parto: {\"dam_identifier\": \"...\" o \"dam_id\": \"...\", \"calf_sex\": \"MACHO|HEMBRA\", \"birth_date\": \"AAAA-MM-DD\" (opcional), \"birth_weight_kg\": \"..\" (opcional), \"lot_id\" / \"production_unit_id\" (opcionales)}. Copia lo que dijo el usuario, sin completar ni corregir. Regresa 'lines' con el status de cada renglón (ok, ambiguous con candidates, not_found, possible_duplicate, invalid, duplicate_skipped) y 'can_register' (true solo si NINGÚN renglón tiene problema). Enséñale al usuario los renglones con problema y resuélvelos con él (elige madre ambigua por su arete, quita o corrige el renglón) ANTES de registrar. Solo lectura.",
+        "operation": "executeQuery",
+        "query": "SELECT public.sp_repro_births_batch_preview($1::text, $2::text, $3::text, $4::text) AS result;",
+        "options": {
+          "queryReplacement": "={{ (() => { const s = (v) => (v === undefined || v === null) ? '' : String(v); return [\n  String($fromAI('tenant_id', \"Numeric tenant/company id (id_company) of the current user, copied EXACTLY from the session context in the system prompt. Never guess, infer or default it.\", 'number')),\n  String($fromAI('user_email', \"Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato.\", 'string')),\n  s($fromAI('items', \"Arreglo JSON (como texto) de partos, en el MISMO ORDEN en que el usuario los dio. Máximo 50. Nunca inventes ni omitas un renglón.\", 'string', null)),\n  s($fromAI('default_date', \"Fecha AAAA-MM-DD que aplica a los renglones sin birth_date propia. Omite para usar hoy.\", 'string', null))\n]; })() }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        2800,
+        4920
+      ],
+      "id": "ee426a40-9246-d8f4-6e41-fcb37b017867",
+      "name": "births_batch_preview",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "REGISTRA un bloque de partos (hasta 50 renglones). Es TODO O NADA y vuelve a validar todo por su cuenta (no confía en ninguna vista previa): si CUALQUIER renglón es ambiguous, not_found, possible_duplicate o inválido regresa status 'rejected' con el detalle por renglón y NO se guarda ninguno. En ese caso dile al usuario cuáles fallaron y que no se guardó nada del bloque; corrige o quita esos renglones y repite el bloque COMPLETO, o registra aparte (con register_birth_checked y force) un gemelo o un parto repetido; nunca digas 'se guardaron algunos'. Si regresa 'recorded', resume cuántos se escribieron (written) y cuántos ya existían (duplicate_skipped) revisando 'results' renglón por renglón. Misma forma de 'items' que births_batch_preview. Úsala solo después de la vista previa y de la confirmación Sí del usuario. ANTES de llamarla resume lo que se va a registrar y pide al usuario que confirme con Sí/No; llámala solo tras el Sí (regla del prompt, Fase 5).",
+        "operation": "executeQuery",
+        "query": "SELECT public.sp_repro_births_batch_register($1::text, $2::text, $3::text, $4::text) AS result;",
+        "options": {
+          "queryReplacement": "={{ (() => { const s = (v) => (v === undefined || v === null) ? '' : String(v); return [\n  String($fromAI('tenant_id', \"Numeric tenant/company id (id_company) of the current user, copied EXACTLY from the session context in the system prompt. Never guess, infer or default it.\", 'number')),\n  String($fromAI('user_email', \"Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato.\", 'string')),\n  s($fromAI('items', \"El MISMO arreglo JSON (como texto) que se previsualizó, ya con las ambigüedades resueltas. Máximo 50.\", 'string', null)),\n  s($fromAI('default_date', \"Fecha AAAA-MM-DD común para los renglones sin birth_date. Omite para usar hoy.\", 'string', null))\n]; })() }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        2800,
+        5140
+      ],
+      "id": "f5c555a7-2548-ad05-b30e-6b148a52db56",
+      "name": "births_batch_register",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Registra un parto HISTÓRICO de una madre (de una libreta vieja, de hace más de un año, o con fecha aproximada). NO crea ninguna cría, NO cambia el estatus de la madre (puede estar ya vendida o muerta) y es idempotente: repetirlo regresa duplicate_skipped. Precisión de la fecha: DAY (AAAA-MM-DD), MONTH (AAAA-MM) o YEAR (AAAA); usa la que el usuario realmente sabe, no la inventes. calf_sex es opcional (MACHO/HEMBRA); litter_position solo para gemelos (1 a 4). 'ambiguous' = el arete/fuego coincide con varios animales: muestra los candidatos y pide cuál. Un parto histórico con precisión DAY o MONTH cuenta para el aviso possible_duplicate de partos nuevos; uno con precisión YEAR no. Para anular uno registrado por error usa void_historical_birth. ANTES de llamarla resume lo que se va a registrar y pide al usuario que confirme con Sí/No; llámala solo tras el Sí (regla del prompt, Fase 5).",
+        "operation": "executeQuery",
+        "query": "SELECT public.sp_repro_register_historical_birth($1::text, $2::text, $3::text, $4::text, $5::text, $6::text, $7::text, $8::text, $9::text, $10::text) AS result;",
+        "options": {
+          "queryReplacement": "={{ (() => { const s = (v) => (v === undefined || v === null) ? '' : String(v); return [\n  String($fromAI('tenant_id', \"Numeric tenant/company id (id_company) of the current user, copied EXACTLY from the session context in the system prompt. Never guess, infer or default it.\", 'number')),\n  String($fromAI('user_email', \"Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato.\", 'string')),\n  s($fromAI('dam_identifier', \"Arete SINIIGA, RFID o número a fuego de la madre. Omite si das dam_id.\", 'string', null)),\n  s($fromAI('dam_id', \"UUID de la madre (de una respuesta anterior). Omite si das dam_identifier.\", 'string', null)),\n  s($fromAI('birth_date', \"Fecha del parto: AAAA-MM-DD, AAAA-MM o AAAA según la precisión. No puede ser futura; no hay límite hacia atrás.\", 'string', null)),\n  s($fromAI('date_precision', \"DAY, MONTH o YEAR. Omite para DAY.\", 'string', null)),\n  s($fromAI('calf_sex', \"MACHO o HEMBRA si el usuario lo sabe. Omite si no.\", 'string', null)),\n  s($fromAI('litter_position', \"Posición en la camada (1 a 4) solo si hubo gemelos. Omite para 1.\", 'string', null)),\n  s($fromAI('source', \"HISTORICAL_NOTEBOOK (por omisión), HISTORICAL_SPREADSHEET o HISTORICAL_OTHER.\", 'string', null)),\n  s($fromAI('notes', \"Notas del usuario. Omite si no hay.\", 'string', null))\n]; })() }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        2800,
+        5360
+      ],
+      "id": "18fab73c-c187-f68a-3c2c-70e75708b0d2",
+      "name": "register_historical_birth",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Anula UN parto histórico registrado por error. Requiere su 'historical_birth_id' (de register_historical_birth o de list_historical_births) y el MOTIVO que da el usuario; nunca inventes el motivo. Solo se anula una vez ('already_voided'). 'not_found' = ese id no existe en la empresa. No cambia nada más (no toca animales ni partos registrados). ANTES de llamarla resume lo que se va a registrar y pide al usuario que confirme con Sí/No; llámala solo tras el Sí (regla del prompt, Fase 5).",
+        "operation": "executeQuery",
+        "query": "SELECT public.sp_repro_void_historical_birth($1::text, $2::text, $3::text, $4::text) AS result;",
+        "options": {
+          "queryReplacement": "={{ (() => { const s = (v) => (v === undefined || v === null) ? '' : String(v); return [\n  String($fromAI('tenant_id', \"Numeric tenant/company id (id_company) of the current user, copied EXACTLY from the session context in the system prompt. Never guess, infer or default it.\", 'number')),\n  String($fromAI('user_email', \"Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato.\", 'string')),\n  s($fromAI('historical_birth_id', \"UUID del parto histórico, tal como lo regresó register_historical_birth o list_historical_births.\", 'string', null)),\n  s($fromAI('reason', \"Motivo de la anulación, en palabras del usuario (mínimo 3 caracteres).\", 'string', null))\n]; })() }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        2800,
+        5580
+      ],
+      "id": "ea7c9796-584c-5f62-2bf9-3f3eca63bd2b",
+      "name": "void_historical_birth",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Lista los partos históricos de la empresa (o de UNA madre si das su identificador), del más reciente al más antiguo, con precisión de la fecha, sexo de la cría si se sabe, quién lo capturó y si está anulado (por omisión se ocultan los anulados). Sirve para encontrar el 'historical_birth_id' que se va a anular. Solo lectura. Si regresa 'ambiguous', muestra los candidatos y pide cuál. Paginada con 'offset'.",
+        "operation": "executeQuery",
+        "query": "SELECT public.sp_repro_list_historical_births($1::text, $2::text, $3::text, $4::text, $5::text, $6::text) AS result;",
+        "options": {
+          "queryReplacement": "={{ (() => { const s = (v) => (v === undefined || v === null) ? '' : String(v); return [\n  String($fromAI('tenant_id', \"Numeric tenant/company id (id_company) of the current user, copied EXACTLY from the session context in the system prompt. Never guess, infer or default it.\", 'number')),\n  String($fromAI('user_email', \"Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato.\", 'string')),\n  s($fromAI('dam_identifier', \"Arete SINIIGA, RFID o número a fuego de la madre. Omite para listar todos.\", 'string', null)),\n  s($fromAI('include_voided', \"'true' para incluir los anulados. Omite para ocultarlos.\", 'string', null)),\n  s($fromAI('limit', \"Máximo de partos (por omisión 50, tope 100).\", 'string', null)),\n  s($fromAI('offset', \"Cuántos saltar para la siguiente página (0 por omisión).\", 'string', null))\n]; })() }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        2800,
+        5800
+      ],
+      "id": "987f9523-14ae-ebba-5c93-522b3afde10c",
+      "name": "list_historical_births",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Regresa la ventana (en días) con la que se avisa de un posible parto duplicado de la misma madre (por omisión 240, configurable por empresa entre 30 y 730). Solo lectura. Solo un ADMIN la cambia desde el panel; tú no puedes cambiarla.",
+        "operation": "executeQuery",
+        "query": "SELECT public.sp_repro_births_get_config($1::text, $2::text) AS result;",
+        "options": {
+          "queryReplacement": "={{ (() => { const s = (v) => (v === undefined || v === null) ? '' : String(v); return [\n  String($fromAI('tenant_id', \"Numeric tenant/company id (id_company) of the current user, copied EXACTLY from the session context in the system prompt. Never guess, infer or default it.\", 'number')),\n  String($fromAI('user_email', \"Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato.\", 'string'))\n]; })() }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        2800,
+        6020
+      ],
+      "id": "504255d5-765a-8235-2b76-78e004ac4bf1",
+      "name": "get_births_config",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "Historial reproductivo completo de UNA hembra: sus partos registrados (con la cría y el servicio ligado), sus partos históricos, sus servicios (anulados marcados), sus palpaciones con la condición uterina (repro_condition, código en bruto, estado del mapeo) y la condición de las cargas viejas, sus entradas a empadre, su estatus actual, la fecha estimada de parto (solo si está PREÑADA) y banderas de calidad de datos. Solo lectura. Si el arete o fuego coincide con varios animales regresa 'ambiguous' con los candidatos: pide cuál, nunca elijas. 🛑 Lee las 'quality_flags': si stale_import_date_company.flag es true, las palpaciones con on_stale_import_date = true tienen la fecha de una carga masiva, no la de una palpación real; un expected_calving.bucket 'stale_data' es un dato viejo, NO un parto próximo ni atrasado; un servicio sin birth_event_id no está ligado a ningún parto (no se adivina). Los partos históricos no tienen cría registrada. Muestra solo lo que regrese la herramienta.",
+        "operation": "executeQuery",
+        "query": "SELECT public.sp_repro_get_dam_history($1::text, $2::text, $3::text, $4::text) AS result;",
+        "options": {
+          "queryReplacement": "={{ (() => { const s = (v) => (v === undefined || v === null) ? '' : String(v); return [\n  String($fromAI('tenant_id', \"Numeric tenant/company id (id_company) of the current user, copied EXACTLY from the session context in the system prompt. Never guess, infer or default it.\", 'number')),\n  String($fromAI('user_email', \"Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato.\", 'string')),\n  s($fromAI('dam_identifier', \"Arete SINIIGA, RFID o número a fuego de la hembra. Omite si das dam_id.\", 'string', null)),\n  s($fromAI('dam_id', \"UUID de la hembra (de una respuesta anterior). Omite si das dam_identifier.\", 'string', null))\n]; })() }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        2800,
+        6240
+      ],
+      "id": "27ba1be2-c5bf-bda6-0ddc-86346bde3a99",
+      "name": "get_dam_reproductive_history",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "register_birth_checked": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "births_batch_preview": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "births_batch_register": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "register_historical_birth": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "void_historical_birth": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "list_historical_births": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_births_config": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_dam_reproductive_history": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
