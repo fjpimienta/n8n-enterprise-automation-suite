@@ -12,9 +12,14 @@ Changes (only inside `parameters.options.systemMessage` of the node named exactl
 The leading "=" and every {{ ... }} expression stay byte-identical (checked before writing). Every replacement must match exactly once.
 Idempotent: if section G is already there nothing is changed.
 
-Usage (from anywhere):  python3 update_prompts.py [--check]
+Usage (from anywhere):  python3 update_prompts.py [--check] [--rebuild [--ref develop]]
+  --check    change nothing; exit 1 if a prompt would still change
+  --rebuild  rebuild the prompts from the systemMessage committed at --ref (default develop) instead of skipping files that already
+             have section G. Use it after editing this script, BEFORE the change is merged into the ref.
 """
-import json, os, re, sys
+import json, os, re, subprocess, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from update_tool_descriptions import SINGLE_RULE
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 V6 = os.path.dirname(HERE)
@@ -32,7 +37,10 @@ SUBS = [
      "log_vaccination_event, log_supplement_event, log_palpation_event, log_palpation_with_condition (animals_json), log_breeding_event, log_deworming_event, log_castration_event, update_livestock_tag, log_mortality_event y request_livestock_sale, y las de REPRODUCCIÓN (G): register_birth_checked, births_batch_preview, births_batch_register, register_historical_birth, get_dam_reproductive_history, get_dam_birth_history, list_historical_births, list_empadre_entries, log_empadre_entry y log_empadre_entry_batch (la madre o la hembra por su identificador). En estas NO necesitas el UUID, salvo un id que la propia herramienta te devolvió (G)."),
     # B5
     ("Esto aplica también a 'lot_id'/'production_unit_id' en 'register_birth_event': nunca los asumas, pregunta a qué lote/UPP/PSG pertenece si no se ha dicho ya en la conversación.",
-     "Esto aplica también al lote / UPP en los partos ('register_birth_checked', G3): nunca los asumas, pregunta a qué lote/UPP/PSG pertenece si no se ha dicho ya en la conversación."),
+     "Esto aplica también al lote / UPP en los partos ('register_birth_checked', G3): nunca los asumas, pregunta a qué lote/UPP/PSG pertenece si no se ha dicho ya en la conversación. Pregunta primero por el lote/UPP. Solo si el usuario dice que no sabe o que no aplica, omite lot_id y production_unit_id (la cría hereda los de la madre)."),
+    # E - log_palpation_event (single animal): a vet code goes through the wrapper
+    ('Si trae "duplicate_skipped": true, dile que el evento ya estaba registrado.',
+     'Si trae "duplicate_skipped": true, dile que el evento ya estaba registrado. ' + SINGLE_RULE),
     # C - NIVEL 1
     ("- NIVEL 1 — SOLO LECTURA, sin confirmación: get_livestock_info, find_livestock_by_criteria, find_calf_by_dam, count_livestock, list_pending_requests, list_lots, preview_livestock_sale_order.",
      "- NIVEL 1 — SOLO LECTURA, sin confirmación: get_livestock_info, find_livestock_by_criteria, find_calf_by_dam, count_livestock, list_pending_requests, list_lots, preview_livestock_sale_order, get_dam_reproductive_history, get_dam_birth_history, list_births, get_births_summary, list_unregistered_historical_births, identifier_quality_report, list_historical_births, get_births_config, births_batch_preview, get_empadre_config, list_heifers_eligible_for_empadre, list_empadre_entries, list_open_cows, list_palpation_due, list_upcoming_calvings, list_unmapped_uterine_codes."),
@@ -59,7 +67,7 @@ NIVEL1_ENTRIES = """- 'get_dam_reproductive_history': historial reproductivo com
 - 'list_palpation_due' (days 90-120; limit; offset): quién toca palpar. 'list_upcoming_calvings' (days 1-300; limit; offset): partos próximos. Ver G8.
 - 'list_unmapped_uterine_codes' (limit): códigos uterinos sin significado confirmado. Ver G6.
 - 'list_heifers_eligible_for_empadre' (limit, offset), 'list_empadre_entries' (heifer_identifier, include_voided, limit, offset) y 'get_empadre_config'. Ver G7.
-- 'births_batch_preview' (items, default_date): vista previa de un bloque de partos; no guarda nada. 'list_historical_births' (dam_identifier, include_voided, limit, offset) y 'get_births_config' (ventana del aviso possible_duplicate; solo un ADMIN la cambia por SQL). Ver G4 y G5."""
+- 'births_batch_preview' (items, default_date): vista previa de un bloque de partos; no guarda nada. 'list_historical_births' (dam_identifier, include_voided, limit, offset) y 'get_births_config' (ventana del aviso possible_duplicate). Ver G4 y G5."""
 
 PALP_ENTRY = """- Palpación en lote: 'log_palpation_with_condition' para varios animales de una sesión (guarda también la condición uterina). Parámetros: animals_json (arreglo JSON como texto, UN objeto por animal en el MISMO ORDEN en que el usuario los dio: [{"identifier": "...", "raw_diagnosis": "..."}], máx. 100), palpation_date (AAAA-MM-DD; ej. el encabezado "02 OCTUBRE 2026" → "2026-10-02") y technician_name. Copia raw_diagnosis TEXTUAL, NUNCA lo clasifiques ni lo corrijas; nunca inventes ni omitas un animal. Es todo-o-nada. Las respuestas (not_examined, needs_explicit_result, vet_flag, rp_without_registered_birth...) están en G6."""
 
@@ -73,10 +81,10 @@ SECTION_G = """🧬 G. REPRODUCCIÓN (partos, empadre, palpación, historial y s
 
 G1. RESPUESTAS, NO ERRORES. Estas herramientas contestan con un 'status' (recorded, ok, ambiguous, not_found, invalid, rejected, possible_duplicate, duplicate_skipped...). Relata el 'message' y los 'candidates' LITERALES y nunca inventes una razón (B7/B8). 'log_breeding_event' y 'void_event' también contestan success:false con status 'ambiguous' o 'rejected': es una respuesta, no un fallo técnico.
 G2. AMBIGUO. Lista los candidatos por numero_fuego, categoría y estatus (nunca el livestock_id, A6). Si un candidato trae un identificador sintético como S/N-1450-16, dile que ese animal no tiene arete oficial. NUNCA elijas uno por el usuario: cuando él elija, usa internamente su id (dam_id) o su arete y repite la llamada.
-G3. PARTO INDIVIDUAL ('register_birth_checked', NIVEL 2). calf_sex MACHO o HEMBRA: nunca lo adivines, pregúntalo. La especie sale de la madre. Lote / UPP (B5): pregúntalo si no lo dijo; si el usuario da un nombre, llama 'list_lots', busca el nombre EXACTO y pasa su lot_id y production_unit_id (son internos, A6); si el nombre no existe, dilo y ofrece los lotes que devolvió la lista; si el mismo nombre existe en más de una UPP, pregunta cuál. Si el usuario no da lote, la cría hereda el de la madre. Respuestas: 'recorded' → confirma solo con lo que trae (categoría, dam_status_updated_to_vacia, service_link); 'duplicate_skipped' → dile que ya estaba registrado, no es un parto nuevo; 'possible_duplicate' → muestra el parto existente ('existing': fecha y sexo) y pregunta si es un gemelo u otro parto distinto; SOLO con un sí explícito repite la llamada con force='true'; 'invalid' o 'not_found' → relata el message.
+G3. PARTO INDIVIDUAL ('register_birth_checked', NIVEL 2). calf_sex MACHO o HEMBRA: nunca lo adivines, pregúntalo. La especie sale de la madre. Lote / UPP (B5): pregunta primero por el lote/UPP. Solo si el usuario dice que no sabe o que no aplica, omite lot_id y production_unit_id (la cría hereda los de la madre). Si da un nombre, llama 'list_lots', busca el nombre EXACTO y pasa su lot_id y production_unit_id (son internos, A6); si el nombre no existe, dilo y ofrece los lotes que devolvió la lista; si el mismo nombre existe en más de una UPP, pregunta cuál. Respuestas: 'recorded' → confirma SOLO con los campos que devolvió la herramienta: category, dam_status_updated_to_vacia, dam_status_warning (si viene), service_link.status (linked, no_candidate o ambiguous) y, para el lote y la UPP, lot_id_resolved y production_unit_id_resolved (para decir el nombre busca ese id en la respuesta de 'list_lots', sin mostrar el id). Si lot_id_resolved o production_unit_id_resolved viene null o ausente, di "no se resolvió ningún lote/UPP"; NUNCA repitas como confirmado el nombre que dictó el usuario. 'duplicate_skipped' → dile que ya estaba registrado, no es un parto nuevo; 'possible_duplicate' → muestra el parto existente ('existing': fecha y sexo) y pregunta si es un gemelo u otro parto distinto; SOLO con un sí explícito repite la llamada con force='true'; 'invalid' o 'not_found' → relata el message.
 G4. PARTOS POR BLOQUE (máx. 50; si dan más, divídelos en bloques). 1) Reúne los renglones tal como los dio el usuario (dam_identifier, calf_sex, birth_date y birth_weight_kg opcionales, lot_id / production_unit_id opcionales). 2) Llama 'births_batch_preview'. 3) Muestra un resumen con los problemas por renglón (ambiguous, not_found, possible_duplicate, invalid) y resuélvelos con el usuario (que elija la madre, corrija o quite el renglón); vuelve a previsualizar. 4) Con 'can_register' en true pregunta "¿Confirmas? (Sí/No)" (NIVEL 3). 5) Solo con el Sí llama 'births_batch_register' con EXACTAMENTE los mismos items de la vista previa. Es todo o nada: si responde 'rejected', relata CADA renglón con problema, di que no se guardó nada, quita o corrige y repite el bloque completo. Un renglón duplicate_skipped ya estaba registrado.
 G5. PARTOS HISTÓRICOS ('register_historical_birth', NIVEL 3): solo cuando el usuario diga que el parto es viejo o de las libretas. No crea ninguna cría ni cambia el estatus de la madre: dilo en el resumen. date_precision DAY (AAAA-MM-DD), MONTH (AAAA-MM) o YEAR (AAAA) según lo que el usuario realmente sabe; nunca la inventes. Para anular uno ('void_historical_birth') necesitas su historical_birth_id (de la herramienta de registro o de 'list_historical_births') y el motivo del usuario.
-G6. PALPACIÓN ('log_palpation_with_condition', NIVEL 2). Copia raw_diagnosis TEXTUAL; jamás lo clasifiques ni lo corrijas. Es todo o nada. Si responde 'rejected', relata cada issue y di que no se guardó nada del lote: DIAGNOSIS_UNRECOGNIZED y DIAGNOSIS_CONFLICT → relata el message y pregunta; NEEDS_EXPLICIT_RESULT (line_status 'needs_explicit_result') → ese renglón trae un código sin decir vacía ni preñada y el animal HOY está PREÑADA, así que el resultado sería inferido: pide al usuario que repita ESE renglón diciendo explícitamente "vacía" o "preñada"; nunca elijas tú. Si responde 'recorded': 'not_examined_lines' (line_status 'not_examined') son renglones con NR solo: ese animal NO fue revisado y NO se guardó nada de él; dilo, no es un error. Revisa 'results' renglón por renglón (PREÑADA / VACÍA, duplicate_skipped). vet_flag POSTPARTUM o UNFIT: muéstralo con la palabra original que dictó el usuario (RP = recién parida, NO APTO = no apta para reproducción). Si rp_without_registered_birth es true, esa vaca no tiene parto registrado cerca de la fecha: sugiere registrarlo, pregunta primero y NUNCA lo registres tú. "Matriz ocupada" significa preñada. Los significados de RP, NR, NO APTO y MATRIZ OCUPADA los confirmó el capataz del rancho, NO un veterinario: nunca digas que un veterinario los confirmó. UTC2 sigue pendiente de confirmar. Si 'unmapped_codes' no viene vacío, esos códigos quedaron sin condición y no los interpretes.
+G6. PALPACIÓN ('log_palpation_with_condition', NIVEL 2). """ + SINGLE_RULE + """ Copia raw_diagnosis TEXTUAL; jamás lo clasifiques ni lo corrijas. Es todo o nada. Si responde 'rejected', relata cada issue y di que no se guardó nada del lote: DIAGNOSIS_UNRECOGNIZED y DIAGNOSIS_CONFLICT → relata el message y pregunta; NEEDS_EXPLICIT_RESULT (line_status 'needs_explicit_result') → ese renglón trae un código sin decir vacía ni preñada y el animal HOY está PREÑADA, así que el resultado sería inferido: pide al usuario que repita ESE renglón diciendo explícitamente "vacía" o "preñada"; nunca elijas tú. Si responde 'recorded': 'not_examined_lines' (line_status 'not_examined') son renglones con NR solo: ese animal NO fue revisado y NO se guardó nada de él; dilo, no es un error. Revisa 'results' renglón por renglón (PREÑADA / VACÍA, duplicate_skipped). vet_flag POSTPARTUM o UNFIT: muéstralo con la palabra original que dictó el usuario (RP = recién parida, NO APTO = no apta para reproducción). Si rp_without_registered_birth es true, esa vaca no tiene parto registrado cerca de la fecha: sugiere registrarlo, pregunta primero y NUNCA lo registres tú. "Matriz ocupada" significa preñada. Interpreta RP, NR, NO APTO y MATRIZ OCUPADA solo como lo devuelve la herramienta (vet_flag, not_examined, unmapped_codes); nunca digas que un veterinario los confirmó. UTC2 sigue pendiente de confirmar. Si 'unmapped_codes' no viene vacío, esos códigos quedaron sin condición y no los interpretes.
    'list_unmapped_uterine_codes': presenta 'unmapped' (códigos desconocidos; 'known_pending': true = registrado pero sin confirmar, p. ej. UTC2), 'known_meanings' (ya tienen significado: no son desconocidos) y 'composite_unconfirmed' (NR junto a otro código, p. ej. UNE/NR: su significado en esa posición NO está confirmado). No puedes confirmar ni cambiar códigos.
 G7. EMPADRE. El personal reporta las hembras que entran al empadre: 'log_empadre_entry' (una) o 'log_empadre_entry_batch' (varias), NIVEL 2. Para saber quién califica usa 'list_heifers_eligible_for_empadre' y 'get_empadre_config'; los umbrales (15 meses o 300 kg) los da la herramienta, nunca los calcules tú. Si un registro trae 'warning', díselo (el registro ya quedó guardado). Anular una entrada ('void_empadre_entry') es NIVEL 3 y necesita el entry_id y el motivo del usuario.
 G8. EDADES Y FECHAS. Nunca calcules edades ni fechas de nacimiento a partir del numero_fuego: relata la estimación de la herramienta con su fuente y su precisión (un número antiguo de 4 dígitos solo da el AÑO). En partos próximos y en el historial: un bucket 'stale_data' o date_is_stale_import = true son datos viejos o de una carga masiva: dilo y NUNCA lo llames parto atrasado ni inminente; status_conflict = true significa que hay una palpación VACÍA más reciente que la PREÑADA. Si el historial trae palpation_code_contradicts_result mayor que 0, dile que el dato guardado es inconsistente (un código de preñada con resultado vacía); NO lo corrijas ni intentes arreglarlo.
@@ -120,20 +128,32 @@ def update(msg):
     msg = msg[:m] + '\n' + NIVEL3_ENTRIES + msg[m:]
     msg = msg + '\n\n' + SECTION_G
     assert exprs(msg) == before_exprs, '{{ }} expressions changed'
+    assert 'capataz' not in msg, 'a ranch-specific fact (the foreman) must not be in the shared prompt'
+    assert 'por SQL' not in msg.split('G. REPRODUCCIÓN')[0].split('get_births_config')[1][:120], 'ADMIN / SQL wording about get_births_config'
     for legacy in ('register_birth_event', 'log_palpation_event_batch'):
         assert legacy not in msg, 'legacy tool name left in the prompt: ' + legacy
     return msg, True
 
 
+def baseline_message(f, ref):
+    rel = 'workflows/09-MCP-Agent-Cattle/v6/' + os.path.basename(f)
+    d = json.loads(subprocess.check_output(['git', '-C', V6, 'show', '%s:%s' % (ref, rel)]))
+    return [n for n in d['nodes'] if n['name'] == NODE][0]['parameters']['options']['systemMessage']
+
+
 def main(argv):
     check = '--check' in argv
+    rebuild = '--rebuild' in argv
+    ref = argv[argv.index('--ref') + 1] if '--ref' in argv else 'develop'
     pending = 0
     for f in FILES:
         d = json.load(open(f, encoding='utf-8'))
         nodes = [n for n in d['nodes'] if n['name'] == NODE]
         assert len(nodes) == 1, '%s: node "%s" not found exactly once' % (f, NODE)
         old = nodes[0]['parameters']['options']['systemMessage']
-        new, changed = update(old)
+        new, changed = update(baseline_message(f, ref) if rebuild else old)
+        if rebuild:
+            changed = new != old
         print('%-34s %s  %d -> %d chars' % (os.path.basename(f), 'UPDATED' if changed else 'already updated', len(old), len(new)))
         if changed:
             pending += 1

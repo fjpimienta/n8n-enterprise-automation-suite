@@ -288,7 +288,8 @@ All 24 nodes live in `workflows/09-MCP-Agent-Cattle/v6/repro-phase{1..4}/repro_p
 
 **Not exposed to the agent (no node):** `sp_repro_condition_code_set`, `sp_repro_empadre_set_config`, `sp_repro_births_set_config` (SQL / ADMIN only).
 
-**Leave the dictionary, keep the node (rollback path):** `register_birth_event` (replaced by `register_birth_checked`) and `log_palpation_event_batch` (replaced by `log_palpation_with_condition`). `log_palpation_event` (single) stays in the dictionary.
+**Leave the dictionary, keep the node (rollback path):** `register_birth_event` (replaced by `register_birth_checked`) and `log_palpation_event_batch` (replaced by `log_palpation_with_condition`). Their node `toolDescription` (only that) now starts with `OBSOLETA: no la uses. Usa <replacement>.`. `log_palpation_event` (single) stays in the dictionary, for an explicit result WITHOUT a code; with a vet code even a single animal goes through `log_palpation_with_condition` with ONE element.
+- What the two legacy nodes call (read from the MCP export): `register_birth_event` → `sp_register_birth_event` (13 parameters), resolving lot / UPP names with a partial `ILIKE … LIMIT 1` and no ambiguity check; `log_palpation_event_batch` → `sp_log_palpation_event` once per animal, turning any text without a `PRE…ADA` word into VACÍA. **That batch can overwrite a PREÑADA animal with VACÍA and has no `NEEDS_EXPLICIT_RESULT` guard** (the guard is in `sp_repro_log_palpation_batch`, i.e. the wrapper); the single `log_palpation_event` needs an explicit result from the model.
 
 **Existing tools whose answers changed** (the tools themselves were not edited; the prompts must relay the new answers):
 

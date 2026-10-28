@@ -27,7 +27,8 @@ Every apply / rollback uses `$P -v apply=true -f <file>` **without `--single-tra
 - **Frontend:** nothing.
 - **Confirmation levels (owner's decisions):** reads = NIVEL 1; routine writes (single birth, palpation batch, empadre single / batch, services) = NIVEL 2, no confirmation; births by block, historical births and every void = NIVEL 3, a summary and an explicit "Sí". Every role may capture; death and sale still need an ADMIN.
 - **Not exposed to the agents:** `sp_repro_condition_code_set`, `sp_repro_empadre_set_config`, `sp_repro_births_set_config`.
-- **The old tools** `register_birth_event` and `log_palpation_event_batch` leave the agents' dictionary but their **nodes stay** in the MCP server (rollback path of 087); deleting them is backlog items 24-25.
+- **The old tools** `register_birth_event` and `log_palpation_event_batch` leave the agents' dictionary but their **nodes stay** in the MCP server (rollback path of 087). Their `toolDescription` (only that) now starts with `OBSOLETA: no la uses. Usa register_birth_checked.` / `... Usa log_palpation_with_condition.`; `log_palpation_event` (single) stays and gets one sentence: with a vet code use the wrapper with ONE element. Deleting the two nodes is backlog items 24-25.
+  - Why they are obsolete: `register_birth_event` calls the 13-parameter `sp_register_birth_event` and resolves lot / UPP names with a partial `ILIKE ... LIMIT 1` (no ambiguity check); `log_palpation_event_batch` calls `sp_log_palpation_event` once per animal and turns ANY text without a PRE…ADA word into VACÍA — **it can overwrite a PREÑADA animal with VACÍA, without the 090 `NEEDS_EXPLICIT_RESULT` guard** (that guard lives only in `sp_repro_log_palpation_batch`).
 
 ## Files and md5 (verify with `md5sum` before copying anything to the VPS)
 | File | md5 |
@@ -58,20 +59,20 @@ Every apply / rollback uses `$P -v apply=true -f <file>` **without `--single-tra
 
 | Workflow export | md5 |
 |---|---|
-| `v6_MCP_Server_Cattle.json` | `e76a202ac2435e1860a3f526b8bead38` |
-| `v6_ai_chat_cattle.json` | `4fac5bcc09e6584a78ca0313b6bac179` |
-| `v6_WhatsApp_Agent_Cattle.json` | `542dfc8a7d704ecde6b24dceb3d91e0e` |
+| `v6_MCP_Server_Cattle.json` | `348d17217e7878bcd729f09d07f2df0d` |
+| `v6_ai_chat_cattle.json` | `40beb5273eea7262d73e060972e7a5ff` |
+| `v6_WhatsApp_Agent_Cattle.json` | `dfedcae289bfa2c3e4fb1a120c9f2769` |
 
 | Phase 5 tools and QA | md5 |
 |---|---|
-| `repro-phase5/add_repro_tools.py` | `2bc583938eecbbba8c582620ba9609af` |
-| `repro-phase5/update_tool_descriptions.py` | `ac88277a2cf8d529c990befe859391a2` |
-| `repro-phase5/update_prompts.py` | `ad1342d8479e87adda3ed81d3ef4ba8a` |
+| `repro-phase5/add_repro_tools.py` | `69a2bc534bdf8c501130874e4ea14f5e` |
+| `repro-phase5/update_tool_descriptions.py` | `1cd01a0d2a7934484a1d5463167b9f7b` |
+| `repro-phase5/update_prompts.py` | `704271602e6cfc0c43242f3049114c16` |
 | `repro-phase5/compare_workflow_export.py` | `7071aa8d17c0e6ef1cde545ab16e37ed` |
-| `repro-phase5/check_repro_consistency.js` | `79d0cd5f8bc690527152b07ccb86c841` |
+| `repro-phase5/check_repro_consistency.js` | `78b66693cf462cefd51d5e87b7def16c` |
 | `repro-phase5/list_lots_diff.py` | `fcf70c0c7fd6d911c347727370327683` |
-| `repro-phase5/qa_fixtures.sql` | `6986387c574bb11b09791f1f9fd283fe` |
-| `repro-phase5/REPRO_QA_SCRIPT.md` | `a1eb1fd2bed9e723a5dd188b6d9921b1` |
+| `repro-phase5/qa_fixtures.sql` | `21f3fe09d0cbaa02ae5d80fd26bf7e1b` |
+| `repro-phase5/REPRO_QA_SCRIPT.md` | `906f6248480fba57dafcaf460550c42c` |
 
 (Recompute with `md5sum` if a file is edited after this runbook was written. The per-migration runbooks `0NN_RUNBOOK.md` hold the detail of each migration and their own md5 tables.)
 
@@ -141,6 +142,8 @@ python3 workflows/09-MCP-Agent-Cattle/v6/repro-phase5/compare_workflow_export.py
 It prints `RESULT: IDENTICAL` and exits 0, or lists the differing nodes / connections. Repeat for the two agent workflows (`live_before_chat.json` vs the previous `v6_ai_chat_cattle.json`, `live_before_whatsapp.json` vs the previous `v6_WhatsApp_Agent_Cattle.json`).
 **STOP if** any is `DIFFERENT`: production has manual changes (precedent: 2026-10-24, the mortality fix made by hand in the prompts). First incorporate the live change into the repo file, review it, and only then continue. Position-only differences are reported as info and are fine.
 
+**What the live-vs-repo comparison will show after the import:** four EXISTING nodes differ in content — `list_lots` (SQL + description), and `register_birth_event`, `log_palpation_event_batch`, `log_palpation_event` (**toolDescription only**; `add_repro_tools.py` proves it) — plus the 24 new nodes and their connections. Anything else is a surprise: STOP.
+
 **4b. The `list_lots` change is a change to an EXISTING tool's answer** (two new keys, no key removed or renamed). Prove it is additive **before** importing (⚠️ UNTESTED; read-only SQL, run it on LOCAL first):
 ```bash
 python3 workflows/09-MCP-Agent-Cattle/v6/repro-phase5/list_lots_diff.py --tenant 3 --email '<a member of company 3>' --old-file live_before_mcp.json > list_lots_diff.sql
@@ -163,7 +166,7 @@ Then one read-only message per channel on company 3, **through the real channel*
 **STOP if** the import fails, a re-export differs, or the smoke message answers with a technical error. **ROLLBACK of step 5 (back to the previous prompts):** import `live_before_chat.json` and `live_before_whatsapp.json`, Publish, re-export, compare → `IDENTICAL`. The MCP server may stay (the old prompts do not mention the new tools, and the old tools `register_birth_event` / `log_palpation_event_batch` are still there).
 
 ## Step 6 — QA on the owner's test company (company 3, never company 5)
-Files: `REPRO_QA_SCRIPT.md` (39 dialogs, the exact messages, the expected tool and reply shape, a WhatsApp subset) and `qa_fixtures.sql`. ⚠️ UNTESTED, all of it.
+Files: `REPRO_QA_SCRIPT.md` (40 dialogs, the exact messages, the expected tool and reply shape, a WhatsApp subset) and `qa_fixtures.sql`. ⚠️ UNTESTED, all of it.
 1. **Fixtures — LOCAL first**, then production: `psql -v ON_ERROR_STOP=1 -v run=1 -f qa_fixtures.sql` (dry run: read the table it prints), then `-v apply=true`. It writes only to company 3 and aborts if company 3 is not "Rancho El Palomar".
    **There is NO cleanup script, on purpose:** company 3 is in production and the births, empadre and historical tables are append-only; the QA events remain as residue in the test company (every fixture row carries a `QA5R<run>` / `9999<run>#####` marker). A second pass needs `-v run=2`.
 2. Run the dialogs on **Chat Web and WhatsApp (subset)**, writing into the tables of the QA script.

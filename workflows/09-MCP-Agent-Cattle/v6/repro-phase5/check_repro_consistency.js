@@ -37,8 +37,14 @@ const EXPECTED = {
 };
 const REQUIRED_G_WORDS = ['not_examined', 'needs_explicit_result', 'NEEDS_EXPLICIT_RESULT', 'DIAGNOSIS_UNRECOGNIZED', 'DIAGNOSIS_CONFLICT', 'vet_flag', 'POSTPARTUM', 'UNFIT',
   'rp_without_registered_birth', 'palpation_code_contradicts_result', 'known_meanings', 'composite_unconfirmed', 'known_pending', 'possible_duplicate', "force='true'",
-  'duplicate_skipped', 'S/N-1450-16', 'stale_data', 'date_is_stale_import', 'sire_not_resolved', 'semen_batch_missing', 'can_register', 'NO un veterinario',
-  'date_precision', 'list_lots', 'lot_id', 'production_unit_id', '15 meses o 300 kg'];
+  'duplicate_skipped', 'S/N-1450-16', 'stale_data', 'date_is_stale_import', 'sire_not_resolved', 'semen_batch_missing', 'can_register', 'nunca digas que un veterinario los confirmó',
+  'date_precision', 'list_lots', 'lot_id', 'production_unit_id', '15 meses o 300 kg',
+  'lot_id_resolved', 'production_unit_id_resolved', 'dam_status_warning', 'no se resolvió ningún lote/UPP', 'pregunta primero por el lote/UPP',
+  'Interpreta RP, NR, NO APTO y MATRIZ OCUPADA solo como lo devuelve la herramienta (vet_flag, not_examined, unmapped_codes)'];
+
+// phase 5 review: single animal with a vet code goes through the wrapper; legacy nodes are marked obsolete
+const SINGLE_RULE = 'Si el usuario dicta un código (UNE, UTCL1, RP, NR, NO APTO, MATRIZ OCUPADA...), usa log_palpation_with_condition con UN solo elemento en animals_json, aunque sea un solo animal. log_palpation_event es solo para un resultado explícito sin código.';
+const OBSOLETE_PREFIX = { register_birth_event: 'OBSOLETA: no la uses. Usa register_birth_checked.', log_palpation_event_batch: 'OBSOLETA: no la uses. Usa log_palpation_with_condition.' };
 
 let fails = 0, passes = 0, skips = 0;
 const ok = (label, cond, detail) => {
@@ -138,6 +144,10 @@ const ASKS = /pide al usuario que confirme con Sí\/No/;
 ok('NIVEL 2 tools: toolDescription does NOT ask for a Sí/No before calling', NEW_ROUTINE.every((t) => !ASKS.test(descOf(t))), NEW_ROUTINE.filter((t) => ASKS.test(descOf(t))).join(', '));
 ok('NIVEL 3 tools: toolDescription KEEPS the Sí/No sentence', NEW_CONFIRM.every((t) => ASKS.test(descOf(t))), NEW_CONFIRM.filter((t) => !ASKS.test(descOf(t))).join(', '));
 ok('NIVEL 1 tools: toolDescription does not ask for a Sí/No', NEW_READS.every((t) => !ASKS.test(descOf(t))));
+ok('log_palpation_event and log_palpation_with_condition descriptions carry the single-animal rule', [descOf('log_palpation_event'), descOf('log_palpation_with_condition')].every((d) => d.includes(SINGLE_RULE)));
+ok('legacy nodes are marked OBSOLETA with their replacement (toolDescription prefix)',
+  Object.entries(OBSOLETE_PREFIX).every(([k, v]) => descOf(k).startsWith(v)));
+ok('get_births_config description has no ADMIN / SQL / panel wording', !/ADMIN|SQL|panel/.test(descOf('get_births_config')), descOf('get_births_config'));
 ok('no toolDescription says an ADMIN changes settings / codes "desde el panel" (there is no panel)',
   toolNodes.filter((n) => /ADMIN[^.]*desde el panel/.test(n.parameters.toolDescription || '') && NEW_READS.concat(NEW_ROUTINE, NEW_CONFIRM).includes(n.name)).length === 0);
 
@@ -167,7 +177,14 @@ ok('the 24 new tools use no e-mail/tenant parameter other than user_email and te
 for (const ch of Object.keys(AGENTS)) {
   const miss = REQUIRED_G_WORDS.filter((w) => !parts[ch].G.includes(w));
   ok(`${ch}: section G teaches every required answer / field / rule`, miss.length === 0, 'missing: ' + miss.join(', '));
-  ok(`${ch}: section G never says a veterinarian confirmed RP / NR / NO APTO / MATRIZ OCUPADA`, !/veterinario[s]? (los )?confirm[óo]/i.test(parts[ch].G.replace(/NO un veterinario[^.]*\./, '')));
+  ok(`${ch}: section G never says a veterinarian confirmed RP / NR / NO APTO / MATRIZ OCUPADA`, !/veterinario[s]? (los )?confirm[óo]/i.test(parts[ch].G.replace('nunca digas que un veterinario los confirmó', '')));
+  ok(`${ch}: the shared prompt carries no ranch-specific fact about the foreman ("capataz")`, !/capataz/i.test(sys[ch]));
+  ok(`${ch}: single-animal-with-a-code rule is in the log_palpation_event dictionary entry AND in G6`,
+    parts[ch].E.split('\n').some((l) => l.includes("'log_palpation_event'") && l.includes(SINGLE_RULE)) && parts[ch].G.includes(SINGLE_RULE));
+  ok(`${ch}: B5 says to ask for the lot/UPP first and only omit it when the user does not know / it does not apply`,
+    sys[ch].includes('Pregunta primero por el lote/UPP. Solo si el usuario dice que no sabe o que no aplica, omite lot_id y production_unit_id (la cría hereda los de la madre).'));
+  ok(`${ch}: get_births_config has no ADMIN / SQL wording in the prompt`,
+    !/get_births_config[^\n]{0,160}(ADMIN|SQL)/.test(sys[ch]));
   ok(`${ch}: section G adds no role restriction (no "solo un ADMIN" outside the death / sale authorization)`, !/solo (un )?ADMIN (puede )?(registr|captur)/i.test(parts[ch].G));
 }
 

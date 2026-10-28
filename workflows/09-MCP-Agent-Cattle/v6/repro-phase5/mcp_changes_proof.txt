@@ -1,10 +1,14 @@
+OK    the repo file equals what this script builds from the "before" file and the phase files
 OK    node count  30 -> 54
 OK    connection count  29 -> 53
 OK    names unique
 OK    ids unique
-OK    existing nodes changed: exactly ["list_lots"]  ['list_lots']
+OK    existing nodes changed: exactly ["list_lots", "log_palpation_event", "log_palpation_event_batch", "register_birth_event"]  ['list_lots', 'log_palpation_event', 'log_palpation_event_batch', 'register_birth_event']
 OK    removed nodes: none
-OK    the 28 other existing nodes + trigger byte-identical  29 identical
+OK    the other 26 existing nodes (the MCP trigger included) byte-identical  26 identical
+OK    register_birth_event: ONLY toolDescription changed (SQL, parameters, credentials, position untouched) and only by the OBSOLETA prefix
+OK    log_palpation_event_batch: ONLY toolDescription changed (SQL, parameters, credentials, position untouched) and only by the OBSOLETA prefix
+OK    log_palpation_event: ONLY toolDescription changed (SQL, parameters, credentials, position untouched) and only by the appended rule
 OK    existing connections unchanged
 OK    new nodes are the 24 expected
 OK    every new node is connected to the MCP trigger

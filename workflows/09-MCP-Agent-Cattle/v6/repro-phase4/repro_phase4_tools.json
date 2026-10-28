@@ -153,7 +153,7 @@
     {
       "parameters": {
         "descriptionType": "manual",
-        "toolDescription": "Regresa la ventana (en días) con la que se avisa de un posible parto duplicado de la misma madre (por omisión 240, configurable por empresa entre 30 y 730). Solo lectura. Solo un ADMIN la cambia por SQL (no hay pantalla); tú no puedes cambiarla.",
+        "toolDescription": "Regresa la ventana (en días) con la que se avisa de un posible parto duplicado de la misma madre (por omisión 240, configurable por empresa entre 30 y 730). Solo lectura.",
         "operation": "executeQuery",
         "query": "SELECT public.sp_repro_births_get_config($1::text, $2::text) AS result;",
         "options": {

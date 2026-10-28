@@ -28,6 +28,15 @@ P090 = (' 🛑 Respuestas de la migración 090: (1) renglón con NR SOLO: aparec
         '(4) vet_flag en un resultado: POSTPARTUM (código RP, recién parida) o UNFIT (NO APTO, no apta para reproducción); muéstralo con la palabra original que dictó el usuario. Si el resultado trae rp_without_registered_birth = true, esa vaca no tiene parto registrado cerca de la fecha: sugiere registrarlo, pregunta primero y NUNCA lo registres por tu cuenta. '
         '(5) "MATRIZ OCUPADA" significa preñada. Los significados de RP, NR, NO APTO y MATRIZ OCUPADA los confirmó el capataz del rancho, NO un veterinario: nunca digas que un veterinario los confirmó.')
 
+SINGLE_RULE = ('Si el usuario dicta un código (UNE, UTCL1, RP, NR, NO APTO, MATRIZ OCUPADA...), usa log_palpation_with_condition con UN solo elemento '
+               'en animals_json, aunque sea un solo animal. log_palpation_event es solo para un resultado explícito sin código.')
+
+# descriptions to strip entirely (the sentence said an ADMIN changes the births window "desde el panel" / "por SQL": not wanted in the node)
+REMOVE = [
+    (4, 'get_births_config', [' Solo un ADMIN la cambia desde el panel; tú no puedes cambiarla.',
+                              ' Solo un ADMIN la cambia por SQL (no hay pantalla); tú no puedes cambiarla.']),
+]
+
 # (file phase, node name, old, new)
 EDITS = [
     (2, 'log_empadre_entry', CONFIRM, NIVEL2),
@@ -46,9 +55,8 @@ EDITS = [
     (2, 'get_empadre_config',
      'Estos valores solo los cambia un ADMIN desde el panel; tú no puedes cambiarlos.',
      'Estos valores solo los cambia un ADMIN por SQL (no hay pantalla); tú no puedes cambiarlos.'),
-    (4, 'get_births_config',
-     'Solo un ADMIN la cambia desde el panel; tú no puedes cambiarla.',
-     'Solo un ADMIN la cambia por SQL (no hay pantalla); tú no puedes cambiarla.'),
+    # insertion: the wrapper is also THE tool for one animal with a code (new text CONTAINS the old one, so the "already applied" test is `new in d`)
+    (3, 'log_palpation_with_condition', ' 🛑 Respuestas de la migración 090: (1)', ' ' + SINGLE_RULE + ' 🛑 Respuestas de la migración 090: (1)'),
 ]
 
 
@@ -60,15 +68,28 @@ def main(argv):
         n = [x for x in data[ph]['nodes'] if x['name'] == node]
         assert len(n) == 1, 'node %s not found exactly once in phase %d' % (node, ph)
         d = n[0]['parameters']['toolDescription']
+        if new in d:
+            continue                                     # already applied
         if old in d:
             assert d.count(old) == 1, 'replacement matches more than once in %s' % node
             pending += 1
             if not check:
                 n[0]['parameters']['toolDescription'] = d.replace(old, new)
-        elif new.strip() and new in d:
-            continue                                     # already applied
         else:
             raise SystemExit('ABORT: neither the old nor the new text is in %s (edited by hand?)' % node)
+    for ph, node, candidates in REMOVE:
+        n = [x for x in data[ph]['nodes'] if x['name'] == node]
+        assert len(n) == 1
+        d = n[0]['parameters']['toolDescription']
+        for c in candidates:
+            if c in d:
+                pending += 1
+                if not check:
+                    d = d.replace(c, '')
+        assert check or not any(c in d for c in candidates)
+        assert not (' ADMIN la cambia' in d and not check), 'an ADMIN wording is still in %s' % node
+        if not check:
+            n[0]['parameters']['toolDescription'] = d
     if check:
         print('descriptions still to edit: %d' % pending)
         return 1 if pending else 0

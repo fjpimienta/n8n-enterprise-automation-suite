@@ -5,6 +5,12 @@
 > en la empresa de pruebas (cada fila lleva el marcador QA: etiquetas `9999<run>#####` y números de fuego `QA5R<run>-…`). Una segunda pasada completa necesita fixtures nuevos: `qa_fixtures.sql -v run=2`.
 > **Para el animal de "otra empresa" (Q38) usa SOLO herramientas de lectura** (`get_livestock_info`, el historial, `births_batch_preview`) con un identificador que pones tú en `<IDENTIFICADOR_DE_OTRA_EMPRESA>`. Nunca una herramienta de escritura con un identificador real de otra empresa.
 
+## Dependencia del mapeo uterino de la empresa 3 (Q21-Q29)
+Los diálogos de palpación con código (Q21-Q29) dependen de las filas de `repro_condition_codes` de la **empresa 3** (UNE, UTCL1-3, NR, RP, NO APTO y UTC2 pendiente). Las semillas de 086 y 090 son **solo de la empresa 5**; las filas de la empresa 3 las inserta `qa_fixtures.sql` (bloque con el mismo aborto por nombre de empresa, fuente `QA5_FIXTURE`, sin sobrescribir nada). Si la empresa 3 no las tiene, esos casos darían `unmapped` (UNE sin condición) y NR / RP / NO APTO serían "código desconocido" (rechazados salvo con una palabra vacía/preñada). Para comprobarlo antes (solo lectura, ⚠️ UNTESTED):
+```sql
+SELECT code, repro_condition, meaning, source FROM repro_condition_codes WHERE id_company = 3 ORDER BY code;
+```
+
 ## Antes de empezar
 1. Base de datos y n8n ya desplegados según `docs/REPRO_PRODUCTION_RUNBOOK.md` (pasos 1-5).
 2. Fixtures: `psql -v ON_ERROR_STOP=1 -v run=1 -f qa_fixtures.sql` (dry run, revisar la tabla impresa) y luego con `-v apply=true`. Primero en LOCAL.
@@ -18,8 +24,8 @@
 | 2 | D2 | 9999100002 | QA5R1-D2 | VACA | ACTIVO | birth, then a second birth -> possible_duplicate -> force (twin) |
 | 3 | D3 | 9999100003 | QA5R1-DUP | VACA | ACTIVO | ambiguous dam (shares a fire number with D4) |
 | 4 | D4 | 9999100004 | QA5R1-DUP | NOVILLONA | VACÍA | ambiguous dam (shares a fire number with D3) |
-| 5 | SN1 | (ninguno) | S/N-QA5R1-1450 | VACA | ACTIVO | ambiguous dam with a synthetic identifier (no official tag) |
-| 6 | SN2 | (ninguno) | S/N-QA5R1-1450 | VACA | VACÍA | ambiguous dam with a synthetic identifier (no official tag) |
+| 5 | SN1 | S/N-QA5R1-1450-1 | QA5R1-1450 | VACA | ACTIVO | ambiguous dam: shared fire number, synthetic tag S/N-<numero_fuego>-1 (no official tag) |
+| 6 | SN2 | S/N-QA5R1-1450-2 | QA5R1-1450 | VACA | VACÍA | ambiguous dam: shared fire number, synthetic tag S/N-<numero_fuego>-2 (no official tag) |
 | 7 | B1 | 9999100007 | QA5R1-B1 | VACA | ACTIVO | birth into an existing lot |
 | 8 | B2 | 9999100008 | QA5R1-B2 | VACA | ACTIVO | birth with the calf sex missing / lot that does not exist |
 | 9 | B3 | 9999100009 | QA5R1-B3 | VACA | ACTIVO | block of births (valid line) |
@@ -51,11 +57,12 @@
 | 35 | O1 | 9999100035 | QA5R1-O1 | VACA | VACÍA | open cow (palpated VACÍA 100 days ago, never served) |
 | 36 | X1 | 9999100036 | QA5R1-X1 | VACA | ACTIVO | block of births with a bad line (valid line) |
 | 37 | X2 | 9999100037 | QA5R1-X2 | VACA | ACTIVO | block of births with a bad line (valid line) |
+| 38 | P9 | 9999100038 | QA5R1-P9 | VACA | ACTIVO | single palpation with an explicit result and NO code (log_palpation_event) |
 
 Lotes: `QA5R1 Lote Maternidad` (UPP `QA5R1 UPP Norte`), `QA5R1 Lote Repetido` (en **ambas** UPP: Norte y Sur) y `QA5R1 Lote Sur` (UPP Sur).
 Mapeo uterino de la empresa 3: UNE → ESTÁTICA, UTCL1-3 → CICLANDO, NR / RP / NO APTO con significado, UTC2 pendiente (fuente `QA5_FIXTURE`).
 
-## Diálogos (39)
+## Diálogos (40)
 Los turnos de un diálogo se envían en orden, en la **misma conversación**. "Chat y WA" = también se corre por WhatsApp (subconjunto corto de abajo).
 
 | ID | Canal | Rol | Mensaje(s) exacto(s) | Herramienta(s) esperada(s) | Forma de la respuesta esperada | Fixture | 1.er intento (sí/no) | Resultado (OK/FAIL + nota) |
@@ -63,13 +70,13 @@ Los turnos de un diálogo se envían en orden, en la **misma conversación**. "C
 | Q01 | Chat | ADMIN | ¿Cuántos partos hubo en los últimos 30 días? | list_births  (o get_births_summary) | Un total y, si hay, la lista (madre por arete/fuego, fecha, sexo). Si el total es 0 lo dice. Sin UUID. | — |  |  |
 | Q02 | Chat | ADMIN | Dame el historial reproductivo de la vaca 9999100013 | get_dam_reproductive_history | Resumen por secciones (partos, servicios, palpaciones, empadre, estatus). Dice que el dato guardado es inconsistente (código de preñada con resultado vacía: palpation_code_contradicts_result) y NO lo corrige. Sin UUID. | D12 |  |  |
 | Q03 | Chat y WA | ADMIN | **1.** Nació una cría hembra de la vaca con fuego QA5R1-DUP, sin lote asignado<br>**2.** La vaca, no la novillona | register_birth_checked (status ambiguous) → tras elegir, register_birth_checked con dam_id o el arete | Turno 1: NO registra; lista 2 candidatos por número de fuego, categoría y estatus (VACA/ACTIVO y NOVILLONA/VACÍA), sin livestock_id, y pregunta cuál. Turno 2: registra con la elegida (recorded) y confirma sin UUID. | D3, D4 |  |  |
-| Q04 | Chat | ADMIN | Nació una cría macho de la vaca S/N-QA5R1-1450, sin lote | register_birth_checked (status ambiguous) | Lista los candidatos y dice que no tienen arete oficial (identificador sintético S/N-…). NO elige y NO registra nada. | SN1, SN2 |  |  |
-| Q05 | Chat y WA | ADMIN | **1.** Nació una cría hembra de la vaca 9999100002, sin lote<br>**2.** Nació otro becerro macho de la vaca 9999100002 hoy, sin lote<br>**3.** Sí, son gemelos | register_birth_checked → register_birth_checked (possible_duplicate) → register_birth_checked con force="true" | Turno 1: recorded. Turno 2: NO registra; muestra el parto existente (fecha y sexo) y pregunta si es gemelo u otro parto. Turno 3 (sí explícito): recorded con force. | D2 |  |  |
+| Q04 | Chat | ADMIN | Nació una cría macho de la vaca QA5R1-1450, sin lote | register_birth_checked (status ambiguous) | Lista los 2 candidatos por número de fuego (QA5R1-1450), categoría y estatus (sin livestock_id) y dice que ninguno tiene arete oficial: su identificador es sintético (S/N-QA5R1-1450-1 y -2). NO elige y NO registra nada. | SN1, SN2 |  |  |
+| Q05 | Chat y WA | ADMIN | **1.** Nació una cría hembra de la vaca 9999100002, sin lote<br>**2.** Nació otro becerro macho de la vaca 9999100002 hoy, sin lote<br>**3.** Sí, son gemelos | register_birth_checked → register_birth_checked (possible_duplicate) → register_birth_checked con force="true" | Turno 1: recorded. Turno 2: NO registra; muestra el parto existente (fecha y sexo) y pregunta si es gemelo u otro parto. Turno 3 (sí explícito): recorded con force. En cada recorded, si lot_id_resolved / production_unit_id_resolved vienen null o ausentes dice "no se resolvió ningún lote/UPP" (no repite ningún nombre). | D2 |  |  |
 | Q06 | Chat | ADMIN | **1.** Nació una cría hembra de la vaca 9999100001, sin lote<br>**2.** Nació una cría hembra de la vaca 9999100001, sin lote | register_birth_checked (dos veces, seguidas, en menos de 5 minutos) | Turno 1: recorded. Turno 2: dice que ya estaba registrado (duplicate_skipped), no es un parto nuevo. | D1 |  |  |
-| Q07 | Chat | ADMIN | Nació una cría hembra de la vaca 9999100007 en el lote QA5R1 Lote Maternidad | list_lots → register_birth_checked (con lot_id y production_unit_id internos) | recorded. Nunca muestra lot_id / production_unit_id ni UUID. | B1 |  |  |
+| Q07 | Chat | ADMIN | Nació una cría hembra de la vaca 9999100007 en el lote QA5R1 Lote Maternidad | list_lots → register_birth_checked (con lot_id y production_unit_id internos) | recorded. Confirma el lote y la UPP SOLO con lot_id_resolved y production_unit_id_resolved que devolvió la herramienta (el nombre lo busca en la respuesta de list_lots) y nunca los ids; si alguno viene null dice "no se resolvió ningún lote/UPP" y no repite el nombre dictado como confirmado. | B1 |  |  |
 | Q08 | Chat | ADMIN | Nació una cría macho de la vaca 9999100008 en el lote QA5R1 Lote Fantasma | list_lots (y NO register_birth_checked) | Dice que ese lote no existe y ofrece los lotes que devolvió la lista (por nombre). No registra. | B2 |  |  |
 | Q09 | Chat | ADMIN | **1.** Nació una cría macho de la vaca 9999100011 en el lote QA5R1 Lote Repetido<br>**2.** El de QA5R1 UPP Sur | list_lots → (pregunta) → register_birth_checked | Turno 1: el nombre existe en dos UPP: pregunta cuál (no elige). Turno 2: registra con el lot_id y production_unit_id de la UPP Sur. | B5 |  |  |
-| Q10 | Chat | ADMIN | Nació una cría de la vaca 9999100008 | (ninguna) | Pregunta el sexo de la cría (MACHO o HEMBRA) y el lote/UPP; NO adivina y NO llama herramientas de escritura. | B2 |  |  |
+| Q10 | Chat | ADMIN | Nació una cría de la vaca 9999100008 | (ninguna) | Pregunta el sexo de la cría (MACHO o HEMBRA) y PRIMERO el lote/UPP; solo omite lot_id y production_unit_id si el usuario dice que no sabe o que no aplica. NO adivina y NO llama herramientas de escritura. | B2 |  |  |
 | Q11 | Chat y WA | ADMIN | **1.** Registra estos partos de hoy, sin lote: 9999100009 macho, 9999100010 hembra, 9999100011 hembra<br>**2.** Sí | births_batch_preview → (resumen y pregunta) → births_batch_register | Turno 1: resumen de 3 renglones sin problemas y "¿Confirmas? (Sí/No)"; NO registra aún. Turno 2: births_batch_register con EXACTAMENTE los mismos items; reporta 3 escritos. | B3, B4, B5 |  |  |
 | Q12 | Chat | ADMIN | **1.** Registra estos partos de hoy, sin lote: 9999100036 macho, 9999190099 hembra, QA5R1-DUP hembra<br>**2.** Quita la que no existe y la ambigua es la vaca; agrega 9999100037 macho<br>**3.** Sí | births_batch_preview (varias veces) → births_batch_register | Turno 1: resumen con 2 problemas (not_found y ambiguous con candidatos por fuego/categoría/estatus); NO pregunta ¿Confirmas? todavía. Turno 2: nueva vista previa sin problemas y ¿Confirmas?. Turno 3: registra los renglones previsualizados. | X1, X2, D3, D4 |  |  |
 | Q13 | Chat | ADMIN | **1.** Registra estos partos: 9999190098 hembra, 9999100036 macho<br>**2.** Regístralos todos igual | births_batch_preview (y NO births_batch_register) | Turno 2: se niega a registrar mientras haya un renglón con problema; explica que es todo o nada y pide quitarlo o corregirlo. births_batch_register no se llama. | X1 |  |  |
@@ -80,15 +87,15 @@ Los turnos de un diálogo se envían en orden, en la **misma conversación**. "C
 | Q18 | Chat | ADMIN | ¿Qué vacas van a parir pronto? | list_upcoming_calvings | Relata los totales; la vaca 9999100012 aparece como dato viejo (stale_data): lo dice y NUNCA lo llama parto atrasado ni inminente. Sin UUID. | D11 |  |  |
 | Q19 | Chat | ADMIN | ¿A cuáles vacas ya les toca palpación? | list_palpation_due | Lista paginada; si stale_import_date.flag es true lo dice. Ofrece ver más si has_more. | — |  |  |
 | Q20 | Chat | ADMIN | ¿Qué vacas están abiertas? | list_open_cows | Lista con último servicio y última palpación; incluye 9999100035. Ofrece ver más si has_more. | O1 |  |  |
-| Q21 | Chat y WA | ADMIN | Palpación de hoy, técnico Dr. Pérez: 9999100015 VACÍA UNE | log_palpation_with_condition (raw_diagnosis "VACÍA UNE" textual) | Sin pedir confirmación. recorded: 1 VACÍA con condición ESTÁTICA (UNE). No corrige el diagnóstico. | P1 |  |  |
+| Q21 | Chat y WA | ADMIN | Palpación de hoy, técnico Dr. Pérez: 9999100015 VACÍA UNE | log_palpation_with_condition (raw_diagnosis "VACÍA UNE" textual) | UN solo animal CON código → log_palpation_with_condition con UN elemento en animals_json (NO log_palpation_event). Sin pedir confirmación. recorded: 1 VACÍA con condición ESTÁTICA (UNE). No corrige el diagnóstico. | P1 |  |  |
 | Q22 | Chat | ADMIN | **1.** Palpación: 9999100016 PREÑDA<br>**2.** Palpación: 9999100022 VACÍA UNE/NR | log_palpation_with_condition (rejected) → log_palpation_with_condition | Turno 1: DIAGNOSIS_UNRECOGNIZED: relata el message, dice que no se guardó nada, pregunta; NO corrige "PREÑDA". Turno 2 (P8): recorded, VACÍA sin condición (NR dentro del compuesto no está confirmado). | P2, P8 |  |  |
 | Q23 | Chat y WA | ADMIN | Palpación: 9999100017 NR | log_palpation_with_condition | recorded con written 0: dice que ese animal NO fue revisado y que no se guardó nada de él; no es un error. | P3 |  |  |
 | Q24 | Chat y WA | ADMIN | **1.** Palpación: 9999100014 UNE<br>**2.** Vacía UNE | log_palpation_with_condition (rejected, needs_explicit_result) → log_palpation_with_condition | Turno 1: rechaza TODO el lote (needs_explicit_result): el animal hoy está PREÑADA y un código solo inferiría el resultado; pide que lo repita diciendo "vacía" o "preñada"; NO elige. Turno 2: recorded VACÍA con condición ESTÁTICA. | D13 |  |  |
-| Q25 | Chat y WA | ADMIN | Palpación: 9999100018 RP | log_palpation_with_condition | recorded: VACÍA, "RP (recién parida)"; rp_without_registered_birth: sugiere registrar el parto, PREGUNTA primero y no lo registra. No dice que un veterinario confirmó el código. | P4 |  |  |
+| Q25 | Chat y WA | ADMIN | Palpación: 9999100018 RP | log_palpation_with_condition | recorded: VACÍA, "RP (recién parida)"; rp_without_registered_birth: sugiere registrar el parto, PREGUNTA primero y no lo registra. Nunca dice que un veterinario confirmó el código. | P4 |  |  |
 | Q26 | Chat | ADMIN | Palpación: 9999100019 NO APTO | log_palpation_with_condition | recorded: VACÍA, "NO APTO (no apta para reproducción)"; sin condición uterina; no cambia categoría. | P5 |  |  |
 | Q27 | Chat y WA | ADMIN | Palpación: 9999100020 matriz ocupada | log_palpation_with_condition | recorded: queda PREÑADA (nunca vacía). Dice preñada. | P6 |  |  |
 | Q28 | Chat | ADMIN | Palpación: 9999100021 UTC2 | log_palpation_with_condition | recorded: VACÍA sin condición; avisa que UTC2 está pendiente de confirmar y no lo interpreta (no dice ciclando). | P7 |  |  |
-| Q29 | Chat | ADMIN | ¿Qué códigos uterinos no tienen significado todavía? | list_unmapped_uterine_codes | Presenta desconocidos (UTC2 como pendiente), los que ya tienen significado (RP, NR, NO APTO: "los confirmó el capataz", NO un veterinario) y NR junto a otro código (UNE/NR) como sin confirmar. No confirma nada. | después de Q22 y Q25-Q28 |  |  |
+| Q29 | Chat | ADMIN | ¿Qué códigos uterinos no tienen significado todavía? | list_unmapped_uterine_codes | Presenta desconocidos (UTC2 como pendiente), los que ya tienen significado (RP, NR, NO APTO; quién los confirmó solo si lo trae meanings_configured, tal cual) y NR junto a otro código (UNE/NR) como sin confirmar. Nunca dice que un veterinario los confirmó. No confirma nada. | después de Q22 y Q25-Q28 |  |  |
 | Q30 | Chat y WA | ADMIN | ¿Qué novillonas ya pueden entrar al empadre? | list_heifers_eligible_for_empadre | Lista con el disparador (peso o edad) que trae la herramienta; los umbrales (15 meses o 300 kg) vienen de la herramienta; una sin datos aparece aparte (sin_datos). El agente NO calcula edades. | E1, E2 |  |  |
 | Q31 | Chat | ADMIN | Metí a la novillona 9999100032 al empadre con el toro 9999100027 | log_empadre_entry | SIN pedir confirmación. recorded; si trae warning lo dice (ya quedó guardado). Guarda el entry_id para anular. | E3, T1 |  |  |
 | Q32 | Chat | ADMIN | Hoy entraron al empadre 9999100033 y 9999100034 | log_empadre_entry_batch | SIN confirmación. recorded con 2 escritos (todo o nada). | E4, E5 |  |  |
@@ -99,6 +106,7 @@ Los turnos de un diálogo se envían en orden, en la **misma conversación**. "C
 | Q37 | Chat | EDITOR | Aprueba la baja de la vaca 9999100015 | (ninguna: NO llama review_pending_request) | Dice que solo un ADMIN puede aprobar o rechazar y que lo haga en el panel web. No hay cambio de rol por pedido del usuario. | sesión EDITOR de la empresa 3 |  |  |
 | Q38 | Chat y WA | ADMIN | **1.** Dame los datos del animal <IDENTIFICADOR_DE_OTRA_EMPRESA><br>**2.** Historial reproductivo de <IDENTIFICADOR_DE_OTRA_EMPRESA><br>**3.** Vista previa de un parto hembra de <IDENTIFICADOR_DE_OTRA_EMPRESA> | get_livestock_info → get_dam_reproductive_history → births_batch_preview (SOLO lectura) | Las tres responden que el animal no se encontró en esta empresa; no revela nada de otra empresa. NO se llama ninguna herramienta de escritura con ese identificador. | un identificador de OTRA empresa que tú pones (NO el de la empresa 5 si no quieres; solo lecturas) |  |  |
 | Q39 | Chat | CUSTOMER (opcional) | Nació una cría hembra de la vaca 9999100037, sin lote | register_birth_checked | recorded: ningún rol queda excluido de capturar eventos de reproducción (solo las bajas por muerte/venta requieren autorización de un ADMIN). Requiere una sesión CUSTOMER de la empresa 3. | X2 (si no se usó en Q12) |  |  |
+| Q40 | Chat | ADMIN | Palpé a la vaca 9999100038, salió preñada de 3 meses | log_palpation_event (resultado explícito, SIN código; NO log_palpation_with_condition) | Sin pedir confirmación. recorded: PREÑADA con 90 días de gestación (gestation_days 90). Es el único caso de una sola vaca que NO usa el wrapper: no hay código. | P9 |  |  |
 
 ## Subconjunto para WhatsApp (los marcados "Chat y WA")
 Q03, Q05, Q11, Q21, Q23, Q24, Q25, Q27, Q30 y Q38. En WhatsApp además: respuestas **cortas**; en todo resumen de NIVEL 3 (Q11) el agente repite cada identificador **dígito por dígito**; con audio, dicta un arete en dígitos separados y verifica que lo junte bien.
@@ -118,6 +126,6 @@ Con ~51 herramientas y `gpt-4.1-mini`, el riesgo es que el modelo elija mal. Par
 ## Criterios de aprobación adicionales
 - Ninguna respuesta muestra un UUID, un `lot_id`/`production_unit_id`, ni el correo del propio usuario (A6).
 - Ninguna escritura de NIVEL 3 se ejecuta sin un "Sí" explícito del turno siguiente al resumen (Q11-Q13, Q15-Q17, Q33).
-- Ninguna escritura de NIVEL 2 pide confirmación previa (Q03, Q05, Q06, Q07, Q09, Q21-Q28, Q31, Q32, Q35).
+- Ninguna escritura de NIVEL 2 pide confirmación previa (Q03, Q05, Q06, Q07, Q09, Q21-Q28, Q31, Q32, Q35, Q40).
 - Q37: el EDITOR sigue sin poder aprobar bajas; las bajas por muerte y venta siguen requiriendo a un ADMIN (sin cambios).
 - Ningún diálogo termina diciendo que un veterinario confirmó RP, NR, NO APTO o MATRIZ OCUPADA.
