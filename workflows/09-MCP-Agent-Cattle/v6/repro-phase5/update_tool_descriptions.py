@@ -42,6 +42,20 @@ BIRTH_LOT_NEW = (' Para asignar lote o UPP pasa lot_id y production_unit_id toma
 BIRTH_NIVEL2_EXTRA = (' Ejecútala en cuanto conozcas la madre y el sexo de la cría; no preguntes la fecha (por omisión hoy), el peso ni las notas si el usuario no los mencionó, '
                       'ni vuelvas a preguntar lo que ya dijo. Es para UN parto: con dos o más partos en el mismo mensaje usa births_batch_preview.')
 
+# round 2 of the local QA (2026-10-29): what the SP does with the lot / UPP when none is passed (087: the dam's lot and UPP, empty when she has none),
+# a clear "one birth only" opening, and no confirmation of date / lot / UPP / weight
+BIRTH_INHERIT_OLD = 'Si no dijo ninguno o dijo "sin lote", omite lot_id y production_unit_id y la cría hereda de la madre. '
+BIRTH_INHERIT_NEW = ('Si el usuario nombra un lote, llama primero a list_lots. Si no dijo ninguno o dijo "sin lote", omite lot_id y production_unit_id: la cría queda con el lote y la UPP '
+                     'que la madre tenga registrados (vacíos si no tiene); no afirmes que "heredó" nada que lot_id_resolved y production_unit_id_resolved no digan. ')
+BIRTH_LOT_V2 = BIRTH_LOT_NEW.replace(BIRTH_INHERIT_OLD, BIRTH_INHERIT_NEW)
+assert BIRTH_LOT_V2 != BIRTH_LOT_NEW
+BIRTH_NIVEL2_EXTRA_V2 = (' Ejecútala en cuanto conozcas la madre y el sexo de la cría; no preguntes ni pidas confirmar la fecha ("ayer" y similares los conviertes tú), el lote, la UPP, el peso ni las notas '
+                         'si el usuario no los mencionó, ni vuelvas a preguntar lo que ya dijo. birth_weight_kg y notes son opcionales: envíalos solo si el usuario los dio. '
+                         'Es para UN parto: con dos o más partos en el mismo mensaje usa births_batch_preview, nunca llamadas repetidas a esta herramienta.')
+BIRTH_HEAD_OLD = 'Registra UN parto con validación completa:'
+BIRTH_HEAD_NEW = ('UN solo parto. Para 2 o más, usar el flujo de bloque (births_batch_preview y, solo tras el Sí del usuario, births_batch_register). '
+                  'Registra UN parto con validación completa:')
+
 # descriptions to strip entirely (the sentence said an ADMIN changes the births window "desde el panel" / "por SQL": not wanted in the node)
 REMOVE = [
     (4, 'get_births_config', [' Solo un ADMIN la cambia desde el panel; tú no puedes cambiarla.',
@@ -49,7 +63,9 @@ REMOVE = [
 ]
 
 # an edit whose result a LATER edit rewrote counts as applied when the later text is present (key: node name, old text)
-DONE_ALSO = {('register_birth_checked', CONFIRM): (BIRTH_LOT_NEW,)}
+DONE_ALSO = {('register_birth_checked', CONFIRM): (BIRTH_LOT_NEW, BIRTH_LOT_V2),
+             ('register_birth_checked', BIRTH_LOT_OLD): (BIRTH_LOT_V2,),
+             ('register_birth_checked', NIVEL2): (NIVEL2 + BIRTH_NIVEL2_EXTRA_V2,)}
 
 # (file phase, node name, old, new)
 EDITS = [
@@ -75,6 +91,10 @@ EDITS = [
     (4, 'register_birth_checked', "Si regresa 'recorded', confirma con los datos que trae", "Si regresa 'recorded', reporta con los datos que trae"),
     (4, 'register_birth_checked', BIRTH_LOT_OLD, BIRTH_LOT_NEW),
     (4, 'register_birth_checked', NIVEL2, NIVEL2 + BIRTH_NIVEL2_EXTRA),
+    # round 2: lot / UPP when none is passed, no confirmation of date / lot / UPP, one birth only
+    (4, 'register_birth_checked', BIRTH_INHERIT_OLD, BIRTH_INHERIT_NEW),
+    (4, 'register_birth_checked', NIVEL2 + BIRTH_NIVEL2_EXTRA, NIVEL2 + BIRTH_NIVEL2_EXTRA_V2),
+    (4, 'register_birth_checked', BIRTH_HEAD_OLD, BIRTH_HEAD_NEW),
 ]
 
 # (file phase, node name, old, new) inside options.queryReplacement: the hint texts of the $fromAI keys (no double quotes inside them)
@@ -85,6 +105,9 @@ QR_EDITS = [
      '$fromAI(\'production_unit_id\', "UUID de la UPP: la columna production_unit_id de la MISMA fila de list_lots. NUNCA un nombre de UPP. Omite si no hay UPP."'),
     (4, 'register_birth_checked', '$fromAI(\'notes\', "Notas del usuario. Omite si no hay."',
      '$fromAI(\'notes\', "SOLO palabras que el usuario dictó como nota. Nunca comentarios tuyos, identificadores ni observaciones sobre el lote. Omite si no dictó ninguna."'),
+    # round 2: the model sent birth_weight_kg as the number 35 and the schema wants text (the hint text holds escaped quotes: it sits inside a JS double-quoted string)
+    (4, 'register_birth_checked', '$fromAI(\'birth_weight_kg\', "Peso al nacer en kg, sin comas (ej. 36.5). Omite si el usuario no lo dio."',
+     '$fromAI(\'birth_weight_kg\', "Peso al nacer en kg, OPCIONAL: envíalo como TEXTO entre comillas, sin comas (ej. \\"35\\" o \\"36.5\\"; NUNCA el número 35 sin comillas). Omite si el usuario no lo dio."'),
 ]
 
 
