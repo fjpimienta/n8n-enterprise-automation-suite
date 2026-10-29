@@ -17,6 +17,8 @@
 > ```
 > Debe imprimir una tabla con los 9 casos en `ok = t`, la línea `ALL 9 TESTS OK` y, después del `ROLLBACK`, `animals_unchanged`, `births_unchanged` y `weights_unchanged` en `t`. Los dos primeros bloques usan las madres B1-B5, X1 y X2 del run, que **no deben tener partos todavía** (el script aborta si los tienen): córrelo antes de los diálogos. No sustituye ejecutar cada nodo una vez en el n8n LOCAL.
 
+> **Cuarta pasada local (tanda 5, 2026-10-29):** (a) **el diálogo 4 incumplió G0 por segunda vez** (varias crías en un mensaje sin el flujo de bloque); es el motivo de la puerta de salida del paso 6 del runbook (5 repeticiones por canal, 0 escrituras antes del "Sí"); (b) **el diálogo 5 falló de forma segura**: no escribió nada; (c) **el diálogo 3 es correcto**: el lote y la UPP reportados coinciden con lo que escribió la base, y lo verifica `births_names_check.sql` (9 de 9 casos). Pendiente: repetir el diálogo del bloque de partos con madres frescas y medir la puerta de salida.
+
 ## Dependencia del mapeo uterino de la empresa 3 (Q21-Q29)
 Los diálogos de palpación con código (Q21-Q29) dependen de las filas de `repro_condition_codes` de la **empresa 3** (UNE, UTCL1-3, NR, RP, NO APTO y UTC2 pendiente). Las semillas de 086 y 090 son **solo de la empresa 5**; las filas de la empresa 3 las inserta `qa_fixtures.sql` (bloque con el mismo aborto por nombre de empresa, fuente `QA5_FIXTURE`, sin sobrescribir nada). Si la empresa 3 no las tiene, esos casos darían `unmapped` (UNE sin condición) y NR / RP / NO APTO serían "código desconocido" (rechazados salvo con una palabra vacía/preñada). Para comprobarlo antes (solo lectura, ⚠️ UNTESTED):
 ```sql
