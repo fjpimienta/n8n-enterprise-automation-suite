@@ -90,19 +90,11 @@ After step 4 the MCP server says `OBSOLETA` on the two legacy tools **while the 
 
 | Phase 5 tools and QA | md5 |
 |---|---|
-<<<<<<< HEAD
 | `repro-phase5/add_repro_tools.py` | `be04b4c572e9da6d9fdf68424a2f2e29` |
 | `repro-phase5/update_tool_descriptions.py` | `cea76c3b2ac17de1fd9eaeaa12584e90` |
 | `repro-phase5/update_prompts.py` | `2f25efef60c8df2202cb76467a4aab8c` |
-| `repro-phase5/compare_workflow_export.py` | `7071aa8d17c0e6ef1cde545ab16e37ed` |
-| `repro-phase5/check_repro_consistency.js` | `749f50cbc7b72e7dfe937f024c62441e` |
-=======
-| `repro-phase5/add_repro_tools.py` | `69a2bc534bdf8c501130874e4ea14f5e` |
-| `repro-phase5/update_tool_descriptions.py` | `1cd01a0d2a7934484a1d5463167b9f7b` |
-| `repro-phase5/update_prompts.py` | `704271602e6cfc0c43242f3049114c16` |
 | `repro-phase5/compare_workflow_export.py` | `6f81f284607d5d643701b25defa353c4` |
-| `repro-phase5/check_repro_consistency.js` | `78b66693cf462cefd51d5e87b7def16c` |
->>>>>>> cf45667 (fix(agro-erp): treat n8n node ids as volatile in the workflow export comparison (#882))
+| `repro-phase5/check_repro_consistency.js` | `749f50cbc7b72e7dfe937f024c62441e` |
 | `repro-phase5/list_lots_diff.py` | `fcf70c0c7fd6d911c347727370327683` |
 | `repro-phase5/qa_fixtures.sql` | `9de4bc89e6b4577748bacb42056ce25e` |
 | `repro-phase5/births_names_check.sql` | `613b1e7e275c4f6ee2613ccafc715775` |
@@ -316,11 +308,7 @@ python3 workflows/09-MCP-Agent-Cattle/v6/repro-phase5/compare_workflow_export.py
 
 ## Step 5 — n8n: the two agent prompts (right after step 4, same window)
 Import the two agent workflows the same way (4c) from `v6_ai_chat_cattle.json` and `v6_WhatsApp_Agent_Cattle.json`. They differ from the live ones **only** in the `systemMessage` of the node `AI Agent` (proved offline by `check_repro_consistency.js`). Do WhatsApp last. ⚠️ UNTESTED.
-<<<<<<< HEAD
-Verify: re-export both and compare with the repo files (`IDENTICAL`); from the repo, run the offline check (✅ executed by the author on the repo files; **187 passed, 0 failed** at the last run):
-=======
-Verify: re-export both and compare with the repo files (`RESULT: IDENTICAL (nodes, connections, settings)` plus `info: node ids differ in N nodes (volatile)` for each: the re-export has new node ids; any other line is a STOP); from the repo, run the offline check (✅ executed by the author on the repo files; **75 passed, 0 failed** at the last run):
->>>>>>> cf45667 (fix(agro-erp): treat n8n node ids as volatile in the workflow export comparison (#882))
+Verify: re-export both and compare with the repo files (`RESULT: IDENTICAL (nodes, connections, settings)` plus `info: node ids differ in N nodes (volatile)` for each: the re-export has new node ids; any other line is a STOP); from the repo, run the offline check (✅ executed by the author on the repo files; **187 passed, 0 failed** at the last run):
 ```bash
 set -euo pipefail
 V=workflows/09-MCP-Agent-Cattle/v6
