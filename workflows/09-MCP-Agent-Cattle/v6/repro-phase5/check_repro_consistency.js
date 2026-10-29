@@ -301,9 +301,8 @@ for (const ch of Object.keys(AGENTS)) {
   const w5 = ['TEXTO', 'también los valores numéricos', 'birth_weight_kg "35"', 'days "300"', 'limit "50"', 'offset "0"', 'litter_position "2"', 'NUNCA muestres al usuario un error de esquema o de validación', 'reintenta en silencio UNA vez con el tipo corregido', 'avisa solo si el segundo intento también falla'];
   ok(`${ch}: R2-5 G11 sends numeric values as quoted text, never shows schema errors, retries silently once`, has(G11, w5), missing(G11, w5));
   ok(`${ch}: R2-5 B7 exempts schema / type errors from "tell the user the error"`, sys[ch].includes('EXCEPCIÓN: un error de esquema o de tipos') && sys[ch].includes('NUNCA se muestra al usuario: sigue G11'));
-  const exc = (G11.match(/Solo se envían como número tenant_id y limit \/ offset de (.+?)\./) || [])[1] || '';
-  const excTools = [...exc.matchAll(/'([a-z_]+)'/g)].map((m) => m[1]).sort();
-  ok(`${ch}: R2-5 G11 names exactly the tools whose limit / offset the nodes declare as NUMBER (${numberTools.join(', ')})`, JSON.stringify(excTools) === JSON.stringify(numberTools), 'G11 says [' + excTools.join(', ') + ']');
+  ok(`${ch}: R2-5 / R3-5b G11 says that only tenant_id is sent as a number, and no node declares another parameter as number (${numberTools.length} found)`,
+    G11.includes('Solo se envía como número tenant_id.') && !/limit \/ offset de/.test(G11) && numberTools.length === 0, numberTools.join(', '));
 }
 {
   const rbc2 = toolNodes.find((n) => n.name === 'register_birth_checked');
@@ -386,7 +385,53 @@ for (const ch of Object.keys(AGENTS)) {
   const rbcNode = toolNodes.find((n) => n.name === 'register_birth_checked');
   ok('R3-2 in the tool schema (emulated from the $fromAI defaults) only tenant_id and user_email are REQUIRED in register_birth_checked: birth_weight_kg, birth_date, notes are optional', JSON.stringify(reqOf(rbcNode)) === JSON.stringify(['tenant_id', 'user_email']), reqOf(rbcNode).join(', '));
   const reqNew = phaseNames.map((t) => [t, reqOf(toolNodes.find((n) => n.name === t))]).filter(([, r]) => r.some((k) => !['tenant_id', 'user_email'].includes(k)));
-  ok('R3-2 audit: required keys of the 24 new tools beyond tenant_id / user_email (informational)', true, reqNew.map(([t, r]) => t + ': ' + r.join(', ')).join('; '));
+  ok('R3-2 / R3-5b none of the 24 new tools has a REQUIRED key beyond tenant_id / user_email (limit and offset of list_births and list_unregistered_historical_births were)', reqNew.length === 0, reqNew.map(([t, r]) => t + ': ' + r.join(', ')).join('; '));
+}
+
+// ---------------------------------------------------------------- round 4 (2026-10-29): R3-5a .. R3-5c
+{
+  const qOf = (t) => toolNodes.find((n) => n.name === t).parameters.query;
+  // R3-5a: births_batch_preview shows the names that WILL be written, computed with the rule of sp_register_birth_event
+  const PV = qOf('births_batch_preview');
+  const pvWords = ["sp_repro_births_batch_preview($1::text, $2::text, $3::text, $4::text)", "t.e->>'status' = 'ok'", "'lot_id_resolved', w.lot_id", "'production_unit_id_resolved', w.upp_id", "'lot_name_resolved'", "'upp_name_resolved'",
+    'public.production_unit_lots l WHERE l.id = w.lot_id', 'public.production_units pu WHERE pu.id = w.upp_id', "COALESCE(NULLIF(t.e->>'lot_id', '')::uuid,", 'c.lot_id FROM public.cattle_livestock c', 'c.production_unit_id FROM public.cattle_livestock c', 'public.fn_repro_int($1::text)'];
+  ok('R3-5a births_batch_preview: the node query adds lot_id_resolved / production_unit_id_resolved / lot_name_resolved / upp_name_resolved to every ok line, tenant-filtered', pvWords.every((w) => PV.includes(w)), pvWords.filter((w) => !PV.includes(w)).join(' | '));
+  ok('R3-5a births_batch_preview: the inheritance rule is the one of the stored procedure (lot = explicit, else the dam\'s; UPP = UPP of the explicit lot, else the dam\'s, else the UPP given)',
+    /COALESCE\(NULLIF\(t\.e->>'lot_id', ''\)::uuid,\s*\(SELECT c\.lot_id FROM public\.cattle_livestock c/.test(PV)
+    && (() => { const a = PV.indexOf('x.production_unit_id FROM public.production_unit_lots x'), b = PV.indexOf('c.production_unit_id FROM public.cattle_livestock c'), c = PV.indexOf("NULLIF(t.e->>'production_unit_id', '')::uuid)"); return a > 0 && b > a && c > b; })()
+    && (SP087 === null || (SP087.includes('COALESCE(p_lot_id, v_dam_lot_id)') && SP087.includes('COALESCE(v_explicit_lot_unit, v_dam_production_unit, p_production_unit_id)'))));
+  ok('R3-5a births_batch_preview is read-only (calls the preview SP once, no INSERT / UPDATE / DELETE) and its description tells the model to show the names', (PV.match(/sp_repro_births_batch_preview\(/g) || []).length === 1 && !/\b(INSERT|UPDATE|DELETE)\b/i.test(PV)
+    && ['lot_name_resolved', 'upp_name_resolved', 'nunca los que recuerdes'].every((w) => descOf('births_batch_preview').includes(w)));
+  for (const ch of Object.keys(AGENTS)) {
+    const G4 = section(parts[ch].G, '\nG4. ', '\nG5. ');
+    const w = ["2) Llama 'births_batch_preview'. En el resumen muestra de cada renglón la madre, el sexo, la fecha y el lote y la UPP SOLO desde lot_name_resolved y upp_name_resolved de 'lines'", 'incluido el que la cría tomaría de su madre', 'nunca desde \'list_lots\' ni desde tu memoria', 'dilo y corrige el renglón antes del Sí'];
+    ok(`${ch}: R3-5a G4 makes the preview show the lot and UPP from lot_name_resolved / upp_name_resolved (never from memory)`, w.every((x) => G4.includes(x)), w.filter((x) => !G4.includes(x)).join(' | '));
+  }
+  // R3-5b: limit / offset have the same default and type in every list
+  const lo = [];
+  for (const [t, ps] of Object.entries(declared)) for (const p of ps) if (p.key === 'limit' || p.key === 'offset') lo.push(t + '.' + p.key + ':' + p.type);
+  ok(`R3-5b limit and offset are declared as text with a null default in all ${lo.length} places (list_births and list_unregistered_historical_births included)`, lo.length >= 16 && lo.every((x) => x.endsWith(':string')), lo.filter((x) => !x.endsWith(':string')).join(', '));
+  const dflt = (t, k) => ((toolNodes.find((n) => n.name === t).parameters.options.queryReplacement.match(new RegExp("\\$fromAI\\('" + k + "', \"[^\"]*\", 'string', null\\)")) || [])[0]) ? 'null' : 'other';
+  ok('R3-5b list_births and list_unregistered_historical_births: limit / offset end in , \'string\', null) like list_open_cows', ['list_births', 'list_unregistered_historical_births'].every((t) => dflt(t, 'limit') === 'null' && dflt(t, 'offset') === 'null'));
+  // R3-5c: the psql test script runs the SAME query texts, ends in ROLLBACK and writes nothing that survives
+  let SQLT = null;
+  try { SQLT = fs.readFileSync(path.join(__dirname, 'births_names_check.sql'), 'utf8'); } catch (e) { SQLT = null; }
+  ok('R3-5c births_names_check.sql exists', SQLT !== null);
+  if (SQLT !== null) {
+    const body = (name) => { const m = SQLT.match(new RegExp("INSERT INTO q VALUES \\('" + name + "', \\$q\\$([\\s\\S]*?)\\$q\\$\\);")); return m ? m[1] : null; };
+    for (const [nm, tool] of [['rbc', 'register_birth_checked'], ['preview', 'births_batch_preview'], ['register', 'births_batch_register']])
+      ok(`R3-5c the query '${nm}' in births_names_check.sql is the node query of ${tool}, byte for byte`, body(nm) === qOf(tool), body(nm) === null ? 'not found' : 'differs');
+    const code = SQLT.split('\n').filter((l) => !l.trim().startsWith('--')).join('\n');
+    ok('R3-5c the script refuses any database but hosting3m_rehearsal, works only on company 3, runs inside BEGIN ... ROLLBACK and has no COMMIT / DELETE / DROP / TRUNCATE',
+      /current_database\(\) = 'hosting3m_rehearsal'/.test(code) && /\\quit/.test(code) && /^BEGIN;/m.test(code) && /^ROLLBACK;/m.test(code) && !/\b(COMMIT|DELETE|DROP|TRUNCATE)\b/i.test(code)
+      && /company_name[\s\S]*Rancho El Palomar/.test(code) && !/(id_company|tenant_id)\s*=\s*(?!3\b)\d/.test(code), '');
+    ok('R3-5c the script proves that nothing is left behind (counts of animals, births and weights of company 3 before BEGIN and after ROLLBACK)',
+      /n_animals_before/.test(code) && /n_births_before/.test(code) && /n_weights_before/.test(code) && /animals_unchanged/.test(code) && /births_unchanged/.test(code) && /weights_unchanged/.test(code));
+    const arrs = [...code.matchAll(/pg_temp\.run(13|4)\('(\w+)', ARRAY\[([\s\S]*?)\]\)/g)].map((m) => [m[1], m[2], m[3].split(/,(?=(?:[^']*'[^']*')*[^']*$)/).length]);
+    ok(`R3-5c every call passes exactly the arguments of its node (13 for register_birth_checked, 4 for the batch tools): ${arrs.length} calls`, arrs.length >= 8 && arrs.every(([n, , c]) => Number(n) === c), JSON.stringify(arrs.filter(([n, , c]) => Number(n) !== c)));
+    ok('R3-5c the script covers the failure of round 3 (explicit "Lote Repetido" of UPP Sur vs the neighbour "Lote Sur"), the dam\'s inheritance, a bare UPP overridden by the dam, an ambiguous dam, bad preview lines and preview == register',
+      ["lot_rep_sur", "lot_sur", "'C  register_birth_checked", "'D  register_birth_checked", "'E  register_birth_checked", "'P2 births_batch_preview", "'R1 births_batch_register", "'R2 what the database really holds"].every((x) => SQLT.includes(x)));
+  }
 }
 
 // section G content

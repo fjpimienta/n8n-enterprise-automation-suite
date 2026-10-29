@@ -106,6 +106,15 @@ QR_EDITS = [
      '$fromAI(\'production_unit_id\', "UUID de la UPP: la columna production_unit_id de la MISMA fila de list_lots. NUNCA un nombre de UPP. Omite si no hay UPP."'),
     (4, 'register_birth_checked', '$fromAI(\'notes\', "Notas del usuario. Omite si no hay."',
      '$fromAI(\'notes\', "SOLO palabras que el usuario dictó como nota. Nunca comentarios tuyos, identificadores ni observaciones sobre el lote. Omite si no dictó ninguna."'),
+    # round 4 (R3-5b): limit / offset were declared as NUMBER without a usable default, so the tool schema marked them REQUIRED; the other lists declare text with a null default
+    (1, 'list_births', '$fromAI(\'limit\', "Máximo de partos a regresar (por omisión 50, tope 100). Omite si no es necesario.", \'number\', null)',
+     '$fromAI(\'limit\', "Máximo de partos a regresar (por omisión 50, tope 100). Omite si no es necesario.", \'string\', null)'),
+    (1, 'list_births', '$fromAI(\'offset\', "Cuántos partos saltar para ver la siguiente página (0 por omisión).", \'number\', null)',
+     '$fromAI(\'offset\', "Cuántos partos saltar para ver la siguiente página (0 por omisión).", \'string\', null)'),
+    (1, 'list_unregistered_historical_births', '$fromAI(\'limit\', "Máximo de filas (por omisión 50, tope 100).", \'number\', null)',
+     '$fromAI(\'limit\', "Máximo de filas (por omisión 50, tope 100).", \'string\', null)'),
+    (1, 'list_unregistered_historical_births', '$fromAI(\'offset\', "Cuántas filas saltar para la siguiente página (0 por omisión).", \'number\', null)',
+     '$fromAI(\'offset\', "Cuántas filas saltar para la siguiente página (0 por omisión).", \'string\', null)'),
     # round 2: the model sent birth_weight_kg as the number 35 and the schema wants text (the hint text holds escaped quotes: it sits inside a JS double-quoted string)
     (4, 'register_birth_checked', '$fromAI(\'birth_weight_kg\', "Peso al nacer en kg, sin comas (ej. 36.5). Omite si el usuario no lo dio."',
      '$fromAI(\'birth_weight_kg\', "Peso al nacer en kg, OPCIONAL: envíalo como TEXTO entre comillas, sin comas (ej. \\"35\\" o \\"36.5\\"; NUNCA el número 35 sin comillas). Omite si el usuario no lo dio."'),
@@ -136,7 +145,30 @@ BATCH_NEW = ("WITH r AS (\n  SELECT public.sp_repro_births_batch_register($1::te
              "                          ELSE e END ORDER BY o)\n"
              "      FROM jsonb_array_elements(r.result->'results') WITH ORDINALITY AS t(e, o)), '[]'::jsonb))\n"
              "  ELSE r.result END AS result\nFROM r;")
+# round 4 (R3-5a): the preview shows the names of the lot and the UPP that WILL be written, computed with the rule of sp_register_birth_event
+# (087): lot = COALESCE(explicit lot, the dam's lot); UPP = COALESCE(UPP of the explicit lot, the dam's UPP, the UPP given). Only status 'ok' lines.
+PREVIEW_OLD = "SELECT public.sp_repro_births_batch_preview($1::text, $2::text, $3::text, $4::text) AS result;"
+_TEN = "public.fn_repro_int($1::text)"
+PREVIEW_NEW = ("WITH r AS (\n  SELECT public.sp_repro_births_batch_preview($1::text, $2::text, $3::text, $4::text) AS result\n)\n"
+               "SELECT CASE WHEN jsonb_typeof(r.result->'lines') = 'array'\n"
+               "  THEN jsonb_set(r.result, '{lines}', COALESCE((\n"
+               "    SELECT jsonb_agg(CASE WHEN t.e->>'status' = 'ok'\n"
+               "                          THEN t.e || jsonb_build_object('lot_id_resolved', w.lot_id, 'production_unit_id_resolved', w.upp_id,\n"
+               "                                                       'lot_name_resolved', (SELECT l.lot_name FROM public.production_unit_lots l WHERE l.id = w.lot_id AND l.id_company = " + _TEN + "),\n"
+               "                                                       'upp_name_resolved', (SELECT pu.ranch_name FROM public.production_units pu WHERE pu.id = w.upp_id AND pu.id_company = " + _TEN + "))\n"
+               "                          ELSE t.e END ORDER BY t.o)\n"
+               "      FROM jsonb_array_elements(r.result->'lines') WITH ORDINALITY AS t(e, o)\n"
+               "      CROSS JOIN LATERAL (SELECT\n"
+               "          CASE WHEN t.e->>'status' = 'ok' THEN COALESCE(NULLIF(t.e->>'lot_id', '')::uuid,\n"
+               "               (SELECT c.lot_id FROM public.cattle_livestock c WHERE c.id = NULLIF(t.e->>'dam_id', '')::uuid AND c.tenant_id = " + _TEN + ")) END AS lot_id,\n"
+               "          CASE WHEN t.e->>'status' = 'ok' THEN COALESCE(\n"
+               "               (SELECT x.production_unit_id FROM public.production_unit_lots x WHERE x.id = NULLIF(t.e->>'lot_id', '')::uuid AND x.id_company = " + _TEN + "),\n"
+               "               (SELECT c.production_unit_id FROM public.cattle_livestock c WHERE c.id = NULLIF(t.e->>'dam_id', '')::uuid AND c.tenant_id = " + _TEN + "),\n"
+               "               NULLIF(t.e->>'production_unit_id', '')::uuid) END AS upp_id\n"
+               "      ) w), '[]'::jsonb))\n"
+               "  ELSE r.result END AS result\nFROM r;")
 QUERY_EDITS = [
+    (4, 'births_batch_preview', PREVIEW_OLD, PREVIEW_NEW),
     (4, 'register_birth_checked', BIRTH_OLD.replace('\\n', '\n'), BIRTH_NEW.replace('\\n', '\n')),
     (4, 'births_batch_register', BATCH_OLD, BATCH_NEW.replace('\\n', '\n')),
 ]
@@ -147,6 +179,9 @@ APPENDS = [
     (4, 'register_birth_checked',
      ' El lote y la UPP se reportan SOLO con lot_name_resolved y upp_name_resolved (lo que la base escribió), nunca con el nombre que dictó el usuario ni con la fila de list_lots que elegiste; '
      'si no coinciden con lo pedido, dilo y ofrece corregir. El peso, la fecha y las notas no son obligatorios: nunca digas que la herramienta los necesita.'),
+    (4, 'births_batch_preview',
+     ' Cada renglón ok trae lot_name_resolved y upp_name_resolved: el lote y la UPP que se escribirían (incluido el que la cría tomaría de su madre; null = sin lote / sin UPP). '
+     'Muéstralos en el resumen, nunca los que recuerdes de list_lots; si no coinciden con lo que pidió el usuario, dilo y corrige el renglón antes del Sí.'),
     (4, 'births_batch_register',
      ' Al reportar el bloque, el lote y la UPP de cada cría salen SOLO de lot_name_resolved y upp_name_resolved de cada elemento de results; si no coinciden con lo pedido, dilo y ofrece corregir.'),
 ]

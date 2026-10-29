@@ -84,20 +84,21 @@ After step 4 the MCP server says `OBSOLETA` on the two legacy tools **while the 
 
 | Workflow export | md5 |
 |---|---|
-| `v6_MCP_Server_Cattle.json` | `3e3c58b114fa9486a159a8b76b35bce9` |
-| `v6_ai_chat_cattle.json` | `4e4e176f2e86c3a45ba8b579a0005532` |
-| `v6_WhatsApp_Agent_Cattle.json` | `3e31d18365ac0efe18866436cf7294da` |
+| `v6_MCP_Server_Cattle.json` | `d516052e606a2a1ce456b0eec11f916c` |
+| `v6_ai_chat_cattle.json` | `bb1336e4d6f47cda2c6326176761f2d0` |
+| `v6_WhatsApp_Agent_Cattle.json` | `41c79aed3405eef34d4d8539bea77c8f` |
 
 | Phase 5 tools and QA | md5 |
 |---|---|
 | `repro-phase5/add_repro_tools.py` | `be04b4c572e9da6d9fdf68424a2f2e29` |
-| `repro-phase5/update_tool_descriptions.py` | `4ab8957397e719e2a33af5ec60365faa` |
-| `repro-phase5/update_prompts.py` | `21940688e015aea4ad33b34aa1a5ac98` |
+| `repro-phase5/update_tool_descriptions.py` | `cea76c3b2ac17de1fd9eaeaa12584e90` |
+| `repro-phase5/update_prompts.py` | `2f25efef60c8df2202cb76467a4aab8c` |
 | `repro-phase5/compare_workflow_export.py` | `7071aa8d17c0e6ef1cde545ab16e37ed` |
-| `repro-phase5/check_repro_consistency.js` | `3abd43376cb0a10846f8f4ba127e33f9` |
+| `repro-phase5/check_repro_consistency.js` | `749f50cbc7b72e7dfe937f024c62441e` |
 | `repro-phase5/list_lots_diff.py` | `fcf70c0c7fd6d911c347727370327683` |
 | `repro-phase5/qa_fixtures.sql` | `9de4bc89e6b4577748bacb42056ce25e` |
-| `repro-phase5/REPRO_QA_SCRIPT.md` | `be272566a4dbda1db21706bace1526eb` |
+| `repro-phase5/births_names_check.sql` | `613b1e7e275c4f6ee2613ccafc715775` |
+| `repro-phase5/REPRO_QA_SCRIPT.md` | `4a2d55790c08dd4012344d57ccbd3deb` |
 
 (Recompute with `md5sum` if a file is edited after this runbook was written. The per-migration runbooks `0NN_RUNBOOK.md` hold the detail of each migration and their own md5 tables.)
 
@@ -307,13 +308,13 @@ python3 workflows/09-MCP-Agent-Cattle/v6/repro-phase5/compare_workflow_export.py
 
 ## Step 5 — n8n: the two agent prompts (right after step 4, same window)
 Import the two agent workflows the same way (4c) from `v6_ai_chat_cattle.json` and `v6_WhatsApp_Agent_Cattle.json`. They differ from the live ones **only** in the `systemMessage` of the node `AI Agent` (proved offline by `check_repro_consistency.js`). Do WhatsApp last. ⚠️ UNTESTED.
-Verify: re-export both and compare with the repo files (`IDENTICAL`); from the repo, run the offline check (✅ executed by the author on the repo files; **172 passed, 0 failed** at the last run):
+Verify: re-export both and compare with the repo files (`IDENTICAL`); from the repo, run the offline check (✅ executed by the author on the repo files; **187 passed, 0 failed** at the last run):
 ```bash
 set -euo pipefail
 V=workflows/09-MCP-Agent-Cattle/v6
 python3 "$V/repro-phase5/compare_workflow_export.py" live_after_chat.json "$V/v6_ai_chat_cattle.json"
 python3 "$V/repro-phase5/compare_workflow_export.py" live_after_whatsapp.json "$V/v6_WhatsApp_Agent_Cattle.json"
-node "$V/repro-phase5/check_repro_consistency.js"        # exit 0, no FAIL (172 passed)
+node "$V/repro-phase5/check_repro_consistency.js"        # exit 0, no FAIL (187 passed)
 ```
 Then one read-only message per channel on company 3, **through the real channel** (never the editor's Chat / Test panel — Rules 6 and 11): "¿Cuántos partos hubo en los últimos 30 días?" → a total.
 **STOP if** the import fails, a re-export differs, or the smoke message answers with a technical error.
