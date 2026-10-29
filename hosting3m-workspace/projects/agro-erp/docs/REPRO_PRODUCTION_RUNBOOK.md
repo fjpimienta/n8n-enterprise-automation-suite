@@ -84,20 +84,21 @@ After step 4 the MCP server says `OBSOLETA` on the two legacy tools **while the 
 
 | Workflow export | md5 |
 |---|---|
-| `v6_MCP_Server_Cattle.json` | `348d17217e7878bcd729f09d07f2df0d` |
-| `v6_ai_chat_cattle.json` | `40beb5273eea7262d73e060972e7a5ff` |
-| `v6_WhatsApp_Agent_Cattle.json` | `dfedcae289bfa2c3e4fb1a120c9f2769` |
+| `v6_MCP_Server_Cattle.json` | `d516052e606a2a1ce456b0eec11f916c` |
+| `v6_ai_chat_cattle.json` | `bb1336e4d6f47cda2c6326176761f2d0` |
+| `v6_WhatsApp_Agent_Cattle.json` | `41c79aed3405eef34d4d8539bea77c8f` |
 
 | Phase 5 tools and QA | md5 |
 |---|---|
-| `repro-phase5/add_repro_tools.py` | `69a2bc534bdf8c501130874e4ea14f5e` |
-| `repro-phase5/update_tool_descriptions.py` | `1cd01a0d2a7934484a1d5463167b9f7b` |
-| `repro-phase5/update_prompts.py` | `704271602e6cfc0c43242f3049114c16` |
+| `repro-phase5/add_repro_tools.py` | `be04b4c572e9da6d9fdf68424a2f2e29` |
+| `repro-phase5/update_tool_descriptions.py` | `cea76c3b2ac17de1fd9eaeaa12584e90` |
+| `repro-phase5/update_prompts.py` | `2f25efef60c8df2202cb76467a4aab8c` |
 | `repro-phase5/compare_workflow_export.py` | `6f81f284607d5d643701b25defa353c4` |
-| `repro-phase5/check_repro_consistency.js` | `78b66693cf462cefd51d5e87b7def16c` |
+| `repro-phase5/check_repro_consistency.js` | `749f50cbc7b72e7dfe937f024c62441e` |
 | `repro-phase5/list_lots_diff.py` | `fcf70c0c7fd6d911c347727370327683` |
 | `repro-phase5/qa_fixtures.sql` | `9de4bc89e6b4577748bacb42056ce25e` |
-| `repro-phase5/REPRO_QA_SCRIPT.md` | `6a75f8c794b60ee4fcd3cc7762156364` |
+| `repro-phase5/births_names_check.sql` | `613b1e7e275c4f6ee2613ccafc715775` |
+| `repro-phase5/REPRO_QA_SCRIPT.md` | `83819ee46424ca7c050f2bc50cfc9304` |
 
 (Recompute with `md5sum` if a file is edited after this runbook was written. The per-migration runbooks `0NN_RUNBOOK.md` hold the detail of each migration and their own md5 tables.)
 
@@ -307,13 +308,13 @@ python3 workflows/09-MCP-Agent-Cattle/v6/repro-phase5/compare_workflow_export.py
 
 ## Step 5 — n8n: the two agent prompts (right after step 4, same window)
 Import the two agent workflows the same way (4c) from `v6_ai_chat_cattle.json` and `v6_WhatsApp_Agent_Cattle.json`. They differ from the live ones **only** in the `systemMessage` of the node `AI Agent` (proved offline by `check_repro_consistency.js`). Do WhatsApp last. ⚠️ UNTESTED.
-Verify: re-export both and compare with the repo files (`RESULT: IDENTICAL (nodes, connections, settings)` plus `info: node ids differ in N nodes (volatile)` for each: the re-export has new node ids; any other line is a STOP); from the repo, run the offline check (✅ executed by the author on the repo files; **75 passed, 0 failed** at the last run):
+Verify: re-export both and compare with the repo files (`RESULT: IDENTICAL (nodes, connections, settings)` plus `info: node ids differ in N nodes (volatile)` for each: the re-export has new node ids; any other line is a STOP); from the repo, run the offline check (✅ executed by the author on the repo files; **187 passed, 0 failed** at the last run):
 ```bash
 set -euo pipefail
 V=workflows/09-MCP-Agent-Cattle/v6
 python3 "$V/repro-phase5/compare_workflow_export.py" live_after_chat.json "$V/v6_ai_chat_cattle.json"
 python3 "$V/repro-phase5/compare_workflow_export.py" live_after_whatsapp.json "$V/v6_WhatsApp_Agent_Cattle.json"
-node "$V/repro-phase5/check_repro_consistency.js"        # exit 0, no FAIL (75 passed)
+node "$V/repro-phase5/check_repro_consistency.js"        # exit 0, no FAIL (187 passed)
 ```
 Then one read-only message per channel on company 3, **through the real channel** (never the editor's Chat / Test panel — Rules 6 and 11): "¿Cuántos partos hubo en los últimos 30 días?" → a total.
 **STOP if** the import fails, a re-export differs, or the smoke message answers with a technical error.
@@ -372,7 +373,8 @@ Files: `REPRO_QA_SCRIPT.md` (40 dialogs, the exact messages, the expected tool a
 3. **Measure tool selection** (`gpt-4.1-mini`, 53 tools): at least **90 %** of the dialogs pick the right tool on the first try, **per channel** (WhatsApp: 10 dialogs, so at most 1 miss).
 4. For "an animal of another company" use **only read tools** with the identifier you put in the placeholder of Q38.
 
-**Pass criteria:** the measure ≥ 90 % on both channels, every "Criterios de aprobación adicionales" item of the QA script holds, no UUID / `lot_id` shown, no NIVEL 3 write without a "Sí", no NIVEL 2 write that asks for confirmation, **and no QA execution called either legacy tool (`register_birth_event`, `log_palpation_event_batch`)**.
+**Pass criteria:** the measure ≥ 90 % on both channels, **the births-block exit gate below (5 repetitions per channel, 0 writes before the "Sí")**, every "Criterios de aprobación adicionales" item of the QA script holds, no UUID / `lot_id` shown, no NIVEL 3 write without a "Sí", no NIVEL 2 write that asks for confirmation, **and no QA execution called either legacy tool (`register_birth_event`, `log_palpation_event_batch`)**.
+**Exit gate for the births block (a separate criterion; it does NOT count towards the 90 %):** the dialog of several births in ONE message (Q11) is repeated **at least 5 times per channel** (Chat Web and WhatsApp), each time with **fresh dams** (a dam that already has a birth answers `possible_duplicate`, so one fixture run is not enough: use new runs of `qa_fixtures.sql`, or more dams). It must give **0 writes before the "Sí"**: in none of the repetitions may `register_birth_checked` be called for that message, nor `births_batch_register` before the user's "Sí", and no calf may exist before it (check the executions of `v6/MCP Server Cattle`, as in the legacy-tool check below, and the births of the dams afterwards). **A single write before the "Sí" fails the gate. If it fails, no real user of company 5 is linked** until it passes. Options to try, in this order, re-running the whole gate (5 + 5 repetitions) after each one: **(1)** a stronger model for the agent nodes (as 6 (b) below); **(2)** a short block rule at the very START of the prompt (the first lines of section A: "2 or more calves in a message: `births_batch_preview`, one "¿Confirmas?", then `births_batch_register`; never `register_birth_checked` in a loop"); **(3)** a brake in the server: the MCP side refuses a second `register_birth_checked` of the same user within a short time and answers with the block instructions (not implemented; it needs a change in the node or in a stored procedure, with a new rehearsal if a migration changes).
 **How to check that no QA execution called a legacy tool (⚠️ UNTESTED, in the n8n editor):**
 1. First make sure successful executions are being saved (the `EXECUTIONS_DATA_SAVE_ON_SUCCESS` setting, the same one `089_RUNBOOK.md` Part 0 asks you to check). **If they are not saved, this check is impossible: STOP, do not do step 6b, and leave the two nodes in place.**
 2. Executions → filter **Workflow = `v6/MCP Server Cattle`**, and the date range of the QA. Each tool call of an agent is one execution of that workflow.
@@ -421,7 +423,7 @@ PY
 ```bash
 python3 workflows/09-MCP-Agent-Cattle/v6/repro-phase5/compare_workflow_export.py live_after_6b.json v6_MCP_Server_Cattle.6b.json
 ```
-→ `IDENTICAL`. **STOP if** it differs, the import fails or an agent message errors. **ROLLBACK of 6b:** import `live_after_mcp.json` (the export of 4d) the same way, Publish, re-export and compare → `IDENTICAL` (it brings both nodes back).
+→ `RESULT: IDENTICAL (nodes, connections, settings)`, preceded by `info: node ids differ in N nodes (volatile)` (a re-export after an import has new node ids: that line is expected); **any other line is a STOP**. **STOP if** it differs, the import fails or an agent message errors. **ROLLBACK of 6b:** import `live_after_mcp.json` (the export of 4d) the same way, Publish, re-export and compare → the same two lines (it brings both nodes back).
 **6b.4 Follow-up commit (after 6b is verified):** replace `v6_MCP_Server_Cattle.json` in the repo with the 6b file, in a separate PR; in `check_repro_consistency.js` change the expected count from 53 to 51 and drop the two legacy exceptions; update backlog items 24-25. Never before 6b is verified live.
 
 ## Step 7 — 089 (disable the legacy `nacimiento` gateway model) — only after its pre-checks and a successful gateway check
@@ -450,15 +452,16 @@ SQL
 Only when steps 1-6 (6b and 7 if you did them) are verified. `main` deploys the frontends through Plesk, so first list what would be published (⚠️ UNTESTED shape):
 ```bash
 set -euo pipefail
-git diff --stat main...develop -- hosting3m-workspace/projects/agro-erp/src hosting3m-workspace/projects/
+git fetch origin
+git diff --stat origin/main...origin/develop -- hosting3m-workspace/projects/agro-erp/src hosting3m-workspace/projects/
 ```
-**STOP if** the diff contains frontend files that are not expected (this phase changes none). After the merge, record the merge commit (`MERGE_COMMIT=$(git rev-parse HEAD)`). **ROLLBACK:** `git revert -m 1 "$MERGE_COMMIT"` on `main` (no force push, no history rewrite); the database and n8n stay as they are.
+**STOP if** the diff contains frontend files that are not expected (this phase changes none; checked read-only on 2026-10-29: `origin/main` → `develop` differs in 59 files, none of them under `src/` or `public/`, none of `angular.json`, `package*.json`, `tsconfig*` or `infrastructure/`). Use the `origin/` refs: the local `main` can be far behind (on 2026-10-29 it was 91 commits behind `origin/main`). After the merge, record the merge commit (`MERGE_COMMIT=$(git rev-parse HEAD)`). **ROLLBACK:** `git revert -m 1 "$MERGE_COMMIT"` on `main` (no force push, no history rewrite); the database and n8n stay as they are.
 
 ---
 
 ## If the n8n import fails (steps 4-5)
 1. Do not edit the workflow by hand in the editor to "make it work". Keep the error text.
-2. Import the matching `live_before_*.json` of step 1, **Publish**, re-export and compare with the saved export (`IDENTICAL`). If the failure is in step 5, restore **all three** (chat, WhatsApp and MCP): see the step 5 rollback.
+2. Import the matching `live_before_*.json` of step 1, **Publish**, re-export and compare with the saved export (`RESULT: IDENTICAL (nodes, connections, settings)` plus the line `info: node ids differ in N nodes (volatile)`: the re-export has new node ids; any other line is a STOP). If the failure is in step 5, restore **all three** (chat, WhatsApp and MCP): see the step 5 rollback.
 3. Check that the three workflows are active and the webhook / MCP endpoint answers (a read-only message on company 3).
 4. The database stays as it is: 084-090 are additive and the legacy tools still work. If the failure needs the DB back too, use the reverse rollbacks of step 2.
 5. Common causes to check first: the import deactivates the workflow (Publish again); the credential id of the new nodes; an unpublished saved version (only the re-export shows it); the Postgres node pointing at a different database than expected (Rule 11).
@@ -471,9 +474,23 @@ git diff --stat main...develop -- hosting3m-workspace/projects/agro-erp/src host
 | step 4 (MCP), before step 5 started | import `live_before_mcp.json` |
 | step 5 (prompts) | import `live_before_chat.json`, `live_before_whatsapp.json` **and `live_before_mcp.json`** — rolling back step 5 also rolls back step 4 (the legacy tool descriptions say OBSOLETA while the old prompts still use those tools) |
 | step 6 (QA below 90 %) | trim the dictionary, or a stronger model, or the step 5 rollback (which includes step 4) |
+| step 6 (births-block gate fails) | do not link real users of company 5; try, in order: a stronger model, a short block rule at the start of the prompt, a brake in the server; repeat the gate |
 | step 6b | import `live_after_mcp.json` (the export of 4d) |
 | step 7 (089) | `089_rollback.sql` |
 | step 8 (main) | `git revert -m 1` of the merge |
 
 ## After the rollout (backlog, not part of it)
 24. delete the node `register_birth_event`, 25. delete the node `log_palpation_event_batch` — **both in step 6b** once the QA passed and no QA execution called them; the repo export follows in a separate commit. 23. inject `tenant_id` and the e-mail from the trusted context for all MCP tools. 26. the QA residue in company 3. See `docs/reproduction-discovery.md`.
+
+## Next sprint backlog (not part of the rollout; nothing here is implemented)
+Found in the local QA rounds of 2026-10-28 and 2026-10-29, or pending from the owner:
+1. **Friction in single births:** the agent still asks for the sex, the date or the weight that the user already gave.
+2. **Dam ambiguity:** the agent loses the user's choice between turns (it remembers what it wrote, not what a tool returned).
+3. **Never show a UUID to the user** (A6): make it impossible instead of asking for it in the prompt.
+4. **Level-3 tools copy ids without returning names:** `void_event`, `void_empadre_entry`, `void_historical_birth` and `request_livestock_sale` should return what they touched (names / identifiers), as the birth tools now do, so the agent reports what the database wrote.
+5. **The prompt is about 53 000 characters** (chat 53 433, WhatsApp 53 942 at `95a678e`): condense it.
+6. **Retry on 520 errors** of the model node (`OpenAI Chat Model` / `OpenAI Chat Model1`).
+7. **The lot and UPP rule lives in two places:** the stored procedure (`sp_register_birth_event`, 087) and the queries of the nodes (`births_batch_preview` recomputes the inheritance). Put it in one SQL function the next time migrations may change.
+8. **The owner's notebooks and real palpation dates** (to load; pending from the owner).
+9. **Physically verify the cow with fire number 2011 and ear tag 0720152501.**
+10. **Ask the foreman what NR means after a slash** (for example `UNE/NR`): today it is shown as unconfirmed.

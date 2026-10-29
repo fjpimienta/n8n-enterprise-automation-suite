@@ -7,7 +7,7 @@ What it changes (and ONLY this):
   3. the existing node `list_lots`: its SQL gains two NEW columns at the END of the select list (lot_id, production_unit_id; additive,
      same tenant filter, no column removed or renamed) and its toolDescription says they are internal (never shown);
   4. the toolDescription (ONLY that parameter) of three more existing nodes:
-       register_birth_event        -> prefixed "OBSOLETA: no la uses. Usa register_birth_checked."
+       register_birth_event        -> prefixed "OBSOLETA: no la uses. Usa register_birth_checked, que NO acepta lot_name ni production_unit_name ..."
        log_palpation_event_batch   -> prefixed "OBSOLETA: no la uses. Usa log_palpation_with_condition."
        log_palpation_event         -> gets the single-animal-with-a-code rule appended
      (their SQL, parameters and everything else stay byte-identical; the proof shows it).
@@ -19,7 +19,7 @@ Run `update_tool_descriptions.py` first (it fixes the descriptions inside the ph
 
 Usage (from anywhere):
   python3 add_repro_tools.py            # apply and print the proof
-  python3 add_repro_tools.py --check    # change nothing; verify the repo file is in the "after" state and print the proof
+  python3 add_repro_tools.py --check    # change nothing; verify the repo file is in the "after" state (built from --ref, default 14dd60c) and print the proof
   python3 add_repro_tools.py --baseline <file>   # build from another "before" file (e.g. the live export) instead of the repo file
 """
 import json, os, sys, copy, subprocess
@@ -31,6 +31,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 V6 = os.path.dirname(HERE)
 MCP = os.path.join(V6, 'v6_MCP_Server_Cattle.json')
 PHASES = [os.path.join(V6, 'repro-phase%d' % p, 'repro_phase%d_tools.json' % p) for p in (1, 2, 3, 4)]
+BEFORE_REF = '14dd60c'       # COMMIT_BEFORE_PHASE5 of the runbook: the MCP server export without the 24 nodes
 TRIGGER = 'MCP Server Cattle'
 GRID_X0, GRID_DX, GRID_PER_ROW, GRID_DY = 1056, 352, 6, 224
 
@@ -42,7 +43,8 @@ LOTS_DESC_ADD = (" Cada fila trae también lot_id y production_unit_id (UUID): s
 
 
 OBSOLETE = {
-    'register_birth_event': 'OBSOLETA: no la uses. Usa register_birth_checked.\n\n',
+    'register_birth_event': ('OBSOLETA: no la uses. Usa register_birth_checked, que NO acepta lot_name ni production_unit_name: solo lot_id y production_unit_id '
+                             'tomados de list_lots. Ignora el resto de esta descripción (habla de nombres de lote/UPP que register_birth_checked no tiene).\n\n'),
     'log_palpation_event_batch': 'OBSOLETA: no la uses. Usa log_palpation_with_condition.\n\n',
 }
 DESC_ONLY = ['register_birth_event', 'log_palpation_event_batch', 'log_palpation_event']     # existing nodes whose ONLY change is toolDescription
@@ -142,11 +144,13 @@ def main(argv):
     out = []
     if check_only:
         # the repo file must already be the "after" state: rebuild from the committed "before" and compare
+        # the "before" file is the one at COMMIT_BEFORE_PHASE5 (develop already holds the new nodes since phase 5 was merged)
+        ref = argv[argv.index('--ref') + 1] if '--ref' in argv else BEFORE_REF
         try:
-            raw = subprocess.check_output(['git', '-C', V6, 'show', 'develop:workflows/09-MCP-Agent-Cattle/v6/v6_MCP_Server_Cattle.json'], stderr=subprocess.DEVNULL)
+            raw = subprocess.check_output(['git', '-C', V6, 'show', '%s:workflows/09-MCP-Agent-Cattle/v6/v6_MCP_Server_Cattle.json' % ref], stderr=subprocess.DEVNULL)
             before = json.loads(raw)
         except Exception:
-            print('cannot read the "before" file from git (branch develop); use --baseline <file>')
+            print('cannot read the "before" file from git (ref %s); use --ref <commit> or --baseline <file>' % ref)
             return 2
         after = repo
         try:
