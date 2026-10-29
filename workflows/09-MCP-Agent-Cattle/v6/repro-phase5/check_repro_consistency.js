@@ -208,7 +208,7 @@ for (const ch of Object.keys(AGENTS)) {
 }
 
 // round 1 of the local QA (F2-F6): wording of E and G, and the birth node
-const LOTNAME = /lot_name|production_unit_name/g;
+const LOTNAME = /lot_name(?!_resolved)|production_unit_name/g;
 const rbc = toolNodes.find((n) => n.name === 'register_birth_checked');
 const rbcKeys = [...((rbc.parameters.options.queryReplacement).matchAll(/\$fromAI\(\s*['"]([A-Za-z_]+)['"]/g))].map((m) => m[1]);
 ok('register_birth_checked defines lot_id and production_unit_id and NOT lot_name / production_unit_name', rbcKeys.includes('lot_id') && rbcKeys.includes('production_unit_id') && !rbcKeys.some((k) => /_name$/.test(k)), rbcKeys.join(', '));
@@ -291,7 +291,7 @@ for (const ch of Object.keys(AGENTS)) {
   ok('R2-3 register_birth_checked description: list_lots first, calf gets the dam\'s lot / UPP only if she has them', has(descOf('register_birth_checked'), ['llama primero a list_lots', 'la cría queda con el lote y la UPP que la madre tenga registrados (vacíos si no tiene)']));
 
   // R2-4: no confirmation of date / lot / UPP; relative dates converted; birth weight optional in single AND block
-  const w4 = ['no pidas confirmar la fecha, el lote ni la UPP', '"ayer"', 'los conviertes tú a AAAA-MM-DD, sin preguntar', 'birth_weight_kg y notes son OPCIONALES', 'no puedes dejarlo en blanco', 'igual en un parto individual que en un bloque', 'NUNCA escribas un resumen ni preguntes "¿Confirmas?" ni "Sí/No" antes de registrar', 'No vuelvas a preguntar lo que el usuario ya dijo'];
+  const w4 = ['no pidas confirmar la fecha, el lote ni la UPP', '"ayer"', 'los conviertes tú a AAAA-MM-DD, sin preguntar', 'birth_weight_kg y notes son OPCIONALES', 'no puedes dejarlo en blanco', 'igual en un parto individual que en un bloque', 'NUNCA escribas un resumen ni preguntes "¿Confirmas?" ni "Sí/No" antes de registrar', 'NUNCA preguntes algo que ya esté en la conversación'];
   ok(`${ch}: R2-4 G3 asks nothing to confirm (date, lot, UPP), converts "ayer" without asking, and birth weight is OPTIONAL`, has(G3, w4), missing(G3, w4));
   ok(`${ch}: R2-4 G4 treats birth_date and birth_weight_kg as optional and converts relative dates`, has(G4, ['birth_date y birth_weight_kg OPCIONALES', 'nunca los pidas', '"ayer"']));
   ok(`${ch}: R2-4 the dictionary says birth_weight_kg is OPCIONAL and never asked`, E.includes('birth_weight_kg (OPCIONAL, texto entre comillas') && E.includes('nunca lo pidas'));
@@ -321,15 +321,73 @@ for (const ch of Object.keys(AGENTS)) {
   const G = parts[ch].G, E = parts[ch].E;
   const G10 = section(G, '\n' + 'G10' + '. ', '\nG11. ');
   const calv = E.split('\n').find((l) => l.startsWith("- 'list_palpation_due'")) || '';
-  // R2-6: five totals that add up to pregnant_total, rows labelled by days remaining
-  const w6 = ['upcoming_total, overdue_total, later_total, stale_data_total y no_estimate_total', 'suman pregnant_total', 'days_to_calving', 'NO llames "próxima a parir" a una vaca con más de 60 días por delante', 'faltan 197 días'];
-  ok(`${ch}: R2-6 G10 reports the five totals (incl. overdue_total), checks they add up to pregnant_total and labels rows by days remaining`, w6.every((w) => G10.includes(w)), w6.filter((w) => !G10.includes(w)).join(' | '));
-  ok(`${ch}: R2-6 the dictionary entry of list_upcoming_calvings carries the same rule`, ['overdue_total', 'later_total', 'suman pregnant_total', 'days_to_calving', 'no como "próxima a parir"'].every((w) => calv.includes(w)));
+  // R2-6 (round 2) + R3-3 (round 3): the five totals add up to pregnant_total; the FIRST answer opens with a fixed sentence built from the JSON; headings by days
+  const SENTENCE = '"X preñadas en total: A con parto en los próximos N días, B más adelante, C atrasadas, D con datos viejos y E sin estimación"';
+  const MAPPING = '(X = pregnant_total, A = upcoming_total, N = days, B = later_total, C = overdue_total, D = stale_data_total, E = no_estimate_total)';
+  const w6 = ['tu PRIMERA respuesta empieza con esta frase fija', SENTENCE, MAPPING, 'con los cinco totales y pregnant_total', 'A, B, C, D y E suman X', 'si no suman, dilo, no los ajustes', 'days_to_calving',
+    '"En los próximos N días", "Más adelante", "Atrasadas", "Datos viejos", "Sin estimación"', 'nunca "próximas a parir"', 'NO llames "próxima a parir" a una vaca con más de 60 días por delante', 'faltan 197 días'];
+  ok(`${ch}: R3-3 G10 opens list_upcoming_calvings with the fixed sentence (five totals + pregnant_total, mapped to the JSON keys), headings by days, rows by days remaining`, w6.every((w) => G10.includes(w)), w6.filter((w) => !G10.includes(w)).join(' | '));
+  ok(`${ch}: R3-3 the dictionary entry of list_upcoming_calvings carries the fixed sentence and the five JSON keys`,
+    [SENTENCE, 'upcoming_total, overdue_total, later_total, stale_data_total y no_estimate_total', 'suman pregnant_total', 'days_to_calving', 'nunca como "próxima a parir"'].every((w) => calv.includes(w)));
 }
 ok('R2-6 the five totals are partitions of pregnant_total in the SQL (090: upcoming 0..days, overdue -60..-1, stale < -60, later > days, no_estimate = no date)',
   SP090 === null ? true : ["'upcoming_total',   (SELECT count(*) FROM rowj WHERE days_to BETWEEN 0 AND v_days)", "'overdue_total',    (SELECT count(*) FROM rowj WHERE days_to BETWEEN -60 AND -1)",
     "'stale_data_total', (SELECT count(*) FROM rowj WHERE days_to < -60)", "'later_total',      (SELECT count(*) FROM rowj WHERE days_to > v_days)", "'no_estimate_total',(SELECT count(*) FROM rowj WHERE est_date IS NULL)", "'pregnant_total',   (SELECT count(*) FROM rowj)"].every((x) => SP090.includes(x)));
 
+
+// ---------------------------------------------------------------- round 3 of the local QA (2026-10-29): R3-1 .. R3-3
+const mdsum = (f) => { try { return require('crypto').createHash('md5').update(fs.readFileSync(path.join(MIG, f))).digest('hex'); } catch (e) { return null; } };
+const RUNBOOK = (() => { try { return fs.readFileSync(path.resolve(V6, '../../../hosting3m-workspace/projects/agro-erp/docs/REPRO_PRODUCTION_RUNBOOK.md'), 'utf8'); } catch (e) { return null; } })();
+{
+  // R3-1(a): the names are looked up in the tool node (the SQL of the node), NOT in a stored procedure of 084-090
+  const qOf = (t) => toolNodes.find((n) => n.name === t).parameters.query;
+  const NAMES = ["'lot_name_resolved'", "'upp_name_resolved'", "->>'lot_id_resolved'", "->>'production_unit_id_resolved'", 'public.production_unit_lots', 'public.production_units', 'l.lot_name', 'pu.ranch_name', 'public.fn_repro_int($1::text)'];
+  for (const t of ['register_birth_checked', 'births_batch_register']) {
+    ok(`R3-1a ${t}: the node query adds lot_name_resolved / upp_name_resolved from the ids the stored procedure RETURNED, filtered by the tenant`, NAMES.every((w) => qOf(t).includes(w)) && /id_company = public\.fn_repro_int\(\$1::text\)/.test(qOf(t)), NAMES.filter((w) => !qOf(t).includes(w)).join(' | '));
+  }
+  ok('R3-1a register_birth_checked still calls sp_repro_register_birth once (13 parameters) and births_batch_register sp_repro_births_batch_register once (4)',
+    (qOf('register_birth_checked').match(/sp_repro_register_birth\(/g) || []).length === 1 && (qOf('births_batch_register').match(/sp_repro_births_batch_register\(/g) || []).length === 1 && /\$13::text\)/.test(qOf('register_birth_checked')) && /\$4::text\)/.test(qOf('births_batch_register')));
+  ok('R3-1a the lookup uses columns that list_lots already reads (lot.lot_name, pu.ranch_name)', /lot\.lot_name/.test(qOf('list_lots')) && /pu\.ranch_name/.test(qOf('list_lots')));
+  ok('R3-1a register_historical_birth is NOT wrapped: it has no lot, no UPP and no calf', !/lot_name_resolved/.test(qOf('register_historical_birth')) && !(declared.register_historical_birth || []).some((p) => /lot|production_unit/.test(p.key)));
+  const mig = ['084_repro_births_age.sql', '085_repro_empadre.sql', '086_repro_palpation.sql', '087_repro_births.sql', '088_repro_services.sql', '090_repro_vet_code_semantics.sql'];
+  const bad = RUNBOOK === null ? [] : mig.filter((f) => { const m = RUNBOOK.match(new RegExp('\\| `' + f.replace('.', '\\.') + '` \\| `([0-9a-f]{32})` \\|')); return !m || m[1] !== mdsum(f); });
+  ok('R3-1a no migration of 084-090 changed: their md5 still match the runbook table (the rehearsal stays valid)', RUNBOOK === null || (mdsum('087_repro_births.sql') !== null && bad.length === 0), bad.join(', '));
+  ok('R3-1a the descriptions of both tools tell the model to report from lot_name_resolved and upp_name_resolved',
+    ['register_birth_checked', 'births_batch_register'].every((t) => ['lot_name_resolved', 'upp_name_resolved', 'SOLO'].every((w) => descOf(t).includes(w))));
+}
+for (const ch of Object.keys(AGENTS)) {
+  const G = parts[ch].G, E = parts[ch].E;
+  const only = (id, nextId) => section(G, '\n' + id + '. ', '\n' + nextId + '. ');
+  const G3 = only('G3', 'G4'), G4 = only('G4', 'G5');
+  const has = (t, words) => words.every((w) => t.includes(w));
+  const miss = (t, words) => words.filter((w) => !t.includes(w)).join(' | ');
+  // R3-1(b)
+  const w1 = ['SOLO lot_name_resolved y upp_name_resolved', 'la base ESCRIBIÓ', 'no se muestran', 'NUNCA reportes el lote o la UPP desde el nombre que dictó el usuario, desde la fila de \'list_lots\' que elegiste ni desde tu memoria',
+    'di "no se resolvió ningún lote/UPP"', 'NO coincide con el lote o la UPP que pidió el usuario', 'los dos nombres (el que pidió y el que se escribió)', 'NO digas que coincide', 'ofrece corregirlo', 'move_livestock', 'solo dentro de la misma UPP'];
+  ok(`${ch}: R3-1b G3 reports lot and UPP ONLY from lot_name_resolved / upp_name_resolved, says so when they differ from the request, and offers to correct`, has(G3, w1), miss(G3, w1));
+  ok(`${ch}: R3-1b G4 reports each calf's lot and UPP only from results[].lot_name_resolved / upp_name_resolved`, has(G4, ['lot_name_resolved y upp_name_resolved de cada elemento de \'results\'', 'dilo y ofrece corregir']));
+  ok(`${ch}: R3-1b nothing in the prompt tells the model to look the name up in list_lots to REPORT it`, !/busca ese id en la respuesta/.test(sys[ch]) && !/para decir el nombre busca/.test(sys[ch]));
+  ok(`${ch}: R3-1b move_livestock (used for the correction) exists and moves within the same UPP`, toolNames.includes('move_livestock') && /MISMA UPP/.test(sys[ch]));
+  // R3-2
+  const w2 = ['NUNCA preguntes algo que ya esté en la conversación (por ejemplo el sexo dicho en el primer mensaje)', 'pregunta SOLO por los datos obligatorios que falten (la madre y el sexo)', 'Está PROHIBIDO afirmar que la herramienta "necesita" el peso, la fecha o las notas',
+    'o que un valor "no sea null"', 'son opcionales y se omiten', "llama PRIMERO a 'list_lots', antes de preguntar nada: ve directo, sin preguntarle cómo se escribe o se estructura el nombre"];
+  ok(`${ch}: R3-2 G3 never asks what is already in the conversation, asks only for missing mandatory data (dam, sex), forbids "the tool needs weight / date / notes", goes straight to list_lots`, has(G3, w2), miss(G3, w2));
+}
+{
+  ok('R3-2 the register_birth_checked description says the weight, date and notes are not required', descOf('register_birth_checked').includes('nunca digas que la herramienta los necesita'));
+  // what n8n 2.29.0 does with $fromAI: a 4th argument (default) makes the key optional in the tool schema (generateZodSchema -> schema.default(...)); without it the key is REQUIRED
+  const reqOf = (node) => {
+    const q = (node.parameters.options && node.parameters.options.queryReplacement) || '';
+    const out = [];
+    const re = /\$fromAI\(\s*'([A-Za-z_]+)',\s*(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')\s*,\s*'([a-z]+)'\s*(,?)/g;
+    for (let m; (m = re.exec(q));) if (m[3] !== ',') out.push(m[1]);
+    return out.sort();
+  };
+  const rbcNode = toolNodes.find((n) => n.name === 'register_birth_checked');
+  ok('R3-2 in the tool schema (emulated from the $fromAI defaults) only tenant_id and user_email are REQUIRED in register_birth_checked: birth_weight_kg, birth_date, notes are optional', JSON.stringify(reqOf(rbcNode)) === JSON.stringify(['tenant_id', 'user_email']), reqOf(rbcNode).join(', '));
+  const reqNew = phaseNames.map((t) => [t, reqOf(toolNodes.find((n) => n.name === t))]).filter(([, r]) => r.some((k) => !['tenant_id', 'user_email'].includes(k)));
+  ok('R3-2 audit: required keys of the 24 new tools beyond tenant_id / user_email (informational)', true, reqNew.map(([t, r]) => t + ': ' + r.join(', ')).join('; '));
+}
 
 // section G content
 for (const ch of Object.keys(AGENTS)) {

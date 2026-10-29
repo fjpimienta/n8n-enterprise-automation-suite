@@ -7,7 +7,8 @@ Why: the descriptions written in phases 1-4 predate the owner's decisions (confi
     keep that sentence.
   * three descriptions say an ADMIN changes settings / codes "from the panel": there is no panel, it is SQL.
   * the palpation description must teach the 090 answers (not_examined, needs_explicit_result, vet_flag ...).
-Every replacement must match EXACTLY ONCE (the script aborts otherwise) and nothing but `toolDescription` is touched (round 1 of the local QA
+Every replacement must match EXACTLY ONCE (the script aborts otherwise) and nothing but `toolDescription` is touched (round 3 of the local QA also wraps
+the SQL of register_birth_checked / births_batch_register, see QUERY_EDITS; round 1 of the local QA
 also edits the `$fromAI` hint texts of lot_id / production_unit_id / notes of register_birth_checked, see QR_EDITS).
 Idempotent: a second run finds nothing to replace and changes nothing.
 
@@ -111,6 +112,46 @@ QR_EDITS = [
 ]
 
 
+# round 3 of the local QA (2026-10-29): the model copied the lot_id of a NEIGHBOUR row of list_lots and reported the lot it meant to write, not the one the
+# database wrote. The tool now returns lot_name_resolved / upp_name_resolved next to the ids, looked up from the ids the stored procedure RETURNED (so the
+# names are what was written). It is done in the node's query, not in the stored procedures, so no migration of 084-090 changes (md5 and rehearsal stay valid).
+# register_historical_birth is NOT wrapped: a historical birth has no lot, no UPP and no calf.
+LOT_NAME_SQL = ("(SELECT l.lot_name FROM public.production_unit_lots l WHERE l.id = NULLIF({src}->>'lot_id_resolved', '')::uuid "
+                "AND l.id_company = public.fn_repro_int($1::text))")
+UPP_NAME_SQL = ("(SELECT pu.ranch_name FROM public.production_units pu WHERE pu.id = NULLIF({src}->>'production_unit_id_resolved', '')::uuid "
+                "AND pu.id_company = public.fn_repro_int($1::text))")
+BIRTH_OLD = ("SELECT public.sp_repro_register_birth($1::text, $2::text, $3::text, $4::text, $5::text, $6::text, $7::text, $8::text, $9::text, $10::text, $11::text, $12::text, $13::text) AS result;")
+BIRTH_NEW = ("WITH r AS (\n  SELECT public.sp_repro_register_birth($1::text, $2::text, $3::text, $4::text, $5::text, $6::text, $7::text, $8::text, $9::text, $10::text, $11::text, $12::text, $13::text) AS result\n)\n"
+             "SELECT CASE WHEN r.result->'lot_id_resolved' IS NOT NULL\n"
+             "  THEN r.result || jsonb_build_object('lot_name_resolved', " + LOT_NAME_SQL.format(src='r.result') + ",\n"
+             "                                      'upp_name_resolved', " + UPP_NAME_SQL.format(src='r.result') + ")\n"
+             "  ELSE r.result END AS result\nFROM r;")
+BATCH_OLD = "SELECT public.sp_repro_births_batch_register($1::text, $2::text, $3::text, $4::text) AS result;"
+BATCH_NEW = ("WITH r AS (\n  SELECT public.sp_repro_births_batch_register($1::text, $2::text, $3::text, $4::text) AS result\n)\n"
+             "SELECT CASE WHEN jsonb_typeof(r.result->'results') = 'array'\n"
+             "  THEN jsonb_set(r.result, '{results}', COALESCE((\n"
+             "    SELECT jsonb_agg(CASE WHEN e->'lot_id_resolved' IS NOT NULL\n"
+             "                          THEN e || jsonb_build_object('lot_name_resolved', " + LOT_NAME_SQL.format(src='e') + ",\n"
+             "                                                       'upp_name_resolved', " + UPP_NAME_SQL.format(src='e') + ")\n"
+             "                          ELSE e END ORDER BY o)\n"
+             "      FROM jsonb_array_elements(r.result->'results') WITH ORDINALITY AS t(e, o)), '[]'::jsonb))\n"
+             "  ELSE r.result END AS result\nFROM r;")
+QUERY_EDITS = [
+    (4, 'register_birth_checked', BIRTH_OLD.replace('\\n', '\n'), BIRTH_NEW.replace('\\n', '\n')),
+    (4, 'births_batch_register', BATCH_OLD, BATCH_NEW.replace('\\n', '\n')),
+]
+
+
+# round 3: the lot / UPP are reported from what the database WROTE (names returned next to the ids), and no "the tool needs weight / date / notes"
+APPENDS = [
+    (4, 'register_birth_checked',
+     ' El lote y la UPP se reportan SOLO con lot_name_resolved y upp_name_resolved (lo que la base escribió), nunca con el nombre que dictó el usuario ni con la fila de list_lots que elegiste; '
+     'si no coinciden con lo pedido, dilo y ofrece corregir. El peso, la fecha y las notas no son obligatorios: nunca digas que la herramienta los necesita.'),
+    (4, 'births_batch_register',
+     ' Al reportar el bloque, el lote y la UPP de cada cría salen SOLO de lot_name_resolved y upp_name_resolved de cada elemento de results; si no coinciden con lo pedido, dilo y ofrece corregir.'),
+]
+
+
 def main(argv):
     check = '--check' in argv
     data = {p: json.load(open(f, encoding='utf-8')) for p, f in FILES.items()}
@@ -128,6 +169,25 @@ def main(argv):
                 n[0]['parameters']['toolDescription'] = d.replace(old, new)
         else:
             raise SystemExit('ABORT: neither the old nor the new text is in %s (edited by hand?)' % node)
+    for ph, node, text in APPENDS:
+        n = [x for x in data[ph]['nodes'] if x['name'] == node]
+        assert len(n) == 1, 'node %s not found exactly once in phase %d' % (node, ph)
+        d = n[0]['parameters']['toolDescription']
+        if text in d:
+            continue
+        pending += 1
+        if not check:
+            n[0]['parameters']['toolDescription'] = d + text
+    for ph, node, old, new in QUERY_EDITS:
+        n = [x for x in data[ph]['nodes'] if x['name'] == node]
+        assert len(n) == 1, 'node %s not found exactly once in phase %d' % (node, ph)
+        q = n[0]['parameters']['query']
+        if new in q:
+            continue
+        assert q.strip() == old, 'the query of %s is not the expected one (edited by hand?)' % node
+        pending += 1
+        if not check:
+            n[0]['parameters']['query'] = new
     for ph, node, old, new in QR_EDITS:
         n = [x for x in data[ph]['nodes'] if x['name'] == node]
         assert len(n) == 1, 'node %s not found exactly once in phase %d' % (node, ph)
