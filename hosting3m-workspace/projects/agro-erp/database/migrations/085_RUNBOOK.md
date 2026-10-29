@@ -40,7 +40,7 @@ memberships inside the transaction). They refuse to run if `T085` fixtures alrea
 > The commands below were **reconstructed from the description of the 084 run** (schema-only dump into a new database, copy
 > `companys` and two users). Adjust the container / database names if yours differ.
 
-1. **Create the throwaway database with the schema only** (from the LOCAL `hosting3m_db`, which is the daily copy of production):
+1. **Create the throwaway database with the schema only** (from the LOCAL `hosting3m_db`, the daily copy of production; it can hold leftover objects of 084-090 that are absent from the dump, so a schema-only copy of it may not be a clean base: prefer a fresh base from a production dump, see `workflows/09-MCP-Agent-Cattle/v6/repro-phase5/rehearsal/README.md`, "Evidence"):
 
    ```bash
    docker exec n8n-enterprise-db createdb -U n8n_user hosting3m_test085
@@ -131,11 +131,10 @@ on your local machine (there `/root` does not exist or is not yours, and a LOCAL
 2. **State before** was taken in Part 0 (`/root/085_state_before.txt`, must end with `085 state check (before): OK`). Keep the `FINGERPRINT` lines.
 3. **Dry run** (rolls back): `$P -f /tmp/m085/085_repro_empadre.sql > /root/085_dryrun.txt 2>&1` → `085: OK` and `DRY RUN`.
 4. **Tests ran on the throwaway database** (section above), never here.
-5. **Apply** (single transaction, `ON_ERROR_STOP`; the file also opens / commits its own transaction, so psql may print a harmless
-   *"there is already a transaction in progress"* warning):
+5. **Apply** (the repo convention: `-v apply=true -f FILE`, **no `--single-transaction`**; each file owns its `BEGIN` ... `COMMIT` and `ON_ERROR_STOP` stops it at the first error before the `COMMIT`, so nothing is left half-applied; the flag would only add the warnings *"there is already a transaction in progress"* / *"there is no transaction in progress"*):
 
    ```bash
-   $P --single-transaction -v apply=true -f /tmp/m085/085_repro_empadre.sql > /root/085_apply.txt 2>&1
+   $P -v apply=true -f /tmp/m085/085_repro_empadre.sql > /root/085_apply.txt 2>&1
    tail -5 /root/085_apply.txt     # expect: 085: OK  and  *** 085 COMMITTED ***
    ```
 
@@ -154,36 +153,36 @@ on your local machine (there `/root` does not exist or is not yours, and a LOCAL
    **Do not call a write tool in production** except with a test company and animals (the owner's test tenant 3 "Rancho El Palomar",
    `rfid_siniiga` `9999…`), and void the test entry afterwards.
 
-**Rollback:** `$P --single-transaction -v apply=true -f /tmp/m085/085_rollback.sql > /root/085_rollback.txt 2>&1`, then
+**Rollback:** `$P -v apply=true -f /tmp/m085/085_rollback.sql > /root/085_rollback.txt 2>&1`, then
 `-v expect=rolled_back` state check. It drops nothing: the 8 tools answer `disabled`; the tables **and any entries already recorded stay**
 (they are the only copy of what staff reported). Re-apply is the same command as step 5 (`CREATE OR REPLACE` / `IF NOT EXISTS`) and keeps the rows.
 Removing the tables would be a separate, explicit decision of the owner (with a backup first); this runbook never does it.
 
 ## Part 1b. LOCAL rehearsal on a copy with data (before production)
 
-On the LOCAL `hosting3m_db` (daily restored from production, so it has real data). 085 needs 084 there too:
+On the LOCAL `hosting3m_db` (it has real data but is NOT a reliable clean base: see the note below). 085 needs 084 there too:
 
 ```bash
 P='docker exec -i n8n-enterprise-db psql -U n8n_user -d hosting3m_db -v ON_ERROR_STOP=1'
 docker exec n8n-enterprise-db rm -rf /tmp/m085 && docker cp hosting3m-workspace/projects/agro-erp/database/migrations n8n-enterprise-db:/tmp/m085
 # 084 first (skip if already applied: its state check says so)
 $P -v expect=before  -f /tmp/m085/084_state_check.sql
-$P --single-transaction -v apply=true -f /tmp/m085/084_repro_births_age.sql
+$P -v apply=true -f /tmp/m085/084_repro_births_age.sql
 $P -v expect=applied -f /tmp/m085/084_state_check.sql
 # then 085
 $P -v expect=before  -f /tmp/m085/085_state_check.sql > 085_local_before.txt 2>&1
 $P -f /tmp/m085/085_repro_empadre.sql                                   # dry run
-$P --single-transaction -v apply=true -f /tmp/m085/085_repro_empadre.sql
+$P -v apply=true -f /tmp/m085/085_repro_empadre.sql
 $P -v expect=applied -f /tmp/m085/085_state_check.sql > 085_local_after.txt 2>&1
 diff 085_local_before.txt 085_local_after.txt                           # only NOTICE / OK / EMPADRE_ROWS lines
 # rollback rehearsal, then re-apply (rows must survive: compare the EMPADRE_ROWS line)
-$P --single-transaction -v apply=true -f /tmp/m085/085_rollback.sql
+$P -v apply=true -f /tmp/m085/085_rollback.sql
 $P -v expect=rolled_back -f /tmp/m085/085_state_check.sql
-$P --single-transaction -v apply=true -f /tmp/m085/085_repro_empadre.sql
+$P -v apply=true -f /tmp/m085/085_repro_empadre.sql
 $P -v expect=applied -f /tmp/m085/085_state_check.sql
 ```
 
-The daily LOCAL restore (07:00) wipes what you applied there; that is expected.
+The daily local refresh does **not** reliably wipe what you applied there: it leaves objects that are absent from the production dump (new functions and tables) and restores tables and replaced procedures that are in it (inferred from three observations on 2026-10-28, not documented behaviour of the refresh tool; see `workflows/09-MCP-Agent-Cattle/v6/repro-phase5/rehearsal/README.md`, "Evidence"). Use a fresh database restored from a production dump, or the rollback scripts.
 
 ## Part 2. n8n (`v6/MCP Server Cattle`) — only if Part 1 state check is `applied`
 

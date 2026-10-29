@@ -1,0 +1,475 @@
+#!/usr/bin/env node
+/*
+ * Phase 5 - offline consistency check between the MCP server export and the two livestock agent prompts.
+ * No dependencies, no network. The only optional external call is `git show develop:<file>` to read the PREVIOUS prompts
+ * (to prove the leading "=" and every {{ }} expression are untouched); if git or the branch is not available that one check is SKIPPED.
+ *
+ * Usage:  node check_repro_consistency.js [--baseline-ref <git ref>]       (default ref: develop)
+ * Exit code 0 = every check passed, 1 = at least one FAIL.
+ */
+const fs = require('fs');
+const path = require('path');
+const { execFileSync } = require('child_process');
+
+const V6 = path.resolve(__dirname, '..');
+const REF = process.argv.includes('--baseline-ref') ? process.argv[process.argv.indexOf('--baseline-ref') + 1] : 'develop';
+const MCP_FILE = 'v6_MCP_Server_Cattle.json';
+const AGENTS = { chat: 'v6_ai_chat_cattle.json', whatsapp: 'v6_WhatsApp_Agent_Cattle.json' };
+const PHASE_FILES = [1, 2, 3, 4].map((p) => `repro-phase${p}/repro_phase${p}_tools.json`);
+
+// documented exceptions: out of the dictionary on purpose
+const LEGACY_KEPT_AS_NODE = ['register_birth_event', 'log_palpation_event_batch'];   // rollback path of 087; backlog items 24 and 25
+const FORBIDDEN_TOOL = ['get_table_metadata'];                                       // A4 says it is NOT allowed
+const NOT_EXPOSED = ['sp_repro_condition_code_set', 'sp_repro_empadre_set_config', 'sp_repro_births_set_config'];
+
+// the owner's decisions (phase 5): confirmation levels
+const NEW_READS = ['get_dam_reproductive_history', 'get_dam_birth_history', 'list_births', 'get_births_summary', 'list_unregistered_historical_births',
+  'identifier_quality_report', 'list_historical_births', 'get_births_config', 'births_batch_preview', 'get_empadre_config',
+  'list_heifers_eligible_for_empadre', 'list_empadre_entries', 'list_open_cows', 'list_palpation_due', 'list_upcoming_calvings', 'list_unmapped_uterine_codes'];
+const NEW_ROUTINE = ['register_birth_checked', 'log_palpation_with_condition', 'log_empadre_entry', 'log_empadre_entry_batch'];
+const NEW_CONFIRM = ['births_batch_register', 'register_historical_birth', 'void_historical_birth', 'void_empadre_entry'];
+const EXPECTED = {
+  1: ['get_livestock_info', 'find_livestock_by_criteria', 'find_calf_by_dam', 'count_livestock', 'list_pending_requests', 'list_lots', 'preview_livestock_sale_order', ...NEW_READS],
+  2: ['log_cattle_weight', 'log_health_event', 'log_vaccination_event', 'log_supplement_event', 'log_palpation_event', 'log_breeding_event', 'log_deworming_event',
+      'log_weaning_event', 'register_ranch_expense', 'register_livestock_purchase', 'move_livestock', ...NEW_ROUTINE],
+  3: ['log_mortality_event', 'request_livestock_sale_order', 'request_livestock_sale', 'review_pending_request', 'cancel_pending_request', 'update_livestock_tag',
+      'log_castration_event', 'void_event', ...NEW_CONFIRM],
+};
+const REQUIRED_G_WORDS = ['not_examined', 'needs_explicit_result', 'NEEDS_EXPLICIT_RESULT', 'DIAGNOSIS_UNRECOGNIZED', 'DIAGNOSIS_CONFLICT', 'vet_flag', 'POSTPARTUM', 'UNFIT',
+  'rp_without_registered_birth', 'palpation_code_contradicts_result', 'known_meanings', 'composite_unconfirmed', 'known_pending', 'possible_duplicate', "force='true'",
+  'duplicate_skipped', 'S/N-1450-16', 'stale_data', 'date_is_stale_import', 'sire_not_resolved', 'semen_batch_missing', 'can_register', 'nunca digas que un veterinario los confirmó',
+  'date_precision', 'list_lots', 'lot_id', 'production_unit_id', '15 meses o 300 kg',
+  'lot_id_resolved', 'production_unit_id_resolved', 'dam_status_warning', 'no se resolvió ningún lote/UPP',
+  'Interpreta RP, NR, NO APTO y MATRIZ OCUPADA solo como lo devuelve la herramienta (vet_flag, not_examined, unmapped_codes)'];
+
+// phase 5 review: single animal with a vet code goes through the wrapper; legacy nodes are marked obsolete
+const SINGLE_RULE = 'Si el usuario dicta un código (UNE, UTCL1, RP, NR, NO APTO, MATRIZ OCUPADA...), usa log_palpation_with_condition con UN solo elemento en animals_json, aunque sea un solo animal. log_palpation_event es solo para un resultado explícito sin código.';
+const OBSOLETE_PREFIX = { register_birth_event: 'OBSOLETA: no la uses. Usa register_birth_checked, que NO acepta lot_name ni production_unit_name', log_palpation_event_batch: 'OBSOLETA: no la uses. Usa log_palpation_with_condition.' };
+
+let fails = 0, passes = 0, skips = 0;
+const ok = (label, cond, detail) => {
+  if (cond) { passes++; console.log('OK    ' + label); }
+  else { fails++; console.log('FAIL  ' + label + (detail ? '\n        ' + detail : '')); }
+};
+const skip = (label, why) => { skips++; console.log('SKIP  ' + label + '  (' + why + ')'); };
+const setEq = (a, b) => a.length === b.length && a.every((x) => b.includes(x));
+const diff = (a, b) => ({ onlyA: a.filter((x) => !b.includes(x)), onlyB: b.filter((x) => !a.includes(x)) });
+const fmt = (d) => 'only in first: [' + d.onlyA.join(', ') + ']   only in second: [' + d.onlyB.join(', ') + ']';
+const exprs = (t) => (t.match(/\{\{[\s\S]*?\}\}/g) || []);
+
+// ---------------------------------------------------------------- 1. every JSON parses
+const docs = {};
+for (const f of [MCP_FILE, ...Object.values(AGENTS), ...PHASE_FILES]) {
+  try { docs[f] = JSON.parse(fs.readFileSync(path.join(V6, f), 'utf8')); ok('JSON parses: ' + f, true); }
+  catch (e) { ok('JSON parses: ' + f, false, e.message); }
+}
+if (fails) { console.log('\nStopping: a file does not parse.'); process.exit(1); }
+
+const mcp = docs[MCP_FILE];
+const toolNodes = mcp.nodes.filter((n) => n.type.endsWith('postgresTool'));
+const toolNames = toolNodes.map((n) => n.name);
+ok('MCP server: node names are unique', new Set(mcp.nodes.map((n) => n.name)).size === mcp.nodes.length);
+ok('MCP server: 53 tool nodes (29 existing + 24 reproduction)', toolNames.length === 53, 'found ' + toolNames.length);
+const trigger = mcp.nodes.find((n) => n.type.endsWith('mcpTrigger'));
+ok('MCP server: every tool node is connected to the MCP trigger',
+  toolNames.every((t) => { const c = mcp.connections[t]; return c && c.ai_tool && c.ai_tool[0] && c.ai_tool[0].some((x) => x.node === trigger.name); }));
+const phaseNames = [].concat(...PHASE_FILES.map((f) => docs[f].nodes.map((n) => n.name)));
+ok('the 24 nodes of repro-phase1..4 are all in the MCP server', phaseNames.length === 24 && phaseNames.every((n) => toolNames.includes(n)),
+  fmt(diff(phaseNames, toolNames)));
+ok('MCP server: each reproduction node equals its phase file node except position',
+  phaseNames.every((n) => {
+    const a = JSON.parse(JSON.stringify(toolNodes.find((x) => x.name === n))); delete a.position;
+    const src = PHASE_FILES.map((f) => docs[f].nodes.find((x) => x.name === n)).find(Boolean);
+    const b = JSON.parse(JSON.stringify(src)); delete b.position;
+    return JSON.stringify(a) === JSON.stringify(b);
+  }));
+ok('the setters are NOT exposed (no node, not in any prompt)', NOT_EXPOSED.every((s) => !toolNames.includes(s)));
+
+// ---------------------------------------------------------------- 2. prompts
+const sys = {};
+const baseline = {};
+for (const [ch, f] of Object.entries(AGENTS)) {
+  const agent = docs[f].nodes.filter((n) => n.name === 'AI Agent');
+  ok(`${ch}: exactly one node "AI Agent"`, agent.length === 1);
+  sys[ch] = agent[0].parameters.options.systemMessage;
+  ok(`${ch}: systemMessage starts with "="`, sys[ch].startsWith('='));
+}
+
+const section = (msg, from, to) => { const i = msg.indexOf(from); const j = to ? msg.indexOf(to, i + 1) : msg.length; return i < 0 ? '' : msg.slice(i, j < 0 ? msg.length : j); };
+const parts = {};
+for (const ch of Object.keys(AGENTS)) {
+  parts[ch] = {
+    E: section(sys[ch], '🛠️ E. DICCIONARIO', '✨ F. PROTOCOLO'),
+    G: section(sys[ch], '🧬 G. REPRODUCCIÓN', null),
+    C: section(sys[ch], '🛑 C. PROTOCOLO', '🛑 D. FLUJOS'),
+  };
+  ok(`${ch}: sections E, G and C are present`, parts[ch].E.length > 1000 && parts[ch].G.length > 1000 && parts[ch].C.length > 200);
+}
+ok('both prompts carry EXACTLY the same section G', parts.chat.G === parts.whatsapp.G);
+
+// tools named in the prompts
+const TOOL_RE = /'((?:get|list|log|register|void|find|count|move|review|cancel|preview|request|update|births|identifier)_[a-z_]+)'/g;
+const allowed = new Set(toolNames.filter((t) => !LEGACY_KEPT_AS_NODE.includes(t)));
+const dict = {};
+for (const ch of Object.keys(AGENTS)) {
+  const named = new Set([...sys[ch].matchAll(TOOL_RE)].map((m) => m[1]));
+  // parameter names look like tools sometimes (e.g. 'log_...'): keep only what is an MCP tool or clearly a tool verb used as a tool
+  const unknown = [...named].filter((t) => !toolNames.includes(t));
+  ok(`${ch}: every tool named in the prompt exists in the MCP server (and none is a legacy tool)`,
+    unknown.length === 0 && LEGACY_KEPT_AS_NODE.every((l) => !sys[ch].includes(l)), 'unknown: [' + unknown.join(', ') + ']');
+  dict[ch] = [...new Set([...parts[ch].E.matchAll(TOOL_RE)].map((m) => m[1]))].filter((t) => toolNames.includes(t)).sort();
+  const expectedDict = toolNames.filter((t) => !LEGACY_KEPT_AS_NODE.includes(t) && !FORBIDDEN_TOOL.includes(t)).sort();
+  ok(`${ch}: dictionary E lists every MCP tool except the documented ones (get_table_metadata, ${LEGACY_KEPT_AS_NODE.join(', ')})`, setEq(dict[ch], expectedDict),
+    fmt(diff(dict[ch], expectedDict)));
+  ok(`${ch}: nothing outside the MCP server is named as a tool (no sp_repro_* setter)`, NOT_EXPOSED.every((s) => !sys[ch].includes(s)));
+}
+ok('both prompts list the same tools in the dictionary', setEq(dict.chat, dict.whatsapp), fmt(diff(dict.chat, dict.whatsapp)));
+
+// confirmation levels (section C) against the owner's decisions
+for (const ch of Object.keys(AGENTS)) {
+  const lvl = {};
+  for (const n of [1, 2, 3]) {
+    const m = parts[ch].C.match(new RegExp('- NIVEL ' + n + ' —[^:]*: ([^\\n]+)'));
+    lvl[n] = m ? m[1].replace(/\.$/, '').split(',').map((s) => s.trim()).filter(Boolean) : [];
+    ok(`${ch}: NIVEL ${n} list matches the decisions`, setEq(lvl[n], EXPECTED[n]), fmt(diff(lvl[n], EXPECTED[n])));
+  }
+  const all = [...lvl[1], ...lvl[2], ...lvl[3]];
+  ok(`${ch}: no tool is in two levels`, new Set(all).size === all.length);
+  ok(`${ch}: every dictionary tool has a level`, setEq(all.slice().sort(), dict[ch]), fmt(diff(all.slice().sort(), dict[ch])));
+}
+
+// each new tool's description agrees with its level
+const descOf = (n) => toolNodes.find((x) => x.name === n).parameters.toolDescription || '';
+const ASKS = /pide al usuario que confirme con Sí\/No/;
+ok('NIVEL 2 tools: toolDescription does NOT ask for a Sí/No before calling', NEW_ROUTINE.every((t) => !ASKS.test(descOf(t))), NEW_ROUTINE.filter((t) => ASKS.test(descOf(t))).join(', '));
+ok('NIVEL 3 tools: toolDescription KEEPS the Sí/No sentence', NEW_CONFIRM.every((t) => ASKS.test(descOf(t))), NEW_CONFIRM.filter((t) => !ASKS.test(descOf(t))).join(', '));
+ok('NIVEL 1 tools: toolDescription does not ask for a Sí/No', NEW_READS.every((t) => !ASKS.test(descOf(t))));
+ok('log_palpation_event and log_palpation_with_condition descriptions carry the single-animal rule', [descOf('log_palpation_event'), descOf('log_palpation_with_condition')].every((d) => d.includes(SINGLE_RULE)));
+ok('legacy nodes are marked OBSOLETA with their replacement (toolDescription prefix)',
+  Object.entries(OBSOLETE_PREFIX).every(([k, v]) => descOf(k).startsWith(v)));
+ok('get_births_config description has no ADMIN / SQL / panel wording', !/ADMIN|SQL|panel/.test(descOf('get_births_config')), descOf('get_births_config'));
+ok('no toolDescription says an ADMIN changes settings / codes "desde el panel" (there is no panel)',
+  toolNodes.filter((n) => /ADMIN[^.]*desde el panel/.test(n.parameters.toolDescription || '') && NEW_READS.concat(NEW_ROUTINE, NEW_CONFIRM).includes(n.name)).length === 0);
+
+// A5: every e-mail and tenant parameter of every tool
+const params = new Set();
+for (const n of toolNodes) {
+  const q = (n.parameters.options && n.parameters.options.queryReplacement) || '';
+  for (const m of q.matchAll(/\$fromAI\(\s*['"]([A-Za-z_]+)['"]/g)) params.add(m[1]);
+}
+const emailParams = [...params].filter((p) => /email/i.test(p)).sort();
+const tenantParams = [...params].filter((p) => /tenant/i.test(p)).sort();
+for (const ch of Object.keys(AGENTS)) {
+  const a5 = (sys[ch].match(/A5\.[^\n]+/) || [''])[0];
+  const missing = emailParams.filter((p) => !a5.includes(p));
+  ok(`${ch}: A5 lists every e-mail parameter name used by any MCP tool [${emailParams.join(', ')}]`, missing.length === 0, 'missing: ' + missing.join(', '));
+  ok(`${ch}: A5 covers the tenant parameter [${tenantParams.join(', ')}]`, tenantParams.every((p) => a5.includes(p)));
+  ok(`${ch}: A5 states that the reproduction tools take only user_email and tenant_id`, /REPRODUCCIÓN[^.]*user_email y tenant_id/.test(a5));
+}
+const newToolParams = new Set();
+for (const n of toolNodes.filter((x) => phaseNames.includes(x.name))) {
+  const q = (n.parameters.options && n.parameters.options.queryReplacement) || '';
+  for (const m of q.matchAll(/\$fromAI\(\s*['"]([A-Za-z_]+)['"]/g)) if (/email|tenant/i.test(m[1])) newToolParams.add(m[1]);
+}
+ok('the 24 new tools use no e-mail/tenant parameter other than user_email and tenant_id', setEq([...newToolParams].sort(), ['tenant_id', 'user_email']), [...newToolParams].join(', '));
+
+
+// A5, per tool: the e-mail parameter NAME that A5 gives each tool must be the one its node defines (round 1 of the local QA, F1)
+const emailKeyOf = (n) => {
+  const q = (n.parameters.options && n.parameters.options.queryReplacement) || '';
+  return [...new Set([...q.matchAll(/\$fromAI\(\s*['"]([A-Za-z_]+)['"]/g)].map((m) => m[1]).filter((k) => /email/i.test(k)))];
+};
+for (const ch of Object.keys(AGENTS)) {
+  const a5 = (sys[ch].match(/A5\.[^\n]+/) || [''])[0];
+  const mp = a5.match(/por herramienta: (.+?); TODAS las demás → user_email, incluidas estas 24 herramientas de REPRODUCCIÓN, que solo reciben user_email y tenant_id: ([a-z_, ]+)\./);
+  ok(`${ch}: A5 has the per-tool e-mail parameter map (exceptions + the list of the 24 reproduction tools)`, !!mp);
+  if (!mp) continue;
+  const said = {};
+  for (const seg of mp[1].split(';')) {
+    const m = seg.trim().match(/^(.+?) → ([a-z_]+_email)$/);
+    if (!m) { said['<unparsed: ' + seg.trim() + '>'] = '?'; continue; }
+    for (const t of m[1].split(/ y |, /)) said[t.trim()] = m[2];
+  }
+  const listed24 = mp[2].split(',').map((x) => x.trim()).filter(Boolean);
+  ok(`${ch}: A5 names exactly the 24 new reproduction tools (the nodes of repro-phase1..4)`, setEq(listed24, phaseNames), fmt(diff(listed24, phaseNames)));
+  ok(`${ch}: no tool is both an A5 exception and one of the 24`, listed24.every((t) => !(t in said)));
+  const bad = [], seen = [];
+  for (const n of toolNodes) {
+    if (LEGACY_KEPT_AS_NODE.includes(n.name) || FORBIDDEN_TOOL.includes(n.name)) continue;
+    const keys = emailKeyOf(n);
+    if (keys.length !== 1) { bad.push(`${n.name}: node defines [${keys.join(', ')}]`); continue; }
+    const told = said[n.name] || 'user_email';
+    seen.push(n.name);
+    if (told !== keys[0]) bad.push(`${n.name}: A5 says ${told}, node defines ${keys[0]}`);
+  }
+  ok(`${ch}: for each of the ${seen.length} tools in the dictionary, the e-mail parameter A5 gives is the one the node defines`, bad.length === 0, bad.join('; '));
+  ok(`${ch}: every A5 exception names a tool that exists and defines that parameter`, Object.entries(said).every(([t, k]) => toolNodes.some((n) => n.name === t && emailKeyOf(n)[0] === k)));
+  ok(`${ch}: A5 explains that log_breeding_event and void_event are NOT part of the 24`, a5.includes('log_breeding_event (G9) y void_event NO son de esas 24'));
+}
+
+// round 1 of the local QA (F2-F6): wording of E and G, and the birth node
+const LOTNAME = /lot_name(?!_resolved)|production_unit_name/g;
+const rbc = toolNodes.find((n) => n.name === 'register_birth_checked');
+const rbcKeys = [...((rbc.parameters.options.queryReplacement).matchAll(/\$fromAI\(\s*['"]([A-Za-z_]+)['"]/g))].map((m) => m[1]);
+ok('register_birth_checked defines lot_id and production_unit_id and NOT lot_name / production_unit_name', rbcKeys.includes('lot_id') && rbcKeys.includes('production_unit_id') && !rbcKeys.some((k) => /_name$/.test(k)), rbcKeys.join(', '));
+ok('list_lots returns lot_id and production_unit_id next to upp / lote', /lot\.id AS lot_id, pu\.id AS production_unit_id/.test(toolNodes.find((n) => n.name === 'list_lots').parameters.query));
+ok('register_birth_checked description: ids from list_lots, never names, notes only dictated, reporta (not confirma), one birth only',
+  ['NUNCA lot_name ni production_unit_name', 'MISMA fila de list_lots', 'notes lleva SOLO palabras que el usuario dictó', "reporta con los datos que trae", 'births_batch_preview'].every((w) => descOf('register_birth_checked').includes(w)));
+const hint = (k) => (rbc.parameters.options.queryReplacement.match(new RegExp("\\$fromAI\\('" + k + "', \"([^\"]*)\"")) || [])[1] || '';
+ok('register_birth_checked lot_id / production_unit_id / notes hints: list_lots column, never a name, only dictated notes',
+  /lot_id de la fila de list_lots/.test(hint('lot_id')) && /NUNCA un nombre/.test(hint('lot_id')) && /production_unit_id de la MISMA fila/.test(hint('production_unit_id')) && /NUNCA un nombre/.test(hint('production_unit_id')) && /SOLO palabras que el usuario dictó/.test(hint('notes')));
+ok('legacy register_birth_event description says register_birth_checked has NO lot_name / production_unit_name', /^OBSOLETA[^\n]*NO acepta lot_name ni production_unit_name/.test(descOf('register_birth_event')));
+// the rules themselves quote the forbidden question ("NUNCA ... preguntes '¿Confirmas?'", "confirmar un gemelo" in force): drop those quotes before looking for a real ask
+const noProhibition = (t) => t.replace(/preguntes "¿Confirmas\?" ni "Sí\/No"/g, '').replace(/confirmar un gemelo/g, '');
+const ASK_CONFIRM = /confirma (SOLO|ÚNICAMENTE|con los)|Confirma ÚNICAMENTE|Al confirmar|¿Confirmas/i;
+ok('NIVEL 2 tools register_birth_checked, log_breeding_event, log_palpation_with_condition, log_empadre_entry: no description reads as "ask the user to confirm"',
+  ['register_birth_checked', 'log_breeding_event', 'log_palpation_with_condition', 'log_empadre_entry'].every((t) => !ASK_CONFIRM.test(descOf(t))));
+for (const ch of Object.keys(AGENTS)) {
+  const G = parts[ch].G, E = parts[ch].E;
+  const g = (id) => section(G, '\n' + id + '. ', '\nG' + (parseInt(id.slice(1), 10) + 1) + '. ') || section(G, '\n' + id + '. ', null);
+  const birthEntry = E.split('\n').find((l) => l.startsWith("- Nacimiento: 'register_birth_checked'")) || '';
+  ok(`${ch}: E birth entry: NIVEL 2 without Sí/No, ids from the SAME list_lots row, NUNCA lot_name / production_unit_name, notes only dictated, reporta`,
+    ['NIVEL 2: ejecútala en cuanto conozcas la madre y el sexo de la cría, sin resumen ni Sí/No', 'MISMA fila de \'list_lots\'', 'NUNCA lot_name ni production_unit_name', 'SOLO palabras que el usuario dictó', 'Reporta ÚNICAMENTE'].every((w) => birthEntry.includes(w)) && !ASK_CONFIRM.test(birthEntry));
+  const lotRefs = (G.match(LOTNAME) || []).length, neverRefs = (G.match(/NUNCA lot_name ni production_unit_name/g) || []).length;
+  ok(`${ch}: in section G, lot_name / production_unit_name appear only inside "NUNCA lot_name ni production_unit_name"`, lotRefs === neverRefs * 2 && neverRefs >= 1, `${lotRefs} mentions, ${neverRefs} prohibitions`);
+  ok(`${ch}: E birth entry mentions lot_name / production_unit_name only inside the prohibition`, (birthEntry.match(LOTNAME) || []).length === 2 * (birthEntry.match(/NUNCA lot_name ni production_unit_name/g) || []).length);
+  const G3 = g('G3'), G4 = g('G4'), G9 = g('G9'), G10 = g('G10');
+  ok(`${ch}: G3 and G9 say notes carries only words the user dictated as a note`, G3.includes('NOTES: solo con palabras que el usuario dictó como nota; nunca comentarios tuyos') && G9.includes('notes solo con palabras que el usuario dictó como nota; nunca comentarios tuyos'));
+  ok(`${ch}: G3 "recorded" says REPORTA (no "confirma") and G3 / G9 / E contain no phrase that reads as asking the user to confirm`,
+    G3.includes("'recorded' → REPORTA SOLO") && !ASK_CONFIRM.test(noProhibition(G3)) && !ASK_CONFIRM.test(noProhibition(G9)) && !ASK_CONFIRM.test(noProhibition(E.split('\n').filter((l) => /register_birth_checked|log_breeding_event/.test(l)).join('\n'))));
+  ok(`${ch}: G9 is NIVEL 2 (no summary, no Sí/No; no date / sire / semen / notes questions) and names registered_by_email`,
+    ['NIVEL 2', 'NUNCA escribas un resumen ni preguntes "¿Confirmas?" ni "Sí/No"', 'No preguntes la fecha (por omisión hoy), el semental, el lote de semen ni las notas', 'registered_by_email, no user_email'].every((w) => G9.includes(w)));
+  const calv = E.split('\n').find((l) => l.startsWith("- 'list_palpation_due'")) || '';
+  const FIVE = ['pregnant_total', 'upcoming_total', 'overdue_total', 'stale_data_total', 'no_estimate_total', 'later_total'];
+  ok(`${ch}: E list_upcoming_calvings entry and G10 make the model report the five totals and call again with a larger days instead of reusing the output`,
+    FIVE.every((w) => calv.includes(w) && G10.includes(w)) && calv.includes('hasta 300') && G10.includes('hasta 300') && calv.includes('no contestes con la salida anterior') && G10.includes('en vez de contestar con la salida anterior'));
+}
+
+// ---------------------------------------------------------------- round 2 of the local QA (2026-10-29): R2-1 .. R2-6
+const MIG = path.resolve(V6, '../../../hosting3m-workspace/projects/agro-erp/database/migrations');
+const readMig = (f) => { try { return fs.readFileSync(path.join(MIG, f), 'utf8'); } catch (e) { return null; } };
+const SP087 = readMig('087_repro_births.sql'), SP090 = readMig('090_repro_vet_code_semantics.sql'), SP085 = readMig('085_repro_empadre.sql');
+const declared = {};                       // tool -> [{key, type}] for the 24 new tools
+for (const n of toolNodes.filter((x) => phaseNames.includes(x.name))) {
+  const q = (n.parameters.options && n.parameters.options.queryReplacement) || '';
+  declared[n.name] = [...q.matchAll(/\$fromAI\(\s*'([A-Za-z_]+)',\s*(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')\s*,\s*'([a-z]+)'/g)].map((m) => ({ key: m[1], type: m[2] }));
+}
+const numberTools = [...new Set(Object.entries(declared).filter(([, ps]) => ps.some((p) => p.type === 'number' && p.key !== 'tenant_id')).map(([t]) => t))].sort();
+const HEREDA = /la cría hereda|hereda los de la madre|hereda de la madre|hereda el lote/i;
+for (const ch of Object.keys(AGENTS)) {
+  const G = parts[ch].G, E = parts[ch].E;
+  const g = (id) => section(G, '\n' + id + '. ', null);
+  const only = (id, nextId) => section(G, '\n' + id + '. ', '\n' + nextId + '. ');
+  const G0 = only('G0', 'G1'), G2 = only('G2', 'G3'), G3 = only('G3', 'G4'), G4 = only('G4', 'G5'), G10 = only('G10', 'G11'), G11 = g('G11');
+  const has = (t, words) => words.every((w) => t.includes(w));
+  const missing = (t, words) => words.filter((w) => !t.includes(w)).join(' | ');
+  const calv = E.split('\n').find((l) => l.startsWith("- 'list_palpation_due'")) || '';
+  const bprev = E.split('\n').find((l) => l.startsWith("- 'births_batch_preview'")) || '';
+
+  // R2-1: two or more births in one message -> the block flow, never register_birth_checked in a loop
+  const w1 = ['register_birth_checked', 'UN SOLO parto', '2 o más crías', 'SIEMPRE el flujo de bloque de G4', "'births_batch_preview'", "'births_batch_register'", 'UNA sola confirmación', 'PROHIBIDO llamar', 'varias veces seguidas'];
+  ok(`${ch}: R2-1 G0 sends 2+ births to the block flow (preview, ONE confirmation, register) and forbids looping register_birth_checked`, has(G0, w1), missing(G0, w1));
+  ok(`${ch}: R2-1 the block tools named in G0 / G4 are real MCP tools`, ['births_batch_preview', 'births_batch_register', 'register_birth_checked'].every((t) => toolNames.includes(t)) && G4.includes('NUNCA llamadas sueltas repetidas') && G4.includes('UNA sola vez "¿Confirmas? (Sí/No)" por todo el bloque'));
+  ok(`${ch}: R2-1 the dictionary says births_batch_preview is OBLIGATORIA with 2+ births, and register_birth_checked is for ONE`, bprev.includes('OBLIGATORIA') && E.includes('para UN SOLO parto recién ocurrido'));
+  ok('R2-1 register_birth_checked description opens with "UN solo parto. Para 2 o más, usar el flujo de bloque"', descOf('register_birth_checked').startsWith('UN solo parto. Para 2 o más, usar el flujo de bloque'));
+
+  // R2-2: the model remembers only what it wrote
+  const w2a = ['NO recuerdas lo que devolvió una herramienta', 'DEBE listar de CADA candidato', 'el arete SINIIGA (rfid_siniiga)', 'la categoría y el estatus', 'dam_identifier igual a ESE arete SINIIGA', 'nunca con el número de fuego repetido', 'S/N-1450-16'];
+  ok(`${ch}: R2-2a G2 lists arete SINIIGA + category + status of EVERY candidate and re-calls with THAT arete, not the repeated fire number`, has(G2, w2a), missing(G2, w2a));
+  const w2b = ['escribe cada UPP con su nombre', "vuelve a llamar a 'list_lots'", 'la fila cuyo lote Y cuya UPP coinciden', 'sin depender de ids que recuerdes'];
+  ok(`${ch}: R2-2b G3 lists each UPP by name for a repeated lot and calls list_lots again instead of remembering ids`, has(G3, w2b), missing(G3, w2b));
+  ok('R2-2 the ambiguity candidates really carry rfid_siniiga, numero_fuego, category and current_status (085 fn_repro_resolve_animal)',
+    SP085 === null ? true : /jsonb_build_object\('livestock_id', l\.id, 'rfid_siniiga', l\.rfid_siniiga,\s*'numero_fuego', l\.numero_fuego, 'electronic_rfid', l\.electronic_rfid/.test(SP085) && /'candidates', v_c/.test(SP085));
+
+  // R2-3: name a lot -> list_lots FIRST; no unsupported "the calf inherits the dam's lot"
+  const w3 = ["llama PRIMERO a 'list_lots', antes de preguntar nada", 'Una sola fila coincide', 'Varias filas', 'Ninguna fila: dilo, ofrece los lotes que devolvió la lista y pregunta', 'NUNCA digas que "hereda"', 'la madre tenga registrados (si la madre no tiene, quedan vacíos)', 'Una UPP suelta (sin lote) la ignora la base cuando la madre ya tiene UPP', 'NUNCA lot_name ni production_unit_name'];
+  ok(`${ch}: R2-3 G3 calls list_lots before asking (one row / several / none) and states exactly when the calf gets the dam's lot and UPP`, has(G3, w3), missing(G3, w3));
+  ok(`${ch}: R2-3 B5 says list_lots first and carries the conditional inheritance sentence`, has(sys[ch], ["Si el usuario nombra un lote, llama PRIMERO a 'list_lots' (G3), antes de preguntar nada", 'omite lot_id y production_unit_id y registra, sin más preguntas', 'NUNCA digas que "hereda"']));
+  ok(`${ch}: R2-3 no unconditional "la cría hereda ..." anywhere in the prompt, register_birth_checked or list_lots`, !HEREDA.test(sys[ch]) && !HEREDA.test(descOf('register_birth_checked')) && !HEREDA.test(descOf('list_lots')), (sys[ch].match(HEREDA) || [''])[0]);
+  ok('R2-3 the wording matches the stored procedure: lot = COALESCE(explicit, dam lot); UPP = COALESCE(explicit lot UPP, dam UPP, UPP parameter) (087)',
+    SP087 === null ? true : SP087.includes('v_final_lot_id          := COALESCE(p_lot_id, v_dam_lot_id);') && SP087.includes('v_final_production_unit := COALESCE(v_explicit_lot_unit, v_dam_production_unit, p_production_unit_id);'));
+  ok('R2-3 register_birth_checked description: list_lots first, calf gets the dam\'s lot / UPP only if she has them', has(descOf('register_birth_checked'), ['llama primero a list_lots', 'la cría queda con el lote y la UPP que la madre tenga registrados (vacíos si no tiene)']));
+
+  // R2-4: no confirmation of date / lot / UPP; relative dates converted; birth weight optional in single AND block
+  const w4 = ['no pidas confirmar la fecha, el lote ni la UPP', '"ayer"', 'los conviertes tú a AAAA-MM-DD, sin preguntar', 'birth_weight_kg y notes son OPCIONALES', 'no puedes dejarlo en blanco', 'igual en un parto individual que en un bloque', 'NUNCA escribas un resumen ni preguntes "¿Confirmas?" ni "Sí/No" antes de registrar', 'NUNCA preguntes algo que ya esté en la conversación'];
+  ok(`${ch}: R2-4 G3 asks nothing to confirm (date, lot, UPP), converts "ayer" without asking, and birth weight is OPTIONAL`, has(G3, w4), missing(G3, w4));
+  ok(`${ch}: R2-4 G4 treats birth_date and birth_weight_kg as optional and converts relative dates`, has(G4, ['birth_date y birth_weight_kg OPCIONALES', 'nunca los pidas', '"ayer"']));
+  ok(`${ch}: R2-4 the dictionary says birth_weight_kg is OPCIONAL and never asked`, E.includes('birth_weight_kg (OPCIONAL, texto entre comillas') && E.includes('nunca lo pidas'));
+  ok('R2-4 register_birth_checked description: no confirmation of date, lot, UPP, weight or notes', has(descOf('register_birth_checked'), ['no preguntes ni pidas confirmar la fecha', 'el lote, la UPP, el peso ni las notas', 'birth_weight_kg y notes son opcionales']));
+
+  // R2-5: types
+  const w5 = ['TEXTO', 'también los valores numéricos', 'birth_weight_kg "35"', 'days "300"', 'limit "50"', 'offset "0"', 'litter_position "2"', 'NUNCA muestres al usuario un error de esquema o de validación', 'reintenta en silencio UNA vez con el tipo corregido', 'avisa solo si el segundo intento también falla'];
+  ok(`${ch}: R2-5 G11 sends numeric values as quoted text, never shows schema errors, retries silently once`, has(G11, w5), missing(G11, w5));
+  ok(`${ch}: R2-5 B7 exempts schema / type errors from "tell the user the error"`, sys[ch].includes('EXCEPCIÓN: un error de esquema o de tipos') && sys[ch].includes('NUNCA se muestra al usuario: sigue G11'));
+  ok(`${ch}: R2-5 / R3-5b G11 says that only tenant_id is sent as a number, and no node declares another parameter as number (${numberTools.length} found)`,
+    G11.includes('Solo se envía como número tenant_id.') && !/limit \/ offset de/.test(G11) && numberTools.length === 0, numberTools.join(', '));
+}
+{
+  const rbc2 = toolNodes.find((n) => n.name === 'register_birth_checked');
+  const q = rbc2.parameters.options.queryReplacement;
+  const bw = (declared.register_birth_checked || []).find((x) => x.key === 'birth_weight_kg');
+  ok('R2-5 birth_weight_kg is declared text and its hint carries a quoted example and says NEVER the bare number',
+    !!bw && bw.type === 'string' && q.includes('\\"35\\"') && q.includes('NUNCA el número 35 sin comillas'));
+  // every numeric-valued parameter of the 24 tools that is declared as TEXT is covered by the examples / the rule in G11 (audit result, informational)
+  const numericText = [];
+  for (const [t, ps] of Object.entries(declared)) for (const p of ps) if (p.type === 'string' && /^(birth_weight_kg|days|limit|offset|litter_position)$/.test(p.key)) numericText.push(t + '.' + p.key);
+  ok(`R2-5 audit: ${numericText.length} numeric-valued parameters are declared as text (${[...new Set(numericText.map((x) => x.split('.')[1]))].join(', ')}); G11 names all of those keys`,
+    ['birth_weight_kg', 'days', 'limit', 'offset', 'litter_position'].every((k) => parts.chat.G.includes(k + ' "')) && numericText.length >= 10);
+}
+for (const ch of Object.keys(AGENTS)) {
+  const G = parts[ch].G, E = parts[ch].E;
+  const G10 = section(G, '\n' + 'G10' + '. ', '\nG11. ');
+  const calv = E.split('\n').find((l) => l.startsWith("- 'list_palpation_due'")) || '';
+  // R2-6 (round 2) + R3-3 (round 3): the five totals add up to pregnant_total; the FIRST answer opens with a fixed sentence built from the JSON; headings by days
+  const SENTENCE = '"X preñadas en total: A con parto en los próximos N días, B más adelante, C atrasadas, D con datos viejos y E sin estimación"';
+  const MAPPING = '(X = pregnant_total, A = upcoming_total, N = days, B = later_total, C = overdue_total, D = stale_data_total, E = no_estimate_total)';
+  const w6 = ['tu PRIMERA respuesta empieza con esta frase fija', SENTENCE, MAPPING, 'con los cinco totales y pregnant_total', 'A, B, C, D y E suman X', 'si no suman, dilo, no los ajustes', 'days_to_calving',
+    '"En los próximos N días", "Más adelante", "Atrasadas", "Datos viejos", "Sin estimación"', 'nunca "próximas a parir"', 'NO llames "próxima a parir" a una vaca con más de 60 días por delante', 'faltan 197 días'];
+  ok(`${ch}: R3-3 G10 opens list_upcoming_calvings with the fixed sentence (five totals + pregnant_total, mapped to the JSON keys), headings by days, rows by days remaining`, w6.every((w) => G10.includes(w)), w6.filter((w) => !G10.includes(w)).join(' | '));
+  ok(`${ch}: R3-3 the dictionary entry of list_upcoming_calvings carries the fixed sentence and the five JSON keys`,
+    [SENTENCE, 'upcoming_total, overdue_total, later_total, stale_data_total y no_estimate_total', 'suman pregnant_total', 'days_to_calving', 'nunca como "próxima a parir"'].every((w) => calv.includes(w)));
+}
+ok('R2-6 the five totals are partitions of pregnant_total in the SQL (090: upcoming 0..days, overdue -60..-1, stale < -60, later > days, no_estimate = no date)',
+  SP090 === null ? true : ["'upcoming_total',   (SELECT count(*) FROM rowj WHERE days_to BETWEEN 0 AND v_days)", "'overdue_total',    (SELECT count(*) FROM rowj WHERE days_to BETWEEN -60 AND -1)",
+    "'stale_data_total', (SELECT count(*) FROM rowj WHERE days_to < -60)", "'later_total',      (SELECT count(*) FROM rowj WHERE days_to > v_days)", "'no_estimate_total',(SELECT count(*) FROM rowj WHERE est_date IS NULL)", "'pregnant_total',   (SELECT count(*) FROM rowj)"].every((x) => SP090.includes(x)));
+
+
+// ---------------------------------------------------------------- round 3 of the local QA (2026-10-29): R3-1 .. R3-3
+const mdsum = (f) => { try { return require('crypto').createHash('md5').update(fs.readFileSync(path.join(MIG, f))).digest('hex'); } catch (e) { return null; } };
+const RUNBOOK = (() => { try { return fs.readFileSync(path.resolve(V6, '../../../hosting3m-workspace/projects/agro-erp/docs/REPRO_PRODUCTION_RUNBOOK.md'), 'utf8'); } catch (e) { return null; } })();
+{
+  // R3-1(a): the names are looked up in the tool node (the SQL of the node), NOT in a stored procedure of 084-090
+  const qOf = (t) => toolNodes.find((n) => n.name === t).parameters.query;
+  const NAMES = ["'lot_name_resolved'", "'upp_name_resolved'", "->>'lot_id_resolved'", "->>'production_unit_id_resolved'", 'public.production_unit_lots', 'public.production_units', 'l.lot_name', 'pu.ranch_name', 'public.fn_repro_int($1::text)'];
+  for (const t of ['register_birth_checked', 'births_batch_register']) {
+    ok(`R3-1a ${t}: the node query adds lot_name_resolved / upp_name_resolved from the ids the stored procedure RETURNED, filtered by the tenant`, NAMES.every((w) => qOf(t).includes(w)) && /id_company = public\.fn_repro_int\(\$1::text\)/.test(qOf(t)), NAMES.filter((w) => !qOf(t).includes(w)).join(' | '));
+  }
+  ok('R3-1a register_birth_checked still calls sp_repro_register_birth once (13 parameters) and births_batch_register sp_repro_births_batch_register once (4)',
+    (qOf('register_birth_checked').match(/sp_repro_register_birth\(/g) || []).length === 1 && (qOf('births_batch_register').match(/sp_repro_births_batch_register\(/g) || []).length === 1 && /\$13::text\)/.test(qOf('register_birth_checked')) && /\$4::text\)/.test(qOf('births_batch_register')));
+  ok('R3-1a the lookup uses columns that list_lots already reads (lot.lot_name, pu.ranch_name)', /lot\.lot_name/.test(qOf('list_lots')) && /pu\.ranch_name/.test(qOf('list_lots')));
+  ok('R3-1a register_historical_birth is NOT wrapped: it has no lot, no UPP and no calf', !/lot_name_resolved/.test(qOf('register_historical_birth')) && !(declared.register_historical_birth || []).some((p) => /lot|production_unit/.test(p.key)));
+  const mig = ['084_repro_births_age.sql', '085_repro_empadre.sql', '086_repro_palpation.sql', '087_repro_births.sql', '088_repro_services.sql', '090_repro_vet_code_semantics.sql'];
+  const bad = RUNBOOK === null ? [] : mig.filter((f) => { const m = RUNBOOK.match(new RegExp('\\| `' + f.replace('.', '\\.') + '` \\| `([0-9a-f]{32})` \\|')); return !m || m[1] !== mdsum(f); });
+  ok('R3-1a no migration of 084-090 changed: their md5 still match the runbook table (the rehearsal stays valid)', RUNBOOK === null || (mdsum('087_repro_births.sql') !== null && bad.length === 0), bad.join(', '));
+  ok('R3-1a the descriptions of both tools tell the model to report from lot_name_resolved and upp_name_resolved',
+    ['register_birth_checked', 'births_batch_register'].every((t) => ['lot_name_resolved', 'upp_name_resolved', 'SOLO'].every((w) => descOf(t).includes(w))));
+}
+for (const ch of Object.keys(AGENTS)) {
+  const G = parts[ch].G, E = parts[ch].E;
+  const only = (id, nextId) => section(G, '\n' + id + '. ', '\n' + nextId + '. ');
+  const G3 = only('G3', 'G4'), G4 = only('G4', 'G5');
+  const has = (t, words) => words.every((w) => t.includes(w));
+  const miss = (t, words) => words.filter((w) => !t.includes(w)).join(' | ');
+  // R3-1(b)
+  const w1 = ['SOLO lot_name_resolved y upp_name_resolved', 'la base ESCRIBIÓ', 'no se muestran', 'NUNCA reportes el lote o la UPP desde el nombre que dictó el usuario, desde la fila de \'list_lots\' que elegiste ni desde tu memoria',
+    'di "no se resolvió ningún lote/UPP"', 'NO coincide con el lote o la UPP que pidió el usuario', 'los dos nombres (el que pidió y el que se escribió)', 'NO digas que coincide', 'ofrece corregirlo', 'move_livestock', 'solo dentro de la misma UPP'];
+  ok(`${ch}: R3-1b G3 reports lot and UPP ONLY from lot_name_resolved / upp_name_resolved, says so when they differ from the request, and offers to correct`, has(G3, w1), miss(G3, w1));
+  ok(`${ch}: R3-1b G4 reports each calf's lot and UPP only from results[].lot_name_resolved / upp_name_resolved`, has(G4, ['lot_name_resolved y upp_name_resolved de cada elemento de \'results\'', 'dilo y ofrece corregir']));
+  ok(`${ch}: R3-1b nothing in the prompt tells the model to look the name up in list_lots to REPORT it`, !/busca ese id en la respuesta/.test(sys[ch]) && !/para decir el nombre busca/.test(sys[ch]));
+  ok(`${ch}: R3-1b move_livestock (used for the correction) exists and moves within the same UPP`, toolNames.includes('move_livestock') && /MISMA UPP/.test(sys[ch]));
+  // R3-2
+  const w2 = ['NUNCA preguntes algo que ya esté en la conversación (por ejemplo el sexo dicho en el primer mensaje)', 'pregunta SOLO por los datos obligatorios que falten (la madre y el sexo)', 'Está PROHIBIDO afirmar que la herramienta "necesita" el peso, la fecha o las notas',
+    'o que un valor "no sea null"', 'son opcionales y se omiten', "llama PRIMERO a 'list_lots', antes de preguntar nada: ve directo, sin preguntarle cómo se escribe o se estructura el nombre"];
+  ok(`${ch}: R3-2 G3 never asks what is already in the conversation, asks only for missing mandatory data (dam, sex), forbids "the tool needs weight / date / notes", goes straight to list_lots`, has(G3, w2), miss(G3, w2));
+}
+{
+  ok('R3-2 the register_birth_checked description says the weight, date and notes are not required', descOf('register_birth_checked').includes('nunca digas que la herramienta los necesita'));
+  // what n8n 2.29.0 does with $fromAI: a 4th argument (default) makes the key optional in the tool schema (generateZodSchema -> schema.default(...)); without it the key is REQUIRED
+  const reqOf = (node) => {
+    const q = (node.parameters.options && node.parameters.options.queryReplacement) || '';
+    const out = [];
+    const re = /\$fromAI\(\s*'([A-Za-z_]+)',\s*(?:"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')\s*,\s*'([a-z]+)'\s*(,?)/g;
+    for (let m; (m = re.exec(q));) if (m[3] !== ',') out.push(m[1]);
+    return out.sort();
+  };
+  const rbcNode = toolNodes.find((n) => n.name === 'register_birth_checked');
+  ok('R3-2 in the tool schema (emulated from the $fromAI defaults) only tenant_id and user_email are REQUIRED in register_birth_checked: birth_weight_kg, birth_date, notes are optional', JSON.stringify(reqOf(rbcNode)) === JSON.stringify(['tenant_id', 'user_email']), reqOf(rbcNode).join(', '));
+  const reqNew = phaseNames.map((t) => [t, reqOf(toolNodes.find((n) => n.name === t))]).filter(([, r]) => r.some((k) => !['tenant_id', 'user_email'].includes(k)));
+  ok('R3-2 / R3-5b none of the 24 new tools has a REQUIRED key beyond tenant_id / user_email (limit and offset of list_births and list_unregistered_historical_births were)', reqNew.length === 0, reqNew.map(([t, r]) => t + ': ' + r.join(', ')).join('; '));
+}
+
+// ---------------------------------------------------------------- round 4 (2026-10-29): R3-5a .. R3-5c
+{
+  const qOf = (t) => toolNodes.find((n) => n.name === t).parameters.query;
+  // R3-5a: births_batch_preview shows the names that WILL be written, computed with the rule of sp_register_birth_event
+  const PV = qOf('births_batch_preview');
+  const pvWords = ["sp_repro_births_batch_preview($1::text, $2::text, $3::text, $4::text)", "t.e->>'status' = 'ok'", "'lot_id_resolved', w.lot_id", "'production_unit_id_resolved', w.upp_id", "'lot_name_resolved'", "'upp_name_resolved'",
+    'public.production_unit_lots l WHERE l.id = w.lot_id', 'public.production_units pu WHERE pu.id = w.upp_id', "COALESCE(NULLIF(t.e->>'lot_id', '')::uuid,", 'c.lot_id FROM public.cattle_livestock c', 'c.production_unit_id FROM public.cattle_livestock c', 'public.fn_repro_int($1::text)'];
+  ok('R3-5a births_batch_preview: the node query adds lot_id_resolved / production_unit_id_resolved / lot_name_resolved / upp_name_resolved to every ok line, tenant-filtered', pvWords.every((w) => PV.includes(w)), pvWords.filter((w) => !PV.includes(w)).join(' | '));
+  ok('R3-5a births_batch_preview: the inheritance rule is the one of the stored procedure (lot = explicit, else the dam\'s; UPP = UPP of the explicit lot, else the dam\'s, else the UPP given)',
+    /COALESCE\(NULLIF\(t\.e->>'lot_id', ''\)::uuid,\s*\(SELECT c\.lot_id FROM public\.cattle_livestock c/.test(PV)
+    && (() => { const a = PV.indexOf('x.production_unit_id FROM public.production_unit_lots x'), b = PV.indexOf('c.production_unit_id FROM public.cattle_livestock c'), c = PV.indexOf("NULLIF(t.e->>'production_unit_id', '')::uuid)"); return a > 0 && b > a && c > b; })()
+    && (SP087 === null || (SP087.includes('COALESCE(p_lot_id, v_dam_lot_id)') && SP087.includes('COALESCE(v_explicit_lot_unit, v_dam_production_unit, p_production_unit_id)'))));
+  ok('R3-5a births_batch_preview is read-only (calls the preview SP once, no INSERT / UPDATE / DELETE) and its description tells the model to show the names', (PV.match(/sp_repro_births_batch_preview\(/g) || []).length === 1 && !/\b(INSERT|UPDATE|DELETE)\b/i.test(PV)
+    && ['lot_name_resolved', 'upp_name_resolved', 'nunca los que recuerdes'].every((w) => descOf('births_batch_preview').includes(w)));
+  for (const ch of Object.keys(AGENTS)) {
+    const G4 = section(parts[ch].G, '\nG4. ', '\nG5. ');
+    const w = ["2) Llama 'births_batch_preview'. En el resumen muestra de cada renglón la madre, el sexo, la fecha y el lote y la UPP SOLO desde lot_name_resolved y upp_name_resolved de 'lines'", 'incluido el que la cría tomaría de su madre', 'nunca desde \'list_lots\' ni desde tu memoria', 'dilo y corrige el renglón antes del Sí'];
+    ok(`${ch}: R3-5a G4 makes the preview show the lot and UPP from lot_name_resolved / upp_name_resolved (never from memory)`, w.every((x) => G4.includes(x)), w.filter((x) => !G4.includes(x)).join(' | '));
+  }
+  // R3-5b: limit / offset have the same default and type in every list
+  const lo = [];
+  for (const [t, ps] of Object.entries(declared)) for (const p of ps) if (p.key === 'limit' || p.key === 'offset') lo.push(t + '.' + p.key + ':' + p.type);
+  ok(`R3-5b limit and offset are declared as text with a null default in all ${lo.length} places (list_births and list_unregistered_historical_births included)`, lo.length >= 16 && lo.every((x) => x.endsWith(':string')), lo.filter((x) => !x.endsWith(':string')).join(', '));
+  const dflt = (t, k) => ((toolNodes.find((n) => n.name === t).parameters.options.queryReplacement.match(new RegExp("\\$fromAI\\('" + k + "', \"[^\"]*\", 'string', null\\)")) || [])[0]) ? 'null' : 'other';
+  ok('R3-5b list_births and list_unregistered_historical_births: limit / offset end in , \'string\', null) like list_open_cows', ['list_births', 'list_unregistered_historical_births'].every((t) => dflt(t, 'limit') === 'null' && dflt(t, 'offset') === 'null'));
+  // R3-5c: the psql test script runs the SAME query texts, ends in ROLLBACK and writes nothing that survives
+  let SQLT = null;
+  try { SQLT = fs.readFileSync(path.join(__dirname, 'births_names_check.sql'), 'utf8'); } catch (e) { SQLT = null; }
+  ok('R3-5c births_names_check.sql exists', SQLT !== null);
+  if (SQLT !== null) {
+    const body = (name) => { const m = SQLT.match(new RegExp("INSERT INTO q VALUES \\('" + name + "', \\$q\\$([\\s\\S]*?)\\$q\\$\\);")); return m ? m[1] : null; };
+    for (const [nm, tool] of [['rbc', 'register_birth_checked'], ['preview', 'births_batch_preview'], ['register', 'births_batch_register']])
+      ok(`R3-5c the query '${nm}' in births_names_check.sql is the node query of ${tool}, byte for byte`, body(nm) === qOf(tool), body(nm) === null ? 'not found' : 'differs');
+    const code = SQLT.split('\n').filter((l) => !l.trim().startsWith('--')).join('\n');
+    ok('R3-5c the script refuses any database but hosting3m_rehearsal, works only on company 3, runs inside BEGIN ... ROLLBACK and has no COMMIT / DELETE / DROP / TRUNCATE',
+      /current_database\(\) = 'hosting3m_rehearsal'/.test(code) && /\\quit/.test(code) && /^BEGIN;/m.test(code) && /^ROLLBACK;/m.test(code) && !/\b(COMMIT|DELETE|DROP|TRUNCATE)\b/i.test(code)
+      && /company_name[\s\S]*Rancho El Palomar/.test(code) && !/(id_company|tenant_id)\s*=\s*(?!3\b)\d/.test(code), '');
+    ok('R3-5c the script proves that nothing is left behind (counts of animals, births and weights of company 3 before BEGIN and after ROLLBACK)',
+      /n_animals_before/.test(code) && /n_births_before/.test(code) && /n_weights_before/.test(code) && /animals_unchanged/.test(code) && /births_unchanged/.test(code) && /weights_unchanged/.test(code));
+    const arrs = [...code.matchAll(/pg_temp\.run(13|4)\('(\w+)', ARRAY\[([\s\S]*?)\]\)/g)].map((m) => [m[1], m[2], m[3].split(/,(?=(?:[^']*'[^']*')*[^']*$)/).length]);
+    ok(`R3-5c every call passes exactly the arguments of its node (13 for register_birth_checked, 4 for the batch tools): ${arrs.length} calls`, arrs.length >= 8 && arrs.every(([n, , c]) => Number(n) === c), JSON.stringify(arrs.filter(([n, , c]) => Number(n) !== c)));
+    ok('R3-5c the script covers the failure of round 3 (explicit "Lote Repetido" of UPP Sur vs the neighbour "Lote Sur"), the dam\'s inheritance, a bare UPP overridden by the dam, an ambiguous dam, bad preview lines and preview == register',
+      ["lot_rep_sur", "lot_sur", "'C  register_birth_checked", "'D  register_birth_checked", "'E  register_birth_checked", "'P2 births_batch_preview", "'R1 births_batch_register", "'R2 what the database really holds"].every((x) => SQLT.includes(x)));
+  }
+}
+
+// section G content
+for (const ch of Object.keys(AGENTS)) {
+  const miss = REQUIRED_G_WORDS.filter((w) => !parts[ch].G.includes(w));
+  ok(`${ch}: section G teaches every required answer / field / rule`, miss.length === 0, 'missing: ' + miss.join(', '));
+  ok(`${ch}: section G never says a veterinarian confirmed RP / NR / NO APTO / MATRIZ OCUPADA`, !/veterinario[s]? (los )?confirm[óo]/i.test(parts[ch].G.replace('nunca digas que un veterinario los confirmó', '')));
+  ok(`${ch}: the shared prompt carries no ranch-specific fact about the foreman ("capataz")`, !/capataz/i.test(sys[ch]));
+  ok(`${ch}: single-animal-with-a-code rule is in the log_palpation_event dictionary entry AND in G6`,
+    parts[ch].E.split('\n').some((l) => l.includes("'log_palpation_event'") && l.includes(SINGLE_RULE)) && parts[ch].G.includes(SINGLE_RULE));
+  ok(`${ch}: get_births_config has no ADMIN / SQL wording in the prompt`,
+    !/get_births_config[^\n]{0,160}(ADMIN|SQL)/.test(sys[ch]));
+  ok(`${ch}: section G adds no role restriction (no "solo un ADMIN" outside the death / sale authorization)`, !/solo (un )?ADMIN (puede )?(registr|captur)/i.test(parts[ch].G));
+}
+
+// leading "=" and {{ }} expressions against the previous version of the file (git)
+function previous(file) {
+  try { return JSON.parse(execFileSync('git', ['-C', V6, 'show', `${REF}:workflows/09-MCP-Agent-Cattle/v6/${file}`], { stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 1 << 28 }).toString()); }
+  catch (e) { return null; }
+}
+for (const [ch, f] of Object.entries(AGENTS)) {
+  const prev = previous(f);
+  if (!prev) { skip(`${ch}: "=" and {{ }} expressions identical to ${REF}`, 'git or ref not available'); continue; }
+  const pm = prev.nodes.find((n) => n.name === 'AI Agent').parameters.options.systemMessage;
+  ok(`${ch}: leading "=" and the ${exprs(pm).length} {{ }} expressions are identical to ${REF}`, pm[0] === '=' && sys[ch][0] === '=' && JSON.stringify(exprs(pm)) === JSON.stringify(exprs(sys[ch])));
+  const pp = prev.nodes.find((n) => n.name === 'AI Agent Palma').parameters.options.systemMessage;
+  ok(`${ch}: "AI Agent Palma" is untouched`, pp === docs[f].nodes.find((n) => n.name === 'AI Agent Palma').parameters.options.systemMessage);
+  const pt = prev.nodes.find((n) => n.name === 'AI Agent').parameters.text;
+  ok(`${ch}: the "text" input expression of "AI Agent" is untouched`, pt === docs[f].nodes.find((n) => n.name === 'AI Agent').parameters.text);
+  const agentNow = docs[f].nodes.find((n) => n.name === 'AI Agent'), agentPrev = prev.nodes.find((n) => n.name === 'AI Agent');
+  const strip = (n) => { const c = JSON.parse(JSON.stringify(n)); delete c.parameters.options.systemMessage; return JSON.stringify(c); };
+  ok(`${ch}: in the node "AI Agent" ONLY options.systemMessage changed (model, tools wiring, memory and every other parameter identical to ${REF})`, strip(agentNow) === strip(agentPrev));
+  const others = prev.nodes.filter((n) => n.name !== 'AI Agent');
+  ok(`${ch}: no other node of the workflow changed (${others.length} nodes)`, others.every((n) => JSON.stringify(n) === JSON.stringify(docs[f].nodes.find((x) => x.name === n.name))));
+}
+for (const ch of Object.keys(AGENTS)) {
+  ok(`${ch}: prompt size ${sys[ch].length} characters (informational: it was ~32 000 before phase 5)`, sys[ch].length < 60000);
+}
+
+console.log(`\n${passes} passed, ${fails} failed, ${skips} skipped`);
+process.exit(fails ? 1 : 0);
