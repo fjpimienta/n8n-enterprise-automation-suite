@@ -65,6 +65,35 @@ export const appConfig: ApplicationConfig = {
 
 ```
 
+## 📎 Optional File Attachment (disabled by default)
+
+Opt-in via `CHAT_CONFIG_TOKEN`. Without `attachments` (or with `enabled: false`) the UI and the HTTP request are identical to a text-only chat. **Do not enable it in a host app until the backend supports it.**
+
+```typescript
+const chatConfig: ChatConfig = {
+  // ...
+  attachments: { enabled: true, maxSizeMb: 5, accept: ['application/pdf', 'text/xml'] }
+};
+```
+
+| Option | Default | Notes |
+|--------|---------|-------|
+| `enabled` | `false` | Shows the paperclip. One file per message. |
+| `maxSizeMb` | `5` | Can only lower the 5 MB raw hard limit. |
+| `accept` | `image/jpeg, image/png, image/webp, application/pdf, text/xml, application/xml` | |
+
+**Type resolution:** `file.type` if it is in `accept`; otherwise, only when it is empty or `application/octet-stream`, the extension is mapped (`.xml`→`text/xml`, `.pdf`, `.jpg/.jpeg`, `.png`, `.webp`) and accepted if the result is in `accept`. The resolved type is what is sent. The file name has control characters stripped and is capped at 255 characters; it is display-only metadata.
+
+**Request contract:** the same POST as always (`chatInput`, `sessionId`, `tenant_id`) plus, only when a file is attached:
+
+```json
+"file": { "name": "invoice.xml", "type": "text/xml", "size": 2931, "base64": "<raw Base64, no data: prefix>" }
+```
+
+The Base64 exists only inside the in-flight request: never in the message history (`ChatMessage.file` holds name/type/size only), signals, storage or logs. The size is checked before reading and again against the real byte length. On HTTP error the draft text and the file stay available for retry.
+
+> ⚠️ The client checks are UX only. The backend MUST validate the real file type (content, not the declared type or name), the size, and the caller's tenant membership for `tenant_id`.
+
 ## 🧩 Component API
 
 ### `<lib-ai-chat>`
