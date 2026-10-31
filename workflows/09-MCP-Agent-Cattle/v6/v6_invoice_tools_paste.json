@@ -1,0 +1,55 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "VISTA PREVIA de una factura (CFDI) que el usuario envió como archivo. No registra nada. El sistema ya leyó el archivo y te dio la línea [FACTURA draft_id=...] con un resumen: usa ese draft_id tal cual. Sugiere la categoría según los conceptos del resumen (o pregunta si no es obvia). Si regresa status 'preview', muéstrale al usuario: emisor y RFC, folio, fecha, total, impuestos, categoría, descripción y estatus SAT, y pregúntale '¿Lo registro? (Sí/No)'. Otros status: 'duplicate' (ya estaba registrada, dilo y no registres), 'rfc_not_registered' (un ADMIN debe registrar el RFC de la empresa), 'sat_not_valid' (no vigente o no verificable: no se puede registrar), 'invalid' (explica el mensaje), 'not_found' o 'draft_expired' (pide que reenvíe el archivo), 'already_registered' (ya se procesó). Solo lectura.",
+        "operation": "executeQuery",
+        "query": "SELECT public.sp_expense_invoice_preview($1::text, $2::text, $3::text, $4::text, NULLIF($5::text, ''), NULLIF($6::text, '')) AS result;",
+        "options": {
+          "queryReplacement": "={{ (() => { const s = (v) => (v === undefined || v === null) ? '' : String(v); return [\n  String($fromAI('tenant_id', \"Numeric tenant/company id (id_company) of the current user, copied EXACTLY from the session context in the system prompt. Never guess, infer or default it.\", 'number')),\n  String($fromAI('user_email', \"Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato.\", 'string')),\n  String($fromAI('draft_id', \"UUID del borrador de factura, copiado EXACTAMENTE del mensaje del usuario (línea [FACTURA draft_id=...]). Nunca lo inventes.\", 'string')),\n  String($fromAI('category', \"Categoría del gasto en MAYÚSCULAS, corta (ej. ALIMENTO, COMBUSTIBLE, MEDICINA, MANTENIMIENTO, SERVICIOS, OTROS). Si no es obvia por los conceptos, pregúntale al usuario.\", 'string')),\n  s($fromAI('description', \"Descripción breve del gasto si el usuario la dio. Omite si no.\", 'string', null)),\n  s($fromAI('expense_date', \"Fecha AAAA-MM-DD del gasto solo si el usuario la indicó. Omite para usar la fecha de emisión de la factura.\", 'string', null))\n]; })() }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        1056,
+        2816
+      ],
+      "id": "7844fecf-ebc8-46cc-8409-89152d5ab6d7",
+      "name": "preview_expense_invoice",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "REGISTRA como gasto la factura mostrada en la vista previa. Es un evento NIVEL 2: usa esta herramienta SOLO después de que el usuario respondió 'Sí' a la vista previa, en un mensaje posterior; NUNCA en el mismo turno en que la muestras. Usa el mismo draft_id, category, description y expense_date exactos de la vista previa (si el usuario cambia algo, vuelve a llamar primero a preview_expense_invoice). Si regresa 'preview_required', muéstrale la vista previa de nuevo y espera su 'Sí'. Si regresa 'recorded', confírmale el gasto con el folio y el monto; 'duplicate' y 'already_registered' significan que no se guardó de nuevo; cualquier otro status, explícale el mensaje sin reintentar.",
+        "operation": "executeQuery",
+        "query": "SELECT public.sp_expense_invoice_confirm($1::text, $2::text, $3::text, $4::text, NULLIF($5::text, ''), NULLIF($6::text, '')) AS result;",
+        "options": {
+          "queryReplacement": "={{ (() => { const s = (v) => (v === undefined || v === null) ? '' : String(v); return [\n  String($fromAI('tenant_id', \"Numeric tenant/company id (id_company) of the current user, copied EXACTLY from the session context in the system prompt. Never guess, infer or default it.\", 'number')),\n  String($fromAI('user_email', \"Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato.\", 'string')),\n  String($fromAI('draft_id', \"UUID del borrador de factura, copiado EXACTAMENTE del mensaje del usuario (línea [FACTURA draft_id=...]). Nunca lo inventes.\", 'string')),\n  String($fromAI('category', \"Categoría del gasto en MAYÚSCULAS, corta (ej. ALIMENTO, COMBUSTIBLE, MEDICINA, MANTENIMIENTO, SERVICIOS, OTROS). Si no es obvia por los conceptos, pregúntale al usuario.\", 'string')),\n  s($fromAI('description', \"Descripción breve del gasto si el usuario la dio. Omite si no.\", 'string', null)),\n  s($fromAI('expense_date', \"Fecha AAAA-MM-DD del gasto solo si el usuario la indicó. Omite para usar la fecha de emisión de la factura.\", 'string', null))\n]; })() }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        1296,
+        2816
+      ],
+      "id": "3ce2fab6-d645-4116-ab22-4a53e1080b0f",
+      "name": "register_expense_invoice",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    }
+  ],
+  "connections": {}
+}
