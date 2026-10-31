@@ -11,6 +11,8 @@ const TFD_NS = 'http://www.sat.gob.mx/TimbreFiscalDigital';
 const UUID_RE = /^[0-9A-F]{8}-([0-9A-F]{4}-){3}[0-9A-F]{12}$/i;
 const RFC_RE = /^[A-ZÑ&]{3,4}\d{6}[A-Z0-9]{3}$/;
 const AMOUNT_RE = /^(\d{1,13})(?:\.(\d{1,2}))?$/;
+// Concept-level amounts may carry up to 6 decimals (SAT Anexo 20); the comprobante totals stay at 2.
+const CONCEPT_AMOUNT_RE = /^(\d{1,13})(?:\.(\d{1,6}))?$/;
 const DATETIME_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/;
 const CONTROL_CHARS_RE = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/;
 const CONTROL_CHARS_G = /[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g;
@@ -49,6 +51,17 @@ function toCents(value, field) {
   const m = typeof value === 'string' ? AMOUNT_RE.exec(value) : null;
   if (!m) fail('INVALID_AMOUNT', `${field} is not a valid amount with at most 2 decimals`);
   return Number(m[1]) * 100 + Number((m[2] ?? '').padEnd(2, '0'));
+}
+
+/**
+ * Concept-level amount -> integer cents, rounded half-up from the decimal string (no floating point).
+ * Informational only: concept amounts are never used to reconcile the comprobante totals, which stay exact to the cent.
+ */
+function toCentsRounded(value, field) {
+  const m = typeof value === 'string' ? CONCEPT_AMOUNT_RE.exec(value) : null;
+  if (!m) fail('INVALID_AMOUNT', `${field} is not a valid amount with at most 6 decimals`);
+  const frac = (m[2] ?? '').padEnd(3, '0');
+  return Number(m[1]) * 100 + Number(frac.slice(0, 2)) + (frac.charCodeAt(2) >= 53 ? 1 : 0);
 }
 
 function decodeText(raw) {
@@ -206,7 +219,7 @@ function extract(xmlText, body) {
   const conceptos = conceptoNodes.map((node, i) => ({
     claveProdServ: decodeText(attr(node, 'ClaveProdServ')),
     descripcion: (decodeText(attr(node, 'Descripcion')) ?? '').slice(0, MAX_DESCRIPCION),
-    importeCents: toCents(attr(node, 'Importe'), `Concepto[${i}].Importe`),
+    importeCents: toCentsRounded(attr(node, 'Importe'), `Concepto[${i}].Importe`),
   }));
 
   return {
