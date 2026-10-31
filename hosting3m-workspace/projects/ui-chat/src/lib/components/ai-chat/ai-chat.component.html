@@ -24,6 +24,11 @@
             <div class="message-content">
                 {{ msg.text }}
             </div>
+            @if (msg.file) {
+            <div class="file-badge" [attr.aria-label]="'Archivo adjunto: ' + msg.file.name">
+                <span aria-hidden="true">📎</span> {{ msg.file.name }}
+            </div>
+            }
             <small class="message-time">{{ msg.timestamp | date:'shortTime' }}</small>
         </div>
         }
@@ -37,7 +42,30 @@
     </div>
 
     <div class="chat-footer">
+        @if (attachments.enabled) {
+        @if (selectedFile(); as file) {
+        <div class="attachment-preview">
+            @if (previewUrl(); as url) {
+            <img class="attachment-thumb" [src]="url" [alt]="displayName(file)">
+            } @else {
+            <span class="file-badge"><span aria-hidden="true">📎</span> {{ selectedType() }}</span>
+            }
+            <span class="attachment-name">{{ displayName(file) }}</span>
+            <button type="button" class="attachment-remove" (click)="removeFile()"
+                [attr.aria-label]="'Quitar archivo adjunto ' + displayName(file)">✕</button>
+        </div>
+        }
+        @if (attachmentError(); as err) {
+        <div class="attachment-error" role="alert">{{ err }}</div>
+        }
+        }
         <div class="input-group">
+            @if (attachments.enabled) {
+            <input #fileInput type="file" class="visually-hidden" tabindex="-1" [attr.accept]="acceptAttr"
+                (change)="onFileSelected($event)">
+            <button type="button" class="btn-attach" (click)="fileInput.click()" aria-label="Adjuntar archivo"
+                [disabled]="aiService.isLoading()">📎</button>
+            }
             <input type="text" class="form-control" placeholder="Escribe tu consulta..." [(ngModel)]="userInput"
                 (keyup.enter)="send()">
 
