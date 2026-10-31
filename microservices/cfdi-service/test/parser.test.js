@@ -185,7 +185,7 @@ test('never leaks Addenda, Certificado or Sello', () => {
     DIESEL,
     'NoCertificado="00001000000727082423"',
     'NoCertificado="00001000000727082423" Certificado="CERT_SECRET_VALUE" Sello="SELLO_SECRET_VALUE"',
-  ).replace('<cfdi:Complemento>', '<cfdi:Complemento>').replace('Version="1.1"', 'Version="1.1" SelloCFD="SELLOCFD_SECRET" SelloSAT="SELLOSAT_SECRET"');
+  ).replace('Version="1.1"', 'Version="1.1" SelloCFD="SELLOCFD_SECRET" SelloSAT="SELLOSAT_SECRET"');
   const res = parseCfdi(sealed);
   assert.equal(res.ok, true);
   const out = JSON.stringify(res);
