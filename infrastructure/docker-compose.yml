@@ -186,6 +186,37 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  cfdi-service:
+    build:
+      context: ../microservices/cfdi-service
+      dockerfile: Dockerfile
+    container_name: n8n-cfdi-service
+    restart: always
+    environment:
+      # Shared secret with n8n (header x-internal-token). Defined in the VPS .env, never in the repo.
+      - CFDI_SERVICE_TOKEN=${CFDI_SERVICE_TOKEN}
+      - STORAGE_ROOT=/data/cfdi
+    volumes:
+      # Original invoices, outside any web root. Host dir must be chown 1000:1000 (uid of node in the image).
+      - ./data/cfdi:/data/cfdi
+    networks:
+      - n8n_enterprise_net
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256m
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 volumes:
   n8n_restored_data: {}
   postgres_data: {}
