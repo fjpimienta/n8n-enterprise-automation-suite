@@ -276,3 +276,82 @@
         opacity: .2;
     }
 }
+
+/* =========================================
+   ARCHIVO ADJUNTO (solo si attachments.enabled)
+   ========================================= */
+.btn-attach {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 1.2rem;
+    width: 36px;
+}
+
+.btn-attach:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+.btn-attach:focus-visible,
+.attachment-remove:focus-visible {
+    outline: 2px solid #206bc4;
+    outline-offset: 2px;
+}
+
+.attachment-preview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 4px;
+}
+
+.attachment-thumb {
+    width: 40px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 6px;
+}
+
+.attachment-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 0.85rem;
+}
+
+.attachment-remove {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: #d63939;
+}
+
+.attachment-error {
+    color: #d63939;
+    font-size: 0.8rem;
+    padding: 4px;
+}
+
+.file-badge {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: rgba(0, 0, 0, 0.08);
+    font-size: 0.8rem;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+}

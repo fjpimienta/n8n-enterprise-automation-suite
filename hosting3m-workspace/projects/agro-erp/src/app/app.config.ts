@@ -34,7 +34,8 @@ export const appConfig: ApplicationConfig = {
         apiUrl_ai: environment.apiUrl_ai, // Asegúrate que esta variable exista en environment.ts
         logoUrl: 'assets/images/logo_agroerp.png',
         title: 'Asistente IA - Agro ERP',
-        primaryColor: '#6c9a40' // Verde para el AGRO ERP
+        primaryColor: '#6c9a40', // Verde para el AGRO ERP
+        attachments: { enabled: true } // CFDI invoice upload; set to false to disable
       }
     }
   ]
