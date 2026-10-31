@@ -9,10 +9,10 @@
       "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
       "typeVersion": 2,
       "position": [
-        1776,
-        1504
+        3536,
+        5104
       ],
-      "id": "1c0c85b6-4cdb-4274-8ab1-9e198093a0a9",
+      "id": "e1f5f180-d05d-41bf-9e5f-9d673514fb68",
       "name": "MCP Server Cattle",
       "webhookId": "68e31c86-2f32-4234-be5d-32fd5260fd1c",
       "credentials": {
@@ -35,10 +35,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2272,
-        1184
+        4112,
+        4864
       ],
-      "id": "9cfe5fea-0c39-4a2a-a02b-f51dd6e76f1c",
+      "id": "b7964f1a-bb83-4716-be9f-f91883379fcb",
       "name": "get_table_metadata",
       "credentials": {
         "postgres": {
@@ -61,10 +61,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1376,
-        1536
+        3216,
+        5216
       ],
-      "id": "bdb26d2b-f8e5-4cf4-b7be-eeea5598e3a7",
+      "id": "571e24e9-3034-4326-96a6-4fec3aa36753",
       "name": "log_cattle_weight",
       "credentials": {
         "postgres": {
@@ -86,10 +86,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1216,
-        1536
+        3056,
+        5216
       ],
-      "id": "b758b2ea-709d-479b-9671-de97ed08b7ab",
+      "id": "7ad2ce0c-6fbd-4688-b8eb-7da15de8af24",
       "name": "log_health_event",
       "credentials": {
         "postgres": {
@@ -111,10 +111,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2112,
-        1184
+        3952,
+        4864
       ],
-      "id": "b0f69c34-16d9-4c5f-be23-6de9f2e3009e",
+      "id": "222f1e40-1d37-4c58-a84b-0594cfc52722",
       "name": "get_livestock_info",
       "credentials": {
         "postgres": {
@@ -136,10 +136,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2448,
-        1728
+        4288,
+        5408
       ],
-      "id": "8291ce1c-eac0-4f21-839e-648d40c95802",
+      "id": "0d5dc2ba-f563-4afe-929b-e7996b43193e",
       "name": "register_ranch_expense",
       "credentials": {
         "postgres": {
@@ -161,10 +161,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1056,
-        1536
+        2896,
+        5216
       ],
-      "id": "5e985c9e-4df5-49c0-99da-bb78b0cfe7cd",
+      "id": "a213fe23-8950-4333-b3a2-8b91e8c6d42d",
       "name": "log_weaning_event",
       "credentials": {
         "postgres": {
@@ -186,10 +186,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1056,
-        1728
+        2896,
+        5408
       ],
-      "id": "0f75b4dd-1ca0-4884-aa73-6d9fb42d776b",
+      "id": "2e07e87d-a975-4510-a030-b3e709913859",
       "name": "log_mortality_event",
       "credentials": {
         "postgres": {
@@ -211,10 +211,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2448,
-        1552
+        4288,
+        5232
       ],
-      "id": "2a29d856-3418-459a-bfe6-def2610ce405",
+      "id": "50272941-3b81-4a28-bf99-3b78374a228d",
       "name": "request_livestock_sale",
       "credentials": {
         "postgres": {
@@ -236,10 +236,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2272,
-        1728
+        4112,
+        5408
       ],
-      "id": "989fb05d-8b58-4245-bf83-2377ff380909",
+      "id": "faa0b6e4-882c-41e1-b242-1b7d2a26d33f",
       "name": "register_birth_event",
       "credentials": {
         "postgres": {
@@ -261,10 +261,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2448,
-        1184
+        4288,
+        4864
       ],
-      "id": "57be1b44-eed5-4a4f-aa8c-c7862c6aa882",
+      "id": "f98542f5-1981-448d-bd61-eb0f7f2970a9",
       "name": "find_calf_by_dam",
       "credentials": {
         "postgres": {
@@ -286,10 +286,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2448,
-        1376
+        4288,
+        5056
       ],
-      "id": "ad23d423-b39d-412e-87f6-186307e73229",
+      "id": "df2236ea-50d0-41d1-81a4-f666f239ee3f",
       "name": "count_livestock",
       "credentials": {
         "postgres": {
@@ -311,10 +311,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2112,
-        1728
+        3952,
+        5408
       ],
-      "id": "e42a984d-d76b-4552-aeb5-c05bdfed701c",
+      "id": "c09f67f6-14a0-4455-af01-a0d003ab4c49",
       "name": "register_livestock_purchase",
       "credentials": {
         "postgres": {
@@ -336,10 +336,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1216,
-        1728
+        3056,
+        5408
       ],
-      "id": "916b75cb-5179-4dcf-b558-3ae5d0be16b6",
+      "id": "ba4dcf90-f841-4b5e-8c35-f26fe9053274",
       "name": "log_vaccination_event",
       "credentials": {
         "postgres": {
@@ -361,10 +361,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1376,
-        1728
+        3216,
+        5408
       ],
-      "id": "a5034fb3-c75b-4294-aa51-a985584fa571",
+      "id": "234bac88-6648-4cfc-8358-7a59b7bf4435",
       "name": "log_supplement_event",
       "credentials": {
         "postgres": {
@@ -386,10 +386,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1552,
-        1728
+        3392,
+        5408
       ],
-      "id": "6864f025-0e3d-4b49-b313-784b325d00ca",
+      "id": "e674d6e6-8ed6-4af8-bf0c-271e76c98266",
       "name": "log_palpation_event",
       "credentials": {
         "postgres": {
@@ -411,10 +411,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2272,
-        1376
+        4112,
+        5056
       ],
-      "id": "1f85499a-27f4-4d49-9b36-40fc1a4b5a84",
+      "id": "72c07fe5-7234-43e1-ba13-a0b96eadae31",
       "name": "find_livestock_by_criteria",
       "credentials": {
         "postgres": {
@@ -436,10 +436,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2272,
-        1552
+        4112,
+        5232
       ],
-      "id": "971c421b-5e7c-403d-983b-b7eb0404065c",
+      "id": "3b01ea73-9296-4fef-a88f-e2de88420b8e",
       "name": "move_livestock",
       "credentials": {
         "postgres": {
@@ -461,10 +461,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2624,
-        1376
+        4464,
+        5056
       ],
-      "id": "5ef3501a-7762-443d-96c8-7b878405bfcf",
+      "id": "a604bbf4-9912-4821-aaf2-c2c1f22ca005",
       "name": "list_pending_requests",
       "credentials": {
         "postgres": {
@@ -486,10 +486,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2624,
-        1552
+        4464,
+        5232
       ],
-      "id": "c98ce33a-c61c-4b9f-9b01-ff7f42c6d761",
+      "id": "74b53beb-765d-423b-8402-374d72cc7f52",
       "name": "review_pending_request",
       "credentials": {
         "postgres": {
@@ -511,10 +511,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1392,
-        1344
+        3232,
+        5024
       ],
-      "id": "5b864fbc-ea88-4762-bf1c-d79ed981216a",
+      "id": "e53aa86b-0e40-433d-ab86-f623bc82273e",
       "name": "log_breeding_event",
       "credentials": {
         "postgres": {
@@ -536,10 +536,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1216,
-        1344
+        3056,
+        5024
       ],
-      "id": "e1e933bd-2ec7-48af-a35b-cec41ee6778d",
+      "id": "9e3051b0-bc5f-4345-8e9c-d92f7cff3376",
       "name": "log_deworming_event",
       "credentials": {
         "postgres": {
@@ -561,10 +561,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2624,
-        1728
+        4464,
+        5408
       ],
-      "id": "0b2283c7-ae6b-415f-baaf-eb9a98ce180f",
+      "id": "79763c05-000b-4e33-9238-9353e3d56330",
       "name": "update_livestock_tag",
       "credentials": {
         "postgres": {
@@ -586,10 +586,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1056,
-        1344
+        2896,
+        5024
       ],
-      "id": "82370877-663e-4350-bae2-56d9bce914ce",
+      "id": "4f8c4bdd-1ca9-4a6f-b778-27a7de65ef55",
       "name": "log_castration_event",
       "credentials": {
         "postgres": {
@@ -611,10 +611,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2112,
-        1552
+        3952,
+        5232
       ],
-      "id": "c6dd0f77-1ca0-4bc7-b5fa-5bceae3944fb",
+      "id": "2a6698de-dcd9-41cd-8aec-07dc5955ea14",
       "name": "void_event",
       "credentials": {
         "postgres": {
@@ -636,10 +636,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1552,
-        1536
+        3392,
+        5216
       ],
-      "id": "969f9b15-e0fd-42ee-9ecc-7133445dcb93",
+      "id": "3e7af4dc-6e71-4e99-b685-4a87d15d4566",
       "name": "log_palpation_event_batch",
       "credentials": {
         "postgres": {
@@ -661,10 +661,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2112,
-        1376
+        3952,
+        5056
       ],
-      "id": "f22c3987-9439-46c7-abff-0b53a3eb896b",
+      "id": "bbb420d7-e471-4b77-90c2-8db556dcbf87",
       "name": "list_lots",
       "credentials": {
         "postgres": {
@@ -686,10 +686,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2608,
-        1184
+        4448,
+        4864
       ],
-      "id": "bdc95c58-4551-44a8-afbd-f8511c3bcd8c",
+      "id": "662b5f0b-70c8-4edd-b431-5f81b78db157",
       "name": "cancel_pending_request",
       "credentials": {
         "postgres": {
@@ -711,10 +711,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2448,
-        1760
+        4288,
+        5440
       ],
-      "id": "55f99f9a-1699-4279-b366-51373a3debff",
+      "id": "850dce23-810d-4404-abb2-f5bde66903af",
       "name": "preview_livestock_sale_order",
       "credentials": {
         "postgres": {
@@ -736,10 +736,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2768,
-        1760
+        4608,
+        5440
       ],
-      "id": "1707dc01-42ca-4eca-8b39-2cd145866652",
+      "id": "c2a57afb-96aa-4fbf-ae10-daad3af14fbb",
       "name": "request_livestock_sale_order",
       "credentials": {
         "postgres": {
@@ -761,10 +761,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1056,
-        1984
+        2896,
+        5664
       ],
-      "id": "6939f81c-e65e-4356-aac4-0beba70b0983",
+      "id": "494d9ba6-4670-4498-b028-f70d9bf4fee7",
       "name": "list_births",
       "credentials": {
         "postgres": {
@@ -786,10 +786,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1408,
-        1984
+        3248,
+        5664
       ],
-      "id": "9127bd32-f486-4d0a-9db4-5f994ab6d8c8",
+      "id": "92ebbaf8-1070-4a77-8912-8efb0fb30b7e",
       "name": "get_dam_birth_history",
       "credentials": {
         "postgres": {
@@ -811,10 +811,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1760,
-        1984
+        3600,
+        5664
       ],
-      "id": "3edc3117-13ac-4786-8dcc-6fd88a7842c1",
+      "id": "4ecaffa4-daae-441f-af21-755ea8e3e460",
       "name": "get_births_summary",
       "credentials": {
         "postgres": {
@@ -836,10 +836,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2112,
-        1984
+        3952,
+        5664
       ],
-      "id": "cda311ea-a890-4ad1-849e-e982bd9a17f7",
+      "id": "d93ef4b6-ab45-415a-9971-727b2cec5151",
       "name": "list_unregistered_historical_births",
       "credentials": {
         "postgres": {
@@ -861,10 +861,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2464,
-        1984
+        4304,
+        5664
       ],
-      "id": "19750fd0-b274-4a8c-aa07-5e3ac65553ba",
+      "id": "4008867e-10d9-4246-a848-b79889462e89",
       "name": "identifier_quality_report",
       "credentials": {
         "postgres": {
@@ -886,10 +886,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2816,
-        1984
+        4656,
+        5664
       ],
-      "id": "51854786-f754-cddc-7235-6c4ee20fd8b3",
+      "id": "14270ea7-b55f-4346-a6f7-b0d2a741174a",
       "name": "get_empadre_config",
       "credentials": {
         "postgres": {
@@ -911,10 +911,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1056,
-        2208
+        2896,
+        5888
       ],
-      "id": "5435e492-549b-2c73-1636-4d74ad8de72e",
+      "id": "91d7d535-0081-43b4-9958-c4492088658d",
       "name": "list_heifers_eligible_for_empadre",
       "credentials": {
         "postgres": {
@@ -936,10 +936,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1408,
-        2208
+        3248,
+        5888
       ],
-      "id": "40d1d8f0-6ddb-0da4-3f26-266351b192a0",
+      "id": "4b41253b-479e-4d5d-a520-51f59d803cf5",
       "name": "log_empadre_entry",
       "credentials": {
         "postgres": {
@@ -961,10 +961,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1760,
-        2208
+        3600,
+        5888
       ],
-      "id": "c81f54cc-253d-44b4-fff0-3c0388a092a0",
+      "id": "c56a732b-7bac-429f-bb8b-622726a25fb3",
       "name": "log_empadre_entry_batch",
       "credentials": {
         "postgres": {
@@ -986,10 +986,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2112,
-        2208
+        3952,
+        5888
       ],
-      "id": "b42e68bc-2fa6-1393-b2e6-ea0ce69cfe49",
+      "id": "64d26463-4458-4ea7-ae0e-54a2d8a9252b",
       "name": "void_empadre_entry",
       "credentials": {
         "postgres": {
@@ -1011,10 +1011,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2464,
-        2208
+        4304,
+        5888
       ],
-      "id": "7b5ea388-0dbf-3472-b2d9-f55815450d96",
+      "id": "f985177a-b9c6-4c54-9da1-11f57b5875c8",
       "name": "list_empadre_entries",
       "credentials": {
         "postgres": {
@@ -1036,10 +1036,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2816,
-        2208
+        4656,
+        5888
       ],
-      "id": "6d83961e-8863-cebd-ad3c-5599e15b0aa4",
+      "id": "6d5934e8-ee5c-4bc1-9f5f-f63bd03ceda4",
       "name": "list_open_cows",
       "credentials": {
         "postgres": {
@@ -1061,10 +1061,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1056,
-        2432
+        2896,
+        6112
       ],
-      "id": "de7176c9-4aea-496b-183e-a1b9f71a1c4a",
+      "id": "a8e5bac2-6999-4e6b-ae70-01af63fb093e",
       "name": "log_palpation_with_condition",
       "credentials": {
         "postgres": {
@@ -1086,10 +1086,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1408,
-        2432
+        3248,
+        6112
       ],
-      "id": "90c53541-cf06-ded3-e3b1-7b77c45a81b8",
+      "id": "cb4c68e8-add6-4aa9-836c-5d14362a083a",
       "name": "list_palpation_due",
       "credentials": {
         "postgres": {
@@ -1111,10 +1111,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1760,
-        2432
+        3600,
+        6112
       ],
-      "id": "7090addc-2523-685c-6405-06be7167f9ac",
+      "id": "29a4e320-2640-4c13-8405-1b9a50bcfacb",
       "name": "list_upcoming_calvings",
       "credentials": {
         "postgres": {
@@ -1136,10 +1136,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2112,
-        2432
+        3952,
+        6112
       ],
-      "id": "334afb1b-e04d-cdb5-4fae-99ac9d3e1274",
+      "id": "a9abddaa-ab05-45b1-868d-549cb1b6000d",
       "name": "list_unmapped_uterine_codes",
       "credentials": {
         "postgres": {
@@ -1161,10 +1161,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2464,
-        2432
+        4304,
+        6112
       ],
-      "id": "61fba733-7438-75c6-dab4-380c00fce3f9",
+      "id": "973eb7a0-2d8d-462a-9b0f-ac8ccf8e9437",
       "name": "register_birth_checked",
       "credentials": {
         "postgres": {
@@ -1186,10 +1186,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2816,
-        2432
+        4656,
+        6112
       ],
-      "id": "ee426a40-9246-d8f4-6e41-fcb37b017867",
+      "id": "04576551-7435-4a38-8ee6-62fecce6441c",
       "name": "births_batch_preview",
       "credentials": {
         "postgres": {
@@ -1211,10 +1211,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1056,
-        2656
+        2896,
+        6336
       ],
-      "id": "f5c555a7-2548-ad05-b30e-6b148a52db56",
+      "id": "b630b8a5-cebe-48b1-b4e0-a7c548c61d73",
       "name": "births_batch_register",
       "credentials": {
         "postgres": {
@@ -1236,10 +1236,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1408,
-        2656
+        3248,
+        6336
       ],
-      "id": "18fab73c-c187-f68a-3c2c-70e75708b0d2",
+      "id": "87bc4413-49bc-46f2-a022-44d81daa8376",
       "name": "register_historical_birth",
       "credentials": {
         "postgres": {
@@ -1261,10 +1261,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        1760,
-        2656
+        3600,
+        6336
       ],
-      "id": "ea7c9796-584c-5f62-2bf9-3f3eca63bd2b",
+      "id": "24c88ee2-6608-47f7-9e40-dad75abb11d3",
       "name": "void_historical_birth",
       "credentials": {
         "postgres": {
@@ -1286,10 +1286,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2112,
-        2656
+        3952,
+        6336
       ],
-      "id": "987f9523-14ae-ebba-5c93-522b3afde10c",
+      "id": "d6d62582-344b-415f-8eff-2d139f577a8d",
       "name": "list_historical_births",
       "credentials": {
         "postgres": {
@@ -1311,10 +1311,10 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2464,
-        2656
+        4304,
+        6336
       ],
-      "id": "504255d5-765a-8235-2b76-78e004ac4bf1",
+      "id": "5cc67140-8a6b-4e7e-af0a-9d1379ed348d",
       "name": "get_births_config",
       "credentials": {
         "postgres": {
@@ -1336,11 +1336,61 @@
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
       "position": [
-        2816,
-        2656
+        4656,
+        6336
       ],
-      "id": "27ba1be2-c5bf-bda6-0ddc-86346bde3a99",
+      "id": "2d6bfa81-5660-49b8-ba72-f5b8572a89f9",
       "name": "get_dam_reproductive_history",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "VISTA PREVIA de una factura (CFDI) que el usuario envió como archivo. No registra nada. El sistema ya leyó el archivo y te dio la línea [FACTURA draft_id=...] con un resumen: usa ese draft_id tal cual. Sugiere la categoría según los conceptos del resumen (o pregunta si no es obvia). No pases description ni expense_date a menos que el usuario los haya indicado: el sistema calcula una descripción y usa la fecha de emisión por defecto. Si regresa status 'preview', muéstrale al usuario: emisor y RFC, folio, fecha, total, impuestos, categoría, descripción y estatus SAT, y pregúntale '¿Lo registro? (Sí/No)'. Si trae rfc_new en true, dile con el texto de rfc_new_notice que ese RFC receptor se registrará como RFC de la empresa al confirmar. Otros status: 'duplicate' (ya estaba registrada, dilo y no registres), 'rfc_not_registered' (un ADMIN debe registrar o confirmar el RFC de la empresa), 'sat_not_valid' (no vigente o no verificable: no se puede registrar), 'invalid' (explica el mensaje), 'not_found' o 'draft_expired' (pide que reenvíe el archivo), 'already_registered' (ya se procesó). Solo lectura.",
+        "operation": "executeQuery",
+        "query": "SELECT public.sp_expense_invoice_preview($1::text, $2::text, $3::text, $4::text, NULLIF($5::text, ''), NULLIF($6::text, '')) AS result;",
+        "options": {
+          "queryReplacement": "={{ (() => { const s = (v) => (v === undefined || v === null) ? '' : String(v).trim(); const nul = (v) => /^(null|undefined|none|n\\/a|nan)$/i.test(s(v)) ? '' : s(v); const em = (v) => s(v).replace(/^[\\s\"'<]+/, '').replace(/[\\s\"'>,;.]+$/, ''); const dt = (v) => /^\\d{4}-\\d{2}-\\d{2}$/.test(nul(v)) ? nul(v) : ''; return [\n  String($fromAI('tenant_id', \"Numeric tenant/company id (id_company) of the current user, copied EXACTLY from the session context in the system prompt. Never guess, infer or default it.\", 'number')),\n  em($fromAI('user_email', \"Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato.\", 'string')),\n  String($fromAI('draft_id', \"UUID del borrador de factura, copiado EXACTAMENTE del mensaje del usuario (línea [FACTURA draft_id=...]). Nunca lo inventes.\", 'string')),\n  String($fromAI('category', \"Categoría del gasto en MAYÚSCULAS, corta (ej. ALIMENTO, COMBUSTIBLE, MEDICINA, MANTENIMIENTO, SERVICIOS, OTROS). Si no es obvia por los conceptos, pregúntale al usuario.\", 'string')),\n  nul($fromAI('description', \"Descripción breve del gasto si el usuario la dio. Omite si no.\", 'string', null)),\n  dt($fromAI('expense_date', \"Fecha AAAA-MM-DD del gasto solo si el usuario la indicó. Omite para usar la fecha de emisión de la factura.\", 'string', null))\n]; })() }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        3536,
+        6544
+      ],
+      "id": "e3f89a12-64eb-4de0-9fa3-849aa61079d6",
+      "name": "preview_expense_invoice",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "REGISTRA como gasto la factura mostrada en la vista previa. Es un evento NIVEL 2: usa esta herramienta SOLO después de que el usuario respondió 'Sí' a la vista previa, en un mensaje posterior; NUNCA en el mismo turno en que la muestras. Usa el mismo draft_id y EXACTAMENTE los mismos argumentos category, description y expense_date con los que llamaste a preview_expense_invoice. Si en la vista previa no pasaste description o expense_date, NO los pases aquí: no copies los valores por defecto que muestra la vista previa. Si el usuario cambia algo, vuelve a llamar primero a preview_expense_invoice. Si regresa 'preview_required', vuelve a llamar a preview_expense_invoice con los mismos argumentos de antes, muéstrale la vista previa y espera su 'Sí'. Si regresa 'recorded', confírmale el gasto con el folio y el monto; si además trae rfc_registered, dile que ese RFC quedó registrado para la empresa. 'duplicate' y 'already_registered' significan que no se guardó de nuevo; cualquier otro status, explícale el mensaje sin reintentar.",
+        "operation": "executeQuery",
+        "query": "SELECT public.sp_expense_invoice_confirm($1::text, $2::text, $3::text, $4::text, NULLIF($5::text, ''), NULLIF($6::text, '')) AS result;",
+        "options": {
+          "queryReplacement": "={{ (() => { const s = (v) => (v === undefined || v === null) ? '' : String(v).trim(); const nul = (v) => /^(null|undefined|none|n\\/a|nan)$/i.test(s(v)) ? '' : s(v); const em = (v) => s(v).replace(/^[\\s\"'<]+/, '').replace(/[\\s\"'>,;.]+$/, ''); const dt = (v) => /^\\d{4}-\\d{2}-\\d{2}$/.test(nul(v)) ? nul(v) : ''; return [\n  String($fromAI('tenant_id', \"Numeric tenant/company id (id_company) of the current user, copied EXACTLY from the session context in the system prompt. Never guess, infer or default it.\", 'number')),\n  em($fromAI('user_email', \"Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato.\", 'string')),\n  String($fromAI('draft_id', \"UUID del borrador de factura, copiado EXACTAMENTE del mensaje del usuario (línea [FACTURA draft_id=...]). Nunca lo inventes.\", 'string')),\n  String($fromAI('category', \"Categoría del gasto en MAYÚSCULAS, corta (ej. ALIMENTO, COMBUSTIBLE, MEDICINA, MANTENIMIENTO, SERVICIOS, OTROS). Si no es obvia por los conceptos, pregúntale al usuario.\", 'string')),\n  nul($fromAI('description', \"Descripción breve del gasto si el usuario la dio. Omite si no.\", 'string', null)),\n  dt($fromAI('expense_date', \"Fecha AAAA-MM-DD del gasto solo si el usuario la indicó. Omite para usar la fecha de emisión de la factura.\", 'string', null))\n]; })() }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        3824,
+        6544
+      ],
+      "id": "01b2d984-c5a2-421a-93c4-c4bf4035fe72",
+      "name": "register_expense_invoice",
       "credentials": {
         "postgres": {
           "id": "BQrod4uGVzM1nvLw",
@@ -1933,6 +1983,28 @@
           }
         ]
       ]
+    },
+    "preview_expense_invoice": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "register_expense_invoice": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": true,
@@ -1945,7 +2017,7 @@
     "timeSavedMode": "fixed",
     "timeSavedPerExecution": 3
   },
-  "versionId": "2d4bce43-1047-4778-95f3-712f219c8894",
+  "versionId": "bcd83421-0d11-411e-8511-d6c50a51c2c3",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "75957d34f9f0189415b8c82ca3ce42d8f0b464efd869382da2158435b39f044d"
@@ -1954,16 +2026,10 @@
   "id": "pJ3CEaO70QEiGL0C",
   "tags": [
     {
-      "updatedAt": "2026-06-02T17:44:17.958Z",
-      "createdAt": "2026-06-02T17:44:17.958Z",
-      "id": "6NGDwjjesOlJeGQr",
-      "name": "v6"
-    },
-    {
-      "updatedAt": "2025-12-23T12:12:28.399Z",
-      "createdAt": "2025-12-23T12:12:28.399Z",
-      "id": "RWBzILPfFXEtEcLf",
-      "name": "AI Agent"
+      "updatedAt": "2025-12-31T16:55:06.301Z",
+      "createdAt": "2025-12-31T16:55:06.301Z",
+      "id": "ts9FABk8F02a5xrA",
+      "name": "Agent IA"
     },
     {
       "updatedAt": "2025-12-23T12:12:58.230Z",
@@ -1972,10 +2038,16 @@
       "name": "Chat"
     },
     {
-      "updatedAt": "2025-12-31T16:55:06.301Z",
-      "createdAt": "2025-12-31T16:55:06.301Z",
-      "id": "ts9FABk8F02a5xrA",
-      "name": "Agent IA"
+      "updatedAt": "2025-12-23T12:12:28.399Z",
+      "createdAt": "2025-12-23T12:12:28.399Z",
+      "id": "RWBzILPfFXEtEcLf",
+      "name": "AI Agent"
+    },
+    {
+      "updatedAt": "2026-06-02T17:44:17.958Z",
+      "createdAt": "2026-06-02T17:44:17.958Z",
+      "id": "6NGDwjjesOlJeGQr",
+      "name": "v6"
     }
   ]
 }
