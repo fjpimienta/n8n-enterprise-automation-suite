@@ -1,12 +1,15 @@
 {
-  "name": "cfdi-parser",
+  "name": "cfdi-service",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "main": "src/index.js",
-  "types": "src/index.d.ts",
   "scripts": {
+    "start": "node src/index.js",
     "test": "node --test test/"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "dependencies": {
     "fast-xml-parser": "^5.11.2"

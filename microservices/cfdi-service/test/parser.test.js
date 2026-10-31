@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
-import { MAX_XML_BYTES, ROUNDING_TOLERANCE_CENTS, parseCfdi } from '../src/index.js';
+import { MAX_XML_BYTES, ROUNDING_TOLERANCE_CENTS, parseCfdi } from '../lib/cfdi-parser/index.js';
 
 const fixture = (name) => readFileSync(new URL(`./fixtures/${name}.xml`, import.meta.url), 'utf8');
 const DIESEL = fixture('038BA478-7C33-46E4-9315-38CDDE3FDBAB');

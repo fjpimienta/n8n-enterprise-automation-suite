@@ -32,4 +32,4 @@ do not change it silently.
 - The root and its children must use the `cfdi:` prefix.
 
 ## Tests
-`npm install && npm test` (node:test, Node >= 20).
+Tested via the cfdi-service suite (`npm test` in the service folder).
