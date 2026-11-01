@@ -12,7 +12,7 @@
 
 ## 💻 Tech Stack & Architectural Constraints
 - **Core Framework:** Angular 21 Single Page Application (SPA) inside the monorepo workspace.
-- **Design System:** Biophilic "Eco-Boutique" styling powered natively by Tailwind CSS v3 using custom design tokens (`eco`, `tierra`).
+- **Design System:** Biophilic "Eco-Boutique" styling powered natively by Tailwind CSS v4 using custom design tokens (`eco`, `tierra`).
 - **Visual Pattern:** Immersive layouts utilizing fluid responsive scaling, "Fat-Finger Design" rules for forms, and Glassmorphism layers via backdrop filters (`backdrop-filter`).
 - **State Management:** Strict lifecycle management tracking explicit asynchronous UI states (`isSubmitting`, `success`, `error`) for interactive user feedback.
 - **Shared Modules Integration:** - `@hosting3m/ui-chat` (AI Concierge): Injected cleanly via `CHAT_CONFIG_TOKEN`.

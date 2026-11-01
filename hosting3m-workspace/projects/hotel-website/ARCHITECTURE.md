@@ -38,6 +38,17 @@ graph LR
 3. **Booking safety:** The availability handler is currently disabled in code and does not issue its normal request to the public booking endpoint.
 4. **Public UI:** Tailwind CSS provides the website presentation; dashboard routing and theming are outside this application's architecture.
 
+### Tailwind build and deployment
+
+The website uses Tailwind CSS v4 through `@tailwindcss/postcss`, configured in
+`.postcssrc.json`. In `src/styles.css`, `@import "tailwindcss" source(none)` disables
+automatic source discovery, `@config "../tailwind.config.js"` retains the existing
+eco/tierra design tokens, and `@source` includes the website and `ui-chat`. A small
+compatibility layer preserves the v3 default border color and `shadow-sm`.
+
+Build from the workspace root with `npx ng build hotel-website --configuration production`.
+The site is served through the Plesk Git deploy action.
+
 ---
 
 ## 2. 📂 Workspace Structure (Distributed Architecture)

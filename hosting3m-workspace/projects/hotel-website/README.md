@@ -40,6 +40,22 @@ El proyecto sigue una estructura desacoplada para facilitar el mantenimiento:
 * **Shared Dependency:** `ui-chat`, configurada con `CHAT_CONFIG_TOKEN` y `apiUrl_ai`.
 * **No integrado en esta aplicación:** `ui-pdf-export` y `core-auth`.
 
+### Current Tailwind build setup
+
+The production build uses Tailwind CSS v4 through `@tailwindcss/postcss`, configured in
+`.postcssrc.json`. `src/styles.css` loads Tailwind with `source(none)`, points to the
+existing `tailwind.config.js`, and explicitly includes this project and `ui-chat` as
+sources. A small compatibility layer preserves Tailwind v3's default border color and
+`shadow-sm`; the existing eco/tierra tokens in `tailwind.config.js` are unchanged.
+
+Run the production build from the workspace root:
+
+```bash
+npx ng build hotel-website --configuration production
+```
+
+The site is served through the Plesk Git deploy action.
+
 ---
 
 ## 🛠️ Configuración y Desarrollo
