@@ -3,7 +3,7 @@
 ### Self-Hosted Architecture: Orquestación de IA & Microservicios Soberanos
 
 > **Arquitecto:** Francisco Jesus Pérez Pimienta (Senior Systems Engineer | PMP | Full Stack)
-> **Core Stack:** n8n 2.29.0 (VPS image source verified in `CLAUDE.md`), Docker, PostgreSQL (pgvector + JSONB), Node.js (Upload Service), OpenAI, Angular 21 (Signals).
+> **Core Stack:** n8n (VPS baseline), Docker, PostgreSQL (pgvector + JSONB), Node.js (Upload Service), OpenAI, Angular 21 (Signals).
 > **Infraestructura:** CloudFree VPS (Hardened Linux) + Private Media CDN (autenticado, ver módulo 15).
 
 ---
@@ -26,8 +26,8 @@ El ecosistema opera en un entorno de alta densidad, maximizando los recursos del
 
 | Servicio | Tecnología | Función Crítica |
 | --- | --- | --- |
-| **Orquestador** | n8n 2.29.0 (VPS baseline; verificado en `CLAUDE.md`) | Motor lógico central y procesamiento de Webhooks. |
-| **Media Server** | Node.js / Express | CDN privado para almacenamiento persistente. Requiere autenticación; secretos compartidos rotados en LOCAL y producción el 2026-10-25. |
+| **Orquestador** | n8n (VPS baseline) | Motor lógico central y procesamiento de Webhooks. |
+| **Media Server** | Node.js / Express | Servicio privado de almacenamiento persistente. |
 | **Capa de Datos** | PostgreSQL + pgvector | Almacenamiento Relacional + Vectorial (RAG). |
 | **Auth Gateway** | Node.js / JWT | Gestión de Sesiones Multi-Tenant e Identidad (RBAC). Mismo secreto compartido que protege el Media Server. |
 | **Frontends** | Angular 21 (Signals) | Tres SPAs activas y una aplicación histórica fuera de producción dentro del workspace Angular. |
@@ -95,12 +95,9 @@ graph LR
     V5 --> DB
 ```
 
-`v5` y `v6` son gateways distintos, no capas de seguridad intercambiables: Agro ERP usa
-`v6` con validación de membresía y tenant; el hotel sigue en `v5`, limitado a modelos
-allowlisted pero sin aislamiento por empresa suficiente para esos modelos. Los guards,
-headers y filtros de tenant en el cliente no reemplazan la autorización del gateway. El
-Media Server es infraestructura separada protegida por autenticación; `core-auth` puede
-adjuntar JWT a las URLs configuradas por la aplicación host.
+Los gateways Meta-CRUD son componentes distintos y se documentan según los proyectos que
+los utilizan. La integración con el Media Server se configura en la aplicación host mediante
+las librerías compartidas.
 
 La suite se compone de módulos interconectados que operan como una malla de servicios:
 
@@ -170,8 +167,7 @@ Librería central de seguridad para todo el monorepo. Gestiona el ciclo de vida 
 (antes sin autenticación desde su lanzamiento en `[0.9.0]`) y reforzado el 2026-08-15 con
 rate limiting, sanitización de extensión de archivo y protección contra path traversal
 (detectada por análisis estático CodeQL). Exige JWT válido o el secreto interno compartido
-(`INTERNAL_SECRET`; los secretos compartidos se rotaron en ambos ambientes el 2026-10-25
-tras el incidente de exposición) en toda subida y
+(`INTERNAL_SECRET`; detalles operativos de credenciales no se publican aquí) en toda subida y
 lectura — mismo mecanismo de confianza que ya usa el Auth Gateway (módulo 1), sin un
 mecanismo paralelo. El Media Server no tiene número de módulo propio en la tabla técnica —
 es infraestructura compartida, no un proyecto con README independiente — de ahí que su

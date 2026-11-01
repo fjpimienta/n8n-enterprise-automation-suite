@@ -43,8 +43,10 @@ No los uses como única fuente de verdad.
 
 ### Despliegue de producción
 
-- `main` despliega los frontends mediante Plesk; no despliega por sí solo cambios de base
-  de datos ni workflows n8n.
+- `main` publica los frontends automáticamente por Plesk. El backend (compose, n8n y base
+  de datos) se despliega manualmente en el VPS con su runbook.
+- `deploy.sh` ejecuta `git pull origin main` y `docker compose up -d --build`: no lo ejecutes
+  sin comparar antes el compose del VPS con el del repositorio.
 - Si un PR depende de migraciones, cambios de Meta-CRUD o workflows n8n, no se mergea a
   `main` hasta que exista un runbook ejecutable con orden de despliegue, comprobaciones,
   pruebas y rollback. Desplegar primero el frontend puede dejar la aplicación apuntando a
@@ -52,8 +54,8 @@ No los uses como única fuente de verdad.
 - Todo runbook que toque base de datos o n8n debe comenzar con este aviso:
 
   > ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (base de datos y n8n,
-  verificadas con sus huellas). `main` despliega el frontend solo (Plesk): si se mergea
-  antes, la pantalla nueva puede fallar en producción.
+  verificadas con sus huellas). `main` publica automáticamente los frontends por Plesk:
+  si se mergea antes, la pantalla nueva puede fallar en producción.
 
 - Para cada operación destructiva o irreversible contra datos/servicios, exige backup o
   dry-run aprobado antes de ejecutarla. Nunca ejecutes `DROP`, `TRUNCATE`, borrados en
@@ -121,10 +123,8 @@ Código, nombres de variables, interfaces TypeScript, comentarios, y descripcion
 - Toda query, pipeline, y capa de componente debe filtrar por `id_company`
   (aislamiento multi-tenant fail-closed). Si el tenant no es explícito en el contexto,
   detente y pregunta — no asumas.
-- El gateway `v6/CRUD` de Agro ERP valida membresía/tenant; el `v5/CRUD` del hotel tiene
-  controles de allowlist pero no aislamiento por empresa suficiente. Un filtro/selector
-  de tenant en el frontend no constituye un límite de seguridad. No extrapoles controles
-  entre versiones de gateway.
+- Los gateways CRUD de Agro ERP y del hotel se documentan por separado; consulta la
+  documentación específica de cada proyecto para sus integraciones.
 
 ---
 
