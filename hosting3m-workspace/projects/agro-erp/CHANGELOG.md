@@ -9,8 +9,8 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 * Migration 094 adds `hotel_maintenance_tickets.id_company` as a non-null integer with a
   default of `1`, a foreign key to `companys`, and an index. Migration 094 is applied.
-* Migration 095 removes the default and is pending; apply it only after the updated hotel
-  CRUD workflow has been stable. See
+* Migration 095 removes the default. Migrations 094 and 095 were applied on 2026-11-01,
+  after the updated hotel CRUD workflow was live and verified. See
   `database/migrations/094_095_RUNBOOK.md`.
 
 ### 🐄 Reproducción: partos, empadre, palpación e historial en los agentes de ganadería (migraciones 084-090, fase 5) — NO desplegada
