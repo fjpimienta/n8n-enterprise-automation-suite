@@ -1,13 +1,12 @@
-# Pinned to n8n 2.29.0, the version running in production. DO NOT change to latest.
 FROM n8nio/n8n:2.29.0
 
 USER root
 
-# pdf-parse removed from global install — crashes Task Runner via DOMMatrix.
-# It remains available via NODE_FUNCTION_ALLOW_EXTERNAL as n8n bundles it internally.
-# Only jsonwebtoken is required for jwt-service microservice integration.
 RUN npm install -g jsonwebtoken && \
     mkdir -p /home/node/.n8n/custom && \
-    npm cache clean --force
+    npm cache clean --force && \
+    # Neutralize task runner binary to prevent spawn
+    mv /usr/local/lib/node_modules/n8n/node_modules/.pnpm/@n8n+task-runner*/node_modules/@n8n/task-runner/dist/start.js \
+       /usr/local/lib/node_modules/n8n/node_modules/.pnpm/@n8n+task-runner*/node_modules/@n8n/task-runner/dist/start.js.disabled 2>/dev/null || true
 
 USER node
