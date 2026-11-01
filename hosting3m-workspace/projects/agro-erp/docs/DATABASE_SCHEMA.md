@@ -1509,8 +1509,9 @@ provided the SAT status is `VIGENTE`; an `EDITOR` still receives
 
 Migration 094 adds `hotel_maintenance_tickets.id_company` as an `integer NOT NULL`
 with `DEFAULT 1`, a foreign key to `companys(id_company)`, and an index on
-`id_company`. The hotel data belongs to company 1. Migration 094 is applied.
+`id_company`. Migration 095 removes the default, so the column is now `NOT NULL` with
+no default. The hotel data belongs to company 1. Migrations 094 and 095 were applied on
+2026-11-01.
 
-Migration 095 drops the column default after the updated hotel CRUD workflow has been
-stable; it is pending. See `database/migrations/094_095_RUNBOOK.md` for the deployment
-sequence.
+The updated hotel CRUD workflow was live and verified before migration 095 was applied.
+See `database/migrations/094_095_RUNBOOK.md` for the deployment sequence.
