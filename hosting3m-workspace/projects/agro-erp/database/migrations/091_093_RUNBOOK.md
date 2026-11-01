@@ -102,7 +102,7 @@ Real chat, ADMIN/OWNER user, XML of the company: preview shows issuer, total and
 | Message without a file | the chat behaves as before |
 | Amounts: concepts with 6 decimals, totals exact to the cent | accepted; a total off by one cent → `AMOUNTS_MISMATCH` |
 
-As of 2026-10-31 the happy path and the 6-decimals case are verified live; the duplicate, PDF, abandoned-preview, EDITOR and no-file cases are covered by the database tests (091-093) but **still pending as live chat checks**.
+As of 2026-10-31 the happy path and the 6-decimals case are verified live; the no-file, PDF, duplicate and EDITOR cases were verified live on 2026-11-01; the abandoned-preview case is covered by the database tests (091-093) but **still pending as a live chat check**.
 
 ## Rollback (nothing here deletes data)
 
