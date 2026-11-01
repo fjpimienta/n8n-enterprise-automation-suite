@@ -27,6 +27,7 @@ import { environment } from '../environments/environment';
 const authConfig: AuthEnvironmentConfig = {
   apiUrl_crud: environment.apiUrl_crud,
   apiUrl_token: environment.apiUrl_token,
+  apiUrl_ai: environment.apiUrl_ai,
   system_id: 'hotel_app' // Unique identifier for the consuming app
 };
 
@@ -42,21 +43,20 @@ export const appConfig: ApplicationConfig = {
 
 ```
 
-### 2. Utilizing the Tenant Selector
+### 2. Tenant context and exported API
 
-Import the visual component to allow users to switch between their assigned companies.
+`core-auth` exports `TenantService` and the `CompanyContext` type for managing the active
+company context. It does **not** export a `TenantSelectorComponent`; host applications
+provide their own selection UI when needed.
 
 ```typescript
-import { TenantSelectorComponent } from 'core-auth';
-
-@Component({
-  standalone: true,
-  imports: [TenantSelectorComponent], // <--- Import directly
-  // ...
-})
-export class HeaderComponent { }
-
+import { CompanyContext, TenantService } from 'core-auth';
 ```
+
+The public API also exports `AuthService`, `authGuard`, `roleGuard` (where available through
+the public auth module), `authInterceptor`, and `tenantInterceptor`. Register
+`authInterceptor` explicitly with `provideHttpClient(withInterceptors([...]))`; the tenant
+header interceptor is a separate export and is not automatically registered by the library.
 
 ## 📦 Authors
 

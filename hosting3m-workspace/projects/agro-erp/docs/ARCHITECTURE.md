@@ -3,7 +3,7 @@
 ## 📝 Descripción
 
 **Project:** Hosting3M Automation Suite (Agro ERP)
-**Version:** v1.16.0 (Gestión Avanzada de Hato vía Agente IA: traslado intra-UPP, reproducción, desparasitación, castración, cambio de identificador, autorización y anulación de eventos)
+**Version:** v1.20.0 (agente de Palma, migración 083; versión de referencia en `CHANGELOG.md`)
 **Stack:** Angular 21 (Signals) | n8n (API Gateway / MCP) | PostgreSQL (JSONB, Views & PL/pgSQL) | Tabler UI
 **Author:** Francisco Jesus Pérez Pimienta
 
@@ -37,39 +37,41 @@
   canal real de chat; dos bugs reales de arquitectura de n8n encontrados y corregidos en las
   8 tools a la vez; 3 bugs reales corregidos en `register_livestock_purchase` (tool
   preexistente, no nueva de esta versión); migración 063 de `vw_cattle_event_log`
+- v1.18.0 — Estructura agrícola de Palma (migración 080): plantaciones, lotes, filas y
+  conteos con historial por empresa; `vw_agri_lot_summary` y `vw_agri_plantation_summary`
+- v1.19.0 — Gastos agrícolas de Palma (migración 081): catálogo global de unidades,
+  categorías y gastos por empresa, anulaciones, balance y vistas de consulta
+- v1.19.1 — Aislamiento del agente de ganadería frente a empresas PALM (migración 082).
+- v1.20.0 — Wrappers SQL para el agente de Palma en Chat Web/WhatsApp (migración 083).
+  Las migraciones 084–090 de reproducción están versionadas, pero el `CHANGELOG.md` las
+  identifica como no desplegadas; 091–093 definen SQL CFDI y 091 se declara sin pruebas.
 
 ## 📝 1. Estructura del Workspace (Feature-Driven Architecture)
 
 El frontend está desarrollado sobre un Monorepo en Angular 21 utilizando una arquitectura orientada a características (*Feature-Driven*), diseñada para un aislamiento estricto de dominios de negocio y carga perezosa (*Lazy Loading*)[cite: 1, 4].
 
 ```text
-├── apps/
-│   └── agro-erp/                       # Aplicación unificada Multi-Dominio[cite: 3, 4]
-│       ├── src/
-│       │   ├── app/
-│       │   │   ├── core/               # Singletons globales (TenantService, Interceptors)[cite: 1, 4]
-│       │   │   ├── features/           # Dominios Operativos Completamente Aislados[cite: 1, 4]
-│       │   │   │   ├── agriculture/    # Módulo Palma (Telemetría, Drones, Hectáreas)[cite: 2, 4]
-│       │   │   │   ├── livestock/      # Módulo Ganadero (Biomasa, Sanidad, Pesajes)[cite: 3, 4]
-│       │   │   │   └── admin/          # Catálogos globales, Autorizaciones Pendientes (v1.11.0)
-│       │   │   ├── shared/             # Componentes UI reutilizables comunes
-│       │   │   ├── app.config.ts       # Configuración global del Core de Angular
-│       │   │   └── app.routes.ts       # Enrutamiento con Lazy Loading Dinámico[cite: 1, 4]
-│       │   └── styles/
-│       │       ├── themes/             # SCSS Reactivo (theme-cattle.scss / theme-palm.scss)[cite: 1, 4]
-│       │       └── main.scss
-│
-├── libs/
-│   └── core-auth/                      # Librería compartida de Autenticación y RBAC[cite: 1, 4]
-│
-├── infrastructure/
-│   └── upload-file/                    # Microservicio propio de almacenamiento de archivos
-│                                        # ("Sovereign Media Service"). Ver sección 5.
-│
-├── workflows/                          # Orquestación de Backend y Agentes de IA en n8n[cite: 1]
-│   └── 09-MCP-Agent-Cattle/            # Configuración de Servidores MCP y Captura de Campo[cite: 4]
-
+└── src/app/
+    ├── core/
+    ├── features/
+    │   ├── agriculture/                # dashboard, plantaciones, lotes, filas y gastos
+    │   ├── admin/                      # tenants, personal y catálogos
+    │   ├── compliance/                 # dominio SENASICA-SINIIGA
+    │   └── livestock/                  # dashboard, inventario y pesajes
+    ├── shared/
+    ├── app.config.ts
+    └── app.routes.ts                   # login y rutas lazy de los dominios
 ```
+
+Las rutas declaradas en `app.routes.ts` y sus archivos lazy-loaded son:
+
+| Dominio | Rutas Angular |
+|---|---|
+| Público | `/login` |
+| Ganadería | `/ganaderia/dashboard`, `/ganaderia/inventario`, `/ganaderia/pesajes` |
+| Agricultura | `/agricultura/dashboard`, `/agricultura/plantaciones`, `/agricultura/lotes`, `/agricultura/lotes/:lotId/filas`, `/agricultura/gastos` |
+| Administración | `/admin/tenants`, `/admin/tenants/:tenantId/production-units`, `/admin/tenants/:tenantId/production-units/:uppId/lots`, `/admin/personal`, `/admin/razas`, `/admin/etapas-vida`, `/admin/precios-referencia`, `/admin/autorizaciones` |
+| Cumplimiento | `/cumplimiento/upp`, `/cumplimiento/upp/:id` |
 
 ---
 
@@ -77,46 +79,75 @@ El frontend está desarrollado sobre un Monorepo en Angular 21 utilizando una ar
 
 El sistema implementa el patrón **Meta-CRUD v3**, donde la lógica transaccional, validaciones y permisos no residen en controladores de código del backend, sino que son interpretados en tiempo de ejecución por el API Gateway de **n8n** (workflow **`v6/crud`**, renombrado desde `06-dynamic-crud-engine` — mismo workflow, confirmado 2026-09-11) a través del diccionario de metadatos de la tabla `crud_models`.
 
-### 🔄 Diagrama de Flujo del Runtime Meta-CRUD
+### 🔄 Diagrama de Componentes: frontend, n8n y persistencia
 
 ```mermaid
 graph TD
     subgraph "Frontend Layer (Angular 21 - Lazy Loaded)"
-        CS["Context Switcher (TenantService)"]
-        UI_Cattle["Livestock Features (Biomasa, Sanidad)"]
-        UI_Palm["Agriculture Features (Drones, Hectáreas)"]
-        UI_Admin["Admin Features (Catálogos, Autorizaciones)"]
-        Signals["State Management (Computed Signals)"]
+        CS["TenantService / active domain"]
+        UI_Cattle["/ganaderia/dashboard, /inventario, /pesajes"]
+        UI_Palm["/agricultura/dashboard, /plantaciones, /lotes, /lotes/:lotId/filas, /gastos"]
+        UI_Admin["/admin/*"]
+        UI_Compliance["/cumplimiento/upp, /cumplimiento/upp/:id"]
+        UIChat["Shared UI Chat\n(file picker; not an Angular route)"]
+        Signals["Angular Signals"]
 
-        CS -->|Inyecta ID & Theme| Signals
+        CS --> Signals
         UI_Cattle <--> Signals
         UI_Palm <--> Signals
         UI_Admin <--> Signals
+        UI_Compliance <--> Signals
     end
 
-    subgraph "Integration Layer (n8n Meta-CRUD v3 — workflow v6/crud)"
+    subgraph "Integration Layer (n8n)"
         Auth["JWT Validator (core-auth)"]
-        Router["Dynamic Model Router (Build Query)"]
-
-        Signals -->|HTTP POST + tenant_id| Auth
+        Router["Meta-CRUD v6/crud"]
+        ChatWebhook["Chat Web webhook"]
+        PalmAgent["Chat Web / WhatsApp: AI Agent Palma"]
+        CattleAgent["Chat Web / WhatsApp: MCP Server Cattle"]
+        InvoiceAgent["CFDI intake (Chat Web workflow)"]
+        InvoiceMCP["MCP Server Cattle: invoice preview / confirm"]
+        CFDIService["cfdi-service\n(parse, SAT status, store original)"]
+        PalmWrappers["sp_agri_chat_* wrappers (083)"]
+        Signals -->|REST + tenant context| Auth
         Auth --> Router
+        UIChat -->|POST chatInput + XML Base64| ChatWebhook
+        ChatWebhook --> InvoiceAgent
+        PalmAgent --> PalmWrappers
+        CattleAgent -->|Postgres tools in repro-phase files| ReproSP
+        InvoiceAgent -->|HTTP parse / SAT status / store| CFDIService
+        InvoiceAgent -->|create draft| InvoiceSP
+        InvoiceMCP -->|preview / confirm| InvoiceSP
     end
 
     subgraph "Persistence & BI Layer (PostgreSQL 15)"
-        Table_Cattle[("Raw Tables: cattle_livestock, health, weight, expenses")]
+        Table_Cattle[("cattle_livestock, cattle_health_logs, cattle_weight_logs, cattle_expenses")]
         Table_Historico[("Audit Log: historico_movimientos")]
-        Table_Palm[("Hybrid Tables: agriculture_telemetry (JSONB)")]
+        Table_Palm[("Palm Structure: agri_plantations, agri_lots, agri_rows, agri_row_census_history")]
+        Table_PalmExpenses[("Palm Expenses: agri_unit_catalog, agri_expense_categories, agri_expenses")]
+        Table_Repro[("Reproduction: birth_events, repro_empadre_entries/voids, repro_condition_codes, palpation_repro_details, repro_historical_births/voids, cattle_breeding_events")]
+        Table_Invoice[("CFDI: company_tax_ids, expense_invoice_drafts, expense_invoices")]
         Table_Auth[("pending_authorizations, mortality_events")]
         Table_Catalog[("cattle_breed_catalog, cattle_lifestage_catalog (global)")]
-        View_BI{{"BI Engine: vw_cattle_kpi, vw_palm_kpi"}}
+        View_BI{{"Views: vw_cattle_kpi, vw_agri_lot_summary, vw_agri_plantation_summary, vw_agri_expense_list/summary, vw_animal_effective_birth"}}
         SP_Salida["PL/pgSQL: sp_procesar_salida_ganado"]
         SP_Mortandad["PL/pgSQL: sp_procesar_baja_mortandad"]
         SP_Auth["PL/pgSQL: sp_solicitar_autorizacion / sp_resolver_autorizacion"]
+        SP_Agri["PL/pgSQL: sp_agri_set_default_plantation / sp_agri_bulk_create_rows / sp_agri_record_row_census / sp_agri_record_expense / sp_agri_void_expense / sp_agri_expense_balance"]
+        ReproSP["PL/pgSQL: sp_repro_* (empadre, palpation, births, history); sp_log_breeding_event / sp_void_event"]
+        InvoiceSP["PL/pgSQL: sp_company_tax_id_set / sp_expense_invoice_register / sp_expense_invoice_draft_create / sp_expense_invoice_preview / sp_expense_invoice_confirm"]
 
-        Router -->|Insert/Update| Table_Cattle
-        Router -->|Insert/Update| Table_Palm
+        Router -->|CRUD / call_sp| Table_Cattle
+        Router -->|CRUD / call_sp| Table_Palm
+        Router -->|call_sp| SP_Agri
+        PalmWrappers --> SP_Agri
+        SP_Agri -->|structure and expense writes| Table_Palm
+        SP_Agri -->|expense writes| Table_PalmExpenses
         Router -->|Select/GetAll, sin filtro tenant| Table_Catalog
         Router -->|Select/GetAll| View_BI
+        ReproSP --> Table_Repro
+        InvoiceSP --> Table_Invoice
+        InvoiceSP -->|CFDI expense reference| Table_Cattle
         Router -->|model: salida_ganado| SP_Salida
         Router -->|model: baja_mortandad| SP_Mortandad
         Router -->|model: solicitar_autorizacion / resolver_autorizacion| SP_Auth
@@ -131,11 +162,20 @@ graph TD
 
 ```
 
-> ⚠️ **Nota v1.16.0:** las 8 herramientas MCP de la nueva sección 8 (más abajo) **no pasan
-> por este diagrama** — igual que `register_birth_event`/`find_calf_by_dam` (sección 5), se
-> invocan directo desde `v6/MCP Server Cattle` vía nodos `postgresTool`, sin tocar el
-> gateway REST `v6/crud` ni `crud_models`. El diagrama de arriba sigue describiendo
-> correctamente el único camino de escritura del panel Web.
+> El panel web usa el gateway REST `v6/crud`; los agentes n8n invocan herramientas SQL
+> mediante `postgresTool`, fuera de `crud_models`. Las rutas de agricultura no representan
+> las capacidades SQL de reproducción ni CFDI como pantallas. Los artefactos de reproducción
+> 084–090 están versionados, pero constan como no desplegados en `CHANGELOG.md`. El flujo
+> CFDI también está versionado como una integración sin ruta Angular: UI Chat envía el mensaje
+> y el adjunto XML como Base64 directamente al webhook n8n; no hay una etapa previa de Media
+> Server/Upload en este flujo. [`v6_ai_chat_cattle.json`](../../../../workflows/09-MCP-Agent-Cattle/v6/v6_ai_chat_cattle.json)
+> conecta el ingreso con [`cfdi-service`](../../../../microservices/cfdi-service/) para parseo,
+> estado SAT y almacenamiento del original, y crea el borrador mediante
+> `sp_expense_invoice_draft_create`. [`v6_MCP_Server_Cattle.json`](../../../../workflows/09-MCP-Agent-Cattle/v6/v6_MCP_Server_Cattle.json)
+> expone la vista previa y confirmación; la UI muestra la respuesta como texto conversacional,
+> no como una tarjeta CFDI dedicada. El parser admite CFDI 4.0 tipo Ingreso, no CFDI 3.3.
+> La migración 091 se declara no ejecutada/sin pruebas; los artefactos no son evidencia de
+> validación end-to-end ni de despliegue.
 
 ### ⚠️ Contrato del motor Meta-CRUD (restricciones implícitas, no declaradas en `crud_models`)
 
@@ -856,3 +896,47 @@ always from the verified JWT). Build Query fingerprint with this change on top o
 * `companys` insert never takes `id_company` (it is both PK and tenant column) and is a plain `INSERT`.
 * Fingerprints: Build Query `856b743c27c3dabb10d2a3b5fcb00b18`, Normalize Data
   `b7741e5edb892a7a6898c731871331eb` (before: `0aedcb74…`, `05153e7f…`).
+
+## 🌴 10. Agricultural Expenses and Palm Chat (migrations 081–083)
+
+Migration 081 adds the agricultural expense domain alongside, not inside, livestock finance:
+`agri_expenses` belongs to a plantation/lot and uses company-scoped categories; `sp_agri_record_expense`
+captures expenses, `sp_agri_void_expense` records a reasoned void, and
+`sp_agri_expense_balance` serves financial totals. Capture is permitted to ADMIN, OWNER and EDITOR;
+voids and amount-bearing reads are restricted to ADMIN/OWNER. The Angular surface is
+`/agricultura/gastos`; route and component definitions are in `src/app/features/agriculture/`.
+
+Migration 082 adds `fn_reject_palm_company` (P0094) as a domain boundary for livestock chat tools.
+Migration 083 adds the `sp_agri_chat_*` wrapper layer for Web Chat and WhatsApp. The wrappers
+resolve company membership and role in SQL and call the 080/081 procedures; the n8n artifacts are
+under [`workflows/09-MCP-Agent-Cattle/v6/`](../../../../workflows/09-MCP-Agent-Cattle/v6/).
+The release and deployment evidence for 083 is recorded in `CHANGELOG.md`; the migration files
+alone are not deployment evidence.
+
+## 🐄 11. Reproduction and CFDI integration boundaries (migrations 084–093)
+
+The livestock Angular route file declares `/ganaderia/dashboard`, `/ganaderia/inventario` and
+`/ganaderia/pesajes`; it does not declare separate routes for the SQL tools below.
+
+* **084–090 — reproduction:** 084 adds the derived-birth-date type/view/functions and read tools;
+  085 adds empadre settings, append-only entries and separate void records; 086 adds per-company
+  uterine-code mappings and append-only palpation details; 087 adds validated and historical birth
+  procedures and birth voids; 088 adds a guarded one-time service-to-birth link; 089 disables the
+  legacy `nacimiento` Meta-CRUD row without deleting it; 090 adds constrained meanings to uterine
+  codes. The procedures use the `sp_repro_*` namespace where defined, and migrations 088/090 also
+  replace `sp_log_breeding_event`, `sp_void_event` and existing reproduction tool bodies.
+* Reproduction MCP tool JSON and phase notes are versioned in
+  [`workflows/09-MCP-Agent-Cattle/v6/`](../../../../workflows/09-MCP-Agent-Cattle/v6/).
+  `CHANGELOG.md` marks the 084–090 integration as not deployed; do not infer rollout from the
+  exported SQL or workflow files.
+* **091–093 — CFDI:** `sp_company_tax_id_set` manages receiver RFCs;
+  `sp_expense_invoice_register` writes invoice metadata; 092 adds draft creation, preview and
+  confirmation procedures; 093 replaces the register function to support conditional RFC
+  registration on confirmation. `expense_invoices.expense_id` points to `cattle_expenses`, not
+  `agri_expenses`. Migration 091 explicitly says it has never been executed and must be tested
+  locally. The source flow is in `v6_ai_chat_cattle.json`, `v6_MCP_Server_Cattle.json` and
+  `microservices/cfdi-service`; the Angular route files do not declare a CFDI screen. Do not
+  infer end-to-end validation or deployment from the presence of these files.
+
+See `docs/DATABASE_SCHEMA.md` for exact table columns, constraints, void/append-only rules and
+procedure contracts for migrations 080–093.

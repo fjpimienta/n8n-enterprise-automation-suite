@@ -41,6 +41,37 @@ No los uses como única fuente de verdad.
    (ver sección 3).
 5. Espera revisión antes de mergear. No hagas `git push --force` sobre ramas compartidas.
 
+### Despliegue de producción
+
+- `main` despliega los frontends mediante Plesk; no despliega por sí solo cambios de base
+  de datos ni workflows n8n.
+- Si un PR depende de migraciones, cambios de Meta-CRUD o workflows n8n, no se mergea a
+  `main` hasta que exista un runbook ejecutable con orden de despliegue, comprobaciones,
+  pruebas y rollback. Desplegar primero el frontend puede dejar la aplicación apuntando a
+  backend/esquema aún no disponible.
+- Todo runbook que toque base de datos o n8n debe comenzar con este aviso:
+
+  > ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (base de datos y n8n,
+  verificadas con sus huellas). `main` despliega el frontend solo (Plesk): si se mergea
+  antes, la pantalla nueva puede fallar en producción.
+
+- Para cada operación destructiva o irreversible contra datos/servicios, exige backup o
+  dry-run aprobado antes de ejecutarla. Nunca ejecutes `DROP`, `TRUNCATE`, borrados en
+  cascada, `rm -rf` contra producción/VPS ni `git push --force`.
+- Para publicar un workflow, compara primero el export y la huella de producción con el
+  estado esperado; si difieren, incorpora primero las diferencias manuales al repositorio.
+  Edita/publica en n8n conservando el workflow y webhook existentes, vuelve a descargar y
+  verifica la huella posterior antes de probar. `n8n import:workflow` puede desactivar el
+  workflow y no es el procedimiento de producción documentado.
+- Ejecuta las pruebas de integración en LOCAL con datos representativos, incluidos
+  parámetros numéricos, vacíos, nulos y con comas cuando aplique. La preparación de SQL o
+  un `PREPARE` aislado no sustituye ejecutar el nodo real de n8n.
+- Los runbooks de frontend deben dejar claro si el cambio no requiere despliegue de DB/n8n;
+  el frontend es la última parte cuando existe dependencia de backend.
+
+El runbook de workflows y los detalles operativos versionados están en `CLAUDE.md`
+(sección "Despliegue").
+
 ---
 
 ## 3. Estándar de Commits — Conventional Commits
@@ -51,7 +82,11 @@ Todos los commits, en inglés, modo imperativo, con scope del app/lib afectado:
 <type>(<scope>): <description>
 ```
 
-**Types:** `feat`, `fix`, `refactor`, `chore`, `docs`, `test`, `perf`
+**Types permitidos:** `feat`, `fix`, `refactor`, `chore`, `docs`, `security`
+
+`security` se usa para cambios motivados por endurecimiento, validaciones o controles de
+seguridad. Usa un scope del proyecto o servicio afectado. Esta lista coincide con la
+política raíz de `CLAUDE.md`; no agregues types alternativos por convención local.
 
 **Ejemplos:**
 ```
@@ -80,12 +115,16 @@ Código, nombres de variables, interfaces TypeScript, comentarios, y descripcion
 
 ## 5. Base de datos y migraciones
 
-- **Nunca** ejecutes `DROP`, `TRUNCATE`, o `DELETE` en cascada contra producción o el VPS.
-  Propón siempre un paso de backup/dry-run primero.
+- **Nunca** ejecutes `DROP`, `TRUNCATE`, `DELETE` en cascada ni `rm -rf` contra producción
+  o el VPS. Propón y completa un paso de backup/dry-run primero.
 - Toda migración nueva debe poder validarse contra el clon local antes de tocar producción.
 - Toda query, pipeline, y capa de componente debe filtrar por `id_company`
   (aislamiento multi-tenant fail-closed). Si el tenant no es explícito en el contexto,
   detente y pregunta — no asumas.
+- El gateway `v6/CRUD` de Agro ERP valida membresía/tenant; el `v5/CRUD` del hotel tiene
+  controles de allowlist pero no aislamiento por empresa suficiente. Un filtro/selector
+  de tenant en el frontend no constituye un límite de seguridad. No extrapoles controles
+  entre versiones de gateway.
 
 ---
 
@@ -106,9 +145,8 @@ Código, nombres de variables, interfaces TypeScript, comentarios, y descripcion
 
 ## 7. Reportar vulnerabilidades de seguridad
 
-Ver `SECURITY.md`. *(Nota: al momento de escribir esto, ese archivo sigue con el
-placeholder genérico del template — no lo trates como proceso definitivo hasta que se
-actualice.)*
+Sigue el proceso de reporte privado documentado en [`SECURITY.md`](./SECURITY.md). No abras
+un issue o PR público para divulgar una vulnerabilidad.
 
 ---
 

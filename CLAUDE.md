@@ -3,9 +3,9 @@
 ## Identidad de la Suite
 **Nombre:** Hosting3M Automation Suite — n8n Enterprise Automation Suite
 **Arquitecto:** Francisco Jesus Pérez Pimienta (Senior Systems Architect | PMP)
-**Naturaleza:** Suite de 15 módulos self-hosted — workflows n8n (auth gateway, CRM, RAG news,
-WhatsApp, MCP servers) + monorepo Angular 21 (`dashboard`, `pista-hielo` — legacy, fuera de
-uso —, `hotel-website`, `agro-erp`, y las libs compartidas `ui-chat`, `ui-pdf-export`, `core-auth`).
+**Naturaleza:** Suite de módulos self-hosted — workflows n8n (auth gateway, CRM, RAG news,
+WhatsApp, MCP servers) + workspace Angular 21 con cuatro aplicaciones registradas (tres
+activas y `pista-hielo`, legacy/fuera de producción) y tres librerías compartidas.
 
 **Este archivo es la raíz.** Cada proyecto del monorepo tiene su propio `CLAUDE.md` con
 detalle específico de su dominio — Claude Code los carga automáticamente por herencia
@@ -57,8 +57,8 @@ técnica y entrega de valor incremental. Estilo: profesional, pragmático, direc
 
 ### 5. Git — Conventional Commits
 - Idioma: inglés, modo imperativo, con scope del app/lib afectado.
-- Types permitidos: `feat`, `fix`, `refactor`, `chore`, `docs`, `security` (shields,
-  validaciones, endurecimiento — cualquier cambio motivado por seguridad, no solo bugs).
+- Types permitidos en este repositorio: `feat`, `fix`, `refactor`, `chore`, `docs`,
+  `security` (shields, validaciones y endurecimiento motivado por seguridad).
 - Formato: `<type>(<scope>): <description>`.
 - Ejemplo: `fix(ui-pdf-export): correct finalY offset on multi-page tables`.
 - Ejemplo: `security(dashboard): harden MetaCRUD payload sanitization`.
@@ -92,8 +92,9 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
   identificadores validados). El `dashboard` del hotel y `hotel-website` usan `crud/v5`
   (`v5/CRUD`: rol del JWT, sin membresía, header de tenant opcional y solo `tenant_id`, `update`
   por PK, `insert` como upsert). Desde la contención v1.17.1 (2026-10-17) `v5` solo atiende los
-  9 modelos del hotel (nodo `Model Allowlist` + regla WAF de Cloudflare para `crud/v5/`). Nunca
-  asumas que un endurecimiento de `v6` protege al hotel; ver deuda abajo.
+  9 modelos del hotel (nodo `Model Allowlist` + regla WAF de Cloudflare para `crud/v5/`).
+  Esto contiene el alcance, pero no ofrece aislamiento por empresa suficiente dentro de
+  esos modelos. Nunca asumas que un endurecimiento de `v6` protege al hotel; ver deuda abajo.
 - **`core-auth`** protege tanto las APIs Meta-CRUD como el Media Server vía
   `apiUrl_upload` en `AUTH_ENV_CONFIG` — verifica esta librería antes de asumir que un
   problema de auth es local a una sola app.
@@ -186,6 +187,11 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
   3. `sed -i` puede cambiar el dueño del archivo: verifica el dueño y los permisos después de editar el `.env`.
   4. Cerrar las sesiones al rotar `JWT_SECRET` es esperado y no pierde datos.
 
+La guía humana equivalente, con el checklist de PR y runbook, está en
+`CONTRIBUTING.md`, sección "Despliegue de producción". La lista de proyectos y enlaces
+canónicos se mantiene en `README.md`; no hay un README propio en la raíz de
+`hosting3m-workspace/`.
+
 ## Deuda técnica activa a nivel suite
 
 - ✅ **Rotación de `JWT_SECRET` e `INTERNAL_SECRET` — CERRADA (2026-10-25).** Cubre la exposición del
@@ -200,10 +206,10 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
   | PRODUCCIÓN | `15544c7c`   | `1f86740a`        |
 
   - Las sesiones abiertas se cerraron (esperado, sin pérdida de datos); los usuarios inician sesión de nuevo.
-  - Pendientes abiertos tras el cierre:
-    - ⚠️ `.env.local` en LOCAL: copia con otras credenciales; nada la referencia. Revisar y retirar o rotar.
-    - ⚠️ `plesk-portainer` tiene variables con esos nombres; es ajeno al proyecto y no se tocó.
-    - ⚠️ No se revisó si otros workflows de n8n usan `JWT_SECRET` más allá de los tres servicios.
+  - Seguimientos separados del cierre de rotación: revisar/retirar la copia no referenciada
+    `.env.local` en LOCAL; evaluar por separado `plesk-portainer` (ajeno al proyecto); y
+    comprobar si workflows adicionales consumen `JWT_SECRET`. No registrar ni compartir
+    secretos ni hashes de verificación en documentación pública.
 - 🔴 **Migrar el hotel (`dashboard`, `hotel-website`) de `v5/CRUD` a `v6/CRUD`.** La contención
   v1.17.1 (2026-10-17) cerró en `v5` la inyección SQL (nombre de modelo en `Get Model Config`,
   `sort_by`, campo de `getone`), el registro automático de tablas en `crud_models` y el acceso a
@@ -290,8 +296,8 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
   `pista-hielo`; los logins de `agro-erp` y del hotel reciben la lista solo de `jwt-service` vía
   `v3`/`v4/GeneraToken`, verificado 2026-10-17). Propuesta (PR aparte): quitarla en `v6` para que
   `companys getall` exija token y membresía como cualquier modelo.
-- `SECURITY.md` sigue con el placeholder genérico de GitHub — falta un proceso real de
-  reporte de vulnerabilidades.
+- `SECURITY.md` contiene el proceso vigente de reporte privado de vulnerabilidades;
+  mantenerlo sincronizado con el alcance, el contacto y los límites reales de la suite.
 - ⚠️ **`N8N_BLOCK_ENV_ACCESS_IN_NODE=false`:** cualquier workflow (y quien pueda editarlos) lee con
   `$env` las variables de entorno del contenedor de n8n, incluidos `INTERNAL_SECRET`, `JWT_SECRET`,
   las claves de OpenAI y la contraseña de la base. **No se cambia por ahora:** `GenerateToken` (`v3`/`v4`)

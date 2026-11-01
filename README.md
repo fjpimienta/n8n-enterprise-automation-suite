@@ -3,7 +3,7 @@
 ### Self-Hosted Architecture: Orquestación de IA & Microservicios Soberanos
 
 > **Arquitecto:** Francisco Jesus Pérez Pimienta (Senior Systems Engineer | PMP | Full Stack)
-> **Core Stack:** n8n v2.4.6, Docker, PostgreSQL (pgvector + JSONB), Node.js (Upload Service), OpenAI (GPT-4o & DALL-E 3), Angular 21 (Signals).
+> **Core Stack:** n8n 2.29.0 (VPS image source verified in `CLAUDE.md`), Docker, PostgreSQL (pgvector + JSONB), Node.js (Upload Service), OpenAI, Angular 21 (Signals).
 > **Infraestructura:** CloudFree VPS (Hardened Linux) + Private Media CDN (autenticado, ver módulo 15).
 
 ---
@@ -16,7 +16,7 @@ Suite de automatización empresarial de **grado industrial** diseñada bajo la f
 2. **Calidad Enterprise:** Uso de modelos comerciales robustos.
 3. **Formalización Digital:** Generación de documentos PDF profesionales (`ui-pdf-export`) directamente desde el cliente.
 4. **Seguridad Corporativa:** Gestión de identidad RBAC Multi-Tenant, Context Switcher centralizado y validación RS256.
-5. **Captura Pública (Lead Gen):** Integración nativa de interfaces orientadas a la conversión directa con orquestación backend en tiempo real.
+5. **Interfaz Pública:** Sitio del hotel integrado con chat y servicios n8n; la búsqueda de disponibilidad/reserva online está pausada por un kill switch documentado.
 
 ---
 
@@ -26,15 +26,81 @@ El ecosistema opera en un entorno de alta densidad, maximizando los recursos del
 
 | Servicio | Tecnología | Función Crítica |
 | --- | --- | --- |
-| **Orquestador** | n8n v2.4.6 (Enterprise) | Motor lógico central y procesamiento de Webhooks. |
-| **Media Server** | Node.js / Express | CDN Privado para almacenamiento persistente. Autenticado (JWT / secreto interno compartido con Auth Gateway) desde 2026-08. |
+| **Orquestador** | n8n 2.29.0 (VPS baseline; verificado en `CLAUDE.md`) | Motor lógico central y procesamiento de Webhooks. |
+| **Media Server** | Node.js / Express | CDN privado para almacenamiento persistente. Requiere autenticación; secretos compartidos rotados en LOCAL y producción el 2026-10-25. |
 | **Capa de Datos** | PostgreSQL + pgvector | Almacenamiento Relacional + Vectorial (RAG). |
 | **Auth Gateway** | Node.js / JWT | Gestión de Sesiones Multi-Tenant e Identidad (RBAC). Mismo secreto compartido que protege el Media Server. |
-| **Frontends** | Angular 21 (Signals) | SPA Distribuidas en Monorepo (Dashboard / Pista / Cattle / Website). |
+| **Frontends** | Angular 21 (Signals) | Tres SPAs activas y una aplicación histórica fuera de producción dentro del workspace Angular. |
 
 ---
 
-## 📦 Módulos Implementados (Suite v1.6.0)
+## 📦 Catálogo de módulos y proyectos (documentación auditada al 2026-10-31)
+
+El changelog raíz registra los cambios de suite por fecha desde 2026-08-14; no existe una
+versión SemVer global vigente. Cada módulo conserva su versión independiente. La última
+entrada registrada en el changelog raíz es 2026-10-31.
+
+### Proyectos Angular del workspace
+
+El workspace contiene **7 proyectos Angular**: cuatro aplicaciones y tres librerías
+compartidas. PistaHielo está registrado históricamente en el workspace, pero está fuera de
+producción y no forma parte del ciclo activo.
+
+| Tipo | Proyecto | Estado | Función |
+|---|---|---|---|
+| SPA principal | `agro-erp` | Activo — v1.20.0 | ERP agropecuario y agrícola; ver [README del producto](hosting3m-workspace/projects/agro-erp/README.md). |
+| SPA principal | `dashboard` | Activo — v0.11.0 | Operación administrativa del hotel; ver [README](hosting3m-workspace/projects/dashboard/README.md). |
+| SPA pública | `hotel-website` | Activo, reserva online temporalmente deshabilitada | Sitio público del hotel; ver [README](hosting3m-workspace/projects/hotel-website/README.md). |
+| SPA histórica | `pista-hielo` | **Legacy / fuera de producción** | Aplicación histórica; ver [README](hosting3m-workspace/projects/pista-hielo/README.md). |
+| Librería compartida | `core-auth` | Activa | Autenticación, guards e identidad/contexto de empresa. |
+| Librería compartida | `ui-chat` | Activa | Widget conversacional Angular conectado a webhooks configurados por la aplicación host. |
+| Librería compartida | `ui-pdf-export` | Activa | Generación client-side de documentos PDF. |
+
+El catálogo de módulos de automatización incluye además workflows y servicios que no son
+proyectos Angular; sus números no representan versiones de las aplicaciones.
+
+### Arquitectura y límites de confianza
+
+```mermaid
+graph LR
+    Agro["Agro ERP"]
+    Dashboard["Hotel dashboard"]
+    Website["Hotel website"]
+    Legacy["PistaHielo\nlegacy; fuera de producción"]
+    CoreAuth["core-auth"]
+    Chat["ui-chat"]
+    PDF["ui-pdf-export"]
+    V6["n8n Meta-CRUD v6\nAgro ERP"]
+    V5["n8n Meta-CRUD v5\nhotel dashboard / website"]
+    Auth["Auth Gateway\nJWT / tenant context"]
+    Media["Media Server\nJWT or internal auth"]
+    UploadHost["Host app with an implemented upload flow"]
+    DB[("PostgreSQL")]
+
+    Agro --> CoreAuth
+    Agro --> Chat
+    Dashboard --> CoreAuth
+    Dashboard --> Chat
+    Dashboard --> PDF
+    Website --> Chat
+    Agro --> Auth
+    Dashboard --> Auth
+    Agro --> V6
+    Dashboard --> V5
+    Website --> V5
+    UploadHost --> Media
+    CoreAuth -. "JWT interceptor for configured upload URL" .-> Media
+    Legacy -. historical only .-> Chat
+    V6 --> DB
+    V5 --> DB
+```
+
+`v5` y `v6` son gateways distintos, no capas de seguridad intercambiables: Agro ERP usa
+`v6` con validación de membresía y tenant; el hotel sigue en `v5`, limitado a modelos
+allowlisted pero sin aislamiento por empresa suficiente para esos modelos. Los guards,
+headers y filtros de tenant en el cliente no reemplazan la autorización del gateway. El
+Media Server es infraestructura separada protegida por autenticación; `core-auth` puede
+adjuntar JWT a las URLs configuradas por la aplicación host.
 
 La suite se compone de módulos interconectados que operan como una malla de servicios:
 
@@ -63,8 +129,10 @@ Implementación del **Model Context Protocol** para consultas de inventario medi
 ### 🏨 08. AdminHotel Dashboard
 ERP integral evolucionado a una **Arquitectura Distribuida** con motor financiero, pagos en cascada (Waterfall) y escudos contra *Timezone Offsets*.
 
-### ⛸️ 09. PistaHielo Operations Center
-PWA Administrativa para gestión de centros de entretenimiento con motor de cobro "Midnight Crossing".
+### ⛸️ 09. PistaHielo Operations Center — Legacy / Histórico
+Aplicación Angular histórica para gestión de centros de entretenimiento. **Fuera de
+producción y del ciclo activo de la suite**; su descripción funcional no implica operación
+vigente.
 
 ### 💬 10. Shared AI Chat Library (`@hosting3m/ui-chat`)
 Librería agnóstica de chat IA inyectada transversalmente en el ecosistema (`CHAT_CONFIG_TOKEN`).
@@ -73,13 +141,16 @@ Librería agnóstica de chat IA inyectada transversalmente en el ecosistema (`CH
 Librería para la estandarización de documentos salientes con motor de cálculo fiscal automático (IVA/ISH).
 
 ### 🌍 12. Hotel Eco-Website
-La interfaz pública de alta conversión del ecosistema (*Customer-Facing*) con diseño Eco-Boutique y captura reactiva.
+Sitio público Eco-Boutique con chat y reseñas; la búsqueda de disponibilidad/reserva online
+está temporalmente deshabilitada por un kill switch en el código.
 
 ### 🌾 13. Agro ERP Suite (Ganadería & Agricultura Digital)
-*Actualizado para agro-erp v1.16.1 (fecha de liberación al desplegarse) — ver `hosting3m-workspace/projects/agro-erp/README.md`
-y su `CHANGELOG.md` para el detalle técnico completo.*
+*Documentación de producto actualizada para agro-erp v1.20.0 — ver
+`hosting3m-workspace/projects/agro-erp/README.md` y su `CHANGELOG.md` para el detalle
+técnico y el estado de despliegue.*
 
-ERP agroindustrial evolucionado a una arquitectura Multi-Dominio para la gestión de biomasa, trazabilidad biológica y telemetría de drones agrícolas (Plantaciones), con registro normativo SENASICA-SINIIGA completo y motor de movilización interestatal REEMO.
+ERP agroindustrial multi-dominio para ganadería, agricultura (Palma), cumplimiento
+SENASICA-SINIIGA y movilización REEMO.
 * **Server-Side BI:** Cálculo de KPIs complejos (ADG, Litros por Hectárea) directamente en Vistas SQL.
 * **Trazabilidad Resiliente IoT:** Implementación estricta de chips subcutáneos y bolos ruminales (rechazando aretes físicos por baja durabilidad en campo), con historial automático de cambios de identificador vía trigger de base de datos.
 * **Inteligencia Artificial de Campo:** Uso del **WhatsApp Field Agent** (MCP) blindado con directivas *Zero-Hallucination* y validación *Human-in-the-Loop* operando bajo el *Context Switcher* Multi-Empresa.
@@ -99,7 +170,8 @@ Librería central de seguridad para todo el monorepo. Gestiona el ciclo de vida 
 (antes sin autenticación desde su lanzamiento en `[0.9.0]`) y reforzado el 2026-08-15 con
 rate limiting, sanitización de extensión de archivo y protección contra path traversal
 (detectada por análisis estático CodeQL). Exige JWT válido o el secreto interno compartido
-(`INTERNAL_SECRET`, rotado el 2026-08-15 tras un incidente de exposición) en toda subida y
+(`INTERNAL_SECRET`; los secretos compartidos se rotaron en ambos ambientes el 2026-10-25
+tras el incidente de exposición) en toda subida y
 lectura — mismo mecanismo de confianza que ya usa el Auth Gateway (módulo 1), sin un
 mecanismo paralelo. El Media Server no tiene número de módulo propio en la tabla técnica —
 es infraestructura compartida, no un proyecto con README independiente — de ahí que su
@@ -119,10 +191,10 @@ documentación viva aquí, junto a la librería que lo protege.
 | `06`|**Dynamic CRUD Engine**|Capa de abstracción BaaS híbrida (SQL + JSONB).|`Postgre` `JS Logic`|[📖 Ver Docs](workflows/06-dynamic-crud-engine/v4/README.md)|
 | `07`|**MCP Server Hotel**| Integración LLM-DB para gestión de cuartos.|`MCP` `Postgres`|[📖 Ver Docs](workflows/07-MCP-server-hotel/v3/README.md)|
 | `08`|**AdminHotel**|Frontend administrativo de hospedaje.|`Angular 21` `Tabler`|[📖 Ver Docs](hosting3m-workspace/projects/dashboard/README.md)|
-| `09`|**PistaHielo Ops**|PWA para centros de entretenimiento.|`Angular 21` `Signals`|[📖 Ver Docs](hosting3m-workspace/projects/pista-hielo/README.md)|
+| `09`|**PistaHielo Ops (Legacy)**|Aplicación histórica; fuera de producción y del ciclo activo.|`Angular 21` `Signals`|[📖 Ver Docs](hosting3m-workspace/projects/pista-hielo/README.md)|
 | `10`|**Shared AI Chat Lib**|Componente reutilizable de UI Conversacional.|`Angular 21` `InjectionToken`|[📖 Ver Docs](hosting3m-workspace/projects/ui-chat/README.md)|
 | `11`|**UI PDF Export Lib**|Motor de renderizado vectorial PDF.|`jsPDF` `TypeScript`|[📖 Docs](hosting3m-workspace/projects/ui-pdf-export/README.md)|
-| `12`|**Hotel Eco-Website**|Landing page optimizada para Core Web Vitals.|`Angular` `Tailwind`|[📖 Docs](hosting3m-workspace/projects/hotel-website/README.md)|
+| `12`|**Hotel Eco-Website**|Sitio público; búsqueda de disponibilidad/reserva online deshabilitada temporalmente por kill switch.|`Angular` `Tailwind`|[📖 Docs](hosting3m-workspace/projects/hotel-website/README.md)|
 | `13`|**Agro ERP Suite**|ERP multi-dominio (Ganadería, Agricultura, Registro Normativo y Movimientos REEMO).|`Angular 21` `SQL Views` `PL/pgSQL`|[📖 Docs](hosting3m-workspace/projects/agro-erp/README.md)|
 | `14`|**MCP Field Agent**|Agente IA agropecuario con Zero-Hallucination.|`n8n` `MCP` `OpenAI`|[📖 Docs](workflows/09-MCP-Agent-Cattle/v6/README.md)|
 | `15`|**Core Auth Lib**|Núcleo Auth y Context Switcher Defensivo. Protege también el Media Server (`apiUrl_upload`).|`Angular 21` `RxJS`|[📖 Docs](hosting3m-workspace/projects/core-auth/README.md)|
@@ -139,7 +211,7 @@ documentación viva aquí, junto a la librería que lo protege.
 ### ✅ Completado (H1 2026)
 * [x] **Monorepo Scaling:** Optimización de `tsconfig` e implementación de librerías compartidas (`core-auth`, `ui-chat`, `ui-pdf-export`).
 * [x] **Sovereign Media:** Implementación de `upload-service` propio y DALL-E 3.
-* [x] **Public Interface:** Despliegue de `hotel-website` interactivo conectado a webhooks.
+* [x] **Public Interface:** `hotel-website` con chat y reseñas conectados a servicios n8n. La búsqueda de disponibilidad/reserva permanece temporalmente deshabilitada por kill switch.
 * [x] **Core Resilience:** Implementación de MetaCRUD Boundary Shields y motor de pagos en cascada (Hotel).
 * [x] **WhatsApp Field Agent (Agro):** Agente IA con NLP integrado. Certificado con protocolos Anti-Jailbreak para la fase obligatoria de recolección de datos.
 * [x] **Agro ERP Transition:** Refactorización arquitectónica a entorno Multi-Dominio (Feature-Driven), habilitando la gestión paralela de Ganadería y Agricultura de Palma mediante el mismo motor Meta-CRUD.
@@ -150,7 +222,7 @@ documentación viva aquí, junto a la librería que lo protege.
 * [x] **Endurecimiento del Media Server:** autenticación JWT/secreto interno en `upload-file`, extensión de `core-auth`.
 
 ### ✅ Completado (2026-10, ver módulos 06 y 13 arriba)
-* [x] **Hotfix de seguridad de cuentas de usuario:** cerrado el secuestro de cuentas entre empresas en el gateway Meta-CRUD (afectaba a agro-erp y al `dashboard` del hotel); membresías solo vía procedimientos con reglas en la base y bitácora `access_audit_log` (agro-erp v1.16.1, migración 073; fecha de liberación al desplegarse).
+* [x] **Hotfix de seguridad de cuentas de usuario:** cerrado el secuestro de cuentas entre empresas en el gateway Meta-CRUD (afectaba a agro-erp y al `dashboard` del hotel); membresías solo vía procedimientos con reglas en la base y bitácora `access_audit_log` (migración 073; introducido en agro-erp v1.16.1 e integrado en la documentación vigente v1.20.0; fecha de liberación al desplegarse).
 
 ### 🏗️ En Progreso / Backlog (Q3 / Q4 2026)
 * [ ] **Huéspedes CRM:** Segmentación eco-boutique y analítica de comportamiento.
@@ -158,7 +230,6 @@ documentación viva aquí, junto a la librería que lo protege.
 * [ ] **Conversion & Sales:** A/B Testing en la landing page y conexión con pasarelas de pago directo (Stripe/PayPal).
 * [ ] **Agro-Finance (OPEX Consolidation):** Abstracción del módulo `cattle_expenses` para consolidar costos transversales por kilo de biomasa o litro de agroquímico en la nueva vertical.
 * [ ] **Enforcement activo de reglas de movimiento (Agro ERP):** pendiente de una sola confirmación del cliente para activar el bloqueo automático de movimientos no permitidos.
-* [ ] **Confirmación de rotación de `INTERNAL_SECRET`:** verificar en ambos servicios (Auth Gateway, Media Server) y ambos ambientes tras el incidente de exposición de 2026-08-13.
 
 ---
 

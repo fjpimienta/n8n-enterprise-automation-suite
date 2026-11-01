@@ -1,5 +1,9 @@
 # ⛸️ Architecture Overview: PistaHielo Operations Center
 
+> ⚠️ **[LEGACY / HISTÓRICO - Fuera de Producción]**
+> Esta arquitectura describe un proyecto histórico que no forma parte del ciclo activo ni
+> debe considerarse desplegado o soportado en producción.
+
 ## 📝 Descripción
 **Project:** PistaHielo Dashboard (Módulo de la Suite Hosting3M)
 **Version:** v0.7.0 (Shared Lib Integration)

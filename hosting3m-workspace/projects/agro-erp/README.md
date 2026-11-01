@@ -1,12 +1,47 @@
 # 🌾 Agro ERP Suite (Ganadería & Agricultura Digital)
 
-### 🚜 Sistema de Trazabilidad Biométrica, Meta-CRUD, Telemetría Agrícola y Movilización REEMO
+### 🚜 Sistema de Trazabilidad Biométrica, Meta-CRUD, Agricultura y Movilización REEMO
 
 ## 📝 Descripción
 
 **agro-erp** es el sistema de planificación de recursos empresariales de grado industrial dentro de la Hosting3M Automation Suite. Está diseñado para modernizar la gestión agropecuaria mediante la trazabilidad biométrica inmutable, telemetría, gobernanza de datos en tiempo real y cumplimiento normativo SENASICA-SINIIGA para movilización de ganado.
 
 Desarrollada como una **Angular 21 SPA** estructurada por dominios (*Feature-Driven*), interactúa con un motor analítico en PostgreSQL a través de la capa Meta-CRUD de **n8n**. Toda la lógica de mutación de datos está encapsulada en el servidor (PL/pgSQL), eliminando la carga computacional en el cliente y operando bajo estricta "Soberanía de Datos" — incluyendo el almacenamiento de archivos, servido por un microservicio propio (`upload-file`) en vez de depender de terceros.
+
+---
+
+## 🆕 Novedades posteriores a v1.17.0 — Código y migraciones versionadas
+
+La última versión identificada como liberada en el [CHANGELOG.md](./CHANGELOG.md) es
+**v1.20.0** (migración 083). Las notas de esta sección describen código y SQL versionados:
+que un archivo exista en el repositorio no significa que se haya aplicado en cada ambiente.
+
+### 🌴 Palma: estructura y gastos (migraciones 080–083)
+* La migración 080 define la jerarquía por empresa de plantaciones, lotes, filas y conteos con historial append-only. La 081 agrega unidades, categorías por empresa, gastos agrícolas, anulaciones y consultas de balance.
+* Las rutas Angular actuales son `/agricultura/dashboard`, `/agricultura/plantaciones`, `/agricultura/lotes`, `/agricultura/lotes/:lotId/filas` y `/agricultura/gastos`. La pantalla de gastos incluye balance, gastos registrados y categorías; la captura y la lectura financiera tienen permisos distintos.
+* La migración 082 añade `fn_reject_palm_company` para impedir que las herramientas ganaderas operen sobre empresas PALM. La 083 define wrappers SQL para el agente de Palma; sus pruebas y estado de despliegue están descritos en el changelog.
+
+### 🐄 Reproducción (migraciones 084–090)
+* 084 agrega funciones, un tipo y una vista para derivar edad desde `numero_fuego` y consultar nacimientos e identificadores; no agrega tablas ni columnas.
+* 085 agrega configuración y registros append-only de empadre; 086 agrega códigos de condición uterina y detalle append-only de palpaciones; 087 agrega configuración, registro validado y nacimientos históricos.
+* 088 permite enlazar una sola vez un servicio con un nacimiento compatible y endurece el registro/anulación; 089 deshabilita reversiblemente el modelo Meta-CRUD `nacimiento`; 090 agrega significados para códigos veterinarios.
+* Hay herramientas MCP versionadas en [workflows/09-MCP-Agent-Cattle/v6/repro-phase1/](../../../workflows/09-MCP-Agent-Cattle/v6/repro-phase1/) y fases posteriores. El changelog registra esta integración como **no desplegada**; estas migraciones no crean rutas Angular nuevas.
+
+### 🧾 Facturas CFDI de gastos ganaderos (migraciones 091–093)
+* 091 define RFC receptores por empresa y registros CFDI append-only vinculados a `cattle_expenses` (no a `agri_expenses`). El encabezado SQL dice **UNTESTED: never executed** y exige pruebas LOCAL.
+* 092 define borradores de servidor, expiración a 30 minutos y confirmación solo tras una vista previa coincidente de los mismos parámetros dentro de 15 minutos. 093 actualiza el registro para permitir que ADMIN/OWNER agreguen un RFC receptor al confirmar.
+* El flujo está representado en [`v6_ai_chat_cattle.json`](../../../workflows/09-MCP-Agent-Cattle/v6/v6_ai_chat_cattle.json) (lectura XML/estado SAT y creación del borrador) y [`v6_MCP_Server_Cattle.json`](../../../workflows/09-MCP-Agent-Cattle/v6/v6_MCP_Server_Cattle.json) (vista previa/confirmación), con el servicio [`cfdi-service`](../../../microservices/cfdi-service/). Estas piezas versionadas no sustituyen las pruebas LOCAL exigidas por 091 ni acreditan despliegue.
+* Estas migraciones no agregan una pantalla Angular.
+
+#### Ingesta desde UI Chat
+
+El canal `CHAT_WEB` permite adjuntar directamente un XML CFDI al mensaje del chat y crear el borrador sin transcribir manualmente sus datos. UI Chat envía el archivo como Base64 en la solicitud al webhook de n8n; el workflow valida el adjunto, llama a `cfdi-service` para parseo, consulta de estado SAT y almacenamiento del original, y después crea el borrador con `sp_expense_invoice_draft_create`. La vista previa y el registro final se realizan por las herramientas MCP, con confirmación explícita del usuario.
+
+El parser versionado admite CFDI 4.0 tipo Ingreso, no CFDI 3.3. La vista previa se presenta como respuesta conversacional del agente, no como una tarjeta CFDI dedicada de Angular. La UI usa el selector de archivos: no implementa arrastrar y soltar ni una subida previa por el Media Server. Ver el detalle en el [README de UI Chat](../ui-chat/README.md) y el flujo de integración en [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md). La migración 091 aún está marcada como no ejecutada/sin pruebas; la presencia de estos artefactos no demuestra que el circuito esté desplegado o validado end-to-end.
+
+Los detalles de tablas, integridad, procedimientos y límites de estado están en
+[docs/DATABASE_SCHEMA.md](./docs/DATABASE_SCHEMA.md); las rutas y límites entre capas, en
+[docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 
 ---
 
@@ -66,10 +101,21 @@ Desarrollada como una **Angular 21 SPA** estructurada por dominios (*Feature-Dri
 * `073_users_access_hotfix_rollback.sql` — solo revierte lo que 073 cambió y desactiva (nunca borra) los modelos que creó. ⚠️ Revertir la migración exige volver a desplegar también el frontend anterior.
 * `073_tests.sql` (21 pruebas funcionales, todo con `ROLLBACK`) y `073_state_check.sql` (verificación de solo lectura para la secuencia aplicar → rollback → re-aplicar).
 
-### 🗄️ Migraciones desde v1.16.0
+### 🗄️ Inventario de migraciones versionadas
+
+Inventario de cambios numerados observados en `database/migrations/`; las pruebas, seeds,
+runbooks, state checks y rollbacks son archivos auxiliares, no migraciones funcionales
+adicionales. Los huecos se conservan explícitamente.
 
 | Migración | Contenido |
 |---|---|
+| `001–009` | Salida y trazabilidad ganadera, validación normativa, modelos Meta-CRUD y campos KPI; categoría NOVILLONA y catálogos globales de raza/etapa de vida |
+| `010–019` | Organización de empresas y dominio; registro de productores, UPP, certificados/documentos, licencias PSG, censos, vistas y modelos de cumplimiento; datos iniciales |
+| `020–029` | Reglas de movimiento, certificados de hato libre, reversiones, correcciones de padrón/aretes, fierros y linaje, y soporte de EQUIDO |
+| `030–038` | Potreros y nacimientos, predios arrendados y protocolos; cargas de ganado/PSG generadas o específicas de unidades de producción |
+| `039–049` | Reglas y eventos de movimiento, destinos, documentos de cumplimiento, vínculos TB/BR e historial de identificadores |
+| `050–059` | Lotes de UPP, registro Meta-CRUD, datos/asignaciones de lotes, enriquecimiento de consultas y captura/lectura de lote histórico |
+| `060–066` | Bitácora de eventos y extensiones; visibilidad financiera/auditoría, escrituras de empresas/accesos y excepción sanitaria de autorización de venta |
 | `067` | Bitácora de eventos en hora de Ciudad de México (vista; aplicada 2026-10-08, versionada después) |
 | `068` | Corrección de datos: fecha de compra de dos registros del tenant de pruebas (2026-10-08) |
 | `069` | Autorizaciones: aprobar/rechazar solo ADMIN activo de la empresa; cancelación solo por el solicitante |
@@ -78,6 +124,21 @@ Desarrollada como una **Angular 21 SPA** estructurada por dominios (*Feature-Dri
 | `072` | Vencimiento de autorizaciones al final del día en hora de Ciudad de México |
 | `073` | **Hotfix de seguridad: Usuarios y Accesos** (v1.16.1) |
 | `074` | **Órdenes de venta** (v1.17.0): `sale_orders`, venta por lote, una solicitud pendiente por animal |
+| `075–079` | No hay archivos numerados con estos prefijos en `database/migrations/` |
+| `080` | Estructura agrícola de Palma: plantaciones, lotes, filas, conteos e historial |
+| `081` | Gastos agrícolas de Palma: unidades, categorías, gastos, anulaciones y balance |
+| `082` | Rechazo de empresas PALM en las herramientas de chat ganaderas |
+| `083` | Wrappers SQL para las herramientas de chat de Palma |
+| `084` | Herramientas de consulta de nacimientos y calidad de identificadores; edad derivada de `numero_fuego` |
+| `085` | Configuración, registros y anulaciones append-only de empadre |
+| `086` | Catálogo de códigos de condición uterina y detalles de palpación |
+| `087` | Registro validado y por lote de nacimientos, y nacimientos históricos |
+| `088` | Enlace de servicios reproductivos a nacimientos; validaciones de servicios y anulaciones |
+| `089` | Deshabilitación reversible del modelo Meta-CRUD `nacimiento` |
+| `090` | Significados veterinarios para códigos reproductivos |
+| `091` | RFC por empresa y registros CFDI vinculados a gastos ganaderos (**SQL indica no ejecutada; requiere pruebas LOCAL**) |
+| `092` | Borradores server-side de CFDI con vista previa y confirmación |
+| `093` | Registro automático de RFC receptor al confirmar una factura |
 
 ---
 
@@ -299,7 +360,12 @@ ng build agro-erp --configuration=production
 * [x] **Subsistema de Autorización Asíncrona:** mortandad y venta vía Agente IA requieren aprobación humana diferida, con notificación por correo y expiración diaria automática (v1.11.0).
 * [x] **Palma, fase 1 — estructura de plantación activa (migración 080, LOCAL):** plantaciones, lotes, filas y conteos con historia, aislados por empresa.
 * [x] **Palma, fase 1 — frontend (LOCAL, probado a mano):** contexto y selector de plantación, pantallas de plantaciones/lotes/filas/conteos, tablero de Palma.
-* [ ] **Palma, fases 2+:** pagos de personal (registro, sin nómina formal); inventario de activos e insumos; cosecha de RFF (racimos de fruta fresca); telemetría por lote (sustituye a `PalmTelemetry` por zona); alcance por usuario y plantación (`user_scope`); Agente IA de palma (conteos y cosecha por chat/WhatsApp).
+* [x] **Palma, fase 2a — gastos agrícolas (migraciones 081):** ruta `/agricultura/gastos` y pantalla con balance, gastos registrados y categorías en el código actual.
+* [x] **Palma, fase 2b — herramientas de chat (migraciones 082–083):** rechazo del dominio PALM en herramientas ganaderas y wrappers de estructura, conteos y gastos para Chat Web/WhatsApp; v1.20.0 según el changelog.
+* [x] **Reproducción, backend SQL (migraciones 084–090):** consultas de edad/nacimientos, empadre, palpaciones, partos históricos y vínculo de servicios presentes en SQL versionado.
+* [ ] **Reproducción, integración MCP:** las herramientas y fases de workflow están versionadas, pero la fase de reproducción figura como no desplegada en `CHANGELOG.md`.
+* [ ] **CFDI de gastos ganaderos (migraciones 091–093):** completar pruebas LOCAL y despliegue; 091 se declara no ejecutada en el propio SQL.
+* [ ] **Palma, fases futuras:** pagos de personal (sin nómina formal); inventario de activos e insumos; cosecha de RFF; telemetría por lote; alcance por usuario/plantación (`user_scope`); herramientas de chat para cosecha.
 * [ ] **Motor Financiero (Fase 4):** Integración transversal del OPEX para calcular costo por kilo de biomasa vs. costo por litro de agroquímico.
 * [ ] **Dashboards Consolidados (Fase 5):** Estabilización final y pruebas E2E.
 * [ ] **Enforcement activo de reglas de movimiento:** pendiente de una sola confirmación del cliente (`requires_destination_ack`) para activar el bloqueo automático de movimientos no permitidos.
