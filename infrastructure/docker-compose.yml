@@ -23,16 +23,20 @@ services:
       - EXECUTIONS_DATA_SAVE_ON_ERROR=all
       - EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
       - N8N_EXPRESS_TRUST_PROXY=loopback,linklocal,unicast
+      - N8N_PROXY_HOPS=1
       - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=true
       - N8N_HOST=${SUBDOMAIN}.${DOMAIN_NAME}
       - N8N_PORT=${port}
       - N8N_PROTOCOL=https
-      - N8N_RUNNERS_ENABLED=false
+      # - N8N_RUNNERS_ENABLED=false
+      - N8N_MIGRATE_FS_STORAGE_PATH=true
       - N8N_RUNNERS_MODE=internal
+      - N8N_RUNNERS_AUTO_SHUTDOWN_TIMEOUT=1
       - N8N_CODE_RUNNER_MODE=inline
       - OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS=false
       - N8N_RUNNERS_SERVER_ENABLED=false
-      - NODE_OPTIONS=--no-experimental-vm-modules
+      #- NODE_OPTIONS=--no-experimental-vm-modules
+      - NODE_OPTIONS=--no-experimental-vm-modules --max-old-space-size=896
       - N8N_SKIP_TASK_RUNNER=true
       - NODE_ENV=production
       - WEBHOOK_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}/
@@ -73,7 +77,9 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1536m
+          memory: 1280m
+        reservations:
+          memory: 512m
     logging:
       driver: "json-file"
       options:
@@ -101,6 +107,13 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    # postgres — darle techo explícito
+    deploy:
+      resources:
+        limits:
+          memory: 256m      # usa solo 47MB
+        reservations:
+          memory: 64m
 
   jwt-service:
     build:
@@ -127,6 +140,13 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+    # jwt-service — darle techo
+    deploy:
+      resources:
+        limits:
+          memory: 128m      # usa solo 48MB
+        reservations:
+          memory: 64m
 
   scraper-service:
     build:
@@ -193,11 +213,9 @@ services:
     container_name: n8n-cfdi-service
     restart: always
     environment:
-      # Shared secret with n8n (header x-internal-token). Defined in the VPS .env, never in the repo.
       - CFDI_SERVICE_TOKEN=${CFDI_SERVICE_TOKEN}
       - STORAGE_ROOT=/data/cfdi
     volumes:
-      # Original invoices, outside any web root. Host dir must be chown 1000:1000 (uid of node in the image).
       - ./data/cfdi:/data/cfdi
     networks:
       - n8n_enterprise_net

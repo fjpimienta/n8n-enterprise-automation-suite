@@ -25,7 +25,7 @@ docker pull node:20-bookworm-slim
 
 echo "🏗️ 3. RECONSTRUYENDO IMAGEN PERSONALIZADA (Dockerfile.n8n)..."
 cd $INFRA_PATH
-docker compose build --no-cache
+docker compose build --pull n8n
 
 # $? captura el código de salida del comando anterior. Si no es 0, hubo error.
 if [ $? -ne 0 ]; then
