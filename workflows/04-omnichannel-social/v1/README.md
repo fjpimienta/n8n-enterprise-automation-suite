@@ -38,8 +38,8 @@ Para desplegar este workflow en tu infraestructura, sigue estos pasos:
 
 4.  **Despliegue de Servicios Relacionados:**
     ```bash
-    # Asegúrate de tener el microservicio de persistencia activo
-    docker-compose up -d n8n-compose-scraper-service jwt-service
+    # Start the required JWT authentication service
+    docker-compose up -d jwt-service
     ```
 
 ---
