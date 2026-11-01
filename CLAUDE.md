@@ -158,6 +158,18 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
   Un PR que dependa de base de datos o de n8n **no llega a `main` hasta tener listo su runbook**: orden de
   despliegue, huellas antes/después, pruebas en producción con empresas de pruebas y rollback. Si el frontend no
   depende del cambio, el runbook lo dice explícitamente (p. ej. v1.18.1).
+- **Backend service builds:** `upload-file` and `jwt-service` use `node:22-alpine` and install
+  production dependencies with `npm ci --omit=dev`; keep each committed `package-lock.json`
+  in sync with its `package.json` by updating both together. The `upload-file` `.dockerignore`
+  excludes `uploads`, a mounted volume that must never be baked into an image; the
+  `jwt-service` `.dockerignore` excludes `node_modules`, `.git`, Markdown files, and logs.
+- **Backend service rebuilds:** before rebuilding, tag the current image for rollback (for
+  example, `<image>:pre-<change>-<date>`), rebuild, and verify that the new image loads its
+  dependencies. Recreate one service at a time with
+  `docker compose up -d --no-build --force-recreate`, then smoke-test it (a real login for
+  `jwt-service`; upload and read for `upload-file`). Keep the rollback tag for several days.
+  The server checkout may not match `main`: copy only the files being changed and verify
+  their checksums instead of running a blanket `git pull`.
 - ⛔ **Todo runbook que toque base de datos o n8n abre, antes de cualquier otro texto, con este recuadro** (y el
   comentario del PR lo repite en su primera línea):
 

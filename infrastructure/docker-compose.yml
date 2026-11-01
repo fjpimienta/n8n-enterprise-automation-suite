@@ -148,36 +148,6 @@ services:
         reservations:
           memory: 64m
 
-  scraper-service:
-    build:
-      context: ../microservices/scraper-service
-      dockerfile: Dockerfile
-    container_name: n8n-scraper-service
-    restart: always
-    # ELIMINADO: ports expuestos al mundo.
-    expose:
-      - "${port_scraper}"
-    environment:
-      - NODE_ENV=production
-      - USER_AGENT="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-      - MAX_CONCURRENCY=2
-      - PORT=3001
-    networks:
-      - n8n_enterprise_net
-    # OPTIMIZACIÓN DE RECURSOS PARA EVITAR OOM KILL EN VPS DE 2 VCPU
-    shm_size: '512m' # Reducido temporalmente. Si usa Puppeteer, 512m es suficiente para concurrencia baja.
-    deploy:
-      resources:
-        limits:
-          memory: 800m # Techo más conservador para evitar colisionar con Plesk y n8n
-        reservations:
-          memory: 300m
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
   fea-signer-service:
     build:
       context: ../microservices/fea-signer-service/FeaSignerAPI

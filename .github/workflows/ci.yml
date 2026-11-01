@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - develop
+      - main
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  v5-crud-tests:
+    name: v5 CRUD tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: workflows/06-dynamic-crud-engine/v5/tests
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: workflows/06-dynamic-crud-engine/v5/tests/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  cfdi-service-tests:
+    name: CFDI service tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: microservices/cfdi-service
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: microservices/cfdi-service/.nvmrc
+          cache: npm
+          cache-dependency-path: microservices/cfdi-service/package-lock.json
+      - run: npm ci
+      - run: npm test
+
+  workspace-build:
+    name: Workspace build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: hosting3m-workspace
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: hosting3m-workspace/package-lock.json
+      - run: npm ci --legacy-peer-deps
+      - name: Generate hotel environment files
+        run: |
+          mkdir -p projects/hotel-website/src/environments
+          cat > projects/hotel-website/src/environments/environment.ts <<'EOF'
+          export const environment = {
+            production: false,
+            apiUrl: 'https://example.invalid',
+            apiUrl_ai: 'https://example.invalid/webhook/v4/ai/chat',
+            apiUrl_public: 'https://example.invalid/webhook/public',
+            apiUrl_token: 'https://example.invalid/webhook/v3/genera-token',
+            apiUrl_crud: 'https://example.invalid/webhook/crud/v5',
+            system_id: 'hotel_app'
+          };
+          EOF
+          cat > projects/hotel-website/src/environments/environment.prod.ts <<'EOF'
+          export const environment = {
+            production: true,
+            apiUrl: 'https://example.invalid',
+            apiUrl_ai: 'https://example.invalid/webhook/v4/ai/chat',
+            apiUrl_public: 'https://example.invalid/webhook/public',
+            apiUrl_token: 'https://example.invalid/webhook/v3/genera-token',
+            apiUrl_crud: 'https://example.invalid/webhook/crud/v5',
+            system_id: 'hotel_app'
+          };
+          EOF
+      - run: npm run build -- ui-pdf-export
+      - name: Generate dashboard environment file
+        run: |
+          mkdir -p projects/dashboard/src/environments
+          cat > projects/dashboard/src/environments/environment.ts <<'EOF'
+          export const environment = {
+            production: false,
+            apiUrl: 'https://example.invalid',
+            apiUrl_ai: 'https://example.invalid/webhook/v4/ai/chat',
+            apiUrl_crud: 'https://example.invalid/webhook/crud/v5',
+            apiUrl_token: 'https://example.invalid/webhook/v3/genera-token',
+            apiUrl_upload: 'https://example.invalid/upload',
+            system_id: 'dashboard'
+          };
+          EOF
+      - run: npx ng build dashboard
+      - run: npx ng build hotel-website --configuration production

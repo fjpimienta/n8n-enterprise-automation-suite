@@ -1,13 +1,12 @@
-FROM node:18-alpine
+FROM node:22-alpine
 
 # Crear carpeta app
 WORKDIR /usr/src/app
 
-# Copiar package.json y package-lock.json (si tienes)
-COPY package*.json ./
+# Copy package manifests before installing dependencies
+COPY package.json package-lock.json ./
 
-# Instalar dependencias
-RUN npm cache clean --force && npm install
+RUN npm ci --omit=dev
 
 # Copiar el resto del código
 COPY . .
