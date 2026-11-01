@@ -87,6 +87,11 @@ No los uses como única fuente de verdad.
 El runbook de workflows y los detalles operativos versionados están en `CLAUDE.md`
 (sección "Despliegue").
 
+## Continuous integration
+
+GitHub Actions runs three checks: v5 CRUD tests, CFDI service tests, and workspace
+builds for `ui-pdf-export`, `dashboard`, and `hotel-website`.
+
 ---
 
 ## 3. Estándar de Commits — Conventional Commits
