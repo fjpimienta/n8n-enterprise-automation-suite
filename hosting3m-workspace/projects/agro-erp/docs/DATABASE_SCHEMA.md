@@ -1178,7 +1178,8 @@ firma), no una sola función con parámetros opcionales agregados con el tiempo.
 ---
 
 ## 🌴 Palm Plantation Subsystem (migration 080)
-*Added in migration 080 (2026-10-17, LOCAL only until deployed). Files: `080_agri_structure.sql`,
+*Added in migration 080 (2026-10-17). The changelog records the initial database test as LOCAL only;
+use the environment-specific state check before asserting deployment. Files: `080_agri_structure.sql`,
 `080_tests.sql` (73 checks, always rolled back), `080_rollback.sql` (no DROP/DELETE),
 `080_state_check.sql` (read-only), `080_qa_palm_tenant_seed.sql` (QA tenant, separate script).*
 
@@ -1247,7 +1248,7 @@ rollback). Rollback backup table: `crud_models_backup_20261017_080`.
 
 
 ## 🌴 Palm Chat Agent Wrappers (migration 083)
-*Added in migration 083 (2026-10-24, LOCAL only until deployed). Functions only: no table, view or `crud_models`
+*Added in migration 083 (2026-10-24; release details are in `CHANGELOG.md`). Functions only: no table, view or `crud_models`
 change. Files: `083_agri_chat_wrappers.sql`, `083_tests.sql` (116 checks, always rolled back), `083_rollback.sql`
 (no DROP: the tools answer `disabled`), `083_state_check.sql` (read-only), `083_RUNBOOK.md`.*
 
@@ -1280,11 +1281,13 @@ not_found | invalid`, `field`, `message`, `options`/`candidates`) so the agent a
 message. Errors `P00xx` raised by the 080/081 procedures come back as `invalid` with `code` and the Spanish message.
 No new error codes.
 
-## 📚 Additional Versioned Schema Migrations (081, 085–093)
+## 📚 Additional Versioned Schema Migrations (081–093)
 
 The following describes objects and changes present in the corresponding SQL files under
 `database/migrations/`. It documents the versioned SQL; it does not assert that a migration
-has been applied to any particular database.
+has been applied to any particular database. Migration 091 explicitly declares itself
+untested and never executed; migrations 084–090 are marked as not deployed in
+`CHANGELOG.md`.
 
 ### Agricultural expenses (migration 081)
 
@@ -1300,9 +1303,11 @@ and normalized names are unique within a company.
 `supplier_name`, `description`, `is_invoiced`, `invoice_folio`, `receipt_url`,
 `reported_by_email`, `is_void`, `void_reason`, `voided_by_email`, `voided_at`,
 `created_at`. The optional plantation, lot and category references are company-scoped;
-a lot requires a plantation. Amounts and optional quantities must be positive, and
-quantity and unit are supplied together. The row is written by `sp_agri_record_expense`;
-`sp_agri_void_expense` records the void, and the expense is not deleted.
+a lot requires a plantation. CHECK constraints require a positive amount, positive
+optional quantity, quantity/unit together, invoice folio only when `is_invoiced`,
+and consistent void fields. Expenses are immutable except for the one-way void
+record written by `sp_agri_void_expense`; neither physical deletion nor hard-delete
+is used. `receipt_url` has no writer in this migration.
 
 `vw_agri_expense_list` joins the expense with its category, optional plantation and lot,
 and unit name. `vw_agri_expense_summary` aggregates non-voided expenses by `grain`,
@@ -1312,24 +1317,47 @@ and unit name. `vw_agri_expense_summary` aggregates non-voided expenses by `grai
 `sp_agri_record_expense` permits `ADMIN`, `OWNER` and `EDITOR` in a palm company;
 `sp_agri_void_expense` is restricted to `ADMIN` and `OWNER`.
 
+### Livestock-chat domain guard (migration 082)
+
+`fn_reject_palm_company(p_tenant_id integer)` raises `P0094` when the company domain
+is `PALM`; otherwise it returns `true`. Migration 082 adds this function only and does
+not add tables or columns. It is called by livestock chat statements before reads or
+writes so those tools cannot operate on agricultural tenants. Its rollback replaces
+the function body with `RETURN true`; it does not drop the function.
+
+### Derived birth dates and read-only reproduction tools (migration 084)
+
+Migration 084 adds functions, the `fire_number_estimate` type and the internal view
+`vw_animal_effective_birth`; it adds no table, column, trigger or `crud_models` row.
+The view/tools derive age from supported `numero_fuego` formats without writing the
+estimate to `cattle_livestock.birth_date`. The new read tools are
+`sp_repro_list_births`, `sp_repro_dam_birth_history`, `sp_repro_births_summary`,
+`sp_repro_list_unregistered_historical_births` and
+`sp_repro_identifier_quality_report`. They validate company membership and reject
+PALM companies; ambiguous identifiers are reported rather than resolved arbitrarily.
+
 ### Reproduction: empadre (migration 085)
 
 `repro_empadre_config` stores per-company settings: `id_company`, `min_age_months`,
 `min_weight_kg`, `weight_stale_days`, `empadre_window_days`, `notify_enabled`,
 `updated_by_email`, `updated_at`, `created_at`. Its defaults are 15 months, 300 kg,
-60 days and 90 days; `notify_enabled` is constrained to `false`.
+60 days and 90 days when no company row exists; `notify_enabled` is constrained to
+`false`. The ADMIN-only
+`sp_repro_empadre_set_config` is the configuration interface and cannot enable
+notifications.
 
 `repro_empadre_entries` records entries: `id`, `id_company`, `heifer_id`, `bull_id`,
 `entry_date`, `method`, `category_at_entry`, `eligibility_trigger`, `warning_code`,
 `warning`, `criteria`, `notes`, `registered_by_email`, `batch_id`, `created_at`.
-`method` is constrained to `MONTA_NATURAL` or `INSEMINACION_ARTIFICIAL`;
+when non-NULL, `method` is constrained to `MONTA_NATURAL` or `INSEMINACION_ARTIFICIAL`;
 `eligibility_trigger` is constrained to `EDAD`, `PESO`, `AMBAS`, `NINGUNO`,
 `SIN_DATOS` or `NO_APLICA`.
 
 `repro_empadre_voids` records append-only voids: `id`, `id_company`, `entry_id`,
 `reason`, `voided_by_email`, `voided_at`; `entry_id` is unique and the reason is
-required. The config and entry tables are also protected against direct mutation as
-specified by the migration. Procedures include `sp_repro_empadre_get_config`,
+required. The config is changed only by its ADMIN procedure; entries and voids reject
+UPDATE, DELETE and TRUNCATE, and tenant guards reject cross-company references.
+Procedures include `sp_repro_empadre_get_config`,
 `sp_repro_empadre_set_config`, `sp_repro_list_heifers_eligible_for_empadre`,
 `sp_repro_log_empadre_entry`, `sp_repro_log_empadre_entry_batch`,
 `sp_void_empadre_entry`, `sp_repro_list_empadre_entries` and
@@ -1352,6 +1380,10 @@ mapping at the time of the palpation.
 The migration adds `sp_repro_log_palpation_batch`,
 `sp_repro_list_palpation_due`, `sp_repro_list_upcoming_calvings`,
 `sp_repro_list_unmapped_uterine_codes` and `sp_repro_condition_code_set`.
+`palpation_repro_details.health_log_id` is unique; `repro_condition` is only allowed
+for `VACÍA`, and `mapping_status` determines whether a condition must be present.
+Direct UPDATE, DELETE and TRUNCATE of the details table are rejected; the code map
+is per-company configuration rather than historical detail.
 
 ### Reproduction: births (migration 087)
 
@@ -1359,7 +1391,7 @@ The migration adds nullable `birth_events.reported_by_email`.
 
 `repro_births_config` stores per-company `id_company`, `possible_duplicate_days`,
 `updated_by_email`, `updated_at` and `created_at`; `possible_duplicate_days` defaults
-to 240 and is constrained to 30–730.
+to 240 when no row exists and is constrained to 30–730.
 
 `repro_historical_births` records historical births without creating a calf or
 changing the dam's status: `id`, `id_company`, `dam_id`, `birth_date`,
@@ -1370,7 +1402,11 @@ changing the dam's status: `id`, `id_company`, `dam_id`, `birth_date`,
 
 `repro_historical_birth_voids` records append-only voids:
 `id`, `id_company`, `historical_birth_id`, `reason`, `voided_by_email`, `voided_at`.
-Each historical birth can have at most one void record.
+Each historical birth can have at most one void record. Historical rows and voids
+reject UPDATE, DELETE and TRUNCATE; tenant guards check the dam/company association.
+The date-precision check requires a month/year value to start on the first day of
+that period. The single/batch register tools validate duplicate windows; batch
+registration is all-or-nothing and limited to 50 lines.
 
 Procedures include `sp_repro_births_get_config`, `sp_repro_births_set_config`,
 `sp_repro_register_birth`, `sp_repro_births_batch_preview`,
@@ -1384,10 +1420,21 @@ with the optional reporter email parameter.
 
 Adds nullable `cattle_breeding_events.birth_event_id`, referencing
 `birth_events(id)`, with a partial index `idx_breeding_events_birth` for non-NULL
-values. `fn_trg_breeding_birth_link_guard` restricts the link to a one-time
-NULL-to-value update and rejects changes to other columns through that update.
-`fn_repro_link_birth_service` performs the link. The migration also replaces
+values. New service rows cannot set the link; `fn_trg_breeding_birth_link_guard`
+restricts it to a one-time NULL-to-value update, and verifies that the birth has the
+same company and dam and that the service is not voided. It rejects changes to other
+columns through that update (`P0097`) and cross-company links (`P0096`).
+`fn_repro_link_birth_service` links only one plausible, non-voided, unlinked service;
+it does not backfill old rows. The migration also replaces
 `sp_repro_get_dam_history`, `sp_log_breeding_event` and `sp_void_event`.
+
+### Reversible disable of legacy birth gateway model (migration 089)
+
+Migration 089 changes the existing `crud_models` row for model `nacimiento` /
+`sp_register_birth_event` to `allowed_ops = '{}'` and sets its role fields to `NONE`.
+It creates `crud_models_backup_089` to preserve the original row for rollback; it
+does not delete the model or alter the birth procedure. The migration aborts if the
+expected model row or the 085 append-only guard is missing.
 
 ### Reproduction: veterinary code meanings (migration 090)
 
@@ -1396,21 +1443,39 @@ Adds nullable `repro_condition_codes.meaning`, constrained to `NOT_EXAMINED`,
 `repro_condition`. The migration updates the palpation parsing/listing procedures
 and adds `fn_repro_code_meaning`, `fn_repro_palp_text` and
 `fn_repro_palp_code_info`.
+The code semantics are `NR` = `NOT_EXAMINED`, `RP` = `POSTPARTUM`, and
+`NO APTO` = `UNFIT`; `MATRIZ OCUPADA` is recognized as a pregnant diagnosis
+phrase, not as a stored `meaning`.
 
 ### CFDI registration for livestock expenses (migration 091)
 
+`agri_expenses` is the Palma ledger; CFDI invoice records in this migration attach
+only to the distinct livestock ledger `cattle_expenses`.
+
 `company_tax_ids` stores receiver RFCs by company: `id_company`, `rfc`, `label`,
 `is_active`, `qa_skip_sat`, `created_by_email`, `created_at`, `updated_at`.
-The primary key is `(id_company, rfc)`.
+The primary key is `(id_company, rfc)`. RFC syntax is checked; company/RFC identity
+cannot be changed and rows cannot be deleted or truncated. Retire a receiver by
+setting `is_active = false`; `qa_skip_sat` is only set by SQL seed.
 
 `expense_invoices` stores append-only invoice records linked to `cattle_expenses`
 (not `agri_expenses`): `id`, `id_company`, `uuid`, `emisor_rfc`, `emisor_name`,
 `receptor_rfc`, `serie`, `folio`, `issued_at`, `stamped_at`, `currency`,
 `subtotal_cents`, `discount_cents`, `total_cents`, `taxes`, `source_sha256`,
 `original_path`, `sat_status`, `expense_id`, `registered_by_email`, `created_at`.
-`expense_id` is unique; `(id_company, uuid)` is also unique. The migration adds
-`sp_company_tax_id_set` and `sp_expense_invoice_register`; invoice records are
-written through the latter, not through `crud_models`.
+`expense_id` references `cattle_expenses(id)` with `ON DELETE RESTRICT` and is
+unique; `(id_company, uuid)` is also unique. Checks constrain RFC/UUID/hash/path
+formats, `currency = 'MXN'`, nonnegative subtotal/discount, positive bounded total,
+and `sat_status` to `VIGENTE` or `SKIPPED_TEST`. The register validates that the
+expense and invoice company match (`P0096`) and rejects UPDATE, DELETE and TRUNCATE
+of invoice rows (`P0095`).
+
+The migration adds `sp_company_tax_id_set` (ADMIN/OWNER) and
+`sp_expense_invoice_register`; invoice records are written through the latter, not
+through `crud_models`. Amounts are reconciled in integer cents
+(`subtotal - discount + transfers - withholdings = total`); the procedure does not
+calculate tax amounts. SQL header states: **UNTESTED: never executed**; run the
+versioned tests on LOCAL before considering application.
 
 ### CFDI invoice drafts (migration 092)
 
@@ -1419,14 +1484,18 @@ written through the latter, not through `crud_models`.
 `original_path`, `sat_status`, `previewed_hash`, `previewed_at`, `consumed_at`,
 `created_at`, `expires_at`. `channel` is `CHAT_WEB` or `WHATSAPP`;
 `sat_status` is `VIGENTE`, `CANCELADO`, `NO_ENCONTRADO` or `ERROR`.
-Rows expire after 30 minutes and cannot be deleted. Updates are limited to
+The email must be normalized; hashes and the company-scoped XML path are validated.
+Rows expire after 30 minutes and cannot be deleted or truncated. Updates are limited to
 `previewed_hash`, `previewed_at` and `consumed_at`; once set, `consumed_at`
-cannot change. The table is not in `crud_models`.
+cannot change. The table is not in `crud_models`; drafts are scoped to company and
+owner email by the procedures.
 
 `sp_expense_invoice_draft_create` creates a draft,
 `sp_expense_invoice_preview` records a preview mark, and
 `sp_expense_invoice_confirm` requires a matching preview from the last 15 minutes
-before calling invoice registration.
+for the same draft, category, description and date before calling invoice
+registration. Confirmation marks the draft consumed after a `recorded` or `duplicate`
+result; expired, consumed and unpreviewed drafts are refused.
 
 ### Automatic receiver RFC registration on confirmation (migration 093)
 
