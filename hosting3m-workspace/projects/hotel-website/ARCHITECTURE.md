@@ -49,6 +49,20 @@ compatibility layer preserves the v3 default border color and `shadow-sm`.
 Build from the workspace root with `npx ng build hotel-website --configuration production`.
 The site is served through the Plesk Git deploy action.
 
+The action pulls `main`, builds `ui-pdf-export` and `hotel-website` with the production
+configuration, and replaces the published files only if both builds succeed. A failed
+build leaves the previous site in place. Back up the currently published files before
+triggering a deployment.
+
+Automatic deployment is not active. After a release reaches `main`, trigger the action
+manually in Plesk with **Deploy now**.
+
+#### Tailwind v4 deployment troubleshooting
+
+If a build fails, check the deploy log first. A Tailwind/PostCSS error indicates an
+incorrect change to `.postcssrc.json` or `src/styles.css`; compare those files with the
+Tailwind v4 configuration described above.
+
 ---
 
 ## 2. 📂 Workspace Structure (Distributed Architecture)
