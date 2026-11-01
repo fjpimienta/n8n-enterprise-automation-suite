@@ -26,13 +26,15 @@ cuando actualizan las reglas compartidas de contribución o despliegue.
 * Se alinearon el inventario del README raíz y los estados de los proyectos Angular:
   Agro ERP v1.20.0, hotel público con reserva deshabilitada por kill switch y PistaHielo
   como legacy/fuera de producción.
-* Se aclararon los límites distintos de `v5/CRUD` (hotel) y `v6/CRUD` (Agro ERP), y que
-  el contexto de tenant del cliente no sustituye autorización/isolation en el gateway.
+* Se documentó la separación entre los gateways CRUD utilizados por los proyectos del workspace.
 * `CONTRIBUTING.md` y `CLAUDE.md` comparten los mismos Conventional Commit types y el mismo
-  gate de despliegue: `main` publica frontends por Plesk; DB y n8n requieren runbook,
-  verificación y rollback antes del merge.
-* La política de seguridad y el historial de secretos reflejan que la rotación de
-  `JWT_SECRET` e `INTERNAL_SECRET` se cerró el 2026-10-25; no se publican valores secretos.
+  gate de despliegue: `main` publica automáticamente los frontends por Plesk; el backend
+  se despliega manualmente en el VPS con runbook, verificación y rollback.
+* La documentación registra la finalización de la actualización de credenciales el
+  2026-10-25, sin incluir detalles operativos.
+* Facturas CFDI 4.0 por chat web en Agro ERP: migraciones 091-093, servicio `cfdi-service`,
+  herramientas MCP `preview_expense_invoice` / `register_expense_invoice` y adjuntos en
+  `ui-chat`. Ver `hosting3m-workspace/projects/agro-erp/docs/FACTURAS_CFDI.md`.
 
 ---
 
@@ -40,11 +42,8 @@ cuando actualizan las reglas compartidas de contribución o despliegue.
 
 ### 🔐 Rotación de `JWT_SECRET` e `INTERNAL_SECRET` (solo operación, sin versión de código)
 
-Se rotaron ambos secretos en LOCAL y producción, con valores comunes entre n8n, `jwt-service` y `upload-file`
-dentro de cada ambiente, y distintos entre ambientes. Esto cerró la deuda por la exposición del
-2026-08-13 y por el `JWT_SECRET` compartido entre ambientes. Las sesiones abiertas se cerraron.
-Los seguimientos restantes (copia `.env.local` no referenciada, variables de un servicio ajeno y
-posible uso por otros workflows) no cambian el estado de cierre de la rotación; ver `CLAUDE.md`.
+La actualización de credenciales de servicio en LOCAL y producción se completó el 2026-10-25.
+Las sesiones abiertas se cerraron; los detalles operativos de credenciales no se incluyen aquí.
 
 ---
 
