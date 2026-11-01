@@ -1474,8 +1474,7 @@ The migration adds `sp_company_tax_id_set` (ADMIN/OWNER) and
 `sp_expense_invoice_register`; invoice records are written through the latter, not
 through `crud_models`. Amounts are reconciled in integer cents
 (`subtotal - discount + transfers - withholdings = total`); the procedure does not
-calculate tax amounts. SQL header states: **UNTESTED: never executed**; run the
-versioned tests on LOCAL before considering application.
+calculate tax amounts. Applied in production on 2026-10-30; see `database/migrations/091_093_RUNBOOK.md`.
 
 ### CFDI invoice drafts (migration 092)
 
