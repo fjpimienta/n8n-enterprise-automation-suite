@@ -4,9 +4,9 @@
 
 ## 📝 Descripción
 
-**AdminHotel** es una aplicación web de alto rendimiento construida sobre Angular 21, diseñada como la interfaz administrativa oficial de la suite de automatización Hosting3M.
+**AdminHotel** es una aplicación web Angular 21 para la operación del Hotel San José, integrada en el monorepo Hosting3M Automation Suite. El hotel opera un inventario de **18 habitaciones**; el dashboard carga las habitaciones desde el backend y no fija ese total como límite en el cliente.
 
-En su versión actual (**v0.10.0**), el sistema integra capacidades avanzadas de **Exportación de Documentos Digitales**, consolidando una arquitectura distribuida que gestiona de forma eficiente Mantenimiento, Finanzas, Inventario y ahora la formalización de Reservas mediante PDF.
+La versión documentada más reciente es **v0.11.0** ([CHANGELOG](./CHANGELOG.md)). La aplicación cubre reservas y operación diaria, mantenimiento, inventario de activos y reportes financieros; comparte las librerías `core-auth`, `ui-chat` y `ui-pdf-export` con otros proyectos del monorepo.
 
 ---
 
@@ -15,7 +15,7 @@ En su versión actual (**v0.10.0**), el sistema integra capacidades avanzadas de
 | Versión | Estado | Módulo Principal | Stack de UI | Cambios Principales |
 | :--- | :--- | :--- | :--- | :--- |
 | **v0.1.0** | `Stable` | `Auth & Architecture` | Tabler + Bootstrap | Estructura base, JWT Auth, Signals. |
-| **v0.2.0** | `Stable` | `Room Rack v1` | CSS Grid / Cards | Gestión visual de 17 habitaciones. |
+| **v0.2.0** | `Stable` | `Room Rack v1` | CSS Grid / Cards | Primera gestión visual del inventario de habitaciones. |
 | **v0.3.0** | `Stable`| `Ops & Finance`| Modals / Reports | Checkout con inventario, Reporte de Caja y Gestión de Usuarios. |
 | **v0.4.0** | `Stable` | `Pro UX & Patterns` | Skeletons / Services | Refactorización a Services, Skeletons de carga, Promesas. |
 | **v0.5.0** | `Stable` | `Full Operation` | Interactive UI | Refresh Engine, Reservas dinámicas, Gestión avanzada de Huéspedes. |
@@ -32,7 +32,7 @@ En su versión actual (**v0.10.0**), el sistema integra capacidades avanzadas de
 ## 🚀 Key Features (v0.11.0 Update)
 
 ### 1. 🛡️ Resiliencia y Manejo de Errores (MetaCRUD Shield)
-* **Zero-Ghost States:** Interceptación estricta de validaciones de PostgreSQL (Ej: doble ocupación de cuarto). Si el backend de n8n falla silenciosamente, Angular intercepta la bandera interna, detiene la UI y alerta al operador, garantizando 100% de consistencia de datos.
+* **Zero-Ghost States:** `BookingService` interpreta las respuestas `error: true` de Meta-CRUD aunque lleguen con HTTP 200 y evita presentarlas como una mutación exitosa.
 * **Timezone Armor:** Funciones blindadas que calculan fechas relativas en hora local (CST/UTC-6), previniendo desfasajes de calendario o bloqueos automáticos en el turno vespertino (post 18:00 hrs).
 
 ### 2. 💰 Motor Financiero Avanzado
@@ -43,6 +43,21 @@ En su versión actual (**v0.10.0**), el sistema integra capacidades avanzadas de
 ### 3. 📄 Generación de Documentos Digitales (PDF)
 * **Cotizaciones Proactivas:** Generación instantánea de presupuestos ("PRESUPUESTO" vs "COMPROBANTE" dinámico).
 * **Motor Fiscal:** Cálculo automático y desglosado de impuestos locales: Base Imponible, IVA (16%) e ISH (2%).
+
+### 4. 🛏️ Inventario y operación hotelera
+* El Room Rack consulta `hotel_rooms` y presenta las habitaciones agrupadas por tipo: **Sencilla, Kingsize, Doble y Triple**. La suite identifica también los tipos `INDIVIDUAL` y otros valores recibidos del backend.
+* El inventario operativo del Hotel San José es de **18 habitaciones**. El frontend no codifica una capacidad máxima: trabaja con las filas que devuelve el gateway, de modo que el número efectivo depende del inventario configurado en el backend.
+* La operación distingue habitación disponible, ocupada, en mantenimiento o sucia; además consulta reservas, entradas/salidas del día, limpieza e incidencias pendientes.
+
+### 5. 🧰 Activos e infraestructura
+* El módulo de inventario registra activos físicos por categoría, estado y ubicación (habitación o bodega); permite guardar costo y fecha de compra.
+* No se encontró en el código una función de captura de lecturas, telemetría o integración con sub-medidores eléctricos. El catálogo de activos no equivale a monitoreo energético.
+
+### 6. 🔌 Servicios compartidos y límites de integración
+* **`core-auth`:** autenticación, selección/contexto de empresa, guards por rol e interceptor HTTP.
+* **`ui-chat`:** asistente conversacional global conectado al webhook de n8n. Esta aplicación no habilita `attachments`, por lo que la integración aquí es de chat sin adjuntos.
+* **`ui-pdf-export`:** generación client-side de documentos desde el módulo financiero.
+* Reservas y gastos guardan métodos/estados de pago para operación y reportes; no se identificó una integración del dashboard con un procesador o pasarela de pago externa.
 
 ---
 
@@ -61,8 +76,8 @@ Integración de la librería corporativa `@hosting3m/ui-pdf-export` para la form
 
 Migración a un sistema de **Rutas Hijas (Child Routes)**, permitiendo enlaces directos (Deep Linking) a módulos específicos.
 
-* **Rutas:** `/dashboard/mantenimiento`, `/dashboard/finanzas`, `/dashboard/inventario`.
-* **Impacto:** Reducción drástica del DOM inicial y mejor gestión de memoria.
+* **Rutas:** `/dashboard/mantenimiento`, `/dashboard/reservas`, `/dashboard/huespedes`, `/dashboard/personal`, `/dashboard/inventario` y `/dashboard/finanzas`.
+* Son rutas hijas de `MainLayoutComponent`; actualmente se registran con imports directos en `app.routes.ts`, no mediante `loadComponent`/lazy loading.
 
 ### 3. ⚡ Optimización de Rendimiento
 
@@ -92,9 +107,7 @@ Estrategia para mejorar el *Time to Interactive (TTI)* y la percepción de veloc
 > 🚀 **Deep Dive:** Consulta el diagrama completo de flujo y decisiones de diseño en:
 
 <p align="center">
-<a href="./ARCHITECTURE.md">
-<img src="[https://img.shields.io/badge/](https://img.shields.io/badge/)🏛️_Leer_Guía_de_Arquitectura-206bc4?style=for-the-badge&logo=readthedocs&logoColor=white" alt="Architecture Guide">
-</a>
+<a href="./ARCHITECTURE.md">🏛️ Leer guía de arquitectura</a>
 </p>
 
 La aplicación implementa una arquitectura **Distributed Data-Access Pattern**:
@@ -102,7 +115,7 @@ La aplicación implementa una arquitectura **Distributed Data-Access Pattern**:
 ### 🛠️ Stack Tecnológico
 
 * **Core:** Angular v21.0.0 (Signals, Router, Standalone Components).
-* **Librerías Internas:** `ui-chat` (IA) y `ui-pdf-export` (Documentos).
+* **Librerías Internas:** `core-auth` (IAM), `ui-chat` (IA) y `ui-pdf-export` (Documentos).
 * **State Management:** Angular Signals + Computed Properties.
 * **PDF Engine:** jsPDF + AutoTable.
 
@@ -112,12 +125,12 @@ La aplicación implementa una arquitectura **Distributed Data-Access Pattern**:
 
 | Módulo | Estado | Descripción Técnica |
 | --- | --- | --- |
-| **Room Rack** | 🟢 Activo | Visualización semafórica de estados (Limpio/Sucio/Mant/Ocupado). |
+| **Room Rack** | 🟢 Activo | Inventario dinámico del hotel (18 habitaciones operativas) y estados de cuarto/limpieza. |
 | **Booking Engine** | 🟢 Activo | Motor de reservas con validación de conflictos y **Exportación PDF**. |
 | **Mantenimiento** | 🟢 Activo | Sistema de Tickets con trazabilidad de resolución. |
 | **Activos (Assets)** | 🟢 Activo | CRUD de inventario físico por habitación. |
 | **Finanzas** | 🟢 Activo | Corte Z, gestión de CAPEX/OPEX y desglose fiscal automático. |
-| **AI Concierge** | 🟢 Activo | Asistencia operativa vía Chat (Librería Compartida). |
+| **AI Concierge** | 🟢 Activo | Asistencia vía `ui-chat`; sin adjuntos habilitados en esta aplicación. |
 
 ---
 
