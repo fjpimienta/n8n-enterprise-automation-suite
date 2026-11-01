@@ -1504,3 +1504,13 @@ an unregistered receiver RFC is reported without writing it. On confirmation, an
 `ADMIN` or `OWNER` may register the new RFC in the same transaction as the expense,
 provided the SAT status is `VIGENTE`; an `EDITOR` still receives
 `rfc_not_registered`. An inactive RFC is not reactivated automatically.
+
+## Hotel maintenance tickets (migrations 094/095)
+
+Migration 094 adds `hotel_maintenance_tickets.id_company` as an `integer NOT NULL`
+with `DEFAULT 1`, a foreign key to `companys(id_company)`, and an index on
+`id_company`. The hotel data belongs to company 1. Migration 094 is applied.
+
+Migration 095 drops the column default after the updated hotel CRUD workflow has been
+stable; it is pending. See `database/migrations/094_095_RUNBOOK.md` for the deployment
+sequence.

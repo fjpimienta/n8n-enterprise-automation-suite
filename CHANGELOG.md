@@ -34,6 +34,23 @@ cuando actualizan las reglas compartidas de contribución o despliegue.
   PDF, duplicado, rol `EDITOR` y vista previa abandonada). Ver
   `hosting3m-workspace/projects/agro-erp/database/migrations/091_093_RUNBOOK.md`.
 
+### 🔄 Hotel workflow, database, and workspace changes
+
+* The `v5/CRUD` workflow now derives the company for each hotel operation (`getall`,
+  `getone`, `insert`, `update`, and `delete`) from the verified token. It rejects tokens
+  without a valid company with `403 NO_TENANT` and denies tables without a company mapping.
+  Hotel data belongs to company 1.
+* Migration 094 adds `hotel_maintenance_tickets.id_company` with a foreign key and index;
+  094 is applied and 095, which removes the default, is pending. See
+  `hosting3m-workspace/projects/agro-erp/database/migrations/094_095_RUNBOOK.md`.
+* In `hosting3m-workspace`, `qs` resolved to `6.17.1` and `@hono/node-server` to `2.1.5`;
+  the `minimatch` override is `^11.0.1`. There are no open Dependabot alerts.
+* `hotel-website` builds with Tailwind CSS v4 through `@tailwindcss/postcss`, configured in
+  `.postcssrc.json`. `src/styles.css` uses `source(none)`, `@config`, and `@source`, with
+  compatibility rules for the v3 default border color and `shadow-sm`; the eco/tierra
+  tokens in `tailwind.config.js` remain unchanged. Build:
+  `npx ng build hotel-website --configuration production`.
+
 ---
 
 ## [2026-10-31]

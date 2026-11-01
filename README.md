@@ -38,7 +38,7 @@ El ecosistema opera en un entorno de alta densidad, maximizando los recursos del
 
 El changelog raíz registra los cambios de suite por fecha desde 2026-08-14; no existe una
 versión SemVer global vigente. Cada módulo conserva su versión independiente. La última
-entrada registrada en el changelog raíz es 2026-10-31.
+entrada registrada en el changelog raíz es 2026-11-01.
 
 ### Proyectos Angular del workspace
 
@@ -184,7 +184,7 @@ documentación viva aquí, junto a la librería que lo protege.
 | `03`|**RAG News Intelligence**|Curaduría de noticias automatizada.|`OpenAI` `Pinecone/PgVector`|[📖 Ver Docs](workflows/03-rag-news-intelligence/v4/README.md)|
 | `04`|**Omnichannel Social**|Orquestador de publicación de contenido en redes.|`Twitter API` `LinkedIn`|[📖 Ver Docs](workflows/04-omnichannel-social/v4/README.md)|
 | `05`|**AI WhatsApp Agent**|Asistente conversacional con memoria a largo plazo.|`WhatsApp` `OpenAI`|[📖 Ver Docs](workflows/05-ai-whatsapp-agent/v4/README.md)|
-| `06`|**Dynamic CRUD Engine**|Capa de abstracción BaaS híbrida (SQL + JSONB).|`Postgre` `JS Logic`|[📖 Ver Docs](workflows/06-dynamic-crud-engine/v4/README.md)|
+| `06`|**Dynamic CRUD Engine**|Capa de abstracción BaaS híbrida (SQL + JSONB).|`Postgre` `JS Logic`|[📖 Ver Docs](workflows/06-dynamic-crud-engine/v5/README.md)|
 | `07`|**MCP Server Hotel**| Integración LLM-DB para gestión de cuartos.|`MCP` `Postgres`|[📖 Ver Docs](workflows/07-MCP-server-hotel/v3/README.md)|
 | `08`|**AdminHotel**|Frontend administrativo de hospedaje.|`Angular 21` `Tabler`|[📖 Ver Docs](hosting3m-workspace/projects/dashboard/README.md)|
 | `09`|**PistaHielo Ops (Legacy)**|Aplicación histórica; fuera de producción y del ciclo activo.|`Angular 21` `Signals`|[📖 Ver Docs](hosting3m-workspace/projects/pista-hielo/README.md)|

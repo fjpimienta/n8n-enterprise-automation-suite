@@ -1,5 +1,17 @@
 # Changelog - Hotel Website
 
+## [Unreleased]
+
+### Build and deployment
+
+* The production build now uses Tailwind CSS v4 through `@tailwindcss/postcss` and
+  `.postcssrc.json`. `src/styles.css` explicitly configures Tailwind sources and retains
+  the v3 default border color and `shadow-sm`; the eco/tierra tokens in
+  `tailwind.config.js` are unchanged.
+* Build from the workspace root with
+  `npx ng build hotel-website --configuration production`.
+* The site is served through the Plesk Git deploy action.
+
 ## [1.0.0] - 2026-03-02
 
 ### 🚀 Lanzamiento Inicial (Initial Release)
