@@ -4,29 +4,29 @@
 
 ## 📝 Descripción
 
-**hotel-website** es la interfaz pública del ecosistema Hosting3M. A diferencia del dashboard administrativo, esta aplicación está optimizada para la **conversión de visitantes en huéspedes**, integrando un diseño biófilo ("Eco-Boutique") y capacidades de Inteligencia Artificial en tiempo real.
+**hotel-website** es la interfaz pública del Hotel San José dentro del ecosistema Hosting3M. A diferencia del dashboard administrativo, esta aplicación presenta el hotel, capta reseñas y ofrece una experiencia de consulta con diseño "Eco-Boutique".
 
-Desarrollada como una **Angular SPA** (Single Page Application) dentro del monorepo, consume servicios compartidos y se comunica directamente con el orquestador **n8n** para la gestión de prospectos.
+Desarrollada como una **Angular SPA** dentro del monorepo, integra `ui-chat` y se comunica con webhooks de **n8n** y el gateway Meta-CRUD. La interfaz de disponibilidad y pre-reserva sigue en el código, pero su búsqueda está deshabilitada actualmente por un control preventivo (*kill switch*); el visitante recibe un aviso para contactar al hotel.
 
 ---
 
-## 🚀 Key Features (v1.0.0)
+## 🚀 Funcionalidad documentada
 
-### 1. 🎨 Diseño "Eco-Boutique" & UI
+### 1. 🎨 Diseño "Eco-Boutique" y UI
 
 * **Tailwind CSS v3 Nativo:** Estilizado mediante un sistema de tokens personalizados (`eco`, `tierra`) con soporte para *Glassmorphism* (efectos de cristal).
 * **Responsive & Fluid:** Optimizado para dispositivos móviles bajo el principio de "Fat-Finger Design" en formularios de reserva.
-* **Core Web Vitals:** Implementación de *Tree-shaking* y compilación *JIT* para asegurar tiempos de carga menores a 1.2s.
 
 ### 2. 🤖 AI Concierge (Shared Library)
 
 * **Integración con `@hosting3m/ui-chat`:** La web reutiliza el widget de chat corporativo, inyectando un `CHAT_CONFIG_TOKEN` específico para atención al cliente público.
-* **Atención 24/7:** Filtrado de dudas frecuentes (FAQ) y asistencia en el proceso de reserva mediante lenguaje natural.
+* El componente usa el webhook `apiUrl_ai` configurado por la aplicación. La integración no activa adjuntos ni PDF.
 
-### 3. 🔌 Lead Capture & n8n Integration
+### 3. 📝 Reseñas y flujos HTTP
 
-* **Formulario Reactivo:** Captura de datos de reserva mediante `FormGroup` y validaciones en tiempo real.
-* **n8n Webhook Connection:** Envío de leads mediante `HttpClient` (POST) hacia flujos de automatización que notifican a recepción y registran al prospecto en PostgreSQL.
+* La aplicación consulta y envía reseñas a través del endpoint Meta-CRUD `hotel_reviews`.
+* La UI conserva el formulario de disponibilidad, selección de tipo de habitación y captura de datos de huésped. Sin embargo, `searchAvailability()` muestra el aviso de mantenimiento y retorna antes de hacer la solicitud al webhook. Por tanto, **la reserva online no está habilitada actualmente desde el sitio**.
+* El código de envío del formulario de pre-reserva permanece detrás del paso de disponibilidad; su presencia no significa que el recorrido público completo esté disponible.
 
 ---
 
@@ -36,9 +36,9 @@ El proyecto sigue una estructura desacoplada para facilitar el mantenimiento:
 
 * **Framework:** Angular 21 (Standalone Components).
 * **Styling:** Tailwind CSS + CSS Variables (Design Tokens).
-* **Communication:** REST API via n8n Webhooks.
-* **Shared Dependencies:** * `ui-chat`: Para el asistente virtual.
-* `ui-pdf-export`: (Opcional) Para pre-visualización de cotizaciones públicas.
+* **Communication:** `HttpClient` hacia webhooks públicos y Meta-CRUD de n8n.
+* **Shared Dependency:** `ui-chat`, configurada con `CHAT_CONFIG_TOKEN` y `apiUrl_ai`.
+* **No integrado en esta aplicación:** `ui-pdf-export` y `core-auth`.
 
 ---
 
@@ -78,7 +78,8 @@ ng build hotel-website --configuration=production
 ## 📋 Roadmap del Proyecto
 
 * [ ] **A/B Testing:** Implementación de diferentes variantes del Hero-Section para medir conversión.
-* [ ] **Direct Payment Integration:** Conexión con pasarelas de pago (Stripe/PayPal) vía n8n.
+* [ ] **Reactivate Online Booking:** Retirar el kill switch solo después de validar disponibilidad, creación de pre-reservas y manejo de errores de punta a punta.
+* [ ] **Direct Payment Integration:** Conexión con pasarelas de pago vía n8n.
 * [ ] **Multi-language Support:** Soporte para i18n (Inglés/Español).
 
 ---

@@ -7,7 +7,17 @@
 
 It is currently the core communication module for:
 * **Admin Hotel Dashboard** (Guest Concierge).
-* **Pista Hielo Operations** (Support & FAQ).
+* **Hotel Eco-Website** (public Hotel San José assistant).
+* **Agro ERP** (cattle/agriculture assistant, including its CFDI XML chat workflow).
+* **Pista Hielo Operations** (historical integration; the app is legacy and out of production).
+
+### Attachment status by consumer
+
+* **Agro ERP:** opts in to file attachments for the `CHAT_WEB` CFDI XML intake flow; see the
+  details below.
+* **Admin Hotel Dashboard:** attachment support is not enabled in its chat configuration.
+* **Hotel Eco-Website:** attachment support is not enabled in its chat configuration.
+* **Pista Hielo:** historical consumer only; do not infer an active production integration.
 
 ## ⚡ Key Features
 * **Standalone Architecture:** Fully compatible with modern Angular (no NgModules required).

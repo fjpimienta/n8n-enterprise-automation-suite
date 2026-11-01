@@ -1,5 +1,10 @@
 # ⛸️ PistaHielo Operations Center
 
+> ⚠️ **[LEGACY / HISTÓRICO - Fuera de Producción]**
+> PistaHielo no forma parte del ciclo activo de la suite y no debe considerarse un sistema
+> desplegado o soportado en producción. Este documento conserva información histórica del
+> proyecto.
+
 ### 🛠️ High-Precision Frontend for Time-Based Operations & Dual-Stage Billing
 
 ## 📝 Descripción

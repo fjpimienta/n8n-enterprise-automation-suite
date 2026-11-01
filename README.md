@@ -34,7 +34,30 @@ El ecosistema opera en un entorno de alta densidad, maximizando los recursos del
 
 ---
 
-## 📦 Módulos Implementados (Suite v1.6.0)
+## 📦 Catálogo de módulos y proyectos (documentación auditada al 2026-10-31)
+
+El changelog raíz registra los cambios de suite por fecha desde 2026-08-14; no existe una
+versión SemVer global vigente. Cada módulo conserva su versión independiente. La última
+entrada registrada en el changelog raíz es 2026-10-25.
+
+### Proyectos Angular del workspace
+
+El workspace contiene **7 proyectos Angular**: cuatro aplicaciones y tres librerías
+compartidas. PistaHielo está registrado históricamente en el workspace, pero está fuera de
+producción y no forma parte del ciclo activo.
+
+| Tipo | Proyecto | Estado | Función |
+|---|---|---|---|
+| SPA principal | `agro-erp` | Activo — v1.20.0 | ERP agropecuario y agrícola; ver [README del producto](hosting3m-workspace/projects/agro-erp/README.md). |
+| SPA principal | `dashboard` | Activo — v0.11.0 | Operación administrativa del hotel; ver [README](hosting3m-workspace/projects/dashboard/README.md). |
+| SPA pública | `hotel-website` | Activo, reserva online temporalmente deshabilitada | Sitio público del hotel; ver [README](hosting3m-workspace/projects/hotel-website/README.md). |
+| SPA histórica | `pista-hielo` | **Legacy / fuera de producción** | Aplicación histórica; ver [README](hosting3m-workspace/projects/pista-hielo/README.md). |
+| Librería compartida | `core-auth` | Activa | Autenticación, guards e identidad/contexto de empresa. |
+| Librería compartida | `ui-chat` | Activa | Widget conversacional Angular conectado a webhooks configurados por la aplicación host. |
+| Librería compartida | `ui-pdf-export` | Activa | Generación client-side de documentos PDF. |
+
+El catálogo de módulos de automatización incluye además workflows y servicios que no son
+proyectos Angular; sus números no representan versiones de las aplicaciones.
 
 La suite se compone de módulos interconectados que operan como una malla de servicios:
 
@@ -63,8 +86,10 @@ Implementación del **Model Context Protocol** para consultas de inventario medi
 ### 🏨 08. AdminHotel Dashboard
 ERP integral evolucionado a una **Arquitectura Distribuida** con motor financiero, pagos en cascada (Waterfall) y escudos contra *Timezone Offsets*.
 
-### ⛸️ 09. PistaHielo Operations Center
-PWA Administrativa para gestión de centros de entretenimiento con motor de cobro "Midnight Crossing".
+### ⛸️ 09. PistaHielo Operations Center — Legacy / Histórico
+Aplicación Angular histórica para gestión de centros de entretenimiento. **Fuera de
+producción y del ciclo activo de la suite**; su descripción funcional no implica operación
+vigente.
 
 ### 💬 10. Shared AI Chat Library (`@hosting3m/ui-chat`)
 Librería agnóstica de chat IA inyectada transversalmente en el ecosistema (`CHAT_CONFIG_TOKEN`).
@@ -76,10 +101,12 @@ Librería para la estandarización de documentos salientes con motor de cálculo
 La interfaz pública de alta conversión del ecosistema (*Customer-Facing*) con diseño Eco-Boutique y captura reactiva.
 
 ### 🌾 13. Agro ERP Suite (Ganadería & Agricultura Digital)
-*Actualizado para agro-erp v1.16.1 (fecha de liberación al desplegarse) — ver `hosting3m-workspace/projects/agro-erp/README.md`
-y su `CHANGELOG.md` para el detalle técnico completo.*
+*Documentación de producto actualizada para agro-erp v1.20.0 — ver
+`hosting3m-workspace/projects/agro-erp/README.md` y su `CHANGELOG.md` para el detalle
+técnico y el estado de despliegue.*
 
-ERP agroindustrial evolucionado a una arquitectura Multi-Dominio para la gestión de biomasa, trazabilidad biológica y telemetría de drones agrícolas (Plantaciones), con registro normativo SENASICA-SINIIGA completo y motor de movilización interestatal REEMO.
+ERP agroindustrial multi-dominio para ganadería, agricultura (Palma), cumplimiento
+SENASICA-SINIIGA y movilización REEMO.
 * **Server-Side BI:** Cálculo de KPIs complejos (ADG, Litros por Hectárea) directamente en Vistas SQL.
 * **Trazabilidad Resiliente IoT:** Implementación estricta de chips subcutáneos y bolos ruminales (rechazando aretes físicos por baja durabilidad en campo), con historial automático de cambios de identificador vía trigger de base de datos.
 * **Inteligencia Artificial de Campo:** Uso del **WhatsApp Field Agent** (MCP) blindado con directivas *Zero-Hallucination* y validación *Human-in-the-Loop* operando bajo el *Context Switcher* Multi-Empresa.
@@ -119,10 +146,10 @@ documentación viva aquí, junto a la librería que lo protege.
 | `06`|**Dynamic CRUD Engine**|Capa de abstracción BaaS híbrida (SQL + JSONB).|`Postgre` `JS Logic`|[📖 Ver Docs](workflows/06-dynamic-crud-engine/v4/README.md)|
 | `07`|**MCP Server Hotel**| Integración LLM-DB para gestión de cuartos.|`MCP` `Postgres`|[📖 Ver Docs](workflows/07-MCP-server-hotel/v3/README.md)|
 | `08`|**AdminHotel**|Frontend administrativo de hospedaje.|`Angular 21` `Tabler`|[📖 Ver Docs](hosting3m-workspace/projects/dashboard/README.md)|
-| `09`|**PistaHielo Ops**|PWA para centros de entretenimiento.|`Angular 21` `Signals`|[📖 Ver Docs](hosting3m-workspace/projects/pista-hielo/README.md)|
+| `09`|**PistaHielo Ops (Legacy)**|Aplicación histórica; fuera de producción y del ciclo activo.|`Angular 21` `Signals`|[📖 Ver Docs](hosting3m-workspace/projects/pista-hielo/README.md)|
 | `10`|**Shared AI Chat Lib**|Componente reutilizable de UI Conversacional.|`Angular 21` `InjectionToken`|[📖 Ver Docs](hosting3m-workspace/projects/ui-chat/README.md)|
 | `11`|**UI PDF Export Lib**|Motor de renderizado vectorial PDF.|`jsPDF` `TypeScript`|[📖 Docs](hosting3m-workspace/projects/ui-pdf-export/README.md)|
-| `12`|**Hotel Eco-Website**|Landing page optimizada para Core Web Vitals.|`Angular` `Tailwind`|[📖 Docs](hosting3m-workspace/projects/hotel-website/README.md)|
+| `12`|**Hotel Eco-Website**|Sitio público; búsqueda de disponibilidad/reserva online deshabilitada temporalmente por kill switch.|`Angular` `Tailwind`|[📖 Docs](hosting3m-workspace/projects/hotel-website/README.md)|
 | `13`|**Agro ERP Suite**|ERP multi-dominio (Ganadería, Agricultura, Registro Normativo y Movimientos REEMO).|`Angular 21` `SQL Views` `PL/pgSQL`|[📖 Docs](hosting3m-workspace/projects/agro-erp/README.md)|
 | `14`|**MCP Field Agent**|Agente IA agropecuario con Zero-Hallucination.|`n8n` `MCP` `OpenAI`|[📖 Docs](workflows/09-MCP-Agent-Cattle/v6/README.md)|
 | `15`|**Core Auth Lib**|Núcleo Auth y Context Switcher Defensivo. Protege también el Media Server (`apiUrl_upload`).|`Angular 21` `RxJS`|[📖 Docs](hosting3m-workspace/projects/core-auth/README.md)|
@@ -150,7 +177,7 @@ documentación viva aquí, junto a la librería que lo protege.
 * [x] **Endurecimiento del Media Server:** autenticación JWT/secreto interno en `upload-file`, extensión de `core-auth`.
 
 ### ✅ Completado (2026-10, ver módulos 06 y 13 arriba)
-* [x] **Hotfix de seguridad de cuentas de usuario:** cerrado el secuestro de cuentas entre empresas en el gateway Meta-CRUD (afectaba a agro-erp y al `dashboard` del hotel); membresías solo vía procedimientos con reglas en la base y bitácora `access_audit_log` (agro-erp v1.16.1, migración 073; fecha de liberación al desplegarse).
+* [x] **Hotfix de seguridad de cuentas de usuario:** cerrado el secuestro de cuentas entre empresas en el gateway Meta-CRUD (afectaba a agro-erp y al `dashboard` del hotel); membresías solo vía procedimientos con reglas en la base y bitácora `access_audit_log` (migración 073; introducido en agro-erp v1.16.1 e integrado en la documentación vigente v1.20.0; fecha de liberación al desplegarse).
 
 ### 🏗️ En Progreso / Backlog (Q3 / Q4 2026)
 * [ ] **Huéspedes CRM:** Segmentación eco-boutique y analítica de comportamiento.
@@ -158,7 +185,6 @@ documentación viva aquí, junto a la librería que lo protege.
 * [ ] **Conversion & Sales:** A/B Testing en la landing page y conexión con pasarelas de pago directo (Stripe/PayPal).
 * [ ] **Agro-Finance (OPEX Consolidation):** Abstracción del módulo `cattle_expenses` para consolidar costos transversales por kilo de biomasa o litro de agroquímico en la nueva vertical.
 * [ ] **Enforcement activo de reglas de movimiento (Agro ERP):** pendiente de una sola confirmación del cliente para activar el bloqueo automático de movimientos no permitidos.
-* [ ] **Confirmación de rotación de `INTERNAL_SECRET`:** verificar en ambos servicios (Auth Gateway, Media Server) y ambos ambientes tras el incidente de exposición de 2026-08-13.
 
 ---
 

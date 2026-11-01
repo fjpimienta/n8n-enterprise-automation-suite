@@ -1,47 +1,42 @@
-# 🏛️ Architecture Overview: AdminHotel & Eco-Website
+# 🏛️ Architecture Overview: Hotel Eco-Website
 
 ## 📝 Descripción
 
-**Project:** Hosting3M Automation Suite (AdminHotel Dashboard & Eco-Website)
-**Version:** v1.1.0 (Monorepo, Eco-Hotel Optimization & Digital Export)
-**Stack:** Angular 21 (Signals, Router, Monorepo) | n8n (API Gateway & Webhooks) | PostgreSQL (Persistence) | Tailwind CSS v3
+**Project:** Hotel Eco-Website (Hosting3M Automation Suite)
+**Stack:** Angular 21 SPA | Tailwind CSS | shared `ui-chat` | n8n webhooks / Meta-CRUD | PostgreSQL behind n8n
 **Author:** Francisco Jesus Pérez Pimienta
 
-La suite ha evolucionado en su versión **v1.1.0** de una aplicación única a un **Monorepositorio (Monorepo)**. Ahora gestiona tanto la Intranet Administrativa (Dashboard distribuido) como la Landing Page pública (hotel-website), compartiendo librerías de IA y generación de documentos en un ecosistema unificado.
+The public hotel SPA lives alongside the hotel dashboard and shared libraries in the Angular
+workspace. The inspected application imports `ui-chat`; it does not import `core-auth` or
+`ui-pdf-export`. Its online availability search currently has a preventive kill switch:
+the handler shows a maintenance notice and returns before requesting availability.
 
 ## 1. 🗺️ High-Level Design (The "Big Picture")
 
 El sistema mantiene el patrón **Data-Access Service** para el Dashboard, pero expande su alcance integrando micro-frontends (librerías) y múltiples aplicaciones que consumen el mismo motor de **n8n**.
 
 ```mermaid
-graph TD
-    subgraph "Monorepo Workspace (Angular 21)"
-        App1["AdminHotel Dashboard"]
-        App2["Hotel Eco-Website"]
-        Lib1["ui-chat (AI Assistant)"]
-        Lib2["ui-pdf-export (Doc Engine)"]
-        
-        App1 --- Lib1
-        App1 --- Lib2
-        App2 --- Lib1
-    end
+graph LR
+    Website["Hotel Website\nAngular SPA"]
+    Chat["Shared ui-chat"]
+    N8N["n8n\npublic webhook / v5 CRUD / AI webhook"]
+    DB[("PostgreSQL\nhotel data")]
+    Dashboard["Hotel Dashboard\nseparate Angular app"]
 
-    subgraph "Business Logic Layer (Services)"
-       Rooms & Maint & Fin -->|Signals| Services["Injectable Services"]
-       Services -->|Computed| KPIs["Reactive KPIs"]
-    end
-    
-    App1 -->|HTTP CRUD| API["n8n Dynamic CRUD"]
-    App2 -->|HTTP Webhooks| API
+    Website -->|"HTTP: apiUrl_public"| N8N
+    Website -->|"HTTP: apiUrl_crud / hotel_reviews"| N8N
+    Chat -->|"HTTP: apiUrl_ai"| N8N
+    N8N --> DB
+    Dashboard -. "separate hotel operations client" .-> N8N
 
 ```
 
-### Principios Clave v1.1.0:
+### Principios de integración
 
-1. **Monorepo Strategy:** Código centralizado. Las aplicaciones (`dashboard`, `hotel-website`) comparten dependencias y librerías (`ui-chat`, `ui-pdf-export`), garantizando consistencia visual y funcional.
-2. **Agnostic Document Generation:** La lógica de creación de PDFs y cálculo de impuestos (IVA/ISH) se extrajo a una librería independiente, liberando a los componentes de la vista de cargas pesadas.
-3. **Distributed Routing & Lazy Loading:** Se mantiene y mejora el desacoplamiento. El Dashboard carga por dominios (`/mantenimiento`, `/finanzas`), y el Website opera como una SPA optimizada para SEO y rendimiento.
-4. **Native Theming & Glassmorphism:** Uso de Variables CSS para *Dark Mode* en el dashboard y directivas Tailwind avanzadas (*Glassmorphism*, paletas Biofílicas) para la interfaz pública.
+1. **Shared monorepo:** The public website and dashboard are separate Angular applications; only dependencies actually imported by this app are listed as integrations.
+2. **Backend mediation:** The browser sends HTTP requests to n8n; it does not connect directly to PostgreSQL.
+3. **Booking safety:** The availability handler is currently disabled in code and does not issue its normal request to the public booking endpoint.
+4. **Public UI:** Tailwind CSS provides the website presentation; dashboard routing and theming are outside this application's architecture.
 
 ---
 
@@ -53,63 +48,57 @@ La aplicación ha migrado a un espacio de trabajo estructurado por proyectos.
 
 | Proyecto | Ruta / Dominio | Responsabilidad |
 | --- | --- | --- |
-| **dashboard** | `/dashboard/*` | Intranet operativa. Gestión de Room Rack, Finanzas, Mantenimiento e Inventario. |
-| **hotel-website** | `/` (Pública) | Landing page de alta conversión, captura de leads y presentación *Eco-Boutique*. |
+| **dashboard** | Separate app | Hotel operations: room rack, bookings, finance, maintenance and assets. |
+| **hotel-website** | Public site | Hotel presentation, AI chat and reviews; online availability/booking search is currently disabled by the code kill switch. |
 
 ### Librerías Compartidas (Shared Libs)
 
 | Librería | Responsabilidad | Servicios Core |
 | --- | --- | --- |
-| **ui-chat** | Widget de conserje virtual mediante IA conectado por MCP a n8n. | `AiService`, `CHAT_CONFIG_TOKEN`. |
-| **ui-pdf-export** | Motor de generación de reportes y cotizaciones (jsPDF + AutoTable). | `PdfExportService`. |
+| **ui-chat** | Shared conversational widget configured by the host. Used by this app. | `AiService`, `CHAT_CONFIG_TOKEN`. |
+| **ui-pdf-export** | Client-side PDF generation library. Not imported by this app. | Not applicable here. |
+| **core-auth** | Shared IAM library. Not imported by this app. | Not applicable here. |
 
 ---
 
-## 3. 🧠 The Business Logic Layer (Reactive Services)
+## 3. 🧠 Service boundaries
 
-Se han añadido nuevos "Cerebros" para manejar las capacidades de la v1.1.0.
+### Finance service boundary
 
-### 🧠 PdfExportService (The Document Brain)
-
-* **Responsabilidad:** Generación de documentos 100% en el cliente (Client-side).
-* **Mecanismo:** Recibe una interfaz abstracta (`PdfExportConfig`) y maneja internamente la agrupación de partidas, renderizado de tablas y cálculo de impuestos (16% IVA, 2% ISH) sin bloquear el hilo principal de Angular.
-
-### 🧠 ReportService (The Financial Brain) - *Updated*
-
-* **Responsabilidad:** Centraliza el cálculo de balances y separa conceptos contables.
-* **Mecanismo:** Diferencia los flujos de caja en **OPEX** (Gasto Operativo) y **CAPEX** (Inversión de Obra/Remodelación), utilizando `computed()` signals para recalcular `netBalance` al instante.
+The finance `ReportService` belongs to the separate dashboard application and is not part
+of the public website.
 
 ---
 
-## 4. ⚙️ Key Workflows & Patterns (v1.1.0 Updates)
+## 4. ⚙️ Current workflows and constraints
 
-### A. Pattern: Batch Booking (Prevención de Race Conditions)
+### A. Pattern: Tokenized Chat Configuration
 
-El sistema ahora soporta la reserva múltiple para clientes corporativos. Implementa el método `isRoomFree` antes de cada inserción transaccional en n8n, asegurando que no existan sobreventas o cruces de disponibilidad en el rack.
+The root application configures `ui-chat` with `CHAT_CONFIG_TOKEN`, including the AI
+webhook URL and hotel branding. This host does not enable file attachments.
 
-### B. Pattern: Client-Side Document Rendering
+### B. Pattern: Availability kill switch
 
-En lugar de generar PDFs en el backend (lo cual consume recursos de servidor), la librería `ui-pdf-export` toma los datos crudos en formato JSON y los procesa vectorialmente en el navegador del usuario, mejorando la velocidad de descarga a milisegundos.
+`searchAvailability()` currently displays a maintenance notice, clears its loading state and
+returns before the public availability HTTP request. The remaining booking flow in the
+component is dormant code and is not an available public booking capability.
 
-### C. Pattern: Tokenized Configuration (Dependency Injection)
+## 5. 🗄️ Backend and data scope
 
-La librería `ui-chat` utiliza `InjectionTokens` (`CHAT_CONFIG_TOKEN`) para recibir su configuración. Esto permite que el mismo componente se vea verde y se llame "Asistente San José" en la web pública, pero pueda reutilizarse con otros colores en futuras aplicaciones del Monorepo.
+The app's current HTTP paths include the public n8n API (`apiUrl_public`) and hotel Meta-CRUD
+(`apiUrl_crud`, `crud/v5`), used for review reads and submissions. The shared chat calls the
+configured AI webhook. These services mediate persistence in PostgreSQL.
 
----
-
-## 5. 🗄️ Database Schema & Relationships
-
-Se prepara el terreno para la Fase II del Eco-Hotel.
-
-* **hotel_guests:** Integración en proceso para soportar perfiles enriquecidos mediante etiquetas (tags como *Senior, Nómada*) y seguimiento de fidelidad.
-* **hotel_metrics (Planeado):** Estructura diseñada para almacenar las lecturas de consumos de CFE y agua, habilitando el dashboard de sustentabilidad (Eco-Metrics).
+No `hotel_metrics` table, energy readings, CFE/water sub-meter integration, or `ui-pdf-export`
+usage was found in the website source. Such items should be treated as proposals only, not as
+implemented schema or features.
 
 ---
 
 ## 6. 🚀 Future Scalability
 
-* **CRM y Eco-Metrics:** Activación de los flujos de trabajo para perfilar huéspedes y monitorear la huella de carbono/hídrica.
-* **PWA Offline Mode:** Implementar Service Workers para asegurar que el rack de habitaciones opere en la recepción incluso ante caídas de red temporales.
+* **CRM y Eco-Metrics:** definir y validar alcance, datos y backend antes de documentar como implementados.
+* **PWA Offline Mode:** evaluar soporte offline para los flujos públicos que se definan como críticos.
 
 ## 📦 Authors
 
