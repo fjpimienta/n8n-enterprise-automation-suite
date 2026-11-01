@@ -41,7 +41,8 @@ cuando actualizan las reglas compartidas de contribución o despliegue.
   without a valid company with `403 NO_TENANT` and denies tables without a company mapping.
   Hotel data belongs to company 1.
 * Migration 094 adds `hotel_maintenance_tickets.id_company` with a foreign key and index;
-  094 is applied and 095, which removes the default, is pending. See
+  094 and 095, which removes the default, were applied on 2026-11-01 after the updated
+  `v5/CRUD` workflow was live and verified. See
   `hosting3m-workspace/projects/agro-erp/database/migrations/094_095_RUNBOOK.md`.
 * In `hosting3m-workspace`, `qs` resolved to `6.17.1` and `@hono/node-server` to `2.1.5`;
   the `minimatch` override is `^11.0.1`. There are no open Dependabot alerts.

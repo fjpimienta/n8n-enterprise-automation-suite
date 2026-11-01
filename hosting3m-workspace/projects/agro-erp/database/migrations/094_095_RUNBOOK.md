@@ -23,3 +23,5 @@ Local tests: `cd workflows/06-dynamic-crud-engine/v5/tests && npm install && npm
 ## Notes
 - Users who belong to several companies get the company they select at login; hotel screens show data for company 1 only.
 - Every script has a dry run (default) and needs `-v apply=true` to commit. No script uses DROP COLUMN, DELETE or TRUNCATE.
+
+Status: 094 and 095 applied on 2026-11-01.
