@@ -33,6 +33,12 @@ que un archivo exista en el repositorio no significa que se haya aplicado en cad
 * El flujo está representado en [`v6_ai_chat_cattle.json`](../../../workflows/09-MCP-Agent-Cattle/v6/v6_ai_chat_cattle.json) (lectura XML/estado SAT y creación del borrador) y [`v6_MCP_Server_Cattle.json`](../../../workflows/09-MCP-Agent-Cattle/v6/v6_MCP_Server_Cattle.json) (vista previa/confirmación), con el servicio [`cfdi-service`](../../../microservices/cfdi-service/). Estas piezas versionadas no sustituyen las pruebas LOCAL exigidas por 091 ni acreditan despliegue.
 * Estas migraciones no agregan una pantalla Angular.
 
+#### Ingesta desde UI Chat
+
+El canal `CHAT_WEB` permite adjuntar directamente un XML CFDI al mensaje del chat y crear el borrador sin transcribir manualmente sus datos. UI Chat envía el archivo como Base64 en la solicitud al webhook de n8n; el workflow valida el adjunto, llama a `cfdi-service` para parseo, consulta de estado SAT y almacenamiento del original, y después crea el borrador con `sp_expense_invoice_draft_create`. La vista previa y el registro final se realizan por las herramientas MCP, con confirmación explícita del usuario.
+
+El parser versionado admite CFDI 4.0 tipo Ingreso, no CFDI 3.3. La vista previa se presenta como respuesta conversacional del agente, no como una tarjeta CFDI dedicada de Angular. La UI usa el selector de archivos: no implementa arrastrar y soltar ni una subida previa por el Media Server. Ver el detalle en el [README de UI Chat](../ui-chat/README.md) y el flujo de integración en [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md). La migración 091 aún está marcada como no ejecutada/sin pruebas; la presencia de estos artefactos no demuestra que el circuito esté desplegado o validado end-to-end.
+
 Los detalles de tablas, integridad, procedimientos y límites de estado están en
 [docs/DATABASE_SCHEMA.md](./docs/DATABASE_SCHEMA.md); las rutas y límites entre capas, en
 [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).

@@ -3,7 +3,7 @@
 ![Angular](https://img.shields.io/badge/Angular-18%2B-red) ![Pattern](https://img.shields.io/badge/Architecture-Standalone-orange) ![Status](https://img.shields.io/badge/Status-Production%20Ready-green)
 
 ## 📖 Executive Summary
-**UI Chat** is a reusable, decoupled Angular library designed to integrate AI conversational capabilities into any Hosting3M application. It abstracts the WebSocket/HTTP complexity and provides a standard UI for user interaction.
+**UI Chat** is a reusable, decoupled Angular library designed to integrate AI conversational capabilities into any Hosting3M application. It provides the chat UI and sends user messages to the configured backend over HTTP.
 
 It is currently the core communication module for:
 * **Admin Hotel Dashboard** (Guest Concierge).
@@ -65,9 +65,9 @@ export const appConfig: ApplicationConfig = {
 
 ```
 
-## 📎 Optional File Attachment (disabled by default)
+## 📎 Optional File Attachments (disabled by default)
 
-Opt-in via `CHAT_CONFIG_TOKEN`. Without `attachments` (or with `enabled: false`) the UI and the HTTP request are identical to a text-only chat. **Do not enable it in a host app until the backend supports it.**
+Opt in via `CHAT_CONFIG_TOKEN`. Without `attachments` (or with `enabled: false`) the UI and the HTTP request remain text-only. Enable it only when the host application's backend supports the attachment request contract.
 
 ```typescript
 const chatConfig: ChatConfig = {
@@ -83,6 +83,16 @@ const chatConfig: ChatConfig = {
 | `accept` | `image/jpeg, image/png, image/webp, application/pdf, text/xml, application/xml` | |
 
 **Type resolution:** `file.type` if it is in `accept`; otherwise, only when it is empty or `application/octet-stream`, the extension is mapped (`.xml`→`text/xml`, `.pdf`, `.jpg/.jpeg`, `.png`, `.webp`) and accepted if the result is in `accept`. The resolved type is what is sent. The file name has control characters stripped and is capped at 255 characters; it is display-only metadata.
+
+### CFDI XML in Agro ERP
+
+The Agro ERP host opts in to attachments through `CHAT_CONFIG_TOKEN` (`attachments.enabled: true`). The component supports selecting **one file per message** with its paperclip button. The file input's `accept` attribute uses the configured MIME types, whose default includes `text/xml` and `application/xml`; `.xml` is mapped to `text/xml` when the browser reports an empty or generic MIME type.
+
+The component currently provides a **file picker only**: drag-and-drop handlers/drop zones are not implemented. It does not parse XML in the browser or render a CFDI-specific preview card. It checks that the file is non-empty and within the configured size limit (at most 5 MB), resolves its MIME type, and shows the selected filename. The consuming app's normal HTTP interceptors apply to the configured `apiUrl_ai` request; UI Chat does not upload the attachment through a separate media endpoint.
+
+When Agro ERP receives the message, its n8n Chat Web workflow validates the XML attachment, sends it to the internal `cfdi-service` for parsing, SAT status lookup and original-file storage, then creates a `CHAT_WEB` draft with `sp_expense_invoice_draft_create`. The parser supports stamped **CFDI 4.0 Ingreso** XML; CFDI 3.3 is not supported by this parser. The assistant presents the resulting draft/preliminary expense information as conversational chat text. The workflow passes parsed concepts to the agent, and `sp_expense_invoice_preview` returns RFC, subtotal, total and other expense details; however, this is not a structured UI contract, and the preview result does not include the invoice UUID or concepts. Do not treat the internal draft ID as the CFDI UUID. The expense is registered only after the user confirms and the workflow calls `sp_expense_invoice_confirm`. This is a conversational preview, not a bespoke UI card.
+
+Source references: Agro ERP's [`app.config.ts`](../agro-erp/src/app/app.config.ts), the versioned [Chat Web workflow](../../../workflows/09-MCP-Agent-Cattle/v6/v6_ai_chat_cattle.json), [MCP workflow](../../../workflows/09-MCP-Agent-Cattle/v6/v6_MCP_Server_Cattle.json), and [`cfdi-service`](../../../microservices/cfdi-service/README.md).
 
 **Request contract:** the same POST as always (`chatInput`, `sessionId`, `tenant_id`) plus, only when a file is attached:
 

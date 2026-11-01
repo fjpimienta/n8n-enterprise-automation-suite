@@ -89,6 +89,7 @@ graph TD
         UI_Palm["/agricultura/dashboard, /plantaciones, /lotes, /lotes/:lotId/filas, /gastos"]
         UI_Admin["/admin/*"]
         UI_Compliance["/cumplimiento/upp, /cumplimiento/upp/:id"]
+        UIChat["Shared UI Chat\n(file picker; not an Angular route)"]
         Signals["Angular Signals"]
 
         CS --> Signals
@@ -101,17 +102,22 @@ graph TD
     subgraph "Integration Layer (n8n)"
         Auth["JWT Validator (core-auth)"]
         Router["Meta-CRUD v6/crud"]
+        ChatWebhook["Chat Web webhook"]
         PalmAgent["Chat Web / WhatsApp: AI Agent Palma"]
         CattleAgent["Chat Web / WhatsApp: MCP Server Cattle"]
-        InvoiceAgent["CFDI intake (Chat Web) / MCP tools"]
-        CFDIService["cfdi-service"]
+        InvoiceAgent["CFDI intake (Chat Web workflow)"]
+        InvoiceMCP["MCP Server Cattle: invoice preview / confirm"]
+        CFDIService["cfdi-service\n(parse, SAT status, store original)"]
         PalmWrappers["sp_agri_chat_* wrappers (083)"]
         Signals -->|REST + tenant context| Auth
         Auth --> Router
+        UIChat -->|POST chatInput + XML Base64| ChatWebhook
+        ChatWebhook --> InvoiceAgent
         PalmAgent --> PalmWrappers
         CattleAgent -->|Postgres tools in repro-phase files| ReproSP
-        InvoiceAgent -->|HTTP parse / SAT status| CFDIService
-        InvoiceAgent -->|draft, preview, confirm SQL| InvoiceSP
+        InvoiceAgent -->|HTTP parse / SAT status / store| CFDIService
+        InvoiceAgent -->|create draft| InvoiceSP
+        InvoiceMCP -->|preview / confirm| InvoiceSP
     end
 
     subgraph "Persistence & BI Layer (PostgreSQL 15)"
@@ -160,11 +166,16 @@ graph TD
 > mediante `postgresTool`, fuera de `crud_models`. Las rutas de agricultura no representan
 > las capacidades SQL de reproducción ni CFDI como pantallas. Los artefactos de reproducción
 > 084–090 están versionados, pero constan como no desplegados en `CHANGELOG.md`. El flujo
-> CFDI también está versionado: [`v6_ai_chat_cattle.json`](../../../../workflows/09-MCP-Agent-Cattle/v6/v6_ai_chat_cattle.json)
-> conecta el ingreso/parsing y estado SAT con [`cfdi-service`](../../../../microservices/cfdi-service/),
-> y [`v6_MCP_Server_Cattle.json`](../../../../workflows/09-MCP-Agent-Cattle/v6/v6_MCP_Server_Cattle.json)
-> expone preview/confirm. La migración 091 se declara no ejecutada; los artefactos no son
-> evidencia de validación end-to-end ni de despliegue.
+> CFDI también está versionado como una integración sin ruta Angular: UI Chat envía el mensaje
+> y el adjunto XML como Base64 directamente al webhook n8n; no hay una etapa previa de Media
+> Server/Upload en este flujo. [`v6_ai_chat_cattle.json`](../../../../workflows/09-MCP-Agent-Cattle/v6/v6_ai_chat_cattle.json)
+> conecta el ingreso con [`cfdi-service`](../../../../microservices/cfdi-service/) para parseo,
+> estado SAT y almacenamiento del original, y crea el borrador mediante
+> `sp_expense_invoice_draft_create`. [`v6_MCP_Server_Cattle.json`](../../../../workflows/09-MCP-Agent-Cattle/v6/v6_MCP_Server_Cattle.json)
+> expone la vista previa y confirmación; la UI muestra la respuesta como texto conversacional,
+> no como una tarjeta CFDI dedicada. El parser admite CFDI 4.0 tipo Ingreso, no CFDI 3.3.
+> La migración 091 se declara no ejecutada/sin pruebas; los artefactos no son evidencia de
+> validación end-to-end ni de despliegue.
 
 ### ⚠️ Contrato del motor Meta-CRUD (restricciones implícitas, no declaradas en `crud_models`)
 
