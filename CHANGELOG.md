@@ -23,6 +23,7 @@ cuando actualizan las reglas compartidas de contribución o despliegue.
 
 ### 🔧 Mantenimiento de producción y verificación
 
+* Removed the unused scraper-service microservice and its compose entry.
 * Se actualizaron en producción las dependencias de los servicios `upload-file` y `jwt-service`
   a las versiones corregidas que ya estaban en `main`, reconstruyendo sus imágenes. No hubo
   cambios de código. Se verificaron la subida, la lectura y la autenticación de `upload-file`
