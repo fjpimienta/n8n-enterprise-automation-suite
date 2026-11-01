@@ -15,11 +15,10 @@ insegura de nuestra parte), sí cae dentro de este alcance.
 
 | Componente               | Versión         | Estado                       |
 | ------------------------ | --------------- | ----------------------------- |
-| n8n Core                 | v2.4.6+          | ✅ Soportado                  |
-| Frontend (Angular)       | v1.6.x           | ✅ Soportado                  |
-| PostgreSQL / pgvector    | Versionado con n8n Core | ✅ Soportado           |
-| Legacy (pre-v2.0.0)      | —                | ❌ Sin soporte, actualizar     |
-| Dev / Beta                | Latest          | ⚠️ Experimental, sin garantías |
+| n8n (VPS)                | 2.29.0 (imagen documentada en `CLAUDE.md`) | Baseline desplegado; evaluar actualizaciones por separado |
+| Angular workspace       | Angular 21; versiones por proyecto | Revisar el estado individual; PistaHielo está fuera de producción |
+| PostgreSQL / pgvector    | Depende del entorno desplegado | Sin garantía de versión global en este documento |
+| Proyectos legacy         | Según el README del proyecto | Sin soporte operativo implícito |
 
 ## Cómo Reportar una Vulnerabilidad
 
@@ -36,6 +35,20 @@ Incluye, si es posible:
 **No incluyas valores reales de secretos, tokens, o credenciales en el reporte** — descríbelos
 o redáctalos con `****`; si el hallazgo requiere demostrar acceso, coordina la prueba de
 forma privada.
+
+## Límites de seguridad del backend
+
+- Agro ERP usa `v6/CRUD`, que valida membresía de empresa y contexto de tenant en el gateway.
+- El dashboard hotelero y el sitio público usan `v5/CRUD`. La allowlist/WAF limita modelos
+  expuestos, pero no proporciona aislamiento por empresa suficiente dentro de los modelos
+  hoteleros permitidos. No trates `id_company`, `X-Tenant-ID`, guards ni filtros del frontend
+  como autorización efectiva.
+- La base de datos usa un rol de servicio privilegiado; no debe asumirse que RLS constituye
+  la barrera de tenant. La whitelist y las validaciones del gateway/backend son controles
+  críticos. Los controles de `v6` no se heredan automáticamente en `v5`.
+- El Media Server (`upload-file`) es un servicio separado y requiere autenticación. La
+  configuración de `apiUrl_upload` en `core-auth` permite al interceptor adjuntar JWT; no
+  implica que todas las aplicaciones tengan un flujo de subida implementado.
 
 ## Qué Esperar
 
@@ -57,8 +70,9 @@ Por transparencia, dos hallazgos reales de este proyecto y su resolución:
 
 - **2026-08-13:** exposición accidental de `INTERNAL_SECRET` en una sesión de trabajo
   (no una vulnerabilidad de código, error operativo). Motivó la sección de manejo de
-  secretos en `CONTRIBUTING.md`. Rotación iniciada; confirmación pendiente en ambos
-  servicios y ambientes — ver deuda técnica en `CLAUDE.md` raíz.
+  secretos en `CONTRIBUTING.md`. La rotación de `JWT_SECRET` e `INTERNAL_SECRET` en LOCAL
+  y producción se completó el 2026-10-25 para n8n, `jwt-service` y `upload-file`; quedan
+  revisiones de alcance separadas registradas en `CLAUDE.md`.
 - **2026-08-15:** path traversal detectado por análisis estático (CodeQL) en el Media
   Server (`upload-file`). Corregido junto con la adición de autenticación JWT/secreto
   interno y rate limiting.

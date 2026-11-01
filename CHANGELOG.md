@@ -1,11 +1,16 @@
 # Changelog Principal: n8n Enterprise Automation Suite 🚀
 
-Todos los cambios notables en esta suite de automatización serán documentados en este archivo. El sistema se adhiere estrictamente a **Semantic Versioning** para la gestión de dependencias entre microservicios, flujos de n8n y frontends.
+Todos los cambios notables en esta suite de automatización se documentan en este archivo.
+Este changelog usa fechas de calendario (**CalVer**) para cambios de suite; no existe una
+versión SemVer global. Las aplicaciones y librerías conservan su propio versionado en sus
+documentos y manifiestos. Los cambios de documentación operativa también se registran aquí
+cuando actualizan las reglas compartidas de contribución o despliegue.
 
 > 📌 **Convención de versionado (vigente desde 2026-08-14):** este changelog usa **CalVer
 > por fecha** (`[AAAA-MM-DD]`) para releases de la suite completa — nunca un número tipo
-> SemVer. Cada módulo mantiene su propio SemVer independiente en su propia documentación
-> (ej. `agro-erp/README.md` dice "v1.10.0", `core-auth/package.json` dice "0.0.2") — esos
+> SemVer. Cada módulo mantiene su propia versión en su documentación o manifiesto
+> (ej. `hosting3m-workspace/projects/agro-erp/README.md` dice "v1.20.0",
+> `hosting3m-workspace/projects/core-auth/package.json` dice "0.0.2") — esos
 > números **no** aparecen como encabezado de entrada aquí, solo se referencian en el cuerpo
 > de la entrada correspondiente cuando aplica. Antes de esta fecha, este archivo usaba
 > números SemVer propios (`[1.6.0]`, `[1.5.0]`, etc.) que por coincidencia compartían cifras
@@ -14,14 +19,32 @@ Todos los cambios notables en esta suite de automatización serán documentados 
 
 ---
 
+## [2026-10-31]
+
+### 📚 Sincronización de documentación raíz y del workspace
+
+* Se alinearon el inventario del README raíz y los estados de los proyectos Angular:
+  Agro ERP v1.20.0, hotel público con reserva deshabilitada por kill switch y PistaHielo
+  como legacy/fuera de producción.
+* Se aclararon los límites distintos de `v5/CRUD` (hotel) y `v6/CRUD` (Agro ERP), y que
+  el contexto de tenant del cliente no sustituye autorización/isolation en el gateway.
+* `CONTRIBUTING.md` y `CLAUDE.md` comparten los mismos Conventional Commit types y el mismo
+  gate de despliegue: `main` publica frontends por Plesk; DB y n8n requieren runbook,
+  verificación y rollback antes del merge.
+* La política de seguridad y el historial de secretos reflejan que la rotación de
+  `JWT_SECRET` e `INTERNAL_SECRET` se cerró el 2026-10-25; no se publican valores secretos.
+
+---
+
 ## [2026-10-25]
 
 ### 🔐 Rotación de `JWT_SECRET` e `INTERNAL_SECRET` (solo operación, sin versión de código)
 
-Se rotaron ambos secretos en LOCAL y producción, con el mismo valor en n8n, `jwt-service` y `upload-file`
-dentro de cada ambiente y valores distintos entre ambientes. Cierra la deuda abierta tras la exposición del
-2026-08-13 y el `JWT_SECRET` compartido entre ambientes. Las sesiones abiertas se cerraron. Huellas y pendientes
-en `CLAUDE.md` (sección "Deuda técnica activa").
+Se rotaron ambos secretos en LOCAL y producción, con valores comunes entre n8n, `jwt-service` y `upload-file`
+dentro de cada ambiente, y distintos entre ambientes. Esto cerró la deuda por la exposición del
+2026-08-13 y por el `JWT_SECRET` compartido entre ambientes. Las sesiones abiertas se cerraron.
+Los seguimientos restantes (copia `.env.local` no referenciada, variables de un servicio ajeno y
+posible uso por otros workflows) no cambian el estado de cierre de la rotación; ver `CLAUDE.md`.
 
 ---
 
