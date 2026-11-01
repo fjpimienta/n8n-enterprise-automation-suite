@@ -3,7 +3,7 @@
 ## 📝 Descripción
 
 **Project:** Hosting3M Automation Suite (Agro ERP)
-**Version:** v1.16.0 (Gestión Avanzada de Hato vía Agente IA: traslado intra-UPP, reproducción, desparasitación, castración, cambio de identificador, autorización y anulación de eventos)
+**Version:** v1.19.0 (Gastos agrícolas, migración 081)
 **Stack:** Angular 21 (Signals) | n8n (API Gateway / MCP) | PostgreSQL (JSONB, Views & PL/pgSQL) | Tabler UI
 **Author:** Francisco Jesus Pérez Pimienta
 
@@ -37,37 +37,26 @@
   canal real de chat; dos bugs reales de arquitectura de n8n encontrados y corregidos en las
   8 tools a la vez; 3 bugs reales corregidos en `register_livestock_purchase` (tool
   preexistente, no nueva de esta versión); migración 063 de `vw_cattle_event_log`
+- v1.18.0 — Estructura agrícola de Palma (migración 080): plantaciones, lotes, filas y
+  conteos con historial por empresa; `vw_agri_lot_summary` y `vw_agri_plantation_summary`
+- v1.19.0 — Gastos agrícolas de Palma (migración 081): catálogo global de unidades,
+  categorías y gastos por empresa, anulaciones, balance y vistas de consulta
 
 ## 📝 1. Estructura del Workspace (Feature-Driven Architecture)
 
 El frontend está desarrollado sobre un Monorepo en Angular 21 utilizando una arquitectura orientada a características (*Feature-Driven*), diseñada para un aislamiento estricto de dominios de negocio y carga perezosa (*Lazy Loading*)[cite: 1, 4].
 
 ```text
-├── apps/
-│   └── agro-erp/                       # Aplicación unificada Multi-Dominio[cite: 3, 4]
-│       ├── src/
-│       │   ├── app/
-│       │   │   ├── core/               # Singletons globales (TenantService, Interceptors)[cite: 1, 4]
-│       │   │   ├── features/           # Dominios Operativos Completamente Aislados[cite: 1, 4]
-│       │   │   │   ├── agriculture/    # Módulo Palma (Telemetría, Drones, Hectáreas)[cite: 2, 4]
-│       │   │   │   ├── livestock/      # Módulo Ganadero (Biomasa, Sanidad, Pesajes)[cite: 3, 4]
-│       │   │   │   └── admin/          # Catálogos globales, Autorizaciones Pendientes (v1.11.0)
-│       │   │   ├── shared/             # Componentes UI reutilizables comunes
-│       │   │   ├── app.config.ts       # Configuración global del Core de Angular
-│       │   │   └── app.routes.ts       # Enrutamiento con Lazy Loading Dinámico[cite: 1, 4]
-│       │   └── styles/
-│       │       ├── themes/             # SCSS Reactivo (theme-cattle.scss / theme-palm.scss)[cite: 1, 4]
-│       │       └── main.scss
-│
-├── libs/
-│   └── core-auth/                      # Librería compartida de Autenticación y RBAC[cite: 1, 4]
-│
-├── infrastructure/
-│   └── upload-file/                    # Microservicio propio de almacenamiento de archivos
-│                                        # ("Sovereign Media Service"). Ver sección 5.
-│
-├── workflows/                          # Orquestación de Backend y Agentes de IA en n8n[cite: 1]
-│   └── 09-MCP-Agent-Cattle/            # Configuración de Servidores MCP y Captura de Campo[cite: 4]
+└── src/app/
+    ├── core/
+    ├── features/
+    │   ├── admin/
+    │   ├── agriculture/                # dashboard, plantaciones, lotes, filas y gastos
+    │   ├── compliance/
+    │   └── livestock/                  # dashboard, inventario y pesajes
+    ├── shared/
+    ├── app.config.ts
+    └── app.routes.ts                   # login y rutas lazy de los dominios
 
 ```
 
@@ -84,7 +73,7 @@ graph TD
     subgraph "Frontend Layer (Angular 21 - Lazy Loaded)"
         CS["Context Switcher (TenantService)"]
         UI_Cattle["Livestock Features (Biomasa, Sanidad)"]
-        UI_Palm["Agriculture Features (Drones, Hectáreas)"]
+        UI_Palm["Agriculture Features (Plantations, Lots, Rows, Expenses)"]
         UI_Admin["Admin Features (Catálogos, Autorizaciones)"]
         Signals["State Management (Computed Signals)"]
 
@@ -105,16 +94,21 @@ graph TD
     subgraph "Persistence & BI Layer (PostgreSQL 15)"
         Table_Cattle[("Raw Tables: cattle_livestock, health, weight, expenses")]
         Table_Historico[("Audit Log: historico_movimientos")]
-        Table_Palm[("Hybrid Tables: agriculture_telemetry (JSONB)")]
+        Table_Palm[("Palm Structure: agri_plantations, agri_lots, agri_rows, agri_row_census_history")]
+        Table_PalmExpenses[("Palm Expenses: agri_expense_categories, agri_expenses")]
         Table_Auth[("pending_authorizations, mortality_events")]
         Table_Catalog[("cattle_breed_catalog, cattle_lifestage_catalog (global)")]
-        View_BI{{"BI Engine: vw_cattle_kpi, vw_palm_kpi"}}
+        View_BI{{"Views: vw_cattle_kpi, vw_agri_lot_summary, vw_agri_plantation_summary, vw_agri_expense_summary"}}
         SP_Salida["PL/pgSQL: sp_procesar_salida_ganado"]
         SP_Mortandad["PL/pgSQL: sp_procesar_baja_mortandad"]
         SP_Auth["PL/pgSQL: sp_solicitar_autorizacion / sp_resolver_autorizacion"]
+        SP_Agri["PL/pgSQL: sp_agri_set_default_plantation / sp_agri_bulk_create_rows / sp_agri_record_row_census / sp_agri_record_expense / sp_agri_void_expense / sp_agri_expense_balance"]
 
         Router -->|Insert/Update| Table_Cattle
         Router -->|Insert/Update| Table_Palm
+        Router -->|call_sp| SP_Agri
+        SP_Agri -->|structure and expense writes| Table_Palm
+        SP_Agri -->|expense writes| Table_PalmExpenses
         Router -->|Select/GetAll, sin filtro tenant| Table_Catalog
         Router -->|Select/GetAll| View_BI
         Router -->|model: salida_ganado| SP_Salida

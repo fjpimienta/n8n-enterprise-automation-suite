@@ -1279,3 +1279,160 @@ not_found | invalid | forbidden | not_palm | disabled`. `need_info` carries `iss
 not_found | invalid`, `field`, `message`, `options`/`candidates`) so the agent asks everything that is missing in one
 message. Errors `P00xx` raised by the 080/081 procedures come back as `invalid` with `code` and the Spanish message.
 No new error codes.
+
+## 📚 Additional Versioned Schema Migrations (081, 085–093)
+
+The following describes objects and changes present in the corresponding SQL files under
+`database/migrations/`. It documents the versioned SQL; it does not assert that a migration
+has been applied to any particular database.
+
+### Agricultural expenses (migration 081)
+
+`agri_unit_catalog` is a global unit catalog (no `id_company`): `id`, `unit_code`,
+`unit_name`, `sort_order`, `is_active`, `created_at`.
+
+`agri_expense_categories` is company-scoped: `id`, `id_company`, `category_code`,
+`category_name`, `sort_order`, `is_active`, `created_at`, `updated_at`. Active category codes
+and normalized names are unique within a company.
+
+`agri_expenses` stores agricultural expenses: `id`, `id_company`, `plantation_id`,
+`lot_id`, `category_id`, `expense_date`, `amount`, `quantity`, `unit_code`,
+`supplier_name`, `description`, `is_invoiced`, `invoice_folio`, `receipt_url`,
+`reported_by_email`, `is_void`, `void_reason`, `voided_by_email`, `voided_at`,
+`created_at`. The optional plantation, lot and category references are company-scoped;
+a lot requires a plantation. Amounts and optional quantities must be positive, and
+quantity and unit are supplied together. The row is written by `sp_agri_record_expense`;
+`sp_agri_void_expense` records the void, and the expense is not deleted.
+
+`vw_agri_expense_list` joins the expense with its category, optional plantation and lot,
+and unit name. `vw_agri_expense_summary` aggregates non-voided expenses by `grain`,
+`period_start`, `period_end`, plantation, lot and category, exposing `total_amount`,
+`expense_count` and `created_at`. `sp_agri_expense_balance` returns filtered totals for
+`DAY`, `WEEK`, `MONTH` or `YEAR`; it is restricted to `ADMIN` and `OWNER`.
+`sp_agri_record_expense` permits `ADMIN`, `OWNER` and `EDITOR` in a palm company;
+`sp_agri_void_expense` is restricted to `ADMIN` and `OWNER`.
+
+### Reproduction: empadre (migration 085)
+
+`repro_empadre_config` stores per-company settings: `id_company`, `min_age_months`,
+`min_weight_kg`, `weight_stale_days`, `empadre_window_days`, `notify_enabled`,
+`updated_by_email`, `updated_at`, `created_at`. Its defaults are 15 months, 300 kg,
+60 days and 90 days; `notify_enabled` is constrained to `false`.
+
+`repro_empadre_entries` records entries: `id`, `id_company`, `heifer_id`, `bull_id`,
+`entry_date`, `method`, `category_at_entry`, `eligibility_trigger`, `warning_code`,
+`warning`, `criteria`, `notes`, `registered_by_email`, `batch_id`, `created_at`.
+`method` is constrained to `MONTA_NATURAL` or `INSEMINACION_ARTIFICIAL`;
+`eligibility_trigger` is constrained to `EDAD`, `PESO`, `AMBAS`, `NINGUNO`,
+`SIN_DATOS` or `NO_APLICA`.
+
+`repro_empadre_voids` records append-only voids: `id`, `id_company`, `entry_id`,
+`reason`, `voided_by_email`, `voided_at`; `entry_id` is unique and the reason is
+required. The config and entry tables are also protected against direct mutation as
+specified by the migration. Procedures include `sp_repro_empadre_get_config`,
+`sp_repro_empadre_set_config`, `sp_repro_list_heifers_eligible_for_empadre`,
+`sp_repro_log_empadre_entry`, `sp_repro_log_empadre_entry_batch`,
+`sp_void_empadre_entry`, `sp_repro_list_empadre_entries` and
+`sp_repro_list_open_cows`.
+
+### Reproduction: palpation details (migration 086)
+
+`repro_condition_codes` maps per-company uterine codes: `id_company`, `code`,
+`repro_condition`, `source`, `confirmed_by`, `confirmed_at`. `repro_condition` may
+be `CICLANDO`, `ESTATICA`, `OTRO`, or NULL while a known code awaits confirmation.
+
+`palpation_repro_details` is an append-only detail linked one-to-one to
+`cattle_health_logs`: `id`, `id_company`, `health_log_id`, `livestock_id`, `result`,
+`raw_code`, `repro_condition`, `ovary_side`, `mapping_status`, `registered_by_email`,
+`created_at`. `result` is `PREÑADA` or `VACÍA`; `ovary_side` is `OI` or `OD`.
+`mapping_status` is `MAPPED`, `UNMAPPED`, `EXPLICIT` or `NOT_APPLICABLE`.
+A reproductive condition is recorded only for `VACÍA`; the detail preserves the
+mapping at the time of the palpation.
+
+The migration adds `sp_repro_log_palpation_batch`,
+`sp_repro_list_palpation_due`, `sp_repro_list_upcoming_calvings`,
+`sp_repro_list_unmapped_uterine_codes` and `sp_repro_condition_code_set`.
+
+### Reproduction: births (migration 087)
+
+The migration adds nullable `birth_events.reported_by_email`.
+
+`repro_births_config` stores per-company `id_company`, `possible_duplicate_days`,
+`updated_by_email`, `updated_at` and `created_at`; `possible_duplicate_days` defaults
+to 240 and is constrained to 30–730.
+
+`repro_historical_births` records historical births without creating a calf or
+changing the dam's status: `id`, `id_company`, `dam_id`, `birth_date`,
+`date_precision`, `calf_sex`, `litter_position`, `source`, `notes`, `entered_by_email`,
+`created_at`. `date_precision` is `DAY`, `MONTH` or `YEAR`; `calf_sex` may be
+`MACHO` or `HEMBRA`; `source` is `HISTORICAL_NOTEBOOK`,
+`HISTORICAL_SPREADSHEET` or `HISTORICAL_OTHER`.
+
+`repro_historical_birth_voids` records append-only voids:
+`id`, `id_company`, `historical_birth_id`, `reason`, `voided_by_email`, `voided_at`.
+Each historical birth can have at most one void record.
+
+Procedures include `sp_repro_births_get_config`, `sp_repro_births_set_config`,
+`sp_repro_register_birth`, `sp_repro_births_batch_preview`,
+`sp_repro_births_batch_register`, `sp_repro_register_historical_birth`,
+`sp_repro_void_historical_birth` and `sp_repro_list_historical_births`.
+`sp_repro_births_batch_preview` is read-only; batch registration revalidates the
+input and is all-or-nothing. The migration also updates `sp_register_birth_event`
+with the optional reporter email parameter.
+
+### Reproduction: service-to-birth link (migration 088)
+
+Adds nullable `cattle_breeding_events.birth_event_id`, referencing
+`birth_events(id)`, with a partial index `idx_breeding_events_birth` for non-NULL
+values. `fn_trg_breeding_birth_link_guard` restricts the link to a one-time
+NULL-to-value update and rejects changes to other columns through that update.
+`fn_repro_link_birth_service` performs the link. The migration also replaces
+`sp_repro_get_dam_history`, `sp_log_breeding_event` and `sp_void_event`.
+
+### Reproduction: veterinary code meanings (migration 090)
+
+Adds nullable `repro_condition_codes.meaning`, constrained to `NOT_EXAMINED`,
+`POSTPARTUM` or `UNFIT`; a row with a `meaning` cannot also have
+`repro_condition`. The migration updates the palpation parsing/listing procedures
+and adds `fn_repro_code_meaning`, `fn_repro_palp_text` and
+`fn_repro_palp_code_info`.
+
+### CFDI registration for livestock expenses (migration 091)
+
+`company_tax_ids` stores receiver RFCs by company: `id_company`, `rfc`, `label`,
+`is_active`, `qa_skip_sat`, `created_by_email`, `created_at`, `updated_at`.
+The primary key is `(id_company, rfc)`.
+
+`expense_invoices` stores append-only invoice records linked to `cattle_expenses`
+(not `agri_expenses`): `id`, `id_company`, `uuid`, `emisor_rfc`, `emisor_name`,
+`receptor_rfc`, `serie`, `folio`, `issued_at`, `stamped_at`, `currency`,
+`subtotal_cents`, `discount_cents`, `total_cents`, `taxes`, `source_sha256`,
+`original_path`, `sat_status`, `expense_id`, `registered_by_email`, `created_at`.
+`expense_id` is unique; `(id_company, uuid)` is also unique. The migration adds
+`sp_company_tax_id_set` and `sp_expense_invoice_register`; invoice records are
+written through the latter, not through `crud_models`.
+
+### CFDI invoice drafts (migration 092)
+
+`expense_invoice_drafts` is server-side draft state:
+`id`, `id_company`, `user_email`, `channel`, `invoice`, `source_sha256`,
+`original_path`, `sat_status`, `previewed_hash`, `previewed_at`, `consumed_at`,
+`created_at`, `expires_at`. `channel` is `CHAT_WEB` or `WHATSAPP`;
+`sat_status` is `VIGENTE`, `CANCELADO`, `NO_ENCONTRADO` or `ERROR`.
+Rows expire after 30 minutes and cannot be deleted. Updates are limited to
+`previewed_hash`, `previewed_at` and `consumed_at`; once set, `consumed_at`
+cannot change. The table is not in `crud_models`.
+
+`sp_expense_invoice_draft_create` creates a draft,
+`sp_expense_invoice_preview` records a preview mark, and
+`sp_expense_invoice_confirm` requires a matching preview from the last 15 minutes
+before calling invoice registration.
+
+### Automatic receiver RFC registration on confirmation (migration 093)
+
+This migration changes no table, column, trigger or other function. It replaces
+`sp_expense_invoice_register` with the same signature as migration 091. On preview,
+an unregistered receiver RFC is reported without writing it. On confirmation, an
+`ADMIN` or `OWNER` may register the new RFC in the same transaction as the expense,
+provided the SAT status is `VIGENTE`; an `EDITOR` still receives
+`rfc_not_registered`. An inactive RFC is not reactivated automatically.

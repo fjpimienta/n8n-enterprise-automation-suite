@@ -10,6 +10,27 @@ Desarrollada como una **Angular 21 SPA** estructurada por dominios (*Feature-Dri
 
 ---
 
+## 🆕 Novedades posteriores a v1.17.0 — Código y migraciones versionadas
+
+### 🌴 Palma: estructura y gastos (migraciones 080–083)
+* La estructura de Palma contempla plantaciones, lotes, filas y conteos con historial por empresa (080). La migración 081 agrega catálogos y registro de gastos agrícolas, anulaciones y consultas de balance.
+* El dominio agrícola define las rutas `/agricultura/dashboard`, `/agricultura/plantaciones`, `/agricultura/lotes`, `/agricultura/lotes/:lotId/filas` y `/agricultura/gastos`. La pantalla de gastos incluye balance, gastos registrados y categorías; el acceso y la lectura de importes varían según el rol.
+* Las migraciones 082 y 083 agregan el rechazo de empresas PALM en las herramientas de chat ganaderas y funciones wrapper para las herramientas de chat de Palma, respectivamente.
+
+### 🐄 Reproducción (migraciones 084–090)
+* 084 agrega funciones, un tipo y una vista para derivar edad desde `numero_fuego` y herramientas de consulta de nacimientos e identificadores; no agrega tablas ni columnas.
+* 085 agrega configuración y registros append-only de empadre; 086 agrega códigos de condición reproductiva y detalle append-only de palpaciones.
+* 087 agrega configuración y registro de nacimientos, incluyendo nacimientos históricos; 088 enlaza servicios reproductivos con nacimientos y endurece los procedimientos de servicio y anulación.
+* 089 deshabilita de forma reversible el modelo Meta-CRUD `nacimiento`; 090 añade significados veterinarios a códigos de palpación. Son cambios de SQL y herramientas; no se describen como pantallas nuevas.
+
+### 🧾 Facturas CFDI de gastos ganaderos (migraciones 091–093)
+* 091 define RFC receptores por empresa y registros CFDI vinculados a `cattle_expenses`; el archivo de la migración indica que todavía no se ha ejecutado y requiere pruebas LOCAL antes de aplicarse.
+* 092 agrega borradores de factura del lado del servidor con vista previa y confirmación; 093 actualiza el registro para permitir que ADMIN/OWNER agreguen el RFC receptor al confirmar.
+
+Esta sección describe archivos SQL y rutas del repositorio; no implica que todas las migraciones estén aplicadas en producción.
+
+---
+
 ## 🚀 Key Features (v1.17.0) — Órdenes de venta
 
 *Base de datos y workflows en producción desde 2026-10-16; la fecha de liberación se fija al desplegar el frontend.*
@@ -66,7 +87,7 @@ Desarrollada como una **Angular 21 SPA** estructurada por dominios (*Feature-Dri
 * `073_users_access_hotfix_rollback.sql` — solo revierte lo que 073 cambió y desactiva (nunca borra) los modelos que creó. ⚠️ Revertir la migración exige volver a desplegar también el frontend anterior.
 * `073_tests.sql` (21 pruebas funcionales, todo con `ROLLBACK`) y `073_state_check.sql` (verificación de solo lectura para la secuencia aplicar → rollback → re-aplicar).
 
-### 🗄️ Migraciones desde v1.16.0
+### 🗄️ Inventario de migraciones versionadas
 
 | Migración | Contenido |
 |---|---|
@@ -78,6 +99,20 @@ Desarrollada como una **Angular 21 SPA** estructurada por dominios (*Feature-Dri
 | `072` | Vencimiento de autorizaciones al final del día en hora de Ciudad de México |
 | `073` | **Hotfix de seguridad: Usuarios y Accesos** (v1.16.1) |
 | `074` | **Órdenes de venta** (v1.17.0): `sale_orders`, venta por lote, una solicitud pendiente por animal |
+| `080` | Estructura agrícola de Palma: plantaciones, lotes, filas, conteos e historial |
+| `081` | Gastos agrícolas de Palma: unidades, categorías, gastos, anulaciones y balance |
+| `082` | Rechazo de empresas PALM en las herramientas de chat ganaderas |
+| `083` | Wrappers SQL para las herramientas de chat de Palma |
+| `084` | Herramientas de consulta de nacimientos y calidad de identificadores; edad derivada de `numero_fuego` |
+| `085` | Configuración, registros y anulaciones append-only de empadre |
+| `086` | Catálogo de códigos de condición uterina y detalles de palpación |
+| `087` | Registro validado y por lote de nacimientos, y nacimientos históricos |
+| `088` | Enlace de servicios reproductivos a nacimientos; validaciones de servicios y anulaciones |
+| `089` | Deshabilitación reversible del modelo Meta-CRUD `nacimiento` |
+| `090` | Significados veterinarios para códigos reproductivos |
+| `091` | RFC por empresa y registros CFDI vinculados a gastos ganaderos (**SQL indica no ejecutada; requiere pruebas LOCAL**) |
+| `092` | Borradores server-side de CFDI con vista previa y confirmación |
+| `093` | Registro automático de RFC receptor al confirmar una factura |
 
 ---
 
@@ -299,6 +334,7 @@ ng build agro-erp --configuration=production
 * [x] **Subsistema de Autorización Asíncrona:** mortandad y venta vía Agente IA requieren aprobación humana diferida, con notificación por correo y expiración diaria automática (v1.11.0).
 * [x] **Palma, fase 1 — estructura de plantación activa (migración 080, LOCAL):** plantaciones, lotes, filas y conteos con historia, aislados por empresa.
 * [x] **Palma, fase 1 — frontend (LOCAL, probado a mano):** contexto y selector de plantación, pantallas de plantaciones/lotes/filas/conteos, tablero de Palma.
+* [x] **Palma, fase 2a — gastos agrícolas (migración 081):** la ruta `/agricultura/gastos` contiene balance, gastos registrados y categorías.
 * [ ] **Palma, fases 2+:** pagos de personal (registro, sin nómina formal); inventario de activos e insumos; cosecha de RFF (racimos de fruta fresca); telemetría por lote (sustituye a `PalmTelemetry` por zona); alcance por usuario y plantación (`user_scope`); Agente IA de palma (conteos y cosecha por chat/WhatsApp).
 * [ ] **Motor Financiero (Fase 4):** Integración transversal del OPEX para calcular costo por kilo de biomasa vs. costo por litro de agroquímico.
 * [ ] **Dashboards Consolidados (Fase 5):** Estabilización final y pruebas E2E.
