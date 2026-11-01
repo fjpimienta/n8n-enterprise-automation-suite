@@ -1,6 +1,23 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Third-party sheets are unlayered by nature and would beat Tailwind v4 utilities (which live in @layer utilities).
+   Importing them into the lowest layer restores the v3 behavior: Tailwind wins over Tabler/Font Awesome. */
+@layer vendor, theme, base, components, utilities;
+@import url("https://cdn.jsdelivr.net/npm/@tabler/core@latest/dist/css/tabler.min.css") layer(vendor);
+@import url("https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css") layer(vendor);
+@import url("https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css") layer(vendor);
+@import "tailwindcss" source(none);
+@config "../tailwind.config.js";
+@source "./";
+@source "../../ui-chat/src";
+
+/* Tailwind v3 look preserved on v4: same default border color and same shadow-sm as v3. */
+@theme {
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+@layer base {
+    *, ::after, ::before, ::backdrop, ::file-selector-button {
+        border-color: var(--color-gray-200, currentColor);
+    }
+}
 
 body {
     @apply font-sans text-gray-800 bg-eco-50 antialiased selection:bg-eco-500 selection:text-white;
