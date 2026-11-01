@@ -41,6 +41,19 @@ No los uses como única fuente de verdad.
    (ver sección 3).
 5. Espera revisión antes de mergear. No hagas `git push --force` sobre ramas compartidas.
 
+### Merge strategy
+
+- For feature, fix, docs, and chore work, use `develop` as the branch base and pull request
+  target; this supersedes the generic `main`-based flow in steps 1 and 4 above.
+- Feature, fix, docs, and chore branches are based on `develop`, opened as pull requests
+  into `develop`, and merged with a squash merge (`gh pr merge N --squash`).
+- Releases from `develop` to `main` use a merge commit
+  (`gh pr merge N --merge`); never squash a release. Squashing makes `main` and `develop`
+  diverge and causes conflicts in the next release.
+- If `main` and `develop` have diverged, open a pull request from a branch that merges
+  `origin/main` into `origin/develop` before the next release. Merge it with a merge
+  commit and no content changes.
+
 ### Despliegue de producción
 
 - `main` publica los frontends automáticamente por Plesk. El backend (compose, n8n y base
