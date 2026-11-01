@@ -23,7 +23,15 @@ cuando actualizan las reglas compartidas de contribución o despliegue.
 
 ### 🔧 Mantenimiento de producción y verificación
 
-* Removed the unused scraper-service microservice and its compose entry.
+* Removed the unused scraper-service microservice and its compose entry (#922).
+* Added GitHub Actions CI for v5 CRUD tests, CFDI service tests, and workspace builds of
+  `ui-pdf-export`, `dashboard`, and `hotel-website` (#921). The workflow generates
+  placeholder environment files on the runner for `dashboard` and `hotel-website` because
+  their real environment files are git-ignored.
+* Updated the `upload-file` and `jwt-service` Docker builds from `node:18-alpine` to
+  `node:22-alpine`, using `npm ci --omit=dev` with the committed lockfiles and a minimal
+  `.dockerignore` in each service (#923). No application code or dependency versions
+  changed.
 * Se actualizaron en producción las dependencias de los servicios `upload-file` y `jwt-service`
   a las versiones corregidas que ya estaban en `main`, reconstruyendo sus imágenes. No hubo
   cambios de código. Se verificaron la subida, la lectura y la autenticación de `upload-file`
