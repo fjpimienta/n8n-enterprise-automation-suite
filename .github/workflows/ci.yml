@@ -89,5 +89,19 @@ jobs:
           };
           EOF
       - run: npm run build -- ui-pdf-export
+      - name: Generate dashboard environment file
+        run: |
+          mkdir -p projects/dashboard/src/environments
+          cat > projects/dashboard/src/environments/environment.ts <<'EOF'
+          export const environment = {
+            production: false,
+            apiUrl: 'https://example.invalid',
+            apiUrl_ai: 'https://example.invalid/webhook/v4/ai/chat',
+            apiUrl_crud: 'https://example.invalid/webhook/crud/v5',
+            apiUrl_token: 'https://example.invalid/webhook/v3/genera-token',
+            apiUrl_upload: 'https://example.invalid/upload',
+            system_id: 'dashboard'
+          };
+          EOF
       - run: npx ng build dashboard
       - run: npx ng build hotel-website --configuration production
