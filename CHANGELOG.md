@@ -19,6 +19,23 @@ cuando actualizan las reglas compartidas de contribución o despliegue.
 
 ---
 
+## [2026-11-01]
+
+### 🔧 Mantenimiento de producción y verificación
+
+* Se actualizaron en producción las dependencias de los servicios `upload-file` y `jwt-service`
+  a las versiones corregidas que ya estaban en `main`, reconstruyendo sus imágenes. No hubo
+  cambios de código. Se verificaron la subida, la lectura y la autenticación de `upload-file`
+  y el inicio de sesión de dashboard y Agro ERP.
+* Los archivos de infraestructura del repositorio (`Dockerfile.n8n`, `docker-compose.yml`,
+  `update_n8n.sh`) se sincronizaron con la configuración de producción, y `cfdi-service`
+  fija Node 20 con `node --test` (#902, #903).
+* Se completaron las pruebas en vivo del flujo de facturas CFDI por Chat Web (sin archivo,
+  PDF, duplicado, rol `EDITOR` y vista previa abandonada). Ver
+  `hosting3m-workspace/projects/agro-erp/database/migrations/091_093_RUNBOOK.md`.
+
+---
+
 ## [2026-10-31]
 
 ### 📚 Sincronización de documentación raíz y del workspace
