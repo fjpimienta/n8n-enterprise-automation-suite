@@ -95,6 +95,12 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
   9 modelos del hotel (nodo `Model Allowlist` + regla WAF de Cloudflare para `crud/v5/`).
   La documentación de cada proyecto describe sus integraciones CRUD por separado. Nunca
   asumas que un endurecimiento de `v6` protege al hotel; ver deuda abajo.
+  Update (2026-11-01): `v5/CRUD` now scopes every hotel operation using the company ID
+  from the verified token, rejects a missing or invalid company with `403 NO_TENANT`, and
+  denies tables without a tenant mapping. Hotel data belongs to company 1; see
+  `workflows/06-dynamic-crud-engine/v5/README.md` and
+  `hosting3m-workspace/projects/agro-erp/database/migrations/094_095_RUNBOOK.md`. This
+  current-state note supersedes earlier v5 tenant-scoping descriptions in this file.
 - **`core-auth`** protege tanto las APIs Meta-CRUD como el Media Server vía
   `apiUrl_upload` en `AUTH_ENV_CONFIG` — verifica esta librería antes de asumir que un
   problema de auth es local a una sola app.
