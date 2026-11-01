@@ -93,8 +93,8 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
   (`v5/CRUD`: rol del JWT, sin membresía, header de tenant opcional y solo `tenant_id`, `update`
   por PK, `insert` como upsert). Desde la contención v1.17.1 (2026-10-17) `v5` solo atiende los
   9 modelos del hotel (nodo `Model Allowlist` + regla WAF de Cloudflare para `crud/v5/`).
-  Esto contiene el alcance, pero no ofrece aislamiento por empresa suficiente dentro de
-  esos modelos. Nunca asumas que un endurecimiento de `v6` protege al hotel; ver deuda abajo.
+  La documentación de cada proyecto describe sus integraciones CRUD por separado. Nunca
+  asumas que un endurecimiento de `v6` protege al hotel; ver deuda abajo.
 - **`core-auth`** protege tanto las APIs Meta-CRUD como el Media Server vía
   `apiUrl_upload` en `AUTH_ENV_CONFIG` — verifica esta librería antes de asumir que un
   problema de auth es local a una sola app.
@@ -145,7 +145,10 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
 
 ## 🚀 Despliegue (aplica a toda la suite)
 
-- **`main` despliega solo los frontends:** Plesk publica desde `main` (agro-erp y también los sitios del hotel).
+- **Despliegue de producción:** `main` publica automáticamente los frontends por Plesk. El backend
+  (compose, n8n y base de datos) se despliega manualmente en el VPS con su runbook.
+  `deploy.sh` ejecuta `git pull origin main` y `docker compose up -d --build`: no lo ejecutes
+  sin comparar antes el compose del VPS con el del repositorio.
   Un PR que dependa de base de datos o de n8n **no llega a `main` hasta tener listo su runbook**: orden de
   despliegue, huellas antes/después, pruebas en producción con empresas de pruebas y rollback. Si el frontend no
   depende del cambio, el runbook lo dice explícitamente (p. ej. v1.18.1).
@@ -153,7 +156,7 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
   comentario del PR lo repite en su primera línea):
 
   > ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (base de datos y n8n, verificadas con sus huellas).
-  > `main` despliega el frontend solo (Plesk): si se mergea antes, la pantalla nueva falla en producción.
+  > `main` publica automáticamente los frontends por Plesk: si se mergea antes, la pantalla nueva falla en producción.
 
   Motivo: el frontend llegó a `main` antes que la base **dos veces** (v1.18.0 el 2026-10-17 y v1.19.0 el
   2026-10-20). La parte del frontend es siempre la última del runbook y empieza con "solo si 1 y 2 están OK".
@@ -206,10 +209,8 @@ canónicos se mantiene en `README.md`; no hay un README propio en la raíz de
   | PRODUCCIÓN | `15544c7c`   | `1f86740a`        |
 
   - Las sesiones abiertas se cerraron (esperado, sin pérdida de datos); los usuarios inician sesión de nuevo.
-  - Seguimientos separados del cierre de rotación: revisar/retirar la copia no referenciada
-    `.env.local` en LOCAL; evaluar por separado `plesk-portainer` (ajeno al proyecto); y
-    comprobar si workflows adicionales consumen `JWT_SECRET`. No registrar ni compartir
-    secretos ni hashes de verificación en documentación pública.
+  - La documentación pública registra el cierre de la rotación; los seguimientos operativos
+    se gestionan fuera de este archivo.
 - 🔴 **Migrar el hotel (`dashboard`, `hotel-website`) de `v5/CRUD` a `v6/CRUD`.** La contención
   v1.17.1 (2026-10-17) cerró en `v5` la inyección SQL (nombre de modelo en `Get Model Config`,
   `sort_by`, campo de `getone`), el registro automático de tablas en `crud_models` y el acceso a
