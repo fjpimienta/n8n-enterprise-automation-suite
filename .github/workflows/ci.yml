@@ -25,7 +25,7 @@ jobs:
         working-directory: workflows/06-dynamic-crud-engine/v5/tests
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
@@ -41,7 +41,7 @@ jobs:
         working-directory: microservices/cfdi-service
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version-file: microservices/cfdi-service/.nvmrc
           cache: npm
@@ -57,7 +57,7 @@ jobs:
         working-directory: hosting3m-workspace
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
