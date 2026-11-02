@@ -58,8 +58,9 @@ No los uses como única fuente de verdad.
 
 - `main` publica los frontends automáticamente por Plesk. El backend (compose, n8n y base
   de datos) se despliega manualmente en el VPS con su runbook.
-- `deploy.sh` ejecuta `git pull origin main` y `docker compose up -d --build`: no lo ejecutes
-  sin comparar antes el compose del VPS con el del repositorio.
+- `deploy.sh` despliega solo los servicios indicados: ejecuta `./deploy.sh [--yes] <service>...`.
+  Confirma antes del despliegue, etiqueta las imágenes actuales para rollback e imprime los
+  comandos de rollback.
 - Si un PR depende de migraciones, cambios de Meta-CRUD o workflows n8n, no se mergea a
   `main` hasta que exista un runbook ejecutable con orden de despliegue, comprobaciones,
   pruebas y rollback. Desplegar primero el frontend puede dejar la aplicación apuntando a
@@ -98,6 +99,19 @@ El runbook de workflows y los detalles operativos versionados están en `CLAUDE.
   files are not a cause of CI failure.
 - Every pull request should have all CI checks green before merging. CI does not deploy
   anything.
+
+## Dependency updates (Dependabot)
+
+- Dependabot monitors `hosting3m-workspace`, `workflows/06-dynamic-crud-engine/v5/tests`,
+  `microservices/cfdi-service`, `microservices/jwt-service`, `infrastructure/upload-file/app`,
+  Dockerfiles in `infrastructure/upload-file` and `microservices/jwt-service`, and GitHub
+  Actions in the repository root. Checks run weekly on Mondays; pull requests target `develop`.
+- Check that CI is green, then merge the pull request with `--squash`.
+- Review the Angular package group on its own. Major updates are not auto-merged and are
+  handled manually.
+- CI does not test `upload-file` or `jwt-service`. After merging a Dependabot pull request
+  that touches either service, redeploy only that service with `./deploy.sh <service>` and
+  run a smoke test: check its health endpoint or make one request.
 
 ---
 

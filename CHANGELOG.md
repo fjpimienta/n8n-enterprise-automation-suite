@@ -19,6 +19,22 @@ cuando actualizan las reglas compartidas de contribución o despliegue.
 
 ---
 
+## [2026-11-02]
+
+### 🔧 Dependency updates and deployment tooling
+
+* Configured Dependabot to check dependencies weekly on Mondays, target `develop`, use the
+  `chore(deps)` commit prefix, and keep at most three open pull requests per ecosystem.
+* Angular packages are grouped separately from other minor and patch updates. Major updates
+  to Angular, TypeScript, RxJS, `zone.js`, and Vitest are ignored and handled manually.
+* Rebuilt the `upload-file` and `jwt-service` containers on Node 22 with `npm ci` and the
+  Dependabot dependency bumps.
+* Reworked `deploy.sh` as a service-scoped deploy script (`./deploy.sh [--yes] <service>...`)
+  with a confirmation prompt, a pre-deploy image tag, and printed rollback commands.
+* Added a CI "Shell checks" job for ShellCheck and the stubbed deploy-script tests.
+
+---
+
 ## [2026-11-01]
 
 ### 🔧 Mantenimiento de producción y verificación
