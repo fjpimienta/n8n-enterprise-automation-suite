@@ -1284,10 +1284,10 @@ No new error codes.
 ## 📚 Additional Versioned Schema Migrations (081–093)
 
 The following describes objects and changes present in the corresponding SQL files under
-`database/migrations/`. It documents the versioned SQL; it does not assert that a migration
-has been applied to any particular database. Migration 091 explicitly declares itself
-untested and never executed; migrations 084–090 are marked as not deployed in
-`CHANGELOG.md`.
+`database/migrations/`. It documents the versioned SQL and does not assert applied status for
+databases other than production. As of 2026-11-02, production state checks pass as applied for
+migrations 084–088 and 090; migration 089 remains optional and pending. See the
+[`REPRO_PRODUCTION_RUNBOOK.md`](./REPRO_PRODUCTION_RUNBOOK.md) for the verified rollout status.
 
 ### Agricultural expenses (migration 081)
 

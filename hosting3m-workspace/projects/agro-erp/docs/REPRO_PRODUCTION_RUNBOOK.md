@@ -1,15 +1,28 @@
 # Production runbook — reproduction tracking (migrations 084-090) and the two livestock agents (phase 5)
 
-> ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LOS PASOS 1 A 7** (respaldo, base de datos, semillas, n8n, prompts, QA, el paso 6b si se hace y — si aplica — 089, todo verificado con sus huellas).
-> `main` despliega el frontend solo (Plesk) y este rollout depende de base de datos y de n8n: si se mergea antes, lo que dependa de ellos falla en producción.
-> **Nada de este documento se ha ejecutado en producción.** Lo ejecuta el dueño, paso a paso, y se detiene en cada condición de parada.
+## Status as of 2026-11-02
+
+Phase 5 is already on `main`. This table records the verified production state; the steps below remain as the operational reference, including their STOP conditions and rollbacks.
+
+| Step | State | Evidence | Verified | Deployed |
+|---|---|---|---|---|
+| 1 — Backup and exports | pending | The `hosting3m_db` backup and `pg_restore --list` were verified; the `n8n_db` backup and off-VPS copies are not verified complete. | 2026-10-28 (partial; remaining date not recorded) | — |
+| 2 — Required migrations 084-088, 090 | done | State checks pass as applied for 084, 085, 086, 087, 088 and 090. Migration 089 is optional and remains pending in step 7. | 2026-11-02 | date not recorded |
+| 3 — Seeds | done | The nine company-5 rows in `repro_condition_codes` exactly match the expected table: NR/RP/NO APTO have the 090 meanings; UNE/UTCL1-3 have the 086 meanings; UTC2 and MATRIZ OCUPADA remain pending. | 2026-11-02 | date not recorded |
+| 4 — MCP server | done | Live `v6/MCP Server Cattle` export matches the repo: 56 nodes and 55 tools (29 existing + 24 reproduction + 2 CFDI). Current live-versus-`develop` expected differences: none. | 2026-11-02 | date not recorded |
+| 5 — Agent prompts | done | WhatsApp matches the repo and its section G is 14,486 characters with phase-5 rules. Chat Web was restored by #953, released to `main` in #954, imported and re-exported identically to `develop`; the real-channel, read-only company-3 births-summary smoke test answered correctly. | 2026-11-02 | WhatsApp: date not recorded; Chat Web: 2026-11-02 (prompt restored, #953/#954) |
+| 6 — QA | pending | The full `REPRO_QA_SCRIPT.md` kit (40 dialogs) has not been completed. | date not recorded | — |
+| 7 — Migration 089 | pending (optional) | 089 remains unapplied; do it only after its pre-checks and successful gateway check. | date not recorded | — |
+| 8 — Merge `develop` into `main` | done | Phase 5 is already on `main`; the Chat Web prompt restoration was released in #954. | date not recorded | date not recorded |
+
+Step 6b (remove the two legacy tool nodes) is still pending and must wait until QA passes. The listed next-sprint backlog also remains pending.
 
 **Who runs it:** the owner. **When:** a low-usage window; nobody edits workflows in the n8n editor during the rollout. **Order is strict:** `1 → 2 → 3 → 4 → 5 → 6 → 6b → 7 → 8`. Each step has a **STOP condition** and a **ROLLBACK**.
 A step is never started until the previous one passed its verification. **Steps 4 and 5 run back to back in the same window** (see "Why 4 and 5 are one unit" below).
 
 ## How to read the status of a command
 - ✅ **EXECUTED** — the owner ran exactly this command (or its LOCAL / throwaway equivalent with another database name or folder) and it worked; the phase where that happened is named.
-- ⚠️ **UNTESTED** — nobody has run it. This includes **everything on production**, the n8n import, the QA, the real gateway check, 089 on production and the new step scripts below.
+- ⚠️ **UNTESTED** — nobody has run it. The status table above supersedes older blanket statements: verified production work is identified there; remaining pending work, including the full QA and optional 089, is not complete.
   Several files of earlier phases failed on their first real run (a `CASE` inside an `IF` condition, a stale snapshot in a test): treat every UNTESTED block as a draft and read it before running it.
   If an UNTESTED command fails, **STOP**, keep the output, and do not improvise a workaround.
 
@@ -28,7 +41,6 @@ TEST_PHONE10=''             # the WhatsApp tester's phone: the LAST 10 DIGITS on
 STAMP=''                    # one timestamp for the whole rollout, e.g. 2026-10-28_1500 (backup file names)
 VPS_SSH=''                  # user@host of the VPS, used from your machine to copy the dumps off
 LOCAL_BACKUP_DIR=''         # folder on your machine that receives the dumps
-COMMIT_BEFORE_PHASE5=14dd60c   # the develop commit just before the phase 5 merge (#879)
 P='docker exec -i n8n-enterprise-db psql -U n8n_user -d hosting3m_db -v ON_ERROR_STOP=1'
 # TOKEN is NEVER written to a file: step 7 reads it with `read -rs TOKEN` (Rule 4).
 
@@ -42,10 +54,10 @@ need() {   # stops a `set -e` script when a variable is empty, unset or still a 
 ```
 The same `P` shape was executed on LOCAL (another database name). Every apply / rollback uses `$P -v apply=true -f FILE` **without `--single-transaction`** (each file owns its `BEGIN` ... `COMMIT`); without `-v apply=true` the file is a dry run. ✅ EXECUTED on LOCAL / throwaway in phases 1-3b.
 
-## What is deployed
-- **Database:** 084 (births and age tools) → 085 (empadre) → 086 (palpation condition) → 087 (checked births, historical births) → 088 (service ↔ birth link, hardened `sp_log_breeding_event` / `sp_void_event`, dam history) → 090 (foreman-confirmed code meanings). **089** (disables the legacy gateway model `nacimiento`) is deliberately **last and optional** (step 7).
+## Rollout reference
+- **Database:** 084 (births and age tools) → 085 (empadre) → 086 (palpation condition) → 087 (checked births, historical births) → 088 (service ↔ birth link, hardened `sp_log_breeding_event` / `sp_void_event`, dam history) → 090 (foreman-confirmed code meanings) are applied in production. **089** (disables the legacy gateway model `nacimiento`) remains unapplied, last and optional (step 7).
   Two seeds (data, dry run by default): `086_seed_tenant5_uterine_codes.sql` and `090_seed_tenant5_vet_code_meanings.sql`.
-- **n8n:** the MCP server `v6/MCP Server Cattle` gains **24 tool nodes** (53 tools in total; `list_lots` gains two NEW keys, `lot_id` and `production_unit_id`); both livestock agents (`v6/ai/chat cattle` and `v6/WhatsApp Agent Catlte`, node `AI Agent`) get a new prompt (sections A5, B1, B5, C, E and a new G). `AI Agent Palma` is not touched.
+- **n8n:** the live MCP server `v6/MCP Server Cattle` matches the repo export: **56 nodes and 55 tools** (29 existing + 24 reproduction + 2 CFDI); `list_lots` has the two additive keys `lot_id` and `production_unit_id`. The WhatsApp agent matches the repo and has the phase-5 prompt. The Chat Web prompt was restored with #953 and verified live on 2026-11-02. `AI Agent Palma` is not touched.
 - **Frontend:** nothing.
 - **Confirmation levels (owner's decisions):** reads = NIVEL 1; routine writes (single birth, palpation batch, empadre single / batch, services) = NIVEL 2, no confirmation; births by block, historical births and every void = NIVEL 3, a summary and an explicit "Sí". Every role may capture; death and sale still need an ADMIN.
 - **Not exposed to the agents:** `sp_repro_condition_code_set`, `sp_repro_empadre_set_config`, `sp_repro_births_set_config`.
@@ -84,8 +96,8 @@ After step 4 the MCP server says `OBSOLETA` on the two legacy tools **while the 
 
 | Workflow export | md5 |
 |---|---|
-| `v6_MCP_Server_Cattle.json` | `d516052e606a2a1ce456b0eec11f916c` |
-| `v6_ai_chat_cattle.json` | `bb1336e4d6f47cda2c6326176761f2d0` |
+| `v6_MCP_Server_Cattle.json` | `c8409499a4ce15c920148e5856aa0958` |
+| `v6_ai_chat_cattle.json` | `d8d4b021b4dfa31e3c240b45f9b1271e` |
 | `v6_WhatsApp_Agent_Cattle.json` | `41c79aed3405eef34d4d8539bea77c8f` |
 
 | Phase 5 tools and QA | md5 |
@@ -94,7 +106,7 @@ After step 4 the MCP server says `OBSOLETA` on the two legacy tools **while the 
 | `repro-phase5/update_tool_descriptions.py` | `cea76c3b2ac17de1fd9eaeaa12584e90` |
 | `repro-phase5/update_prompts.py` | `2f25efef60c8df2202cb76467a4aab8c` |
 | `repro-phase5/compare_workflow_export.py` | `6f81f284607d5d643701b25defa353c4` |
-| `repro-phase5/check_repro_consistency.js` | `749f50cbc7b72e7dfe937f024c62441e` |
+| `repro-phase5/check_repro_consistency.js` | `bd42b5b68cc1a9727753fc2d508db867` |
 | `repro-phase5/list_lots_diff.py` | `fcf70c0c7fd6d911c347727370327683` |
 | `repro-phase5/qa_fixtures.sql` | `9de4bc89e6b4577748bacb42056ce25e` |
 | `repro-phase5/births_names_check.sql` | `613b1e7e275c4f6ee2613ccafc715775` |
@@ -152,7 +164,7 @@ Order: **084 → 085 → 086 → 087 → 088 → 090** (089 is step 7). One pass
 | 088 | `088_repro_services.sql` |
 | 090 | `090_repro_vet_code_semantics.sql` |
 
-Before each pass (by hand): copy the `MIG_*` files to `/root/m$MIG` on the VPS and `md5sum` them against the table above. Then (✅ EXECUTED on LOCAL and on the throwaway database for every migration with these exact `psql` commands in phases 1-3b; the wrapper script and production are ⚠️ UNTESTED):
+Before each pass (by hand): copy the `MIG_*` files to `/root/m$MIG` on the VPS and `md5sum` them against the table above. The production state checks are verified as applied for 084-088 and 090 as of 2026-11-02; do not reapply them. The commands below remain as the original procedure (✅ EXECUTED on LOCAL and on the throwaway database for every migration with these exact `psql` commands in phases 1-3b; wrapper script ⚠️ UNTESTED):
 ```bash
 # usage:  MIG=087 FILE=087_repro_births.sql bash step2.sh
 set -euo pipefail
@@ -213,7 +225,7 @@ Do not call write tools in production except on company 3.
 **Why this order:** with the 086 seed's pending rows in place and no meanings, a bare `NR` / `RP` / `NO APTO` would be accepted as an inferred VACÍA. So the 086 seed and the 090 seed run **one after the other, in this step, before step 4**. The 090 seed only touches rows the 086 seed left pending.
 **STOP if** a dry run does not show company 5 as the expected company, lists a row you did not expect, the 090 seed aborts ("already has a condition or a different meaning"), or the verification below differs. **ROLLBACK:** each seed has an undo (below).
 
-Dry run first (✅ EXECUTED on LOCAL for both seeds: the 086 seed in phase 3, the 090 seed applied and idempotent in phase 3b), then apply (⚠️ UNTESTED on production). `CONFIRMED_BY_086` is the value the owner states; the 090 seed always uses the foreman's value:
+The production seed result is verified: the nine company-5 rows below match the expected table exactly (date not recorded). Do not re-run the seed commands below; they remain as the original procedure. Their dry runs were executed on LOCAL for both seeds (the 086 seed in phase 3, the 090 seed applied and idempotent in phase 3b). `CONFIRMED_BY_086` is the value the owner states; the 090 seed always uses the foreman's value:
 ```bash
 set -euo pipefail
 . ./repro_vars.sh
@@ -235,7 +247,7 @@ Read each dry run before applying: company 5 is the expected company, the AFTER 
 $P -v confirmed_by=x -v undo=true -v apply=true -f /tmp/m090/090_seed_tenant5_vet_code_meanings.sql     # back to pending
 $P -v confirmed_by=x -v undo=true -v apply=true -f /tmp/m086/086_seed_tenant5_uterine_codes.sql          # deletes only the 9 rows it inserted and nobody changed
 ```
-**Verify — read-only, ⚠️ UNTESTED (the column names come from the 086 and 090 migrations):** the 9 rows of the 086 seed on company 5 as they must look **after 3a and 3b**:
+**Verify — read-only, verified in production (date not recorded):** the 9 rows of the 086 seed on company 5 look as shown below **after 3a and 3b**:
 ```bash
 $P -X -f - <<'SQL'
 SELECT code, repro_condition, meaning, source, confirmed_by
@@ -268,24 +280,23 @@ SQL
 ```
 
 ## Step 4 — n8n: export, diff against the repo, import the MCP server
-The repo export is **assumed equal to the live workflow**. This step proves it before importing anything. **Do steps 4 and 5 in the same window** (see "Why 4 and 5 are one unit").
+The live workflows have been compared with the current `develop` exports. **Do steps 4 and 5 in the same window** (see "Why 4 and 5 are one unit"); the production rollout is already complete as recorded in the status table.
 
-**4a. Diff the live workflows against the repo files as they were before this change** (✅ **EXECUTED on production on 2026-10-28:** the three live workflows were exported (MCP Server Cattle, ai/chat cattle, WhatsApp Agent Catlte) and compared with the repo files at `14dd60c`. Result: the same node and connection counts (30/29, 23/21, 42/38) and **every node differs only in the key `id`** — n8n regenerates node ids when a workflow is pasted into the canvas. The script of that run still counted ids as a difference (`DIFFERENT`); this version treats node ids as volatile. ⚠️ The corrected script has been run on synthetic exports and on the repo files with regenerated ids, **not yet on the live exports themselves**.) `compare_workflow_export.py` exits 1 on any real difference, so the script stops:
+**4a. Diff the three live workflows against the CURRENT `develop` exports** (✅ **VERIFIED on production on 2026-11-02:** `v6/MCP Server Cattle`, `v6/ai/chat cattle`, and `v6/WhatsApp Agent Catlte` match the repo exports. Expected differences: **none**. The live MCP export has 56 nodes and 55 tools; Chat Web has 33 nodes; WhatsApp has 42 nodes. n8n regenerates node ids when a workflow is pasted into the canvas, so node ids are volatile.) `compare_workflow_export.py` exits 1 on any real difference, so the script stops:
 ```bash
 set -euo pipefail
 . ./repro_vars.sh
-need COMMIT_BEFORE_PHASE5
 V=workflows/09-MCP-Agent-Cattle/v6
-git show "$COMMIT_BEFORE_PHASE5:$V/v6_MCP_Server_Cattle.json"      > repo_before_mcp.json
-git show "$COMMIT_BEFORE_PHASE5:$V/v6_ai_chat_cattle.json"         > repo_before_chat.json
-git show "$COMMIT_BEFORE_PHASE5:$V/v6_WhatsApp_Agent_Cattle.json"  > repo_before_whatsapp.json
-python3 "$V/repro-phase5/compare_workflow_export.py" live_before_mcp.json repo_before_mcp.json
-python3 "$V/repro-phase5/compare_workflow_export.py" live_before_chat.json repo_before_chat.json
-python3 "$V/repro-phase5/compare_workflow_export.py" live_before_whatsapp.json repo_before_whatsapp.json
+git show "origin/develop:$V/v6_MCP_Server_Cattle.json"      > repo_current_mcp.json
+git show "origin/develop:$V/v6_ai_chat_cattle.json"         > repo_current_chat.json
+git show "origin/develop:$V/v6_WhatsApp_Agent_Cattle.json"  > repo_current_whatsapp.json
+python3 "$V/repro-phase5/compare_workflow_export.py" live_before_mcp.json repo_current_mcp.json
+python3 "$V/repro-phase5/compare_workflow_export.py" live_before_chat.json repo_current_chat.json
+python3 "$V/repro-phase5/compare_workflow_export.py" live_before_whatsapp.json repo_current_whatsapp.json
 ```
-Each prints `RESULT: IDENTICAL (nodes, connections, settings)`, preceded by the line `info: node ids differ in N nodes (volatile)` (on 2026-10-28 N was every node of the workflow: expected). **Any other line is a STOP**, in particular `DIFFERENT`, `ONLY IN A/B`, `NODES WITH DIFFERENT CONTENT`, `CONNECTIONS DIFFER` or `DUPLICATE NODE NAME(S)`; the only lines that are not a STOP are the `nodes:` count line and the other `info:` lines (nodes only moved, top-level `versionId`/`tags`...). `--strict-ids` restores the old behaviour (a node id that differs is `DIFFERENT`). If `DIFFERENT`, production has manual changes (precedent: 2026-10-24, the mortality fix made by hand in the prompts). First incorporate the live change into the repo file, review it, and only then continue. Position-only differences are reported as info and are fine.
+Each comparison prints `RESULT: IDENTICAL (nodes, connections, settings)`; it may be preceded by `info: node ids differ in N nodes (volatile)`. **Any other difference is a STOP**, in particular `DIFFERENT`, `ONLY IN A/B`, `NODES WITH DIFFERENT CONTENT`, `CONNECTIONS DIFFER` or `DUPLICATE NODE NAME(S)`; the only lines that are not a STOP are the `nodes:` count line and other `info:` lines (nodes only moved, top-level `versionId`/`tags`...). `--strict-ids` restores the old behaviour (a node id that differs is `DIFFERENT`). If `DIFFERENT`, first incorporate the live change into the repo file and review it. Position-only differences are reported as info and are fine.
 
-**What the live-vs-repo comparison will show after the import:** four EXISTING nodes differ in content — `list_lots` (SQL + description), and `register_birth_event`, `log_palpation_event_batch`, `log_palpation_event` (**toolDescription only**; `add_repro_tools.py` proves it) — plus the 24 new nodes and their connections. Anything else is a surprise: STOP.
+**Expected live-vs-repo differences today: none.** This supersedes the earlier pre-import difference list; any difference in a future comparison is a STOP until explained and incorporated into the repo.
 
 **4b. The `list_lots` change is a change to an EXISTING tool's answer** (two new keys, no key removed or renamed). Prove it is additive **before** importing (⚠️ UNTESTED; read-only SQL, run it on LOCAL first). The generated SQL compares the old and the new query for company 3:
 ```bash
@@ -297,26 +308,26 @@ $P -X -f - < list_lots_diff.sql        # expect rows_old = rows_new; only_in_old
 ```
 **STOP if** `only_in_old` or `only_in_new` is not 0.
 
-**4c. Import the MCP server.** n8n 2.x: `n8n import:workflow` DEACTIVATES what it imports and changes the `versionId`, so do it from the editor (same workflow id and webhook path), as the root `CLAUDE.md` says: open `v6/MCP Server Cattle`, replace its content with `v6_MCP_Server_Cattle.json` (paste into the canvas), check the Postgres credential on the new nodes (it is the same `Postgres account` as the existing tools), **Save and Publish**. ⚠️ UNTESTED.
-The new tools are connected to the MCP trigger but **no agent mentions them yet**, so they stay inert until step 5.
-**4d. Verify** (⚠️ UNTESTED): re-export the workflow as `live_after_mcp.json` (keep it: step 6b's rollback needs it) and compare with the new repo file (the script exits 1 on a difference):
+**4c. Import the MCP server.** n8n 2.x: `n8n import:workflow` DEACTIVATES what it imports and changes the `versionId`, so do it from the editor (same workflow id and webhook path), as the root `CLAUDE.md` says: open `v6/MCP Server Cattle`, replace its content with `v6_MCP_Server_Cattle.json` (paste into the canvas), check the Postgres credential on the new nodes (it is the same `Postgres account` as the existing tools), **Save and Publish**. This import is complete and verified on 2026-11-02.
+The new tools are connected to the MCP trigger and are available to the agents after step 5.
+**4d. Verify** (completed and verified on 2026-11-02): re-export the workflow as `live_after_mcp.json` (keep it: step 6b's rollback needs it) and compare with the repo file (the script exits 1 on a difference):
 ```bash
 python3 workflows/09-MCP-Agent-Cattle/v6/repro-phase5/compare_workflow_export.py live_after_mcp.json workflows/09-MCP-Agent-Cattle/v6/v6_MCP_Server_Cattle.json
 ```
-→ `RESULT: IDENTICAL (nodes, connections, settings)` plus the info line `node ids differ in N nodes (volatile)` (**the re-export after the import has new node ids**, so that line is expected; any other line is a STOP) (and `Publish` really applied: the editor can leave a saved but unpublished version — the re-export shows it). In the editor the trigger must list 53 tools. The endpoint URL of the agents' `MCP Cattle Management` / `MCP Client` nodes stays `https://n8n.hosting3m.com/mcp/v6/cattle-management` (production) in the repo.
+→ `RESULT: IDENTICAL (nodes, connections, settings)` (a re-export may also report `info: node ids differ in N nodes (volatile)`: node ids are regenerated, so that line is expected; any other difference is a STOP). The re-export verifies that `Publish` applied. The editor trigger lists 55 tools. The endpoint URL of the agents' `MCP Cattle Management` / `MCP Client` nodes stays `https://n8n.hosting3m.com/mcp/v6/cattle-management` (production) in the repo.
 **STOP if** the import fails, the credential is missing, or the re-export differs. **ROLLBACK of step 4 alone (before step 5 starts):** import `live_before_mcp.json` (the export of step 1) the same way, Publish, re-export and compare it with `live_before_mcp.json` → `IDENTICAL` (plus the node ids info line). The database changes of steps 2-3 stay (they are additive and the old tools still work with them).
 
 ## Step 5 — n8n: the two agent prompts (right after step 4, same window)
-Import the two agent workflows the same way (4c) from `v6_ai_chat_cattle.json` and `v6_WhatsApp_Agent_Cattle.json`. They differ from the live ones **only** in the `systemMessage` of the node `AI Agent` (proved offline by `check_repro_consistency.js`). Do WhatsApp last. ⚠️ UNTESTED.
-Verify: re-export both and compare with the repo files (`RESULT: IDENTICAL (nodes, connections, settings)` plus `info: node ids differ in N nodes (volatile)` for each: the re-export has new node ids; any other line is a STOP); from the repo, run the offline check (✅ executed by the author on the repo files; **187 passed, 0 failed** at the last run):
+The two agent workflows were imported from `v6_ai_chat_cattle.json` and `v6_WhatsApp_Agent_Cattle.json`; the Chat Web prompt restoration was imported and verified on 2026-11-02. Chat Web was re-exported identically to `develop`; WhatsApp is identical to the repo and its section G contains the phase-5 rules. A read-only births-summary smoke test through the real Chat Web channel on company 3 answered correctly. The current consistency check passes 189 assertions.
+Verification reference: re-export both and compare with the repo files (`RESULT: IDENTICAL (nodes, connections, settings)` plus optional `info: node ids differ in N nodes (volatile)`; any other difference is a STOP); run the offline check:
 ```bash
 set -euo pipefail
 V=workflows/09-MCP-Agent-Cattle/v6
 python3 "$V/repro-phase5/compare_workflow_export.py" live_after_chat.json "$V/v6_ai_chat_cattle.json"
 python3 "$V/repro-phase5/compare_workflow_export.py" live_after_whatsapp.json "$V/v6_WhatsApp_Agent_Cattle.json"
-node "$V/repro-phase5/check_repro_consistency.js"        # exit 0, no FAIL (187 passed)
+node "$V/repro-phase5/check_repro_consistency.js"        # exit 0, no FAIL (189 passed)
 ```
-Then one read-only message per channel on company 3, **through the real channel** (never the editor's Chat / Test panel — Rules 6 and 11): "¿Cuántos partos hubo en los últimos 30 días?" → a total.
+The Chat Web read-only births-summary smoke test was completed through the real channel on company 3. The same per-channel smoke checks remain part of a future re-import verification; the full dialogs are part of step 6.
 **STOP if** the import fails, a re-export differs, or the smoke message answers with a technical error.
 **ROLLBACK of step 5 = rollback of steps 5 AND 4, together.** Import `live_before_chat.json`, `live_before_whatsapp.json` **and `live_before_mcp.json`**, Publish each, re-export each and compare with the saved export (`IDENTICAL`, plus the node ids info line). **The MCP server must NOT stay on the new export:** its legacy tool descriptions say `OBSOLETA` while the previous prompts still tell the agents to use `register_birth_event` and `log_palpation_event_batch`. (The database stays.)
 
@@ -370,7 +381,7 @@ Files: `REPRO_QA_SCRIPT.md` (40 dialogs, the exact messages, the expected tool a
    It writes only to company 3 and aborts if company 3 is not "Rancho El Palomar" (and, if a tag of the run already exists anywhere, it says how many, in which `tenant_id`, and lists up to 5).
    **There is NO cleanup script, on purpose:** company 3 is in production and the births, empadre and historical tables are append-only; the QA events remain as residue in the test company (every fixture row carries a QA marker: tags `99992#####` and fire numbers / names starting `QA5R2`). A second pass needs `-v run=3`.
 2. Run the dialogs on **Chat Web (40) and WhatsApp (the subset of 10)**, writing into the tables of the QA script. WhatsApp needs the tester's phone linked to an ADMIN user of company 3 (how it is resolved, and a read-only check, are in the QA script, "Antes de empezar").
-3. **Measure tool selection** (`gpt-4.1-mini`, 53 tools): at least **90 %** of the dialogs pick the right tool on the first try, **per channel** (WhatsApp: 10 dialogs, so at most 1 miss).
+3. **Measure tool selection** (`gpt-4.1-mini`, 55 tools): at least **90 %** of the dialogs pick the right tool on the first try, **per channel** (WhatsApp: 10 dialogs, so at most 1 miss).
 4. For "an animal of another company" use **only read tools** with the identifier you put in the placeholder of Q38.
 
 **Pass criteria:** the measure ≥ 90 % on both channels, **the births-block exit gate below (5 repetitions per channel, 0 writes before the "Sí")**, every "Criterios de aprobación adicionales" item of the QA script holds, no UUID / `lot_id` shown, no NIVEL 3 write without a "Sí", no NIVEL 2 write that asks for confirmation, **and no QA execution called either legacy tool (`register_birth_event`, `log_palpation_event_batch`)**.
@@ -387,7 +398,7 @@ Files: `REPRO_QA_SCRIPT.md` (40 dialogs, the exact messages, the expected tool a
 
 ## Step 6b — Delete the two legacy nodes from the MCP server (only after the QA passed)
 This PR **keeps** `register_birth_event` and `log_palpation_event_batch` in the repo export; step 6b removes them from the LIVE server first and from the repo in a **separate follow-up commit**. Skip it if the executions check above was impossible or any criterion failed.
-**6b.1 Build the export without the two nodes, with the proof** — the proof part was executed by the author on the repo export (53 → 51 tools, every remaining node and connection byte-identical); writing the file and importing it are ⚠️ UNTESTED:
+**6b.1 Build the export without the two nodes, with the proof** — the proof part was executed by the author on the repo export (55 → 53 tools, every remaining node and connection byte-identical); writing the file and importing it are ⚠️ UNTESTED:
 ```bash
 set -euo pipefail
 python3 - <<'PY'
@@ -419,12 +430,12 @@ print('OK: removed', LEGACY, '->', len(out['nodes']), 'nodes,', len(tools), 'too
 PY
 ```
 **6b.2 Import** `v6_MCP_Server_Cattle.6b.json` into `v6/MCP Server Cattle` from the editor (as 4c), **Save and Publish**. ⚠️ UNTESTED.
-**6b.3 Re-import check** (⚠️ UNTESTED): re-export as `live_after_6b.json` and compare; in the editor the trigger must list **51** tools; then one read-only message per channel on company 3 and a quick Q03 (a birth through the agent) to prove the agents do not need the deleted tools:
+**6b.3 Re-import check** (⚠️ UNTESTED): re-export as `live_after_6b.json` and compare; in the editor the trigger must list **53** tools; then one read-only message per channel on company 3 and a quick Q03 (a birth through the agent) to prove the agents do not need the deleted tools:
 ```bash
 python3 workflows/09-MCP-Agent-Cattle/v6/repro-phase5/compare_workflow_export.py live_after_6b.json v6_MCP_Server_Cattle.6b.json
 ```
 → `RESULT: IDENTICAL (nodes, connections, settings)`, preceded by `info: node ids differ in N nodes (volatile)` (a re-export after an import has new node ids: that line is expected); **any other line is a STOP**. **STOP if** it differs, the import fails or an agent message errors. **ROLLBACK of 6b:** import `live_after_mcp.json` (the export of 4d) the same way, Publish, re-export and compare → the same two lines (it brings both nodes back).
-**6b.4 Follow-up commit (after 6b is verified):** replace `v6_MCP_Server_Cattle.json` in the repo with the 6b file, in a separate PR; in `check_repro_consistency.js` change the expected count from 53 to 51 and drop the two legacy exceptions; update backlog items 24-25. Never before 6b is verified live.
+**6b.4 Follow-up commit (after 6b is verified):** replace `v6_MCP_Server_Cattle.json` in the repo with the 6b file, in a separate PR; in `check_repro_consistency.js` change the expected count from 55 to 53 and drop the two legacy exceptions; update backlog items 24-25. Never before 6b is verified live.
 
 ## Step 7 — 089 (disable the legacy `nacimiento` gateway model) — only after its pre-checks and a successful gateway check
 Skip this step if any condition below fails; everything above works without 089.
@@ -449,7 +460,7 @@ SQL
 **STOP if** the gateway answers 200 with data, or a QA birth fails. **ROLLBACK:** `$P -v apply=true -f /tmp/m089/089_rollback.sql` then `$P -v expect=rolled_back -f /tmp/m089/089_state_check.sql` (restores the original row exactly).
 
 ## Step 8 — Merge `develop` into `main`, LAST
-Only when steps 1-6 (6b and 7 if you did them) are verified. `main` deploys the frontends through Plesk, so first list what would be published (⚠️ UNTESTED shape):
+The phase-5 release is already on `main` (see the status table). The original gate below is retained as a reference for any future rollout; for a future merge, only proceed when steps 1-6 (6b and 7 if you do them) are verified. `main` deploys the frontends through Plesk, so first list what would be published (⚠️ UNTESTED shape):
 ```bash
 set -euo pipefail
 git fetch origin
