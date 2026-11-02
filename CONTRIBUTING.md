@@ -56,8 +56,9 @@ No los uses como única fuente de verdad.
 
 ### Despliegue de producción
 
-- `main` publica los frontends automáticamente por Plesk. El backend (compose, n8n y base
-  de datos) se despliega manualmente en el VPS con su runbook.
+- Tras mergear a `main`, el despliegue de los frontends en Plesk se inicia manualmente con
+  "Deploy now". El backend (compose, n8n y base de datos) se despliega manualmente en el VPS
+  con su runbook.
 - `deploy.sh` despliega solo los servicios indicados: ejecuta `./deploy.sh [--yes] <service>...`.
   Confirma antes del despliegue, etiqueta las imágenes actuales para rollback e imprime los
   comandos de rollback.
