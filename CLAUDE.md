@@ -179,6 +179,9 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
 
   Motivo: el frontend llegó a `main` antes que la base **dos veces** (v1.18.0 el 2026-10-17 y v1.19.0 el
   2026-10-20). La parte del frontend es siempre la última del runbook y empieza con "solo si 1 y 2 están OK".
+- **Workflows en n8n 2.x:** `n8n import:workflow` **desactiva** lo que importa y `--activeState=fromJson` solo
+  funciona en modo queue/multi-main; además cambia el `versionId`. En producción, reemplaza el contenido desde el
+  editor de n8n (mismo id y `webhookId`) y publica.
 - **Runbook de despliegue de workflows en n8n 2.x:**
   1. **Precondiciones:** el PR debe estar mergeado a `develop` y CI en verde. Ningún cambio de workflow se publica
      en `main` antes de importarlo y verificarlo en n8n.
@@ -186,7 +189,9 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
      limita sus permisos a `600` (por ejemplo, `chmod 600 /ruta/al/respaldo.json`).
   3. **Comparación con `main`:** compara el respaldo de producción con el JSON correspondiente de `origin/main`,
      por nombre de nodo, `parameters` y `connections`, con el snippet siguiente. El resultado esperado es
-     `No differences.`. Si hay diferencias, detente y resuélvelas antes de continuar.
+     `No differences.`. Como comprobación complementaria, calcula la huella con
+     `python3 -I ~/node_fingerprints.py <archivo>` y detente si no coincide con la huella "antes" esperada.
+     Si hay diferencias, detente y resuélvelas antes de continuar.
   4. **Comparación con `develop`:** repite la comparación contra el JSON correspondiente de `origin/develop` y
      registra exactamente los nodos con cambios en `parameters` y las conexiones que cambiarán. Confirma también
      que `credentials` de cada nodo, `webhookId`, `typeVersion` de cada nodo y `settings` del workflow sean iguales.
@@ -226,11 +231,16 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
   5. **Importación:** en n8n, selecciona **⋯ → Import from file…**, elige el JSON de `develop`, pulsa **Save** y
      luego **Publish**. En esta versión, producción conserva la versión publicada anteriormente hasta pulsar
      **Publish**. No uses `n8n import:workflow`: puede desactivar el workflow y cambiar el `versionId`.
-  6. **Verificación:** realiza una solicitud sin autenticar que debe ser denegada con HTTP 403 y JSON limpio
-     (`{message, code}`); después ejecuta una acción autenticada normal en el dashboard y confirma que funciona.
-     Abre la ejecución más reciente y verifica la ruta esperada. Usa únicamente placeholders para URLs y tokens.
-  7. **Rollback:** vuelve a importar el respaldo del paso 2, pulsa **Save** y **Publish**.
-  8. **Release:** finalmente publica `develop` → `main` con `gh pr merge N --merge` y confirma que
+  6. **Verificación de publicación:** descarga el workflow otra vez y compara el export recién descargado con el
+     JSON de `develop` usando el mismo snippet; el resultado esperado es `No differences.`. No lo consideres
+     desplegado hasta que coincidan. El editor puede dejar una versión guardada sin publicar (pasó en v1.18.1,
+     2026-10-17: la primera importación no se publicó y solo la huella lo detectó).
+  7. **Verificación de comportamiento:** realiza una solicitud sin autenticar que debe ser denegada con HTTP 403
+     y JSON limpio (`{message, code}`); después ejecuta una acción autenticada normal en el dashboard y confirma
+     que funciona. Abre la ejecución más reciente y verifica la ruta esperada. Usa únicamente placeholders para
+     URLs y tokens.
+  8. **Rollback:** vuelve a importar el respaldo del paso 2, pulsa **Save** y **Publish**.
+  9. **Release:** finalmente publica `develop` → `main` con `gh pr merge N --merge` y confirma que
      `git diff --stat origin/main origin/develop` no imprime diferencias.
 - **Una consulta parametrizada de n8n se prueba ejecutando el nodo con datos reales, no solo con SQL preparado.**
   El nodo Postgres pasa un `queryReplacement` de tipo arreglo con sus tipos de JS y pg-promise arma la consulta del
