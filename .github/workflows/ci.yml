@@ -17,6 +17,14 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  shell-checks:
+    name: Shell checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: shellcheck deploy.sh tests/deploy/test_deploy.sh
+      - run: bash tests/deploy/test_deploy.sh
+
   v5-crud-tests:
     name: v5 CRUD tests
     runs-on: ubuntu-latest
