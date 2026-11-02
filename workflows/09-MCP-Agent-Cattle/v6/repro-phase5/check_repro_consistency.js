@@ -20,6 +20,7 @@ const PHASE_FILES = [1, 2, 3, 4].map((p) => `repro-phase${p}/repro_phase${p}_too
 // documented exceptions: out of the dictionary on purpose
 const LEGACY_KEPT_AS_NODE = ['register_birth_event', 'log_palpation_event_batch'];   // rollback path of 087; backlog items 24 and 25
 const FORBIDDEN_TOOL = ['get_table_metadata'];                                       // A4 says it is NOT allowed
+const CFDI_TOOLS = ['preview_expense_invoice', 'register_expense_invoice'];
 const NOT_EXPOSED = ['sp_repro_condition_code_set', 'sp_repro_empadre_set_config', 'sp_repro_births_set_config'];
 
 // the owner's decisions (phase 5): confirmation levels
@@ -69,7 +70,7 @@ const mcp = docs[MCP_FILE];
 const toolNodes = mcp.nodes.filter((n) => n.type.endsWith('postgresTool'));
 const toolNames = toolNodes.map((n) => n.name);
 ok('MCP server: node names are unique', new Set(mcp.nodes.map((n) => n.name)).size === mcp.nodes.length);
-ok('MCP server: 53 tool nodes (29 existing + 24 reproduction)', toolNames.length === 53, 'found ' + toolNames.length);
+ok('MCP server: 55 tool nodes (29 existing + 24 reproduction + 2 CFDI)', toolNames.length === 55, 'found ' + toolNames.length);
 const trigger = mcp.nodes.find((n) => n.type.endsWith('mcpTrigger'));
 ok('MCP server: every tool node is connected to the MCP trigger',
   toolNames.every((t) => { const c = mcp.connections[t]; return c && c.ai_tool && c.ai_tool[0] && c.ai_tool[0].some((x) => x.node === trigger.name); }));
@@ -79,8 +80,10 @@ ok('the 24 nodes of repro-phase1..4 are all in the MCP server', phaseNames.lengt
 ok('MCP server: each reproduction node equals its phase file node except position',
   phaseNames.every((n) => {
     const a = JSON.parse(JSON.stringify(toolNodes.find((x) => x.name === n))); delete a.position;
+    delete a.id;
     const src = PHASE_FILES.map((f) => docs[f].nodes.find((x) => x.name === n)).find(Boolean);
     const b = JSON.parse(JSON.stringify(src)); delete b.position;
+    delete b.id;
     return JSON.stringify(a) === JSON.stringify(b);
   }));
 ok('the setters are NOT exposed (no node, not in any prompt)', NOT_EXPOSED.every((s) => !toolNames.includes(s)));
@@ -118,12 +121,16 @@ for (const ch of Object.keys(AGENTS)) {
   ok(`${ch}: every tool named in the prompt exists in the MCP server (and none is a legacy tool)`,
     unknown.length === 0 && LEGACY_KEPT_AS_NODE.every((l) => !sys[ch].includes(l)), 'unknown: [' + unknown.join(', ') + ']');
   dict[ch] = [...new Set([...parts[ch].E.matchAll(TOOL_RE)].map((m) => m[1]))].filter((t) => toolNames.includes(t)).sort();
-  const expectedDict = toolNames.filter((t) => !LEGACY_KEPT_AS_NODE.includes(t) && !FORBIDDEN_TOOL.includes(t)).sort();
+  const expectedDict = toolNames.filter((t) => !LEGACY_KEPT_AS_NODE.includes(t) && !FORBIDDEN_TOOL.includes(t) &&
+    (ch === 'chat' || !CFDI_TOOLS.includes(t))).sort();
   ok(`${ch}: dictionary E lists every MCP tool except the documented ones (get_table_metadata, ${LEGACY_KEPT_AS_NODE.join(', ')})`, setEq(dict[ch], expectedDict),
     fmt(diff(dict[ch], expectedDict)));
   ok(`${ch}: nothing outside the MCP server is named as a tool (no sp_repro_* setter)`, NOT_EXPOSED.every((s) => !sys[ch].includes(s)));
 }
-ok('both prompts list the same tools in the dictionary', setEq(dict.chat, dict.whatsapp), fmt(diff(dict.chat, dict.whatsapp)));
+ok('chat: CFDI tools are exposed in the prompt and dictionary E', CFDI_TOOLS.every((t) => sys.chat.includes(t) && dict.chat.includes(t)));
+ok('whatsapp: CFDI tools are not exposed in the prompt or dictionary E', CFDI_TOOLS.every((t) => !sys.whatsapp.includes(t) && !dict.whatsapp.includes(t)));
+ok('both prompts list the same non-CFDI tools in the dictionary',
+  setEq(dict.chat.filter((t) => !CFDI_TOOLS.includes(t)), dict.whatsapp), fmt(diff(dict.chat, dict.whatsapp)));
 
 // confirmation levels (section C) against the owner's decisions
 for (const ch of Object.keys(AGENTS)) {
@@ -135,7 +142,8 @@ for (const ch of Object.keys(AGENTS)) {
   }
   const all = [...lvl[1], ...lvl[2], ...lvl[3]];
   ok(`${ch}: no tool is in two levels`, new Set(all).size === all.length);
-  ok(`${ch}: every dictionary tool has a level`, setEq(all.slice().sort(), dict[ch]), fmt(diff(all.slice().sort(), dict[ch])));
+  const reproductionDict = dict[ch].filter((t) => !CFDI_TOOLS.includes(t));
+  ok(`${ch}: every reproduction dictionary tool has a level`, setEq(all.slice().sort(), reproductionDict), fmt(diff(all.slice().sort(), reproductionDict)));
 }
 
 // each new tool's description agrees with its level
