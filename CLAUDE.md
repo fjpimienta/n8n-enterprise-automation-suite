@@ -179,15 +179,59 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
 
   Motivo: el frontend llegó a `main` antes que la base **dos veces** (v1.18.0 el 2026-10-17 y v1.19.0 el
   2026-10-20). La parte del frontend es siempre la última del runbook y empieza con "solo si 1 y 2 están OK".
-- **Workflows en n8n 2.x:** `n8n import:workflow` **desactiva** lo que importa y `--activeState=fromJson` solo
-  funciona en modo queue/multi-main; además cambia el `versionId`. En producción, reemplazar el contenido desde el
-  editor de n8n (mismo id y `webhookId`) y publicar.
-- **Runbook estándar de un workflow:** (1) descargar el export de producción y sacar su huella
-  (`python3 -I ~/node_fingerprints.py <archivo>`; detenerse si no coincide con la huella "antes" esperada);
-  (2) importar desde el editor, revisar webhook y credenciales, guardar y **Publish**; (3) **descargar de nuevo y
-  verificar con la huella "después" antes de dar el workflow por desplegado** — el editor puede dejar una versión
-  guardada sin publicar (pasó en v1.18.1, 2026-10-17: la primera importación no se publicó y solo la huella lo
-  detectó); (4) solo entonces, pruebas. Rollback: reimportar el export del paso 1 y publicar.
+- **Runbook de despliegue de workflows en n8n 2.x:**
+  1. **Precondiciones:** el PR debe estar mergeado a `develop` y CI en verde. Ningún cambio de workflow se publica
+     en `main` antes de importarlo y verificarlo en n8n.
+  2. **Respaldo:** abre el workflow en producción, selecciona **⋯ → Download** y guarda el archivo fuera del repo;
+     limita sus permisos a `600` (por ejemplo, `chmod 600 /ruta/al/respaldo.json`).
+  3. **Comparación con `main`:** compara el respaldo de producción con el JSON correspondiente de `origin/main`,
+     por nombre de nodo, `parameters` y `connections`, con el snippet siguiente. El resultado esperado es
+     `No differences.`. Si hay diferencias, detente y resuélvelas antes de continuar.
+  4. **Comparación con `develop`:** repite la comparación contra el JSON correspondiente de `origin/develop` y
+     registra exactamente los nodos con cambios en `parameters` y las conexiones que cambiarán. Confirma también
+     que `credentials` de cada nodo, `webhookId`, `typeVersion` de cada nodo y `settings` del workflow sean iguales.
+     Los `id` de los nodos cambian en cada importación y no son significativos.
+     ```sh
+     python3 - /ruta/al/respaldo-produccion.json /ruta/al/candidato.json <<'PY'
+     import json
+     import sys
+     from pathlib import Path
+
+     def load(path):
+         return json.loads(Path(path).read_text())
+
+     production, candidate = map(load, sys.argv[1:3])
+     production_nodes = {node["name"]: node.get("parameters", {}) for node in production["nodes"]}
+     candidate_nodes = {node["name"]: node.get("parameters", {}) for node in candidate["nodes"]}
+     changed_nodes = sorted(
+         name for name in production_nodes.keys() | candidate_nodes.keys()
+         if production_nodes.get(name) != candidate_nodes.get(name)
+     )
+     production_connections = production.get("connections", {})
+     candidate_connections = candidate.get("connections", {})
+     changed_connections = sorted(
+         name for name in production_connections.keys() | candidate_connections.keys()
+         if production_connections.get(name) != candidate_connections.get(name)
+     )
+     if not changed_nodes and not changed_connections:
+         print("No differences.")
+     else:
+         print("Nodes with changed parameters:", changed_nodes)
+         for name in changed_connections:
+             print(f"Connection changes for {name}:")
+             print("  production:", json.dumps(production_connections.get(name), sort_keys=True))
+             print("  candidate: ", json.dumps(candidate_connections.get(name), sort_keys=True))
+     PY
+     ```
+  5. **Importación:** en n8n, selecciona **⋯ → Import from file…**, elige el JSON de `develop`, pulsa **Save** y
+     luego **Publish**. En esta versión, producción conserva la versión publicada anteriormente hasta pulsar
+     **Publish**. No uses `n8n import:workflow`: puede desactivar el workflow y cambiar el `versionId`.
+  6. **Verificación:** realiza una solicitud sin autenticar que debe ser denegada con HTTP 403 y JSON limpio
+     (`{message, code}`); después ejecuta una acción autenticada normal en el dashboard y confirma que funciona.
+     Abre la ejecución más reciente y verifica la ruta esperada. Usa únicamente placeholders para URLs y tokens.
+  7. **Rollback:** vuelve a importar el respaldo del paso 2, pulsa **Save** y **Publish**.
+  8. **Release:** finalmente publica `develop` → `main` con `gh pr merge N --merge` y confirma que
+     `git diff --stat origin/main origin/develop` no imprime diferencias.
 - **Una consulta parametrizada de n8n se prueba ejecutando el nodo con datos reales, no solo con SQL preparado.**
   El nodo Postgres pasa un `queryReplacement` de tipo arreglo con sus tipos de JS y pg-promise arma la consulta del
   lado del cliente (un número entra sin comillas); uno de tipo texto se parte por comas y descarta los vacíos. Un

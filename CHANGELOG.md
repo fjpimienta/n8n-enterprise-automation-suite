@@ -32,6 +32,8 @@ cuando actualizan las reglas compartidas de contribución o despliegue.
 * Reworked `deploy.sh` as a service-scoped deploy script (`./deploy.sh [--yes] <service>...`)
   with a confirmation prompt, a pre-deploy image tag, and printed rollback commands.
 * Added a CI "Shell checks" job for ShellCheck and the stubbed deploy-script tests.
+* Added an n8n workflow deployment runbook with production comparison, publish verification,
+  and rollback steps.
 
 ---
 
