@@ -43,8 +43,9 @@
   categorías y gastos por empresa, anulaciones, balance y vistas de consulta
 - v1.19.1 — Aislamiento del agente de ganadería frente a empresas PALM (migración 082).
 - v1.20.0 — Wrappers SQL para el agente de Palma en Chat Web/WhatsApp (migración 083).
-  Las migraciones 084–090 de reproducción están versionadas, pero el `CHANGELOG.md` las
-  identifica como no desplegadas; 091–093 definen SQL CFDI y 091 se declara sin pruebas.
+  La fase 5 de reproducción está desplegada en `main`; 084–088 y 090 constan aplicadas en
+  producción, con 089 opcional y pendiente. CFDI (091–093) también está desplegado; las fechas
+  y verificaciones están en `CHANGELOG.md`.
 
 ## 📝 1. Estructura del Workspace (Feature-Driven Architecture)
 
@@ -164,8 +165,9 @@ graph TD
 
 > El panel web usa el gateway REST `v6/crud`; los agentes n8n invocan herramientas SQL
 > mediante `postgresTool`, fuera de `crud_models`. Las rutas de agricultura no representan
-> las capacidades SQL de reproducción ni CFDI como pantallas. Los artefactos de reproducción
-> 084–090 están versionados, pero constan como no desplegados en `CHANGELOG.md`. El flujo
+> las capacidades SQL de reproducción ni CFDI como pantallas. Las migraciones de reproducción
+> 084–088 y 090 están aplicadas en producción, y la fase 5 está desplegada en `main`; 089
+> sigue opcional y pendiente (ver `REPRO_PRODUCTION_RUNBOOK.md`). El flujo
 > CFDI también está versionado como una integración sin ruta Angular: UI Chat envía el mensaje
 > y el adjunto XML como Base64 directamente al webhook n8n; no hay una etapa previa de Media
 > Server/Upload en este flujo. [`v6_ai_chat_cattle.json`](../../../../workflows/09-MCP-Agent-Cattle/v6/v6_ai_chat_cattle.json)
@@ -174,8 +176,9 @@ graph TD
 > `sp_expense_invoice_draft_create`. [`v6_MCP_Server_Cattle.json`](../../../../workflows/09-MCP-Agent-Cattle/v6/v6_MCP_Server_Cattle.json)
 > expone la vista previa y confirmación; la UI muestra la respuesta como texto conversacional,
 > no como una tarjeta CFDI dedicada. El parser admite CFDI 4.0 tipo Ingreso, no CFDI 3.3.
-> La migración 091 se declara no ejecutada/sin pruebas; los artefactos no son evidencia de
-> validación end-to-end ni de despliegue.
+> Las migraciones 091 y 092 se aplicaron en producción el 2026-10-30 y la 093 el 2026-10-31;
+> el flujo CFDI se desplegó el 2026-10-31. Las pruebas en vivo pendientes están enumeradas en
+> `CHANGELOG.md`; la nota de pruebas LOCAL del SQL de 091 es anterior a ese estado.
 
 ### ⚠️ Contrato del motor Meta-CRUD (restricciones implícitas, no declaradas en `crud_models`)
 
@@ -927,8 +930,9 @@ The livestock Angular route file declares `/ganaderia/dashboard`, `/ganaderia/in
   replace `sp_log_breeding_event`, `sp_void_event` and existing reproduction tool bodies.
 * Reproduction MCP tool JSON and phase notes are versioned in
   [`workflows/09-MCP-Agent-Cattle/v6/`](../../../../workflows/09-MCP-Agent-Cattle/v6/).
-  `CHANGELOG.md` marks the 084–090 integration as not deployed; do not infer rollout from the
-  exported SQL or workflow files.
+  As of 2026-11-02, production state checks verify 084–088 and 090 as applied; 089 remains
+  optional and pending. The MCP and agent exports are verified against production as recorded in
+  [`REPRO_PRODUCTION_RUNBOOK.md`](./REPRO_PRODUCTION_RUNBOOK.md).
 * **091–093 — CFDI:** `sp_company_tax_id_set` manages receiver RFCs;
   `sp_expense_invoice_register` writes invoice metadata; 092 adds draft creation, preview and
   confirmation procedures; 093 replaces the register function to support conditional RFC
