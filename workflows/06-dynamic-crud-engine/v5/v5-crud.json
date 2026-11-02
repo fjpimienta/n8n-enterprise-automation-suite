@@ -299,10 +299,44 @@
     },
     {
       "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6f3a5db8-c531-4c5c-8753-927557a4c624",
+              "leftValue": "={{ $json.error === false && ($json.status === undefined || (typeof $json.status === 'number' && Number.isFinite($json.status) && $json.status < 400) || (typeof $json.status === 'string' && $json.status.trim() !== '' && Number.isFinite(Number($json.status)) && Number($json.status) < 400)) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2704,
+        800
+      ],
+      "id": "b9c15ef0-9f2d-4c79-baf7-e083aa3d0576",
+      "name": "Security Validation Gate"
+    },
+    {
+      "parameters": {
         "respondWith": "json",
-        "responseBody": "={\"mensaje\": \"Acceso denegado\"}",
+        "responseBody": "={{ { message: $json.message ?? \"Acceso denegado\", code: $json.code ?? (Number($json.status) === 401 || $json.error !== true ? \"AUTH_ERROR\" : \"SECURITY_VALIDATION\") } }}",
         "options": {
-          "responseCode": 401
+          "responseCode": "={{ Number.isInteger(Number($json.status)) && Number($json.status) >= 400 && Number($json.status) <= 599 ? Number($json.status) : 401 }}"
         }
       },
       "type": "n8n-nodes-base.respondToWebhook",
@@ -728,7 +762,25 @@
       "main": [
         [
           {
+            "node": "Security Validation Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Security Validation Gate": {
+      "main": [
+        [
+          {
             "node": "Build Query",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Denegate",
             "type": "main",
             "index": 0
           }

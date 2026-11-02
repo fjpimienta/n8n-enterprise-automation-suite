@@ -126,5 +126,49 @@ for (const bad of [undefined, null, 0, -1, 2.5, 'abc', '']) { o = ea(eaP, { veri
 o = ea(eaP, { verify: undefined, model: 'companys' }); ok(!o.error && o.user.role === 'CUSTOMER' && o.id_company === null, 'public companys path keeps working (no tenant)');
 o = ea(eaP, { verify: undefined, model: 'hotel_guests' }); ok(o.error && o.code === 'NO_ROLE', 'no token on a hotel model -> NO_ROLE (unchanged)');
 
+console.log('== Security Validation routing');
+const gate = wf.nodes.find(n => n.name === 'Security Validation Gate');
+const gateExpression = gate?.parameters.conditions.conditions[0].leftValue.match(/^={{\s*([\s\S]*?)\s*}}$/)?.[1];
+ok(Boolean(gateExpression), 'security gate has an evaluable allow condition');
+const canContinue = (item) => new Function('$json', `return (${gateExpression});`)(item);
+ok(!canContinue({ error: true, status: 403, message: 'Denied', code: 'SECURITY_VALIDATION' }), '403 denied item selects the response branch');
+ok(!canContinue({ error: false, status: 403 }), 'status >= 400 selects the response branch');
+ok(!canContinue({}), 'ambiguous item selects the response branch');
+ok(canContinue({ error: false }), 'allowed item selects the Build Query branch');
+
+const gateOutputs = wf.connections['Security Validation Gate'].main;
+const allowedTarget = gateOutputs[0][0].node;
+const deniedTarget = gateOutputs[1][0].node;
+ok(allowedTarget === 'Build Query', 'allowed branch connects directly to Build Query');
+ok(deniedTarget === 'Respond Denegate', 'denied branch connects to the response node');
+const reachable = (start) => {
+  const found = new Set();
+  const pending = [start];
+  while (pending.length) {
+    const name = pending.pop();
+    if (found.has(name)) continue;
+    found.add(name);
+    for (const output of wf.connections[name]?.main || []) {
+      for (const edge of output) pending.push(edge.node);
+    }
+  }
+  return found;
+};
+const deniedPath = reachable(deniedTarget);
+ok(!deniedPath.has('Build Query') && ![...deniedPath].some(name => wf.nodes.find(n => n.name === name)?.type === 'n8n-nodes-base.postgres'), 'denied branch cannot reach Build Query or SQL nodes');
+const allowedPath = reachable(allowedTarget);
+ok(allowedPath.has('Build Query'), 'allowed branch continues through Build Query');
+const denialResponse = wf.nodes.find(n => n.name === deniedTarget);
+ok(denialResponse.parameters.responseBody.includes('$json.message') && denialResponse.parameters.responseBody.includes('$json.code') && denialResponse.parameters.options.responseCode.includes('$json.status'), 'denial response uses the item message, code, and status');
+const evaluateExpression = (expression, item) => {
+  const body = expression.match(/^={{\s*([\s\S]*?)\s*}}$/)?.[1];
+  return new Function('$json', `return (${body});`)(item);
+};
+const deniedItem = { error: true, status: 403, message: 'Denied', code: 'SECURITY_VALIDATION' };
+const responseBody = evaluateExpression(denialResponse.parameters.responseBody, deniedItem);
+const responseCode = evaluateExpression(denialResponse.parameters.options.responseCode, deniedItem);
+ok(responseCode === 403 && responseBody.message === deniedItem.message && responseBody.code === deniedItem.code, '403 response preserves the status, message, and code');
+ok(evaluateExpression(denialResponse.parameters.options.responseCode, {}) === 401, 'existing unauthenticated response remains 401');
+
 console.log(`\nRESULT: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
