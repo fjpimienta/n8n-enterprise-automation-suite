@@ -10,8 +10,19 @@ updates:
     commit-message:
       prefix: "chore(deps)"
     groups:
+      # Angular packages pin each other with exact peer versions: they must move together.
+      angular:
+        patterns:
+          - "@angular/*"
+          - "@angular-devkit/*"
+          - "@schematics/angular"
+        update-types: ["minor", "patch"]
       workspace-minor-patch:
         patterns: ["*"]
+        exclude-patterns:
+          - "@angular/*"
+          - "@angular-devkit/*"
+          - "@schematics/angular"
         update-types: ["minor", "patch"]
     ignore:
       - dependency-name: "@angular/*"
