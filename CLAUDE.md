@@ -153,8 +153,9 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
 
 - **Despliegue de producción:** `main` publica automáticamente los frontends por Plesk. El backend
   (compose, n8n y base de datos) se despliega manualmente en el VPS con su runbook.
-  `deploy.sh` ejecuta `git pull origin main` y `docker compose up -d --build`: no lo ejecutes
-  sin comparar antes el compose del VPS con el del repositorio.
+  `deploy.sh <service> [<service>...]` actualiza con `git pull --ff-only origin main`, crea una
+  etiqueta de rollback antes de compilar y recrea solo los servicios solicitados; `upload-file`
+  usa su propio compose. No ejecutarlo sin comparar antes el compose del VPS con el del repositorio.
   Un PR que dependa de base de datos o de n8n **no llega a `main` hasta tener listo su runbook**: orden de
   despliegue, huellas antes/después, pruebas en producción con empresas de pruebas y rollback. Si el frontend no
   depende del cambio, el runbook lo dice explícitamente (p. ej. v1.18.1).
