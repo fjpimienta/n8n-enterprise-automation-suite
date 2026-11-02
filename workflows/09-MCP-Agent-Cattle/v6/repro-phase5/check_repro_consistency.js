@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 /*
  * Phase 5 - offline consistency check between the MCP server export and the two livestock agent prompts.
- * No dependencies, no network. The only optional external call is `git show develop:<file>` to read the PREVIOUS prompts
- * (to prove the leading "=" and every {{ }} expression are untouched); if git or the branch is not available that one check is SKIPPED.
+ * No dependencies, no network. `git show` reads the previous prompts to prove the leading "=" and every {{ }} expression are untouched;
+ * outside CI, if git or the baseline ref is unavailable those checks are SKIPPED.
  *
  * Usage:  node check_repro_consistency.js [--baseline-ref <git ref>]       (default ref: develop)
  * Exit code 0 = every check passed, 1 = at least one FAIL.
@@ -13,6 +13,7 @@ const { execFileSync } = require('child_process');
 
 const V6 = path.resolve(__dirname, '..');
 const REF = process.argv.includes('--baseline-ref') ? process.argv[process.argv.indexOf('--baseline-ref') + 1] : 'develop';
+const CI = process.env.CI === 'true';
 const MCP_FILE = 'v6_MCP_Server_Cattle.json';
 const AGENTS = { chat: 'v6_ai_chat_cattle.json', whatsapp: 'v6_WhatsApp_Agent_Cattle.json' };
 const PHASE_FILES = [1, 2, 3, 4].map((p) => `repro-phase${p}/repro_phase${p}_tools.json`);
@@ -456,13 +457,31 @@ for (const ch of Object.keys(AGENTS)) {
 }
 
 // leading "=" and {{ }} expressions against the previous version of the file (git)
+const BASELINE_REFS = REF === 'develop' ? ['develop', 'origin/develop'] : [REF];
+let baselineRef = null;
+for (const ref of BASELINE_REFS) {
+  try {
+    execFileSync('git', ['-C', V6, 'rev-parse', '--verify', `${ref}^{commit}`], { stdio: 'ignore' });
+    baselineRef = ref;
+    break;
+  } catch (e) { /* Try the fallback ref when available. */ }
+}
 function previous(file) {
-  try { return JSON.parse(execFileSync('git', ['-C', V6, 'show', `${REF}:workflows/09-MCP-Agent-Cattle/v6/${file}`], { stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 1 << 28 }).toString()); }
+  if (!baselineRef) return null;
+  try { return JSON.parse(execFileSync('git', ['-C', V6, 'show', `${baselineRef}:workflows/09-MCP-Agent-Cattle/v6/${file}`], { stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 1 << 28 }).toString()); }
   catch (e) { return null; }
+}
+if (!baselineRef && CI) {
+  ok(`required baseline ref "${REF}" is available`, false,
+    `CI=true requires "${REF}" (or origin/develop when using the default baseline); fetch the baseline branch before running this check.`);
 }
 for (const [ch, f] of Object.entries(AGENTS)) {
   const prev = previous(f);
-  if (!prev) { skip(`${ch}: "=" and {{ }} expressions identical to ${REF}`, 'git or ref not available'); continue; }
+  if (!prev) {
+    if (!CI) skip(`${ch}: "=" and {{ }} expressions identical to ${REF}`, 'git or ref not available');
+    else if (baselineRef) ok(`${ch}: previous workflow export is available at ${baselineRef}`, false, `Could not read or parse workflows/09-MCP-Agent-Cattle/v6/${f} from the baseline ref.`);
+    continue;
+  }
   const pm = prev.nodes.find((n) => n.name === 'AI Agent').parameters.options.systemMessage;
   ok(`${ch}: leading "=" and the ${exprs(pm).length} {{ }} expressions are identical to ${REF}`, pm[0] === '=' && sys[ch][0] === '=' && JSON.stringify(exprs(pm)) === JSON.stringify(exprs(sys[ch])));
   const pp = prev.nodes.find((n) => n.name === 'AI Agent Palma').parameters.options.systemMessage;

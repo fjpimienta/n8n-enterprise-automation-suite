@@ -36,6 +36,7 @@ cuando actualizan las reglas compartidas de contribución o despliegue.
   and rollback steps.
 * Added working rules for automated contributors, covering branch hygiene, local environments,
   tests, pull requests, and commits.
+* Added an Agent workflow consistency CI job that fails if its `develop` baseline cannot be resolved.
 
 ---
 
