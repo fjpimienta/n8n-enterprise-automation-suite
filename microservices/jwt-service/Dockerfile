@@ -1,4 +1,4 @@
-FROM node:22-alpine
+FROM node:25-alpine
 
 # Crear carpeta app
 WORKDIR /usr/src/app
