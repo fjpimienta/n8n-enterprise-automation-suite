@@ -7,8 +7,14 @@ UPLOAD_COMPOSE="$SCRIPT_DIR/infrastructure/upload-file/docker-compose.yml"
 
 cd "$SCRIPT_DIR"
 
+skip_confirmation=false
+if (($# > 0)) && [[ "$1" == "--yes" ]]; then
+  skip_confirmation=true
+  shift
+fi
+
 if (($# == 0)); then
-  printf 'Usage: ./deploy.sh <service> [<service>...]\n\n'
+  printf 'Usage: ./deploy.sh [--yes] <service> [<service>...]\n\n'
   printf 'Available infrastructure services:\n'
   docker compose -f "$MAIN_COMPOSE" config --services
   printf 'upload-file (separate compose file)\n'
@@ -77,11 +83,24 @@ for requested_service in "$@"; do
   validated_services+=("$requested_service")
 done
 
+if [[ "$skip_confirmation" != true ]]; then
+  printf 'Services to rebuild and recreate:\n'
+  printf '  %s\n' "${validated_services[@]}"
+  response=""
+  if ! IFS= read -r -p "Type 'deploy' to continue: " response; then
+    response=""
+  fi
+  if [[ "$response" != "deploy" ]]; then
+    printf 'Deployment cancelled.\n' >&2
+    exit 1
+  fi
+fi
+
 git pull --ff-only origin main
 
 timestamp="$(date '+%Y%m%d-%H%M')"
 declare -a rollback_image_tags=()
-declare -a rollback_image_names=()
+declare -a rollback_image_refs=()
 declare -a rollback_compose_files=()
 declare -a rollback_services=()
 
@@ -92,7 +111,7 @@ print_rollback_commands() {
     printf '\nRollback commands:\n'
     for index in "${!rollback_services[@]}"; do
       printf 'docker image tag %q %q\n' \
-        "${rollback_image_tags[$index]}" "${rollback_image_names[$index]}:latest"
+        "${rollback_image_tags[$index]}" "${rollback_image_refs[$index]}"
       printf 'docker compose -f %q up -d --no-build --no-deps --force-recreate %q\n' \
         "${rollback_compose_files[$index]}" "${rollback_services[$index]}"
     done
@@ -140,7 +159,7 @@ for service in "$@"; do
 
   docker image tag "$running_image_id" "$rollback_tag"
   rollback_image_tags+=("$rollback_tag")
-  rollback_image_names+=("$image_name")
+  rollback_image_refs+=("$running_image_ref")
   rollback_compose_files+=("$compose_file")
   rollback_services+=("$service")
 
