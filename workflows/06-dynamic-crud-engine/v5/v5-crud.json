@@ -316,6 +316,57 @@
     },
     {
       "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { message: Number($json.status) >= 500 ? \"Internal error\" : ($json.message ?? \"Acceso denegado\"), code: $json.code ?? \"SECURITY_VALIDATION\" } }}",
+        "options": {
+          "responseCode": "={{ Number.isInteger($json.status) && $json.status >= 400 && $json.status <= 599 ? $json.status : 403 }}"
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2928,
+        800
+      ],
+      "id": "4b5c0161-0dd8-4d7f-9f0e-8a8b2f3cbf01",
+      "name": "Respond Security Denial"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "6f3a5db8-c531-4c5c-8753-927557a4c624",
+              "leftValue": "={{ $json.error === false && ($json.status === undefined || (typeof $json.status === 'number' && Number.isFinite($json.status) && $json.status < 400) || (typeof $json.status === 'string' && $json.status.trim() !== '' && Number.isFinite(Number($json.status)) && Number($json.status) < 400)) }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2704,
+        800
+      ],
+      "id": "b9c15ef0-9f2d-4c79-baf7-e083aa3d0576",
+      "name": "Security Validation Gate"
+    },
+    {
+      "parameters": {
         "conditions": {
           "options": {
             "caseSensitive": true,
@@ -728,7 +779,25 @@
       "main": [
         [
           {
+            "node": "Security Validation Gate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Security Validation Gate": {
+      "main": [
+        [
+          {
             "node": "Build Query",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Security Denial",
             "type": "main",
             "index": 0
           }
