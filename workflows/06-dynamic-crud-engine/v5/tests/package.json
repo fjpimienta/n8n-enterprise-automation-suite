@@ -1,1 +1,1 @@
-{"name":"v5-crud-tests","private":true,"type":"module","scripts":{"test":"node test_v5_tenant.mjs && node test_sql_state.mjs"},"dependencies":{"@electric-sql/pglite":"^0.3.0"}}
+{"name":"v5-crud-tests","private":true,"type":"module","scripts":{"test":"node test_v5_tenant.mjs && node test_sql_state.mjs"},"dependencies":{"@electric-sql/pglite":"^0.5.13"}}
