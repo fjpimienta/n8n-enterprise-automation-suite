@@ -4,38 +4,53 @@ updates:
     directory: "/hosting3m-workspace"
     schedule:
       interval: "weekly"
+      day: "monday"
     target-branch: "develop"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
     groups:
-      # Angular packages pin each other with exact peer versions: they must move together.
-      angular:
-        patterns:
-          - "@angular/*"
-          - "@angular-devkit/*"
-          - "@schematics/angular"
-        update-types: ["minor", "patch"]
       workspace-minor-patch:
         patterns: ["*"]
-        exclude-patterns:
-          - "@angular/*"
-          - "@angular-devkit/*"
-          - "@schematics/angular"
         update-types: ["minor", "patch"]
     ignore:
       - dependency-name: "@angular/*"
         update-types: ["version-update:semver-major"]
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
+      - dependency-name: "rxjs"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "zone.js"
+        update-types: ["version-update:semver-major"]
       # @angular/build 21.x peers vitest ^4; revisit when Angular supports vitest 5 (see #734).
       - dependency-name: "vitest"
         update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "npm"
-    directory: "/infrastructure/upload-file/app"
+    directory: "/workflows/06-dynamic-crud-engine/v5/tests"
     schedule:
       interval: "weekly"
+      day: "monday"
     target-branch: "develop"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
     groups:
-      upload-file-minor-patch:
+      v5-tests-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "npm"
+    directory: "/microservices/cfdi-service"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    target-branch: "develop"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      cfdi-service-minor-patch:
         patterns: ["*"]
         update-types: ["minor", "patch"]
 
@@ -43,8 +58,68 @@ updates:
     directory: "/microservices/jwt-service"
     schedule:
       interval: "weekly"
+      day: "monday"
     target-branch: "develop"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
     groups:
       jwt-service-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "npm"
+    directory: "/infrastructure/upload-file/app"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    target-branch: "develop"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      upload-file-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "docker"
+    directory: "/infrastructure/upload-file"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    target-branch: "develop"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      upload-file-docker-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "docker"
+    directory: "/microservices/jwt-service"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    target-branch: "develop"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      jwt-service-docker-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    target-branch: "develop"
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      github-actions-minor-patch:
         patterns: ["*"]
         update-types: ["minor", "patch"]
