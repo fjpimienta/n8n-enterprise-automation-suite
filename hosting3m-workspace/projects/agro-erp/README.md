@@ -363,8 +363,8 @@ ng build agro-erp --configuration=production
 * [x] **Palma, fase 2a — gastos agrícolas (migraciones 081):** ruta `/agricultura/gastos` y pantalla con balance, gastos registrados y categorías en el código actual.
 * [x] **Palma, fase 2b — herramientas de chat (migraciones 082–083):** rechazo del dominio PALM en herramientas ganaderas y wrappers de estructura, conteos y gastos para Chat Web/WhatsApp; v1.20.0 según el changelog.
 * [x] **Reproducción, backend SQL (084–088 y 090 aplicadas):** consultas de edad/nacimientos, empadre, palpaciones, partos históricos y vínculo de servicios presentes en SQL versionado; 089 sigue opcional y pendiente.
-* [x] **Reproducción, integración MCP (fase 5):** desplegada en `main`; el kit completo de QA y el paso 6b siguen pendientes (ver `docs/REPRO_PRODUCTION_RUNBOOK.md`).
-* [x] **CFDI de gastos ganaderos (migraciones 091–093):** desplegado en producción; las pruebas en vivo pendientes se detallan en `CHANGELOG.md`.
+* [ ] **Reproducción, integración MCP (fase 5):** desplegada en `main`; el kit completo de QA y el paso 6b siguen pendientes (ver `docs/REPRO_PRODUCTION_RUNBOOK.md`).
+* [ ] **CFDI de gastos ganaderos (migraciones 091–093):** desplegado en producción; las pruebas en vivo pendientes se detallan en `CHANGELOG.md`.
 * [ ] **Palma, fases futuras:** pagos de personal (sin nómina formal); inventario de activos e insumos; cosecha de RFF; telemetría por lote; alcance por usuario/plantación (`user_scope`); herramientas de chat para cosecha.
 * [ ] **Motor Financiero (Fase 4):** Integración transversal del OPEX para calcular costo por kilo de biomasa vs. costo por litro de agroquímico.
 * [ ] **Dashboards Consolidados (Fase 5):** Estabilización final y pruebas E2E.

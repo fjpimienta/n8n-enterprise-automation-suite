@@ -4,16 +4,16 @@
 
 Phase 5 is already on `main`. This table records the verified production state; the steps below remain as the operational reference, including their STOP conditions and rollbacks.
 
-| Step | State | Evidence | Date |
-|---|---|---|---|
-| 1 — Backup and exports | pending | The `hosting3m_db` backup and `pg_restore --list` were verified; the `n8n_db` backup and off-VPS copies are not verified complete. | 2026-10-28 (partial; remaining date not recorded) |
-| 2 — Required migrations 084-088, 090 | done | State checks pass as applied for 084, 085, 086, 087, 088 and 090. Migration 089 is optional and remains pending in step 7. | date not recorded |
-| 3 — Seeds | done | The nine company-5 rows in `repro_condition_codes` exactly match the expected table: NR/RP/NO APTO have the 090 meanings; UNE/UTCL1-3 have the 086 meanings; UTC2 and MATRIZ OCUPADA remain pending. | date not recorded |
-| 4 — MCP server | done | Live `v6/MCP Server Cattle` export matches the repo: 56 nodes and 55 tools (29 existing + 24 reproduction + 2 CFDI). Current live-versus-`develop` expected differences: none. | 2026-11-02 |
-| 5 — Agent prompts | done | WhatsApp matches the repo and its section G is 14,486 characters with phase-5 rules. Chat Web was restored by #953, released to `main` in #954, imported and re-exported identically to `develop`; the real-channel, read-only company-3 births-summary smoke test answered correctly. | 2026-11-02 |
-| 6 — QA | pending | The full `REPRO_QA_SCRIPT.md` kit (40 dialogs) has not been completed. | date not recorded |
-| 7 — Migration 089 | pending (optional) | 089 remains unapplied; do it only after its pre-checks and successful gateway check. | date not recorded |
-| 8 — Merge `develop` into `main` | done | Phase 5 is already on `main`; the Chat Web prompt restoration was released in #954. | date not recorded |
+| Step | State | Evidence | Verified | Deployed |
+|---|---|---|---|---|
+| 1 — Backup and exports | pending | The `hosting3m_db` backup and `pg_restore --list` were verified; the `n8n_db` backup and off-VPS copies are not verified complete. | 2026-10-28 (partial; remaining date not recorded) | — |
+| 2 — Required migrations 084-088, 090 | done | State checks pass as applied for 084, 085, 086, 087, 088 and 090. Migration 089 is optional and remains pending in step 7. | 2026-11-02 | date not recorded |
+| 3 — Seeds | done | The nine company-5 rows in `repro_condition_codes` exactly match the expected table: NR/RP/NO APTO have the 090 meanings; UNE/UTCL1-3 have the 086 meanings; UTC2 and MATRIZ OCUPADA remain pending. | 2026-11-02 | date not recorded |
+| 4 — MCP server | done | Live `v6/MCP Server Cattle` export matches the repo: 56 nodes and 55 tools (29 existing + 24 reproduction + 2 CFDI). Current live-versus-`develop` expected differences: none. | 2026-11-02 | date not recorded |
+| 5 — Agent prompts | done | WhatsApp matches the repo and its section G is 14,486 characters with phase-5 rules. Chat Web was restored by #953, released to `main` in #954, imported and re-exported identically to `develop`; the real-channel, read-only company-3 births-summary smoke test answered correctly. | 2026-11-02 | WhatsApp: date not recorded; Chat Web: 2026-11-02 (prompt restored, #953/#954) |
+| 6 — QA | pending | The full `REPRO_QA_SCRIPT.md` kit (40 dialogs) has not been completed. | date not recorded | — |
+| 7 — Migration 089 | pending (optional) | 089 remains unapplied; do it only after its pre-checks and successful gateway check. | date not recorded | — |
+| 8 — Merge `develop` into `main` | done | Phase 5 is already on `main`; the Chat Web prompt restoration was released in #954. | date not recorded | date not recorded |
 
 Step 6b (remove the two legacy tool nodes) is still pending and must wait until QA passes. The listed next-sprint backlog also remains pending.
 
