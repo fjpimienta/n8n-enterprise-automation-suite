@@ -1,5 +1,7 @@
 # Reproduction tracking — Phase 0 discovery (read-only)
 
+> **Current rollout status (2026-11-02):** phase 5 is deployed and on `main`; the full QA kit (40 dialogs), removal of the two legacy MCP nodes (step 6b), and optional migration 089 remain pending. The database, seed, workflow and prompt verification is summarized in [`REPRO_PRODUCTION_RUNBOOK.md`](./REPRO_PRODUCTION_RUNBOOK.md). The historical Phase 0 notes below describe their status at the time and are not the current deployment status.
+
 Branch: `feat/reproduction-tracking` (from `develop`). Status: **Phase 0 updated with tenant 5 measurements and the owner's decisions; Phase 1 not started; no migration written.**
 Nothing here was run against any database. The three SQL scripts in `database/discovery/` are for the user to run
 (LOCAL first, then the server). They have **not been executed or syntax-tested by the author** (no local PostgreSQL run was
@@ -303,11 +305,11 @@ All 24 nodes live in `workflows/09-MCP-Agent-Cattle/v6/repro-phase{1..4}/repro_p
 | `list_lots` | Phase 5 | **Two NEW keys per row, `lot_id` and `production_unit_id`** (additive, read-only, same tenant filter; no key removed or renamed). The agent uses them internally to pass `lot_id` / `production_unit_id` to `register_birth_checked` and never shows them (A6). |
 
 **Backlog added in phase 5**
-23. **Inject `tenant_id` and the e-mail from the trusted context instead of letting the model fill them, for ALL MCP tools** (a later phase). Today the 29 + 24 tools take them from `$fromAI` (Rule 6); the database validates membership, but the prompt is the only thing that makes the model copy the verified values.
-24. **Delete the `register_birth_event` node** from the MCP server in **step 6b of `docs/REPRO_PRODUCTION_RUNBOOK.md`**, after the QA passed and the n8n executions of the QA show that no execution called it. This PR keeps the node in the repo export; a **follow-up commit** replaces the export with the 6b file (51 tools) once 6b is verified live, and `check_repro_consistency.js` then expects 51 tools and drops its two legacy exceptions.
+23. **Inject `tenant_id` and the e-mail from the trusted context instead of letting the model fill them, for ALL MCP tools** (a later phase). The current MCP export has 55 tools; tool inputs currently use `$fromAI` (Rule 6). The database validates membership, but the prompt is the only thing that makes the model copy the verified values.
+24. **Delete the `register_birth_event` node** from the MCP server in **step 6b of `docs/REPRO_PRODUCTION_RUNBOOK.md`**, after the QA passed and the n8n executions of the QA show that no execution called it. The repo export keeps the node until a **follow-up commit** replaces it with the verified 6b file (53 tools) and updates `check_repro_consistency.js` to expect 53 tools and drop its two legacy exceptions.
 25. **Delete the `log_palpation_event_batch` node** in the same step 6b, with the same condition and the same follow-up commit (replaced by `log_palpation_with_condition`; the legacy batch can overwrite a PREÑADA animal with VACÍA).
 26. **QA leaves residue in company 3 (the test company):** births, empadre entries and historical births are append-only; the QA events cannot be deleted. Fixture rows carry a QA marker in their identifiers.
-27. **Measure tool selection on `gpt-4.1-mini` with 53 tools:** the rollout requires at least 90 % first-try correct tool choice in the QA; if not met, trim the dictionary or move the agent to a stronger model (see `REPRO_PRODUCTION_RUNBOOK.md`).
+27. **Measure tool selection on `gpt-4.1-mini` with 55 tools:** the rollout requires at least 90 % first-try correct tool choice in the QA; if not met, trim the dictionary or move the agent to a stronger model (see `REPRO_PRODUCTION_RUNBOOK.md`).
 
 ### Git (decided 2026-10-27)
 Migrations were already excepted in `.gitignore` (line 35); only `database/discovery/*.sql` was missing. Prepared as **its own `chore` commit, before the feature commits** (one-line change in `.gitignore`); `database/discovery/out/` stays excluded by `.git/info/exclude` and must never be committed. Exact commands are in the hand-over message.
