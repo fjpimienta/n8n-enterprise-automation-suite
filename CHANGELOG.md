@@ -45,6 +45,7 @@ cuando actualizan las reglas compartidas de contribución o despliegue.
 
 ### 🔄 Hotel workflow, database, and workspace changes
 
+* The hotel website hides the guest reviews section until the public reviews endpoint is enabled.
 * The hotel website now displays only approved guest reviews.
 * The `v5/CRUD` workflow now derives the company for each hotel operation (`getall`,
   `getone`, `insert`, `update`, and `delete`) from the verified token. It rejects tokens
