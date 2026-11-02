@@ -68,7 +68,7 @@ export class App implements OnInit {
         const data = res?.data || res; // 🚀 FIX: Lectura segura
 
         if (Array.isArray(data)) {
-          const validReviews = data.filter((r: any) => r.guest_name && r.review_text && r.review_text.trim() !== '');
+          const validReviews = data.filter((r: any) => r.is_approved === true && r.guest_name && r.review_text && r.review_text.trim() !== '');
           this.dbReviews.set(validReviews.slice(0, 3));
 
           setTimeout(() => {
