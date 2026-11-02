@@ -90,8 +90,9 @@ El runbook de workflows y los detalles operativos versionados están en `CLAUDE.
 ## Continuous integration
 
 - Checks run on pull requests targeting `develop` and `main`, and on pushes to `main`.
-- GitHub Actions runs v5 CRUD tests, CFDI service tests, and workspace builds for
-  `ui-pdf-export`, `dashboard`, and `hotel-website`.
+- GitHub Actions runs ShellCheck and the stubbed `deploy.sh` tests, v5 CRUD tests,
+  CFDI service tests, and workspace builds for `ui-pdf-export`, `dashboard`, and
+  `hotel-website`.
 - The `dashboard` and `hotel-website` jobs generate placeholder environment files at
   runtime because the real environment files are git-ignored; missing real environment
   files are not a cause of CI failure.

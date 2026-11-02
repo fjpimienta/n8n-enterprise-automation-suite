@@ -12,6 +12,9 @@ import { environment } from '../environments/environment';
   templateUrl: './app.html'
 })
 export class App implements OnInit {
+  // The public reviews endpoint is not available for anonymous visitors yet.
+  readonly reviewsEnabled = false;
+
   private http = inject(HttpClient);
   private apiUrl_public = environment.apiUrl_public;
   private apiUrl_crud = environment.apiUrl_crud; // Agregado para el MetaCRUD
@@ -40,6 +43,8 @@ export class App implements OnInit {
 
   // --- MÉTODOS DEL MODAL ---
   openReviewModal() {
+    if (!this.reviewsEnabled) return;
+
     this.showReviewModal.set(true);
     setTimeout(() => {
       // @ts-ignore
@@ -68,7 +73,7 @@ export class App implements OnInit {
         const data = res?.data || res; // 🚀 FIX: Lectura segura
 
         if (Array.isArray(data)) {
-          const validReviews = data.filter((r: any) => r.guest_name && r.review_text && r.review_text.trim() !== '');
+          const validReviews = data.filter((r: any) => r.is_approved === true && r.guest_name && r.review_text && r.review_text.trim() !== '');
           this.dbReviews.set(validReviews.slice(0, 3));
 
           setTimeout(() => {
@@ -84,6 +89,8 @@ export class App implements OnInit {
   }
 
   submitReview() {
+    if (!this.reviewsEnabled) return;
+
     if (!this.reviewForm.guest_name || !this.reviewForm.review_text) return;
 
     this.isSubmittingReview.set(true);
@@ -142,8 +149,9 @@ export class App implements OnInit {
       if (window.lucide) window.lucide.createIcons();
     }, 100);
 
-    // Cargar las reseñas al iniciar la aplicación
-    this.loadDbReviews();
+    if (this.reviewsEnabled) {
+      this.loadDbReviews();
+    }
   }
 
   @HostListener('window:scroll', [])
