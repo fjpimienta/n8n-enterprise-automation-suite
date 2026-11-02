@@ -1,5 +1,6 @@
 import { PGlite } from '@electric-sql/pglite';
 import fs from 'node:fs'; import path from 'node:path'; import crypto from 'node:crypto';
+import { execFileSync } from 'node:child_process';
 const here = import.meta.dirname;
 const MIG = path.resolve(here, '../../../../hosting3m-workspace/projects/agro-erp/database/migrations');
 const wf = JSON.parse(fs.readFileSync(path.resolve(here, '../v5-crud.json'), 'utf8'));
@@ -140,7 +141,7 @@ const gateOutputs = wf.connections['Security Validation Gate'].main;
 const allowedTarget = gateOutputs[0][0].node;
 const deniedTarget = gateOutputs[1][0].node;
 ok(allowedTarget === 'Build Query', 'allowed branch connects directly to Build Query');
-ok(deniedTarget === 'Respond Denegate', 'denied branch connects to the response node');
+ok(deniedTarget === 'Respond Security Denial', 'denied branch connects to the response node');
 const reachable = (start) => {
   const found = new Set();
   const pending = [start];
@@ -159,16 +160,33 @@ ok(!deniedPath.has('Build Query') && ![...deniedPath].some(name => wf.nodes.find
 const allowedPath = reachable(allowedTarget);
 ok(allowedPath.has('Build Query'), 'allowed branch continues through Build Query');
 const denialResponse = wf.nodes.find(n => n.name === deniedTarget);
-ok(denialResponse.parameters.responseBody.includes('$json.message') && denialResponse.parameters.responseBody.includes('$json.code') && denialResponse.parameters.options.responseCode.includes('$json.status'), 'denial response uses the item message, code, and status');
 const evaluateExpression = (expression, item) => {
   const body = expression.match(/^={{\s*([\s\S]*?)\s*}}$/)?.[1];
   return new Function('$json', `return (${body});`)(item);
 };
-const deniedItem = { error: true, status: 403, message: 'Denied', code: 'SECURITY_VALIDATION' };
-const responseBody = evaluateExpression(denialResponse.parameters.responseBody, deniedItem);
-const responseCode = evaluateExpression(denialResponse.parameters.options.responseCode, deniedItem);
-ok(responseCode === 403 && responseBody.message === deniedItem.message && responseBody.code === deniedItem.code, '403 response preserves the status, message, and code');
-ok(evaluateExpression(denialResponse.parameters.options.responseCode, {}) === 401, 'existing unauthenticated response remains 401');
+const originalWorkflow = JSON.parse(execFileSync('git', ['show', 'origin/develop:workflows/06-dynamic-crud-engine/v5/v5-crud.json'], { encoding: 'utf8' }));
+const originalDenegate = originalWorkflow.nodes.find(n => n.name === 'Respond Denegate');
+const currentDenegate = wf.nodes.find(n => n.name === 'Respond Denegate');
+ok(JSON.stringify(currentDenegate) === JSON.stringify(originalDenegate), 'Respond Denegate node is unchanged from origin/develop');
+const inboundNodes = (target) => Object.entries(wf.connections).flatMap(([source, connection]) =>
+  (connection.main || []).flatMap(output => output.filter(edge => edge.node === target).map(() => source)));
+ok(JSON.stringify(inboundNodes('Respond Denegate')) === JSON.stringify(['IsValid']), 'Respond Denegate has only IsValid as its inbound connection');
+const securityDenialInbound = inboundNodes('Respond Security Denial');
+ok(JSON.stringify(securityDenialInbound) === JSON.stringify(['Security Validation Gate']), 'Respond Security Denial is reachable only from the Gate');
+ok(denialResponse.parameters.responseBody.includes('$json.message') && denialResponse.parameters.responseBody.includes('$json.code') && denialResponse.parameters.options.responseCode.includes('$json.status'), 'security denial response uses the item message, code, and status');
+
+const responseFor = (item) => ({
+  status: evaluateExpression(denialResponse.parameters.options.responseCode, item),
+  body: evaluateExpression(denialResponse.parameters.responseBody, item)
+});
+const response403 = responseFor({ error: true, status: 403, message: 'Role not permitted', code: 'SECURITY_VALIDATION' });
+ok(response403.status === 403 && response403.body.message === 'Role not permitted' && response403.body.code === 'SECURITY_VALIDATION', '403 response echoes the message and code');
+const response400 = responseFor({ error: true, status: 400, message: 'Missing operation', code: 'MISSING_OPERATION' });
+ok(response400.status === 400 && response400.body.message === 'Missing operation' && response400.body.code === 'MISSING_OPERATION', '400 response echoes the message and code');
+const internalMessage = 'Missing internal column allowed_roles_select';
+const response500 = responseFor({ error: true, status: 500, message: internalMessage, code: 'CONFIG_ERROR' });
+ok(response500.status === 500 && response500.body.message === 'Internal error' && response500.body.code === 'CONFIG_ERROR' && !JSON.stringify(response500.body).includes(internalMessage), '500 response hides the internal message and preserves the code');
+ok(responseFor({ error: true, status: 200, message: 'Denied', code: 'SECURITY_VALIDATION' }).status === 403, 'out-of-range status falls back to 403');
 
 console.log(`\nRESULT: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

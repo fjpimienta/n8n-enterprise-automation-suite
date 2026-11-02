@@ -299,6 +299,40 @@
     },
     {
       "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"mensaje\": \"Acceso denegado\"}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        560,
+        1216
+      ],
+      "id": "5dfb6079-1a95-4c7c-b734-afbbf9222774",
+      "name": "Respond Denegate"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { message: Number($json.status) >= 500 ? \"Internal error\" : ($json.message ?? \"Acceso denegado\"), code: $json.code ?? \"SECURITY_VALIDATION\" } }}",
+        "options": {
+          "responseCode": "={{ Number.isInteger($json.status) && $json.status >= 400 && $json.status <= 599 ? $json.status : 403 }}"
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2928,
+        800
+      ],
+      "id": "4b5c0161-0dd8-4d7f-9f0e-8a8b2f3cbf01",
+      "name": "Respond Security Denial"
+    },
+    {
+      "parameters": {
         "conditions": {
           "options": {
             "caseSensitive": true,
@@ -330,23 +364,6 @@
       ],
       "id": "b9c15ef0-9f2d-4c79-baf7-e083aa3d0576",
       "name": "Security Validation Gate"
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ { message: $json.message ?? \"Acceso denegado\", code: $json.code ?? (Number($json.status) === 401 || $json.error !== true ? \"AUTH_ERROR\" : \"SECURITY_VALIDATION\") } }}",
-        "options": {
-          "responseCode": "={{ Number.isInteger(Number($json.status)) && Number($json.status) >= 400 && Number($json.status) <= 599 ? Number($json.status) : 401 }}"
-        }
-      },
-      "type": "n8n-nodes-base.respondToWebhook",
-      "typeVersion": 1.5,
-      "position": [
-        560,
-        1216
-      ],
-      "id": "5dfb6079-1a95-4c7c-b734-afbbf9222774",
-      "name": "Respond Denegate"
     },
     {
       "parameters": {
@@ -780,7 +797,7 @@
         ],
         [
           {
-            "node": "Respond Denegate",
+            "node": "Respond Security Denial",
             "type": "main",
             "index": 0
           }
