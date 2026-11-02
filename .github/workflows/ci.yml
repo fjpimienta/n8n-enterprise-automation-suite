@@ -27,7 +27,7 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - run: git fetch origin develop
+      - run: git fetch origin +refs/heads/develop:refs/remotes/origin/develop
       - run: node workflows/09-MCP-Agent-Cattle/v6/repro-phase5/check_repro_consistency.js
 
   shell-checks:
