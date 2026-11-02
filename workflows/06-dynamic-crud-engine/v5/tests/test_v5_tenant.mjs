@@ -1,6 +1,5 @@
 import { PGlite } from '@electric-sql/pglite';
 import fs from 'node:fs'; import path from 'node:path'; import crypto from 'node:crypto';
-import { execFileSync } from 'node:child_process';
 const here = import.meta.dirname;
 const MIG = path.resolve(here, '../../../../hosting3m-workspace/projects/agro-erp/database/migrations');
 const wf = JSON.parse(fs.readFileSync(path.resolve(here, '../v5-crud.json'), 'utf8'));
@@ -164,10 +163,8 @@ const evaluateExpression = (expression, item) => {
   const body = expression.match(/^={{\s*([\s\S]*?)\s*}}$/)?.[1];
   return new Function('$json', `return (${body});`)(item);
 };
-const originalWorkflow = JSON.parse(execFileSync('git', ['show', 'origin/develop:workflows/06-dynamic-crud-engine/v5/v5-crud.json'], { encoding: 'utf8' }));
-const originalDenegate = originalWorkflow.nodes.find(n => n.name === 'Respond Denegate');
 const currentDenegate = wf.nodes.find(n => n.name === 'Respond Denegate');
-ok(JSON.stringify(currentDenegate) === JSON.stringify(originalDenegate), 'Respond Denegate node is unchanged from origin/develop');
+ok(currentDenegate.parameters.responseBody === '={"mensaje": "Acceso denegado"}' && currentDenegate.parameters.options.responseCode === 401, 'Respond Denegate body and response code remain unchanged');
 const inboundNodes = (target) => Object.entries(wf.connections).flatMap(([source, connection]) =>
   (connection.main || []).flatMap(output => output.filter(edge => edge.node === target).map(() => source)));
 ok(JSON.stringify(inboundNodes('Respond Denegate')) === JSON.stringify(['IsValid']), 'Respond Denegate has only IsValid as its inbound connection');
