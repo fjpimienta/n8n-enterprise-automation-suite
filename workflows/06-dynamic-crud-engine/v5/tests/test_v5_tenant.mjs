@@ -126,5 +126,64 @@ for (const bad of [undefined, null, 0, -1, 2.5, 'abc', '']) { o = ea(eaP, { veri
 o = ea(eaP, { verify: undefined, model: 'companys' }); ok(!o.error && o.user.role === 'CUSTOMER' && o.id_company === null, 'public companys path keeps working (no tenant)');
 o = ea(eaP, { verify: undefined, model: 'hotel_guests' }); ok(o.error && o.code === 'NO_ROLE', 'no token on a hotel model -> NO_ROLE (unchanged)');
 
+console.log('== Security Validation routing');
+const gate = wf.nodes.find(n => n.name === 'Security Validation Gate');
+const gateExpression = gate?.parameters.conditions.conditions[0].leftValue.match(/^={{\s*([\s\S]*?)\s*}}$/)?.[1];
+ok(Boolean(gateExpression), 'security gate has an evaluable allow condition');
+const canContinue = (item) => new Function('$json', `return (${gateExpression});`)(item);
+ok(!canContinue({ error: true, status: 403, message: 'Denied', code: 'SECURITY_VALIDATION' }), '403 denied item selects the response branch');
+ok(!canContinue({ error: false, status: 403 }), 'status >= 400 selects the response branch');
+ok(!canContinue({}), 'ambiguous item selects the response branch');
+ok(canContinue({ error: false }), 'allowed item selects the Build Query branch');
+
+const gateOutputs = wf.connections['Security Validation Gate'].main;
+const allowedTarget = gateOutputs[0][0].node;
+const deniedTarget = gateOutputs[1][0].node;
+ok(allowedTarget === 'Build Query', 'allowed branch connects directly to Build Query');
+ok(deniedTarget === 'Respond Security Denial', 'denied branch connects to the response node');
+const reachable = (start) => {
+  const found = new Set();
+  const pending = [start];
+  while (pending.length) {
+    const name = pending.pop();
+    if (found.has(name)) continue;
+    found.add(name);
+    for (const output of wf.connections[name]?.main || []) {
+      for (const edge of output) pending.push(edge.node);
+    }
+  }
+  return found;
+};
+const deniedPath = reachable(deniedTarget);
+ok(!deniedPath.has('Build Query') && ![...deniedPath].some(name => wf.nodes.find(n => n.name === name)?.type === 'n8n-nodes-base.postgres'), 'denied branch cannot reach Build Query or SQL nodes');
+const allowedPath = reachable(allowedTarget);
+ok(allowedPath.has('Build Query'), 'allowed branch continues through Build Query');
+const denialResponse = wf.nodes.find(n => n.name === deniedTarget);
+const evaluateExpression = (expression, item) => {
+  const body = expression.match(/^={{\s*([\s\S]*?)\s*}}$/)?.[1];
+  return new Function('$json', `return (${body});`)(item);
+};
+const currentDenegate = wf.nodes.find(n => n.name === 'Respond Denegate');
+ok(currentDenegate.parameters.responseBody === '={"mensaje": "Acceso denegado"}' && currentDenegate.parameters.options.responseCode === 401, 'Respond Denegate body and response code remain unchanged');
+const inboundNodes = (target) => Object.entries(wf.connections).flatMap(([source, connection]) =>
+  (connection.main || []).flatMap(output => output.filter(edge => edge.node === target).map(() => source)));
+ok(JSON.stringify(inboundNodes('Respond Denegate')) === JSON.stringify(['IsValid']), 'Respond Denegate has only IsValid as its inbound connection');
+const securityDenialInbound = inboundNodes('Respond Security Denial');
+ok(JSON.stringify(securityDenialInbound) === JSON.stringify(['Security Validation Gate']), 'Respond Security Denial is reachable only from the Gate');
+ok(denialResponse.parameters.responseBody.includes('$json.message') && denialResponse.parameters.responseBody.includes('$json.code') && denialResponse.parameters.options.responseCode.includes('$json.status'), 'security denial response uses the item message, code, and status');
+
+const responseFor = (item) => ({
+  status: evaluateExpression(denialResponse.parameters.options.responseCode, item),
+  body: evaluateExpression(denialResponse.parameters.responseBody, item)
+});
+const response403 = responseFor({ error: true, status: 403, message: 'Role not permitted', code: 'SECURITY_VALIDATION' });
+ok(response403.status === 403 && response403.body.message === 'Role not permitted' && response403.body.code === 'SECURITY_VALIDATION', '403 response echoes the message and code');
+const response400 = responseFor({ error: true, status: 400, message: 'Missing operation', code: 'MISSING_OPERATION' });
+ok(response400.status === 400 && response400.body.message === 'Missing operation' && response400.body.code === 'MISSING_OPERATION', '400 response echoes the message and code');
+const internalMessage = 'Missing internal column allowed_roles_select';
+const response500 = responseFor({ error: true, status: 500, message: internalMessage, code: 'CONFIG_ERROR' });
+ok(response500.status === 500 && response500.body.message === 'Internal error' && response500.body.code === 'CONFIG_ERROR' && !JSON.stringify(response500.body).includes(internalMessage), '500 response hides the internal message and preserves the code');
+ok(responseFor({ error: true, status: 200, message: 'Denied', code: 'SECURITY_VALIDATION' }).status === 403, 'out-of-range status falls back to 403');
+
 console.log(`\nRESULT: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
