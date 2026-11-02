@@ -34,6 +34,8 @@ cuando actualizan las reglas compartidas de contribución o despliegue.
 * Added a CI "Shell checks" job for ShellCheck and the stubbed deploy-script tests.
 * Added an n8n workflow deployment runbook with production comparison, publish verification,
   and rollback steps.
+* Added working rules for automated contributors, covering branch hygiene, local environments,
+  tests, pull requests, and commits.
 
 ---
 
