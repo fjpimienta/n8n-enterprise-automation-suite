@@ -1,15 +1,19 @@
 #!/usr/bin/env node
 /*
- * Offline consistency check between the MCP server export and the two livestock agent prompts.
- * No dependencies, network access, or repository refs are required.
+ * Phase 5 - offline consistency check between the MCP server export and the two livestock agent prompts.
+ * No dependencies, no network. `git show` reads the previous prompts to prove the leading "=" and every {{ }} expression are untouched;
+ * outside CI, if git or the baseline ref is unavailable those checks are SKIPPED.
  *
- * Usage:  node check_repro_consistency.js
+ * Usage:  node check_repro_consistency.js [--baseline-ref <git ref>]       (default ref: develop)
  * Exit code 0 = every check passed, 1 = at least one FAIL.
  */
 const fs = require('fs');
 const path = require('path');
+const { execFileSync } = require('child_process');
 
 const V6 = path.resolve(__dirname, '..');
+const REF = process.argv.includes('--baseline-ref') ? process.argv[process.argv.indexOf('--baseline-ref') + 1] : 'develop';
+const CI = process.env.CI === 'true';
 const MCP_FILE = 'v6_MCP_Server_Cattle.json';
 const AGENTS = { chat: 'v6_ai_chat_cattle.json', whatsapp: 'v6_WhatsApp_Agent_Cattle.json' };
 const PHASE_FILES = [1, 2, 3, 4].map((p) => `repro-phase${p}/repro_phase${p}_tools.json`);
@@ -49,6 +53,7 @@ const ok = (label, cond, detail) => {
   if (cond) { passes++; console.log('OK    ' + label); }
   else { fails++; console.log('FAIL  ' + label + (detail ? '\n        ' + detail : '')); }
 };
+const skip = (label, why) => { skips++; console.log('SKIP  ' + label + '  (' + why + ')'); };
 const setEq = (a, b) => a.length === b.length && a.every((x) => b.includes(x));
 const diff = (a, b) => ({ onlyA: a.filter((x) => !b.includes(x)), onlyB: b.filter((x) => !a.includes(x)) });
 const fmt = (d) => 'only in first: [' + d.onlyA.join(', ') + ']   only in second: [' + d.onlyB.join(', ') + ']';
@@ -86,6 +91,7 @@ ok('the setters are NOT exposed (no node, not in any prompt)', NOT_EXPOSED.every
 
 // ---------------------------------------------------------------- 2. prompts
 const sys = {};
+const baseline = {};
 for (const [ch, f] of Object.entries(AGENTS)) {
   const agent = docs[f].nodes.filter((n) => n.name === 'AI Agent');
   ok(`${ch}: exactly one node "AI Agent"`, agent.length === 1);
@@ -104,29 +110,23 @@ for (const ch of Object.keys(AGENTS)) {
   ok(`${ch}: sections E, G and C are present`, parts[ch].E.length > 1000 && parts[ch].G.length > 1000 && parts[ch].C.length > 200);
 }
 ok('both prompts carry EXACTLY the same section G', parts.chat.G === parts.whatsapp.G);
-for (const ch of Object.keys(AGENTS)) {
+const fifoSaleFlowIsValid = Object.keys(AGENTS).every((ch) => {
   const sale = section(sys[ch], 'VENTAS = ORDEN DE VENTA', '✨ F. PROTOCOLO');
-  const fifoRules = [
-    'NO BOVINOS',
-    '"seleccion": "FIFO"',
-    'Nunca pidas aretes',
-    'nunca elijas animales tú',
-    'seleccionados',
-    'cantidad exacta',
-    'livestock_id únicamente internamente',
-    'preview_livestock_sale_order',
-    'request_livestock_sale_order',
-    'Solo con el "Sí" del turno siguiente',
-    'guía de tránsito'
-  ];
   const previewAt = sale.indexOf('preview_livestock_sale_order');
   const confirmAt = sale.indexOf('Solo con el "Sí" del turno siguiente');
   const requestAt = sale.indexOf('request_livestock_sale_order');
-  ok(`${ch}: FIFO sale flow delegates selection, previews before confirmation, and keeps bovine guide rules`,
-    sale.length > 0 && fifoRules.every((word) => sale.includes(word))
-      && previewAt >= 0 && confirmAt > previewAt && requestAt > confirmAt,
-    fifoRules.filter((word) => !sale.includes(word)).join(', '));
-}
+  return sale.includes('NO BOVINOS')
+    && sale.includes('"seleccion": "FIFO"')
+    && sale.includes('Nunca pidas aretes')
+    && sale.includes('nunca elijas animales tú')
+    && sale.includes('seleccionados')
+    && sale.includes('cantidad exacta')
+    && sale.includes('livestock_id únicamente internamente')
+    && sale.includes('guía de tránsito')
+    && previewAt >= 0 && confirmAt > previewAt && requestAt > confirmAt;
+});
+ok('chat and WhatsApp: FIFO uses a server preview, shows the exact selected list, and requests only after confirmation',
+  fifoSaleFlowIsValid);
 
 // tools named in the prompts
 const TOOL_RE = /'((?:get|list|log|register|void|find|count|move|review|cancel|preview|request|update|births|identifier)_[a-z_]+)'/g;
@@ -166,12 +166,13 @@ for (const ch of Object.keys(AGENTS)) {
 
 // each new tool's description agrees with its level
 const descOf = (n) => toolNodes.find((x) => x.name === n).parameters.toolDescription || '';
-for (const name of ['preview_livestock_sale_order', 'request_livestock_sale_order']) {
-  const node = toolNodes.find((x) => x.name === name);
-  const replacement = node.parameters.options.queryReplacement || '';
-  const description = node.parameters.toolDescription || '';
-  ok(`${name}: input schema documents FIFO and preserves the wrapped text-array query contract`,
-    replacement.startsWith('={{ [ $fromAI(\'items_json\'')
+const saleOrderTools = ['preview_livestock_sale_order', 'request_livestock_sale_order'].map((name) =>
+  toolNodes.find((node) => node.name === name));
+ok('sale-order tool schemas document FIFO and preserve the existing wrapped text-array query contract',
+  saleOrderTools.every((node) => {
+    const replacement = node.parameters.options.queryReplacement || '';
+    const description = node.parameters.toolDescription || '';
+    return replacement.startsWith('={{ [ $fromAI(\'items_json\'')
       && replacement.includes('seleccion')
       && replacement.includes('FIFO')
       && !replacement.includes("$fromAI('tenant_id'")
@@ -180,8 +181,8 @@ for (const name of ['preview_livestock_sale_order', 'request_livestock_sale_orde
       && node.parameters.query.includes('$3::text')
       && description.includes('seleccion')
       && description.includes('FIFO')
-      && description.includes('non-bovine'));
-}
+      && description.includes('non-bovine');
+  }));
 const ASKS = /pide al usuario que confirme con Sí\/No/;
 ok('NIVEL 2 tools: toolDescription does NOT ask for a Sí/No before calling', NEW_ROUTINE.every((t) => !ASKS.test(descOf(t))), NEW_ROUTINE.filter((t) => ASKS.test(descOf(t))).join(', '));
 ok('NIVEL 3 tools: toolDescription KEEPS the Sí/No sentence', NEW_CONFIRM.every((t) => ASKS.test(descOf(t))), NEW_CONFIRM.filter((t) => !ASKS.test(descOf(t))).join(', '));
@@ -489,13 +490,43 @@ for (const ch of Object.keys(AGENTS)) {
   ok(`${ch}: section G adds no role restriction (no "solo un ADMIN" outside the death / sale authorization)`, !/solo (un )?ADMIN (puede )?(registr|captur)/i.test(parts[ch].G));
 }
 
+// leading "=" and {{ }} expressions against the previous version of the file (git)
+const BASELINE_REFS = REF === 'develop' ? ['develop', 'origin/develop'] : [REF];
+let baselineRef = null;
+for (const ref of BASELINE_REFS) {
+  try {
+    execFileSync('git', ['-C', V6, 'rev-parse', '--verify', `${ref}^{commit}`], { stdio: 'ignore' });
+    baselineRef = ref;
+    break;
+  } catch (e) { /* Try the fallback ref when available. */ }
+}
+function previous(file) {
+  if (!baselineRef) return null;
+  try { return JSON.parse(execFileSync('git', ['-C', V6, 'show', `${baselineRef}:workflows/09-MCP-Agent-Cattle/v6/${file}`], { stdio: ['ignore', 'pipe', 'ignore'], maxBuffer: 1 << 28 }).toString()); }
+  catch (e) { return null; }
+}
+if (!baselineRef && CI) {
+  ok(`required baseline ref "${REF}" is available`, false,
+    `CI=true requires "${REF}" (or origin/develop when using the default baseline); fetch the baseline branch before running this check.`);
+}
 for (const [ch, f] of Object.entries(AGENTS)) {
-  const palma = docs[f].nodes.find((n) => n.name === 'AI Agent Palma');
-  const opens = (sys[ch].match(/\{\{/g) || []).length;
-  const closes = (sys[ch].match(/\}\}/g) || []).length;
-  ok(`${ch}: prompt expressions are balanced and the Palma agent remains present`,
-    sys[ch].startsWith('=') && exprs(sys[ch]).length > 0 && opens === closes
-      && palma && palma.parameters.options.systemMessage.startsWith('='));
+  const prev = previous(f);
+  if (!prev) {
+    if (!CI) skip(`${ch}: "=" and {{ }} expressions identical to ${REF}`, 'git or ref not available');
+    else if (baselineRef) ok(`${ch}: previous workflow export is available at ${baselineRef}`, false, `Could not read or parse workflows/09-MCP-Agent-Cattle/v6/${f} from the baseline ref.`);
+    continue;
+  }
+  const pm = prev.nodes.find((n) => n.name === 'AI Agent').parameters.options.systemMessage;
+  ok(`${ch}: leading "=" and the ${exprs(pm).length} {{ }} expressions are identical to ${REF}`, pm[0] === '=' && sys[ch][0] === '=' && JSON.stringify(exprs(pm)) === JSON.stringify(exprs(sys[ch])));
+  const pp = prev.nodes.find((n) => n.name === 'AI Agent Palma').parameters.options.systemMessage;
+  ok(`${ch}: "AI Agent Palma" is untouched`, pp === docs[f].nodes.find((n) => n.name === 'AI Agent Palma').parameters.options.systemMessage);
+  const pt = prev.nodes.find((n) => n.name === 'AI Agent').parameters.text;
+  ok(`${ch}: the "text" input expression of "AI Agent" is untouched`, pt === docs[f].nodes.find((n) => n.name === 'AI Agent').parameters.text);
+  const agentNow = docs[f].nodes.find((n) => n.name === 'AI Agent'), agentPrev = prev.nodes.find((n) => n.name === 'AI Agent');
+  const strip = (n) => { const c = JSON.parse(JSON.stringify(n)); delete c.parameters.options.systemMessage; return JSON.stringify(c); };
+  ok(`${ch}: in the node "AI Agent" ONLY options.systemMessage changed (model, tools wiring, memory and every other parameter identical to ${REF})`, strip(agentNow) === strip(agentPrev));
+  const others = prev.nodes.filter((n) => n.name !== 'AI Agent');
+  ok(`${ch}: no other node of the workflow changed (${others.length} nodes)`, others.every((n) => JSON.stringify(n) === JSON.stringify(docs[f].nodes.find((x) => x.name === n.name))));
 }
 for (const ch of Object.keys(AGENTS)) {
   ok(`${ch}: prompt size ${sys[ch].length} characters (informational: it was ~32 000 before phase 5)`, sys[ch].length < 60000);

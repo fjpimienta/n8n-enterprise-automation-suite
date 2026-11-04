@@ -38,7 +38,7 @@ credenciales en el repositorio ni en logs compartidos.
    ```
 
    Debe reportar `STATE OK: before`; la definición previa esperada es
-   `d3c1fadef0b7d5e9c188acda08df85fb`. Detente ante cualquier diferencia.
+   `6cad0c8bc9a1388d8ff9080461c60724` (definición posterior a 096). Detente ante cualquier diferencia.
 
 3. **Dry run:** sin `-v apply=true`, el script ejecuta la migración dentro de una transacción que revierte:
 
@@ -130,5 +130,5 @@ psql <CONEXION_PRODUCCION> -v ON_ERROR_STOP=1 -v expect=rolled_back \
   -f 097_state_check.sql
 ```
 
-La última comprobación debe reportar `STATE OK: rolled_back` y recuperar la huella 096
-`d3c1fadef0b7d5e9c188acda08df85fb`; las huellas de datos deben continuar idénticas.
+La última comprobación debe reportar `STATE OK: rolled_back` y recuperar la huella posterior a 096
+`6cad0c8bc9a1388d8ff9080461c60724`; las huellas de datos deben continuar idénticas.

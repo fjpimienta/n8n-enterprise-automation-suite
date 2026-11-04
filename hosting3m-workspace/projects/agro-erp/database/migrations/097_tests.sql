@@ -298,9 +298,12 @@ BEGIN
     IF (v_result->>'success')::boolean IS DISTINCT FROM true
        OR (v_result->>'validos')::int <> 2
        OR v_result->'grupos'->0 ? 'seleccion'
+       OR NOT (v_result->'grupos'->0 ?& ARRAY['empresa', 'upp', 'guia_transito', 'cantidad', 'por_categoria', 'aretes'])
+       OR (SELECT array_agg(k ORDER BY k) FROM jsonb_object_keys(v_result->'grupos'->0) AS keys(k))
+          IS DISTINCT FROM ARRAY['aretes', 'cantidad', 'empresa', 'guia_transito', 'por_categoria', 'upp']
        OR jsonb_array_length(v_result->'grupos'->0->'aretes') <> 2
        OR v_result ? 'seleccionados' THEN
-        RAISE EXCEPTION 'FAIL: lot item without seleccion changed behavior: %', v_result;
+        RAISE EXCEPTION 'FAIL: non-FIFO preview group keys or lot behavior differ from 096: %', v_result;
     END IF;
     v_result := public.sp_solicitar_venta_orden(
         jsonb_build_array(jsonb_build_object('lote', 'T097 Legacy', 'cantidad', 1)),

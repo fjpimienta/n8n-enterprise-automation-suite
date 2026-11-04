@@ -1,6 +1,6 @@
 -- 097_state_check.sql: READ-ONLY. psql -v ON_ERROR_STOP=1 -v expect=before|applied|rolled_back -f 097_state_check.sql
 -- The 097 migration changes only the function definition; compare data fingerprints before and after deployment.
--- before md5 orden (096) = d3c1fadef0b7d5e9c188acda08df85fb
+-- before md5 orden (after 096) = 6cad0c8bc9a1388d8ff9080461c60724
 -- applied md5 orden = TO BE FILLED AFTER REHEARSAL
 \set ON_ERROR_STOP on
 BEGIN READ ONLY;
@@ -27,8 +27,8 @@ BEGIN
     END IF;
     v_def := pg_get_functiondef('public.sp_solicitar_venta_orden(jsonb,character varying,date,boolean,character varying)'::regprocedure);
     v_md5 := md5(v_def);
-    IF e IN ('before', 'rolled_back') AND v_md5 <> 'd3c1fadef0b7d5e9c188acda08df85fb' THEN
-        RAISE EXCEPTION 'STATE FAIL: 096 function fingerprint expected, found %', v_md5;
+    IF e IN ('before', 'rolled_back') AND v_md5 <> '6cad0c8bc9a1388d8ff9080461c60724' THEN
+        RAISE EXCEPTION 'STATE FAIL: post-096 function fingerprint expected, found %', v_md5;
     END IF;
     IF e = 'applied' THEN
         IF v_after_md5 !~ '^[0-9a-f]{32}$' THEN

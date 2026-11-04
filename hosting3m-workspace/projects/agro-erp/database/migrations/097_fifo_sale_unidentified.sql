@@ -21,7 +21,7 @@ BEGIN
         RAISE EXCEPTION 'ABORT: sp_solicitar_venta_orden not found.';
     END IF;
     v_def := pg_get_functiondef('public.sp_solicitar_venta_orden(jsonb,character varying,date,boolean,character varying)'::regprocedure);
-    IF md5(v_def) <> 'd3c1fadef0b7d5e9c188acda08df85fb' THEN
+    IF md5(v_def) <> '6cad0c8bc9a1388d8ff9080461c60724' THEN
         RAISE EXCEPTION 'ABORT: the live definition differs from the 096 definition (md5 %). Rebuild this migration from the live definition.', md5(v_def);
     END IF;
     IF to_regprocedure('public.fn_species_requires_bovine_compliance(character varying)') IS NULL THEN
@@ -313,10 +313,9 @@ BEGIN
         'errores', coalesce((SELECT jsonb_agg(jsonb_build_object('identificador', identificador, 'error', error) ORDER BY pos)
                                FROM tmp_sale_order_items WHERE error IS NOT NULL), '[]'::jsonb),
         'grupos', coalesce((SELECT jsonb_agg(g ORDER BY g->>'empresa', g->>'guia_transito')
-                              FROM (SELECT jsonb_strip_nulls(jsonb_build_object(
+                              FROM (SELECT (jsonb_build_object(
                                              'empresa', empresa, 'upp', upp, 'guia_transito', guia,
                                              'cantidad', count(*),
-                                             'seleccion', i.seleccion,
                                              'por_categoria', (SELECT jsonb_object_agg(categoria, n) FROM (
                                                  SELECT x.categoria, count(*) n FROM tmp_sale_order_items x
                                                   WHERE x.error IS NULL AND x.empresa = i.empresa
@@ -324,7 +323,10 @@ BEGIN
                                                     AND x.seleccion IS NOT DISTINCT FROM i.seleccion
                                                   GROUP BY 1) s),
                                              'aretes', coalesce(jsonb_agg(coalesce(arete, numero_fuego, identificador) ORDER BY pos)
-                                                                  FILTER (WHERE i.seleccion IS NULL), '[]'::jsonb))) AS g
+                                                                  FILTER (WHERE i.seleccion IS NULL), '[]'::jsonb))
+                                             || CASE WHEN i.seleccion IS NOT NULL
+                                                     THEN jsonb_build_object('seleccion', i.seleccion)
+                                                     ELSE '{}'::jsonb END) AS g
                                       FROM tmp_sale_order_items i WHERE error IS NULL
                                      GROUP BY empresa, upp, guia, seleccion) q), '[]'::jsonb));
 
