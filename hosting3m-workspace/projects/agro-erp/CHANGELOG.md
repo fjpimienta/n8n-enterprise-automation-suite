@@ -5,7 +5,7 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
-### 🐄 Cumplimiento de venta según especie (migración 096 y workflows #958) — base y n8n desplegados; panel pendiente
+### 🐄 Cumplimiento de venta según especie (migración 096 y workflows #958) — base y n8n desplegados; frontend integrado
 
 *Runbook: `database/migrations/096_RUNBOOK.md`.*
 * **Regla:** el arete oficial SINIIGA, el estado TB/Brucelosis y la guía de tránsito se requieren solo para el
@@ -16,7 +16,7 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
   `crud_models` ni datos.
 * **n8n:** el PR #958 cambió los prompts de Chat y WhatsApp y las dos herramientas de venta del MCP. Los tres
   workflows se publicaron el 2026-11-04 y se verificaron por re-descarga idéntica a `origin/develop`.
-* **Pendiente:** un PR posterior debe mostrar «Sin guía» en el panel de autorizaciones.
+* **Frontend:** este PR muestra «Sin guía» en los grupos, filtros, selección masiva, lista y modal de aprobación.
 
 ### Hotel maintenance ticket company column (migrations 094/095)
 

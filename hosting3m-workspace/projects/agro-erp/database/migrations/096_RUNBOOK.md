@@ -1,7 +1,7 @@
 > ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (base de datos y n8n, verificadas con sus huellas).
-> **Las partes 1 y 2 ya están completadas y verificadas; la parte 3 sigue pendiente.** El panel debe mostrar
-> «Sin guía» en la lista de autorizaciones mediante un PR posterior. `main` publica automáticamente los frontends
-> por Plesk: no completar el release hasta cerrar esa parte pendiente.
+> Las partes 1 y 2 ya están completadas y verificadas; este PR completa la parte 3 mostrando «Sin guía» en el
+> panel de autorizaciones. `main` publica automáticamente los frontends por Plesk: integrar y publicar solo como
+> parte del release planificado.
 
 # Runbook 096 — cumplimiento de venta según especie
 
@@ -21,8 +21,8 @@ La migración agrega `fn_species_requires_bovine_compliance(species)` y reemplaz
 
 1. Base de datos.
 2. Workflows de n8n.
-3. Frontend. La parte 3 de este release sigue pendiente: un PR posterior debe mostrar «Sin guía» en el panel de
-   autorizaciones. No publicar el frontend antes de que las partes 1 y 2 estén verificadas.
+3. Frontend. Este PR completa la parte 3 mostrando «Sin guía» en el panel de autorizaciones. Publicarlo solo
+   después de verificar las partes 1 y 2.
 
 ## Parte 1 — base de datos
 
@@ -104,11 +104,11 @@ Verificar en la empresa 3 con datos de prueba:
 - Un equino sin guía debe crear una orden de venta pendiente sin guía; un ADMIN la aprueba en el panel y la venta
   queda registrada sin guía.
 
-## Parte 3 — frontend (pendiente)
+## Parte 3 — frontend
 
-Un PR posterior debe mostrar «Sin guía» en el panel de autorizaciones para estas órdenes. Los puntos indicados
-para el cambio son `src/app/shared/utils/sale-order-grouping.util.ts` y
-`src/app/features/admin/components/authorization-list/authorization-list.component.ts`.
+Este PR muestra «Sin guía» como encabezado del grupo sin guía y en las etiquetas de acciones del panel de
+autorizaciones. Añade el filtro y la selección masiva para solicitudes VENTA sin guía, y muestra el mismo texto
+en la vista de lista y en el modal de aprobación. La agrupación existente no cambia.
 `v6_Notificacion_Autorizaciones.json` ya renderiza «Sin guía»; no requiere ese ajuste.
 
 ## Rollback de base de datos
@@ -148,7 +148,8 @@ la usa.
   previa. El equino sin guía generó una orden pendiente sin guía; un ADMIN la aprobó en el panel y la venta se
   registró sin guía.
 
-### Parte 3 — panel, pendiente
+### Parte 3 — panel, este PR
 
-Queda pendiente el PR del panel para mostrar «Sin guía» en la lista de autorizaciones. La parte correspondiente
-de n8n ya está cubierta por `v6_Notificacion_Autorizaciones.json`.
+Este PR completa la presentación «Sin guía» en la lista y los grupos de autorizaciones, agrega filtro y
+selección masiva para VENTA sin guía, y actualiza la etiqueta en el modal de aprobación. La agrupación de órdenes
+se conserva. `v6_Notificacion_Autorizaciones.json` ya cubría ese texto para la notificación de n8n.
