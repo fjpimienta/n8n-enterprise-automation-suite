@@ -151,8 +151,10 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
 
 ## 🚀 Despliegue (aplica a toda la suite)
 
-- **Despliegue de producción:** `main` publica automáticamente los frontends por Plesk. El backend
-  (compose, n8n y base de datos) se despliega manualmente en el VPS con su runbook.
+- **Despliegue de producción:** `main` publica automáticamente los frontends por Plesk. Si el sitio no refleja la
+  release después de unos minutos, abre la sección Git del dominio en Plesk, revisa el último despliegue y usa
+  **Deploy now**; después fuerza la recarga del navegador. El backend (compose, n8n y base de datos) se despliega
+  manualmente en el VPS con su runbook.
   `deploy.sh <service> [<service>...]` actualiza con `git pull --ff-only origin main`, crea una
   etiqueta de rollback antes de compilar y recrea solo los servicios solicitados; `upload-file`
   usa su propio compose. No ejecutarlo sin comparar antes el compose del VPS con el del repositorio.
@@ -231,16 +233,18 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
   5. **Importación:** en n8n, selecciona **⋯ → Import from file…**, elige el JSON de `develop`, pulsa **Save** y
      luego **Publish**. En esta versión, producción conserva la versión publicada anteriormente hasta pulsar
      **Publish**. No uses `n8n import:workflow`: puede desactivar el workflow y cambiar el `versionId`.
-  6. **Verificación de publicación:** descarga el workflow otra vez y compara el export recién descargado con el
+  6. **Estado tras importar:** confirma que el nombre del workflow y su estado publicado no cambiaron al importar
+     el archivo.
+  7. **Verificación de publicación:** descarga el workflow otra vez y compara el export recién descargado con el
      JSON de `develop` usando el mismo snippet; el resultado esperado es `No differences.`. No lo consideres
      desplegado hasta que coincidan. El editor puede dejar una versión guardada sin publicar (pasó en v1.18.1,
      2026-10-17: la primera importación no se publicó y solo la huella lo detectó).
-  7. **Verificación de comportamiento:** realiza una solicitud sin autenticar que debe ser denegada con HTTP 403
+  8. **Verificación de comportamiento:** realiza una solicitud sin autenticar que debe ser denegada con HTTP 403
      y JSON limpio (`{message, code}`); después ejecuta una acción autenticada normal en el dashboard y confirma
      que funciona. Abre la ejecución más reciente y verifica la ruta esperada. Usa únicamente placeholders para
      URLs y tokens.
-  8. **Rollback:** vuelve a importar el respaldo del paso 2, pulsa **Save** y **Publish**.
-  9. **Release:** finalmente publica `develop` → `main` con `gh pr merge N --merge` y confirma que
+  9. **Rollback:** vuelve a importar el respaldo del paso 2, pulsa **Save** y **Publish**.
+  10. **Release:** finalmente publica `develop` → `main` con `gh pr merge N --merge` y confirma que
      `git diff --stat origin/main origin/develop` no imprime diferencias.
 - **Una consulta parametrizada de n8n se prueba ejecutando el nodo con datos reales, no solo con SQL preparado.**
   El nodo Postgres pasa un `queryReplacement` de tipo arreglo con sus tipos de JS y pg-promise arma la consulta del

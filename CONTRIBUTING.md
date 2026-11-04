@@ -93,11 +93,13 @@ El runbook de workflows y los detalles operativos versionados están en `CLAUDE.
 
 - Checks run on pull requests targeting `develop` and `main`, and on pushes to `main`.
 - GitHub Actions runs ShellCheck and the stubbed `deploy.sh` tests, v5 CRUD tests,
-  CFDI service tests, and workspace builds for `ui-pdf-export`, `dashboard`, and
-  `hotel-website`; the Agent workflow consistency job runs the reproduction prompt checker.
-- The `dashboard` and `hotel-website` jobs generate placeholder environment files at
-  runtime because the real environment files are git-ignored; missing real environment
-  files are not a cause of CI failure.
+  CFDI service tests, and workspace builds for `ui-pdf-export`, `dashboard`,
+  `hotel-website`, and `agro-erp` (`npx ng build agro-erp`); the Agent workflow
+  consistency job runs the reproduction prompt checker.
+- The `agro-erp` job runs unit tests with `npm test -- agro-erp --watch=false` on Node 22.
+- The `dashboard`, `hotel-website`, and `agro-erp` jobs generate placeholder environment
+  files at runtime because the real environment files are git-ignored; missing real
+  environment files are not a cause of CI failure.
 - Every pull request should have all CI checks green before merging. CI does not deploy
   anything.
 
@@ -108,8 +110,15 @@ El runbook de workflows y los detalles operativos versionados están en `CLAUDE.
   Dockerfiles in `infrastructure/upload-file` and `microservices/jwt-service`, and GitHub
   Actions in the repository root. Checks run weekly on Mondays; pull requests target `develop`.
 - Check that CI is green, then merge the pull request with `--squash`.
+- If Dependabot does not rebase a pull request, run `gh pr update-branch <N>` to bring
+  `develop` into the branch and re-trigger CI.
+- `gh pr view --comments` fails with a Projects (classic) deprecation error. Use
+  `gh pr view <N> --json comments,mergeStateStatus -q '{mergeStateStatus, comments: [.comments[].body]}'`
+  instead.
 - Review the Angular package group on its own. Major updates are not auto-merged and are
   handled manually.
+- Before releasing an `apexcharts` major bump, visually check the four Agro ERP livestock
+  dashboards.
 - CI does not test `upload-file` or `jwt-service`. After merging a Dependabot pull request
   that touches either service, redeploy only that service with `./deploy.sh <service>` and
   run a smoke test: check its health endpoint or make one request.
