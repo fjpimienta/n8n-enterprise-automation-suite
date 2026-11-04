@@ -139,4 +139,5 @@ jobs:
           EOF
       - run: npx ng build dashboard
       - run: npx ng build agro-erp
+      - run: npm test -- agro-erp --watch=false
       - run: npx ng build hotel-website --configuration production
