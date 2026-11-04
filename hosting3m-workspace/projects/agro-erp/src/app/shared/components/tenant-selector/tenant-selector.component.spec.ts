@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { TenantSelector } from './tenant-selector';
+import { TenantSelectorComponent } from './tenant-selector.component';
 
-describe('TenantSelector', () => {
-  let component: TenantSelector;
-  let fixture: ComponentFixture<TenantSelector>;
+describe('TenantSelectorComponent', () => {
+  let component: TenantSelectorComponent;
+  let fixture: ComponentFixture<TenantSelectorComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [TenantSelector]
+      imports: [TenantSelectorComponent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(TenantSelector);
+    fixture = TestBed.createComponent(TenantSelectorComponent);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });

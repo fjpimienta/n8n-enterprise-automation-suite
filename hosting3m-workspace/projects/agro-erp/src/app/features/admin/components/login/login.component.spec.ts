@@ -1,4 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideHttpClient } from '@angular/common/http';
+import { provideRouter } from '@angular/router';
+import { AUTH_ENV_CONFIG } from 'core-auth';
 
 import { LoginComponent } from './login.component';
 
@@ -24,7 +27,21 @@ describe('LoginComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [LoginComponent]
+      imports: [LoginComponent],
+      providers: [
+        provideHttpClient(),
+        provideRouter([]),
+        {
+          provide: AUTH_ENV_CONFIG,
+          useValue: {
+            apiUrl_crud: 'https://example.invalid',
+            apiUrl_token: 'https://example.invalid',
+            apiUrl_ai: 'https://example.invalid',
+            apiUrl_upload: 'https://example.invalid',
+            system_id: 'agro-erp'
+          }
+        }
+      ]
     })
     .compileComponents();
 

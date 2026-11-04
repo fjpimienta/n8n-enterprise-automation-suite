@@ -8,7 +8,10 @@
       "@env/*": ["src/environments/*"],
       "@features/*": ["src/app/features/*"],
       "@core/*": ["src/app/core/*"],
-      "@shared/*": ["src/app/shared/*"]
+      "@shared/*": ["src/app/shared/*"],
+      "core-auth": ["../core-auth/src/public-api.ts"],
+      "core-auth/*": ["../core-auth/src/lib/*"],
+      "ui-chat": ["../ui-chat/src/public-api.ts"]
     }
   },
   "include": ["src/**/*.d.ts", "src/**/*.spec.ts"]

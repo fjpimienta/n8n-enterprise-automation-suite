@@ -22,7 +22,7 @@ const throwing: StorageLike = {
   getItem() { throw new Error('SecurityError'); },
   setItem() { throw new Error('QuotaExceeded'); },
   removeItem() { throw new Error('SecurityError'); },
-  get length() { throw new Error('SecurityError'); },
+  get length(): number { throw new Error('SecurityError'); },
   key() { throw new Error('SecurityError'); },
 };
 
