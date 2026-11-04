@@ -26,6 +26,7 @@ export interface PendingAuthorizationLivestock {
   numero_fuego?: string | null;
   category?: string;
   species?: string;
+  lot_name?: string | null;
 }
 
 /** Payload JSONB — shape observado en producción (sp_solicitar_autorizacion). No es fijo por
@@ -39,6 +40,8 @@ export interface PendingAuthorizationPayload {
   fecha_evento?: string;
   /** Transit guide folio(s) reported by the requester for a VENTA. */
   guia_transito?: string | null;
+  /** Automatic FIFO selection method for unidentified non-bovine sale requests (migration 097). */
+  seleccion_metodo?: string | null;
   /** Sale order code (e.g. `OV-000003`) when the request belongs to a sale order (migration 074). */
   orden_venta?: string | null;
   /** Animals in the whole sale order, across companies (migration 074). Absent on older orders. */

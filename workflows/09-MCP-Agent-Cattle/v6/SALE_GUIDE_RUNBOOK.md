@@ -76,3 +76,39 @@ No cambies otros nodos, parámetros, conexiones ni credenciales. `AI Agent Palma
    Revisa las ejecuciones recientes de esos tres casos y confirma la ruta esperada: vista previa antes de preguntar por una guía bovina, y creación de la solicitud solo después de la confirmación del usuario. No uses datos reales de huéspedes, productores o animales fuera de los registros de prueba de la empresa 3.
 8. **Rollback:** si falla la comparación o una prueba, vuelve a importar en el editor el respaldo del paso 2 para cada workflow afectado, pulsa **Save** y **Publish**, y verifica que el export publicado vuelva a coincidir con el respaldo.
 9. **Release:** solo después de verificar las partes 1 y 2 puede continuar el proceso de release hacia `main`. La parte 3 se entrega mediante su PR posterior; este runbook no la despliega.
+> ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (base de datos y n8n verificados con sus huellas).
+> `main` publica automáticamente los frontends por Plesk. El orden de despliegue es base de datos → workflows →
+> frontend; no publiques la interfaz antes de verificar las partes 1 y 2.
+
+# Runbook: órdenes FIFO de animales no identificados (migración 097)
+
+## Alcance
+
+Para una venta de animales no bovinos sin identificadores físicos, el usuario proporciona lote, categoría y
+cantidad. El agente llama a la vista previa con un item `{"lote","categoria","cantidad","seleccion":"FIFO"}` y
+muestra el conteo exacto y la lista de animales devuelta. Solo después de que el usuario confirme explícitamente
+con «Sí» llama a `request_livestock_sale_order`. El agente nunca solicita aretes ni elige animales. Los bovinos y
+las especies nulas o desconocidas no son elegibles para FIFO; los bovinos siguen requiriendo identificadores y la
+guía que corresponda. Los items sin `seleccion` y las ventas individuales conservan el flujo existente.
+
+## Parte 1 — base de datos
+
+Consulta [`097_RUNBOOK.md`](../../../hosting3m-workspace/projects/agro-erp/database/migrations/097_RUNBOOK.md)
+para respaldo, dry run, aplicación, huellas, pruebas y rollback. La verificación funcional de producción se limita
+a la empresa 3 y debe usar una transacción revertida o un animal de prueba que se limpie inmediatamente. No uses
+las empresas 5 o 6 para pruebas.
+
+## Parte 2 — workflows de n8n
+
+Los cambios cubren `v6_MCP_Server_Cattle.json` y las instrucciones de venta de `v6_ai_chat_cattle.json` y
+`v6_WhatsApp_Agent_Cattle.json`. Sigue el procedimiento de backup, comparación con `main` y `develop`, importación,
+Save, Publish, re-descarga y comparación descrito en
+[`097_RUNBOOK.md`](../../../hosting3m-workspace/projects/agro-erp/database/migrations/097_RUNBOOK.md).
+Verifica únicamente en la empresa 3 con datos de prueba; usa una transacción revertida o limpia el animal de prueba
+después. No uses las empresas 5 o 6.
+
+## Parte 3 — frontend
+
+Despliega el frontend solo después de comprobar las huellas de la base y workflows. En la lista y el modal de
+aprobación, una solicitud FIFO sin identificador físico debe mostrar «Sin identificador · selección automática»,
+categoría, lote y un ID corto.

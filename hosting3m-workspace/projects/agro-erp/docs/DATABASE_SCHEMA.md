@@ -673,7 +673,12 @@ Payload de una solicitud de orden: `fecha_evento`, `guia_transito`, `orden_venta
 **`sp_solicitar_venta_orden(p_items jsonb, p_solicitado_por_email varchar, p_fecha_evento date DEFAULT NULL, p_preview boolean DEFAULT true, p_channel varchar DEFAULT 'AGENTE') RETURNS jsonb`**
 — vista previa o creación todo-o-nada; renglones por animal o por lote; resultado
 `{fecha_evento, total, validos, errores[], grupos[{empresa, upp, guia_transito, cantidad, por_categoria, aretes}]}`
-y, al crear, `order_id`, `orden_venta`, `solicitudes`. Códigos P0031–P0037 (ver CHANGELOG).
+y, al crear, `order_id`, `orden_venta`, `solicitudes`. Desde 097, un item de lote puede incluir
+`"seleccion":"FIFO"` junto con `lote`, `categoria` y `cantidad` positiva para seleccionar en el servidor los
+animales no identificados más antiguos de una categoría no bovina. La vista previa agrega `seleccion:"FIFO"` al
+grupo y `seleccionados:[{livestock_id,categoria,lote,capturado}]` para esa selección; `livestock_id` se usa para
+identificar internamente las solicitudes. Sin `seleccion`, el comportamiento anterior de lote completo permanece.
+Códigos P0031–P0037 (ver CHANGELOG).
 Desde migración 096, `guia_transito` es obligatoria solo para animales del régimen bovino (`BOVINO`, sin distinguir
 mayúsculas, o especie desconocida/vacía). La vista previa informa `Falta la guía de tránsito` por cada animal
 bovino sin guía; las demás especies pueden incluirse sin ella. La resolución de especie ocurre después de

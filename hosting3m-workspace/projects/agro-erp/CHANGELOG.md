@@ -5,6 +5,15 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🐑 Selección FIFO para ventas de animales no identificados (migración 097)
+
+* Las órdenes pueden seleccionar por lote y categoría una cantidad exacta de animales no bovinos sin identificadores,
+  ordenados por fecha de captura e ID. La vista previa presenta los animales seleccionados; la creación sigue
+  requiriendo confirmación explícita. Los flujos de lote completo y venta por identificador permanecen disponibles.
+* El panel de autorizaciones identifica estas solicitudes como «Sin identificador · selección automática» e incluye
+  categoría, lote y un identificador corto.
+* Runbook de despliegue: `database/migrations/097_RUNBOOK.md`.
+
 ### 🔧 CI y dependencias de Agro ERP
 
 * Actualizado `apexcharts` de 6.10.0 a 8.7.0 (#945); se usa en los cuatro dashboards de ganadería.
