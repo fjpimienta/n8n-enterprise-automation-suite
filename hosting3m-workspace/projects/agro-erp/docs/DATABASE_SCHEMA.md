@@ -674,6 +674,16 @@ Payload de una solicitud de orden: `fecha_evento`, `guia_transito`, `orden_venta
 — vista previa o creación todo-o-nada; renglones por animal o por lote; resultado
 `{fecha_evento, total, validos, errores[], grupos[{empresa, upp, guia_transito, cantidad, por_categoria, aretes}]}`
 y, al crear, `order_id`, `orden_venta`, `solicitudes`. Códigos P0031–P0037 (ver CHANGELOG).
+Desde migración 096, `guia_transito` es obligatoria solo para animales del régimen bovino (`BOVINO`, sin distinguir
+mayúsculas, o especie desconocida/vacía). La vista previa informa `Falta la guía de tránsito` por cada animal
+bovino sin guía; las demás especies pueden incluirse sin ella. La resolución de especie ocurre después de
+resolver cada animal en las empresas del solicitante.
+
+**`sp_procesar_venta_autorizada(p_livestock_id uuid, p_tenant_id integer, p_excepcion_sanitaria boolean DEFAULT false, p_autorizado_por_email varchar DEFAULT NULL, p_notas text DEFAULT NULL, p_fecha_evento date DEFAULT NULL) RETURNS jsonb`**
+— procesa la venta al aprobar una autorización. Desde migración 096, valida el arete oficial y los requisitos
+TB/Brucelosis solo para el régimen bovino (`BOVINO`, sin distinguir mayúsculas, o especie desconocida/vacía).
+Las demás especies no requieren esos requisitos para completar la venta; las reglas de especie desconocida
+permanecen estrictas.
 
 ### `sp_procesar_baja_mortandad(p_electronic_rfid, p_rfid_siniiga, p_numero_fuego, p_tenant_id, p_causa_mortandad, p_fecha_evento, p_descripcion, p_reportado_por_email, p_autorizado_por_email, p_livestock_id)`
 * Mismo patrón de desambiguación multi-identificador que `sp_procesar_salida_ganado`
@@ -1097,16 +1107,12 @@ producción desde v1.9.0 (es el que realmente invoca el gateway Meta-CRUD vía
 legacy de arriba — ambos coexisten como funciones distintas en Postgres (sobrecarga por
 firma), no una sola función con parámetros opcionales agregados con el tiempo.
 
-* Mismo patrón de desambiguación multi-identificador y mismas reglas normativas
-  (arete oficial, TB/BR con exención por hato libre, exención completa para `species =
-  'EQUIDO'`) que el resto de esta sección describe para el mecanismo general.
+* Mismo patrón de desambiguación multi-identificador y mismas reglas normativas que el mecanismo general.
 * **`p_livestock_id uuid DEFAULT NULL`** *(añadido en v1.12.0, 5º parámetro)*: mismo
   patrón que en `sp_procesar_baja_mortandad` — si viene informado, resuelve el animal
   directo por UUID en vez de por los 3 identificadores físicos. Necesario para venta de
-  animales sin arete todavía asignado, aunque en la práctica la validación de arete oficial
-  SINIIGA sigue aplicando después de resolver el animal (un animal sin arete físico
-  legítimamente no puede venderse per la NOM-001-SAG/GAN-2015, salvo `EQUIDO`) — este
-  parámetro resuelve el *lookup*, no exime del requisito legal.
+  animales sin arete todavía asignado; este parámetro resuelve el *lookup*, no cambia los
+  requisitos de venta según especie.
 * Ver "Reporte de eventos para animales sin identificador físico" arriba para el flujo
   completo de venta de animales sin arete.
 * **Mechanism (as of migration 024, 2026-07-29):**
@@ -1115,20 +1121,23 @@ firma), no una sola función con parámetros opcionales agregados con el tiempo.
     already `VENDIDO`.
   * **Regulatory rejections** (`success:false`, no exception — lets the n8n gateway
     distinguish a business rejection from a real data error), evaluated in this order:
-    1. **Official ear tag missing** (`fn_has_official_ear_tag(rfid_siniiga)` false).
-       NOM-001-SAG/GAN-2015 requires the SINIIGA tag for any movement; this check was
-       ABSENT until migration 024 — the routine used to authorize illegal exits.
-    2. **TB/BR not covered.** The 60-day window is the validity of a LOT TEST only
+    1. **Official ear tag missing** (`fn_has_official_ear_tag(rfid_siniiga)` false) for
+       the bovine regime. NOM-001-SAG/GAN-2015 requires the SINIIGA tag for bovines; this
+       check was ABSENT until migration 024 — the routine used to authorize non-compliant
+       bovine exits. Since migration 096, non-bovine species are exempt from this check.
+    2. **TB/BR not covered** for the bovine regime. The 60-day window is the validity of a LOT TEST only
        (`tb_test_date`/`br_test_date`). A production unit with a current entry in
        `herd_free_certificates` for that disease (`fn_is_herd_free`) is exempt from the
        60-day check entirely — a herd-free certificate is valid for 12-24 months.
        This exemption did NOT exist before migration 024: the routine used to reject
        legitimate sales from a certified herd.
-    * ⚠️ **`species = 'EQUIDO'` exemption, added same session, previously undocumented
-      here:** both checks above (official ear tag and TB/BR) are skipped entirely when
-      `v_species = 'EQUIDO'` — horses legitimately carry no SINIIGA tag under Mexican
-      regulation. Fixed live in production during a real client transaction (a mare sale),
-      not caught until then because this SP's rules were written cattle-first.
+    * Since migration 096, `fn_species_requires_bovine_compliance(species)` scopes both
+      checks to `BOVINO` without case sensitivity and to unknown/empty species
+      (fail-closed). Every other species, including `EQUIDO`, skips both checks.
+  * **`fn_species_requires_bovine_compliance(p_species varchar) RETURNS boolean` (migration 096):**
+    returns `true` for `BOVINO` in any letter case or for a null/blank species, and `false` for every other
+    species. Used to scope the official ear-tag, TB/Brucellosis and transit-guide requirements to the bovine
+    regime; unknown or empty species remain strict.
   * **On success:** sets `current_status = 'VENDIDO'`, clears both `upp_origen` AND
     `production_unit_id`, and inserts a `VENTA` row into `historico_movimientos`. Returns
     `tb_herd_free`/`br_herd_free` flags alongside the result for transparency.
