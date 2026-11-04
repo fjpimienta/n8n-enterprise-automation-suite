@@ -110,6 +110,23 @@ for (const ch of Object.keys(AGENTS)) {
   ok(`${ch}: sections E, G and C are present`, parts[ch].E.length > 1000 && parts[ch].G.length > 1000 && parts[ch].C.length > 200);
 }
 ok('both prompts carry EXACTLY the same section G', parts.chat.G === parts.whatsapp.G);
+const fifoSaleFlowIsValid = Object.keys(AGENTS).every((ch) => {
+  const sale = section(sys[ch], 'VENTAS = ORDEN DE VENTA', '✨ F. PROTOCOLO');
+  const previewAt = sale.indexOf('preview_livestock_sale_order');
+  const confirmAt = sale.indexOf('Solo con el "Sí" del turno siguiente');
+  const requestAt = sale.indexOf('request_livestock_sale_order');
+  return sale.includes('NO BOVINOS')
+    && sale.includes('"seleccion": "FIFO"')
+    && sale.includes('Nunca pidas aretes')
+    && sale.includes('nunca elijas animales tú')
+    && sale.includes('seleccionados')
+    && sale.includes('cantidad exacta')
+    && sale.includes('livestock_id únicamente internamente')
+    && sale.includes('guía de tránsito')
+    && previewAt >= 0 && confirmAt > previewAt && requestAt > confirmAt;
+});
+ok('chat and WhatsApp: FIFO uses a server preview, shows the exact selected list, and requests only after confirmation',
+  fifoSaleFlowIsValid);
 
 // tools named in the prompts
 const TOOL_RE = /'((?:get|list|log|register|void|find|count|move|review|cancel|preview|request|update|births|identifier)_[a-z_]+)'/g;
@@ -149,6 +166,23 @@ for (const ch of Object.keys(AGENTS)) {
 
 // each new tool's description agrees with its level
 const descOf = (n) => toolNodes.find((x) => x.name === n).parameters.toolDescription || '';
+const saleOrderTools = ['preview_livestock_sale_order', 'request_livestock_sale_order'].map((name) =>
+  toolNodes.find((node) => node.name === name));
+ok('sale-order tool schemas document FIFO and preserve the existing wrapped text-array query contract',
+  saleOrderTools.every((node) => {
+    const replacement = node.parameters.options.queryReplacement || '';
+    const description = node.parameters.toolDescription || '';
+    return replacement.startsWith('={{ [ $fromAI(\'items_json\'')
+      && replacement.includes('seleccion')
+      && replacement.includes('FIFO')
+      && !replacement.includes("$fromAI('tenant_id'")
+      && node.parameters.query.includes('$1::jsonb')
+      && node.parameters.query.includes('$2::varchar')
+      && node.parameters.query.includes('$3::text')
+      && description.includes('seleccion')
+      && description.includes('FIFO')
+      && description.includes('non-bovine');
+  }));
 const ASKS = /pide al usuario que confirme con Sí\/No/;
 ok('NIVEL 2 tools: toolDescription does NOT ask for a Sí/No before calling', NEW_ROUTINE.every((t) => !ASKS.test(descOf(t))), NEW_ROUTINE.filter((t) => ASKS.test(descOf(t))).join(', '));
 ok('NIVEL 3 tools: toolDescription KEEPS the Sí/No sentence', NEW_CONFIRM.every((t) => ASKS.test(descOf(t))), NEW_CONFIRM.filter((t) => !ASKS.test(descOf(t))).join(', '));

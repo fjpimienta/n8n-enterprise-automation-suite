@@ -5,6 +5,7 @@ import {
   NO_GUIDE_LABEL,
   distinctGuides,
   distinctOrderCodes,
+  fifoSaleSelectionLabel,
   formatCategoryCounts,
   groupSaleAuthorizations,
   isOwnCompanyRow,
@@ -34,6 +35,18 @@ const req = (overrides: Partial<PendingAuthorization> & { orden?: string | null;
 };
 
 describe('groupSaleAuthorizations', () => {
+  it('labels FIFO-selected animals with category, lot and a short livestock id', () => {
+    const row = req({
+      livestock_id: '12345678-1234-4234-8234-123456789012',
+      payload: { seleccion_metodo: 'FIFO_SIN_IDENTIFICADOR' },
+      cattle_livestock_data: { id: '12345678-1234-4234-8234-123456789012', category: 'BORREGA', lot_name: 'Potrero Norte' }
+    });
+
+    expect(fifoSaleSelectionLabel(row))
+      .toBe('Sin identificador · selección automática · BORREGA · lote Potrero Norte · #12345678');
+    expect(fifoSaleSelectionLabel(req())).toBeNull();
+  });
+
   it('groups one order with two guides, counting categories per guide', () => {
     const rows = [
       req({ orden: 'OV-000003', guia: '14288', category: 'VACA' }),

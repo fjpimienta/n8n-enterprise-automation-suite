@@ -62,6 +62,15 @@ export function guideCodeFor(row: PendingAuthorization): string | null {
   return trimmed(row.payload?.guia_transito);
 }
 
+/** Human-readable identifier for an animal selected automatically by migration 097. */
+export function fifoSaleSelectionLabel(row: PendingAuthorization): string | null {
+  if (row.payload?.seleccion_metodo !== 'FIFO_SIN_IDENTIFICADOR') return null;
+  const category = trimmed(row.cattle_livestock_data?.category) ?? 'Categoría —';
+  const lot = trimmed(row.cattle_livestock_data?.lot_name) ?? '—';
+  const shortId = trimmed(row.livestock_id)?.slice(0, 8) ?? '—';
+  return `Sin identificador · selección automática · ${category} · lote ${lot} · #${shortId}`;
+}
+
 /** Fail-closed: a row belongs to the active company only when both ids are known and equal. */
 export function isOwnCompanyRow(row: Pick<PendingAuthorization, 'id_company'>, activeCompanyId: number | null | undefined): boolean {
   const active = Number(activeCompanyId);
