@@ -295,15 +295,16 @@ BEGIN
     RAISE NOTICE 'OK: pending-request exclusion and end-to-end FIFO approval with income';
 
     v_result := public.sp_solicitar_venta_orden(
-        jsonb_build_array(jsonb_build_object('lote', 'T097 Legacy', 'cantidad', v_legacy_total)),
+        jsonb_build_array(jsonb_build_object('lote', 'T097 Legacy', 'cantidad', v_legacy_total, 'guia_transito', 'G-097')),
         v_admin, NULL, true, 'TEST');
     IF (v_result->>'success')::boolean IS DISTINCT FROM true
        OR (v_result->>'validos')::int <> v_legacy_total
+       OR jsonb_array_length(v_result->'grupos') <> 1
        OR v_result->'grupos'->0 ? 'seleccion'
        OR NOT (v_result->'grupos'->0 ?& ARRAY['empresa', 'upp', 'guia_transito', 'cantidad', 'por_categoria', 'aretes'])
        OR (SELECT array_agg(k ORDER BY k) FROM jsonb_object_keys(v_result->'grupos'->0) AS keys(k))
           IS DISTINCT FROM ARRAY['aretes', 'cantidad', 'empresa', 'guia_transito', 'por_categoria', 'upp']
-       OR v_result->'grupos'->0->'guia_transito' IS DISTINCT FROM 'null'::jsonb
+       OR v_result->'grupos'->0->>'guia_transito' IS DISTINCT FROM 'G-097'
        OR jsonb_array_length(v_result->'grupos'->0->'aretes') <> v_legacy_total
        OR v_result ? 'seleccionados' THEN
         RAISE EXCEPTION 'FAIL: non-FIFO preview group keys or lot behavior differ from 096: %', v_result;
@@ -317,8 +318,16 @@ BEGIN
     v_result := public.sp_solicitar_venta_orden(
         jsonb_build_array(jsonb_build_object('identificador', 'T097-LEGACY-SHEEP')),
         v_admin, NULL, true, 'TEST');
-    IF (v_result->>'validos')::int <> 1 THEN
-        RAISE EXCEPTION 'FAIL: single-animal non-bovine behavior changed: %', v_result;
+    IF (v_result->>'success')::boolean IS DISTINCT FROM true
+       OR (v_result->>'validos')::int <> 1
+       OR jsonb_array_length(v_result->'grupos') <> 1
+       OR v_result->'grupos'->0 ? 'seleccion'
+       OR NOT (v_result->'grupos'->0 ?& ARRAY['empresa', 'upp', 'guia_transito', 'cantidad', 'por_categoria', 'aretes'])
+       OR (SELECT array_agg(k ORDER BY k) FROM jsonb_object_keys(v_result->'grupos'->0) AS keys(k))
+          IS DISTINCT FROM ARRAY['aretes', 'cantidad', 'empresa', 'guia_transito', 'por_categoria', 'upp']
+       OR v_result->'grupos'->0->'guia_transito' IS DISTINCT FROM 'null'::jsonb
+       OR v_result ? 'seleccionados' THEN
+        RAISE EXCEPTION 'FAIL: single-animal non-bovine preview keys or behavior changed: %', v_result;
     END IF;
     v_result := public.sp_solicitar_venta_orden(
         jsonb_build_array(jsonb_build_object('identificador', 'T097-LEGACY-BOVINE')),
