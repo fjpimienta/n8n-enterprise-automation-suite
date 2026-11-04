@@ -124,5 +124,19 @@ jobs:
             system_id: 'dashboard'
           };
           EOF
+      - name: Generate agro-erp environment file
+        run: |
+          mkdir -p projects/agro-erp/src/environments
+          cat > projects/agro-erp/src/environments/environment.ts <<'EOF'
+          export const environment = {
+            production: false,
+            apiUrl: 'https://example.invalid',
+            apiUrl_crud: 'https://example.invalid',
+            apiUrl_token: 'https://example.invalid',
+            apiUrl_ai: 'https://example.invalid',
+            apiUrl_upload: 'https://example.invalid'
+          };
+          EOF
       - run: npx ng build dashboard
+      - run: npx ng build agro-erp
       - run: npx ng build hotel-website --configuration production
