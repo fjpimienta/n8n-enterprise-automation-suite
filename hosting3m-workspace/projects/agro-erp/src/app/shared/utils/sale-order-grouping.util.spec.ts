@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { PendingAuthorization } from '@core/models/pending-authorization.model';
 import {
+  NO_GUIDE_FILTER,
   NO_GUIDE_LABEL,
   distinctGuides,
   distinctOrderCodes,
@@ -8,7 +9,9 @@ import {
   groupSaleAuthorizations,
   isOwnCompanyRow,
   matchesSaleFilters,
-  otherCompaniesWarning
+  otherCompaniesWarning,
+  saleGuideLabel,
+  saleGuideTitle
 } from './sale-order-grouping.util';
 
 let seq = 0;
@@ -74,6 +77,13 @@ describe('groupSaleAuthorizations', () => {
     expect(orders[0].guides.map(g => g.guiaTransito)).toEqual(['5', NO_GUIDE_LABEL]);
   });
 
+  it('formats guide and guide-less order titles', () => {
+    expect(saleGuideTitle({ guiaTransito: NO_GUIDE_LABEL })).toBe('Sin guía');
+    expect(saleGuideTitle({ guiaTransito: '14287' })).toBe('Guía 14287');
+    expect(saleGuideLabel('OV-000004', { guiaTransito: NO_GUIDE_LABEL })).toBe('sin guía · OV-000004');
+    expect(saleGuideLabel('OV-000004', { guiaTransito: '14287' })).toBe('guía 14287 · OV-000004');
+  });
+
   it('excludes rows of other companies and flags their order (never returned for resolution)', () => {
     const own = req({ orden: 'OV-000004', guia: '1' });
     const foreignSameOrder = req({ orden: 'OV-000004', guia: '1', id_company: 6 });
@@ -124,6 +134,21 @@ describe('quick filters', () => {
     expect(rows.filter(r => matchesSaleFilters(r, '', '14287')).length).toBe(2);
     expect(rows.filter(r => matchesSaleFilters(r, 'OV-000003', '14287')).length).toBe(1);
     expect(rows.filter(r => matchesSaleFilters(r, '', '')).length).toBe(4);
+  });
+
+  it('filters only guide-less VENTA rows without changing existing guide filters', () => {
+    const guideLessSale = req({ orden: 'OV-000004' });
+    const saleWithGuide = req({ orden: 'OV-000005', guia: '14287' });
+    const mortality = req({
+      tipo_evento: 'BAJA_MORTANDAD',
+      payload: { causa_mortandad: 'Golpe' }
+    });
+
+    expect(matchesSaleFilters(guideLessSale, '', NO_GUIDE_FILTER)).toBe(true);
+    expect(matchesSaleFilters(saleWithGuide, '', NO_GUIDE_FILTER)).toBe(false);
+    expect(matchesSaleFilters(mortality, '', NO_GUIDE_FILTER)).toBe(false);
+    expect(matchesSaleFilters(saleWithGuide, '', '14287')).toBe(true);
+    expect(matchesSaleFilters(guideLessSale, '', '14287')).toBe(false);
   });
 });
 

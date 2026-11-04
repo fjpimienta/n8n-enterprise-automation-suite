@@ -2,6 +2,8 @@ import type { PendingAuthorization } from '@core/models/pending-authorization.mo
 
 /** Label used for VENTA requests of an order that carry no transit guide. */
 export const NO_GUIDE_LABEL = 'Sin guía';
+/** Quick-filter value for VENTA requests that carry no transit guide. */
+export const NO_GUIDE_FILTER = '__SIN_GUIA__';
 const NO_CATEGORY_LABEL = 'Sin categoría';
 
 export interface SaleGuideGroup {
@@ -36,6 +38,17 @@ export interface SaleOrderGrouping {
   ungrouped: PendingAuthorization[];
   /** Rows of other companies seen in the input and excluded (expected 0: the gateway scopes the list). */
   foreignExcluded: number;
+}
+
+export function saleGuideTitle(guide: Pick<SaleGuideGroup, 'guiaTransito'>): string {
+  return guide.guiaTransito === NO_GUIDE_LABEL ? NO_GUIDE_LABEL : `Guía ${guide.guiaTransito}`;
+}
+
+export function saleGuideLabel(orderCode: string, guide: Pick<SaleGuideGroup, 'guiaTransito'>): string {
+  const label = guide.guiaTransito === NO_GUIDE_LABEL
+    ? 'sin guía'
+    : `guía ${guide.guiaTransito}`;
+  return `${label} · ${orderCode}`;
 }
 
 const trimmed = (value: unknown): string | null =>
@@ -197,6 +210,7 @@ export function distinctGuides(rows: readonly PendingAuthorization[]): string[] 
 /** Quick filters: '' = any. Applies to both the plain list and the grouped view. */
 export function matchesSaleFilters(row: PendingAuthorization, orderCode: string, guide: string): boolean {
   if (orderCode && orderCodeFor(row) !== orderCode) return false;
+  if (guide === NO_GUIDE_FILTER) return row.tipo_evento === 'VENTA' && guideCodeFor(row) === null;
   if (guide && guideCodeFor(row) !== guide) return false;
   return true;
 }
