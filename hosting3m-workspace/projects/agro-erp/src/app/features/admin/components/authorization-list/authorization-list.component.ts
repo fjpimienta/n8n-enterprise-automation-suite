@@ -31,6 +31,8 @@ import {
 import {
   SaleGuideGroup,
   SaleOrderGroup,
+  NO_GUIDE_FILTER,
+  NO_GUIDE_LABEL,
   distinctGuides,
   distinctOrderCodes,
   formatCategoryCounts,
@@ -38,7 +40,9 @@ import {
   isOwnCompanyRow,
   matchesSaleFilters,
   orderCodeFor,
-  otherCompaniesWarning
+  otherCompaniesWarning,
+  saleGuideLabel,
+  saleGuideTitle
 } from '@shared/utils/sale-order-grouping.util';
 import {
   ActionOutcome,
@@ -193,6 +197,8 @@ export class AuthorizationListComponent {
   public orderFilter = signal<string>('');
   public guideFilter = signal<string>('');
   public pendingView = signal<PendingView>('AGRUPADA');
+  readonly noGuideFilter = NO_GUIDE_FILTER;
+  readonly noGuideLabel = NO_GUIDE_LABEL;
   readonly formatCategoryCounts = formatCategoryCounts;
   readonly otherCompaniesWarning = otherCompaniesWarning;
 
@@ -239,7 +245,13 @@ export class AuthorizationListComponent {
   );
 
   public orderOptions = computed(() => distinctOrderCodes(this.ownPending()));
-  public guideOptions = computed(() => distinctGuides(this.ownPending()));
+  public guideOptions = computed(() => {
+    const rows = this.ownPending();
+    const guides = distinctGuides(rows);
+    return rows.some(row => row.tipo_evento === 'VENTA' && !this.guideFor(row))
+      ? [...guides, NO_GUIDE_FILTER]
+      : guides;
+  });
   public filtersActive = computed(() => !!this.orderFilter() || !!this.guideFilter());
 
   private filteredPending = computed(() => {
@@ -393,12 +405,12 @@ export class AuthorizationListComponent {
     return rows.length > 0 && this.selectedSaleRows().length === rows.length;
   });
 
-  /** Transit guides with at least one pending VENTA, for "Seleccionar todos de la guía X". */
+  /** Transit guides with at least one pending VENTA, including the guide-less group. */
   public saleGuides = computed(() => {
     const counts = new Map<string, number>();
     for (const row of this.selectableSaleRows()) {
-      const guide = this.guideFor(row);
-      if (guide) counts.set(guide, (counts.get(guide) ?? 0) + 1);
+      const guide = this.guideFor(row) ?? NO_GUIDE_FILTER;
+      counts.set(guide, (counts.get(guide) ?? 0) + 1);
     }
     return [...counts.entries()]
       .map(([guide, count]) => ({ guide, count }))
@@ -424,7 +436,9 @@ export class AuthorizationListComponent {
   public selectGuide(guide: string): void {
     this.selectedIds.update(ids => {
       const next = new Set(ids);
-      for (const row of this.selectableSaleRows()) if (this.guideFor(row) === guide) next.add(row.id);
+      for (const row of this.selectableSaleRows()) {
+        if (matchesSaleFilters(row, '', guide)) next.add(row.id);
+      }
       return next;
     });
   }
@@ -527,7 +541,11 @@ export class AuthorizationListComponent {
   }
 
   public guideLabel(order: SaleOrderGroup, guide: SaleGuideGroup): string {
-    return `guía ${guide.guiaTransito} · ${order.orderCode}`;
+    return saleGuideLabel(order.orderCode, guide);
+  }
+
+  public guideTitle(guide: SaleGuideGroup): string {
+    return saleGuideTitle(guide);
   }
 
   public batchRejectConfig = computed<ConfirmModalConfig | null>(() => {

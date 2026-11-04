@@ -97,7 +97,9 @@
                 <select class="form-select form-select-sm w-auto" [value]="guideFilter()"
                     (change)="guideFilter.set($any($event.target).value)" aria-label="Filtrar por guía de tránsito">
                     <option value="">Todas las guías</option>
-                    @for (g of guideOptions(); track g) { <option [value]="g">Guía {{ g }}</option> }
+                    @for (g of guideOptions(); track g) {
+                    <option [value]="g">{{ g === noGuideFilter ? 'Sin guía' : 'Guía ' + g }}</option>
+                    }
                 </select>
                 @if (filtersActive()) {
                 <button class="btn btn-link btn-sm" (click)="clearFilters()">Quitar filtros</button>
@@ -116,7 +118,7 @@
             <div class="d-flex flex-wrap align-items-center gap-2 px-3 py-2 border-bottom">
                 @for (g of saleGuides(); track g.guide) {
                 <button class="btn btn-outline-primary btn-sm" (click)="selectGuide(g.guide)" [disabled]="isSubmitting()">
-                    Seleccionar todos de la guía {{ g.guide }} ({{ g.count }})
+                    {{ g.guide === noGuideFilter ? 'Seleccionar todos sin guía' : 'Seleccionar todos de la guía ' + g.guide }} ({{ g.count }})
                 </button>
                 }
                 <div class="ms-auto d-flex gap-2">
@@ -188,17 +190,17 @@
                 @for (guide of order.guides; track guide.guiaTransito) {
                 <div class="d-flex flex-wrap align-items-center gap-2 px-3 py-2 border-top">
                     <div class="ps-2">
-                        <span class="font-weight-medium">Guía {{ guide.guiaTransito }}</span>
+                        <span class="font-weight-medium">{{ guideTitle(guide) }}</span>
                         <span class="text-muted small ms-2">{{ guide.requests.length }} animal(es) · {{ formatCategoryCounts(guide.categoryCounts) }}</span>
                     </div>
                     <div class="ms-auto d-flex gap-1">
                         <button class="btn btn-outline-success btn-sm" [disabled]="isSubmitting() || actionableIn(guide.requests).length === 0"
                             (click)="approveGroup(guideLabel(order, guide), guide.requests)">
-                            <i class="ti ti-check"></i> Aprobar guía ({{ actionableIn(guide.requests).length }})
+                            <i class="ti ti-check"></i> {{ guide.guiaTransito === noGuideLabel ? 'Aprobar sin guía' : 'Aprobar guía' }} ({{ actionableIn(guide.requests).length }})
                         </button>
                         <button class="btn btn-outline-danger btn-sm" [disabled]="isSubmitting() || actionableIn(guide.requests).length === 0"
                             (click)="rejectGroup(guideLabel(order, guide), guide.requests)">
-                            <i class="ti ti-x"></i> Rechazar guía
+                            <i class="ti ti-x"></i> {{ guide.guiaTransito === noGuideLabel ? 'Rechazar sin guía' : 'Rechazar guía' }}
                         </button>
                     </div>
                 </div>
@@ -426,7 +428,7 @@
             <div class="small">{{ item.row.payload.descripcion }}</div>
             }
             } @else if (item.row.tipo_evento === 'VENTA') {
-            <div>Guía: {{ guideFor(item.row) || '—' }}</div>
+            <div>Guía: {{ guideFor(item.row) || 'Sin guía' }}</div>
             }
         </td>
         <td class="text-muted">{{ item.row.solicitado_por_email }}</td>
