@@ -1,18 +1,18 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
-import { ReproductiveDashboard } from './reproductive-dashboard';
+import { ReproductiveDashboardComponent } from './reproductive-dashboard.component';
 
-describe('ReproductiveDashboard', () => {
-  let component: ReproductiveDashboard;
-  let fixture: ComponentFixture<ReproductiveDashboard>;
+describe('ReproductiveDashboardComponent', () => {
+  let component: ReproductiveDashboardComponent;
+  let fixture: ComponentFixture<ReproductiveDashboardComponent>;
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ReproductiveDashboard]
+      imports: [ReproductiveDashboardComponent]
     })
     .compileComponents();
 
-    fixture = TestBed.createComponent(ReproductiveDashboard);
+    fixture = TestBed.createComponent(ReproductiveDashboardComponent);
     component = fixture.componentInstance;
     await fixture.whenStable();
   });
