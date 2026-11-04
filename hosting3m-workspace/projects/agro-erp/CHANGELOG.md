@@ -5,6 +5,13 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🔧 CI y dependencias de Agro ERP
+
+* Actualizado `apexcharts` de 6.10.0 a 8.7.0 (#945); se usa en los cuatro dashboards de ganadería.
+* CI ahora compila Agro ERP con `npx ng build agro-erp` y ejecuta sus pruebas unitarias con
+  `npm test -- agro-erp --watch=false` en Node 22; el runner genera un archivo de entorno placeholder
+  (#962, #963).
+
 ### 🐄 Cumplimiento de venta según especie (migración 096 y workflows #958) — base y n8n desplegados; frontend integrado
 
 *Runbook: `database/migrations/096_RUNBOOK.md`.*
@@ -749,6 +756,10 @@ encoger el dataset, `showPager` con y sin umbral, búsqueda normalizada) y, en l
 significa que **ningún test de este ciclo corrió nunca por el comando real del proyecto**.
 Cerrar esto requiere arreglar los specs rotos y los errores de `admin.service.ts` primero —
 fuera de alcance de este ciclo (es deuda preexistente, no introducida por `PagedTable`).
+
+**Resuelto 2026-11-04 (#962, #963):** se corrigieron los aliases de `tsconfig.spec.json` y los
+cuatro specs que impedían compilar el proyecto; las pruebas unitarias de Agro ERP ahora corren en
+CI con Node 22.
 
 ### 🐛 Tasa de Preñez Global inflaba el denominador con animales sin diagnóstico
 
