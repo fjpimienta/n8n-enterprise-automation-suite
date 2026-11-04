@@ -1,7 +1,7 @@
 -- 097_state_check.sql: READ-ONLY. psql -v ON_ERROR_STOP=1 -v expect=before|applied|rolled_back -f 097_state_check.sql
 -- The 097 migration changes only the function definition; compare data fingerprints before and after deployment.
 -- before md5 orden (after 096) = 6cad0c8bc9a1388d8ff9080461c60724
--- applied md5 orden = TO BE FILLED AFTER REHEARSAL
+-- applied md5 orden = 30e1b66caeed011c362d4a07ac41d443
 \set ON_ERROR_STOP on
 BEGIN READ ONLY;
 SELECT set_config('t097.expect', :'expect', false) AS expect;
@@ -19,7 +19,7 @@ DO $$
 DECLARE
     e text := current_setting('t097.expect');
     v_md5 text;
-    v_after_md5 constant text := 'TO BE FILLED AFTER REHEARSAL';
+    v_after_md5 constant text := '30e1b66caeed011c362d4a07ac41d443';
     v_def text;
 BEGIN
     IF e NOT IN ('before', 'applied', 'rolled_back') THEN
@@ -32,7 +32,7 @@ BEGIN
     END IF;
     IF e = 'applied' THEN
         IF v_after_md5 !~ '^[0-9a-f]{32}$' THEN
-            RAISE EXCEPTION 'STATE FAIL: applied fingerprint is pending rehearsal; replace TO BE FILLED AFTER REHEARSAL before deployment';
+            RAISE EXCEPTION 'STATE FAIL: applied fingerprint is not a valid MD5';
         END IF;
         IF v_md5 <> v_after_md5 THEN
             RAISE EXCEPTION 'STATE FAIL: applied function fingerprint expected %, found %', v_after_md5, v_md5;

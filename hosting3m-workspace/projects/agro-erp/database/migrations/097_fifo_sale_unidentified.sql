@@ -427,6 +427,8 @@ BEGIN
        OR pg_get_functiondef('public.sp_solicitar_venta_orden(jsonb,character varying,date,boolean,character varying)'::regprocedure) NOT LIKE '%l.created_at ASC, l.id ASC%' THEN
         RAISE EXCEPTION '097: FIFO selection definition is incomplete';
     END IF;
+    RAISE NOTICE '097: function md5 = %',
+        md5(pg_get_functiondef('public.sp_solicitar_venta_orden(jsonb,character varying,date,boolean,character varying)'::regprocedure));
     RAISE NOTICE '097: OK';
 END $$;
 

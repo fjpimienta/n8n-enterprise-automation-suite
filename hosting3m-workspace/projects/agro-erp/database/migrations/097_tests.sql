@@ -30,6 +30,7 @@ DECLARE
     v_legacy_bovine uuid;
     v_unknown_tagged uuid;
     v_unknown_species_supported boolean := true;
+    v_legacy_total integer;
     v_result jsonb;
     v_request uuid;
     v_selected uuid;
@@ -121,6 +122,7 @@ BEGIN
     EXCEPTION WHEN not_null_violation OR check_violation THEN
         v_unknown_tagged := NULL;
     END;
+    v_legacy_total := 2 + CASE WHEN v_unknown_tagged IS NOT NULL THEN 1 ELSE 0 END;
 
     INSERT INTO public.pending_authorizations (id_company, livestock_id, tipo_evento, payload, solicitado_por_email)
     VALUES (v_company_a, v_pending, 'VENTA', '{"fecha_evento":"2026-11-04"}', v_admin);
@@ -293,22 +295,23 @@ BEGIN
     RAISE NOTICE 'OK: pending-request exclusion and end-to-end FIFO approval with income';
 
     v_result := public.sp_solicitar_venta_orden(
-        jsonb_build_array(jsonb_build_object('lote', 'T097 Legacy', 'cantidad', 2, 'guia_transito', 'G-097')),
+        jsonb_build_array(jsonb_build_object('lote', 'T097 Legacy', 'cantidad', v_legacy_total)),
         v_admin, NULL, true, 'TEST');
     IF (v_result->>'success')::boolean IS DISTINCT FROM true
-       OR (v_result->>'validos')::int <> 2
+       OR (v_result->>'validos')::int <> v_legacy_total
        OR v_result->'grupos'->0 ? 'seleccion'
        OR NOT (v_result->'grupos'->0 ?& ARRAY['empresa', 'upp', 'guia_transito', 'cantidad', 'por_categoria', 'aretes'])
        OR (SELECT array_agg(k ORDER BY k) FROM jsonb_object_keys(v_result->'grupos'->0) AS keys(k))
           IS DISTINCT FROM ARRAY['aretes', 'cantidad', 'empresa', 'guia_transito', 'por_categoria', 'upp']
-       OR jsonb_array_length(v_result->'grupos'->0->'aretes') <> 2
+       OR v_result->'grupos'->0->'guia_transito' IS DISTINCT FROM 'null'::jsonb
+       OR jsonb_array_length(v_result->'grupos'->0->'aretes') <> v_legacy_total
        OR v_result ? 'seleccionados' THEN
         RAISE EXCEPTION 'FAIL: non-FIFO preview group keys or lot behavior differ from 096: %', v_result;
     END IF;
     v_result := public.sp_solicitar_venta_orden(
-        jsonb_build_array(jsonb_build_object('lote', 'T097 Legacy', 'cantidad', 1)),
+        jsonb_build_array(jsonb_build_object('lote', 'T097 Legacy', 'cantidad', v_legacy_total - 1)),
         v_admin, NULL, true, 'TEST');
-    IF v_result->'errores'->0->>'error' NOT LIKE '%tiene 2 animal(es)%' THEN
+    IF v_result->'errores'->0->>'error' NOT LIKE ('%tiene ' || v_legacy_total::text || ' animal(es)%') THEN
         RAISE EXCEPTION 'FAIL: legacy lot quantity mismatch behavior changed: %', v_result;
     END IF;
     v_result := public.sp_solicitar_venta_orden(

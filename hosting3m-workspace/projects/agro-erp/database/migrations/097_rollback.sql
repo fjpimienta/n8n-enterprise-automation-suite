@@ -43,9 +43,6 @@ DECLARE
     v_cat        text;
     v_qty        int;
     v_avail      int;
-    v_seleccion  text;
-    v_lote_id    uuid;
-    v_lote_company int;
 BEGIN
     -- Requester: active user with at least one active membership
     IF v_email = '' THEN
@@ -78,7 +75,7 @@ BEGIN
     IF to_regclass('pg_temp.tmp_sale_order_items') IS NULL THEN
         CREATE TEMP TABLE tmp_sale_order_items (
             pos int, identificador text, guia text, livestock_id uuid, id_company int, empresa text,
-            upp text, lote text, arete text, numero_fuego text, categoria text, estatus text, seleccion text, error text
+            upp text, lote text, arete text, numero_fuego text, categoria text, estatus text, error text
         ) ON COMMIT DROP;
     END IF;
     TRUNCATE tmp_sale_order_items;
@@ -90,31 +87,6 @@ BEGIN
     FOR e IN SELECT x.val FROM jsonb_array_elements(p_items) WITH ORDINALITY AS x(val, ord) ORDER BY x.ord LOOP
         v_guia := left(nullif(btrim(e.val->>'guia_transito'), ''), 40);
         v_lote := nullif(btrim(e.val->>'lote'), '');
-        v_seleccion := upper(nullif(btrim(e.val->>'seleccion'), ''));
-        IF v_seleccion IS NOT NULL AND v_seleccion <> 'FIFO' THEN
-            v_pos := v_pos + 1;
-            INSERT INTO tmp_sale_order_items (pos, identificador, guia, error)
-            VALUES (v_pos, coalesce('lote ' || v_lote, 'elemento de la orden'), v_guia, 'Selección no válida');
-            CONTINUE;
-        END IF;
-        IF v_seleccion = 'FIFO' THEN
-            v_cat := upper(nullif(btrim(e.val->>'categoria'), ''));
-            v_qty := NULL;
-            IF btrim(coalesce(e.val->>'cantidad', '')) ~ '^\d+$' THEN
-                BEGIN
-                    v_qty := btrim(e.val->>'cantidad')::int;
-                EXCEPTION WHEN numeric_value_out_of_range THEN
-                    v_qty := NULL;
-                END;
-            END IF;
-            IF v_lote IS NULL OR v_cat IS NULL OR v_qty IS NULL OR v_qty <= 0 THEN
-                v_pos := v_pos + 1;
-                INSERT INTO tmp_sale_order_items (pos, identificador, guia, error)
-                VALUES (v_pos, coalesce('lote ' || v_lote, 'elemento de la orden'), v_guia,
-                        'La selección FIFO requiere lote, categoría y una cantidad entera positiva');
-                CONTINUE;
-            END IF;
-        END IF;
         IF v_lote IS NULL THEN
             v_pos := v_pos + 1;
             INSERT INTO tmp_sale_order_items (pos, identificador, guia)
@@ -122,10 +94,8 @@ BEGIN
             CONTINUE;
         END IF;
 
-        IF v_seleccion IS NULL THEN
-            v_cat := upper(nullif(btrim(e.val->>'categoria'), ''));
-            v_qty := CASE WHEN btrim(coalesce(e.val->>'cantidad', '')) ~ '^\d+$' THEN btrim(e.val->>'cantidad')::int END;
-        END IF;
+        v_cat := upper(nullif(btrim(e.val->>'categoria'), ''));
+        v_qty := CASE WHEN btrim(coalesce(e.val->>'cantidad', '')) ~ '^\d+$' THEN btrim(e.val->>'cantidad')::int END;
         SELECT count(*) INTO v_n FROM production_unit_lots lt
          WHERE lt.id_company = ANY (v_companies) AND lower(btrim(lt.lot_name)) = lower(v_lote);
         IF v_n <> 1 THEN
@@ -138,52 +108,6 @@ BEGIN
                               THEN 'Tu acceso a la empresa de ese lote es de solo lectura'
                          WHEN v_n = 0 THEN 'No existe ese lote en tus empresas'
                          ELSE 'Hay ' || v_n || ' lotes con ese nombre; da los aretes' END);
-            CONTINUE;
-        END IF;
-
-        IF v_seleccion = 'FIFO' THEN
-            SELECT lt.id, lt.id_company INTO v_lote_id, v_lote_company
-              FROM production_unit_lots lt
-             WHERE lt.id_company = ANY (v_companies) AND lower(btrim(lt.lot_name)) = lower(v_lote);
-
-            SELECT count(*) INTO v_avail
-              FROM cattle_livestock l
-             WHERE l.lot_id = v_lote_id AND l.tenant_id = v_lote_company
-               AND l.category = v_cat
-               AND l.current_status NOT IN ('VENDIDO', 'BAJA_MORTANDAD', 'BAJA_DEPURACION_DATOS', 'FINALIZADO')
-               AND nullif(btrim(l.rfid_siniiga), '') IS NULL
-               AND nullif(btrim(l.numero_fuego), '') IS NULL
-               AND nullif(btrim(l.electronic_rfid), '') IS NULL
-               AND NOT public.fn_species_requires_bovine_compliance(l.species)
-               AND NOT EXISTS (SELECT 1 FROM pending_authorizations pa
-                                WHERE pa.livestock_id = l.id AND pa.estado = 'PENDIENTE');
-
-            IF v_avail < v_qty THEN
-                v_pos := v_pos + 1;
-                INSERT INTO tmp_sale_order_items (pos, identificador, guia, error)
-                VALUES (v_pos, 'lote ' || v_lote, v_guia,
-                        'El lote ' || v_lote || ' tiene ' || v_avail || ' animal(es) elegible(s) para selección FIFO; se solicitaron ' || v_qty
-                        || '. Los animales bovinos y los animales identificados nunca se seleccionan automáticamente');
-                CONTINUE;
-            END IF;
-
-            INSERT INTO tmp_sale_order_items (pos, identificador, guia, livestock_id, id_company, arete, numero_fuego,
-                                              categoria, estatus, seleccion)
-            SELECT v_pos + row_number() OVER (ORDER BY l.created_at ASC, l.id ASC), l.id::text, v_guia,
-                   l.id, l.tenant_id, NULL, NULL, l.category, l.current_status, 'FIFO'
-              FROM cattle_livestock l
-             WHERE l.lot_id = v_lote_id AND l.tenant_id = v_lote_company
-               AND l.category = v_cat
-               AND l.current_status NOT IN ('VENDIDO', 'BAJA_MORTANDAD', 'BAJA_DEPURACION_DATOS', 'FINALIZADO')
-               AND nullif(btrim(l.rfid_siniiga), '') IS NULL
-               AND nullif(btrim(l.numero_fuego), '') IS NULL
-               AND nullif(btrim(l.electronic_rfid), '') IS NULL
-               AND NOT public.fn_species_requires_bovine_compliance(l.species)
-               AND NOT EXISTS (SELECT 1 FROM pending_authorizations pa
-                                WHERE pa.livestock_id = l.id AND pa.estado = 'PENDIENTE')
-             ORDER BY l.created_at ASC, l.id ASC
-             LIMIT v_qty;
-            v_pos := v_pos + v_qty;
             CONTINUE;
         END IF;
 
@@ -289,31 +213,17 @@ BEGIN
         'errores', coalesce((SELECT jsonb_agg(jsonb_build_object('identificador', identificador, 'error', error) ORDER BY pos)
                                FROM tmp_sale_order_items WHERE error IS NOT NULL), '[]'::jsonb),
         'grupos', coalesce((SELECT jsonb_agg(g ORDER BY g->>'empresa', g->>'guia_transito')
-                              FROM (SELECT jsonb_strip_nulls(jsonb_build_object(
+                              FROM (SELECT jsonb_build_object(
                                              'empresa', empresa, 'upp', upp, 'guia_transito', guia,
                                              'cantidad', count(*),
-                                             'seleccion', i.seleccion,
                                              'por_categoria', (SELECT jsonb_object_agg(categoria, n) FROM (
                                                  SELECT x.categoria, count(*) n FROM tmp_sale_order_items x
                                                   WHERE x.error IS NULL AND x.empresa = i.empresa
                                                     AND x.upp IS NOT DISTINCT FROM i.upp AND x.guia IS NOT DISTINCT FROM i.guia
-                                                    AND x.seleccion IS NOT DISTINCT FROM i.seleccion
                                                   GROUP BY 1) s),
-                                             'aretes', coalesce(jsonb_agg(coalesce(arete, numero_fuego, identificador) ORDER BY pos)
-                                                                  FILTER (WHERE i.seleccion IS NULL), '[]'::jsonb))) AS g
+                                             'aretes', jsonb_agg(coalesce(arete, numero_fuego, identificador) ORDER BY pos)) AS g
                                       FROM tmp_sale_order_items i WHERE error IS NULL
-                                     GROUP BY empresa, upp, guia, seleccion) q), '[]'::jsonb));
-
-    IF EXISTS (SELECT 1 FROM tmp_sale_order_items WHERE seleccion = 'FIFO') THEN
-        v_res := v_res || jsonb_build_object('seleccionados',
-            (SELECT coalesce(jsonb_agg(jsonb_build_object(
-                        'livestock_id', t.livestock_id,
-                        'categoria', t.categoria,
-                        'lote', t.lote,
-                        'capturado', l.created_at) ORDER BY t.pos), '[]'::jsonb)
-               FROM tmp_sale_order_items t JOIN cattle_livestock l ON l.id = t.livestock_id AND l.tenant_id = t.id_company
-              WHERE t.error IS NULL AND t.seleccion = 'FIFO'));
-    END IF;
+                                     GROUP BY empresa, upp, guia) q), '[]'::jsonb));
 
     IF p_preview THEN
         RETURN v_res || jsonb_build_object('success', v_errors = 0, 'preview', true);
@@ -338,18 +248,6 @@ BEGIN
       FROM cattle_livestock l
      WHERE l.id = t.livestock_id AND t.error IS NULL
        AND l.current_status IN ('VENDIDO', 'BAJA_MORTANDAD', 'BAJA_DEPURACION_DATOS', 'FINALIZADO');
-    UPDATE tmp_sale_order_items t
-       SET error = 'El animal seleccionado FIFO ya no cumple los requisitos; vuelve a generar la vista previa'
-     WHERE t.error IS NULL AND t.seleccion = 'FIFO'
-       AND NOT EXISTS (
-           SELECT 1 FROM cattle_livestock l
-            WHERE l.id = t.livestock_id AND l.tenant_id = t.id_company
-              AND nullif(btrim(l.rfid_siniiga), '') IS NULL
-              AND nullif(btrim(l.numero_fuego), '') IS NULL
-              AND nullif(btrim(l.electronic_rfid), '') IS NULL
-              AND NOT public.fn_species_requires_bovine_compliance(l.species)
-              AND NOT EXISTS (SELECT 1 FROM pending_authorizations pa
-                               WHERE pa.livestock_id = l.id AND pa.estado = 'PENDIENTE'));
     IF EXISTS (SELECT 1 FROM tmp_sale_order_items WHERE error IS NOT NULL) THEN
         RAISE EXCEPTION 'La orden no se registró: % animal(es) con error: %',
             (SELECT count(*) FROM tmp_sale_order_items WHERE error IS NOT NULL),
@@ -372,7 +270,6 @@ BEGIN
                'rfid_siniiga', t.arete,
                'numero_fuego', t.numero_fuego,
                'electronic_rfid', (SELECT electronic_rfid FROM cattle_livestock WHERE id = t.livestock_id),
-               'seleccion_metodo', CASE WHEN t.seleccion = 'FIFO' THEN 'FIFO_SIN_IDENTIFICADOR' END,
                -- Order-level counts only (no identities from other companies): lets each company's panel
                -- know the order also has animals it cannot see.
                'orden_total_animales', (SELECT count(*) FROM tmp_sale_order_items),
@@ -398,6 +295,9 @@ DO $$
 BEGIN
     IF pg_get_functiondef('public.sp_solicitar_venta_orden(jsonb,character varying,date,boolean,character varying)'::regprocedure) LIKE '%FIFO_SIN_IDENTIFICADOR%' THEN
         RAISE EXCEPTION '097 rollback: the FIFO definition is still present';
+    END IF;
+    IF md5(pg_get_functiondef('public.sp_solicitar_venta_orden(jsonb,character varying,date,boolean,character varying)'::regprocedure)) <> '6cad0c8bc9a1388d8ff9080461c60724' THEN
+        RAISE EXCEPTION '097 rollback: post-096 function fingerprint mismatch';
     END IF;
     RAISE NOTICE '097 rollback: OK';
 END $$;

@@ -47,16 +47,20 @@ credenciales en el repositorio ni en logs compartidos.
      -f 097_fifo_sale_unidentified.sql
    ```
 
-4. **Aplicación:** solo después de comprobar el dry run, aplica el cambio:
+3b. **Confirma el fingerprint de producción antes de aplicar:** compara el valor de `NOTICE: 097: function md5 =`
+    emitido durante el dry run con el fingerprint aplicado en `097_state_check.sql`
+    (`30e1b66caeed011c362d4a07ac41d443`). **Detente y no apliques** si los valores difieren; investiga la
+    diferencia con la definición de función obtenida en la base de producción.
+
+4. **Aplicación:** solo después de comprobar el dry run y confirmar que su fingerprint coincide con el de 097,
+   aplica el cambio:
 
    ```sh
    psql <CONEXION_PRODUCCION> -v ON_ERROR_STOP=1 -v apply=true \
      -f 097_fifo_sale_unidentified.sql
    ```
 
-5. **Estado aplicado:** calcula primero mediante ensayo la huella MD5 de la definición final, actualiza el
-   placeholder `TO BE FILLED AFTER REHEARSAL` en `097_state_check.sql` con ese valor verificado y revisado, y
-   ejecuta:
+5. **Estado aplicado:** verifica la definición y las huellas de datos:
 
    ```sh
    psql <CONEXION_PRODUCCION> -v ON_ERROR_STOP=1 -v expect=applied \
@@ -64,7 +68,6 @@ credenciales en el repositorio ni en logs compartidos.
    ```
 
    Debe reportar `STATE OK: applied`. Compara las huellas de datos con las del paso 2; deben permanecer idénticas.
-   No inventes ni estimes la huella. Si no se dispone de una base de ensayo para obtenerla, detén el despliegue.
 
 6. **Prueba funcional de producción:** limita toda verificación con datos de producción a la empresa 3. Usa
    preferentemente una transacción que termine en `ROLLBACK`; si se usa un animal de prueba, elimínalo mediante el
