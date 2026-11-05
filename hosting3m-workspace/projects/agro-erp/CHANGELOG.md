@@ -5,6 +5,38 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🐄 Repasto con retorno: movimiento por guía a una UPP de tercero (migración 098) — prototipo en la empresa 3
+
+*Runbook: `database/migrations/098_RUNBOOK.md`. Solo base de datos: sin cambios de workflows ni de frontend.*
+* **Qué permite:** sacar animales de su UPP hacia una UPP de tercero **por guía** (propósito `REPASTO`, con fecha de retorno
+  esperada) y registrar su retorno por animal, parcial o total. Mientras estén fuera **no se pueden vender**: el trigger de
+  `cattle_livestock` rechaza `VENDIDO`, `FINALIZADO` y `BAJA_DEPURACION_DATOS` (`P0098`), `sp_solicitar_venta_orden` los rechaza
+  en la vista previa y en la creación con «Animal fuera en repasto (guía …, retorno esperado …): no se puede vender», y la
+  selección FIFO los omite. Una baja por mortandad estando fuera cierra el renglón como `DIED_AWAY`.
+* **Modelo:** el estado vive por animal en `cattle_movement_event_animals.return_status` (`NULL` = sin seguimiento, filas
+  históricas; `OPEN`, `RETURNED`, `CANCELLED`, `DIED_AWAY`); un índice único parcial impide dos préstamos abiertos del mismo
+  animal. El estado del movimiento se calcula en `vw_livestock_out_on_loan` (`OPEN` / `RETURNED` / `CLOSED`); no se guarda.
+  El retorno nunca modifica `production_unit_id`, `lot_id` ni `upp_origen`, y no se borra nada.
+* **`sp_return_movement`:** exige ADMIN u OWNER de la empresa del movimiento; el correo del actor debe salir de la sesión
+  verificada, nunca de `$fromAI`. Errores `P0098` (animal fuera), `P0099` (validaciones del retorno) y `P0100` (alta de préstamo
+  incoherente: animal vendido, muerto o en otra UPP).
+* **Parcheo de `sp_solicitar_venta_orden`:** se reconstruye desde la definición viva (no desde el archivo 097) con cuatro anclas
+  de texto que deben aparecer exactamente una vez; la verificación previa del dry run lo comprueba en PG 15.4 antes de cambiar
+  nada, y el rollback devuelve la función byte a byte (md5 del mismo ambiente).
+* **Prototipo:** seed solo en la empresa 3 y su UPP ficticia `99-999-9999-999`: 31 animales con arete ficticio `99` + últimos 8
+  dígitos (el real queda en `metadata`, `metadata.source = 'PROTOTIPO_REPASTO'`), 3 movimientos por guía (7139728, 7139729 y
+  `PRUEBA-3A-GUIA`) y 31 renglones `OPEN`. `business_model = 'CRIA'` está **pendiente de confirmar con el dueño**. El retorno
+  ficticio (2026-12-10) va en un archivo aparte.
+* **Pruebas:** 83 aserciones en `098_tests.sql` (todas con `ROLLBACK`), seis mutaciones que deben ser detectadas
+  (`098_mutation_check.sh`) y una prueba de concurrencia con dos sesiones sobre una copia descartable (`098_concurrency_check.sh`;
+  venta contra alta del mismo animal, en ambos órdenes: espera y rechazo con `P0100`/`P0098`, sin interbloqueo). Las pruebas
+  encontraron un choque de alias con una variable PL/pgSQL que el dry run no puede ver.
+* **Fuera de alcance:** la carga real de los 31 animales (los aretes reales no caben en la empresa 3 por la unicidad global
+  de `rfid_siniiga`; Santa Lucía está `BLOQUEADA`), la aparcería, y una herramienta o pantalla para registrar retornos.
+* **Límites conocidos:** las rutas que solo protege el trigger (overloads de 1 y 4 parámetros de `sp_procesar_salida_ganado`,
+  `UPDATE` directo) están listadas en el runbook; aprobar una venta que ya estaba pendiente falla con `P0098`. Deuda:
+  `sp_move_livestock` puede cambiar de lote a un animal con renglón `OPEN`.
+
 ### 🐑 Selección FIFO para ventas de animales no identificados (migración 097)
 
 * Las órdenes pueden seleccionar por lote y categoría una cantidad exacta de animales no bovinos sin identificadores,
