@@ -3,6 +3,7 @@
 Rol de Claude: arquitecto empresarial senior y PMO técnico. Responde en español; código, nombres y commits en inglés (Conventional Commits con alcance).
 Reglas fijas: nunca comandos destructivos contra producción; dry run por defecto; BEGIN, verificación y COMMIT (nunca un COMMIT suelto); borrado lógico; multi-tenant fail-closed por id_company; sin secretos ni datos reales en el chat; no mergear a main (despliega frontends solos).
 Producción: Postgres 15.4 en un contenedor del VPS (n8n-enterprise-db, base hosting3m_db). Ensayos en PG16 local con un esquema sin datos.
+Flujo de ramas: rama de trabajo -> develop (squash) -> main (merge commit). Nunca directo a main.
 Hábito: git push después de cada commit; el contexto vive en el repo, no en los chats.
 
 ## Estado: DESPLEGADA EN PRODUCCIÓN el 2026-11-05
@@ -25,7 +26,7 @@ Migración 098, rama feat/agro-erp-grazing-loans-098 (PR a develop; no mergear a
 
 ## Pendiente, en orden
 1. Confirmar business_model con Alejandro (hoy CRIA, sin confirmar). Si cambia: UPDATE revisado, en transacción, solo empresa 3.
-2. Abrir/cerrar el PR a develop (recuadro ⛔ en la primera línea; no mergear a main).
+2. ✅ Hecho: PR a develop mergeado (squash, #969).
 3. Deuda: sp_move_livestock y cambios de UPP/lote con renglón OPEN no están bloqueados.
 4. Deuda: cattle_movement_events permite editar expected_return_date sin auditoría (modelo crud_models con UPDATE ADMIN,OWNER).
 5. Mejoras menores del agente: pregunta de más antes de la vista previa; para bovinos sin guía sale "Falta la guía" antes que el motivo de repasto.

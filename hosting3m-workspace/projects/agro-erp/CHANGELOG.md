@@ -36,6 +36,7 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 * **Límites conocidos:** las rutas que solo protege el trigger (overloads de 1 y 4 parámetros de `sp_procesar_salida_ganado`,
   `UPDATE` directo) están listadas en el runbook; aprobar una venta que ya estaba pendiente falla con `P0098`. Deuda:
   `sp_move_livestock` puede cambiar de lote a un animal con renglón `OPEN`.
+* **Desplegada en producción el 2026-11-05** (hosting3m_db, PG 15.4): dry run con las 4 anclas OK, respaldo previo, state_check before/applied OK, huellas de datos idénticas, apply COMMITTED. Paso 5b: se quitó UPDATE al modelo cattle_movement_event_animals (queda SELECT, INSERT, GETONE, GETALL). Seed del prototipo aplicado en la empresa 3 (31 animales, 3 movimientos, 31 OPEN). P0098 probado en producción y verificado por el canal real (el agente relata "fuera en repasto"). business_model=CRIA pendiente de confirmar con el dueño.
 
 ### 🐑 Selección FIFO para ventas de animales no identificados (migración 097)
 
