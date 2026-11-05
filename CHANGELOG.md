@@ -19,6 +19,15 @@ cuando actualizan las reglas compartidas de contribución o despliegue.
 
 ---
 
+## [2026-11-04]
+
+### 🔧 Agro ERP CI
+
+* Extended CI to build Agro ERP and run its unit tests (#962, #963). The runner generates
+  a placeholder Agro ERP environment file; unit tests run on Node 22.
+
+---
+
 ## [2026-11-02]
 
 ### 🔧 Dependency updates and deployment tooling

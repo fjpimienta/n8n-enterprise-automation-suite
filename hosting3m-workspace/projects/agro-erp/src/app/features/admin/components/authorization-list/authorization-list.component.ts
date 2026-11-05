@@ -35,6 +35,7 @@ import {
   NO_GUIDE_LABEL,
   distinctGuides,
   distinctOrderCodes,
+  fifoSaleSelectionLabel,
   formatCategoryCounts,
   groupSaleAuthorizations,
   isOwnCompanyRow,
@@ -351,6 +352,8 @@ export class AuthorizationListComponent {
    * `cattle_identifier_history`).
    */
   public identifierFor(row: PendingAuthorization): string {
+    const fifoLabel = fifoSaleSelectionLabel(row);
+    if (fifoLabel) return fifoLabel;
     const p = row.payload;
     return p?.electronic_rfid || p?.rfid_siniiga || p?.numero_fuego || 'Sin identificador';
   }
