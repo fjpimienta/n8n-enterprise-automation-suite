@@ -135,17 +135,7 @@ repositorio ni en logs compartidos. Ejecuta los comandos desde la carpeta de las
    modelo (ver «Fuera de alcance»). En la copia local la tabla está vacía, por lo que esta revisión solo tiene sentido en
    producción.
 
-6. **Prueba funcional en producción — solo empresa 3.** No uses animales ni usuarios reales ni otra empresa. Todo con
-   `BEGIN … ROLLBACK`. Después del seed (paso 7) comprueba, por ejemplo con un animal del prototipo:
-
-   ```sql
-   BEGIN;
-   UPDATE cattle_livestock SET current_status = 'VENDIDO'
-    WHERE tenant_id = 3 AND rfid_siniiga = '9924388351';   -- debe fallar con P0098
-   ROLLBACK;
-   ```
-
-7. **Seed del prototipo (empresa 3).** El script escribe solo filas de la empresa 3 y **aborta si la empresa 3 no existe**
+6. **Seed del prototipo (empresa 3).** El script escribe solo filas de la empresa 3 y **aborta si la empresa 3 no existe**
    (nunca la crea sin `-v allow_create_company=true`; no uses esa opción en producción). Primero dry run:
 
    ```sh
@@ -160,6 +150,16 @@ repositorio ni en logs compartidos. Ejecuta los comandos desde la carpeta de las
    ```sql
    SELECT reemo_folio, event_state, count(*) FROM vw_livestock_out_on_loan WHERE id_company = 3 GROUP BY 1, 2 ORDER BY 1;
    -- 7139728 → 13, 7139729 → 17, PRUEBA-3A-GUIA → 1, todos OPEN
+   ```
+
+7. **Prueba funcional en producción — solo empresa 3.** No uses animales ni usuarios reales ni otra empresa. Todo con
+   `BEGIN … ROLLBACK`. Con el seed del paso 6 ya aplicado, comprueba, por ejemplo con un animal del prototipo:
+
+   ```sql
+   BEGIN;
+   UPDATE cattle_livestock SET current_status = 'VENDIDO'
+    WHERE tenant_id = 3 AND rfid_siniiga = '9924388351';   -- debe fallar con P0098
+   ROLLBACK;
    ```
 
 8. **Verificación por el canal real, empresa 3** (WhatsApp o Chat Web con un usuario ADMIN de la empresa 3; **nunca** desde el

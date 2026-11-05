@@ -15,7 +15,7 @@ Producción: Postgres 15.4 en un contenedor del VPS (n8n-enterprise-db, base hos
 
 ## Pendiente, en orden
 1. Dry run de 098 en producción (comprueba las anclas en PG 15.4), con "adelante" explícito. Luego respaldo, state_check before, apply, state_check applied y el paso 5b de crud_models.
-2. Seed en la empresa 3 y verificación por el canal real de que el agente relata "Animal fuera en repasto...". (En el runbook, el paso 6 usa animales del seed: hacer antes el paso 7.)
+2. Seed en la empresa 3 y verificación por el canal real de que el agente relata "Animal fuera en repasto...". (En el runbook, el seed es el paso 6 y la prueba funcional el 7, que usa animales del seed.)
 3. Confirmar business_model con Alejandro.
 4. Deuda: sp_move_livestock y cambios de UPP/lote con renglón OPEN no están bloqueados.
 5. Fuera de alcance: carga real de los 31 (rfid_siniiga es UNIQUE global; Santa Lucía, empresa 8, BLOQUEADA y por levantarse; Maceo es un lote de San José y La Pita, empresa 5) y la aparcería (16 novillonas, sin respuestas a las 19 preguntas).
