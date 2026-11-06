@@ -301,12 +301,10 @@
     {
       "parameters": {
         "descriptionType": "manual",
-        "toolDescription": "Tool: register_livestock_purchase\nDescripción: Da de alta un animal COMPRADO (no nacido en el rancho) en cattle_livestock.\nNo requiere autorización previa (solo las bajas la requieren).\nParámetros (tenant_id y user_email inyectados silenciosamente del contexto de sesión):\n  - species (obligatorio, ej. BOVINO)\n  - category (obligatorio, ej. VACA, BECERRO, TORO)\n  - business_model (OBLIGATORIO, EXACTAMENTE uno de: CRIA, ENGORDA, REPRODUCCION.\n    Si el usuario no lo menciona, PREGÚNTALE — nunca asumas un valor por default,\n    la columna no acepta NULL.)\n  - rfid_siniiga (identificador arete/RFID si el usuario lo dio, opcional)\n  - birth_date (si se conoce, YYYY-MM-DD, opcional)\n  - current_weight_kg (OPCIONAL — inclúyelo ÚNICAMENTE si el usuario declaró un número\n    de kilos explícito, ej. \"pesa 120kg\". PROHIBIDO estimar, calcular o inventar un peso\n    a partir de la edad, especie, categoría o cualquier otra señal. Si no hay un número\n    explícito de kilos en el mensaje del usuario, omite este parámetro por completo.\n    Este campo es 100% OPCIONAL a nivel de base de datos — el INSERT nunca falla por\n    no tener peso. NUNCA le digas al usuario que el peso es obligatorio ni te niegues\n    a registrar la compra por falta de este dato.)\n  - purchase_price (obligatorio)\n  - seller_name (obligatorio)\n  - production_unit_name (UPP destino, opcional)\n  - lot_name (lote destino, opcional)\n  - purchase_date (YYYY-MM-DD, default hoy si se omite)\n  - notes (opcional)\nOperación: INSERT en cattle_livestock, current_status queda en ACTIVO.\nPrecio/vendedor/fecha de compra se guardan en metadata (jsonb).\n🛑 CRÍTICO: Si la respuesta de esta tool viene VACÍA (sin filas), NUNCA confirmes el registro al usuario. Dile explícitamente que el registro falló. Las causas posibles son: (1) business_model no es exactamente CRIA, ENGORDA o REPRODUCCION, o (2) el arete/rfid_siniiga que diste ya pertenece a otro animal de esta empresa (duplicado). Si sospechas duplicado, usa find_livestock_by_criteria con ese arete para confirmarlo y dile al usuario qué animal ya lo tiene. Nunca inventes una confirmación usando los datos que tú le pasaste a la tool.\n🛑 CRÍTICO: NUNCA inventes, estimes ni calcules current_weight_kg. Un animal registrado sin peso explícito del usuario DEBE quedar sin ese dato (NULL) — se completa después con la tool de pesaje (log_cattle_weight) cuando se pese físicamente. Inventar un peso genera datos falsos en el sistema.",
+        "toolDescription": "OBSOLETA, no la uses. El alta por compra ya no se hace con esta herramienta: usa 'register_livestock_purchase' del agente (con vista previa), o 'register_livestock_regularization' si el animal no se compró. Esta herramienta no escribe nada y siempre responde status \"moved\".",
         "operation": "executeQuery",
-        "query": "WITH params AS (\n  SELECT\n    $1::int AS tenant_id,\n    $2::text AS user_email,\n    $3::text AS species,\n    $4::text AS category,\n    UPPER($5::text) AS business_model,\n    NULLIF(NULLIF($6::text, 'null'), 'undefined') AS rfid_siniiga,\n    NULLIF(NULLIF($7::text, 'null'), 'undefined')::date AS birth_date,\n    NULLIF(NULLIF($8::text, 'null'), 'undefined')::numeric AS current_weight_kg,\n    $9::numeric AS purchase_price,\n    $10::text AS seller_name,\n    NULLIF(NULLIF($11::text, 'null'), 'undefined') AS production_unit_name,\n    NULLIF(NULLIF($12::text, 'null'), 'undefined') AS lot_name,\n    NULLIF(NULLIF($13::text, 'null'), 'undefined')::date AS purchase_date,\n    NULLIF(NULLIF($14::text, 'null'), 'undefined') AS notes\n),\nauth_check AS (\n  SELECT 1\n  FROM params p\n  JOIN user_companies uc ON uc.id_company = p.tenant_id AND uc.is_active = true\n  JOIN users u ON u.email = uc.email AND u.email = p.user_email\n),\nduplicate_check AS (\n  -- Blocks the insert if the given rfid_siniiga already identifies another\n  -- animal in this tenant, in ANY of the three tag columns (a physical tag\n  -- can't belong to two animals, regardless of which column it's stored in).\n  SELECT 1\n  FROM params p\n  JOIN cattle_livestock cl ON cl.tenant_id = p.tenant_id\n  WHERE p.rfid_siniiga IS NOT NULL\n    AND (\n      cl.rfid_siniiga = p.rfid_siniiga\n      OR cl.electronic_rfid = p.rfid_siniiga\n      OR cl.numero_fuego = p.rfid_siniiga\n    )\n),\nresolved_lot AS (\n  SELECT lot.id, lot.production_unit_id\n  FROM params p\n  JOIN production_unit_lots lot ON lot.id_company = p.tenant_id\n  WHERE p.lot_name IS NOT NULL AND lot.lot_name ILIKE '%' || p.lot_name || '%'\n  LIMIT 1\n),\nresolved_pu AS (\n  SELECT COALESCE(\n    (\n      SELECT pu.id\n      FROM params p\n      JOIN production_units pu ON pu.id_company = p.tenant_id\n      WHERE p.production_unit_name IS NOT NULL AND pu.ranch_name ILIKE '%' || p.production_unit_name || '%'\n      LIMIT 1\n    ),\n    (SELECT production_unit_id FROM resolved_lot)\n  ) AS id\n)\nINSERT INTO cattle_livestock (\n  id, tenant_id, species, category, business_model, current_status,\n  rfid_siniiga, birth_date, current_weight_kg,\n  production_unit_id, lot_id, metadata, created_at\n)\nSELECT\n  gen_random_uuid(), p.tenant_id, p.species, p.category, p.business_model, 'ACTIVO',\n  p.rfid_siniiga, p.birth_date, p.current_weight_kg,\n  (SELECT id FROM resolved_pu), (SELECT id FROM resolved_lot),\n  jsonb_build_object(\n    'source', 'COMPRA',\n    'purchase_price', p.purchase_price,\n    'seller_name', p.seller_name,\n    'purchase_date', COALESCE(p.purchase_date, (now() AT TIME ZONE 'America/Mexico_City')::date),\n    'notes', p.notes\n  ),\n  now()\nFROM params p\nWHERE fn_reject_palm_company($1::int)\n  AND EXISTS (SELECT 1 FROM auth_check)\n  AND p.business_model IN ('CRIA', 'ENGORDA', 'REPRODUCCION')\n  AND NOT EXISTS (SELECT 1 FROM duplicate_check)\nRETURNING id, rfid_siniiga, category, current_status, business_model;",
-        "options": {
-          "queryReplacement": "={{ (() => { const empty = (v) => (v === '' || v === undefined) ? null : v; return [\n  $fromAI('tenant_id', 'ID del rancho / tenant_id actual del usuario, del contexto de sesión', 'number'),\n  $fromAI('user_email', 'Copia el email del usuario EXACTAMENTE carácter por carácter desde el contexto de sesión (system prompt) — nunca lo reescribas de memoria ni lo abrevies. Antes de usarlo, cuenta que tenga el mismo número de caracteres que el original. Un solo carácter de diferencia hace que el sistema no encuentre ningún dato, sin mostrar ningún error.', 'string'),\n  $fromAI('species', 'Especie del animal comprado, ej. BOVINO', 'string'),\n  $fromAI('category', 'Categoría del animal, ej. VACA, BECERRO, TORO', 'string'),\n  $fromAI('business_model', 'Modelo de negocio del animal: EXACTAMENTE uno de CRIA, ENGORDA o REPRODUCCION. Pregunta al usuario si no lo mencionó — nunca lo inventes ni asumas un default, la columna no acepta vacío.', 'string'),\n  empty($fromAI('rfid_siniiga', 'Identificador arete/RFID SINIIGA del animal si el usuario lo dio', 'string', null)),\n  empty($fromAI('birth_date', 'Fecha de nacimiento si se conoce, formato YYYY-MM-DD', 'string', null)),\n  empty($fromAI('current_weight_kg', 'Peso actual en kg SOLO si el usuario lo declaró explícitamente (ej. \"pesa 120kg\", \"con 30 kilos\"). NUNCA estimes ni inventes un peso a partir de la edad, especie o categoría del animal. Si no hay un número explícito de kilos en el mensaje del usuario, omite este parámetro por completo.', 'string', null)),\n  $fromAI('purchase_price', 'Precio de compra del animal', 'number'),\n  $fromAI('seller_name', 'Nombre del vendedor', 'string'),\n  empty($fromAI('production_unit_name', 'Nombre de la UPP destino si el usuario lo mencionó', 'string', null)),\n  empty($fromAI('lot_name', 'Nombre del lote destino si el usuario lo mencionó', 'string', null)),\n  empty($fromAI('purchase_date', 'Fecha de compra YYYY-MM-DD. Si no la menciona, omite (se usa hoy)', 'string', null)),\n  empty($fromAI('notes', 'Notas adicionales sobre la compra', 'string', null))\n]; })() }}"
-        }
+        "query": "SELECT jsonb_build_object('status', 'moved', 'message', 'Esta herramienta ya no se usa. Para un animal comprado usa register_livestock_purchase (con vista previa); si no se compró, usa register_livestock_regularization.') AS result;",
+        "options": {}
       },
       "type": "n8n-nodes-base.postgresTool",
       "typeVersion": 2.6,
@@ -315,7 +313,7 @@
         5408
       ],
       "id": "c09f67f6-14a0-4455-af01-a0d003ab4c49",
-      "name": "register_livestock_purchase",
+      "name": "register_livestock_purchase_obsolete",
       "credentials": {
         "postgres": {
           "id": "BQrod4uGVzM1nvLw",
@@ -1522,17 +1520,6 @@
         ]
       ]
     },
-    "register_livestock_purchase": {
-      "ai_tool": [
-        [
-          {
-            "node": "MCP Server Cattle",
-            "type": "ai_tool",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "log_vaccination_event": {
       "ai_tool": [
         [
@@ -1996,6 +1983,17 @@
       ]
     },
     "register_expense_invoice": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Cattle",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "register_livestock_purchase_obsolete": {
       "ai_tool": [
         [
           {
