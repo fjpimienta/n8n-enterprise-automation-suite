@@ -5,6 +5,36 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🐄 Alta por regularización de padrón y compra endurecida por chat (migración 099) — pendiente de despliegue
+
+*Runbook: `database/migrations/099_RUNBOOK.md` (⛔ base de datos → n8n en orden MCP, Chat, WhatsApp; sin cambios de frontend).*
+* **Por qué:** el 2026-11-05 un becerro real que faltaba en el sistema se dio de alta por Chat Web con la herramienta de compra:
+  el modelo inventó precio 0, vendedor "desconocido" y una fecha de compra, y pasó el código de UPP de la guía como UPP, que no
+  resolvió nada. El animal quedó sin UPP, sin lote y con un `metadata.source = 'COMPRA'` falso (se deja como está).
+* **Regularización** (`register_livestock_regularization` → `sp_register_livestock_regularization`): alta de animales reales
+  nunca capturados, sin precio, vendedor ni fecha de compra; `metadata.source = 'REGULARIZACION_PADRON'` con folio de guía,
+  código de UPP de origen y fecha de nacimiento estimada por edad (0-240 meses). Bovinos: arete oficial de 10 dígitos y folio
+  obligatorios; otras especies, opcionales.
+* **Compra endurecida** (`register_livestock_purchase` → `sp_register_livestock_purchase_chat`): precio mayor que 0, vendedor
+  real (rechaza "desconocido", "no sé", "-"…), la UPP debe resolverse (nunca un animal sin UPP), lote exacto y activo dentro de
+  esa UPP. Conserva las llaves que lee la Bitácora.
+* **Las dos:** empresa, correo y canal salen de la sesión verificada (patrón de palma, `postgresTool` directo al agente; nunca
+  de `$fromAI`); solo ADMIN, OWNER y EDITOR; palma rechazada; UPP resuelta dentro de la empresa (una sola UPP se usa sola; con
+  varias, coincidencia exacta del nombre o código, sin distinguir mayúsculas, acentos ni espacios); NIVEL 3 con vista previa,
+  "Sí" y registro con el mismo `preview_hash`; respuestas con `status` en vez de resultados vacíos; `rfid_siniiga` y
+  `electronic_rfid` duplicados se rechazan (sin nombrar la otra empresa); una coincidencia con `numero_fuego` es un aviso;
+  categorías por catálogo (BOVINO) o lista fija (BORREGO, BUFALO, EQUIDO). Códigos `P0114`-`P0118`.
+* **MCP:** `register_livestock_purchase` se neutraliza y se renombra a `register_livestock_purchase_obsolete` (responde
+  `moved`, no escribe), para que no choque con la herramienta nueva del agente.
+* **Prompts de Chat y WhatsApp:** regla D4 (compra contra regularización, nunca rellenar precio, vendedor ni fecha; la UPP la
+  resuelve la herramienta; respuestas relatadas literal; `force_duplicate` solo tras `duplicate_recent` y una segunda
+  confirmación explícita); se elimina «puede decir que sin asignar».
+* **Pruebas:** 64 aserciones (`099_tests.sql`, con `ROLLBACK`), 14 de 14 mutaciones detectadas, concurrencia del mismo arete en
+  tres escenarios y `099_state_check.sql` en los tres estados (copia local PG 16.15).
+* **Deuda registrada:** `DELETE` físico permitido en `crud_models` `cattle_livestock` (prioritaria); la Bitácora no muestra
+  `REGULARIZACION_PADRON`; memoria de WhatsApp por teléfono; comas en `Guardar Pregunta Pendiente`; 197 bovinos de la empresa 5
+  sin UPP; 1 BUFALO con categoría NOVILLO (calidad de datos); catálogo de etapas sin especies no bovinas.
+
 ### 🐄 Repasto con retorno: movimiento por guía a una UPP de tercero (migración 098) — prototipo en la empresa 3
 
 *Runbook: `database/migrations/098_RUNBOOK.md`. Solo base de datos: sin cambios de workflows ni de frontend.*
