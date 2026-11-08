@@ -28,8 +28,8 @@
       "Bash(./restore_docker_n8n.sh*)",
       "Bash(./restore_n8n.sh*)",
       "Bash(npm publish*)",
-      "Write(**/AUTH_ENV_CONFIG*)",
-      "Write(**/migrations/**)"
+      "Edit(**/AUTH_ENV_CONFIG*)",
+      "Edit(**/migrations/**)"
     ],
     "allow": [
       "Read(./**)",
