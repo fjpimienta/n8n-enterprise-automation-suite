@@ -51,7 +51,6 @@ import {
   imports: [FormsModule, KpiCardComponent, PeriodChipsComponent, ShareBarListComponent, TrendBarsComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './expense-balance.component.html',
-  styleUrl: '../../../shared/expenses-ui/expenses-ui.scss',
 })
 export class ExpenseBalanceComponent {
   private api = inject(AgriApiService);

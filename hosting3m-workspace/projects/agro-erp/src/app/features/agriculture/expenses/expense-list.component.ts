@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { CategoryChipsComponent } from '@shared/expenses-ui/category-chips.component';
+import { DetailPanelComponent } from '@shared/expenses-ui/detail-panel.component';
 import { TenantService } from 'core-auth';
 import { Lot } from '@core/models/agri.model';
 import { AgriExpense, ExpenseCategory } from '@core/models/agri-expense.model';
@@ -7,7 +9,8 @@ import { exportRowsToCsv } from '@shared/utils/csv-export.util';
 import { AgriApiService } from '../services/agri-api.service';
 import { PlantationContextService } from '../services/plantation-context.service';
 import { todayCdmx } from '../utils/agri.util';
-import { expenseCsvColumns, formatMoney, truncToPeriod, validateBalanceRange, validateVoidReason } from '../utils/expense.util';
+import { expenseCsvColumns, formatMoney, periodLabel, truncToPeriod, validateBalanceRange, validateVoidReason } from '../utils/expense.util';
+import { filterExpenses } from '../utils/expense-view.util';
 
 /**
  * Recorded expenses (ADMIN / OWNER), voided ones included and flagged. No totals here: they come from the
@@ -17,7 +20,7 @@ import { expenseCsvColumns, formatMoney, truncToPeriod, validateBalanceRange, va
 @Component({
   selector: 'app-expense-list',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, CategoryChipsComponent, DetailPanelComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './expense-list.component.html',
 })
@@ -36,12 +39,17 @@ export class ExpenseListComponent {
   dateTo = signal('');
   plantationId = signal('');
   lotId = signal('');
+  /** Client-side filters over the loaded page only. */
   categoryId = signal('');
+  search = signal('');
   showVoided = signal(true);
+  selectedId = signal<string | null>(null);
   lots = signal<Lot[]>([]);
 
   expenses = signal<AgriExpense[]>([]);
-  visible = computed(() => (this.showVoided() ? this.expenses() : this.expenses().filter(e => !e.isVoid)));
+  visible = computed(() => filterExpenses(this.expenses(), { search: this.search(), categoryId: this.categoryId(), showVoided: this.showVoided() }));
+  selected = computed(() => this.expenses().find(e => e.id === this.selectedId()) ?? null);
+  categoryOptions = computed(() => this.categories().map(c => ({ value: c.id, label: c.name + (c.isActive ? '' : ' (inactiva)') })));
   voidedCount = computed(() => this.expenses().filter(e => e.isVoid).length);
   isLoading = signal(false);
   loaded = signal(false);
@@ -66,6 +74,7 @@ export class ExpenseListComponent {
         this.expenses.set([]);
         this.loaded.set(false);
         this.toVoid.set(null);
+        this.selectedId.set(null);
         if (tenantId) void this.load();
       });
     });
@@ -82,8 +91,15 @@ export class ExpenseListComponent {
     this.plantationId.set('');
     this.lotId.set('');
     this.categoryId.set('');
+    this.search.set('');
     this.lots.set([]);
     this.filterError.set(null);
+  }
+
+  day(date: string) { return periodLabel('DAY', date, date); }
+
+  select(expense: AgriExpense) {
+    this.selectedId.set(this.selectedId() === expense.id ? null : expense.id);
   }
 
   async setPlantation(plantationId: string) {
@@ -110,12 +126,18 @@ export class ExpenseListComponent {
     }
     this.filterError.set(null);
     const seq = ++this.seq;
+    // Fail closed: without an active company nothing is requested.
+    if (!this.tenantService.activeTenantId()) {
+      this.expenses.set([]);
+      this.loadError.set('No hay una empresa activa.');
+      return;
+    }
     this.isLoading.set(true);
     this.loadError.set(null);
     try {
       const { items, possiblyTruncated } = await this.api.getExpenses({
         dateFrom: this.dateFrom(), dateTo: this.dateTo(), plantationId: this.plantationId() || null,
-        lotId: this.plantationId() ? this.lotId() || null : null, categoryId: this.categoryId() || null,
+        lotId: this.plantationId() ? this.lotId() || null : null, categoryId: null,
       });
       if (seq !== this.seq) return;
       this.expenses.set(items);
