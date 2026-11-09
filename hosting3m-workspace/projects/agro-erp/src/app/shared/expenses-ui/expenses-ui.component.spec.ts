@@ -87,6 +87,32 @@ describe('exp-trend-bars', () => {
     expect(el.textContent).toContain('$10');
     expect(el.textContent).toContain('feb (en curso)');
   });
+  const mk = (n: number, nonZero: number[] = [0]) => Array.from({ length: n }, (_, i) => ({
+    key: String(i), label: String(i + 1), value: nonZero.includes(i) ? 10 + i : 0, valueText: nonZero.includes(i) ? `$${10 + i}` : '$0',
+    heightPct: nonZero.includes(i) ? 100 : 0, inProgress: false }));
+  it('collapses the value list by default and lists only periods with an amount', () => {
+    const { el } = render(TrendBarsComponent, { bars: mk(30, [3, 7]) });
+    const details = el.querySelector('details') as HTMLDetailsElement;
+    expect(details.open).toBe(false);
+    expect(details.querySelectorAll('dt').length).toBe(2);
+    expect(details.textContent).not.toContain('$0');
+  });
+  it('renders no details nor legend when every period is zero', () => {
+    const { el } = render(TrendBarsComponent, { bars: mk(5, []) });
+    expect(el.querySelector('details')).toBeNull();
+    expect(el.querySelector('.legend')).toBeNull();
+  });
+  it('shows the values above every bar with at most 12 bars', () => {
+    const { el } = render(TrendBarsComponent, { bars: mk(12, [1, 2]) });
+    expect(el.querySelectorAll('.val').length).toBe(12);
+  });
+  it('shows the value only above the largest bar with more than 12 bars', () => {
+    const { el } = render(TrendBarsComponent, { bars: mk(30, [3, 9]) });
+    const vals = Array.from(el.querySelectorAll('.val'));
+    expect(vals.length).toBe(1);
+    expect(vals[0].textContent).toBe('$19');
+    expect(el.querySelectorAll('.col[title]').length).toBe(30);
+  });
   it('shows the empty state', () => {
     const { el } = render(TrendBarsComponent, { bars: [], emptyText: 'Vacío' });
     expect(el.textContent).toContain('Vacío');
