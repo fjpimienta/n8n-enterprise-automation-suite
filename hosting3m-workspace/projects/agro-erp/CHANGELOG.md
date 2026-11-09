@@ -5,6 +5,19 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🌴 Gastos agrícolas: nuevo diseño de Resumen, Movimientos y captura (solo frontend)
+
+*Sin migraciones, sin cambios de workflows ni de contratos de API.*
+* **Resumen:** periodo (Este mes / Trimestre / Año / Personalizado), 4 tarjetas (total con variación contra el periodo
+  anterior, promedio por día, número de gastos, % facturado), tendencia por día o mes, «En qué se gasta», «Por plantación»,
+  «Lotes con más gasto» y la tabla de detalle en «Ver detalle». Los totales siguen viniendo del balance; cada bloque carga
+  y falla por separado.
+* **Movimientos:** búsqueda (sobre lo cargado), chips de categoría, «Anulados (n)», panel de detalle con «Anular gasto»
+  (mismo flujo y validación) y tarjetas en pantallas angostas.
+* **Captura:** monto grande, categoría en chips, atajos Hoy / Ayer / Otra fecha y los campos opcionales en «Más detalles».
+  Mismos campos, validación y payload. El EDITOR conserva la vista de solo captura.
+* Componentes reutilizables en `shared/expenses-ui/` (acento configurable con `--accent`).
+
 ### 🐄 Repasto con retorno: movimiento por guía a una UPP de tercero (migración 098) — prototipo en la empresa 3
 
 *Runbook: `database/migrations/098_RUNBOOK.md`. Solo base de datos: sin cambios de workflows ni de frontend.*
