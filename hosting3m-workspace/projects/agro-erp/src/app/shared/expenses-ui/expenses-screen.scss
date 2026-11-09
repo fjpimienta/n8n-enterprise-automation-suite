@@ -37,7 +37,7 @@
 .exp-field > label, .exp-label { font-size: .8rem; color: var(--exp-muted); }
 .exp-input { min-height: 40px; border: 1px solid var(--exp-border); border-radius: 10px; padding: .35rem .65rem; background: var(--exp-surface); color: var(--exp-ink); max-width: 100%; color-scheme: var(--exp-x-scheme, light); }
 .exp-grid-kpi { display: grid; gap: .75rem; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 1rem; }
-.exp-grid-2 { display: grid; gap: .75rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 1rem; }
+.exp-grid-2 { display: grid; align-items: start; gap: .75rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 1rem; }
 .exp-btn { min-height: 40px; padding: .35rem .9rem; border-radius: 10px; border: 1px solid var(--exp-border); background: var(--exp-surface); color: var(--exp-ink); cursor: pointer; }
 .exp-btn.primary { background: var(--exp-accent); border-color: var(--exp-accent); color: #fff; font-weight: 600; }
 .exp-btn.danger { border-color: var(--exp-danger); color: var(--exp-danger); }
