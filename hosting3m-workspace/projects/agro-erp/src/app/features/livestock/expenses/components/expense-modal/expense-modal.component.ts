@@ -1,14 +1,18 @@
 import { Component, inject, signal, computed, output, Input, OnChanges, SimpleChanges, ChangeDetectionStrategy } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { FormsModule } from '@angular/forms';
 import { CattleApiService } from '@core/services/cattle-api.service';
 import { CattleDataService } from '@core/services/cattle-data.service';
+import { CategoryChipsComponent } from '@shared/expenses-ui/category-chips.component';
+import { formatMoney } from '@shared/expenses-ui/expenses-ui.util';
+import { EXPENSE_CATEGORY_LABELS } from '../../livestock-expense.util';
 
 @Component({
   selector: 'app-expense-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, CategoryChipsComponent],
   templateUrl: './expense-modal.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -53,6 +57,20 @@ export class ExpenseModalComponent implements OnChanges {
     unit_measure: ['KG'],
     description:  ['']
   });
+
+  // Layout-only helpers (the form, its validators, defaults and payload are unchanged).
+  public readonly categoryOptions = Object.entries(EXPENSE_CATEGORY_LABELS).map(([value, label]) => ({ value, label }));
+  private formValue = toSignal(this.expenseForm.valueChanges, { initialValue: this.expenseForm.value });
+  public category = computed(() => this.formValue().category ?? '');
+  public saveLabel = computed(() => {
+    const amount = Number(this.formValue().amount);
+    return this.expenseForm.valid && Number.isFinite(amount) && amount > 0 ? `Guardar gasto · ${formatMoney(amount)}` : 'Guardar gasto';
+  });
+
+  public pickCategory(value: string) {
+    this.expenseForm.controls.category.setValue(value);
+    this.expenseForm.controls.category.markAsTouched();
+  }
 
   ngOnChanges(changes: SimpleChanges) {
     if (changes['preSelectedAnimal'] && this.preSelectedAnimal) {

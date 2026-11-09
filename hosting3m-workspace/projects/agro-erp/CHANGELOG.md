@@ -5,6 +5,21 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🐄 Gastos de ganadería: nuevo diseño de Resumen, Gastos, Costo por animal y captura (solo frontend)
+
+*Sin migraciones, sin cambios de workflows ni de contratos de API. Reutiliza los componentes de `shared/expenses-ui/` de Agricultura.*
+* **Resumen (solo ADMIN de la empresa activa):** periodo (Este mes / Trimestre / Año), tarjetas de gasto del periodo (con variación
+  contra el mismo corte del periodo anterior, nunca contra un periodo de otra duración), valor estimado del hato (con el precio de
+  referencia), balance neto acumulado y gasto por cabeza; «Balance por UPP» (acumulado) con el renglón de gastos generales,
+  «Gasto por tipo» y tendencia. Reemplaza la gráfica de barras de capitalización contra gasto.
+* **Gastos:** búsqueda, chips de categoría, rango de fechas, «Solo gastos generales» y panel de detalle; tarjetas en pantallas angostas.
+* **Costo por animal:** tabla acumulada con costo por kg, valor estimado, balance y marca «En riesgo» (balance menor al 10 % del
+  valor estimado); orden por mayor gasto o peor balance. Sin peso no se marca como riesgo.
+* **Captura de gasto:** monto grande, categorías en chips y campos opcionales en «Más detalles»; mismos campos, validaciones y payload.
+* **Pestaña Costos del animal:** tarjetas con gasto total, peso, costo por kg, valor estimado y balance.
+* Los cálculos viven en `features/livestock/expenses/livestock-expense.util.ts` (funciones puras con sus pruebas). El dashboard conserva
+  la carga de datos, el escudo de errores silenciosos y la restricción por rol.
+
 ### 🌴 Gastos agrícolas: nuevo diseño de Resumen, Movimientos y captura (solo frontend)
 
 *Sin migraciones, sin cambios de workflows ni de contratos de API.*

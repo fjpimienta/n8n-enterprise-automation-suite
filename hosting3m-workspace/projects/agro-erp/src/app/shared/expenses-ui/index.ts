@@ -5,3 +5,4 @@ export * from './share-bar-list.component';
 export * from './trend-bars.component';
 export * from './detail-panel.component';
 export * from './expenses-ui.util';
+export * from './expenses-period.util';

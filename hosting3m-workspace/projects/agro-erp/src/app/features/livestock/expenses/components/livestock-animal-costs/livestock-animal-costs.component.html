@@ -1,0 +1,82 @@
+@if (canViewAmounts()) {
+<div class="exp-screen exp-livestock">
+    @if (loading() && !rows().length) {
+    <div class="exp-state" role="status"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Cargando costos por animal…</div>
+    } @else if (!rows().length) {
+    <div class="exp-state"><i class="ti ti-receipt-off fs-2 d-block mb-2" aria-hidden="true"></i>No hay gastos vinculados a animales específicos.</div>
+    } @else {
+    <div class="exp-card mb-3">
+        <h3 class="exp-card-title">Costo por animal</h3>
+        <p class="exp-card-sub">
+            Acumulado · todas las fechas. «En riesgo»: balance menor al {{ riskMargin }}% del valor estimado (un balance negativo también cuenta).
+            Gasto acumulado vinculado a animales: <strong>{{ money(totalLinked()) }}</strong>.
+        </p>
+        <div class="exp-toolbar">
+            <div class="exp-field">
+                <span class="exp-label">Ordenar por</span>
+                <div class="exp-seg" role="group" aria-label="Ordenar por">
+                    <button type="button" [attr.aria-pressed]="sort() === 'SPEND'" (click)="setSort('SPEND')">Mayor gasto</button>
+                    <button type="button" [attr.aria-pressed]="sort() === 'WORST_BALANCE'" (click)="setSort('WORST_BALANCE')">Peor balance</button>
+                </div>
+            </div>
+            <button type="button" class="exp-chip" [attr.aria-pressed]="onlyRisk()" (click)="toggleRisk()">Solo en riesgo ({{ riskCount() }})</button>
+        </div>
+        <app-table-toolbar [pagedTable]="table" searchPlaceholder="Buscar por arete, fuego o categoría..."></app-table-toolbar>
+
+        @if (!table.paginatedRows().length) {
+        <div class="exp-state">Ningún animal coincide con la búsqueda o los filtros.</div>
+        } @else {
+        <div class="exp-table-wrap exp-desktop">
+            <table class="exp-table">
+                <thead><tr>
+                    <th scope="col">Arete / Fuego</th><th scope="col">Categoría</th><th scope="col">UPP</th><th scope="col" class="r">Peso</th>
+                    <th scope="col" class="r">Gasto acumulado</th><th scope="col" class="r">Costo / kg</th><th scope="col" class="r">Valor estimado</th>
+                    <th scope="col" class="r">Balance</th><th scope="col">Estado</th>
+                </tr></thead>
+                <tbody>
+                    @for (r of table.paginatedRows(); track r.livestockId) {
+                    <tr>
+                        <td><strong class="exp-num">{{ r.arete }}</strong>@if (r.fuego) { <div class="exp-muted small">Fuego {{ r.fuego }}</div> }</td>
+                        <td>{{ r.category || '—' }}</td>
+                        <td>{{ r.upp || 'Sin UPP' }}</td>
+                        <td class="r">{{ r.hasWeight ? (r.weightKg + ' kg') : 'Sin peso' }}</td>
+                        <td class="r">{{ money(r.total) }}</td>
+                        <td class="r">{{ r.costPerKg === null ? '—' : money(r.costPerKg) + '/kg' }}</td>
+                        <td class="r">{{ r.value === null ? '—' : money(r.value) }}</td>
+                        <td class="r">{{ r.balance === null ? '—' : money(r.balance) }}</td>
+                        <td>
+                            @if (r.atRisk) { <span class="exp-pill risk">⚠ En riesgo</span> }
+                            @else if (!r.hasWeight) { <span class="exp-pill muted">Sin peso</span> }
+                            @else { <span class="exp-pill">En orden</span> }
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="exp-cards">
+            @for (r of table.paginatedRows(); track r.livestockId) {
+            <div class="exp-card-item">
+                <div class="d-flex justify-content-between gap-2">
+                    <strong class="exp-num">{{ r.arete }}</strong>
+                    @if (r.atRisk) { <span class="exp-pill risk">⚠ En riesgo</span> }
+                    @else if (!r.hasWeight) { <span class="exp-pill muted">Sin peso</span> }
+                    @else { <span class="exp-pill">En orden</span> }
+                </div>
+                <div class="exp-muted small">{{ r.category || '—' }}@if (r.fuego) { · Fuego {{ r.fuego }} } · {{ r.upp || 'Sin UPP' }}</div>
+                <dl class="exp-dl">
+                    <dt>Peso</dt><dd>{{ r.hasWeight ? (r.weightKg + ' kg') : 'Sin peso' }}</dd>
+                    <dt>Gasto acumulado</dt><dd>{{ money(r.total) }}</dd>
+                    <dt>Costo / kg</dt><dd>{{ r.costPerKg === null ? '—' : money(r.costPerKg) + '/kg' }}</dd>
+                    <dt>Valor estimado</dt><dd>{{ r.value === null ? '—' : money(r.value) }}</dd>
+                    <dt>Balance</dt><dd>{{ r.balance === null ? '—' : money(r.balance) }}</dd>
+                </dl>
+            </div>
+            }
+        </div>
+        }
+        <app-table-footer [pagedTable]="table"></app-table-footer>
+    </div>
+    }
+</div>
+}
