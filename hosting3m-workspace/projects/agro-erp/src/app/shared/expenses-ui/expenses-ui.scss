@@ -1,0 +1,30 @@
+/* Design tokens and shared classes of the expense screens. Domain-agnostic: set --exp-accent on a host to retheme. */
+:host {
+  --exp-accent: #1f6b3f;
+  --exp-accent-strong: #14532d;
+  --exp-accent-soft: #e8f3ec;
+  --exp-ink: #1a2234;
+  --exp-muted: #596273;
+  --exp-border: #e3e7ee;
+  --exp-surface: #fff;
+  --exp-bg: #f5f7f9;
+  --exp-danger: #b42318;
+  font-variant-numeric: tabular-nums;
+}
+.exp-card { background: var(--exp-surface); border: 1px solid var(--exp-border); border-radius: 14px; padding: 1rem 1.1rem; min-width: 0; }
+.exp-card-title { font-size: .95rem; font-weight: 600; color: var(--exp-ink); margin: 0 0 .75rem; }
+.exp-muted { color: var(--exp-muted); }
+.exp-num { font-variant-numeric: tabular-nums; }
+.exp-chip {
+  display: inline-flex; align-items: center; gap: .35rem; min-height: 36px; padding: .3rem .85rem; border-radius: 999px;
+  border: 1px solid var(--exp-border); background: var(--exp-surface); color: var(--exp-ink); font-size: .875rem; cursor: pointer;
+}
+.exp-chip:hover { border-color: var(--exp-accent); }
+.exp-chip[aria-pressed='true'] { background: var(--exp-accent); border-color: var(--exp-accent); color: #fff; font-weight: 600; }
+.exp-chip[aria-pressed='true']::before { content: '✓'; font-size: .8em; }
+:is(.exp-chip, .exp-btn, .exp-row-btn):focus-visible, :is(input, select, textarea, summary):focus-visible {
+  outline: 3px solid var(--exp-accent-strong); outline-offset: 2px;
+}
+.exp-state { text-align: center; padding: 1.5rem 1rem; color: var(--exp-muted); font-size: .9rem; }
+.exp-state.exp-error { color: var(--exp-danger); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
