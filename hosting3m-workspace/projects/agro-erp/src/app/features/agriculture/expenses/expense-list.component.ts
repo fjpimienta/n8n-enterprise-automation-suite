@@ -10,7 +10,7 @@ import { AgriApiService } from '../services/agri-api.service';
 import { PlantationContextService } from '../services/plantation-context.service';
 import { todayCdmx } from '../utils/agri.util';
 import { expenseCsvColumns, formatMoney, periodLabel, truncToPeriod, validateBalanceRange, validateVoidReason } from '../utils/expense.util';
-import { filterExpenses } from '../utils/expense-view.util';
+import { emptyListMessage, filterExpenses } from '../utils/expense-view.util';
 
 /**
  * Recorded expenses (ADMIN / OWNER), voided ones included and flagged. No totals here: they come from the
@@ -39,7 +39,7 @@ export class ExpenseListComponent {
   dateTo = signal('');
   plantationId = signal('');
   lotId = signal('');
-  /** Client-side filters over the loaded page only. */
+  /** The category is a server filter (reloads); the search box filters the loaded page only. */
   categoryId = signal('');
   search = signal('');
   showVoided = signal(true);
@@ -48,6 +48,8 @@ export class ExpenseListComponent {
 
   expenses = signal<AgriExpense[]>([]);
   visible = computed(() => filterExpenses(this.expenses(), { search: this.search(), categoryId: this.categoryId(), showVoided: this.showVoided() }));
+  emptyText = computed(() => emptyListMessage({
+    loaded: this.expenses().length, hasSearch: !!this.search().trim(), hasCategory: !!this.categoryId(), truncated: this.possiblyTruncated() }));
   selected = computed(() => this.expenses().find(e => e.id === this.selectedId()) ?? null);
   categoryOptions = computed(() => this.categories().map(c => ({ value: c.id, label: c.name + (c.isActive ? '' : ' (inactiva)') })));
   voidedCount = computed(() => this.expenses().filter(e => e.isVoid).length);
@@ -72,6 +74,7 @@ export class ExpenseListComponent {
         this.seq++;
         this.resetFilters();
         this.expenses.set([]);
+        this.possiblyTruncated.set(false);
         this.loaded.set(false);
         this.toVoid.set(null);
         this.selectedId.set(null);
@@ -94,6 +97,12 @@ export class ExpenseListComponent {
     this.search.set('');
     this.lots.set([]);
     this.filterError.set(null);
+  }
+
+  /** Selecting a chip reloads with that category (the request sequencing and fail-closed guard live in load()). */
+  setCategory(categoryId: string) {
+    this.categoryId.set(categoryId);
+    void this.load();
   }
 
   day(date: string) { return periodLabel('DAY', date, date); }
@@ -137,7 +146,7 @@ export class ExpenseListComponent {
     try {
       const { items, possiblyTruncated } = await this.api.getExpenses({
         dateFrom: this.dateFrom(), dateTo: this.dateTo(), plantationId: this.plantationId() || null,
-        lotId: this.plantationId() ? this.lotId() || null : null, categoryId: null,
+        lotId: this.plantationId() ? this.lotId() || null : null, categoryId: this.categoryId() || null,
       });
       if (seq !== this.seq) return;
       this.expenses.set(items);
@@ -148,6 +157,7 @@ export class ExpenseListComponent {
       // Silent Error Shield: an error is never shown as an empty list.
       console.error('[Agro-ERP] Error al cargar los gastos:', error);
       this.expenses.set([]);
+      this.possiblyTruncated.set(false);
       this.loadError.set(error?.message || 'No se pudieron cargar los gastos.');
     } finally {
       if (seq === this.seq) this.isLoading.set(false);

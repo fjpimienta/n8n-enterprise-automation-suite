@@ -155,3 +155,10 @@ export function isCaptureReady(input: ExpenseInput): boolean {
   const amount = parseAmountText(input.amount, 2);
   return !!input.categoryId && amount !== null && !Number.isNaN(amount) && amount > 0 && amount <= MAX_AMOUNT;
 }
+
+/** Empty-list explanation; flags that a truncated page may hide matches. */
+export function emptyListMessage(o: { loaded: number; hasSearch: boolean; hasCategory: boolean; truncated: boolean }): string {
+  const incomplete = o.truncated ? ' La lista llegó cortada: el resultado puede estar incompleto.' : '';
+  if (o.loaded > 0 || o.hasSearch || o.hasCategory) return `Ningún gasto coincide con la búsqueda o los filtros.${incomplete}`;
+  return `No hay gastos con esos filtros.${incomplete}`;
+}

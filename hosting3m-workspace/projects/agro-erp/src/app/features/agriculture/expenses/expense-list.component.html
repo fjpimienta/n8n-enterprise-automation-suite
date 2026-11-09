@@ -37,7 +37,7 @@
 
     <div class="exp-toolbar">
         <exp-category-chips style="flex: 1 1 300px;" [options]="categoryOptions()" [value]="categoryId()" [allowAll]="true" ariaLabel="Categoría"
-            (valueChange)="categoryId.set($event)"></exp-category-chips>
+            (valueChange)="setCategory($event)"></exp-category-chips>
         <button type="button" class="exp-chip" [attr.aria-pressed]="showVoided()" (click)="showVoided.set(!showVoided())">Anulados ({{ voidedCount() }})</button>
         <button type="button" class="exp-btn" [disabled]="!visible().length" (click)="exportCsv()"><i class="ti ti-file-spreadsheet me-1" aria-hidden="true"></i>Exportar CSV</button>
     </div>
@@ -53,7 +53,7 @@
         }
     </div>
     @if (possiblyTruncated()) {
-    <div class="exp-alert warn" role="alert">La lista llegó con el máximo de registros que entrega el servidor: reduce el rango de fechas. La búsqueda y los filtros solo aplican a lo cargado.</div>
+    <div class="exp-alert warn" role="alert">La lista llegó con el máximo de registros que entrega el servidor: reduce el rango de fechas. La búsqueda solo aplica a lo cargado.</div>
     }
 
     <div class="exp-split" [class.has-detail]="selected()">
@@ -62,9 +62,7 @@
             <div class="exp-state" role="status"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Cargando gastos…</div>
             } @else if (!visible().length) {
             <div class="exp-state">
-                @if (loadError()) { No se pudo mostrar la lista. }
-                @else if (expenses().length) { Ningún gasto coincide con la búsqueda o los filtros. }
-                @else { No hay gastos con esos filtros. }
+                @if (loadError()) { No se pudo mostrar la lista. } @else { {{ emptyText() }} }
             </div>
             } @else {
             <div class="exp-table-wrap exp-desktop">

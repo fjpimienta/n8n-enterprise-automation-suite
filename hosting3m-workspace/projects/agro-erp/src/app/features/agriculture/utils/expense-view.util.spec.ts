@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { AgriExpense, ExpenseInput } from '@core/models/agri-expense.model';
 import { emptyExpenseInput } from './expense.util';
 import {
-  addDays, averagePerDay, buildTrendBars, comparisonFor, dateShortcutOf, daysInRange, deltaPercent, elapsedDays, filterExpenses,
+  addDays, averagePerDay, buildTrendBars, comparisonFor, dateShortcutOf, daysInRange, emptyListMessage, deltaPercent, elapsedDays, filterExpenses,
   formatDelta, formatPercent, grainForSpan, isCaptureReady, previousRange, rangeForPreset, sharePercent, shortPeriodLabel,
 } from './expense-view.util';
 
@@ -155,5 +155,14 @@ describe('comparison with the previous period', () => {
       kind: 'range', range: { from: '2026-08-31', to: '2026-09-09' }, grain: null, label: 'vs. periodo anterior' });
     expect(comparisonFor('MONTH', { from: '2026-09-01', to: '2026-09-30' }, '2026-11-09')).toMatchObject({
       kind: 'range', range: { from: '2026-08-01', to: '2026-08-31' }, grain: null });
+  });
+});
+
+describe('empty list message', () => {
+  it('warns about incompleteness only when the page was truncated', () => {
+    expect(emptyListMessage({ loaded: 50, hasSearch: true, hasCategory: false, truncated: true })).toContain('puede estar incompleto');
+    expect(emptyListMessage({ loaded: 50, hasSearch: true, hasCategory: false, truncated: false })).not.toContain('incompleto');
+    expect(emptyListMessage({ loaded: 0, hasSearch: false, hasCategory: true, truncated: true })).toContain('puede estar incompleto');
+    expect(emptyListMessage({ loaded: 0, hasSearch: false, hasCategory: false, truncated: false })).toBe('No hay gastos con esos filtros.');
   });
 });
