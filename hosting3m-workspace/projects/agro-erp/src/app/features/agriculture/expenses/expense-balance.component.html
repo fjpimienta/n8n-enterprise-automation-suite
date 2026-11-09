@@ -1,213 +1,131 @@
-<!-- Filters -->
-<div class="card shadow-sm border-0 mb-3">
-    <div class="card-body">
-        <div class="row g-2 align-items-end">
-            <div class="col-6 col-md-2">
-                <label class="form-label small">Agrupar por</label>
-                <select class="form-select" [ngModel]="grain()" (ngModelChange)="grain.set($event)">
-                    @for (g of grainOptions; track g.value) { <option [value]="g.value">{{ g.label }}</option> }
-                </select>
-            </div>
-            <div class="col-6 col-md-2">
-                <label class="form-label small">Desde</label>
-                <input type="date" class="form-control" [ngModel]="dateFrom()" (ngModelChange)="dateFrom.set($event)">
-            </div>
-            <div class="col-6 col-md-2">
-                <label class="form-label small">Hasta</label>
-                <input type="date" class="form-control" [ngModel]="dateTo()" (ngModelChange)="dateTo.set($event)">
-            </div>
-            <div class="col-6 col-md-2">
-                <label class="form-label small">Plantación</label>
-                <select class="form-select" [ngModel]="plantationId()" (ngModelChange)="setPlantation($event)">
-                    <option value="">Todas (incluye generales)</option>
-                    @for (p of context.allPlantations(); track p.id) {
-                    <option [value]="p.id">{{ p.code }} · {{ p.name }}{{ p.isActive ? '' : ' (inactiva)' }}</option>
-                    }
-                </select>
-            </div>
-            <div class="col-6 col-md-2">
-                <label class="form-label small">Lote</label>
-                <select class="form-select" [disabled]="!plantationId()" [ngModel]="lotId()" (ngModelChange)="lotId.set($event)">
-                    <option value="">Todos</option>
-                    @for (l of lots(); track l.id) { <option [value]="l.id">{{ l.code }}{{ l.isActive ? '' : ' (inactivo)' }}</option> }
-                </select>
-            </div>
-            <div class="col-6 col-md-2">
-                <label class="form-label small">Categoría</label>
-                <select class="form-select" [ngModel]="categoryId()" (ngModelChange)="categoryId.set($event)">
-                    <option value="">Todas</option>
-                    @for (c of categories(); track c.id) { <option [value]="c.id">{{ c.name }}{{ c.isActive ? '' : ' (inactiva)' }}</option> }
-                </select>
-            </div>
+<div class="exp-screen">
+    <!-- Filters -->
+    <div class="exp-toolbar">
+        <div class="exp-field">
+            <span class="exp-label" id="exp-period-label">Periodo</span>
+            <exp-period-chips [options]="presets" [value]="preset()" ariaLabel="Periodo" (valueChange)="setPreset($event)"></exp-period-chips>
         </div>
-        <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
-            <div class="text-muted small">
-                <i class="ti ti-info-circle me-1"></i>El rango se ajusta a periodos completos (semanas de lunes a domingo).
-                @if (applied()) { Periodo aplicado: <strong>{{ appliedLabel() }}</strong>. }
-            </div>
-            <div class="btn-list">
-                <button class="btn btn-outline-secondary" [disabled]="isLoading()" (click)="resetFilters(); apply()">Limpiar</button>
-                <button class="btn btn-primary" [disabled]="isLoading()" (click)="apply()">
-                    @if (isLoading()) { <span class="spinner-border spinner-border-sm me-2" role="status"></span> }
-                    Aplicar
-                </button>
-            </div>
+        <div class="exp-field">
+            <label for="exp-bal-plantation">Plantación</label>
+            <select id="exp-bal-plantation" class="exp-input" [ngModel]="plantationId()" (ngModelChange)="setPlantation($event)">
+                <option value="">Todas (incluye generales)</option>
+                @for (p of context.allPlantations(); track p.id) {
+                <option [value]="p.id">{{ p.code }} · {{ p.name }}{{ p.isActive ? '' : ' (inactiva)' }}</option>
+                }
+            </select>
         </div>
-        @if (filterError()) {
-        <div class="alert alert-warning mt-3 mb-0" role="alert"><i class="ti ti-alert-circle me-2"></i>{{ filterError() }}</div>
-        }
-    </div>
-</div>
-
-@if (loadError()) {
-<div class="alert alert-danger" role="alert"><i class="ti ti-alert-triangle me-2"></i>{{ loadError() }}</div>
-}
-
-@if (isLoading() && !balance()) {
-<div class="text-center py-5 text-muted"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Calculando balance…</div>
-}
-
-@if (balance(); as b) {
-<!-- KPIs (from sp_agri_expense_balance) -->
-<div class="row row-cards mb-3">
-    <div class="col-12 col-md-4">
-        <div class="card card-sm"><div class="card-body">
-            <div class="subheader">Total del periodo</div>
-            <div class="h2 mb-0">{{ money(b.totalAmount) }}</div>
-            <div class="text-muted small">{{ b.expenseCount }} gasto(s) vigentes · sin anulados</div>
-        </div></div>
-    </div>
-    <div class="col-6 col-md-4">
-        <div class="card card-sm"><div class="card-body">
-            <div class="subheader">Gastos generales</div>
-            <div class="h2 mb-0">{{ money(b.generalAmount) }}</div>
-            <div class="text-muted small">Sin plantación asignada</div>
-        </div></div>
-    </div>
-    <div class="col-6 col-md-4">
-        <div class="card card-sm"><div class="card-body">
-            <div class="subheader">Periodos</div>
-            <div class="h2 mb-0">{{ b.byPeriod.length }}</div>
-            <div class="text-muted small">por {{ grain() === 'DAY' ? 'día' : grain() === 'WEEK' ? 'semana' : grain() === 'MONTH' ? 'mes' : 'año' }}</div>
-        </div></div>
-    </div>
-</div>
-
-<div class="row row-cards mb-3">
-    <!-- By period -->
-    <div class="col-12 col-lg-6">
-        <div class="card h-100">
-            <div class="card-header"><h3 class="card-title">Por periodo</h3></div>
-            <div class="table-responsive" style="max-height: 420px;">
-                <table class="table table-vcenter card-table table-sm">
-                    <thead><tr><th>Periodo</th><th class="w-50"></th><th class="text-end">Total</th><th class="text-end">Gastos</th></tr></thead>
-                    <tbody>
-                        @for (p of b.byPeriod; track p.periodStart) {
-                        <tr [class.text-muted]="p.expenseCount === 0">
-                            <td class="text-nowrap">{{ label(b.grain, p.periodStart, p.periodEnd) }}</td>
-                            <td>
-                                @if (maxPeriodTotal() > 0 && p.totalAmount > 0) {
-                                <div class="progress progress-sm"><div class="progress-bar bg-success" [style.width.%]="(100 * p.totalAmount) / maxPeriodTotal()"></div></div>
-                                }
-                            </td>
-                            <td class="text-end text-nowrap">{{ money(p.totalAmount) }}</td>
-                            <td class="text-end">{{ p.expenseCount }}</td>
-                        </tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+        <div class="exp-field">
+            <label for="exp-bal-lot">Lote</label>
+            <select id="exp-bal-lot" class="exp-input" [disabled]="!plantationId()" [ngModel]="lotId()" (ngModelChange)="setLot($event)">
+                <option value="">Todos</option>
+                @for (l of lots(); track l.id) { <option [value]="l.id">{{ l.code }}{{ l.isActive ? '' : ' (inactivo)' }}</option> }
+            </select>
         </div>
     </div>
-    <!-- By category -->
-    <div class="col-12 col-lg-6">
-        <div class="card h-100">
-            <div class="card-header"><h3 class="card-title">Por categoría</h3></div>
-            <div class="table-responsive">
-                <table class="table table-vcenter card-table table-sm">
-                    <thead><tr><th>Categoría</th><th class="text-end">Total</th><th class="text-end">Gastos</th></tr></thead>
-                    <tbody>
-                        @for (c of b.byCategory; track c.categoryId) {
-                        <tr><td>{{ c.categoryName }}</td><td class="text-end text-nowrap">{{ money(c.totalAmount) }}</td><td class="text-end">{{ c.expenseCount }}</td></tr>
-                        } @empty {
-                        <tr><td colspan="3" class="text-center text-muted py-4">Sin gastos en el periodo.</td></tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+    @if (preset() === 'CUSTOM') {
+    <div class="exp-toolbar">
+        <div class="exp-field">
+            <label for="exp-bal-from">Desde</label>
+            <input id="exp-bal-from" type="date" class="exp-input" [ngModel]="customFrom()" (ngModelChange)="customFrom.set($event)">
         </div>
-    </div>
-</div>
-
-<div class="row row-cards mb-3">
-    <div class="col-12 col-lg-6">
-        <div class="card h-100">
-            <div class="card-header"><h3 class="card-title">Por plantación</h3></div>
-            <div class="table-responsive">
-                <table class="table table-vcenter card-table table-sm">
-                    <thead><tr><th>Plantación</th><th class="text-end">Total</th><th class="text-end">Gastos</th></tr></thead>
-                    <tbody>
-                        @for (p of b.byPlantation; track p.plantationId) {
-                        <tr>
-                            <td>{{ p.plantationId ? (p.plantationCode + ' · ' + p.plantationName) : 'General (sin plantación)' }}</td>
-                            <td class="text-end text-nowrap">{{ money(p.totalAmount) }}</td><td class="text-end">{{ p.expenseCount }}</td>
-                        </tr>
-                        } @empty {
-                        <tr><td colspan="3" class="text-center text-muted py-4">Sin gastos en el periodo.</td></tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
+        <div class="exp-field">
+            <label for="exp-bal-to">Hasta</label>
+            <input id="exp-bal-to" type="date" class="exp-input" [ngModel]="customTo()" (ngModelChange)="customTo.set($event)">
         </div>
-    </div>
-    <div class="col-12 col-lg-6">
-        <div class="card h-100">
-            <div class="card-header"><h3 class="card-title">Por lote</h3></div>
-            <div class="table-responsive">
-                <table class="table table-vcenter card-table table-sm">
-                    <thead><tr><th>Lote</th><th class="text-end">Total</th><th class="text-end">Gastos</th></tr></thead>
-                    <tbody>
-                        @for (l of b.byLot; track l.lotId) {
-                        <tr><td>{{ l.lotCode }}{{ l.lotName ? ' · ' + l.lotName : '' }}</td><td class="text-end text-nowrap">{{ money(l.totalAmount) }}</td><td class="text-end">{{ l.expenseCount }}</td></tr>
-                        } @empty {
-                        <tr><td colspan="3" class="text-center text-muted py-4">Ningún gasto del periodo está asignado a un lote.</td></tr>
-                        }
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Detail (vw_agri_expense_summary) -->
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h3 class="card-title mb-0">Detalle por periodo, plantación, lote y categoría</h3>
-        <button class="btn btn-outline-success btn-sm" [disabled]="!summary().length" (click)="exportCsv()"><i class="ti ti-file-spreadsheet me-1"></i>Exportar CSV</button>
-    </div>
-    @if (possiblyTruncated()) {
-    <div class="alert alert-warning m-3 mb-0" role="alert">
-        <i class="ti ti-alert-triangle me-2"></i>El detalle llegó con el máximo de filas que entrega el servidor: puede estar incompleto. Reduce el rango o usa un periodo más largo.
+        <button type="button" class="exp-btn primary" [disabled]="isLoading()" (click)="apply()">Aplicar</button>
     </div>
     }
-    <div class="table-responsive" style="max-height: 480px;">
-        <table class="table table-vcenter card-table table-sm">
-            <thead><tr><th>Periodo</th><th>Plantación</th><th>Lote</th><th>Categoría</th><th class="text-end">Total</th><th class="text-end">Gastos</th></tr></thead>
-            <tbody>
-                @for (r of summary(); track r.id) {
-                <tr>
-                    <td class="text-nowrap">{{ label(r.grain, r.periodStart, r.periodEnd) }}</td>
-                    <td>{{ r.plantationId ? r.plantationCode : 'General' }}</td>
-                    <td>{{ r.lotCode || '—' }}</td>
-                    <td>{{ r.categoryName }}</td>
-                    <td class="text-end text-nowrap">{{ money(r.totalAmount) }}</td>
-                    <td class="text-end">{{ r.expenseCount }}</td>
-                </tr>
-                } @empty {
-                <tr><td colspan="6" class="text-center text-muted py-4">Sin gastos en el periodo.</td></tr>
-                }
-            </tbody>
-        </table>
+    <div class="exp-muted small mb-3">
+        @if (applied()) { Periodo aplicado: <strong>{{ appliedLabel() }}</strong>. }
+        @if (preset() === 'CUSTOM') { El rango se ajusta a periodos completos. }
     </div>
+
+    <div aria-live="polite">
+        @if (filterError()) { <div class="exp-alert warn" role="alert">{{ filterError() }}</div> }
+        @if (loadError()) { <div class="exp-alert err" role="alert">{{ loadError() }}</div> }
+    </div>
+
+    @if (isLoading() && !balance()) {
+    <div class="exp-state" role="status"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Calculando balance…</div>
+    }
+
+    @if (balance(); as b) {
+    <!-- KPIs -->
+    <div class="exp-grid-kpi">
+        <exp-kpi-card label="Total del periodo" [value]="money(b.totalAmount)" [deltaText]="deltaText()" [tone]="deltaTone()"
+            [hint]="deltaHint()"></exp-kpi-card>
+        <exp-kpi-card label="Promedio por día" [value]="money(avgPerDay())" hint="Días transcurridos del periodo"></exp-kpi-card>
+        <exp-kpi-card label="Número de gastos" [value]="'' + b.expenseCount" hint="Vigentes"></exp-kpi-card>
+        <exp-kpi-card label="% facturado" [value]="invoicedText()" [hint]="invoicedPct() === null ? 'No disponible para este rango' : 'Del número de gastos'"></exp-kpi-card>
+    </div>
+
+    <div class="exp-card mb-3">
+        <h3 class="exp-card-title">Gasto por {{ b.grain === 'DAY' ? 'día' : b.grain === 'MONTH' ? 'mes' : b.grain === 'WEEK' ? 'semana' : 'año' }}</h3>
+        <exp-trend-bars [bars]="bars()"></exp-trend-bars>
+    </div>
+
+    <div class="exp-grid-2">
+        <div class="exp-card">
+            <h3 class="exp-card-title">En qué se gasta</h3>
+            <exp-share-bar-list [items]="categoryItems()" emptyText="Sin gastos en el periodo."></exp-share-bar-list>
+        </div>
+        <div class="exp-card">
+            <h3 class="exp-card-title">Por plantación</h3>
+            <exp-share-bar-list [items]="plantationItems()" emptyText="Sin gastos en el periodo."></exp-share-bar-list>
+        </div>
+    </div>
+
+    <div class="exp-card mb-3">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h3 class="exp-card-title mb-0">Lotes con más gasto</h3>
+            <button type="button" class="exp-link" (click)="openMovements.emit()">Ver movimientos</button>
+        </div>
+        <div class="exp-table-wrap mt-2">
+            <table class="exp-table">
+                <thead><tr><th scope="col">Lote</th><th scope="col" class="r">Total</th><th scope="col" class="r">% del total</th><th scope="col" class="r">Gastos</th></tr></thead>
+                <tbody>
+                    @for (l of topLots(); track l.lotId) {
+                    <tr><td>{{ l.lotCode }}{{ l.lotName ? ' · ' + l.lotName : '' }}</td><td class="r">{{ money(l.totalAmount) }}</td><td class="r">{{ l.pctText }}</td><td class="r">{{ l.expenseCount }}</td></tr>
+                    } @empty {
+                    <tr><td colspan="4" class="exp-state">Ningún gasto del periodo está asignado a un lote.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Detail (vw_agri_expense_summary) -->
+    <details class="exp-card">
+        <summary class="exp-card-title mb-0" style="cursor: pointer;">Ver detalle por periodo, plantación, lote y categoría</summary>
+        <div class="mt-3">
+            <div class="d-flex justify-content-end mb-2">
+                <button type="button" class="exp-btn" [disabled]="!summary().length" (click)="exportCsv()"><i class="ti ti-file-spreadsheet me-1" aria-hidden="true"></i>Exportar CSV</button>
+            </div>
+            @if (possiblyTruncated()) {
+            <div class="exp-alert warn" role="alert">El detalle llegó con el máximo de filas que entrega el servidor: puede estar incompleto. Reduce el rango o usa un periodo más largo.</div>
+            }
+            @if (summaryError()) { <div class="exp-alert err" role="alert">{{ summaryError() }}</div> }
+            @if (summaryLoading()) { <div class="exp-state" role="status">Cargando detalle…</div> }
+            <div class="exp-table-wrap" style="max-height: 480px;">
+                <table class="exp-table">
+                    <thead><tr><th scope="col">Periodo</th><th scope="col">Plantación</th><th scope="col">Lote</th><th scope="col">Categoría</th><th scope="col" class="r">Total</th><th scope="col" class="r">Gastos</th></tr></thead>
+                    <tbody>
+                        @for (r of summary(); track r.id) {
+                        <tr>
+                            <td class="text-nowrap">{{ label(r.grain, r.periodStart, r.periodEnd) }}</td>
+                            <td>{{ r.plantationId ? r.plantationCode : 'General' }}</td>
+                            <td>{{ r.lotCode || '—' }}</td>
+                            <td>{{ r.categoryName }}</td>
+                            <td class="r">{{ money(r.totalAmount) }}</td>
+                            <td class="r">{{ r.expenseCount }}</td>
+                        </tr>
+                        } @empty {
+                        @if (!summaryLoading() && !summaryError()) { <tr><td colspan="6" class="exp-state">Sin gastos en el periodo.</td></tr> }
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </details>
+    }
 </div>
-}

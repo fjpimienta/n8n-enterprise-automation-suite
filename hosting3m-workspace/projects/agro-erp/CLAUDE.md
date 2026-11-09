@@ -245,6 +245,7 @@ de un AI Agent, usar `.first()` en lugar de `.item` en `$('Node')`.
 ## Deuda técnica activa (ver `docs/DOCS_DELTA_v1.9.0_FINAL.md`, `docs/DATABASE_SCHEMA_DELTA_v1.10.0.md` y `docs/INVENTARIO_COMPLETITUD.md` para detalle completo)
 
 **Urgente:**
+- ✅ **Migración 098 (repasto con retorno) — desplegada en producción el 2026-11-05** (ver `docs/CONTEXT_098.md` y el CHANGELOG). ERRCODEs: `P0098` (animal con renglón `OPEN` no puede pasar a VENDIDO/FINALIZADO/BAJA_DEPURACION_DATOS), `P0099` (`sp_return_movement`, solo ADMIN/OWNER) y `P0100` (no se abre préstamo de animal terminal o fuera de su UPP de origen). ⚠️ **Deuda:** `sp_move_livestock` y los cambios de UPP/lote no bloquean a un animal con renglón `OPEN`.
 - ✅ **Las tools de ganadería aceptaban empresas de palma — CERRADO (migración 082, producción 2026-10-24).** Incidente
   del 2026-10-21: con la empresa 10 (palma) activa, el Chat Web guardó un gasto en `cattle_expenses` (`3f294c48…`, se
   conserva como evidencia). Ahora `fn_reject_palm_company` (P0094) es la primera condición del `WHERE` de 26 de las 29

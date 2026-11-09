@@ -1,0 +1,90 @@
+@if (canViewAmounts()) {
+<div class="exp-screen exp-livestock">
+    <div class="exp-toolbar">
+        <div class="exp-field" style="flex: 1 1 220px;">
+            <label for="ls-exp-search">Buscar</label>
+            <input id="ls-exp-search" type="search" class="exp-input" placeholder="Concepto, categoría o arete" autocomplete="off"
+                [ngModel]="search()" (ngModelChange)="search.set($event)">
+        </div>
+        <div class="exp-field">
+            <label for="ls-exp-from">Desde</label>
+            <input id="ls-exp-from" type="date" class="exp-input" [ngModel]="from()" (ngModelChange)="from.set($event)">
+        </div>
+        <div class="exp-field">
+            <label for="ls-exp-to">Hasta</label>
+            <input id="ls-exp-to" type="date" class="exp-input" [ngModel]="to()" (ngModelChange)="to.set($event)">
+        </div>
+    </div>
+    <div class="exp-toolbar">
+        <exp-category-chips style="flex: 1 1 300px;" [options]="chips()" [value]="categoryKey()" [allowAll]="true" ariaLabel="Categoría"
+            (valueChange)="categoryKey.set($event)"></exp-category-chips>
+        <button type="button" class="exp-chip" [attr.aria-pressed]="onlyGeneral()" (click)="toggleGeneral()">Solo gastos generales</button>
+    </div>
+
+    <div class="exp-split" [class.has-detail]="selected()">
+        <div class="exp-card" style="padding: .5rem;">
+            @if (loading() && !expenses().length) {
+            <div class="exp-state" role="status"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Cargando gastos…</div>
+            } @else if (!table.paginatedRows().length) {
+            <div class="exp-state">
+                @if (expenses().length) { Ningún gasto coincide con la búsqueda o los filtros. }
+                @else { No se han registrado costos operativos. }
+            </div>
+            } @else {
+            <div class="exp-table-wrap exp-desktop">
+                <table class="exp-table">
+                    <thead><tr><th scope="col">Fecha</th><th scope="col">Concepto</th><th scope="col">Categoría</th><th scope="col">Volumen</th><th scope="col" class="r">Monto</th></tr></thead>
+                    <tbody>
+                        @for (e of table.paginatedRows(); track e.id) {
+                        <tr>
+                            <td class="text-nowrap">{{ day(e) }}</td>
+                            <td>
+                                <button type="button" class="exp-row-btn" [attr.aria-pressed]="selectedId() === e.id" [attr.aria-label]="'Ver detalle: ' + concept(e)" (click)="select(e)">{{ concept(e) }}</button>
+                                @if (arete(e)) { <div class="exp-muted small">Arete {{ arete(e) }}</div> }
+                            </td>
+                            <td><span class="exp-pill">{{ label(e.category) }}</span></td>
+                            <td>{{ e.quantity ? (e.quantity + ' ' + (e.unit_measure || '')) : '—' }}</td>
+                            <td class="r">{{ money(amount(e)) }}</td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="exp-cards">
+                @for (e of table.paginatedRows(); track e.id) {
+                <div class="exp-card-item">
+                    <div class="d-flex justify-content-between gap-2">
+                        <span class="exp-muted small">{{ day(e) }}</span>
+                        <strong>{{ money(amount(e)) }}</strong>
+                    </div>
+                    <button type="button" class="exp-row-btn" style="min-height: 44px;" [attr.aria-pressed]="selectedId() === e.id" (click)="select(e)">{{ concept(e) }}</button>
+                    @if (arete(e)) { <div class="exp-muted small">Arete {{ arete(e) }}</div> }
+                    <div><span class="exp-pill">{{ label(e.category) }}</span></div>
+                </div>
+                }
+            </div>
+            }
+            <app-table-footer [pagedTable]="table"></app-table-footer>
+        </div>
+
+        @if (selected(); as e) {
+        <exp-detail-panel heading="Detalle del gasto" (closed)="selectedId.set(null)">
+            <dl class="exp-dl">
+                <dt>Monto</dt><dd><strong>{{ money(amount(e)) }}</strong></dd>
+                <dt>Fecha</dt><dd>{{ day(e) }}</dd>
+                <dt>Categoría</dt><dd>{{ label(e.category) }}</dd>
+                <dt>Descripción</dt><dd>{{ e.description || '—' }}</dd>
+                <dt>Cantidad</dt><dd>{{ e.quantity ? (e.quantity + ' ' + (e.unit_measure || '')) : '—' }}</dd>
+                <dt>Animal</dt>
+                <dd>
+                    @if (arete(e)) { Arete {{ arete(e) }}@if (selectedAnimal()?.numero_fuego) { · Fuego {{ selectedAnimal()?.numero_fuego }} } }
+                    @else { Gasto general (sin animal) }
+                </dd>
+                <dt>Evento sanitario</dt><dd>{{ e.health_event_id ? 'Vinculado a un evento sanitario' : '—' }}</dd>
+            </dl>
+        </exp-detail-panel>
+        }
+    </div>
+    <div class="exp-muted small mt-2">Un gasto de ganadería no se edita ni se anula desde aquí.</div>
+</div>
+}

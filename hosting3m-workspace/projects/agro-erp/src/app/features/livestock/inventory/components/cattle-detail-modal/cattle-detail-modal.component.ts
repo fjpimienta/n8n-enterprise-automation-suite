@@ -3,11 +3,14 @@ import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { CattleApiService } from '@core/services/cattle-api.service';
 import { ExpenseModalComponent } from '../../../expenses/components/expense-modal/expense-modal.component';
+import { KpiCardComponent } from '@shared/expenses-ui/kpi-card.component';
+import { formatMoney } from '@shared/expenses-ui/expenses-ui.util';
+import { REFERENCE_PRICE_PER_KG, categoryLabel } from '../../../expenses/livestock-expense.util';
 
 @Component({
   selector: 'app-cattle-detail-modal',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, ExpenseModalComponent],
+  imports: [CommonModule, ReactiveFormsModule, ExpenseModalComponent, KpiCardComponent],
   templateUrl: './cattle-detail-modal.component.html',
   styleUrls: ['./cattle-detail-modal.component.scss']
 })
@@ -32,6 +35,17 @@ export class CattleDetailModalComponent implements OnInit {
   public totalCost = computed(() =>
     this.animalExpenses().reduce((sum, e) => sum + Number(e.amount || 0), 0)
   );
+
+  // COSTOS tab presentation (same data as before; the price is the dashboard's reference price).
+  public readonly money = formatMoney;
+  public readonly refPrice = REFERENCE_PRICE_PER_KG;
+  public readonly categoryLabel = categoryLabel;
+  public weightKg = computed(() => {
+    const w = Number(this.selectedAnimal?.current_weight_kg || 0);
+    return Number.isFinite(w) && w > 0 ? w : 0;
+  });
+  public estimatedValue = computed(() => this.weightKg() * REFERENCE_PRICE_PER_KG);
+  public costBalance = computed(() => this.estimatedValue() - this.totalCost());
 
   public costPerKg = computed(() => {
     const weight = Number(this.selectedAnimal?.current_weight_kg || 0);

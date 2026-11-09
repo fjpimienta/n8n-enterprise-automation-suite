@@ -5,6 +5,67 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🐄 Gastos de ganadería: nuevo diseño de Resumen, Gastos, Costo por animal y captura (solo frontend)
+
+*Sin migraciones, sin cambios de workflows ni de contratos de API. Reutiliza los componentes de `shared/expenses-ui/` de Agricultura.*
+* **Resumen (solo ADMIN de la empresa activa):** periodo (Este mes / Trimestre / Año), tarjetas de gasto del periodo (con variación
+  contra el mismo corte del periodo anterior, nunca contra un periodo de otra duración), valor estimado del hato (con el precio de
+  referencia), balance neto acumulado y gasto por cabeza; «Balance por UPP» (acumulado) con el renglón de gastos generales,
+  «Gasto por tipo» y tendencia. Reemplaza la gráfica de barras de capitalización contra gasto.
+* **Gastos:** búsqueda, chips de categoría, rango de fechas, «Solo gastos generales» y panel de detalle; tarjetas en pantallas angostas.
+* **Costo por animal:** tabla acumulada con costo por kg, valor estimado, balance y marca «En riesgo» (balance menor al 10 % del
+  valor estimado); orden por mayor gasto o peor balance. Sin peso no se marca como riesgo.
+* **Captura de gasto:** monto grande, categorías en chips y campos opcionales en «Más detalles»; mismos campos, validaciones y payload.
+* **Pestaña Costos del animal:** tarjetas con gasto total, peso, costo por kg, valor estimado y balance.
+* Los cálculos viven en `features/livestock/expenses/livestock-expense.util.ts` (funciones puras con sus pruebas). El dashboard conserva
+  la carga de datos, el escudo de errores silenciosos y la restricción por rol.
+
+### 🌴 Gastos agrícolas: nuevo diseño de Resumen, Movimientos y captura (solo frontend)
+
+*Sin migraciones, sin cambios de workflows ni de contratos de API.*
+* **Resumen:** periodo (Este mes / Trimestre / Año / Personalizado), 4 tarjetas (total con variación contra el periodo
+  anterior, promedio por día, número de gastos, % facturado), tendencia por día o mes, «En qué se gasta», «Por plantación»,
+  «Lotes con más gasto» y la tabla de detalle en «Ver detalle». Los totales siguen viniendo del balance; cada bloque carga
+  y falla por separado.
+* **Movimientos:** búsqueda (sobre lo cargado), chips de categoría, «Anulados (n)», panel de detalle con «Anular gasto»
+  (mismo flujo y validación) y tarjetas en pantallas angostas.
+* **Captura:** monto grande, categoría en chips, atajos Hoy / Ayer / Otra fecha y los campos opcionales en «Más detalles».
+  Mismos campos, validación y payload. El EDITOR conserva la vista de solo captura.
+* Componentes reutilizables en `shared/expenses-ui/` (acento configurable con `--accent`).
+
+### 🐄 Repasto con retorno: movimiento por guía a una UPP de tercero (migración 098) — prototipo en la empresa 3
+
+*Runbook: `database/migrations/098_RUNBOOK.md`. Solo base de datos: sin cambios de workflows ni de frontend.*
+* **Qué permite:** sacar animales de su UPP hacia una UPP de tercero **por guía** (propósito `REPASTO`, con fecha de retorno
+  esperada) y registrar su retorno por animal, parcial o total. Mientras estén fuera **no se pueden vender**: el trigger de
+  `cattle_livestock` rechaza `VENDIDO`, `FINALIZADO` y `BAJA_DEPURACION_DATOS` (`P0098`), `sp_solicitar_venta_orden` los rechaza
+  en la vista previa y en la creación con «Animal fuera en repasto (guía …, retorno esperado …): no se puede vender», y la
+  selección FIFO los omite. Una baja por mortandad estando fuera cierra el renglón como `DIED_AWAY`.
+* **Modelo:** el estado vive por animal en `cattle_movement_event_animals.return_status` (`NULL` = sin seguimiento, filas
+  históricas; `OPEN`, `RETURNED`, `CANCELLED`, `DIED_AWAY`); un índice único parcial impide dos préstamos abiertos del mismo
+  animal. El estado del movimiento se calcula en `vw_livestock_out_on_loan` (`OPEN` / `RETURNED` / `CLOSED`); no se guarda.
+  El retorno nunca modifica `production_unit_id`, `lot_id` ni `upp_origen`, y no se borra nada.
+* **`sp_return_movement`:** exige ADMIN u OWNER de la empresa del movimiento; el correo del actor debe salir de la sesión
+  verificada, nunca de `$fromAI`. Errores `P0098` (animal fuera), `P0099` (validaciones del retorno) y `P0100` (alta de préstamo
+  incoherente: animal vendido, muerto o en otra UPP).
+* **Parcheo de `sp_solicitar_venta_orden`:** se reconstruye desde la definición viva (no desde el archivo 097) con cuatro anclas
+  de texto que deben aparecer exactamente una vez; la verificación previa del dry run lo comprueba en PG 15.4 antes de cambiar
+  nada, y el rollback devuelve la función byte a byte (md5 del mismo ambiente).
+* **Prototipo:** seed solo en la empresa 3 y su UPP ficticia `99-999-9999-999`: 31 animales con arete ficticio `99` + últimos 8
+  dígitos (el real queda en `metadata`, `metadata.source = 'PROTOTIPO_REPASTO'`), 3 movimientos por guía (7139728, 7139729 y
+  `PRUEBA-3A-GUIA`) y 31 renglones `OPEN`. `business_model = 'CRIA'` está **pendiente de confirmar con el dueño**. El retorno
+  ficticio (2026-12-10) va en un archivo aparte.
+* **Pruebas:** 83 aserciones en `098_tests.sql` (todas con `ROLLBACK`), seis mutaciones que deben ser detectadas
+  (`098_mutation_check.sh`) y una prueba de concurrencia con dos sesiones sobre una copia descartable (`098_concurrency_check.sh`;
+  venta contra alta del mismo animal, en ambos órdenes: espera y rechazo con `P0100`/`P0098`, sin interbloqueo). Las pruebas
+  encontraron un choque de alias con una variable PL/pgSQL que el dry run no puede ver.
+* **Fuera de alcance:** la carga real de los 31 animales (los aretes reales no caben en la empresa 3 por la unicidad global
+  de `rfid_siniiga`; Santa Lucía está `BLOQUEADA`), la aparcería, y una herramienta o pantalla para registrar retornos.
+* **Límites conocidos:** las rutas que solo protege el trigger (overloads de 1 y 4 parámetros de `sp_procesar_salida_ganado`,
+  `UPDATE` directo) están listadas en el runbook; aprobar una venta que ya estaba pendiente falla con `P0098`. Deuda:
+  `sp_move_livestock` puede cambiar de lote a un animal con renglón `OPEN`.
+* **Desplegada en producción el 2026-11-05** (hosting3m_db, PG 15.4): dry run con las 4 anclas OK, respaldo previo, state_check before/applied OK, huellas de datos idénticas, apply COMMITTED. Paso 5b: se quitó UPDATE al modelo cattle_movement_event_animals (queda SELECT, INSERT, GETONE, GETALL). Seed del prototipo aplicado en la empresa 3 (31 animales, 3 movimientos, 31 OPEN). P0098 probado en producción y verificado por el canal real (el agente relata "fuera en repasto"). business_model=CRIA pendiente de confirmar con el dueño.
+
 ### 🐑 Selección FIFO para ventas de animales no identificados (migración 097)
 
 * Las órdenes pueden seleccionar por lote y categoría una cantidad exacta de animales no bovinos sin identificadores,
