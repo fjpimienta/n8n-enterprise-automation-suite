@@ -4,12 +4,12 @@
   --exp-accent: var(--accent, #1f6b3f);
   --exp-accent-strong: var(--accent-strong, #14532d);
   --exp-accent-soft: var(--accent-soft, #e8f3ec);
-  --exp-ink: #1a2234;
-  --exp-muted: #596273;
-  --exp-border: #e3e7ee;
-  --exp-surface: #fff;
-  --exp-bg: #f5f7f9;
-  --exp-danger: #b42318;
+  --exp-ink: var(--exp-x-ink, #1a2234);
+  --exp-muted: var(--exp-x-muted, #596273);
+  --exp-border: var(--exp-x-border, #e3e7ee);
+  --exp-surface: var(--exp-x-surface, #fff);
+  --exp-bg: var(--exp-x-bg, #f5f7f9);
+  --exp-danger: var(--exp-x-danger, #b42318);
   font-variant-numeric: tabular-nums;
 }
 .exp-card { background: var(--exp-surface); border: 1px solid var(--exp-border); border-radius: 14px; padding: 1rem 1.1rem; min-width: 0; }

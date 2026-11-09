@@ -1,0 +1,75 @@
+@if (canViewAmounts()) {
+<div class="exp-screen exp-livestock">
+    <div class="exp-toolbar">
+        <div class="exp-field">
+            <span class="exp-label">Periodo</span>
+            <exp-period-chips [options]="presets" [value]="preset()" ariaLabel="Periodo" (valueChange)="setPreset($event)"></exp-period-chips>
+        </div>
+    </div>
+
+    @if (isEmptyLoading()) {
+    <div class="exp-state" role="status"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Cargando información financiera…</div>
+    } @else {
+    <div class="exp-grid-kpi">
+        <exp-kpi-card label="Gasto del periodo" [value]="money(periodTotal())" [deltaText]="deltaText()" [tone]="deltaTone()" [hint]="deltaHint()"></exp-kpi-card>
+        <exp-kpi-card label="Valor estimado del hato" [value]="money(value())" [hint]="priceHint()"></exp-kpi-card>
+        <exp-kpi-card label="Balance neto acumulado" [value]="money(net())" hint="Acumulado: valor estimado menos todo el gasto"></exp-kpi-card>
+        <exp-kpi-card label="Gasto por cabeza" [value]="money(perHeadValue())" [hint]="heads() + ' cabezas · gasto del periodo'"></exp-kpi-card>
+    </div>
+
+    @if (noUpp(); as none) {
+    <div class="exp-alert warn" role="status">
+        <strong>{{ none.heads }} de {{ heads() }} animales ({{ formatPercent(noUppPct()) }}) sin UPP asignada.</strong>
+        Valor estimado: {{ money(none.value) }} — esta cifra no aparece en el balance por UPP de abajo.
+    </div>
+    }
+
+    <div class="exp-card mb-3">
+        <h3 class="exp-card-title">Balance por UPP</h3>
+        <p class="exp-card-sub">Acumulado · incluye todas las fechas, sin importar el periodo elegido.</p>
+        <div class="exp-table-wrap">
+            <table class="exp-table">
+                <thead><tr>
+                    <th scope="col">UPP</th><th scope="col" class="r">Cabezas</th><th scope="col" class="r">Valor estimado</th>
+                    <th scope="col" class="r">Gasto</th><th scope="col">Gasto sobre valor</th><th scope="col" class="r">Balance</th>
+                </tr></thead>
+                <tbody>
+                    @for (r of uppRows(); track r.key) {
+                    <tr>
+                        <td>{{ r.label }}</td>
+                        <td class="r">{{ r.kind === 'general' ? '—' : r.heads }}</td>
+                        <td class="r">{{ r.kind === 'general' ? '—' : money(r.value) }}</td>
+                        <td class="r">{{ money(r.spend) }}</td>
+                        <td>
+                            @if (r.spendOverValuePct !== null) {
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="exp-meter flex-grow-1" aria-hidden="true"><span [style.width.%]="meterWidth(r.spendOverValuePct)"></span></div>
+                                <span class="exp-num text-nowrap">{{ formatPercent(r.spendOverValuePct) }}</span>
+                            </div>
+                            } @else { <span class="exp-muted">—</span> }
+                        </td>
+                        <td class="r">{{ money(r.balance) }}</td>
+                    </tr>
+                    } @empty {
+                    <tr><td colspan="6" class="exp-state">@if (noUpp()) { Todos los animales están sin UPP asignada. } @else { No hay datos de UPP para mostrar. }</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="exp-grid-2">
+        <div class="exp-card">
+            <h3 class="exp-card-title">Gasto por tipo</h3>
+            <p class="exp-card-sub">Del periodo elegido.</p>
+            <exp-share-bar-list [items]="typeItems()" emptyText="Sin gastos en el periodo."></exp-share-bar-list>
+        </div>
+        <div class="exp-card">
+            <h3 class="exp-card-title">{{ trendTitle() }}</h3>
+            <p class="exp-card-sub">Del periodo elegido.</p>
+            <exp-trend-bars [bars]="bars()" emptyText="Sin gastos en el periodo."></exp-trend-bars>
+        </div>
+    </div>
+    }
+</div>
+}
