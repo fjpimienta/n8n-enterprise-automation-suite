@@ -48,7 +48,7 @@
     </ul>
 
     @switch (activeTab()) {
-    @case ('BALANCE') { <app-expense-balance [categories]="categories()" [refreshToken]="refreshToken()"></app-expense-balance> }
+    @case ('BALANCE') { <app-expense-balance [categories]="categories()" [refreshToken]="refreshToken()" (openMovements)="activeTab.set('GASTOS')"></app-expense-balance> }
     @case ('GASTOS') {
     <app-expense-list [categories]="categories()" [refreshToken]="refreshToken()" (onVoided)="refreshToken.update(n => n + 1)"></app-expense-list>
     }
