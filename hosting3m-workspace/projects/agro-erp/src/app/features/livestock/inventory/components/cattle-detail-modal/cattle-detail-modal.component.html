@@ -278,32 +278,16 @@
                 }
 
                 @case ('COSTOS') {
+                <div class="exp-screen exp-livestock" style="background: transparent; padding: 0; overflow: visible;">
                 <!-- KPI cards -->
-                <div class="row g-3 mb-4">
-                    <div class="col-4">
-                        <div class="card border-0 bg-red-lt text-center p-3">
-                            <div class="text-muted small mb-1">Gasto Total</div>
-                            <div class="fs-3 font-weight-bold text-danger">
-                                ${{ totalCost() | number:'1.2-2' }}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-4">
-                        <div class="card border-0 bg-blue-lt text-center p-3">
-                            <div class="text-muted small mb-1">Peso Actual</div>
-                            <div class="fs-3 font-weight-bold text-blue">
-                                {{ selectedAnimal?.current_weight_kg }} kg
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-4">
-                        <div class="card border-0 bg-orange-lt text-center p-3">
-                            <div class="text-muted small mb-1">Costo / kg</div>
-                            <div class="fs-3 font-weight-bold text-orange">
-                                ${{ costPerKg() | number:'1.2-2' }}
-                            </div>
-                        </div>
-                    </div>
+                <div class="mb-4" style="display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));">
+                    <exp-kpi-card label="Gasto total" [value]="money(totalCost())"></exp-kpi-card>
+                    <exp-kpi-card label="Peso actual" [value]="weightKg() > 0 ? weightKg() + ' kg' : 'Sin peso'"></exp-kpi-card>
+                    <exp-kpi-card label="Costo por kg" [value]="weightKg() > 0 ? money(costPerKg()) : '—'"></exp-kpi-card>
+                    @if (weightKg() > 0) {
+                    <exp-kpi-card label="Valor estimado" [value]="money(estimatedValue())" [hint]="'Precio de referencia ' + money(refPrice) + '/kg'"></exp-kpi-card>
+                    <exp-kpi-card label="Balance" [value]="money(costBalance())" hint="Valor estimado menos gasto"></exp-kpi-card>
+                    }
                 </div>
 
                 <!-- Tabla de gastos -->
@@ -332,7 +316,7 @@
                             @for (exp of animalExpenses(); track exp.id) {
                             <tr>
                                 <td class="text-muted small">{{ exp.expense_date | date:'dd/MM/yy' }}</td>
-                                <td><span class="badge bg-secondary-lt">{{ exp.category }}</span></td>
+                                <td><span class="exp-pill">{{ categoryLabel(exp.category) }}</span></td>
                                 <td class="text-muted small">{{ exp.description || '—' }}</td>
                                 <td>
                                     @if (exp.health_event_id) {
@@ -357,6 +341,7 @@
                         (click)="showSubExpenseModal.set(true)">
                         + Registrar Gasto para este Animal
                     </button>
+                </div>
                 </div>
                 }
 
