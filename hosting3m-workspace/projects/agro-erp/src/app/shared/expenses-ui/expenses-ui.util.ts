@@ -24,3 +24,10 @@ export function formatDelta(delta: number | null): string {
   return `${rounded > 0 ? '+' : rounded < 0 ? '−' : ''}${PCT.format(Math.abs(rounded))}%`;
 }
 
+
+const MONEY = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+/** 10000.5 -> "$10,000.50" (MXN, es-MX); "—" when there is no finite value. */
+export function formatMoney(value: number | null | undefined): string {
+  return value === null || value === undefined || !Number.isFinite(value) ? '—' : MONEY.format(value);
+}
