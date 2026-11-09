@@ -1,0 +1,10 @@
+services:
+  jwt-service:
+    env_file: !override
+      - .env.dev
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
+  n8n:
+    env_file: !override
+      - .env.dev
