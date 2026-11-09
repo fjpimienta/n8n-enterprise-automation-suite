@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { AgriExpense, ExpenseInput } from '@core/models/agri-expense.model';
 import { emptyExpenseInput } from './expense.util';
 import {
-  addDays, averagePerDay, buildTrendBars, dateShortcutOf, daysInRange, deltaPercent, elapsedDays, filterExpenses,
+  addDays, averagePerDay, buildTrendBars, comparisonFor, dateShortcutOf, daysInRange, deltaPercent, elapsedDays, filterExpenses,
   formatDelta, formatPercent, grainForSpan, isCaptureReady, previousRange, rangeForPreset, sharePercent, shortPeriodLabel,
 } from './expense-view.util';
 
@@ -132,5 +132,28 @@ describe('capture', () => {
     expect(dateShortcutOf('2026-10-20', '2026-10-20')).toBe('TODAY');
     expect(dateShortcutOf('2026-10-19', '2026-10-20')).toBe('YESTERDAY');
     expect(dateShortcutOf('2026-10-01', '2026-10-20')).toBe('OTHER');
+  });
+});
+
+describe('comparison with the previous period', () => {
+  const nov = { from: '2026-11-01', to: '2026-11-30' };
+  it('month in progress compares the same elapsed days of the previous month, by day', () => {
+    expect(comparisonFor('MONTH', nov, '2026-11-09')).toEqual({
+      kind: 'range', range: { from: '2026-10-01', to: '2026-10-09' }, grain: 'DAY', label: 'vs. mismos días del mes anterior' });
+  });
+  it('caps the cut to the last day of a shorter previous month', () => {
+    const c = comparisonFor('MONTH', { from: '2026-03-01', to: '2026-03-31' }, '2026-03-31');
+    expect(c).toMatchObject({ kind: 'range', range: { from: '2026-02-01', to: '2026-02-28' }, grain: 'DAY' });
+  });
+  it('quarter and year in progress have no like-for-like cut', () => {
+    expect(comparisonFor('QUARTER', { from: '2026-10-01', to: '2026-12-31' }, '2026-11-09')).toEqual({ kind: 'in-progress' });
+    expect(comparisonFor('YEAR', { from: '2026-01-01', to: '2026-12-31' }, '2026-11-09')).toEqual({ kind: 'in-progress' });
+    expect(comparisonFor('CUSTOM', { from: '2026-11-01', to: '2026-11-30' }, '2026-11-09')).toEqual({ kind: 'in-progress' });
+  });
+  it('closed periods keep the whole previous period', () => {
+    expect(comparisonFor('CUSTOM', { from: '2026-09-10', to: '2026-09-19' }, '2026-11-09')).toEqual({
+      kind: 'range', range: { from: '2026-08-31', to: '2026-09-09' }, grain: null, label: 'vs. periodo anterior' });
+    expect(comparisonFor('MONTH', { from: '2026-09-01', to: '2026-09-30' }, '2026-11-09')).toMatchObject({
+      kind: 'range', range: { from: '2026-08-01', to: '2026-08-31' }, grain: null });
   });
 });

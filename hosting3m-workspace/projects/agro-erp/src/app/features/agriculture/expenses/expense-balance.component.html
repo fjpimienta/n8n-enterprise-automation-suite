@@ -53,7 +53,7 @@
     <!-- KPIs -->
     <div class="exp-grid-kpi">
         <exp-kpi-card label="Total del periodo" [value]="money(b.totalAmount)" [deltaText]="deltaText()" [tone]="deltaTone()"
-            [hint]="deltaText() ? 'vs. periodo anterior' : 'Sin anulados'"></exp-kpi-card>
+            [hint]="deltaHint()"></exp-kpi-card>
         <exp-kpi-card label="Promedio por día" [value]="money(avgPerDay())" hint="Días transcurridos del periodo"></exp-kpi-card>
         <exp-kpi-card label="Número de gastos" [value]="'' + b.expenseCount" hint="Vigentes"></exp-kpi-card>
         <exp-kpi-card label="% facturado" [value]="invoicedText()" [hint]="invoicedPct() === null ? 'No disponible para este rango' : 'Del número de gastos'"></exp-kpi-card>

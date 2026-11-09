@@ -25,6 +25,7 @@ import {
   validateBalanceRange,
 } from '../utils/expense.util';
 import {
+  Comparison,
   DateRange,
   PERIOD_PRESETS,
   PeriodPreset,
@@ -35,7 +36,7 @@ import {
   formatDelta,
   formatPercent,
   grainForSpan,
-  previousRange,
+  comparisonFor,
   rangeForPreset,
   sharePercent,
 } from '../utils/expense-view.util';
@@ -82,6 +83,8 @@ export class ExpenseBalanceComponent {
   filterError = signal<string | null>(null);
 
   previous = signal<ExpenseBalance | null>(null);
+  /** What the total is compared with (null until loaded). Never a range of a different length. */
+  comparison = signal<Comparison | null>(null);
   invoicedPct = signal<number | null>(null);
 
   summary = signal<ExpenseSummaryRow[]>([]);
@@ -114,6 +117,12 @@ export class ExpenseBalanceComponent {
     if (!b || !p) return 'flat';
     const d = deltaPercent(b.totalAmount, p.totalAmount);
     return d === null || Math.round(d * 10) === 0 ? 'flat' : d > 0 ? 'up' : 'down';
+  });
+  deltaHint = computed(() => {
+    const c = this.comparison();
+    if (!c) return 'Sin anulados';
+    if (c.kind === 'in-progress') return 'Periodo en curso';
+    return this.deltaText() ? c.label : 'Sin anulados';
   });
   invoicedText = computed(() => formatPercent(this.invoicedPct()));
   bars = computed(() => {
@@ -168,6 +177,7 @@ export class ExpenseBalanceComponent {
   private clearData() {
     this.balance.set(null);
     this.previous.set(null);
+    this.comparison.set(null);
     this.invoicedPct.set(null);
     this.summary.set([]);
     this.summaryError.set(null);
@@ -272,6 +282,7 @@ export class ExpenseBalanceComponent {
     this.summaryLoading.set(true);
     this.summaryError.set(null);
     this.previous.set(null);
+    this.comparison.set(null);
     this.invoicedPct.set(null);
     const live = () => seq === this.seq; // a newer query or a company change won
 
@@ -285,13 +296,18 @@ export class ExpenseBalanceComponent {
       this.loadError.set(error?.message || 'No se pudo cargar el balance de gastos.');
     }).finally(() => { if (live()) this.isLoading.set(false); });
 
-    // Previous equivalent period: only decorates the total card.
-    const prev = snapRangeToGrain(...this.prevArgs(preset, query));
-    this.api.getExpenseBalance({ ...query, dateFrom: prev.from, dateTo: prev.to }).then(p => {
-      if (live()) this.previous.set(p);
-    }).catch((error: any) => {
-      console.error('[Agro-ERP] No se pudo cargar el periodo anterior:', error);
-    });
+    // Like-for-like comparison: only decorates the total card. In-progress quarter/year: no request, no delta.
+    const comparison = comparisonFor(preset, { from: query.dateFrom, to: query.dateTo }, todayCdmx());
+    this.comparison.set(comparison);
+    if (comparison.kind === 'range') {
+      const grain = comparison.grain ?? query.grain;
+      const prev = comparison.grain ? comparison.range : snapRangeToGrain(comparison.range.from, comparison.range.to, grain);
+      this.api.getExpenseBalance({ ...query, grain, dateFrom: prev.from, dateTo: prev.to }).then(p => {
+        if (live()) this.previous.set(p);
+      }).catch((error: any) => {
+        console.error('[Agro-ERP] No se pudo cargar el periodo anterior:', error);
+      });
+    }
 
     // Invoiced share: counts over the complete list of the range; hidden when the page may be cut.
     this.api.getExpenses({ dateFrom: query.dateFrom, dateTo: query.dateTo, plantationId: query.plantationId, lotId: query.lotId, categoryId: null })
@@ -314,11 +330,6 @@ export class ExpenseBalanceComponent {
       this.summary.set([]);
       this.summaryError.set(error?.message || 'No se pudo cargar el detalle.');
     }).finally(() => { if (live()) this.summaryLoading.set(false); });
-  }
-
-  private prevArgs(preset: PeriodPreset, q: ExpenseBalanceQuery): [string, string, ExpenseGrain] {
-    const p = previousRange(preset, { from: q.dateFrom, to: q.dateTo });
-    return [p.from, p.to, q.grain];
   }
 
   exportCsv() {
