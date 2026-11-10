@@ -1,7 +1,6 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TenantService } from 'core-auth';
-import { SaleService } from '@core/services/sale.service';
 import { PAYMENT_METHOD_LABEL, SALE_MODE_LABEL, SaleIncome } from '@core/models/sale.model';
 import { Livestock } from '../../../models/livestock.model';
 import { formatCalendarDate } from '@shared/utils/authorization-deadline.util';
@@ -26,57 +25,23 @@ interface IncomeRow {
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class SaleIncomeLogComponent {
-  private saleService = inject(SaleService);
   private tenantService = inject(TenantService);
 
   /** Full herd of the active tenant (sold animals included), used for identifier and category. */
   cattleData = input<Livestock[]>([]);
   /** Herd of the active module (CRIA/ENGORDA/REPRODUCCION), same scope as Cattle Event Log. */
   moduleCattleData = input<Livestock[]>([]);
-  /** Bumped by the dashboard on every explicit refresh. */
-  refreshToken = input<number>(0);
+  /** Sale incomes loaded by the dashboard (shared with the Resumen: this component never fetches). */
+  incomes = input<readonly SaleIncome[]>([]);
+  isLoading = input<boolean>(false);
+  loadError = input<string | null>(null);
 
   readonly saleModeLabel = SALE_MODE_LABEL;
   readonly paymentMethodLabel = PAYMENT_METHOD_LABEL;
 
-  private rawRows = signal<SaleIncome[]>([]);
-  public isLoading = signal<boolean>(false);
-  public loadError = signal<string | null>(null);
+  private rawRows = computed(() => this.incomes());
   public dateFrom = signal<string>('');
   public dateTo = signal<string>('');
-
-  private requestSeq = 0;
-
-  constructor() {
-    effect(() => {
-      const tenantId = this.tenantService.activeTenantId();
-      this.refreshToken();
-      if (!tenantId) {
-        this.rawRows.set([]);
-        this.loadError.set('No hay un rancho activo — no se pueden mostrar los ingresos por venta.');
-        return;
-      }
-      this.load();
-    });
-  }
-
-  /** Latest-wins: an older response that resolves after a newer request is discarded. */
-  public async load(): Promise<void> {
-    const seq = ++this.requestSeq;
-    this.isLoading.set(true);
-    this.loadError.set(null);
-    try {
-      const rows = await this.saleService.getSaleIncome();
-      if (seq === this.requestSeq) this.rawRows.set(rows);
-    } catch (error: any) {
-      if (seq !== this.requestSeq) return;
-      // The last good data is kept; only the error is reported (message as-is).
-      console.error('[Agro-ERP] Error al cargar ingresos por venta:', error);
-      this.loadError.set(error?.message || 'No se pudieron cargar los ingresos por venta.');
-    } finally {
-      if (seq === this.requestSeq) this.isLoading.set(false);
-    }
-  }
 
   /**
    * Second tenant layer: only rows whose own `tenant_id` is the active tenant. Module scope:

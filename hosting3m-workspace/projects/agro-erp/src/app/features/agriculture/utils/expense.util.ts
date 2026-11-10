@@ -13,7 +13,10 @@ import type {
   ExpenseSummaryRow,
 } from '@core/models/agri-expense.model';
 import type { CsvColumn } from '@shared/utils/csv-export.util';
+import { formatMoney } from '@shared/expenses-ui/expenses-ui.util';
 import { blankToNull, toInt, toNumber } from './agri.util';
+
+export { formatMoney };
 
 // ---------------------------------------------------------------------------------------------------
 // Roles (always the role of the ACTIVE company: tenantService.activeTenant()?.role, never the JWT role)
@@ -63,13 +66,7 @@ export function parseAmountText(text: string | null | undefined, maxDecimals: nu
   return decimals.length > maxDecimals ? NaN : Number(value);
 }
 
-const MONEY = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const AMOUNT = new Intl.NumberFormat('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-/** 10000.5 -> "$10,000.50" (display). */
-export function formatMoney(value: number | null | undefined): string {
-  return value === null || value === undefined || !Number.isFinite(value) ? '—' : MONEY.format(value);
-}
 
 /** 10000.5 -> "10,000.50" (what the amount input shows after leaving it). */
 export function formatAmountInput(value: number): string {

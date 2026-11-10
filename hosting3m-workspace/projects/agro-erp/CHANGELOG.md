@@ -35,6 +35,49 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
   `REGULARIZACION_PADRON`; memoria de WhatsApp por teléfono; comas en `Guardar Pregunta Pendiente`; 197 bovinos de la empresa 5
   sin UPP; 1 BUFALO con categoría NOVILLO (calidad de datos); catálogo de etapas sin especies no bovinas.
 
+### 🐄 Valor estimado y biomasa del hato: sin animales dados de baja por mortandad (solo frontend)
+
+* Un animal en `BAJA_MORTANDAD` (baja ya aprobada) deja de sumar al «Valor estimado del hato» y a la «Biomasa total» del dashboard, y al valor del Resumen de gastos (valor del hato, balance por UPP y balance neto). Ambos cálculos usan el mismo criterio (`isValuedHead`) y coinciden.
+* Sin cambios: conteos de cabezas, «Gasto por cabeza», filtro de inventario, y bajas / pérdida estimada del bloque de mortandad (que ahora indica que esas bajas ya no suman al valor). Los roles sin permiso de montos siguen sin ver cifras financieras.
+
+### 🌴 Tablero de palma: resumen de gasto (solo frontend)
+
+* La tarjeta «Gasto del mes» del tablero de palma pasa a un resumen de gasto para ADMIN / OWNER: periodo (Este mes / Trimestre / Año), alcance (toda la empresa o la plantación activa), cuatro tarjetas con variación contra el mismo corte del periodo anterior, tendencia, «En qué se gasta» y «Por plantación». Cada bloque carga y falla por separado; un error se muestra como error, nunca como $0.
+
+### 🐄 Gastos y resultado de ganadería: correcciones y bloque «Resultado del periodo» (solo frontend)
+
+* **Estilos:** las clases privadas de los componentes compartidos de gastos llevan el prefijo `exp-`; la leyenda de las barras chocaba con `.legend` de Tabler y se partía letra por letra.
+* **Categorías:** «Gasto por tipo» agrupa por el valor real de la categoría (sin acentos ni mayúsculas; ALIMENTO/ALIMENTOS = Alimentación), hasta 6 grupos más «Otros»; vacía = «Sin categoría». Los chips del historial salen de las categorías existentes.
+* **Resultado del periodo (Resumen, solo ADMIN):** ingresos por ventas, gasto, resultado con signo, cabezas vendidas, bajas por mortandad (acumulado, sin fecha de baja confiable) y ventas del periodo. Los ingresos se cargan una sola vez en el dashboard y se comparten con la pestaña Ingresos.
+
+### 🐄 Gastos de ganadería: nuevo diseño de Resumen, Gastos, Costo por animal y captura (solo frontend)
+
+*Sin migraciones, sin cambios de workflows ni de contratos de API. Reutiliza los componentes de `shared/expenses-ui/` de Agricultura.*
+* **Resumen (solo ADMIN de la empresa activa):** periodo (Este mes / Trimestre / Año), tarjetas de gasto del periodo (con variación
+  contra el mismo corte del periodo anterior, nunca contra un periodo de otra duración), valor estimado del hato (con el precio de
+  referencia), balance neto acumulado y gasto por cabeza; «Balance por UPP» (acumulado) con el renglón de gastos generales,
+  «Gasto por tipo» y tendencia. Reemplaza la gráfica de barras de capitalización contra gasto.
+* **Gastos:** búsqueda, chips de categoría, rango de fechas, «Solo gastos generales» y panel de detalle; tarjetas en pantallas angostas.
+* **Costo por animal:** tabla acumulada con costo por kg, valor estimado, balance y marca «En riesgo» (balance menor al 10 % del
+  valor estimado); orden por mayor gasto o peor balance. Sin peso no se marca como riesgo.
+* **Captura de gasto:** monto grande, categorías en chips y campos opcionales en «Más detalles»; mismos campos, validaciones y payload.
+* **Pestaña Costos del animal:** tarjetas con gasto total, peso, costo por kg, valor estimado y balance.
+* Los cálculos viven en `features/livestock/expenses/livestock-expense.util.ts` (funciones puras con sus pruebas). El dashboard conserva
+  la carga de datos, el escudo de errores silenciosos y la restricción por rol.
+
+### 🌴 Gastos agrícolas: nuevo diseño de Resumen, Movimientos y captura (solo frontend)
+
+*Sin migraciones, sin cambios de workflows ni de contratos de API.*
+* **Resumen:** periodo (Este mes / Trimestre / Año / Personalizado), 4 tarjetas (total con variación contra el periodo
+  anterior, promedio por día, número de gastos, % facturado), tendencia por día o mes, «En qué se gasta», «Por plantación»,
+  «Lotes con más gasto» y la tabla de detalle en «Ver detalle». Los totales siguen viniendo del balance; cada bloque carga
+  y falla por separado.
+* **Movimientos:** búsqueda (sobre lo cargado), chips de categoría, «Anulados (n)», panel de detalle con «Anular gasto»
+  (mismo flujo y validación) y tarjetas en pantallas angostas.
+* **Captura:** monto grande, categoría en chips, atajos Hoy / Ayer / Otra fecha y los campos opcionales en «Más detalles».
+  Mismos campos, validación y payload. El EDITOR conserva la vista de solo captura.
+* Componentes reutilizables en `shared/expenses-ui/` (acento configurable con `--accent`).
+
 ### 🐄 Repasto con retorno: movimiento por guía a una UPP de tercero (migración 098) — prototipo en la empresa 3
 
 *Runbook: `database/migrations/098_RUNBOOK.md`. Solo base de datos: sin cambios de workflows ni de frontend.*

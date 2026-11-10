@@ -4,7 +4,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { CattleApiService } from '@core/services/cattle-api.service';
 import { CattleDataService } from '@core/services/cattle-data.service';
-import { NgApexchartsModule } from 'ng-apexcharts';
+import { SaleService } from '@core/services/sale.service';
+import type { SaleIncome } from '@core/models/sale.model';
 import { ReproductiveDashboardComponent } from '../reproductive-dashboard/reproductive-dashboard.component';
 import { EngordaDashboardComponent } from '../engorda-dashboard/engorda-dashboard.component';
 import { ReproduccionDashboardComponent } from '../reproduccion-dashboard/reproduccion-dashboard.component';
@@ -19,7 +20,7 @@ import { TableFooterComponent } from '@shared/components/table-footer/table-foot
 import { PagedTable } from '@shared/utils/paged-table.util';
 import { hasDisplayableMetadata } from '@shared/utils/metadata-view.util';
 import { withoutFinancialMetadata } from '@shared/utils/financial-metadata.util';
-import { HERD_STATUS_FILTER_OPTIONS, HerdStatusFilter, filterByHerdStatus } from '@shared/utils/herd-status.util';
+import { HERD_STATUS_FILTER_OPTIONS, HerdStatusFilter, filterByHerdStatus, valuedBiomassKg } from '@shared/utils/herd-status.util';
 import { SPECIES_FILTER_ALL, deriveAvailableSpecies, getAnimalSpecies } from '@shared/utils/species.util';
 import { LOT_FILTER_ALL, deriveAvailableLots, getAnimalLot } from '@shared/utils/lot.util';
 import { isAutoRefreshDue } from '@shared/utils/auto-refresh.util';
@@ -28,11 +29,16 @@ import { ThemeService } from '@core/services/theme.service';
 import { Expense } from '../../../models/expense.model';
 import { BusinessModel } from '../../../models/livestock.model';
 import { Paginator } from '../../utils/paginator';
+import { REFERENCE_PRICE_PER_KG } from '../../../expenses/livestock-expense.util';
+import { isMortality, scopeIncomes } from '../../../expenses/livestock-result.util';
+import { LivestockExpenseSummaryComponent } from '../../../expenses/components/livestock-expense-summary/livestock-expense-summary.component';
+import { LivestockExpenseHistoryComponent } from '../../../expenses/components/livestock-expense-history/livestock-expense-history.component';
+import { LivestockAnimalCostsComponent } from '../../../expenses/components/livestock-animal-costs/livestock-animal-costs.component';
 
 @Component({
   selector: 'app-main-dashboard',
   standalone: true,
-  imports: [CommonModule, NgApexchartsModule, ReproductiveDashboardComponent, EngordaDashboardComponent, ReproduccionDashboardComponent, ExpenseModalComponent, ComplianceAlertCardComponent, MetadataDetailModalComponent, CattleEventLogComponent, SaleIncomeLogComponent, TableToolbarComponent, TableFooterComponent],
+  imports: [CommonModule, LivestockExpenseSummaryComponent, LivestockExpenseHistoryComponent, LivestockAnimalCostsComponent, ReproductiveDashboardComponent, EngordaDashboardComponent, ReproduccionDashboardComponent, ExpenseModalComponent, ComplianceAlertCardComponent, MetadataDetailModalComponent, CattleEventLogComponent, SaleIncomeLogComponent, TableToolbarComponent, TableFooterComponent],
   templateUrl: './main-dashboard.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -40,18 +46,25 @@ export class MainDashboardComponent implements OnInit {
   private cattleApi = inject(CattleApiService);
   private cattleDataService = inject(CattleDataService);
   private complianceService = inject(ComplianceService);
+  private saleService = inject(SaleService);
   private tenantService = inject(TenantService);
   public themeService = inject(ThemeService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private destroyRef = inject(DestroyRef);
 
-  public PRECIO_KILO = 65.00;
+  public PRECIO_KILO = REFERENCE_PRICE_PER_KG;
 
   // Misma fuente que cattle-list, adg-alerts, etc. — evita que el dashboard muestre
   // una copia del hato desincronizada del resto de la app.
   public cattleList = this.cattleDataService.cattleList;
   public expensesList = signal<Expense[]>([]);
+
+  // Sale incomes (cattle_sale_income, ADMIN only): loaded ONCE here and shared by the Resumen and the Ingresos tab.
+  // A failed refresh keeps the last data and only reports the error; a company change clears them first.
+  public saleIncomes = signal<SaleIncome[]>([]);
+  public incomesLoaded = signal<boolean>(false);
+  public incomesError = signal<string | null>(null);
 
   // `isLoading`: SOLO la carga inicial / cambio de tenant (datos aún no visibles por primera
   // vez). `isRefreshing`: refresco manual o automático de datos ya visibles — nunca oculta ni
@@ -265,12 +278,35 @@ export class MainDashboardComponent implements OnInit {
       // 🔒 cattle_expenses es financiero y no-ADMIN no debe verlo (ver fix de Cattle Event Log) —
       // ni siquiera se intenta el fetch para un rol sin acceso: evita un 403 inútil contra el
       // gateway y la fila de `expensesList` nunca llega a existir en memoria para ese rol.
-      const [, expensesRaw] = await Promise.all([
+      const isAdmin = this.isAdminForActiveTenant();
+      if (kind === 'initial') {
+        // Company change / first load: nothing of the previous company may stay visible while this one loads.
+        this.saleIncomes.set([]);
+        this.incomesLoaded.set(false);
+        this.incomesError.set(null);
+      }
+      // Incomes never fail the whole load: their own error is reported separately (see incomesError).
+      const incomesAttempt: Promise<{ ok: true; rows: SaleIncome[] } | { ok: false; message: string } | null> = isAdmin
+        ? this.saleService.getSaleIncome().then(
+            rows => ({ ok: true as const, rows }),
+            (error: any) => ({ ok: false as const, message: error?.message || 'No se pudieron cargar los ingresos por venta.' }))
+        : Promise.resolve(null);
+      const [, expensesRaw, incomesResult] = await Promise.all([
         cattleReload,
-        this.isAdminForActiveTenant() ? this.cattleApi.getExpenses() : Promise.resolve([])
+        isAdmin ? this.cattleApi.getExpenses() : Promise.resolve([]),
+        incomesAttempt
       ]);
 
       if (seq !== this.dashboardLoadSeq) return; // una carga más reciente ya ganó — descartar sin tocar signals
+
+      if (incomesResult?.ok) {
+        this.saleIncomes.set(incomesResult.rows);
+        this.incomesLoaded.set(true);
+        this.incomesError.set(null);
+      } else if (incomesResult) {
+        console.error('Error al cargar ingresos por venta:', incomesResult.message);
+        this.incomesError.set(incomesResult.message);
+      }
 
       this.expensesList.set((Array.isArray(expensesRaw) ? expensesRaw : []) as Expense[]);
 
@@ -459,7 +495,7 @@ export class MainDashboardComponent implements OnInit {
   // cambio de módulo/especie/lote/rancho activo debe regresar a la página 1. PagedTable la
   // combina internamente con su propio `searchQuery` — no hace falta llamar `reset()` a mano
   // en ningún setter, a diferencia del `Paginator` legacy.
-  private operationalPanelResetKey = computed(() => ({
+  public readonly operationalPanelResetKey = computed(() => ({
     tab: this.activeTab(),
     species: this.selectedSpecies(),
     lot: this.selectedLot(),
@@ -529,7 +565,6 @@ export class MainDashboardComponent implements OnInit {
 
   private currentDataset = computed(() => {
     const tab = this.activeSubTab();
-    if (tab === 'GASTOS') return this.filteredExpensesList();
     if (tab === 'INVENTARIO') return this.inventorySearchedList();
     return this.filteredCattleList();
   });
@@ -540,11 +575,25 @@ export class MainDashboardComponent implements OnInit {
     return this.inventorySearchedList().slice(startIndex, startIndex + this.pagination.pageSize());
   });
 
-  public paginatedExpensesList = computed(() => {
-    if (this.activeSubTab() !== 'GASTOS') return [];
-    const startIndex = (this.pagination.currentPage() - 1) * this.pagination.pageSize();
-    return this.filteredExpensesList().slice(startIndex, startIndex + this.pagination.pageSize());
+  /** Number of distinct animals with linked expenses (tab badge). */
+  public animalsWithExpensesCount = computed(() =>
+    new Set(this.filteredExpensesList().filter(e => !!e.livestock_id).map(e => e.livestock_id)).size
+  );
+
+  /** Animals of the module / species / lot filter, whatever their herd status (sold and dead included). */
+  public scopedAnyStatusIds = computed(() => new Set(this.scopedCattleList().map(a => a.id)));
+  private allCattleIds = computed(() => new Set(this.cattleList().map(a => a.id)));
+
+  /** Incomes of the active company inside the current filter (see scopeIncomes). */
+  public scopedIncomes = computed(() => {
+    if (!this.isAdminForActiveTenant()) return [];
+    const tenant = Number(this.tenantService.activeTenantId());
+    const noFilters = this.selectedSpecies() === SPECIES_FILTER_ALL && this.selectedLot() === LOT_FILTER_ALL;
+    return scopeIncomes(this.saleIncomes(), Number.isFinite(tenant) ? tenant : null, this.scopedAnyStatusIds(), this.allCattleIds(), noFilters);
   });
+
+  /** Dead animals (BAJA_MORTANDAD) in the current filter. There is no reliable date of death on the client, so the figures are accumulated. */
+  public mortalityCattleList = computed(() => (this.isAdminForActiveTenant() ? this.scopedCattleList().filter(isMortality) : []));
 
   public setTab(tab: BusinessModel) {
     // Solo navega — activeTab es un computed derivado de la URL, se recalcula solo.
@@ -586,161 +635,11 @@ export class MainDashboardComponent implements OnInit {
   }
 
   public biomasaTotal = computed(() => {
-    return this.filteredCattleList().reduce((acc, curr) => acc + Number(curr.current_weight_kg || 0), 0);
+    return valuedBiomassKg(this.filteredCattleList());
   });
 
   public capitalizacionTotal = computed(() => {
     return this.biomasaTotal() * this.PRECIO_KILO;
   });
 
-  /** Ranking de gastos por animal: agrupa filteredExpensesList por livestock_id y cruza con cattleList */
-  public animalCostSummary = computed(() => {
-    const expenses = this.filteredExpensesList().filter(
-      (e): e is Expense & { livestock_id: string } => !!e.livestock_id
-    );
-    const grouped = new Map<string, { total: number; count: number }>();
-
-    for (const e of expenses) {
-      const existing = grouped.get(e.livestock_id) ?? { total: 0, count: 0 };
-      grouped.set(e.livestock_id, {
-        total: existing.total + Number(e.amount || 0),
-        count: existing.count + 1
-      });
-    }
-
-    return Array.from(grouped.entries())
-      .map(([livestockId, stats]) => {
-        const animal = this.cattleList().find(a => a.id === livestockId);
-        const weightKg = Number(animal?.current_weight_kg || 0);
-        const valorEstimado = weightKg * this.PRECIO_KILO;
-        return {
-          livestockId,
-          rfid:        animal?.rfid_siniiga ?? 'Desconocido',
-          numero_fuego: animal?.numero_fuego ?? '',
-          category:    animal?.category ?? '',
-          weightKg,
-          total:       stats.total,
-          count:       stats.count,
-          costPerKg:   weightKg > 0 ? stats.total / weightKg : 0,
-          valorEstimado,
-          balance:     valorEstimado - stats.total
-        };
-      })
-      .sort((a, b) => b.total - a.total);
-  });
-
-  public totalAnimalCosts = computed(() =>
-    this.animalCostSummary().reduce((sum, row) => sum + row.total, 0)
-  );
-
-  public porAnimalTable = new PagedTable(
-    () => this.animalCostSummary(),
-    () => this.operationalPanelResetKey(),
-    { search: { fields: row => [row.rfid, row.numero_fuego, row.category] } }
-  );
-
-  /** Top 10 animales con más gasto registrado: balance (valor estimado - gasto) para detectar rendimiento negativo */
-  public animalBalanceChartOptions = computed(() => {
-    const rows = this.animalCostSummary().slice(0, 10);
-    return {
-      series: [{
-        name: 'Balance',
-        data: rows.map(r => Number(r.balance.toFixed(2)))
-      }],
-      xaxis: {
-        categories: rows.map(r => r.numero_fuego || `...${r.rfid.slice(-4)}`),
-        labels: { rotate: -45, style: { cssClass: 'text-muted font-monospace' } }
-      }
-    };
-  });
-
-  private static readonly SIN_UPP = 'Sin UPP Asignada';
-  private static readonly GASTOS_GENERALES = 'Gastos Generales';
-
-  /**
-   * Balance por UPP: cruza capitalización del hato (agrupado por `production_unit_id`, mostrando
-   * el `upp_code` oficial vía `vw_cattle_kpi`) contra los gastos vinculados a esos mismos animales.
-   * Se agrupa por `production_unit_id` — no por `upp_origen` (texto libre legacy, con huecos NULL
-   * en registros históricos que no reflejan la asignación real) — porque es el campo relacional
-   * real, validado por el trigger `fn_guard_livestock_production_unit`. Los gastos sin livestock_id
-   * (o cuyo animal no tiene UPP asignada) no pueden atribuirse a una UPP real y se agrupan aparte
-   * en "Gastos Generales".
-   */
-  public uppBalanceSummary = computed(() => {
-    const cattle = this.filteredCattleList();
-    const expenses = this.filteredExpensesList();
-
-    const grouped = new Map<string, { capitalizacion: number; cabezas: number; gasto: number }>();
-
-    for (const animal of cattle) {
-      const upp = (animal.production_unit_id && String(animal.upp_code ?? '').trim()) || MainDashboardComponent.SIN_UPP;
-      const entry = grouped.get(upp) ?? { capitalizacion: 0, cabezas: 0, gasto: 0 };
-      entry.capitalizacion += Number(animal.current_weight_kg || 0) * this.PRECIO_KILO;
-      entry.cabezas += 1;
-      grouped.set(upp, entry);
-    }
-
-    let gastosGenerales = 0;
-    for (const expense of expenses) {
-      const animal = expense.livestock_id ? cattle.find(a => a.id === expense.livestock_id) : null;
-      const upp = animal?.production_unit_id && String(animal.upp_code ?? '').trim();
-
-      if (upp) {
-        const entry = grouped.get(upp) ?? { capitalizacion: 0, cabezas: 0, gasto: 0 };
-        entry.gasto += Number(expense.amount || 0);
-        grouped.set(upp, entry);
-      } else {
-        gastosGenerales += Number(expense.amount || 0);
-      }
-    }
-
-    const rows = Array.from(grouped.entries())
-      .map(([upp, v]) => ({
-        upp,
-        capitalizacion: v.capitalizacion,
-        gasto:          v.gasto,
-        cabezas:        v.cabezas,
-        balance:        v.capitalizacion - v.gasto
-      }))
-      .sort((a, b) => b.capitalizacion - a.capitalizacion);
-
-    if (gastosGenerales > 0) {
-      rows.push({
-        upp: MainDashboardComponent.GASTOS_GENERALES,
-        capitalizacion: 0,
-        gasto: gastosGenerales,
-        cabezas: 0,
-        balance: -gastosGenerales
-      });
-    }
-
-    return rows;
-  });
-
-  /** Fila "Sin UPP Asignada" separada del chart: se muestra como tarjeta de alerta en vez de barra,
-   *  ya que su magnitud (mayoría del hato) aplasta visualmente a los UPP operativamente relevantes. */
-  public sinUppSummary = computed(() =>
-    this.uppBalanceSummary().find(row => row.upp === MainDashboardComponent.SIN_UPP)
-  );
-
-  // Filas que sí se grafican en el chart de Balance por UPP (excluye "Sin UPP Asignada")
-  public uppChartDisplayRows = computed(() =>
-    this.uppBalanceSummary().filter(row => row.upp !== MainDashboardComponent.SIN_UPP)
-  );
-
-  public uppChartOptions = computed(() => {
-    const rows = this.uppChartDisplayRows();
-    return {
-      series: [
-        { name: 'Capitalización', data: rows.map(r => Number(r.capitalizacion.toFixed(2))) },
-        { name: 'Gasto', data: rows.map(r => Number(r.gasto.toFixed(2))) }
-      ],
-      xaxis: { categories: rows.map(r => r.upp) },
-      colors: ['#2fb344', '#d63939']
-    };
-  });
-
-  public balanceNetoUpp = computed(() =>
-    this.uppBalanceSummary().reduce((sum, row) => sum + row.balance, 0)
-  );
 }

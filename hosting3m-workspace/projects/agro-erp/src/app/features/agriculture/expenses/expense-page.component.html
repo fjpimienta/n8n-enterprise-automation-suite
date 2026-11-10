@@ -14,9 +14,10 @@
     </div>
 
     @if (successMessage()) {
-    <div class="alert alert-success alert-dismissible" role="alert">
-        <i class="ti ti-check me-2"></i>{{ successMessage() }}
-        <button type="button" class="btn-close" (click)="successMessage.set(null)"></button>
+    <div class="alert alert-success alert-dismissible" role="status" aria-live="polite">
+        <i class="ti ti-check me-2" aria-hidden="true"></i>{{ successMessage() }}
+        <button type="button" class="btn btn-sm btn-outline-success ms-3" [disabled]="catalogsLoading()" (click)="openCapture()">Registrar otro</button>
+        <button type="button" class="btn-close" aria-label="Cerrar aviso" (click)="successMessage.set(null)"></button>
     </div>
     }
     @if (catalogError() && !isModalOpen()) {
@@ -42,13 +43,13 @@
     <ul class="nav nav-tabs mb-3">
         @for (tab of tabs(); track tab) {
         <li class="nav-item">
-            <a class="nav-link" [class.active]="activeTab() === tab" style="cursor: pointer;" (click)="activeTab.set(tab)">{{ tabLabels[tab] }}</a>
+            <button type="button" class="nav-link" [class.active]="activeTab() === tab" [attr.aria-current]="activeTab() === tab ? 'page' : null" (click)="activeTab.set(tab)">{{ tabLabels[tab] }}</button>
         </li>
         }
     </ul>
 
     @switch (activeTab()) {
-    @case ('BALANCE') { <app-expense-balance [categories]="categories()" [refreshToken]="refreshToken()"></app-expense-balance> }
+    @case ('BALANCE') { <app-expense-balance [categories]="categories()" [refreshToken]="refreshToken()" (openMovements)="activeTab.set('GASTOS')"></app-expense-balance> }
     @case ('GASTOS') {
     <app-expense-list [categories]="categories()" [refreshToken]="refreshToken()" (onVoided)="refreshToken.update(n => n + 1)"></app-expense-list>
     }

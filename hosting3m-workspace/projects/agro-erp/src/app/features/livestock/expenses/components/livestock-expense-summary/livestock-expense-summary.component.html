@@ -1,0 +1,138 @@
+@if (canViewAmounts()) {
+<div class="exp-screen exp-livestock">
+    <div class="exp-toolbar">
+        <div class="exp-field">
+            <span class="exp-label">Periodo</span>
+            <exp-period-chips [options]="presets" [value]="preset()" ariaLabel="Periodo" (valueChange)="setPreset($event)"></exp-period-chips>
+        </div>
+    </div>
+
+    @if (isEmptyLoading()) {
+    <div class="exp-state" role="status"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Cargando información financiera…</div>
+    } @else {
+    <div class="exp-grid-kpi">
+        <exp-kpi-card label="Gasto del periodo" [value]="money(periodTotal())" [deltaText]="deltaText()" [tone]="deltaTone()" [hint]="deltaHint()"></exp-kpi-card>
+        <exp-kpi-card label="Valor estimado del hato" [value]="money(value())" [hint]="priceHint()"></exp-kpi-card>
+        <exp-kpi-card label="Balance neto acumulado" [value]="money(net())" hint="Acumulado: valor estimado menos todo el gasto"></exp-kpi-card>
+        <exp-kpi-card label="Gasto por cabeza" [value]="money(perHeadValue())" [hint]="heads() + ' cabezas · gasto del periodo'"></exp-kpi-card>
+    </div>
+
+    <p class="exp-card-sub exp-explain">
+        <strong>Balance neto acumulado</strong> = valor estimado del hato actual menos todo el gasto.
+        @if (accumulated() !== null) { <strong>Resultado acumulado</strong> = todos los ingresos por venta menos todo el gasto: {{ signedMoney(accumulated()!) }}. }
+    </p>
+
+    <div class="exp-card mb-3" aria-live="polite">
+        <h3 class="exp-card-title">Resultado del periodo</h3>
+        @if (incomesError() && !incomesReady()) {
+        <div class="exp-alert err" role="alert">No se pudieron cargar los ingresos por venta: {{ incomesError() }} El resultado no está disponible.</div>
+        } @else if (!incomesReady()) {
+        <div class="exp-state" role="status"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Cargando ingresos por venta…</div>
+        } @else {
+        @if (incomesError()) {
+        <div class="exp-alert warn" role="status">No se pudieron actualizar los ingresos por venta. Se conserva la última información disponible.</div>
+        }
+        @if (result(); as r) {
+        <div class="exp-grid-kpi">
+            <exp-kpi-card label="Ingresos por ventas" [value]="money(r.income)" [deltaText]="incomeDeltaText()" [tone]="incomeTone()"
+                [hint]="incomeDeltaText() ? comparison()?.label ?? '' : 'Por fecha de venta'"></exp-kpi-card>
+            <exp-kpi-card label="Gasto del periodo" [value]="money(r.spend)" hint="Mismo gasto de arriba"></exp-kpi-card>
+            <exp-kpi-card label="Resultado (ingresos − gasto)" [value]="signedMoney(r.result)" [deltaText]="resultDeltaText()" [tone]="resultDeltaTone()"
+                [hint]="resultHint()"></exp-kpi-card>
+            <exp-kpi-card label="Cabezas vendidas" [value]="'' + r.soldHeads" hint="Ventas registradas en el periodo"></exp-kpi-card>
+        </div>
+        <div class="exp-grid-2">
+            <div class="exp-card">
+                <h3 class="exp-card-title">Bajas por mortandad</h3>
+                <p class="exp-card-sub">Acumulado · no hay fecha de baja confiable en los datos, por eso no se filtra por periodo.</p>
+                <div class="exp-mort">
+                    <div><span class="exp-muted">Bajas</span> <strong class="exp-num">{{ mortality().count }}</strong></div>
+                    <div><span class="exp-muted">Pérdida estimada</span> <strong class="exp-num">{{ money(mortality().estimatedLoss) }}</strong></div>
+                </div>
+                <div class="exp-muted small mt-1">Peso conocido × precio de referencia {{ money(pricePerKg()) }}/kg.
+                    @if (mortality().withoutWeight) { <strong>{{ mortality().withoutWeight }} sin peso</strong> (cuentan, pero suman $0.00). }
+                </div>
+                <div class="exp-muted small mt-1">Estas bajas ya no suman al valor estimado del hato.</div>
+            </div>
+            <div class="exp-card">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <h3 class="exp-card-title mb-0">Ventas del periodo</h3>
+                    <button type="button" class="exp-link" (click)="openSales.emit()">Ver ingresos</button>
+                </div>
+                @if (sales().length) {
+                <div class="exp-table-wrap mt-2">
+                    <table class="exp-table">
+                        <thead><tr><th scope="col">Fecha</th><th scope="col">Comprador</th><th scope="col">Animal</th><th scope="col" class="r">Monto</th></tr></thead>
+                        <tbody>
+                            @for (v of sales(); track v.id) {
+                            <tr><td class="text-nowrap">{{ shortDate(v.date) }}</td><td>{{ v.buyer }}</td><td>{{ v.tag }}</td><td class="r">{{ money(v.amount) }}</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                @if (salesCount() > sales().length) { <div class="exp-muted small mt-1">Mostrando {{ sales().length }} de {{ salesCount() }} ventas.</div> }
+                } @else {
+                <div class="exp-state">Sin ventas en el periodo.</div>
+                }
+            </div>
+        </div>
+        }
+        }
+    </div>
+
+    @if (noUpp(); as none) {
+    <div class="exp-alert warn" role="status">
+        <strong>{{ none.heads }} de {{ heads() }} animales ({{ formatPercent(noUppPct()) }}) sin UPP asignada.</strong>
+        Valor estimado: {{ money(none.value) }} — esta cifra no aparece en el balance por UPP de abajo.
+    </div>
+    }
+
+    <div class="exp-card mb-3">
+        <h3 class="exp-card-title">Balance por UPP</h3>
+        <p class="exp-card-sub">Acumulado · incluye todas las fechas, sin importar el periodo elegido.</p>
+        <div class="exp-table-wrap">
+            <table class="exp-table">
+                <thead><tr>
+                    <th scope="col">UPP</th><th scope="col" class="r">Cabezas</th><th scope="col" class="r">Valor estimado</th>
+                    <th scope="col" class="r">Gasto</th><th scope="col">Gasto sobre valor</th><th scope="col" class="r">Balance</th>
+                </tr></thead>
+                <tbody>
+                    @for (r of uppRows(); track r.key) {
+                    <tr>
+                        <td>{{ r.label }}</td>
+                        <td class="r">{{ r.kind === 'general' ? '—' : r.heads }}</td>
+                        <td class="r">{{ r.kind === 'general' ? '—' : money(r.value) }}</td>
+                        <td class="r">{{ money(r.spend) }}</td>
+                        <td>
+                            @if (r.spendOverValuePct !== null) {
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="exp-meter flex-grow-1" aria-hidden="true"><span [style.width.%]="meterWidth(r.spendOverValuePct)"></span></div>
+                                <span class="exp-num text-nowrap">{{ formatPercent(r.spendOverValuePct) }}</span>
+                            </div>
+                            } @else { <span class="exp-muted">—</span> }
+                        </td>
+                        <td class="r">{{ money(r.balance) }}</td>
+                    </tr>
+                    } @empty {
+                    <tr><td colspan="6" class="exp-state">@if (noUpp()) { Todos los animales están sin UPP asignada. } @else { No hay datos de UPP para mostrar. }</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="exp-grid-2">
+        <div class="exp-card">
+            <h3 class="exp-card-title">Gasto por tipo</h3>
+            <p class="exp-card-sub">Del periodo elegido.</p>
+            <exp-share-bar-list [items]="typeItems()" emptyText="Sin gastos en el periodo."></exp-share-bar-list>
+        </div>
+        <div class="exp-card">
+            <h3 class="exp-card-title">{{ trendTitle() }}</h3>
+            <p class="exp-card-sub">Del periodo elegido.</p>
+            <exp-trend-bars [bars]="bars()" emptyText="Sin gastos en el periodo."></exp-trend-bars>
+        </div>
+    </div>
+    }
+</div>
+}
