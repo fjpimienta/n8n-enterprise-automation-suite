@@ -20,7 +20,7 @@ import { TableFooterComponent } from '@shared/components/table-footer/table-foot
 import { PagedTable } from '@shared/utils/paged-table.util';
 import { hasDisplayableMetadata } from '@shared/utils/metadata-view.util';
 import { withoutFinancialMetadata } from '@shared/utils/financial-metadata.util';
-import { HERD_STATUS_FILTER_OPTIONS, HerdStatusFilter, filterByHerdStatus } from '@shared/utils/herd-status.util';
+import { HERD_STATUS_FILTER_OPTIONS, HerdStatusFilter, filterByHerdStatus, valuedBiomassKg } from '@shared/utils/herd-status.util';
 import { SPECIES_FILTER_ALL, deriveAvailableSpecies, getAnimalSpecies } from '@shared/utils/species.util';
 import { LOT_FILTER_ALL, deriveAvailableLots, getAnimalLot } from '@shared/utils/lot.util';
 import { isAutoRefreshDue } from '@shared/utils/auto-refresh.util';
@@ -635,7 +635,7 @@ export class MainDashboardComponent implements OnInit {
   }
 
   public biomasaTotal = computed(() => {
-    return this.filteredCattleList().reduce((acc, curr) => acc + Number(curr.current_weight_kg || 0), 0);
+    return valuedBiomassKg(this.filteredCattleList());
   });
 
   public capitalizacionTotal = computed(() => {

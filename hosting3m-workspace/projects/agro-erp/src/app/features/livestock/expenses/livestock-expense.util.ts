@@ -7,6 +7,7 @@ import type { Expense } from '../models/expense.model';
 import type { Livestock } from '../models/livestock.model';
 import { DateRange, PeriodGrain, PeriodPreset, PeriodTotal, addDays, elapsedDays, previousRange, rangeForPreset } from '@shared/expenses-ui/expenses-period.util';
 import { deltaPercent, sharePercent } from '@shared/expenses-ui/expenses-ui.util';
+import { isValuedHead } from '@shared/utils/herd-status.util';
 import { normalizeForSearch } from '@shared/utils/text-normalize.util';
 
 /** Reference price used for the estimated value of the herd (MXN per kg). Not configurable yet. */
@@ -188,8 +189,9 @@ const weightOf = (a: Pick<Livestock, 'current_weight_kg'> | null | undefined) =>
   return Number.isFinite(n) && n > 0 ? n : 0;
 };
 
+/** Estimated value of the herd: weight x price. Deceased animals (BAJA_MORTANDAD) do not add to it. */
 export function herdValue(cattle: readonly Livestock[], pricePerKg: number): number {
-  return cattle.reduce((sum, a) => sum + weightOf(a) * pricePerKg, 0);
+  return cattle.reduce((sum, a) => (isValuedHead(a) ? sum + weightOf(a) * pricePerKg : sum), 0);
 }
 
 /** Spend per head; null without heads. */
@@ -228,7 +230,7 @@ export function uppBalance(cattle: readonly Livestock[], expenses: readonly Expe
     const key = code || NO_UPP_LABEL;
     const g = groups.get(key) ?? { heads: 0, value: 0, spend: 0, kind: code ? 'upp' : 'none' };
     g.heads += 1;
-    g.value += weightOf(a) * pricePerKg;
+    if (isValuedHead(a)) g.value += weightOf(a) * pricePerKg; // heads still count; deceased animals add no value
     groups.set(key, g);
   }
   let general = 0;
