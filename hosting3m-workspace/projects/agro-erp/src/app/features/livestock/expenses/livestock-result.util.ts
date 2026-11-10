@@ -59,7 +59,8 @@ export function periodResult(incomes: readonly SaleIncome[], expenses: readonly 
   return {
     income, spend, result, soldHeads: inPeriod.length,
     incomeDelta: deltaPercent(income, previousIncome),
-    resultDelta: deltaPercent(result, previousResult),
+    // A percentage across a change of sign (e.g. +$100 vs −$300) misleads: only same-sign results are compared.
+    resultDelta: result > 0 && previousResult > 0 ? deltaPercent(result, previousResult) : null,
     previousIncome, previousSpend,
   };
 }

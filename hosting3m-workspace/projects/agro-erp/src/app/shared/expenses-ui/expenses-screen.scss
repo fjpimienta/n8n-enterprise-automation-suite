@@ -1,5 +1,5 @@
 /* Global styles of the expense screens (scoped under .exp-screen). Shared widgets carry their own styles. */
-.exp-screen {
+.exp-screen, .exp-theme {
   /* A screen retheme sets --accent / --accent-strong / --accent-soft on an ancestor (e.g. livestock). */
   --exp-accent: var(--accent, #1f6b3f);
   --exp-accent-strong: var(--accent-strong, #14532d);
@@ -7,12 +7,13 @@
   --exp-ink: var(--exp-x-ink, #1a2234);
   --exp-muted: var(--exp-x-muted, #596273);
   --exp-border: var(--exp-x-border, #e3e7ee);
+  --exp-input-border: var(--exp-x-input-border, var(--exp-border));
   --exp-surface: var(--exp-x-surface, #fff);
   --exp-bg: var(--exp-x-bg, #f5f7f9);
   --exp-danger: var(--exp-x-danger, #b42318);
   font-variant-numeric: tabular-nums;
-  background: var(--exp-bg); border-radius: 14px; padding: .25rem 0; color: var(--exp-ink); overflow-x: clip;
 }
+.exp-screen { background: var(--exp-bg); border-radius: 14px; padding: .25rem 0; color: var(--exp-ink); overflow-x: clip; }
 .exp-screen {
 .exp-card { background: var(--exp-surface); border: 1px solid var(--exp-border); border-radius: 14px; padding: 1rem 1.1rem; min-width: 0; }
 .exp-card-title { font-size: .95rem; font-weight: 600; color: var(--exp-ink); margin: 0 0 .75rem; }
@@ -20,7 +21,7 @@
 .exp-num { font-variant-numeric: tabular-nums; }
 .exp-chip {
   display: inline-flex; align-items: center; gap: .35rem; min-height: 36px; padding: .3rem .85rem; border-radius: 999px;
-  border: 1px solid var(--exp-border); background: var(--exp-surface); color: var(--exp-ink); font-size: .875rem; cursor: pointer;
+  border: 1px solid var(--exp-input-border); background: var(--exp-surface); color: var(--exp-ink); font-size: .875rem; cursor: pointer;
 }
 .exp-chip:hover { border-color: var(--exp-accent); }
 .exp-chip[aria-pressed='true'] { background: var(--exp-accent); border-color: var(--exp-accent); color: #fff; font-weight: 600; }
@@ -35,10 +36,10 @@
 .exp-toolbar { display: flex; flex-wrap: wrap; gap: .75rem 1rem; align-items: flex-end; margin-bottom: 1rem; }
 .exp-field { display: grid; gap: .2rem; min-width: 0; }
 .exp-field > label, .exp-label { font-size: .8rem; color: var(--exp-muted); }
-.exp-input { min-height: 40px; border: 1px solid var(--exp-border); border-radius: 10px; padding: .35rem .65rem; background: var(--exp-surface); color: var(--exp-ink); max-width: 100%; color-scheme: var(--exp-x-scheme, light); }
+.exp-input { min-height: 40px; border: 1px solid var(--exp-input-border); border-radius: 10px; padding: .35rem .65rem; background: var(--exp-surface); color: var(--exp-ink); max-width: 100%; color-scheme: var(--exp-x-scheme, light); }
 .exp-grid-kpi { display: grid; gap: .75rem; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 1rem; }
 .exp-grid-2 { display: grid; align-items: start; gap: .75rem; grid-template-columns: repeat(2, minmax(0, 1fr)); margin-bottom: 1rem; }
-.exp-btn { min-height: 40px; padding: .35rem .9rem; border-radius: 10px; border: 1px solid var(--exp-border); background: var(--exp-surface); color: var(--exp-ink); cursor: pointer; }
+.exp-btn { min-height: 40px; padding: .35rem .9rem; border-radius: 10px; border: 1px solid var(--exp-input-border); background: var(--exp-surface); color: var(--exp-ink); cursor: pointer; }
 .exp-btn.primary { background: var(--exp-accent); border-color: var(--exp-accent); color: #fff; font-weight: 600; }
 .exp-btn.danger { border-color: var(--exp-danger); color: var(--exp-danger); }
 .exp-btn:disabled { opacity: .55; cursor: not-allowed; }
@@ -70,16 +71,22 @@
 
 }
 
-/* Livestock retheme: accent through --accent*, and an opt-in dark palette (Agriculture keeps its light panel). */
-.exp-screen.exp-livestock { --accent: #2b3a67; --accent-strong: #1d2a52; --accent-soft: #e3e8f5; }
-[data-bs-theme='dark'] .exp-screen.exp-livestock {
-  --accent: #5b6fba; --accent-strong: #c3cff5; --accent-soft: #2a3354;
-  --exp-x-ink: #e6e9f0; --exp-x-muted: #a9b2c3; --exp-x-border: #33405a; --exp-x-surface: #1c2333; --exp-x-bg: #141a28;
-  --exp-x-danger: #ff8a80; --exp-x-scheme: dark;
+/* Dark palette for ALL expense screens (the app starts in dark). `.exp-theme` carries the same variables for pieces
+   rendered outside a screen, such as the capture modal. Agriculture keeps its green identity with a readable tint. */
+[data-bs-theme='dark'] :is(.exp-screen, .exp-theme) {
+  --accent: #2a8450; --accent-strong: #86d6a4; --accent-soft: #1f3a2b;
+  --exp-x-ink: #e6e9f0; --exp-x-muted: #a9b2c3; --exp-x-border: #33405a; --exp-x-input-border: #6b7a99;
+  --exp-x-surface: #1c2333; --exp-x-bg: #141a28; --exp-x-danger: #ff8a80; --exp-x-scheme: dark;
+  color-scheme: dark;
 }
-[data-bs-theme='dark'] .exp-screen.exp-livestock .exp-alert.warn { background: #3b2f10; border-color: #d9a441; color: #ffe9b3; }
-[data-bs-theme='dark'] .exp-screen.exp-livestock .exp-alert.err { background: #3d1a18; border-color: #ff8a80; color: #ffd4d0; }
-[data-bs-theme='dark'] .exp-screen.exp-livestock .exp-pill.void { background: #2c3446; color: #d3d9e6; }
+[data-bs-theme='dark'] :is(.exp-screen, .exp-theme) .exp-alert.warn { background: #3b2f10; border-color: #d9a441; color: #ffe9b3; }
+[data-bs-theme='dark'] :is(.exp-screen, .exp-theme) .exp-alert.err { background: #3d1a18; border-color: #ff8a80; color: #ffd4d0; }
+[data-bs-theme='dark'] :is(.exp-screen, .exp-theme) .exp-pill.void { background: #2c3446; color: #d3d9e6; }
+[data-bs-theme='dark'] :is(.exp-screen, .exp-theme) .exp-pill.risk { background: #3d1a18; color: #ffd4d0; }
+
+/* Livestock retheme: its own accent (light and dark). */
+.exp-screen.exp-livestock { --accent: #2b3a67; --accent-strong: #1d2a52; --accent-soft: #e3e8f5; }
+[data-bs-theme='dark'] .exp-screen.exp-livestock { --accent: #5b6fba; --accent-strong: #c3cff5; --accent-soft: #2a3354; }
 
 /* Extras used by the Livestock expense views */
 .exp-screen .exp-card-sub { font-size: .8rem; color: var(--exp-muted); margin: -.5rem 0 .75rem; }
@@ -87,11 +94,11 @@
 .exp-screen .exp-meter > span { display: block; height: 100%; background: var(--exp-accent); }
 .exp-screen .exp-pill.risk { background: #fdecea; color: #7a1a12; font-weight: 600; }
 .exp-screen .exp-pill.muted { background: var(--exp-bg); color: var(--exp-muted); border: 1px solid var(--exp-border); }
-.exp-screen .exp-seg { display: inline-flex; border: 1px solid var(--exp-border); border-radius: 10px; overflow: hidden; }
+.exp-screen .exp-seg { display: inline-flex; border: 1px solid var(--exp-input-border); border-radius: 10px; overflow: hidden; }
 .exp-screen .exp-seg button { min-height: 40px; padding: 0 .9rem; border: 0; background: var(--exp-surface); color: var(--exp-ink); cursor: pointer; }
 .exp-screen .exp-seg button[aria-pressed='true'] { background: var(--exp-accent); color: #fff; font-weight: 600; }
 .exp-screen .exp-seg button:focus-visible { outline: 3px solid var(--exp-accent-strong); outline-offset: -3px; }
-[data-bs-theme='dark'] .exp-screen.exp-livestock .exp-pill.risk { background: #3d1a18; color: #ffd4d0; }
 
 .exp-screen .exp-mort { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; font-size: 1.05rem; }
+.exp-screen .exp-mort > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: .15rem .5rem; }
 .exp-screen .exp-explain { margin: 0 0 .75rem; }

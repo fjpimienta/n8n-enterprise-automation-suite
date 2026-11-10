@@ -21,20 +21,20 @@ import { addDays, dateShortcutOf, isCaptureReady } from '../utils/expense-view.u
     .amount { font-size: 2rem; font-weight: 700; text-align: right; min-height: 64px; font-variant-numeric: tabular-nums; }
     .exp-touch { min-height: 44px; }
     .seg { display: flex; flex-wrap: wrap; gap: .4rem; }
-    .seg button { min-height: 44px; padding: 0 1rem; border-radius: 999px; border: 1px solid #c9d1dc; background: #fff; color: #1a2234; }
-    .seg button[aria-pressed='true'] { background: #1f6b3f; border-color: #1f6b3f; color: #fff; font-weight: 600; }
-    .seg button:focus-visible, summary:focus-visible { outline: 3px solid #14532d; outline-offset: 2px; }
-    summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: #14532d; font-weight: 600; }
-    .btn-save { background: #1f6b3f; border-color: #1f6b3f; color: #fff; min-height: 48px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .seg button { min-height: 44px; padding: 0 1rem; border-radius: 999px; border: 1px solid var(--exp-input-border, #c9d1dc); background: var(--exp-surface, #fff); color: var(--exp-ink, #1a2234); }
+    .seg button[aria-pressed='true'] { background: var(--exp-accent, #1f6b3f); border-color: var(--exp-accent, #1f6b3f); color: #fff; font-weight: 600; }
+    .seg button:focus-visible, summary:focus-visible { outline: 3px solid var(--exp-accent-strong, #14532d); outline-offset: 2px; }
+    summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--exp-accent-strong, #14532d); font-weight: 600; }
+    .btn-save { background: var(--exp-accent, #1f6b3f); border-color: var(--exp-accent, #1f6b3f); color: #fff; min-height: 48px; font-weight: 600; font-variant-numeric: tabular-nums; }
     .btn-save:disabled { opacity: .55; }
-    .btn-save:focus-visible { outline: 3px solid #14532d; outline-offset: 2px; }
+    .btn-save:focus-visible { outline: 3px solid var(--exp-accent-strong, #14532d); outline-offset: 2px; }
   `,
   template: `
     @if (isOpen()) {
     <div class="modal-backdrop fade show"></div>
     <div class="modal modal-blur fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="exp-form-title">
       <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg modal-fullscreen-sm-down">
-        <div class="modal-content shadow-lg border-0">
+        <div class="modal-content exp-theme shadow-lg border-0">
           <div class="modal-header">
             <h5 class="modal-title" id="exp-form-title"><i class="ti ti-receipt me-2" aria-hidden="true"></i>Registrar gasto</h5>
             <button type="button" class="btn-close exp-touch" aria-label="Cerrar" [disabled]="isSubmitting()" (click)="onClose.emit()"></button>

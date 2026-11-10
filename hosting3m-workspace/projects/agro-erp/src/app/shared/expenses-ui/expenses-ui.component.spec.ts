@@ -97,6 +97,12 @@ describe('exp-trend-bars', () => {
     expect(details.querySelectorAll('dt').length).toBe(2);
     expect(details.textContent).not.toContain('$0');
   });
+  it('shows an empty state instead of a blank chart (and no axis) when every period is zero', () => {
+    const { el } = render(TrendBarsComponent, { bars: mk(30, []), emptyText: 'Sin gastos en el periodo' });
+    expect(el.querySelector('.exp-bars')).toBeNull();
+    expect(el.querySelector('.exp-labels')).toBeNull();
+    expect(el.textContent).toContain('Sin gastos en el periodo');
+  });
   it('renders no details nor legend when every period is zero', () => {
     const { el } = render(TrendBarsComponent, { bars: mk(5, []) });
     expect(el.querySelector('details')).toBeNull();
