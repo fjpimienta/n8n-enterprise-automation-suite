@@ -6,9 +6,13 @@
  * a un estado terminal — vendido, finalizado o dado de baja por depuración de
  * datos. Cualquier otro `current_status` (ACTIVO, PREÑADA, VACÍA, DESARROLLO,
  * RIESGO, CUARENTENA, EN_TRANSITO, BAJA_MORTANDAD, …) sigue siendo hato activo a
- * efectos de conteo y de la vista por defecto de inventario — incluye
- * BAJA_MORTANDAD porque es una baja pendiente de aprobación, no una salida
- * confirmada del hato (misma decisión de negocio que count_livestock).
+ * efectos de conteo y de la vista por defecto de inventario.
+ *
+ * Sobre BAJA_MORTANDAD: ese estado se asigna al APROBAR la baja (`sp_procesar_baja_mortandad`);
+ * las solicitudes pendientes se llevan aparte, en `pending_authorizations`. Por eso un animal en
+ * BAJA_MORTANDAD es una pérdida confirmada. Los conteos lo siguen incluyendo por ahora, a propósito
+ * (alineado con `count_livestock` del Agente IA), hasta que esa regla se revise. El valor estimado
+ * y la biomasa del hato SÍ lo excluyen: ver `isValuedHead`.
  *
  * El historial de venta/baja no se oculta de forma permanente: las pantallas
  * exponen un selector (`HERD_STATUS_FILTER_OPTIONS`) para auditarlo cuando haga falta.
@@ -30,6 +34,19 @@ export const HERD_STATUS_FILTER_OPTIONS: ReadonlyArray<{ value: HerdStatusFilter
 export function isActiveHead(animal: { current_status?: string | null } | null | undefined): boolean {
   const status = (animal?.current_status ?? '').trim().toUpperCase();
   return status === '' || !INACTIVE_HERD_STATUSES.includes(status);
+}
+
+/** `true` si el animal suma al valor estimado y a la biomasa del hato: hato activo y sin baja por mortandad. */
+export function isValuedHead(animal: { current_status?: string | null } | null | undefined): boolean {
+  return isActiveHead(animal) && (animal?.current_status ?? '').trim().toUpperCase() !== 'BAJA_MORTANDAD';
+}
+
+/** Biomasa (kg) del hato valorable: suma el peso de los animales con `isValuedHead`; sin peso válido suma 0. */
+export function valuedBiomassKg(list: ReadonlyArray<{ current_status?: string | null; current_weight_kg?: number | string | null }>): number {
+  return list.reduce((sum, a) => {
+    const w = Number(a.current_weight_kg ?? 0);
+    return isValuedHead(a) && Number.isFinite(w) && w > 0 ? sum + w : sum;
+  }, 0);
 }
 
 /**
