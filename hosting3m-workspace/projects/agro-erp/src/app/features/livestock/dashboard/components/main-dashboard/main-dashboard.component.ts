@@ -4,6 +4,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { CattleApiService } from '@core/services/cattle-api.service';
 import { CattleDataService } from '@core/services/cattle-data.service';
+import { SaleService } from '@core/services/sale.service';
+import type { SaleIncome } from '@core/models/sale.model';
 import { ReproductiveDashboardComponent } from '../reproductive-dashboard/reproductive-dashboard.component';
 import { EngordaDashboardComponent } from '../engorda-dashboard/engorda-dashboard.component';
 import { ReproduccionDashboardComponent } from '../reproduccion-dashboard/reproduccion-dashboard.component';
@@ -28,6 +30,7 @@ import { Expense } from '../../../models/expense.model';
 import { BusinessModel } from '../../../models/livestock.model';
 import { Paginator } from '../../utils/paginator';
 import { REFERENCE_PRICE_PER_KG } from '../../../expenses/livestock-expense.util';
+import { isMortality, scopeIncomes } from '../../../expenses/livestock-result.util';
 import { LivestockExpenseSummaryComponent } from '../../../expenses/components/livestock-expense-summary/livestock-expense-summary.component';
 import { LivestockExpenseHistoryComponent } from '../../../expenses/components/livestock-expense-history/livestock-expense-history.component';
 import { LivestockAnimalCostsComponent } from '../../../expenses/components/livestock-animal-costs/livestock-animal-costs.component';
@@ -43,6 +46,7 @@ export class MainDashboardComponent implements OnInit {
   private cattleApi = inject(CattleApiService);
   private cattleDataService = inject(CattleDataService);
   private complianceService = inject(ComplianceService);
+  private saleService = inject(SaleService);
   private tenantService = inject(TenantService);
   public themeService = inject(ThemeService);
   private router = inject(Router);
@@ -55,6 +59,12 @@ export class MainDashboardComponent implements OnInit {
   // una copia del hato desincronizada del resto de la app.
   public cattleList = this.cattleDataService.cattleList;
   public expensesList = signal<Expense[]>([]);
+
+  // Sale incomes (cattle_sale_income, ADMIN only): loaded ONCE here and shared by the Resumen and the Ingresos tab.
+  // A failed refresh keeps the last data and only reports the error; a company change clears them first.
+  public saleIncomes = signal<SaleIncome[]>([]);
+  public incomesLoaded = signal<boolean>(false);
+  public incomesError = signal<string | null>(null);
 
   // `isLoading`: SOLO la carga inicial / cambio de tenant (datos aún no visibles por primera
   // vez). `isRefreshing`: refresco manual o automático de datos ya visibles — nunca oculta ni
@@ -268,12 +278,35 @@ export class MainDashboardComponent implements OnInit {
       // 🔒 cattle_expenses es financiero y no-ADMIN no debe verlo (ver fix de Cattle Event Log) —
       // ni siquiera se intenta el fetch para un rol sin acceso: evita un 403 inútil contra el
       // gateway y la fila de `expensesList` nunca llega a existir en memoria para ese rol.
-      const [, expensesRaw] = await Promise.all([
+      const isAdmin = this.isAdminForActiveTenant();
+      if (kind === 'initial') {
+        // Company change / first load: nothing of the previous company may stay visible while this one loads.
+        this.saleIncomes.set([]);
+        this.incomesLoaded.set(false);
+        this.incomesError.set(null);
+      }
+      // Incomes never fail the whole load: their own error is reported separately (see incomesError).
+      const incomesAttempt: Promise<{ ok: true; rows: SaleIncome[] } | { ok: false; message: string } | null> = isAdmin
+        ? this.saleService.getSaleIncome().then(
+            rows => ({ ok: true as const, rows }),
+            (error: any) => ({ ok: false as const, message: error?.message || 'No se pudieron cargar los ingresos por venta.' }))
+        : Promise.resolve(null);
+      const [, expensesRaw, incomesResult] = await Promise.all([
         cattleReload,
-        this.isAdminForActiveTenant() ? this.cattleApi.getExpenses() : Promise.resolve([])
+        isAdmin ? this.cattleApi.getExpenses() : Promise.resolve([]),
+        incomesAttempt
       ]);
 
       if (seq !== this.dashboardLoadSeq) return; // una carga más reciente ya ganó — descartar sin tocar signals
+
+      if (incomesResult?.ok) {
+        this.saleIncomes.set(incomesResult.rows);
+        this.incomesLoaded.set(true);
+        this.incomesError.set(null);
+      } else if (incomesResult) {
+        console.error('Error al cargar ingresos por venta:', incomesResult.message);
+        this.incomesError.set(incomesResult.message);
+      }
 
       this.expensesList.set((Array.isArray(expensesRaw) ? expensesRaw : []) as Expense[]);
 
@@ -546,6 +579,21 @@ export class MainDashboardComponent implements OnInit {
   public animalsWithExpensesCount = computed(() =>
     new Set(this.filteredExpensesList().filter(e => !!e.livestock_id).map(e => e.livestock_id)).size
   );
+
+  /** Animals of the module / species / lot filter, whatever their herd status (sold and dead included). */
+  public scopedAnyStatusIds = computed(() => new Set(this.scopedCattleList().map(a => a.id)));
+  private allCattleIds = computed(() => new Set(this.cattleList().map(a => a.id)));
+
+  /** Incomes of the active company inside the current filter (see scopeIncomes). */
+  public scopedIncomes = computed(() => {
+    if (!this.isAdminForActiveTenant()) return [];
+    const tenant = Number(this.tenantService.activeTenantId());
+    const noFilters = this.selectedSpecies() === SPECIES_FILTER_ALL && this.selectedLot() === LOT_FILTER_ALL;
+    return scopeIncomes(this.saleIncomes(), Number.isFinite(tenant) ? tenant : null, this.scopedAnyStatusIds(), this.allCattleIds(), noFilters);
+  });
+
+  /** Dead animals (BAJA_MORTANDAD) in the current filter. There is no reliable date of death on the client, so the figures are accumulated. */
+  public mortalityCattleList = computed(() => (this.isAdminForActiveTenant() ? this.scopedCattleList().filter(isMortality) : []));
 
   public setTab(tab: BusinessModel) {
     // Solo navega — activeTab es un computed derivado de la URL, se recalcula solo.

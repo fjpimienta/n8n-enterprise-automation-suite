@@ -43,9 +43,9 @@ describe('app-livestock-expense-summary', () => {
     expect(text()).toContain('$625.00'); // 1250 / 2 heads
   });
 
-  it('shows legacy categories under Otros in the spend by type', () => {
+  it('shows other categories as received in the spend by type', () => {
     const { text } = render(LivestockExpenseSummaryComponent, inputs);
-    expect(text()).toContain('Otros');
+    expect(text()).toContain('Herrajes');
     expect(text()).toContain('Alimentación');
   });
 
@@ -72,6 +72,66 @@ describe('app-livestock-expense-summary', () => {
   it('shows a loading state while there is no data yet', () => {
     const { text } = render(LivestockExpenseSummaryComponent, { canViewAmounts: true, loading: true });
     expect(text()).toContain('Cargando');
+  });
+});
+
+describe('app-livestock-expense-summary: Resultado del periodo', () => {
+  const sale = (o: Record<string, unknown> = {}) => ({
+    id: 's' + Math.random(), tenantId: 3, livestockId: 'a1', pendingAuthorizationId: null, saleDate: TODAY, saleMode: 'PER_HEAD', amount: 5000,
+    weightKg: null, pricePerKg: null, buyerName: 'Rancho Norte', paymentMethod: 'EFECTIVO', invoiced: false, invoiceFolio: null, banked: false, guiaTransito: null, ...o });
+  const base = {
+    canViewAmounts: true, cattle: [cow()], expenses: [exp({ amount: 1500 })], pricePerKg: 10, resetKey: 'k1', lookup: [cow()],
+    incomes: [sale()], incomesLoaded: true,
+    mortalityCattle: [cow({ id: 'd1', current_weight_kg: 200 }), cow({ id: 'd2', current_weight_kg: 0 })],
+  };
+
+  it('renders income, the signed result, sold heads, mortality and the sales list', () => {
+    const { text } = render(LivestockExpenseSummaryComponent, base);
+    expect(text()).toContain('Resultado del periodo');
+    expect(text()).toContain('Ingresos por ventas');
+    expect(text()).toContain('$5,000.00');
+    expect(text()).toContain('+$3,500.00');
+    expect(text()).toContain('Ganancia');
+    expect(text()).toContain('Cabezas vendidas');
+    expect(text()).toContain('Rancho Norte');
+    expect(text()).toContain('Pérdida estimada');
+    expect(text()).toContain('$2,000.00');
+    expect(text()).toContain('1 sin peso');
+    expect(text()).toContain('Acumulado');
+    expect(text()).toContain('Resultado acumulado');
+  });
+
+  it('shows a negative result with its sign and word', () => {
+    const { text } = render(LivestockExpenseSummaryComponent, { ...base, incomes: [] });
+    expect(text()).toContain('−$1,500.00');
+    expect(text()).toContain('Pérdida');
+    expect(text()).toContain('Sin ventas en el periodo');
+  });
+
+  it('opens the Ingresos tab from the link', () => {
+    const { fixture, el } = render(LivestockExpenseSummaryComponent, base);
+    let opened = 0;
+    fixture.componentInstance.openSales.subscribe(() => opened++);
+    press(el, 'Ver ingresos');
+    expect(opened).toBe(1);
+  });
+
+  it('never turns a failed load into zeros: explicit error before the first load', () => {
+    const { text } = render(LivestockExpenseSummaryComponent, { ...base, incomes: [], incomesLoaded: false, incomesError: 'Sin conexión' });
+    expect(text()).toContain('No se pudieron cargar los ingresos por venta');
+    expect(text()).not.toContain('Cabezas vendidas');
+  });
+
+  it('keeps the last data and warns when a later refresh fails', () => {
+    const { text } = render(LivestockExpenseSummaryComponent, { ...base, incomesError: 'Sin conexión' });
+    expect(text()).toContain('Se conserva la última información disponible');
+    expect(text()).toContain('Rancho Norte');
+  });
+
+  it('renders no incomes or amounts when the admin flag is false', () => {
+    const { text } = render(LivestockExpenseSummaryComponent, { ...base, canViewAmounts: false });
+    expect(text()).not.toContain('Rancho Norte');
+    expect(text()).not.toContain('$');
   });
 });
 

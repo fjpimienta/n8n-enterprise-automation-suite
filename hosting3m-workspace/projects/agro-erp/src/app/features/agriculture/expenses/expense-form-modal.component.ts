@@ -19,7 +19,7 @@ import { addDays, dateShortcutOf, isCaptureReady } from '../utils/expense-view.u
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: `
     .amount { font-size: 2rem; font-weight: 700; text-align: right; min-height: 64px; font-variant-numeric: tabular-nums; }
-    .touch { min-height: 44px; }
+    .exp-touch { min-height: 44px; }
     .seg { display: flex; flex-wrap: wrap; gap: .4rem; }
     .seg button { min-height: 44px; padding: 0 1rem; border-radius: 999px; border: 1px solid #c9d1dc; background: #fff; color: #1a2234; }
     .seg button[aria-pressed='true'] { background: #1f6b3f; border-color: #1f6b3f; color: #fff; font-weight: 600; }
@@ -37,7 +37,7 @@ import { addDays, dateShortcutOf, isCaptureReady } from '../utils/expense-view.u
         <div class="modal-content shadow-lg border-0">
           <div class="modal-header">
             <h5 class="modal-title" id="exp-form-title"><i class="ti ti-receipt me-2" aria-hidden="true"></i>Registrar gasto</h5>
-            <button type="button" class="btn-close touch" aria-label="Cerrar" [disabled]="isSubmitting()" (click)="onClose.emit()"></button>
+            <button type="button" class="btn-close exp-touch" aria-label="Cerrar" [disabled]="isSubmitting()" (click)="onClose.emit()"></button>
           </div>
           <div class="modal-body p-3 p-md-4">
             <div aria-live="assertive">
@@ -66,14 +66,14 @@ import { addDays, dateShortcutOf, isCaptureReady } from '../utils/expense-view.u
             <div class="row">
               <div class="col-12 col-md-6 mb-3">
                 <label class="form-label fw-bold" for="exp-form-plantation">Plantación</label>
-                <select id="exp-form-plantation" class="form-select touch" [disabled]="isSubmitting()" [ngModel]="data().plantationId" (ngModelChange)="setPlantation($event)">
+                <select id="exp-form-plantation" class="form-select exp-touch" [disabled]="isSubmitting()" [ngModel]="data().plantationId" (ngModelChange)="setPlantation($event)">
                   @for (p of plantations(); track p.id) { <option [value]="p.id">{{ p.code }} · {{ p.name }}</option> }
                   <option value="">Gasto general de la empresa (sin plantación)</option>
                 </select>
               </div>
               <div class="col-12 col-md-6 mb-3">
                 <label class="form-label fw-bold" for="exp-form-lot">Lote</label>
-                <select id="exp-form-lot" class="form-select touch" [disabled]="isSubmitting() || !data().plantationId || lotsLoading()"
+                <select id="exp-form-lot" class="form-select exp-touch" [disabled]="isSubmitting() || !data().plantationId || lotsLoading()"
                   [ngModel]="data().lotId" (ngModelChange)="set('lotId', $event)">
                   <option value="">{{ lotsLoading() ? 'Cargando lotes…' : 'Toda la plantación (sin lote)' }}</option>
                   @for (l of lots(); track l.id) { <option [value]="l.id">{{ l.code }}{{ l.name ? ' · ' + l.name : '' }}</option> }
@@ -90,7 +90,7 @@ import { addDays, dateShortcutOf, isCaptureReady } from '../utils/expense-view.u
               </div>
               @if (shortcut() === 'OTHER') {
               <label class="visually-hidden" for="exp-form-date">Fecha del gasto</label>
-              <input id="exp-form-date" type="date" class="form-control touch mt-2" style="max-width: 220px;" [max]="today()" [disabled]="isSubmitting()"
+              <input id="exp-form-date" type="date" class="form-control exp-touch mt-2" style="max-width: 220px;" [max]="today()" [disabled]="isSubmitting()"
                 [ngModel]="data().expenseDate" (ngModelChange)="set('expenseDate', $event)">
               }
             </div>
@@ -100,19 +100,19 @@ import { addDays, dateShortcutOf, isCaptureReady } from '../utils/expense-view.u
               <div class="row mt-2">
                 <div class="col-6 col-md-3 mb-3">
                   <label class="form-label" for="exp-form-qty">Cantidad</label>
-                  <input id="exp-form-qty" type="text" inputmode="decimal" class="form-control touch" placeholder="Opcional" [disabled]="isSubmitting()"
+                  <input id="exp-form-qty" type="text" inputmode="decimal" class="form-control exp-touch" placeholder="Opcional" [disabled]="isSubmitting()"
                     [ngModel]="data().quantity" (ngModelChange)="set('quantity', $event)">
                 </div>
                 <div class="col-6 col-md-3 mb-3">
                   <label class="form-label" for="exp-form-unit">Unidad</label>
-                  <select id="exp-form-unit" class="form-select touch" [disabled]="isSubmitting()" [ngModel]="data().unitCode" (ngModelChange)="set('unitCode', $event)">
+                  <select id="exp-form-unit" class="form-select exp-touch" [disabled]="isSubmitting()" [ngModel]="data().unitCode" (ngModelChange)="set('unitCode', $event)">
                     <option value="">—</option>
                     @for (u of units(); track u.code) { <option [value]="u.code">{{ u.name }}</option> }
                   </select>
                 </div>
                 <div class="col-12 col-md-6 mb-3">
                   <label class="form-label" for="exp-form-supplier">Proveedor</label>
-                  <input id="exp-form-supplier" type="text" class="form-control touch" maxlength="150" placeholder="Opcional" [disabled]="isSubmitting()"
+                  <input id="exp-form-supplier" type="text" class="form-control exp-touch" maxlength="150" placeholder="Opcional" [disabled]="isSubmitting()"
                     [ngModel]="data().supplierName" (ngModelChange)="set('supplierName', $event)">
                 </div>
               </div>
@@ -123,7 +123,7 @@ import { addDays, dateShortcutOf, isCaptureReady } from '../utils/expense-view.u
               </div>
               <div class="row align-items-end">
                 <div class="col-12 col-md-4 mb-2">
-                  <label class="form-check mb-0 touch d-flex align-items-center gap-2">
+                  <label class="form-check mb-0 exp-touch d-flex align-items-center gap-2">
                     <input type="checkbox" class="form-check-input mt-0" [disabled]="isSubmitting()" [ngModel]="data().isInvoiced" (ngModelChange)="setInvoiced($event)">
                     <span class="form-check-label">Tiene factura</span>
                   </label>
@@ -131,7 +131,7 @@ import { addDays, dateShortcutOf, isCaptureReady } from '../utils/expense-view.u
                 @if (data().isInvoiced) {
                 <div class="col-12 col-md-8 mb-2">
                   <label class="form-label" for="exp-form-folio">Folio de la factura</label>
-                  <input id="exp-form-folio" type="text" class="form-control touch" maxlength="60" placeholder="Opcional" [disabled]="isSubmitting()"
+                  <input id="exp-form-folio" type="text" class="form-control exp-touch" maxlength="60" placeholder="Opcional" [disabled]="isSubmitting()"
                     [ngModel]="data().invoiceFolio" (ngModelChange)="set('invoiceFolio', $event)">
                 </div>
                 }
@@ -139,7 +139,7 @@ import { addDays, dateShortcutOf, isCaptureReady } from '../utils/expense-view.u
             </details>
           </div>
           <div class="modal-footer">
-            <button class="btn touch" [disabled]="isSubmitting()" (click)="onClose.emit()">Cancelar</button>
+            <button class="btn exp-touch" [disabled]="isSubmitting()" (click)="onClose.emit()">Cancelar</button>
             <button class="btn btn-save" [disabled]="isSubmitting() || !ready()" (click)="onSave.emit()">
               @if (isSubmitting()) { <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Guardando… }
               @else { <i class="ti ti-device-floppy me-2" aria-hidden="true"></i>{{ saveLabel() }} }

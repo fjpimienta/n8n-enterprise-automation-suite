@@ -5,6 +5,12 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🐄 Gastos y resultado de ganadería: correcciones y bloque «Resultado del periodo» (solo frontend)
+
+* **Estilos:** las clases privadas de los componentes compartidos de gastos llevan el prefijo `exp-`; la leyenda de las barras chocaba con `.legend` de Tabler y se partía letra por letra.
+* **Categorías:** «Gasto por tipo» agrupa por el valor real de la categoría (sin acentos ni mayúsculas; ALIMENTO/ALIMENTOS = Alimentación), hasta 6 grupos más «Otros»; vacía = «Sin categoría». Los chips del historial salen de las categorías existentes.
+* **Resultado del periodo (Resumen, solo ADMIN):** ingresos por ventas, gasto, resultado con signo, cabezas vendidas, bajas por mortandad (acumulado, sin fecha de baja confiable) y ventas del periodo. Los ingresos se cargan una sola vez en el dashboard y se comparten con la pestaña Ingresos.
+
 ### 🐄 Gastos de ganadería: nuevo diseño de Resumen, Gastos, Costo por animal y captura (solo frontend)
 
 *Sin migraciones, sin cambios de workflows ni de contratos de API. Reutiliza los componentes de `shared/expenses-ui/` de Agricultura.*
