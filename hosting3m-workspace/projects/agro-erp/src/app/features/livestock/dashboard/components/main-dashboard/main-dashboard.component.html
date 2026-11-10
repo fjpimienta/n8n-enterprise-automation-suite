@@ -178,7 +178,8 @@
             @if (isAdminForActiveTenant()) {
             <app-livestock-expense-summary [canViewAmounts]="isAdminForActiveTenant()" [cattle]="filteredCattleList()"
                 [expenses]="filteredExpensesList()" [pricePerKg]="PRECIO_KILO" [resetKey]="operationalPanelResetKey()"
-                [loading]="isLoading()"></app-livestock-expense-summary>
+                [loading]="isLoading()" [incomes]="scopedIncomes()" [incomesLoaded]="incomesLoaded()" [incomesError]="incomesError()"
+                [mortalityCattle]="mortalityCattleList()" [lookup]="cattleList()" (openSales)="setSubTab('VENTAS')"></app-livestock-expense-summary>
             } @else {
             <!-- 👷 Panel Operativo (no-ADMIN): conteos y estado del hato, sin ninguna cifra financiera. -->
             <div class="row row-cards mb-4">
@@ -511,7 +512,7 @@
 
         @if (activeSubTab() === 'VENTAS' && isAdminForActiveTenant()) {
         <app-sale-income-log [cattleData]="cattleList()" [moduleCattleData]="eventLogCattleList()"
-            [refreshToken]="refreshToken()"></app-sale-income-log>
+            [incomes]="saleIncomes()" [isLoading]="isLoading() && !incomesLoaded()" [loadError]="incomesError()"></app-sale-income-log>
         }
 
         @if (activeSubTab() === 'EVENT_LOG' && isAdminForActiveTenant()) {
