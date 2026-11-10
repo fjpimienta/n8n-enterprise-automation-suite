@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { todayCdmx } from '../../../agriculture/utils/agri.util';
 import type { Expense } from '../../models/expense.model';
 import type { Livestock } from '../../models/livestock.model';
+import { unweightedHeads } from '@shared/utils/herd-status.util';
 import { LivestockAnimalCostsComponent } from './livestock-animal-costs/livestock-animal-costs.component';
 import { LivestockExpenseHistoryComponent } from './livestock-expense-history/livestock-expense-history.component';
 import { LivestockExpenseSummaryComponent } from './livestock-expense-summary/livestock-expense-summary.component';
@@ -120,6 +121,20 @@ describe('app-livestock-expense-summary: animals without weight', () => {
     const { text } = render(LivestockExpenseSummaryComponent, { ...base, cattle });
     expect(text()).toContain('sin UPP asignada');
     expect(text()).not.toContain('peso registrado');
+  });
+
+  it('agrees with the no-UPP warning on a mixed fixture (production unit set but empty code counts as no UPP)', () => {
+    const cattle = [
+      noWeight({ production_unit_id: null, upp_code: null }),
+      noWeight({ id: 'a2', production_unit_id: 'u1', upp_code: '' }),
+      noWeight({ id: 'a3', production_unit_id: 'u1', upp_code: 'UPP-1' }),
+      cow({ id: 'a4', production_unit_id: 'u1', upp_code: ' ' }),
+      cow({ id: 'a5' }),
+    ];
+    const { text } = render(LivestockExpenseSummaryComponent, { ...base, cattle });
+    expect(text()).toContain('3 de 5 animales (60%) sin UPP asignada');
+    expect(unweightedHeads(cattle).withoutWeightAndUpp).toBe(2);
+    expect(text()).toContain('2 de ellos no tienen peso registrado y suman $0.00.');
   });
 
   it('shows none of it to a non-ADMIN', () => {
