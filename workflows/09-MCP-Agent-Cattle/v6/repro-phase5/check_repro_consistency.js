@@ -19,7 +19,11 @@ const AGENTS = { chat: 'v6_ai_chat_cattle.json', whatsapp: 'v6_WhatsApp_Agent_Ca
 const PHASE_FILES = [1, 2, 3, 4].map((p) => `repro-phase${p}/repro_phase${p}_tools.json`);
 
 // documented exceptions: out of the dictionary on purpose
-const LEGACY_KEPT_AS_NODE = ['register_birth_event', 'log_palpation_event_batch'];   // rollback path of 087; backlog items 24 and 25
+const LEGACY_KEPT_AS_NODE = ['register_birth_event', 'log_palpation_event_batch', 'register_livestock_purchase_obsolete'];   // rollback path of 087 (backlog items 24 and 25); the legacy purchase tool kept as a node by migration 099
+// migration 099: intake tools wired straight into the two agent workflows (postgresTool, not MCP nodes); both are NIVEL 3 with a server preview + preview_hash
+const AGENT_DIRECT_TOOLS = ['register_livestock_regularization', 'register_livestock_purchase'];
+// names that look like tools in the prompt but are parameters
+const PARAM_NAMES_NOT_TOOLS = ['preview_hash', 'preview_required'];
 const FORBIDDEN_TOOL = ['get_table_metadata'];                                       // A4 says it is NOT allowed
 const CFDI_TOOLS = ['preview_expense_invoice', 'register_expense_invoice'];
 const NOT_EXPOSED = ['sp_repro_condition_code_set', 'sp_repro_empadre_set_config', 'sp_repro_births_set_config'];
@@ -33,9 +37,9 @@ const NEW_CONFIRM = ['births_batch_register', 'register_historical_birth', 'void
 const EXPECTED = {
   1: ['get_livestock_info', 'find_livestock_by_criteria', 'find_calf_by_dam', 'count_livestock', 'list_pending_requests', 'list_lots', 'preview_livestock_sale_order', ...NEW_READS],
   2: ['log_cattle_weight', 'log_health_event', 'log_vaccination_event', 'log_supplement_event', 'log_palpation_event', 'log_breeding_event', 'log_deworming_event',
-      'log_weaning_event', 'register_ranch_expense', 'register_livestock_purchase', 'move_livestock', ...NEW_ROUTINE],
+      'log_weaning_event', 'register_ranch_expense', 'move_livestock', ...NEW_ROUTINE],
   3: ['log_mortality_event', 'request_livestock_sale_order', 'request_livestock_sale', 'review_pending_request', 'cancel_pending_request', 'update_livestock_tag',
-      'log_castration_event', 'void_event', ...NEW_CONFIRM],
+      'log_castration_event', 'void_event', ...NEW_CONFIRM, ...AGENT_DIRECT_TOOLS],
 };
 const REQUIRED_G_WORDS = ['not_examined', 'needs_explicit_result', 'NEEDS_EXPLICIT_RESULT', 'DIAGNOSIS_UNRECOGNIZED', 'DIAGNOSIS_CONFLICT', 'vet_flag', 'POSTPARTUM', 'UNFIT',
   'rp_without_registered_birth', 'palpation_code_contradicts_result', 'known_meanings', 'composite_unconfirmed', 'known_pending', 'possible_duplicate', "force='true'",
@@ -145,7 +149,7 @@ const dict = {};
 for (const ch of Object.keys(AGENTS)) {
   const named = new Set([...sys[ch].matchAll(TOOL_RE)].map((m) => m[1]));
   // parameter names look like tools sometimes (e.g. 'log_...'): keep only what is an MCP tool or clearly a tool verb used as a tool
-  const unknown = [...named].filter((t) => !toolNames.includes(t));
+  const unknown = [...named].filter((t) => !toolNames.includes(t) && !AGENT_DIRECT_TOOLS.includes(t) && !PARAM_NAMES_NOT_TOOLS.includes(t));
   ok(`${ch}: every tool named in the prompt exists in the MCP server (and none is a legacy tool)`,
     unknown.length === 0 && LEGACY_KEPT_AS_NODE.every((l) => !sys[ch].includes(l)), 'unknown: [' + unknown.join(', ') + ']');
   dict[ch] = [...new Set([...parts[ch].E.matchAll(TOOL_RE)].map((m) => m[1]))].filter((t) => toolNames.includes(t)).sort();
@@ -165,13 +169,15 @@ for (const ch of Object.keys(AGENTS)) {
   const lvl = {};
   for (const n of [1, 2, 3]) {
     const m = parts[ch].C.match(new RegExp('- NIVEL ' + n + ' —[^:]*: ([^\\n]+)'));
-    lvl[n] = m ? m[1].replace(/\.$/, '').split(',').map((s) => s.trim()).filter(Boolean) : [];
+    lvl[n] = m ? m[1].replace(/\.$/, '').replace(/\s*\([^)]*\)/g, '').split(',').map((s) => s.trim()).filter(Boolean) : [];
     ok(`${ch}: NIVEL ${n} list matches the decisions`, setEq(lvl[n], EXPECTED[n]), fmt(diff(lvl[n], EXPECTED[n])));
   }
   const all = [...lvl[1], ...lvl[2], ...lvl[3]];
+  ok(`${ch}: the migration 099 intake tools are direct postgresTool nodes of this workflow, named in dictionary E and in NIVEL 3 only`,
+    AGENT_DIRECT_TOOLS.every((t) => docs[AGENTS[ch]].nodes.some((n) => n.name === t && n.type.endsWith('postgresTool')) && parts[ch].E.includes("'" + t + "'") && lvl[3].includes(t) && !lvl[1].includes(t) && !lvl[2].includes(t)));
   ok(`${ch}: no tool is in two levels`, new Set(all).size === all.length);
   const reproductionDict = dict[ch].filter((t) => !CFDI_TOOLS.includes(t));
-  ok(`${ch}: every reproduction dictionary tool has a level`, setEq(all.slice().sort(), reproductionDict), fmt(diff(all.slice().sort(), reproductionDict)));
+  ok(`${ch}: every reproduction dictionary tool has a level`, setEq(all.filter((t) => !AGENT_DIRECT_TOOLS.includes(t)).sort(), reproductionDict), fmt(diff(all.filter((t) => !AGENT_DIRECT_TOOLS.includes(t)).sort(), reproductionDict)));
 }
 
 // each new tool's description agrees with its level
@@ -539,7 +545,7 @@ for (const [ch, f] of Object.entries(AGENTS)) {
   ok(`${ch}: no other node of the workflow changed (${others.length} nodes)`, others.every((n) => JSON.stringify(n) === JSON.stringify(docs[f].nodes.find((x) => x.name === n.name))));
 }
 for (const ch of Object.keys(AGENTS)) {
-  ok(`${ch}: prompt size ${sys[ch].length} characters (informational: it was ~32 000 before phase 5)`, sys[ch].length < 60000);
+  ok(`${ch}: prompt size ${sys[ch].length} characters (limit 64 000; it was ~32 000 before phase 5; the growth to ~62 000 comes from migration 099, any further growth needs a review)`, sys[ch].length < 64000);
 }
 
 console.log(`\n${passes} passed, ${fails} failed, ${skips} skipped`);
