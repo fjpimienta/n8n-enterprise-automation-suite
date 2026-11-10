@@ -29,7 +29,7 @@ import type { TrendBar } from './expenses-ui.util';
     .exp-legend { font-size: .75rem; color: var(--exp-muted); margin-top: .4rem; }
   `,
   template: `
-    @if (bars().length) {
+    @if (bars().length && !allZero()) {
     <div class="exp-scroll">
       <div class="exp-bars" [class.exp-wide]="showAllValues()" role="img" [attr.aria-label]="ariaLabel()">
         @for (b of bars(); track b.key; let i = $index) {
@@ -69,6 +69,8 @@ export class TrendBarsComponent {
     bars.forEach((b, i) => { if (b.value > 0 && (idx < 0 || b.value > bars[idx].value)) idx = i; });
     return idx;
   });
+  /** Every period is $0: an empty state replaces the blank chart (and its day axis). */
+  allZero = computed(() => this.bars().every(b => !(b.value > 0)));
   hasLive = computed(() => this.bars().some(b => b.inProgress));
   /** Only periods with an amount, in the order received (chronological). */
   listed = computed(() => this.bars().filter(b => b.value > 0));
