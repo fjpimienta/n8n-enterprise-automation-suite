@@ -15,7 +15,7 @@
 }
 .exp-screen { background: var(--exp-bg); border-radius: 14px; padding: .25rem 0; color: var(--exp-ink); overflow-x: clip; }
 .exp-screen {
-.exp-card { background: var(--exp-surface); border: 1px solid var(--exp-border); border-radius: 14px; padding: 1rem 1.1rem; min-width: 0; }
+.exp-card { box-sizing: border-box; background: var(--exp-surface); border: 1px solid var(--exp-border); border-radius: 14px; padding: 1rem 1.1rem; min-width: 0; }
 .exp-card-title { font-size: .95rem; font-weight: 600; color: var(--exp-ink); margin: 0 0 .75rem; }
 .exp-muted { color: var(--exp-muted); }
 .exp-num { font-variant-numeric: tabular-nums; }
@@ -44,7 +44,7 @@
 .exp-btn.danger { border-color: var(--exp-danger); color: var(--exp-danger); }
 .exp-btn:disabled { opacity: .55; cursor: not-allowed; }
 .exp-link { background: none; border: 0; padding: 0; color: var(--exp-accent-strong); text-decoration: underline; cursor: pointer; font: inherit; }
-.exp-table-wrap { overflow-x: auto; max-width: 100%; }
+.exp-table-wrap { overflow-x: auto; max-width: 100%; scrollbar-color: var(--exp-input-border) var(--exp-bg); }
 .exp-table { width: 100%; border-collapse: collapse; font-size: .875rem; }
 .exp-table th { text-align: left; font-weight: 600; color: var(--exp-muted); padding: .5rem .6rem; border-bottom: 1px solid var(--exp-border); white-space: nowrap; }
 .exp-table td { padding: .55rem .6rem; border-bottom: 1px solid var(--exp-border); vertical-align: top; }
@@ -102,3 +102,9 @@
 .exp-screen .exp-mort { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; font-size: 1.05rem; }
 .exp-screen .exp-mort > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: .15rem .5rem; }
 .exp-screen .exp-explain { margin: 0 0 .75rem; }
+
+/* Embedded in a Tabler page (palm dashboard): breathing room, and a link styled like a button */
+.exp-screen.exp-embed { padding: .75rem; }
+.exp-screen .exp-embed-sub { margin: 0 0 .75rem; }
+.exp-screen .exp-grid-1 { display: grid; grid-template-columns: minmax(0, 1fr); margin-bottom: 1rem; }
+.exp-screen a.exp-btn { display: inline-flex; align-items: center; text-decoration: none; }

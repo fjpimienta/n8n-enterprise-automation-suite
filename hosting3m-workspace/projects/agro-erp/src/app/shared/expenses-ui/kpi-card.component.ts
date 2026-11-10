@@ -9,7 +9,8 @@ export type KpiTone = 'up' | 'down' | 'flat';
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './expenses-ui.scss',
   styles: `
-    .exp-kpi { background: var(--exp-surface); border: 1px solid var(--exp-border); border-radius: 14px; padding: .9rem 1rem; height: 100%; }
+    :host { display: block; min-width: 0; }
+    .exp-kpi { box-sizing: border-box; background: var(--exp-surface); border: 1px solid var(--exp-border); border-radius: 14px; padding: .9rem 1rem; height: 100%; }
     .exp-kpi-label { font-size: .8rem; color: var(--exp-muted); margin: 0 0 .25rem; }
     .exp-kpi-value { font-size: 1.6rem; font-weight: 700; color: var(--exp-ink); line-height: 1.15; overflow-wrap: anywhere; }
     .exp-kpi-hint { font-size: .8rem; color: var(--exp-muted); margin-top: .25rem; }
