@@ -12,7 +12,7 @@ import type { TrendBar } from './expenses-ui.util';
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './expenses-ui.scss',
   styles: `
-    .exp-scroll { overflow-x: auto; }
+    .exp-scroll { overflow-x: auto; scrollbar-color: var(--exp-input-border) var(--exp-bg); }
     .exp-bars { display: flex; align-items: flex-end; gap: 4px; height: 160px; padding-top: 18px; box-sizing: border-box; min-width: 100%; width: max-content; }
     .exp-bars.exp-wide .exp-col { min-width: 52px; }
     .exp-col { position: relative; flex: 1 1 0; min-width: 14px; height: 100%; }

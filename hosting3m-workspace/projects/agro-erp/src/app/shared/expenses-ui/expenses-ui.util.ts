@@ -31,3 +31,16 @@ const MONEY = new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN
 export function formatMoney(value: number | null | undefined): string {
   return value === null || value === undefined || !Number.isFinite(value) ? '—' : MONEY.format(value);
 }
+
+export interface GroupRow { key: string; label: string; amount: number; count: number; }
+
+/**
+ * Largest `max` groups (amount descending) and the rest summed into one final "Otros" row, so the rows always add up
+ * to the total of the input. Rows without a positive amount are left out.
+ */
+export function groupTopN(rows: ReadonlyArray<GroupRow>, max: number, otherLabel = 'Otros'): GroupRow[] {
+  const sorted = rows.filter(r => r.amount > 0).sort((a, b) => b.amount - a.amount);
+  if (sorted.length <= max) return sorted;
+  const rest = sorted.slice(max);
+  return [...sorted.slice(0, max), { key: '__other', label: otherLabel, amount: rest.reduce((t, r) => t + r.amount, 0), count: rest.reduce((t, r) => t + r.count, 0) }];
+}

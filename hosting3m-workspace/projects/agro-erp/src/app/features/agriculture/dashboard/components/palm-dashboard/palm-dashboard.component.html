@@ -85,25 +85,58 @@
     </div>
 
     @if (canAdminister()) {
-    <!-- Gasto del mes (ADMIN / OWNER, sp_agri_expense_balance) -->
-    <div class="card card-sm mb-3">
-        <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
-            <div>
-                <div class="subheader">Gasto del mes{{ monthLabel() ? ' · ' + monthLabel() : '' }}</div>
-                @if (monthLoading() && !monthBalance()) {
-                <div class="text-muted"><span class="spinner-border spinner-border-sm me-2" role="status"></span>Calculando…</div>
-                } @else if (monthError()) {
-                <div class="text-danger small"><i class="ti ti-alert-triangle me-1"></i>{{ monthError() }}</div>
-                } @else if (monthBalance(); as m) {
-                <div class="h2 mb-0">{{ money(m.totalAmount) }} <span class="text-muted small fw-normal">empresa · {{ m.expenseCount }} gasto(s)</span></div>
-                <div class="text-muted small">
-                    Esta plantación: {{ money(monthPlantation()?.totalAmount ?? 0) }} · Generales (sin plantación): {{ money(m.generalAmount) }}
-                </div>
-                }
+    <!-- Gasto (ADMIN / OWNER, sp_agri_expense_balance) -->
+    <section class="exp-screen exp-embed mb-3" aria-label="Gasto">
+        <div class="exp-toolbar">
+            <div class="exp-field">
+                <span class="exp-label">Periodo</span>
+                <exp-period-chips [options]="presets" [value]="preset()" ariaLabel="Periodo" (valueChange)="setPreset($event)"></exp-period-chips>
             </div>
-            <a class="btn btn-outline-primary" routerLink="/agricultura/gastos"><i class="ti ti-receipt me-2"></i>Ver gastos y balance</a>
+            <div class="exp-field">
+                <span class="exp-label">Alcance</span>
+                <exp-period-chips [options]="scopes" [value]="scope()" ariaLabel="Alcance del gasto" (valueChange)="setScope($event)"></exp-period-chips>
+            </div>
+            <a class="exp-btn" routerLink="/agricultura/gastos"><i class="ti ti-receipt me-2" aria-hidden="true"></i>Ver gastos y balance</a>
         </div>
-    </div>
+        <div class="exp-card-sub exp-embed-sub">
+            <strong>Gasto</strong> · {{ scopeLabel() }}@if (rangeLabel()) { · {{ rangeLabel() }} }
+        </div>
+
+        <div aria-live="polite">
+            @if (error()) { <div class="exp-alert err" role="alert"><i class="ti ti-alert-triangle me-1" aria-hidden="true"></i>{{ error() }}</div> }
+        </div>
+
+        @if (noPlantation()) {
+        <div class="exp-state">No hay una plantación activa: elige una para ver su gasto.</div>
+        } @else if (loading() && !balance()) {
+        <div class="exp-state" role="status"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Calculando gasto…</div>
+        } @else if (balance(); as b) {
+        <div class="exp-grid-kpi">
+            <exp-kpi-card label="Total del periodo" [value]="money(b.totalAmount)" [deltaText]="deltaText()" [tone]="deltaTone()" [hint]="deltaHint()"></exp-kpi-card>
+            <exp-kpi-card label="Promedio por día" [value]="money(avgPerDay())" hint="Días transcurridos del periodo"></exp-kpi-card>
+            <exp-kpi-card label="Número de gastos" [value]="'' + b.expenseCount" hint="Vigentes"></exp-kpi-card>
+            <exp-kpi-card [label]="fourthLabel()" [value]="fourthValue()" [hint]="fourthHint()"></exp-kpi-card>
+        </div>
+
+        <div class="exp-card mb-3">
+            <h3 class="exp-card-title">{{ trendTitle() }}</h3>
+            <exp-trend-bars [bars]="bars()" emptyText="Sin gastos en el periodo"></exp-trend-bars>
+        </div>
+
+        <div [class]="scope() === 'COMPANY' ? 'exp-grid-2' : 'exp-grid-1'">
+            <div class="exp-card">
+                <h3 class="exp-card-title">En qué se gasta</h3>
+                <exp-share-bar-list [items]="categoryItems()" emptyText="Sin gastos en el periodo"></exp-share-bar-list>
+            </div>
+            @if (scope() === 'COMPANY') {
+            <div class="exp-card">
+                <h3 class="exp-card-title">Por plantación</h3>
+                <exp-share-bar-list [items]="plantationItems()" emptyText="Sin gastos en el periodo"></exp-share-bar-list>
+            </div>
+            }
+        </div>
+        }
+    </section>
     }
 
     <div class="row row-cards mb-3">

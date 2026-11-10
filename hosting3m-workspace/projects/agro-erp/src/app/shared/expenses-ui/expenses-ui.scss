@@ -13,7 +13,7 @@
   --exp-danger: var(--exp-x-danger, #b42318);
   font-variant-numeric: tabular-nums;
 }
-.exp-card { background: var(--exp-surface); border: 1px solid var(--exp-border); border-radius: 14px; padding: 1rem 1.1rem; min-width: 0; }
+.exp-card { box-sizing: border-box; background: var(--exp-surface); border: 1px solid var(--exp-border); border-radius: 14px; padding: 1rem 1.1rem; min-width: 0; }
 .exp-card-title { font-size: .95rem; font-weight: 600; color: var(--exp-ink); margin: 0 0 .75rem; }
 .exp-muted { color: var(--exp-muted); }
 .exp-num { font-variant-numeric: tabular-nums; }
