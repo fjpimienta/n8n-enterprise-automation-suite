@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { todayCdmx } from '../../../agriculture/utils/agri.util';
 import type { Expense } from '../../models/expense.model';
 import type { Livestock } from '../../models/livestock.model';
+import { unweightedHeads } from '@shared/utils/herd-status.util';
 import { LivestockAnimalCostsComponent } from './livestock-animal-costs/livestock-animal-costs.component';
 import { LivestockExpenseHistoryComponent } from './livestock-expense-history/livestock-expense-history.component';
 import { LivestockExpenseSummaryComponent } from './livestock-expense-summary/livestock-expense-summary.component';
@@ -72,6 +73,74 @@ describe('app-livestock-expense-summary', () => {
   it('shows a loading state while there is no data yet', () => {
     const { text } = render(LivestockExpenseSummaryComponent, { canViewAmounts: true, loading: true });
     expect(text()).toContain('Cargando');
+  });
+});
+
+describe('app-livestock-expense-summary: animals without weight', () => {
+  const base = { canViewAmounts: true, expenses: [], pricePerKg: 10, resetKey: 'k1' };
+  const noWeight = (o: Partial<Livestock> = {}) => cow({ current_weight_kg: undefined, ...o });
+
+  it('shows nothing new when every valued animal has a weight', () => {
+    const { text } = render(LivestockExpenseSummaryComponent, { ...base, cattle: [cow(), cow({ id: 'a2' })] });
+    expect(text()).not.toContain('sin peso');
+    expect(text()).not.toContain('0 animales');
+  });
+
+  it('uses the singular for one animal and the plural otherwise', () => {
+    const one = render(LivestockExpenseSummaryComponent, { ...base, cattle: [cow(), noWeight({ id: 'a2' })] });
+    expect(one.text()).toContain('1 animal sin peso no suma al valor');
+    const two = render(LivestockExpenseSummaryComponent, { ...base, cattle: [noWeight(), noWeight({ id: 'a2', current_weight_kg: '0' as unknown as number })] });
+    expect(two.text()).toContain('2 animales sin peso no suman al valor');
+  });
+
+  it('does not count deceased animals', () => {
+    const { text } = render(LivestockExpenseSummaryComponent, { ...base, cattle: [cow(), noWeight({ id: 'a2', current_status: 'BAJA_MORTANDAD' })] });
+    expect(text()).not.toContain('sin peso no suma');
+  });
+
+  it('says in the no-UPP warning that all of them add $0 when none has a weight', () => {
+    const cattle = [noWeight({ production_unit_id: null, upp_code: null }), noWeight({ id: 'a2', production_unit_id: null, upp_code: null })];
+    const { text } = render(LivestockExpenseSummaryComponent, { ...base, cattle });
+    expect(text()).toContain('2 de 2 animales (100%) sin UPP asignada');
+    expect(text()).toContain('Ninguno tiene peso registrado, por eso suman $0.00.');
+  });
+
+  it('says how many of the no-UPP animals lack weight when only some do', () => {
+    const cattle = [
+      noWeight({ production_unit_id: null, upp_code: null }),
+      cow({ id: 'a2', production_unit_id: null, upp_code: null, current_weight_kg: 50 }),
+      cow({ id: 'a3' }),
+    ];
+    const { text } = render(LivestockExpenseSummaryComponent, { ...base, cattle });
+    expect(text()).toContain('2 de 3 animales (66.7%) sin UPP asignada');
+    expect(text()).toContain('1 de ellos no tiene peso registrado y suma $0.00.');
+  });
+
+  it('adds no weight text to the warning when the no-UPP animals all have a weight', () => {
+    const cattle = [cow({ production_unit_id: null, upp_code: null })];
+    const { text } = render(LivestockExpenseSummaryComponent, { ...base, cattle });
+    expect(text()).toContain('sin UPP asignada');
+    expect(text()).not.toContain('peso registrado');
+  });
+
+  it('agrees with the no-UPP warning on a mixed fixture (production unit set but empty code counts as no UPP)', () => {
+    const cattle = [
+      noWeight({ production_unit_id: null, upp_code: null }),
+      noWeight({ id: 'a2', production_unit_id: 'u1', upp_code: '' }),
+      noWeight({ id: 'a3', production_unit_id: 'u1', upp_code: 'UPP-1' }),
+      cow({ id: 'a4', production_unit_id: 'u1', upp_code: ' ' }),
+      cow({ id: 'a5' }),
+    ];
+    const { text } = render(LivestockExpenseSummaryComponent, { ...base, cattle });
+    expect(text()).toContain('3 de 5 animales (60%) sin UPP asignada');
+    expect(unweightedHeads(cattle).withoutWeightAndUpp).toBe(2);
+    expect(text()).toContain('2 de ellos no tienen peso registrado y suman $0.00.');
+  });
+
+  it('shows none of it to a non-ADMIN', () => {
+    const { text } = render(LivestockExpenseSummaryComponent, { ...base, canViewAmounts: false, cattle: [noWeight()] });
+    expect(text()).not.toContain('sin peso');
+    expect(text().trim()).toBe('');
   });
 });
 
