@@ -4,21 +4,31 @@ import { RouterLink } from '@angular/router';
 import { TenantService } from 'core-auth';
 import { LotSummary, PlantationSummary, STAGE_OPTIONS } from '@core/models/agri.model';
 import { ExpenseBalance } from '@core/models/agri-expense.model';
+import { KpiCardComponent, KpiTone } from '@shared/expenses-ui/kpi-card.component';
+import { PeriodChipsComponent } from '@shared/expenses-ui/period-chips.component';
+import { ShareBarListComponent, ShareItem } from '@shared/expenses-ui/share-bar-list.component';
+import { TrendBarsComponent } from '@shared/expenses-ui/trend-bars.component';
+import { averagePerDay, buildTrendBars, elapsedDays } from '@shared/expenses-ui/expenses-period.util';
+import { deltaPercent, formatDelta, formatPercent, sharePercent } from '@shared/expenses-ui/expenses-ui.util';
 import { AgriApiService } from '../../../services/agri-api.service';
 import { PlantationContextService } from '../../../services/plantation-context.service';
-import { canAdministerPalm } from '../../../utils/agri.util';
+import { canAdministerPalm, todayCdmx } from '../../../utils/agri.util';
 import { formatMoney, periodLabel } from '../../../utils/expense.util';
+import {
+  OVERVIEW_PRESETS, OVERVIEW_SCOPES, OverviewPlan, OverviewPreset, OverviewScope, categoryGroups, plantationGroups, planOverview,
+} from '../../../utils/expense-overview.util';
 import { densityComparison, lotsByStage, plantTotals } from '../../../utils/palm-dashboard.util';
 
 /**
  * Palm dashboard (read-only) for the ACTIVE plantation, from vw_agri_plantation_summary and
- * vw_agri_lot_summary. The only financial figure is the "Gasto del mes" card, for ADMIN / OWNER only, from
- * sp_agri_expense_balance (current month in America/Mexico_City, computed by the database).
+ * vw_agri_lot_summary. The only financial block is the expense overview, for ADMIN / OWNER only, from
+ * sp_agri_expense_balance (totals computed by the database; here only ratios of what it returns are derived).
+ * Each part of the overview (current period, previous period, company total) loads and fails on its own.
  */
 @Component({
   selector: 'app-palm-dashboard',
   standalone: true,
-  imports: [DecimalPipe, RouterLink],
+  imports: [DecimalPipe, RouterLink, KpiCardComponent, PeriodChipsComponent, ShareBarListComponent, TrendBarsComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './palm-dashboard.component.html',
   styleUrls: ['./palm-dashboard.component.scss'],
@@ -44,17 +54,71 @@ export class PalmDashboardComponent {
   maxStageLots = computed(() => Math.max(1, ...this.stages().map(s => s.lots)));
 
   readonly money = formatMoney;
-  monthBalance = signal<ExpenseBalance | null>(null);
-  monthLoading = signal(false);
-  monthError = signal<string | null>(null);
-  private monthSeq = 0;
-  monthLabel = computed(() => {
-    const b = this.monthBalance();
-    return b ? periodLabel('MONTH', b.dateFrom, b.dateTo) : '';
+  readonly presets = OVERVIEW_PRESETS;
+  readonly scopes = OVERVIEW_SCOPES;
+
+  preset = signal<OverviewPreset>('MONTH');
+  scope = signal<OverviewScope>('COMPANY');
+  today = signal(todayCdmx());
+  plan = signal<OverviewPlan | null>(null);
+
+  balance = signal<ExpenseBalance | null>(null);
+  loading = signal(false);
+  error = signal<string | null>(null);
+  previous = signal<ExpenseBalance | null>(null);
+  /** Company-wide balance of the same period: only the denominator of "Parte de la empresa" (plantation scope). */
+  companyBalance = signal<ExpenseBalance | null>(null);
+  private seq = 0;
+
+  rangeLabel = computed(() => {
+    const p = this.plan();
+    return p ? `${periodLabel('DAY', p.range.from, p.range.from)} al ${periodLabel('DAY', p.range.to, p.range.to)}` : '';
   });
-  /** This plantation's share, as returned by the balance (by_plantation); null = no expenses this month. */
-  monthPlantation = computed(() =>
-    this.monthBalance()?.byPlantation.find(p => p.plantationId === this.context.activePlantationId()) ?? null);
+  scopeLabel = computed(() => (this.scope() === 'PLANTATION'
+    ? `Plantación ${this.plantation()?.code ?? ''}${this.plantation()?.name ? ' · ' + this.plantation()!.name : ''}`.trim() : 'Toda la empresa'));
+  /** Plantation scope without an active plantation: nothing is requested. */
+  noPlantation = computed(() => this.scope() === 'PLANTATION' && !this.context.activePlantationId());
+
+  avgPerDay = computed(() => {
+    const b = this.balance();
+    const p = this.plan();
+    return b && p ? averagePerDay(b.totalAmount, elapsedDays(p.range, this.today())) : null;
+  });
+  delta = computed(() => {
+    const b = this.balance();
+    const prev = this.previous();
+    return b && prev ? deltaPercent(b.totalAmount, prev.totalAmount) : null;
+  });
+  deltaText = computed(() => formatDelta(this.delta()));
+  deltaTone = computed<KpiTone>(() => {
+    const d = this.delta();
+    return d === null || Math.round(d * 10) === 0 ? 'flat' : d > 0 ? 'up' : 'down';
+  });
+  deltaHint = computed(() => {
+    const c = this.plan()?.comparison;
+    if (!c) return 'Sin anulados';
+    if (c.kind === 'in-progress') return 'Periodo en curso';
+    return this.deltaText() ? c.label : 'Sin anulados';
+  });
+  /** 4th KPI: general expenses (company) or the share of the company total (plantation). */
+  fourthLabel = computed(() => (this.scope() === 'PLANTATION' ? 'Parte de la empresa' : 'Generales (sin plantación)'));
+  fourthValue = computed(() => {
+    const b = this.balance();
+    if (!b) return '—';
+    if (this.scope() === 'COMPANY') return formatMoney(b.generalAmount);
+    const company = this.companyBalance();
+    return company && company.totalAmount > 0 ? formatPercent(sharePercent(b.totalAmount, company.totalAmount)) : '—';
+  });
+  fourthHint = computed(() => (this.scope() === 'COMPANY' ? 'Sin plantación asignada'
+    : this.companyBalance() ? 'Del gasto total de la empresa' : 'Total de la empresa no disponible'));
+
+  bars = computed(() => {
+    const b = this.balance();
+    return b ? buildTrendBars(b.byPeriod, b.grain, this.today(), formatMoney) : [];
+  });
+  trendTitle = computed(() => (this.balance()?.grain === 'DAY' || (!this.balance() && this.preset() === 'MONTH') ? 'Gasto por día' : 'Gasto por mes'));
+  categoryItems = computed<ShareItem[]>(() => categoryGroups(this.balance()).map(r => ({ key: r.key, label: r.label, amount: r.amount, amountText: formatMoney(r.amount) })));
+  plantationItems = computed<ShareItem[]>(() => plantationGroups(this.balance()).map(r => ({ key: r.key, label: r.label, amount: r.amount, amountText: formatMoney(r.amount) })));
 
   constructor() {
     effect(() => {
@@ -65,35 +129,80 @@ export class PalmDashboardComponent {
         if (plantationId) void this.load(plantationId);
       });
     });
-    // "Gasto del mes": ADMIN / OWNER only; re-evaluated when the company or its role changes.
+    // Expense overview: ADMIN / OWNER only. A company or role change clears everything and goes back to the defaults.
+    effect(() => {
+      const tenantId = this.tenantService.activeTenantId();
+      this.canAdminister();
+      untracked(() => {
+        this.seq++;
+        this.clearOverview();
+        this.preset.set('MONTH');
+        this.scope.set('COMPANY');
+        void tenantId;
+      });
+    });
+    // (Re)load when the company, the role, the period, the scope or (plantation scope) the plantation changes.
     effect(() => {
       const tenantId = this.tenantService.activeTenantId();
       const canSee = this.canAdminister();
+      const preset = this.preset();
+      const scope = this.scope();
+      const plantationId = scope === 'PLANTATION' ? this.context.activePlantationId() : null;
       untracked(() => {
-        this.monthSeq++;
-        this.monthBalance.set(null);
-        this.monthError.set(null);
-        if (tenantId && canSee) void this.loadMonth();
+        this.seq++;
+        this.clearOverview();
+        // Fail closed: no company, no permission, or no plantation for the plantation scope -> no request at all.
+        if (tenantId && canSee) void this.loadOverview(preset, scope, plantationId);
       });
     });
   }
 
+  private clearOverview() {
+    this.balance.set(null);
+    this.previous.set(null);
+    this.companyBalance.set(null);
+    this.plan.set(null);
+    this.error.set(null);
+    this.loading.set(false);
+  }
+
+  setPreset(value: string) { this.preset.set(value as OverviewPreset); }
+  setScope(value: string) { this.scope.set(value as OverviewScope); }
+
   stageLabel(value: string) { return STAGE_OPTIONS.find(s => s.value === value)?.label ?? value; }
   stageBadge(value: string) { return STAGE_OPTIONS.find(s => s.value === value)?.badge ?? 'bg-secondary-lt'; }
 
-  async loadMonth() {
-    const seq = ++this.monthSeq;
-    this.monthLoading.set(true);
+  /**
+   * Current period first (it is the one that may show an error); the previous period and the company total only decorate
+   * it: their failure hides that figure and never blocks anything. A stale answer (newer request, company switch) is dropped.
+   */
+  async loadOverview(preset: OverviewPreset, scope: OverviewScope, plantationId: string | null) {
+    const seq = this.seq;
+    this.today.set(todayCdmx());
+    const plan = planOverview(preset, scope, plantationId, this.today());
+    this.plan.set(plan);
+    if (!plan) return; // plantation scope without an active plantation
+    const live = () => seq === this.seq;
+    this.loading.set(true);
+
+    if (plan.previous) {
+      this.api.getExpenseBalance(plan.previous).then(p => { if (live()) this.previous.set(p); })
+        .catch(error => console.error('[Agro-ERP] No se pudo cargar el periodo anterior:', error));
+    }
+    if (plan.company) {
+      this.api.getExpenseBalance(plan.company).then(c => { if (live()) this.companyBalance.set(c); })
+        .catch(error => console.error('[Agro-ERP] No se pudo cargar el total de la empresa:', error));
+    }
     try {
-      const balance = await this.api.getExpenseBalance();
-      if (seq === this.monthSeq) this.monthBalance.set(balance);
+      const balance = await this.api.getExpenseBalance(plan.query);
+      if (live()) this.balance.set(balance);
     } catch (error: any) {
-      if (seq !== this.monthSeq) return;
+      if (!live()) return;
       // Its own error: the rest of the dashboard stays usable, and an error is never shown as $0.
-      console.error('[Agro-ERP] Error al cargar el gasto del mes:', error);
-      this.monthError.set(error?.message || 'No se pudo cargar el gasto del mes.');
+      console.error('[Agro-ERP] Error al cargar el gasto:', error);
+      this.error.set(error?.message || 'No se pudo cargar el gasto.');
     } finally {
-      if (seq === this.monthSeq) this.monthLoading.set(false);
+      if (live()) this.loading.set(false);
     }
   }
 
