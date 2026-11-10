@@ -5,6 +5,11 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🐄 Aviso de animales sin peso en el valor estimado del hato (solo frontend)
+
+* En el Resumen de gastos (solo ADMIN), el «Valor estimado del hato» indica cuántos animales sin peso registrado no suman al valor, y el aviso de «sin UPP asignada» aclara cuántos de esos animales no tienen peso y por eso suman $0.00. Mismo alcance que el valor y la biomasa (`isValuedHead`). Si no hay nada que señalar, no se muestra texto nuevo.
+* Sin cambios: totales, conteos de cabezas, filtros y bloque de mortandad; no se agrega ninguna valoración alternativa.
+
 ### 🐄 Valor estimado y biomasa del hato: sin animales dados de baja por mortandad (solo frontend)
 
 * Un animal en `BAJA_MORTANDAD` (baja ya aprobada) deja de sumar al «Valor estimado del hato» y a la «Biomasa total» del dashboard, y al valor del Resumen de gastos (valor del hato, balance por UPP y balance neto). Ambos cálculos usan el mismo criterio (`isValuedHead`) y coinciden.

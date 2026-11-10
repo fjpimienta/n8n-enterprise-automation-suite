@@ -84,6 +84,11 @@
     <div class="exp-alert warn" role="status">
         <strong>{{ none.heads }} de {{ heads() }} animales ({{ formatPercent(noUppPct()) }}) sin UPP asignada.</strong>
         Valor estimado: {{ money(none.value) }} — esta cifra no aparece en el balance por UPP de abajo.
+        @if (unweighted().withoutWeightAndUpp > 0) {
+        {{ unweighted().withoutWeightAndUpp === none.heads ? 'Ninguno tiene peso registrado, por eso suman $0.00.'
+            : unweighted().withoutWeightAndUpp === 1 ? '1 de ellos no tiene peso registrado y suma $0.00.'
+            : unweighted().withoutWeightAndUpp + ' de ellos no tienen peso registrado y suman $0.00.' }}
+        }
     </div>
     }
 

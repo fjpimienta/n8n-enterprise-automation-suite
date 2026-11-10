@@ -50,6 +50,25 @@ export function valuedBiomassKg(list: ReadonlyArray<{ current_status?: string | 
 }
 
 /**
+ * Counts valued animals (`isValuedHead`) that add $0 to the herd value because their weight is missing, null, NaN or
+ * <= 0 (same parsing as `valuedBiomassKg`). `withoutWeightAndUpp` is the subset with no `production_unit_id`.
+ */
+export function unweightedHeads(
+  list: ReadonlyArray<{ current_status?: string | null; current_weight_kg?: number | string | null; production_unit_id?: string | null }>
+): { withoutWeight: number; withoutWeightAndUpp: number } {
+  let withoutWeight = 0;
+  let withoutWeightAndUpp = 0;
+  for (const a of list) {
+    if (!isValuedHead(a)) continue;
+    const w = Number(a.current_weight_kg ?? 0);
+    if (Number.isFinite(w) && w > 0) continue;
+    withoutWeight += 1;
+    if (!a.production_unit_id) withoutWeightAndUpp += 1;
+  }
+  return { withoutWeight, withoutWeightAndUpp };
+}
+
+/**
  * Aplica el filtro de estado de vida a una lista de cabezas.
  * `ACTIVOS` (default) es la vista viva; `BAJAS` solo venta/mortandad; `TODOS` no filtra.
  */
