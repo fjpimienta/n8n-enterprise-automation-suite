@@ -9,20 +9,20 @@ export type KpiTone = 'up' | 'down' | 'flat';
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './expenses-ui.scss',
   styles: `
-    .kpi { background: var(--exp-surface); border: 1px solid var(--exp-border); border-radius: 14px; padding: .9rem 1rem; height: 100%; }
-    .kpi-label { font-size: .8rem; color: var(--exp-muted); margin: 0 0 .25rem; }
-    .kpi-value { font-size: 1.6rem; font-weight: 700; color: var(--exp-ink); line-height: 1.15; overflow-wrap: anywhere; }
-    .kpi-hint { font-size: .8rem; color: var(--exp-muted); margin-top: .25rem; }
-    .kpi-delta { display: inline-block; font-size: .8rem; font-weight: 600; margin-top: .35rem; padding: .1rem .5rem; border-radius: 999px; background: var(--exp-bg); color: var(--exp-ink); }
+    .exp-kpi { background: var(--exp-surface); border: 1px solid var(--exp-border); border-radius: 14px; padding: .9rem 1rem; height: 100%; }
+    .exp-kpi-label { font-size: .8rem; color: var(--exp-muted); margin: 0 0 .25rem; }
+    .exp-kpi-value { font-size: 1.6rem; font-weight: 700; color: var(--exp-ink); line-height: 1.15; overflow-wrap: anywhere; }
+    .exp-kpi-hint { font-size: .8rem; color: var(--exp-muted); margin-top: .25rem; }
+    .exp-kpi-delta { display: inline-block; font-size: .8rem; font-weight: 600; margin-top: .35rem; padding: .1rem .5rem; border-radius: 999px; background: var(--exp-bg); color: var(--exp-ink); }
   `,
   template: `
-    <div class="kpi">
-      <p class="kpi-label">{{ label() }}</p>
-      <div class="kpi-value">{{ value() }}</div>
+    <div class="exp-kpi">
+      <p class="exp-kpi-label">{{ label() }}</p>
+      <div class="exp-kpi-value">{{ value() }}</div>
       @if (deltaText()) {
-      <span class="kpi-delta" [attr.data-tone]="tone()">{{ tone() === 'up' ? '▲' : tone() === 'down' ? '▼' : '■' }} {{ deltaText() }}</span>
+      <span class="exp-kpi-delta" [attr.data-tone]="tone()">{{ tone() === 'up' ? '▲' : tone() === 'down' ? '▼' : '■' }} {{ deltaText() }}</span>
       }
-      @if (hint()) { <div class="kpi-hint">{{ hint() }}</div> }
+      @if (hint()) { <div class="exp-kpi-hint">{{ hint() }}</div> }
     </div>
   `,
 })

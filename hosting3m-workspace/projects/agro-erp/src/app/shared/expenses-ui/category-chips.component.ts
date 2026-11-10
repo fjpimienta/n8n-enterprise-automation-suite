@@ -10,14 +10,14 @@ import { ChipOption } from './period-chips.component';
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './expenses-ui.scss',
-  styles: `.group { display: flex; flex-wrap: wrap; gap: .4rem; } .exp-chip.big { min-height: 44px; padding-inline: 1rem; }`,
+  styles: `.exp-group { display: flex; flex-wrap: wrap; gap: .4rem; } .exp-chip.exp-big { min-height: 44px; padding-inline: 1rem; }`,
   template: `
-    <div class="group" role="group" [attr.aria-label]="ariaLabel()">
+    <div class="exp-group" role="group" [attr.aria-label]="ariaLabel()">
       @if (allowAll()) {
-      <button type="button" class="exp-chip" [class.big]="large()" [attr.aria-pressed]="!value()" (click)="valueChange.emit('')">{{ allLabel() }}</button>
+      <button type="button" class="exp-chip" [class.exp-big]="large()" [attr.aria-pressed]="!value()" (click)="valueChange.emit('')">{{ allLabel() }}</button>
       }
       @for (o of options(); track o.value) {
-      <button type="button" class="exp-chip" [class.big]="large()" [attr.aria-pressed]="o.value === value()" [disabled]="disabled()" (click)="valueChange.emit(o.value)">{{ o.label }}</button>
+      <button type="button" class="exp-chip" [class.exp-big]="large()" [attr.aria-pressed]="o.value === value()" [disabled]="disabled()" (click)="valueChange.emit(o.value)">{{ o.label }}</button>
       }
     </div>
   `,
