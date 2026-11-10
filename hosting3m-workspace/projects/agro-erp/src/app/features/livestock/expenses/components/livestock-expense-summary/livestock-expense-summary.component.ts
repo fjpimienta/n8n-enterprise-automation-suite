@@ -14,6 +14,7 @@ import {
   periodView, spendByType, spendDelta, spendTrend, sumAmount, uppBalance,
 } from '../../livestock-expense.util';
 import { accumulatedResult, mortalityLoss, periodResult, recentSales, resultTone, resultWord, signedMoney } from '../../livestock-result.util';
+import { unweightedHeads } from '@shared/utils/herd-status.util';
 import { formatCalendarDate } from '@shared/utils/authorization-deadline.util';
 
 /**
@@ -89,7 +90,14 @@ export class LivestockExpenseSummaryComponent {
 
   heads = computed(() => this.cattle().length);
   value = computed(() => (this.canViewAmounts() ? herdValue(this.cattle(), this.pricePerKg()) : 0));
-  priceHint = computed(() => `Precio de referencia ${formatMoney(this.pricePerKg())}/kg`);
+  /** Animals in the valued scope without a usable weight: they add $0 to the herd value. */
+  unweighted = computed(() => unweightedHeads(this.cattle()));
+  priceHint = computed(() => {
+    const base = `Precio de referencia ${formatMoney(this.pricePerKg())}/kg`;
+    const n = this.unweighted().withoutWeight;
+    if (n <= 0) return base;
+    return `${base} · ${n === 1 ? '1 animal sin peso no suma' : `${n} animales sin peso no suman`} al valor`;
+  });
   rows = computed(() => (this.canViewAmounts() ? uppBalance(this.cattle(), this.expenses(), this.pricePerKg()) : []));
   net = computed(() => netBalance(this.rows()));
   perHeadValue = computed(() => perHead(this.periodTotal(), this.heads()));
