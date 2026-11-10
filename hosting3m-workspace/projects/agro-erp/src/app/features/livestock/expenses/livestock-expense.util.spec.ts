@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { isActiveHead, valuedBiomassKg } from '@shared/utils/herd-status.util';
+import { mortalityLoss } from './livestock-result.util';
 import type { Expense } from '../models/expense.model';
 import type { Livestock } from '../models/livestock.model';
 import {
@@ -242,5 +244,35 @@ describe('history', () => {
     expect(chips[8]).toEqual({ value: 'OTROS', label: 'Otros' });
     // "Otros" reaches the categories without their own chip
     expect(filterHistory(many, { ...base, categoryKey: 'OTROS' }, [], []).map(e => e.id).sort()).toEqual(['m8', 'm9']);
+  });
+});
+
+describe('deceased animals (BAJA_MORTANDAD) and the estimated herd value', () => {
+  const alive = cow({ id: 'a1', current_weight_kg: 100 });
+  const dead = cow({ id: 'a2', current_weight_kg: 300, current_status: 'BAJA_MORTANDAD' });
+  const deadNoWeight = cow({ id: 'a3', current_weight_kg: 0, current_status: ' baja_mortandad ' });
+  const deadList = [alive, dead, deadNoWeight];
+
+  it('herdValue excludes them, with and without weight', () => {
+    expect(herdValue(deadList, P)).toBe(1000);
+    expect(herdValue([dead], P)).toBe(0);
+    expect(herdValue([alive, dead], P)).toBe(herdValue([alive], P));
+    expect(herdValue([alive, dead], P)).toBe(herdValue([alive, { ...dead, current_status: 'ACTIVO' }], P) - 300 * P);
+  });
+  it('uppBalance excludes their value but keeps the head counts', () => {
+    const row = uppBalance(deadList, [], P).find(r => r.label === 'UPP-1')!;
+    expect(row).toMatchObject({ heads: 3, value: 1000, spend: 0, balance: 1000 });
+    expect(netBalance(uppBalance(deadList, [exp({ amount: 40 })], P))).toBe(herdValue(deadList, P) - 40);
+  });
+  it('the dashboard biomass x price equals the summary herd value for the same list', () => {
+    expect(valuedBiomassKg(deadList)).toBe(100);
+    expect(valuedBiomassKg(deadList) * P).toBe(herdValue(deadList, P));
+    expect(valuedBiomassKg([{ current_status: 'ACTIVO', current_weight_kg: '250' }, { current_status: 'VENDIDO', current_weight_kg: 90 }, { current_weight_kg: 'x' }])).toBe(250);
+    expect(valuedBiomassKg([dead])).toBe(0);
+  });
+  it('keeps counting them as heads and keeps the mortality loss', () => {
+    expect(isActiveHead(dead)).toBe(true);
+    expect(deadList.filter(isActiveHead).length).toBe(3);
+    expect(mortalityLoss([dead, deadNoWeight], P)).toEqual({ count: 2, estimatedLoss: 3000, withoutWeight: 1 });
   });
 });

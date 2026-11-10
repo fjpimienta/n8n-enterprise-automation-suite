@@ -5,6 +5,11 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🐄 Valor estimado y biomasa del hato: sin animales dados de baja por mortandad (solo frontend)
+
+* Un animal en `BAJA_MORTANDAD` (baja ya aprobada) deja de sumar al «Valor estimado del hato» y a la «Biomasa total» del dashboard, y al valor del Resumen de gastos (valor del hato, balance por UPP y balance neto). Ambos cálculos usan el mismo criterio (`isValuedHead`) y coinciden.
+* Sin cambios: conteos de cabezas, «Gasto por cabeza», filtro de inventario, y bajas / pérdida estimada del bloque de mortandad (que ahora indica que esas bajas ya no suman al valor). Los roles sin permiso de montos siguen sin ver cifras financieras.
+
 ### 🌴 Tablero de palma: resumen de gasto (solo frontend)
 
 * La tarjeta «Gasto del mes» del tablero de palma pasa a un resumen de gasto para ADMIN / OWNER: periodo (Este mes / Trimestre / Año), alcance (toda la empresa o la plantación activa), cuatro tarjetas con variación contra el mismo corte del periodo anterior, tendencia, «En qué se gasta» y «Por plantación». Cada bloque carga y falla por separado; un error se muestra como error, nunca como $0.
