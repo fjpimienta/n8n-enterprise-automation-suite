@@ -25,11 +25,11 @@ describe('exp-kpi-card', () => {
     expect(el.textContent).toContain('Total');
     expect(el.textContent).toContain('$1.00');
     expect(el.textContent).toContain('3 gastos');
-    expect(el.querySelector('.kpi-delta')?.textContent).toContain('▲ +10%');
+    expect(el.querySelector('.exp-kpi-delta')?.textContent).toContain('▲ +10%');
   });
   it('hides the delta when empty', () => {
     const { el } = render(KpiCardComponent, { label: 'Total', value: '$1.00' });
-    expect(el.querySelector('.kpi-delta')).toBeNull();
+    expect(el.querySelector('.exp-kpi-delta')).toBeNull();
   });
 });
 
@@ -68,7 +68,7 @@ describe('exp-share-bar-list', () => {
       { key: 'a', label: 'A', amount: 75, amountText: '$75' }, { key: 'b', label: 'B', amount: 25, amountText: '$25' }] });
     expect(el.textContent).toContain('75%');
     expect(el.textContent).toContain('$25');
-    expect((el.querySelector('.fill') as HTMLElement).style.width).toBe('75%');
+    expect((el.querySelector('.exp-fill') as HTMLElement).style.width).toBe('75%');
   });
   it('shows the empty text', () => {
     const { el } = render(ShareBarListComponent, { items: [], emptyText: 'Nada' });
@@ -82,8 +82,8 @@ describe('exp-trend-bars', () => {
     { key: '2', label: 'feb', value: 5, valueText: '$5', heightPct: 50, inProgress: true }];
   it('gives every bar a text value and tags the one in progress', () => {
     const { el } = render(TrendBarsComponent, { bars });
-    expect(el.querySelectorAll('.bar').length).toBe(2);
-    expect(el.querySelector('.bar.live')).not.toBeNull();
+    expect(el.querySelectorAll('.exp-bar').length).toBe(2);
+    expect(el.querySelector('.exp-bar.exp-live')).not.toBeNull();
     expect(el.textContent).toContain('$10');
     expect(el.textContent).toContain('feb (en curso)');
   });
@@ -100,18 +100,24 @@ describe('exp-trend-bars', () => {
   it('renders no details nor legend when every period is zero', () => {
     const { el } = render(TrendBarsComponent, { bars: mk(5, []) });
     expect(el.querySelector('details')).toBeNull();
-    expect(el.querySelector('.legend')).toBeNull();
+    expect(el.querySelector('.exp-legend')).toBeNull();
   });
   it('shows the values above every bar with at most 12 bars', () => {
     const { el } = render(TrendBarsComponent, { bars: mk(12, [1, 2]) });
-    expect(el.querySelectorAll('.val').length).toBe(12);
+    expect(el.querySelectorAll('.exp-val').length).toBe(12);
   });
   it('shows the value only above the largest bar with more than 12 bars', () => {
     const { el } = render(TrendBarsComponent, { bars: mk(30, [3, 9]) });
-    const vals = Array.from(el.querySelectorAll('.val'));
+    const vals = Array.from(el.querySelectorAll('.exp-val'));
     expect(vals.length).toBe(1);
     expect(vals[0].textContent).toBe('$19');
-    expect(el.querySelectorAll('.col[title]').length).toBe(30);
+    expect(el.querySelectorAll('.exp-col[title]').length).toBe(30);
+  });
+  it('uses a prefixed legend class that cannot collide with the Tabler legend', () => {
+    const { el } = render(TrendBarsComponent, { bars: [{ ...mk(3)[0], inProgress: true }, ...mk(3).slice(1)] });
+    expect(el.querySelector('.exp-legend')?.textContent).toContain('periodo en curso');
+    expect(el.querySelector('.legend')).toBeNull();
+    expect(Array.from(el.querySelectorAll('[class]')).some(n => n.classList.contains('legend'))).toBe(false);
   });
   it('shows the empty state', () => {
     const { el } = render(TrendBarsComponent, { bars: [], emptyText: 'Vacío' });

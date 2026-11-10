@@ -8,9 +8,9 @@ export interface ChipOption<T extends string = string> { value: T; label: string
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   styleUrl: './expenses-ui.scss',
-  styles: `.group { display: flex; flex-wrap: wrap; gap: .4rem; }`,
+  styles: `.exp-group { display: flex; flex-wrap: wrap; gap: .4rem; }`,
   template: `
-    <div class="group" role="group" [attr.aria-label]="ariaLabel()">
+    <div class="exp-group" role="group" [attr.aria-label]="ariaLabel()">
       @for (o of options(); track o.value) {
       <button type="button" class="exp-chip" [attr.aria-pressed]="o.value === value()" (click)="valueChange.emit(o.value)">{{ o.label }}</button>
       }
