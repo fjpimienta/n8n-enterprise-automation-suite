@@ -94,4 +94,5 @@
 [data-bs-theme='dark'] .exp-screen.exp-livestock .exp-pill.risk { background: #3d1a18; color: #ffd4d0; }
 
 .exp-screen .exp-mort { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; font-size: 1.05rem; }
+.exp-screen .exp-mort > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: .15rem .5rem; }
 .exp-screen .exp-explain { margin: 0 0 .75rem; }

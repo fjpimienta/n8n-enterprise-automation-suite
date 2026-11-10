@@ -50,6 +50,16 @@ describe('period result', () => {
     expect(r.incomeDelta).toBeCloseTo(150);
     expect(r.resultDelta).toBeCloseTo(((3500 - 1500) / 1500) * 100);
   });
+  it('hides the result delta when the sign changes between the previous and the current result', () => {
+    // previous cut: +1500 income - 500 spend = +1000; current: 0 income - 1500 spend = -1500
+    const r = periodResult([inc({ saleDate: '2026-10-05', amount: 1500 })], [exp({ expense_date: '2026-10-06', amount: 500 }), exp({ expense_date: '2026-11-04', amount: 1500 })], 'MONTH', '2026-11-09');
+    expect(r.result).toBe(-1500);
+    expect(r.resultDelta).toBeNull();
+    // opposite change: negative before, positive now
+    const r2 = periodResult([inc({ saleDate: '2026-11-03', amount: 3000 })], [exp({ expense_date: '2026-10-06', amount: 500 })], 'MONTH', '2026-11-09');
+    expect(r2.result).toBe(3000);
+    expect(r2.resultDelta).toBeNull();
+  });
   it('short previous month is capped at its last day', () => {
     const r = periodResult([inc({ saleDate: '2026-02-28', amount: 100 })], [], 'MONTH', '2026-03-31');
     expect(r.previousIncome).toBe(100);

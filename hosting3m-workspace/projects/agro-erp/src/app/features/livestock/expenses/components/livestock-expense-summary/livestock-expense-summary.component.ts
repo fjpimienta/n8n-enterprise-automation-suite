@@ -112,7 +112,8 @@ export class LivestockExpenseSummaryComponent {
   incomesReady = computed(() => this.incomesLoaded());
   result = computed(() => (this.canViewAmounts() && this.incomesLoaded() ? periodResult(this.incomes(), this.expenses(), this.preset(), this.today()) : null));
   resultTone = computed<KpiTone>(() => resultTone(this.result()?.result ?? 0));
-  resultHint = computed(() => resultWord(this.result()?.result ?? 0));
+  /** Without a percentage (sign change, no base) the hint says what the result is compared with instead. */
+  resultHint = computed(() => resultWord(this.result()?.result ?? 0) + (this.resultDeltaText() ? '' : ` · ${this.comparison()?.label ?? ''}`));
   incomeDeltaText = computed(() => formatDelta(this.result()?.incomeDelta ?? null));
   resultDeltaText = computed(() => formatDelta(this.result()?.resultDelta ?? null));
   incomeTone = computed<KpiTone>(() => { const d = this.result()?.incomeDelta ?? null; return d === null || Math.round(d * 10) === 0 ? 'flat' : d > 0 ? 'up' : 'down'; });
