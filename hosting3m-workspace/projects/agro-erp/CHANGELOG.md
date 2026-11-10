@@ -5,6 +5,10 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🌴 Tablero de palma: resumen de gasto (solo frontend)
+
+* La tarjeta «Gasto del mes» del tablero de palma pasa a un resumen de gasto para ADMIN / OWNER: periodo (Este mes / Trimestre / Año), alcance (toda la empresa o la plantación activa), cuatro tarjetas con variación contra el mismo corte del periodo anterior, tendencia, «En qué se gasta» y «Por plantación». Cada bloque carga y falla por separado; un error se muestra como error, nunca como $0.
+
 ### 🐄 Gastos y resultado de ganadería: correcciones y bloque «Resultado del periodo» (solo frontend)
 
 * **Estilos:** las clases privadas de los componentes compartidos de gastos llevan el prefijo `exp-`; la leyenda de las barras chocaba con `.legend` de Tabler y se partía letra por letra.
