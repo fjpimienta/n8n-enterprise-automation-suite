@@ -43,9 +43,9 @@ describe('app-livestock-expense-summary', () => {
     expect(text()).toContain('$625.00'); // 1250 / 2 heads
   });
 
-  it('shows legacy categories under Otros in the spend by type', () => {
+  it('shows other categories as received in the spend by type', () => {
     const { text } = render(LivestockExpenseSummaryComponent, inputs);
-    expect(text()).toContain('Otros');
+    expect(text()).toContain('Herrajes');
     expect(text()).toContain('Alimentación');
   });
 

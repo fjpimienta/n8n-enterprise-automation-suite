@@ -32,26 +32,45 @@ export const EXPENSE_CATEGORY_LABELS: Readonly<Record<string, string>> = {
 };
 export const OTHER_CATEGORY_KEY = 'OTROS';
 export const OTHER_CATEGORY_LABEL = 'Otros';
+export const NO_CATEGORY_KEY = 'SIN_CATEGORIA';
+export const NO_CATEGORY_LABEL = 'Sin categoría';
+/** Groups shown in "Gasto por tipo" before the rest is summed into "Otros". */
+export const MAX_TYPE_GROUPS = 6;
+/** Category chips of the history before the rest is reachable through "Otros". */
+export const MAX_CATEGORY_CHIPS = 8;
 
-const upperKey = (raw: string | null | undefined) => (raw ?? '').trim().toUpperCase();
+/** Obvious spellings only. Anything else stays as its own category. */
+const CATEGORY_ALIASES: Readonly<Record<string, string>> = { ALIMENTO: 'ALIMENTACION', ALIMENTOS: 'ALIMENTACION' };
 
-/** Group key: one of the four known categories, or OTROS for any legacy / missing value. */
+/** Trim, uppercase, strip accents and collapse inner spaces; '' for a missing value. */
+export function normalizeCategory(raw: string | null | undefined): string {
+  return String(raw ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase().trim().replace(/\s+/g, ' ');
+}
+
+/** Group key: the normalized value (aliases applied) or SIN_CATEGORIA when there is none. */
 export function categoryKey(raw: string | null | undefined): string {
-  const key = upperKey(raw);
-  return key in EXPENSE_CATEGORY_LABELS ? key : OTHER_CATEGORY_KEY;
+  const n = normalizeCategory(raw);
+  return n ? (CATEGORY_ALIASES[n] ?? n) : NO_CATEGORY_KEY;
 }
 
-/** Label of the group ("Otros" for anything unknown) — used by aggregations. */
-export function categoryGroupLabel(raw: string | null | undefined): string {
-  const key = categoryKey(raw);
-  return key === OTHER_CATEGORY_KEY ? OTHER_CATEGORY_LABEL : EXPENSE_CATEGORY_LABELS[key];
+const sentenceCase = (text: string) => {
+  const t = text.trim().replace(/\s+/g, ' ').toLowerCase();
+  return t.charAt(0).toUpperCase() + t.slice(1);
+};
+
+/** Label of a group: known label, "Sin categoría", or the received text in sentence case. */
+export function groupLabel(key: string, sampleRaw?: string | null): string {
+  if (key in EXPENSE_CATEGORY_LABELS) return EXPENSE_CATEGORY_LABELS[key];
+  if (key === NO_CATEGORY_KEY) return NO_CATEGORY_LABEL;
+  if (key === OTHER_CATEGORY_KEY) return OTHER_CATEGORY_LABEL;
+  return sentenceCase(sampleRaw || key);
 }
 
-/** Label of one expense: the known label, or the value exactly as received for a legacy category. */
+/** Label of one expense as it must be read: the known label, or the text exactly as received. */
 export function categoryLabel(raw: string | null | undefined): string {
   const key = categoryKey(raw);
-  if (key !== OTHER_CATEGORY_KEY) return EXPENSE_CATEGORY_LABELS[key];
-  return (raw ?? '').trim() || OTHER_CATEGORY_LABEL;
+  if (key in EXPENSE_CATEGORY_LABELS) return EXPENSE_CATEGORY_LABELS[key];
+  return String(raw ?? '').trim().replace(/\s+/g, ' ') || NO_CATEGORY_LABEL;
 }
 
 // Amounts and dates ---------------------------------------------------------------------------------------
@@ -143,17 +162,25 @@ export function spendTrend(expenses: readonly Expense[], range: DateRange, grain
 
 export interface TypeRow { key: string; label: string; amount: number; count: number; }
 
-/** Spend by category group; any unknown value is added to "Otros". Sorted by amount, descending. */
+/**
+ * Spend by normalized category, largest first. At most MAX_TYPE_GROUPS groups are listed; the rest is summed
+ * into a final "Otros" row (with its count), so the rows always add up to the sum of all the expenses.
+ */
 export function spendByType(expenses: readonly Expense[]): TypeRow[] {
   const groups = new Map<string, TypeRow>();
   for (const e of expenses) {
     const key = categoryKey(e.category);
-    const row = groups.get(key) ?? { key, label: categoryGroupLabel(e.category), amount: 0, count: 0 };
+    const row = groups.get(key) ?? { key, label: groupLabel(key, e.category), amount: 0, count: 0 };
     row.amount += amountOf(e);
     row.count += 1;
     groups.set(key, row);
   }
-  return [...groups.values()].sort((a, b) => b.amount - a.amount);
+  const sorted = [...groups.values()].sort((a, b) => b.amount - a.amount);
+  const named = sorted.filter(r => r.key !== OTHER_CATEGORY_KEY);
+  const head = named.slice(0, MAX_TYPE_GROUPS);
+  const rest = [...named.slice(MAX_TYPE_GROUPS), ...sorted.filter(r => r.key === OTHER_CATEGORY_KEY)];
+  if (!rest.length) return head;
+  return [...head, { key: OTHER_CATEGORY_KEY, label: OTHER_CATEGORY_LABEL, amount: rest.reduce((t, r) => t + r.amount, 0), count: rest.reduce((t, r) => t + r.count, 0) }];
 }
 
 const weightOf = (a: Pick<Livestock, 'current_weight_kg'> | null | undefined) => {
@@ -308,13 +335,32 @@ export function isGeneralExpense(expense: Expense, cattle: readonly Livestock[])
 
 export interface HistoryFilter { search: string; categoryKey: string; from: string; to: string; onlyGeneral: boolean; }
 
+/** Chips of the history: the categories that exist in the list (largest first, max 8) plus "Otros" for the rest. */
+export function categoryChipOptions(expenses: readonly Expense[]): Array<{ value: string; label: string }> {
+  const rows = new Map<string, { label: string; amount: number }>();
+  for (const e of expenses) {
+    const key = categoryKey(e.category);
+    const r = rows.get(key) ?? { label: groupLabel(key, e.category), amount: 0 };
+    r.amount += amountOf(e);
+    rows.set(key, r);
+  }
+  const sorted = [...rows.entries()].filter(([k]) => k !== OTHER_CATEGORY_KEY).sort((a, b) => b[1].amount - a[1].amount);
+  const options = sorted.slice(0, MAX_CATEGORY_CHIPS).map(([value, r]) => ({ value, label: r.label }));
+  if (sorted.length > MAX_CATEGORY_CHIPS || rows.has(OTHER_CATEGORY_KEY)) options.push({ value: OTHER_CATEGORY_KEY, label: OTHER_CATEGORY_LABEL });
+  return options;
+}
+
 /** Search matches concept, category (label or value as received), arete and fuego. Newest first. */
 export function filterHistory(expenses: readonly Expense[], f: HistoryFilter, lookup: readonly Livestock[], scope: readonly Livestock[]): Expense[] {
   const needle = normalizeForSearch(f.search.trim());
   const byId = new Map(lookup.map(a => [a.id, a] as const));
+  const chipKeys = new Set(categoryChipOptions(expenses).map(o => o.value).filter(v => v !== OTHER_CATEGORY_KEY));
   return filterByRange(expenses, f.from, f.to)
     .filter(e => {
-      if (f.categoryKey && categoryKey(e.category) !== f.categoryKey) return false;
+      if (f.categoryKey) {
+        const key = categoryKey(e.category);
+        if (f.categoryKey === OTHER_CATEGORY_KEY ? chipKeys.has(key) : key !== f.categoryKey) return false;
+      }
       if (f.onlyGeneral && !isGeneralExpense(e, scope)) return false;
       if (!needle) return true;
       const animal = e.livestock_id ? byId.get(e.livestock_id) : undefined;
@@ -322,11 +368,4 @@ export function filterHistory(expenses: readonly Expense[], f: HistoryFilter, lo
       return normalizeForSearch(haystack).includes(needle);
     })
     .sort((a, b) => (expenseDay(b) < expenseDay(a) ? -1 : expenseDay(b) > expenseDay(a) ? 1 : 0));
-}
-
-/** Chips for the history: the four known categories plus "Otros" only when a legacy value exists. */
-export function categoryChipOptions(expenses: readonly Expense[]): Array<{ value: string; label: string }> {
-  const options = Object.entries(EXPENSE_CATEGORY_LABELS).map(([value, label]) => ({ value, label }));
-  if (expenses.some(e => categoryKey(e.category) === OTHER_CATEGORY_KEY)) options.push({ value: OTHER_CATEGORY_KEY, label: OTHER_CATEGORY_LABEL });
-  return options;
 }

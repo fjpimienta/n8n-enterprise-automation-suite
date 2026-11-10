@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Expense } from '../models/expense.model';
 import type { Livestock } from '../models/livestock.model';
 import {
-  RISK_MARGIN_PCT, REFERENCE_PRICE_PER_KG, amountOf, animalCosts, categoryChipOptions, categoryGroupLabel, categoryKey, categoryLabel,
+  RISK_MARGIN_PCT, REFERENCE_PRICE_PER_KG, amountOf, animalCosts, categoryChipOptions, categoryKey, categoryLabel, groupLabel, normalizeCategory,
   comparisonLabel, expenseDay, filterByRange, filterHistory, herdValue, isAtRisk, isGeneralExpense, netBalance, perHead, periodView,
   previousCut, sortAnimalCosts, spendByType, spendDelta, spendTrend, sumAmount, uppBalance,
 } from './livestock-expense.util';
@@ -14,18 +14,29 @@ const cow = (o: Partial<Livestock> = {}): Livestock => ({
 const P = 10; // price used by the tests
 
 describe('categories', () => {
-  it('maps the four known values (any case/spacing) to their labels', () => {
+  it('normalizes accents, case and spaces', () => {
+    expect(normalizeCategory('  Alimentación   Mixta ')).toBe('ALIMENTACION MIXTA');
+    expect(normalizeCategory(undefined)).toBe('');
+    expect(categoryKey(' medicina ')).toBe('MEDICINA');
+  });
+  it('maps only the obvious aliases to ALIMENTACION', () => {
+    expect(categoryKey('ALIMENTO')).toBe('ALIMENTACION');
+    expect(categoryKey('alimentos')).toBe('ALIMENTACION');
+    expect(categoryKey('FORRAJE')).toBe('FORRAJE');
+  });
+  it('labels the four known keys and shows other values as received', () => {
     expect(categoryLabel('ALIMENTACION')).toBe('Alimentación');
     expect(categoryLabel(' medicina ')).toBe('Medicina y sanidad');
     expect(categoryLabel('SUPLEMENTOS')).toBe('Suplementos');
     expect(categoryLabel('MANEJO')).toBe('Manejo y fletes');
+    expect(categoryLabel('Herrajes  nuevos')).toBe('Herrajes nuevos');
+    expect(groupLabel('HERRAJES NUEVOS', 'HERRAJES NUEVOS')).toBe('Herrajes nuevos');
   });
-  it('shows an unknown legacy value as received and groups it under Otros', () => {
-    expect(categoryLabel('HERRAJES')).toBe('HERRAJES');
-    expect(categoryGroupLabel('HERRAJES')).toBe('Otros');
-    expect(categoryKey('HERRAJES')).toBe('OTROS');
-    expect(categoryLabel(undefined)).toBe('Otros');
-    expect(categoryKey(null)).toBe('OTROS');
+  it('treats an empty or missing category as "Sin categoría", not "Otros"', () => {
+    expect(categoryKey('')).toBe('SIN_CATEGORIA');
+    expect(categoryKey(null)).toBe('SIN_CATEGORIA');
+    expect(categoryLabel(undefined)).toBe('Sin categoría');
+    expect(groupLabel('SIN_CATEGORIA')).toBe('Sin categoría');
   });
 });
 
@@ -106,9 +117,21 @@ describe('trend', () => {
 });
 
 describe('by type', () => {
-  it('adds unknown values to Otros and sorts by amount', () => {
-    const rows = spendByType([exp({ category: 'MEDICINA', amount: 50 }), exp({ category: 'HERRAJES', amount: 30 }), exp({ category: '', amount: 20 }), exp({ category: 'ALIMENTACION', amount: 10 })]);
-    expect(rows.map(r => [r.label, r.amount, r.count])).toEqual([['Medicina y sanidad', 50, 1], ['Otros', 50, 2], ['Alimentación', 10, 1]]);
+  it('groups by normalized key, merges aliases and sorts by amount', () => {
+    const rows = spendByType([exp({ category: 'MEDICINA', amount: 50 }), exp({ category: 'Herrajes', amount: 30 }), exp({ category: '', amount: 20 }), exp({ category: 'ALIMENTO', amount: 10 }), exp({ category: 'Alimentación', amount: 5 })]);
+    expect(rows.map(r => [r.label, r.amount, r.count])).toEqual([['Medicina y sanidad', 50, 1], ['Herrajes', 30, 1], ['Sin categoría', 20, 1], ['Alimentación', 15, 2]]);
+  });
+  it('lists at most 6 groups and sums the rest into Otros with its count', () => {
+    const list = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].map((c, i) => exp({ category: c, amount: 100 - i * 10 }));
+    list.push(exp({ category: 'H', amount: 5 }));
+    const rows = spendByType(list);
+    expect(rows.map(r => r.label)).toEqual(['A', 'B', 'C', 'D', 'E', 'F', 'Otros']);
+    expect(rows[6]).toMatchObject({ amount: 40 + 30 + 5, count: 3 });
+  });
+  it('keeps the invariant: the groups add up to all the expenses', () => {
+    const list = Array.from({ length: 12 }, (_, i) => exp({ category: i % 3 === 0 ? '' : `CAT${i}`, amount: 10 + i }));
+    expect(spendByType(list).reduce((t, r) => t + r.amount, 0)).toBe(sumAmount(list));
+    expect(spendByType(list).reduce((t, r) => t + r.count, 0)).toBe(list.length);
   });
 });
 
@@ -206,13 +229,18 @@ describe('history', () => {
     expect(filterHistory(list, { ...base, search: 'alimentacion' }, cattle, cattle).map(e => e.id)).toEqual(['1']);
   });
   it('filters by category chip (Otros for legacy values), range and general-only', () => {
-    expect(filterHistory(list, { ...base, categoryKey: 'OTROS' }, cattle, cattle).map(e => e.id)).toEqual(['3']);
+    expect(filterHistory(list, { ...base, categoryKey: 'HERRAJES' }, cattle, cattle).map(e => e.id)).toEqual(['3']);
     expect(filterHistory(list, { ...base, from: '2026-11-02', to: '2026-11-02' }, cattle, cattle).map(e => e.id)).toEqual(['3']);
     expect(filterHistory(list, { ...base, onlyGeneral: true }, cattle, cattle).map(e => e.id)).toEqual(['2', '3']);
     expect(isGeneralExpense(list[0], cattle)).toBe(false);
   });
-  it('offers the Otros chip only when a legacy category exists', () => {
-    expect(categoryChipOptions(list).map(o => o.value)).toEqual(['ALIMENTACION', 'MEDICINA', 'SUPLEMENTOS', 'MANEJO', 'OTROS']);
-    expect(categoryChipOptions([list[0]]).length).toBe(4);
+  it('builds the chips from the categories that exist and adds Otros only beyond 8', () => {
+    expect(categoryChipOptions(list).map(o => o.value).sort()).toEqual(['ALIMENTACION', 'HERRAJES', 'MEDICINA']);
+    const many = Array.from({ length: 10 }, (_, i) => exp({ id: 'm' + i, category: `C${i}`, amount: 100 - i }));
+    const chips = categoryChipOptions(many);
+    expect(chips.length).toBe(9);
+    expect(chips[8]).toEqual({ value: 'OTROS', label: 'Otros' });
+    // "Otros" reaches the categories without their own chip
+    expect(filterHistory(many, { ...base, categoryKey: 'OTROS' }, [], []).map(e => e.id).sort()).toEqual(['m8', 'm9']);
   });
 });
