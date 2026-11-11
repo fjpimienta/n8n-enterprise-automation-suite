@@ -5,6 +5,12 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🐄 Confirmación única de las herramientas de alta del chat: ajustes
+
+* Chat Web y WhatsApp: tras pedir o corregir datos, el agente vuelve a llamar la herramienta para obtener la vista previa
+  (nunca escribe su propio resumen), pasa la UPP tal como la dijo el usuario y usa el `preview_hash` devuelto por la herramienta.
+* Solo cambia el texto del nodo `AI Agent` en ambos workflows; sin cambios de base de datos ni de frontend.
+
 ### 🐄 Flujo de confirmación simplificado en las herramientas de alta del chat
 
 * Chat Web y WhatsApp: en `register_livestock_regularization` y `register_livestock_purchase` el agente llama primero a la
