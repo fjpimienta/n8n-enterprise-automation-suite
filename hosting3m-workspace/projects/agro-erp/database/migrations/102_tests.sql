@@ -157,7 +157,8 @@ SELECT pg_temp.ok(pg_temp.p(9821, 't102-customer@example.test', p_tag => '982110
 SELECT pg_temp.ok(pg_temp.p(9823, 't102-admin@example.test', p_tag => '9821100002')->>'status' = 'palm',
                   'A4 a palm company answers palm');
 SELECT pg_temp.n(9824) AS n9824_before \gset
-SELECT pg_temp.ok(pg_temp.p(9824, 't102-admin@example.test', p_tag => '9821100003', p_confirmed => 'commit')->>'status' = 'forbidden'
+SELECT pg_temp.put('a5', pg_temp.p(9824, 't102-admin@example.test', p_tag => '9821100003', p_confirmed => 'commit'));
+SELECT pg_temp.ok(pg_temp.j('a5')->>'status' = 'forbidden'
                   AND pg_temp.n(9824) = :n9824_before,
                   'A5 an actor of company 9821 cannot write into company 9824 (forbidden, nothing written)');
 SELECT pg_temp.ok(pg_temp.p(9821, 'T102-OWNER@example.test', p_tag => '9821100002')->>'status' = 'preview'
@@ -213,13 +214,16 @@ SELECT pg_temp.ok((SELECT cl.metadata->>'source' = 'PANEL_ALTA' AND cl.metadata-
                      FROM cattle_livestock cl WHERE cl.id = (pg_temp.j('c1')->>'livestock_id')::uuid),
                   'C3 metadata: source PANEL_ALTA, actor, channel, migration; no preview_hash; no no_official_tag for an official tag');
 SELECT pg_temp.n(9821) AS n_c4 \gset
-SELECT pg_temp.ok(pg_temp.p(9821, 't102-editor@example.test', p_tag => '9821100007', p_confirmed => 'true', p_hash => 'deadbeefdeadbeefdeadbeefdeadbeef')->>'status' = 'preview_required'
-                  AND pg_temp.p(9821, 't102-editor@example.test', p_tag => '9821100007', p_confirmed => 'true')->>'status' = 'preview_required'
+SELECT pg_temp.put('c4a', pg_temp.p(9821, 't102-editor@example.test', p_tag => '9821100007', p_confirmed => 'true', p_hash => 'deadbeefdeadbeefdeadbeefdeadbeef'));
+SELECT pg_temp.put('c4b', pg_temp.p(9821, 't102-editor@example.test', p_tag => '9821100007', p_confirmed => 'true'));
+SELECT pg_temp.ok(pg_temp.j('c4a')->>'status' = 'preview_required'
+                  AND pg_temp.j('c4b')->>'status' = 'preview_required'
                   AND pg_temp.n(9821) = :n_c4,
                   'C4 an invalid or missing hash answers preview_required and writes nothing');
 SELECT pg_temp.put('c5', pg_temp.p(9821, 't102-editor@example.test', p_tag => '9821100007'));
-SELECT pg_temp.ok(pg_temp.p(9821, 't102-editor@example.test', p_tag => '9821100007', p_weight => '300', p_confirmed => 'true',
-                            p_hash => pg_temp.j('c5')->>'preview_hash')->>'status' = 'preview_required'
+SELECT pg_temp.put('c5b', pg_temp.p(9821, 't102-editor@example.test', p_tag => '9821100007', p_weight => '300', p_confirmed => 'true',
+                                    p_hash => pg_temp.j('c5')->>'preview_hash'));
+SELECT pg_temp.ok(pg_temp.j('c5b')->>'status' = 'preview_required'
                   AND pg_temp.n(9821) = :n_c4,
                   'C5 changing any value after the preview invalidates the hash');
 SELECT pg_temp.ok(pg_temp.p(9821, 't102-admin@example.test', p_tag => '9821100007', p_confirmed => 'true',
@@ -233,7 +237,8 @@ SELECT pg_temp.ok(pg_temp.p(9821, 't102-editor@example.test', p_tag => '98211000
 -- D. Duplicates
 -- ---------------------------------------------------------------------------------------------
 SELECT pg_temp.n(9821) AS n_d \gset
-SELECT pg_temp.ok(pg_temp.p(9821, 't102-editor@example.test', p_tag => '9821000001', p_confirmed => 'commit')->>'status' = 'duplicate'
+SELECT pg_temp.put('d1', pg_temp.p(9821, 't102-editor@example.test', p_tag => '9821000001', p_confirmed => 'commit'));
+SELECT pg_temp.ok(pg_temp.j('d1')->>'status' = 'duplicate'
                   AND pg_temp.n(9821) = :n_d,
                   'D1 a registered ear tag of the company is a duplicate (nothing written)');
 SELECT pg_temp.put('d2', pg_temp.p(9821, 't102-editor@example.test', p_tag => '9824000001'));
@@ -278,7 +283,8 @@ SELECT pg_temp.ok(pg_temp.j('e7')->>'status' = 'recorded'
                   'E7 the same request repeated twice (forced) yields three distinct identifiers and never the literal S/N');
 SELECT pg_temp.ok(pg_temp.p(9821, 't102-editor@example.test', p_tag => 'S/N', p_category => 'NOVILLO', p_confirmed => 'commit')->>'status' = 'recorded',
                   'E8 a different animal without tag is not blocked by the recent-duplicate rule');
-SELECT pg_temp.ok(pg_temp.p(9822, 't102-admin@example.test', p_upp => 'Norte', p_tag => '', p_category => 'TORO', p_confirmed => 'commit')->>'status' = 'recorded'
+SELECT pg_temp.put('e9', pg_temp.p(9822, 't102-admin@example.test', p_upp => 'Norte', p_tag => '', p_category => 'TORO', p_confirmed => 'commit'));
+SELECT pg_temp.ok(pg_temp.j('e9')->>'status' = 'recorded'
                   AND (SELECT rfid_siniiga FROM cattle_livestock WHERE tenant_id = 9822 AND rfid_siniiga LIKE 'S/N-%') ~ '^S/N-9822-',
                   'E9 the identifier carries the company of the animal');
 
@@ -287,7 +293,8 @@ SELECT pg_temp.ok(pg_temp.p(9822, 't102-admin@example.test', p_upp => 'Norte', p
 -- ---------------------------------------------------------------------------------------------
 SELECT pg_temp.ok(pg_temp.issue(pg_temp.p(9821, 't102-editor@example.test', p_tag => '12345'), 'ear_tag')->>'type' = 'invalid',
                   'G1 a bovine with a typed tag that is not 10 digits is an issue (use S/N instead)');
-SELECT pg_temp.ok(pg_temp.p(9821, 't102-editor@example.test', p_species => 'BORREGO', p_category => 'BORREGO', p_tag => 'AB-12', p_confirmed => 'commit')->>'status' = 'recorded'
+SELECT pg_temp.put('g2', pg_temp.p(9821, 't102-editor@example.test', p_species => 'BORREGO', p_category => 'BORREGO', p_tag => 'AB-12', p_confirmed => 'commit'));
+SELECT pg_temp.ok(pg_temp.j('g2')->>'status' = 'recorded'
                   AND EXISTS (SELECT 1 FROM cattle_livestock WHERE tenant_id = 9821 AND rfid_siniiga = 'AB-12'),
                   'G2 another species keeps a typed tag as typed');
 
@@ -329,7 +336,8 @@ SELECT pg_temp.ok(pg_temp.warn(pg_temp.p(9821, 't102-editor@example.test', p_tag
 SELECT pg_temp.ok(pg_temp.issue(pg_temp.p(9821, 't102-editor@example.test', p_tag => '9821100012', p_tb => (pg_temp.today() + 1)::text), 'tb_test_date') IS NOT NULL
                   AND pg_temp.issue(pg_temp.p(9821, 't102-editor@example.test', p_tag => '9821100012', p_br => 'ayer'), 'br_test_date') IS NOT NULL,
                   'I6 a future or malformed TB / BR date is an issue');
-SELECT pg_temp.ok(pg_temp.p(9821, 't102-editor@example.test', p_tag => '9821100012', p_confirmed => 'commit')->>'status' = 'recorded'
+SELECT pg_temp.put('i7', pg_temp.p(9821, 't102-editor@example.test', p_tag => '9821100012', p_confirmed => 'commit'));
+SELECT pg_temp.ok(pg_temp.j('i7')->>'status' = 'recorded'
                   AND (SELECT tb_test_date IS NULL AND br_test_date IS NULL FROM cattle_livestock WHERE rfid_siniiga = '9821100012'),
                   'I7 TB / BR stay NULL when not given (warnings do not block the registration)');
 
