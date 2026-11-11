@@ -1087,6 +1087,7 @@ Agente IA" arriba para el detalle de esta última extensión.*
   solo lectura, con filtro y agrupación por Lote agregados en v1.Unreleased sin migración
   nueva (ver `vw_cattle_kpi.lot_name` arriba).
 * Cumple el contrato de `created_at` señalado arriba (todas las tablas fuente ya lo tienen).
+* **Migración 101:** rama nueva `REGULARIZACION` (una fila por animal con `cattle_livestock.metadata->>'source' = 'REGULARIZACION_PADRON'`, alta por chat de la 099), calcada de `COMPRA`; mismas 18 columnas y tipos. La descripción no incluye `preview_hash` ni el correo de quien registró.
 * **Verificado en LOCAL y PRODUCCIÓN el 2026-09-22** (migración 060) **y el 2026-10-04**
   (migración 063) (`n8n-enterprise-db`/`hosting3m_db`), con backup previo y checksum de
   integridad tras transferir el archivo de migración — runbook estándar, ver `CLAUDE.md`.
@@ -1251,6 +1252,13 @@ All timestamps are naive UTC (`timestamp`, `now() AT TIME ZONE 'UTC'`); "today" 
 | `P0089` | Census history is append-only |
 
 ### `crud_models` (10 models, none with `id` in `allowed_fields`, none with a DELETE op)
+> **Scope note:** "10 models, none with a DELETE op" describes only the 10 palm (`agri_*`) models added by migration 080. It is
+> not a statement about the whole table: in production, 24 `crud_models` rows have `DELETE` in `allowed_ops`.
+> The gateway (`v6/CRUD`, `Build Query`, `delete` case) never issues a physical `DELETE`; it runs
+> `UPDATE <table> SET is_active = false WHERE <pk> = …`. Of those 24 models, 6 have an `is_active` column and therefore get a
+> logical deactivation: `cattle_sale_reference_prices`, `companys`, `customer_type`, `hotel_bookings`, `hotel_rooms` and
+> `news_articles`. The other 18 have no `is_active` column, so a `delete` fails with a SQL error and changes nothing
+> (`cattle_livestock` is one of them). `DELETE` in `allowed_ops` is therefore ineffective for those 18 models.
 `agri_variety_catalog` (select all roles, write ADMIN), `agri_plantations` / `agri_lots` (select
 ADMIN/OWNER/EDITOR/CUSTOMER, write ADMIN/OWNER), `agri_rows` (no INSERT: rows only via
 `sp_agri_bulk_create_rows`; UPDATE ADMIN/OWNER; `planting_positions`, `alive_plants`,
