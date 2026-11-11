@@ -7,9 +7,10 @@
 > (modelo del gateway, servicio y pantalla del panel). No hay Parte 2 de n8n; el merge a `main` (Parte 3) es lo último, solo si
 > la Parte 1 está OK. Requiere la 099 aplicada (la 100 no es necesaria).
 
-> ⚠️ **ESTADO: los SQL de este PR están SIN EJECUTAR.** Quien los escribió no tiene base de datos ni puede correrlos. Hasta que
-> la persona que los ejecute en una base local descartable reporte los resultados (sección «Resultados de la ejecución»), todo
-> lo que dice este runbook sobre su comportamiento es **diseño, no evidencia**.
+> ⚠️ **ESTADO: probado en una base local descartable (scratch_100, PostgreSQL 15.4, datos de prueba); NO aplicado en producción.**
+> Las pruebas, el ciclo completo (estado antes → dry run → aplicación → estado después → rollback → estado antes) y la
+> nulabilidad de las columnas en producción (solo lectura) están en «Resultados de la ejecución». **Producción no se ha tocado:**
+> antes de aplicar, ejecuta el state check «before» en producción, saca el respaldo y haz el dry run (Parte 1).
 
 # Runbook 102 — alta de ganado del panel web: función de vista previa y confirmación
 
@@ -80,18 +81,15 @@ empresa y 10 hex del id del animal, y la restricción global lo respalda con rei
 * `production_unit_id`: **sí**. `load_ganado_rojo.py:30` («`production_unit_id` … left NULL — this is schema-legal»);
   `016_cattle_livestock_production_unit_link.sql:~30` (el disparador regresa `NEW` si es `NULL`); animales de la 099 y 100 de
   empresas sin UPP en pruebas (`099_tests.sql`, `exists_without_upp`).
-* `current_weight_kg`: **evidencia en conflicto — el repositorio no lo resuelve.**
-  * A favor de `NULL`: la 099 inserta `NULL` en la regularización (`099_livestock_regularization.sql:793-794`) y sus pruebas lo
-    afirman (`099_tests.sql:343`, `100_tests.sql:339`: `current_weight_kg IS NULL`); la 099 está desplegada desde 2026-11-10 y el
-    CHANGELOG (#993) ya describe animales «sin peso registrado».
-  * En contra: scripts de carga de 2026-08 dicen «`current_weight_kg` is NOT NULL in production (discovered 2026-08-04)»
-    (`upsert_adult_cattle.py:295`, `load_ganado_rojo.py:35`, `038_alta_toros_tenosique.sql:21`) y usaban `0` +
-    `metadata.peso_no_registrado`.
-  * **Lo que hace la 102:** la decisión 2 (peso opcional) la sigue la 099 como precedente, pero la 102 **no lo supone**: su
-    precondición **aborta** (antes de crear nada) si `cattle_livestock.current_weight_kg` (o `production_unit_id`, `rfid_siniiga`,
-    `electronic_rfid`, `numero_fuego`, `lot_id`, `upp_origen`, `tb_test_date`, `br_test_date`) es `NOT NULL`; `102_state_check.sql`
-    imprime `is_nullable` de esas columnas y falla igual. **Antes del dry run, ejecuta la consulta de solo lectura del paso 2b.** Si
-    el peso resulta `NOT NULL` en producción, detente y reporta: la decisión 2 cambiaría (p. ej. guardar `0` + marca).
+* `current_weight_kg`: **acepta `NULL` — verificado en producción (solo lectura).** El repositorio daba evidencia en conflicto
+  (la 099 inserta `NULL` y sus pruebas lo afirman, `099_livestock_regularization.sql:793-794`, `099_tests.sql:343`,
+  `100_tests.sql:339`; en contra, scripts de carga de 2026-08 decían «NOT NULL in production»: `upsert_adult_cattle.py:295`,
+  `load_ganado_rojo.py:35`, `038_alta_toros_tenosique.sql:21`). La consulta en producción confirmó `is_nullable = YES` para
+  `current_weight_kg`, `production_unit_id`, `birth_date`, `upp_origen`, `numero_fuego`, `electronic_rfid`, `tb_test_date` y
+  `br_test_date`; así que la decisión 2 (peso opcional) se mantiene.
+  * **Red de seguridad que se conserva:** la precondición de la 102 **aborta** (antes de crear nada) si alguna de esas columnas
+    (o `rfid_siniiga`, `lot_id`) fuera `NOT NULL` al aplicar, y `102_state_check.sql` imprime `is_nullable` y falla igual. Se
+    vuelve a comprobar en el paso 2b contra el estado de producción del día de la aplicación.
 
 **(c) Especies, categorías y etapas.**
 * Categorías permitidas por `cattle_livestock_category_check` (`029_add_equine_species_support.sql:30-37`): `VACA, TORO, NOVILLO,
@@ -121,8 +119,8 @@ empresa y 10 hex del id del animal, y la restricción global lo respalda con rei
 * La 102 usa la misma regla para los avisos, con la fecha de CDMX (`fn_livestock_chat_today`); la función de salida usa
   `CURRENT_DATE` (hora del servidor). Un caso límite de un día cerca de la medianoche puede divergir; el aviso es informativo.
 
-**Contradicciones con las decisiones:** ninguna que obligue a detenerse. El único punto abierto es la nulabilidad real de
-`current_weight_kg` en producción (b), que la 102 protege con una precondición que aborta.
+**Contradicciones con las decisiones:** ninguna. La duda sobre la nulabilidad de `current_weight_kg` quedó resuelta con la
+consulta de solo lectura en producción (b); la precondición que aborta se conserva como red de seguridad.
 
 ## Orden de despliegue
 
@@ -155,7 +153,7 @@ comandos desde la carpeta de las migraciones. **Nada contra producción sin el r
    Debe terminar en `STATE OK: before`. Si falla por columnas `NOT NULL`, la 099 ausente o una función 102 ya existente, **detente**.
 
    2b. **Nulabilidad de las columnas (solo lectura)** — ya la imprime el paso anterior en `=== COLUMNS 102 NEEDS TO ACCEPT NULL`;
-   todas deben decir `YES`. Si `current_weight_kg` dice `NO`, **detente y reporta** (ver (b)).
+   todas deben decir `YES` (ya se confirmó una vez en producción; se repite el día de la aplicación). Si alguna dice `NO`, **detente y reporta** (ver (b)).
 
 3. **Conteo de referencia** (lo imprime `102_state_check.sql` en `=== DATA FINGERPRINTS`; permite verificar que la 102 no modifica
    filas).
@@ -236,12 +234,17 @@ manejo de `unique_violation` de la función (mismo diseño que `099_concurrency_
 
 ## Resultados de la ejecución
 
-**Pendiente.** Ningún SQL de este PR se ha ejecutado. Quien lo ejecute debe pegar aquí (o en el comentario del PR) la salida real:
+Ejecutado por el dueño en una base local descartable (`scratch_100`, PostgreSQL 15.4, datos de prueba). **Producción: solo la
+consulta de nulabilidad (lectura); la migración no se ha aplicado.** Nota: tras una primera revisión se corrigieron las pruebas
+(commit `42e8148`): siete aserciones mezclaban escritura y lectura en una sola sentencia; el procedimiento no cambió.
 
 | Paso | Resultado |
 |---|---|
-| `102_tests.sql` (base descartable) | _pendiente_ |
+| `102_tests.sql` (base descartable) | `102 TESTS: 67 assertions passed; rolling back, nothing is kept` y `no trace left (fixtures, users, animals and the function are as before the run)`. PASS: F1, A1-A7, B1-B6, C1-C7, D1-D4, E1-E9, G1-G2, H1-H3, I1-I7, J1-J8, K1-K5, L1-L8 |
+| Ciclo completo en la base descartable | state check `before` → dry run (`DRY RUN: 102 rolled back`) → aplicación (`102 COMMITTED`) → state check `applied` (`sp_register_livestock_panel` con 19 parámetros, md5 de la función `c93653e5a45221e446e80945d1622fc2`, `public_revoked = t`) → rollback (`102 ROLLBACK COMMITTED`) → state check `before` (`STATE OK: before`) |
+| Huella de las funciones que la 102 no debe cambiar | `09e51ec5d96445108f8be30440439a92` antes y después (idéntica) |
+| `is_nullable` en producción (solo lectura) | `YES` en `current_weight_kg`, `production_unit_id`, `birth_date`, `upp_origen`, `numero_fuego`, `electronic_rfid`, `tb_test_date` y `br_test_date` |
+| State check `before` en producción | _pendiente_ |
 | Dry run en producción | _pendiente_ |
-| `102_state_check.sql` antes / después, y su `diff` | _pendiente_ |
+| Aplicación en producción y state check `applied` + `diff` | _pendiente_ |
 | Humo de solo lectura, empresa 3 | _pendiente_ |
-| `is_nullable` de `current_weight_kg` en producción | _pendiente_ |
