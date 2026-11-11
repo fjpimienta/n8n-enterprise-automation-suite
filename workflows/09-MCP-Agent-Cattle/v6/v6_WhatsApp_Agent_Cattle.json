@@ -772,7 +772,7 @@
         "operation": "executeQuery",
         "query": "INSERT INTO pending_user_query (phone, query_text, created_at)\nVALUES ($1, $2, CURRENT_TIMESTAMP)\nON CONFLICT (phone) DO UPDATE SET query_text = EXCLUDED.query_text, created_at = CURRENT_TIMESTAMP;",
         "options": {
-          "queryReplacement": "={{ $('Set Message').item.json.number.toString().slice(-10) }},{{ $('Set Message').item.json.text }}"
+          "queryReplacement": "={{ [ String($('Set Message').item.json.number).slice(-10), String($('Set Message').item.json.text ?? '') ] }}"
         }
       },
       "type": "n8n-nodes-base.postgres",

@@ -5,6 +5,11 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🐄 WhatsApp: pregunta pendiente completa
+
+* La pregunta pendiente del agente de WhatsApp ya se guarda completa aunque el mensaje tenga comas. Solo cambia el nodo
+  `Guardar Pregunta Pendiente`; sin cambios de base de datos ni de frontend.
+
 ### 🐄 Bitácora: altas por regularización de padrón (migración 101)
 
 * La Bitácora de eventos muestra ahora las altas hechas por la regularización de padrón (tipo «Regularización», con su filtro y

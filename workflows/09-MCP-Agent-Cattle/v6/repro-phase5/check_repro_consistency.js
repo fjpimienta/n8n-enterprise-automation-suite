@@ -542,8 +542,8 @@ for (const [ch, f] of Object.entries(AGENTS)) {
   const strip = (n) => { const c = JSON.parse(JSON.stringify(n)); delete c.parameters.options.systemMessage; return JSON.stringify(c); };
   ok(`${ch}: in the node "AI Agent" ONLY options.systemMessage changed (model, tools wiring, memory and every other parameter identical to ${REF})`, strip(agentNow) === strip(agentPrev));
   const others = prev.nodes.filter((n) => n.name !== 'AI Agent');
-  // The only allowed difference outside "AI Agent": the audio language of the WhatsApp "Transcribe" node (options.language = 'es').
-  const sameNode = (n) => { const now = docs[f].nodes.find((x) => x.name === n.name); if (JSON.stringify(n) === JSON.stringify(now)) return true; if (n.name !== 'Transcribe' || !now || !now.parameters || !now.parameters.options || now.parameters.options.language !== 'es') return false; const c = JSON.parse(JSON.stringify(now)); delete c.parameters.options.language; return JSON.stringify(c) === JSON.stringify(n); };
+  // The only allowed differences outside "AI Agent": the audio language of the WhatsApp "Transcribe" node (options.language = 'es') and the queryReplacement array of "Guardar Pregunta Pendiente".
+  const sameNode = (n) => { const now = docs[f].nodes.find((x) => x.name === n.name); if (JSON.stringify(n) === JSON.stringify(now)) return true; if (n.name === 'Guardar Pregunta Pendiente' && now && now.parameters && now.parameters.options && String(now.parameters.options.queryReplacement).startsWith('={{ [')) { const c = JSON.parse(JSON.stringify(now)); c.parameters.options.queryReplacement = n.parameters.options.queryReplacement; return JSON.stringify(c) === JSON.stringify(n); } if (n.name !== 'Transcribe' || !now || !now.parameters || !now.parameters.options || now.parameters.options.language !== 'es') return false; const c = JSON.parse(JSON.stringify(now)); delete c.parameters.options.language; return JSON.stringify(c) === JSON.stringify(n); };
   ok(`${ch}: no other node of the workflow changed (${others.length} nodes)`, others.every(sameNode));
 }
 for (const ch of Object.keys(AGENTS)) {
@@ -558,6 +558,12 @@ for (const ch of Object.keys(AGENTS)) {
   const wa = sys.whatsapp || '';
   const audio = wa.slice(wa.indexOf('AUDIO (CANAL WHATSAPP)'), wa.indexOf('🛑 A. SEGURIDAD'));
   ok('whatsapp: AUDIO paragraph exempts register_livestock_regularization / register_livestock_purchase from a self-made summary (tool preview first, tag digit by digit in it)', audio.includes("Excepción: para 'register_livestock_regularization' y 'register_livestock_purchase' NO escribas un resumen propio antes") && audio.includes('llama PRIMERO la herramienta con confirmed="false"') && audio.includes('repite el arete dígito por dígito'));
+}
+{
+  // The pending question must be saved whole: queryReplacement is an array expression, not comma-separated text (n8n splits text on every comma)
+  const gpq = docs[AGENTS.whatsapp].nodes.find((n) => n.name === 'Guardar Pregunta Pendiente');
+  const qr = gpq && gpq.parameters && gpq.parameters.options && gpq.parameters.options.queryReplacement;
+  ok('whatsapp: "Guardar Pregunta Pendiente" passes queryReplacement as an array expression ("={{ [") and not as comma-separated text', typeof qr === 'string' && qr.startsWith('={{ [') && /\]\s*\}\}$/.test(qr));
 }
 for (const ch of Object.keys(AGENTS)) {
   ok(`${ch}: prompt size ${sys[ch].length} characters (limit 64 000; it was ~32 000 before phase 5; the growth to ~62 000 comes from migration 099, any further growth needs a review)`, sys[ch].length < 64000);
