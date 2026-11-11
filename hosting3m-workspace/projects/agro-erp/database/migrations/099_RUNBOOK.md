@@ -283,8 +283,16 @@ a `http://localhost:5678/mcp/v6/cattle-management` sin versionar ese cambio y de
 
 ## Deuda (no se resuelve en la 099)
 
-* 🔴 **`crud_models` `cattle_livestock` permite `DELETE` físico** desde el panel (`{SELECT,INSERT,UPDATE,DELETE,GETONE,GETALL}`,
-  insert/update ADMIN y EDITOR; producción 2026-11-05). Contradice el borrado lógico. Prioritaria.
+* ✅ **Nota corregida — `crud_models` `cattle_livestock` tiene `DELETE` en `allowed_ops`, pero el Meta-CRUD no borra
+  físicamente** (`{SELECT,INSERT,UPDATE,DELETE,GETONE,GETALL}`, insert/update ADMIN y EDITOR; producción 2026-11-05). Esta
+  viñeta decía antes que el panel permitía un `DELETE` físico; es incorrecto. Verificado en producción y en `v6/CRUD` (nodo
+  `Build Query`, caso `delete`): el gateway ejecuta `UPDATE <tabla> SET is_active = false WHERE <pk> = …`, es decir, una baja
+  lógica. `cattle_livestock` **no tiene columna `is_active`**, así que un `delete` sobre este modelo falla con un error de SQL y
+  no modifica ni borra nada. **Deja de ser deuda prioritaria.**
+  * Habilitar `DELETE` en `allowed_ops` de un modelo cuya tabla no tiene `is_active` es una configuración sin efecto (la
+    operación siempre falla).
+  * Si en el futuro se añadiera `is_active` a `cattle_livestock`, un `delete` dejaría al animal «desactivado» pero con
+    `current_status` en `ACTIVO`, sin pasar por `BAJA_DEPURACION_DATOS`. No añadir esa columna sin revisar este punto.
 * La Bitácora (`vw_cattle_event_log`) no muestra las altas `REGULARIZACION_PADRON` (solo la rama `COMPRA`).
 * La memoria del agente de ganadería en WhatsApp usa solo el teléfono como llave: puede mezclar el contexto de dos empresas.
   Mitigado para las altas por el `preview_hash`, que ata empresa y usuario.

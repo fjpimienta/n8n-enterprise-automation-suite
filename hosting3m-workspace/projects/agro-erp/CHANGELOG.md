@@ -5,6 +5,11 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 📝 Documentación: borrado vía Meta-CRUD
+
+* Se corrige la documentación de `crud_models`: el borrado del gateway es una baja lógica (`is_active`), no un `DELETE`
+  físico. Solo documentación; sin cambios de código, migraciones ni workflows.
+
 ### 🐄 Folio de guía normalizado en la regularización por chat (migración 100)
 
 * `sp_register_livestock_regularization` guarda el folio de la guía en mayúsculas y con los espacios internos repetidos
