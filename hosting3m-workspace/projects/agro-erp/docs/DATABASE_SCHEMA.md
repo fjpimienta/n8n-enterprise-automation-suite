@@ -1057,6 +1057,20 @@ its absence fails at runtime, not at deploy time (see CLAUDE.md, Contrato Meta-C
 
 ## ⚙️ Stored Procedures & Triggers (Business Logic Layer)
 
+### `sp_register_livestock_panel` (migración 102)
+*Función nueva, sin consumidores hasta los PR 2-4 (gateway y pantalla del panel); ver `database/migrations/102_RUNBOOK.md`.*
+* **Firma:** `(p_tenant_id integer, p_upp, p_lot, p_species, p_category, p_business_model, p_ear_tag, p_fire_number,
+  p_electronic_rfid, p_weight_kg, p_birth_date, p_origin_upp, p_tb_test_date, p_br_test_date, p_notes, p_confirmed,
+  p_preview_hash, p_force_duplicate, p_actor_email text)` → `jsonb` con `status` (`preview`, `preview_required`, `recorded`,
+  `need_info`, `duplicate`, `duplicate_other_company`, `exists_without_upp`, `duplicate_recent`, `forbidden`, `palm`, `invalid`).
+* **Alta del panel web en dos pasos** (vista previa sin escritura → confirmación con `preview_hash` de 32 hex), con los ayudantes
+  `fn_livestock_chat_*` de la 099 (sin modificarlos). `fn_livestock_chat_ctx` valida empresa, miembro activo, no palma y rol
+  ADMIN/OWNER/EDITOR antes de leer o escribir. Peso, TB y BR opcionales (avisos en la vista previa); arete vacío o `S/N` →
+  identificador único `S/N-<empresa>-<10 hex>` y `metadata.no_official_tag`; `metadata.source = 'PANEL_ALTA'`, `channel = 'PANEL_WEB'`,
+  `migration = '102'`, sin `preview_hash`.
+* `REVOKE ALL ... FROM PUBLIC`; depende de que `n8n_user` sea superusuario (como la 099). Rollback: `102_rollback.sql` (solo elimina la
+  función; los animales registrados no se tocan).
+
 
 ### `vw_cattle_event_log`
 *Añadido en v1.13.0, migración 060 (`CREATE OR REPLACE VIEW`, idempotente). Extendida en

@@ -5,6 +5,14 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🐄 Alta del panel web: función de vista previa y confirmación (migración 102, solo base de datos)
+
+* Nueva función `sp_register_livestock_panel`: alta de ganado en dos pasos (vista previa y confirmación) con los resguardos de la
+  migración 099 (empresa y usuario verificados, UPP, duplicados). Peso, TB y BR opcionales con avisos; un animal sin arete recibe un
+  identificador interno único `S/N-…`. Aún sin consumidores: **no cambia ningún comportamiento visible** hasta que el gateway y la
+  pantalla del panel la usen (PR siguientes). Runbook: `database/migrations/102_RUNBOOK.md`; los SQL están pendientes de ejecutar y
+  reportar.
+
 ### 🐄 WhatsApp: pregunta pendiente completa
 
 * La pregunta pendiente del agente de WhatsApp ya se guarda completa aunque el mensaje tenga comas. Solo cambia el nodo
