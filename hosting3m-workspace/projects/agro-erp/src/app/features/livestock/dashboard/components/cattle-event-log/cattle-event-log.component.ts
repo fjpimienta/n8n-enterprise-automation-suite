@@ -92,6 +92,16 @@ export class CattleEventLogComponent {
 
   public readonly eventTypeLabel = EVENT_TYPE_LABEL;
 
+  /** Etiqueta del tipo; un `event_type` que este frontend aún no conoce se muestra tal cual (nunca vacío ni con error). */
+  public typeLabel(type: string): string {
+    return (EVENT_TYPE_LABEL as Record<string, string | undefined>)[type] ?? (type || 'Sin tipo');
+  }
+
+  /** `false` para un tipo sin etiqueta/color asignado (el badge usa una clase neutra). */
+  public isKnownType(type: string): boolean {
+    return (EVENT_TYPE_LABEL as Record<string, string | undefined>)[type] !== undefined;
+  }
+
   public isLoading = signal<boolean>(false);
   public loadError = signal<string | null>(null);
   private rawRows = signal<CattleEventLogRow[]>([]);
@@ -256,7 +266,7 @@ export class CattleEventLogComponent {
         case 'numeroFuego':
           return factor * a.numeroFuego.localeCompare(b.numeroFuego);
         case 'eventType':
-          return factor * this.eventTypeLabel[a.eventType].localeCompare(this.eventTypeLabel[b.eventType]);
+          return factor * (this.typeLabel(a.eventType) ?? '').localeCompare(this.typeLabel(b.eventType) ?? '');
         case 'eventDate':
         default:
           return factor * (new Date(a.eventDate).getTime() - new Date(b.eventDate).getTime());
@@ -284,7 +294,7 @@ export class CattleEventLogComponent {
         ? `${entry.rfidSiniiga} / ${entry.numeroFuego}`
         : mode === 'LOT'
           ? `Lote: ${entry.lotName ?? NO_LOT_LABEL}`
-          : this.eventTypeLabel[entry.eventType];
+          : this.typeLabel(entry.eventType);
       const bucket = groups.get(key);
       if (bucket) {
         bucket.push(entry);
@@ -340,7 +350,7 @@ export class CattleEventLogComponent {
     const rows = this.sortedEntries().map(entry => [
       entry.rfidSiniiga,
       entry.numeroFuego,
-      this.eventTypeLabel[entry.eventType],
+      this.typeLabel(entry.eventType),
       entry.eventDate,
       this.describeEntry(entry)
     ]);

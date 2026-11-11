@@ -75,4 +75,69 @@ describe('CattleEventLogComponent — REGULARIZACION event type', () => {
     const component: any = fixture.componentInstance;
     expect(component.describeEntry(component.entries()[0])).toBe('Alta por regularización');
   });
+
+  describe('unknown event types', () => {
+    const rows = () => [
+      row('c1', 'A1', 'COMPRA', 'Comprado a X'),
+      row('u1', 'A2', 'TIPO_INVENTADO', 'Detalle del tipo nuevo'),
+      row('p1', 'A1', 'PESO')
+    ];
+
+    it('shows the raw type as label and a neutral badge', async () => {
+      const fixture = await setup(rows());
+      const c = fixture.componentInstance;
+      expect(c.typeLabel('TIPO_INVENTADO')).toBe('TIPO_INVENTADO');
+      expect(c.isKnownType('TIPO_INVENTADO')).toBe(false);
+      expect(c.isKnownType('COMPRA')).toBe(true);
+
+      const el: HTMLElement = fixture.nativeElement;
+      expect(el.textContent).toContain('TIPO_INVENTADO');
+      expect(el.textContent).toContain('Detalle del tipo nuevo');
+      const badges = Array.from(el.querySelectorAll('.badge')).filter(b => b.textContent?.trim() === 'TIPO_INVENTADO');
+      expect(badges.length).toBe(1);
+      expect(badges[0].classList.contains('bg-secondary-lt')).toBe(true);
+    });
+
+    it('sorts by event type in both directions without throwing', async () => {
+      const fixture = await setup(rows());
+      const c = fixture.componentInstance;
+      c.setSort('eventType');
+      expect(() => c.sortedEntries()).not.toThrow();
+      expect(c.sortedEntries().length).toBe(3);
+      c.setSort('eventType');
+      expect(() => c.sortedEntries()).not.toThrow();
+      expect(() => fixture.detectChanges()).not.toThrow();
+    });
+
+    it('groups by event type using the raw type as group name', async () => {
+      const fixture = await setup(rows());
+      const c = fixture.componentInstance;
+      c.setGroupBy('EVENT_TYPE');
+      const keys = c.groupedPageEntries().map(g => g.key);
+      expect(keys).toContain('TIPO_INVENTADO');
+      expect(keys).not.toContain('undefined');
+      expect(() => fixture.detectChanges()).not.toThrow();
+    });
+
+    it('exports the raw type in the CSV type column', async () => {
+      const fixture = await setup(rows());
+      let captured: Blob | null = null;
+      const originalCreate = (URL as any).createObjectURL;
+      const originalRevoke = (URL as any).revokeObjectURL;
+      (URL as any).createObjectURL = (b: Blob) => { captured = b; return 'blob:test'; };
+      (URL as any).revokeObjectURL = () => {};
+      const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+      try {
+        expect(() => fixture.componentInstance.exportCsv()).not.toThrow();
+      } finally {
+        (URL as any).createObjectURL = originalCreate;
+        (URL as any).revokeObjectURL = originalRevoke;
+        clickSpy.mockRestore();
+      }
+      expect(captured).not.toBeNull();
+      const text = await (captured as unknown as Blob).text();
+      expect(text).toContain('"TIPO_INVENTADO"');
+      expect(text).toContain('"Compra"');
+    });
+  });
 });

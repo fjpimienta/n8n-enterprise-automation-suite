@@ -32,26 +32,19 @@ La Bitácora sigue siendo solo ADMIN (migración 064, `crud_models`); la 101 no 
 * Sin cambios en funciones, tablas, workflows ni en la 099.
 * Las altas por compra y el resto de ramas no cambian (la prueba compara cada fila de la vista antes y después).
 
-## Comportamiento entre la base y el frontend (verificado leyendo el componente)
+## Comportamiento entre la base y el frontend
 
-Si la base ya tiene la 101 y el frontend todavía es el anterior, el componente recibe `event_type = 'REGULARIZACION'`, que no
-conoce:
-
-* **La fila se muestra**: la plantilla cae en `@default` y pinta `description`.
-* El badge del tipo sale **vacío y sin color** (`eventTypeLabel['REGULARIZACION']` es `undefined`).
-* **Ordenar por «Tipo de evento» falla** (`undefined.localeCompare`): la tabla deja de renderizarse mientras se ordene por esa
-  columna y haya una fila de tipo desconocido junto a otra.
-* **Agrupar por tipo** crea un grupo sin nombre. El filtro de tipo no ofrece la opción nueva. El CSV deja vacía la columna de tipo.
-* Los demás tipos y la carga de la vista no se ven afectados, y no se pierde ni se escribe ningún dato.
-
-Por eso el orden es base de datos primero y frontend enseguida; la ventana se reduce a lo que tarde el despliegue de Plesk. Si
-hace falta esperar, el rollback (`101_rollback.sql`) elimina las filas nuevas de la vista.
+El componente de la Bitácora tolera cualquier `event_type` que no conozca: muestra el tipo tal cual como etiqueta, con un badge
+neutro (gris), y el orden, la agrupación y la exportación CSV por tipo funcionan sin error. Por eso aplicar la base y desplegar
+el frontend en **cualquier orden** no rompe la pantalla. Con la base aplicada y el frontend anterior, las filas nuevas se ven con
+el texto `REGULARIZACION` en el badge (sin la etiqueta «Regularización» ni la opción en el filtro de tipo) hasta que se despliegue
+el frontend. No se pierde ni se escribe ningún dato.
 
 ## Orden de despliegue
 
-1. Base de datos: migración 101.
+1. Base de datos: migración 101 (primero).
 2. n8n: sin cambios.
-3. Frontend (Plesk). `main` lo publica solo; si el sitio no refleja la release, en la sección Git del dominio usa
+3. Frontend (Plesk), enseguida. `main` lo publica solo; si el sitio no refleja la release, en la sección Git del dominio usa
    **Deploy now** y fuerza la recarga del navegador. Solo cuando se libere a `main`.
 
 ## Parte 1 — base de datos
@@ -145,7 +138,7 @@ No aplica: la 101 no cambia workflows.
 ## Parte 3 — frontend
 
 **Solo si la Parte 1 está OK.** Cambia `cattle-event-log` (tipo `REGULARIZACION`: etiqueta, filtro «Regularización», color y
-detalle) y agrega su prueba. Publica `develop` → `main` (`gh pr merge N --merge`), confirma que
+detalle; además tolera tipos desconocidos) y agrega sus pruebas. Publica `develop` → `main` (`gh pr merge N --merge`), confirma que
 `git diff --stat origin/main origin/develop` no imprime nada y, si Plesk no refleja la release, **Deploy now** y recarga forzada.
 Comprueba en la pestaña «Cattle Event Log», con un ADMIN, que las altas por regularización aparecen con el tipo
 «Regularización», que el filtro de tipo las aísla y que ordenar y agrupar por tipo funcionan.
