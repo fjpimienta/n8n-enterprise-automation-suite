@@ -1072,6 +1072,13 @@ its absence fails at runtime, not at deploy time (see CLAUDE.md, Contrato Meta-C
   función; los animales registrados no se tocan).
 
 
+### Modelo del gateway `register_livestock_panel` (migración 103)
+*Una fila de `crud_models`; sin consumidores hasta la pantalla del panel; ver `database/migrations/103_RUNBOOK.md`.*
+* `table_name = sp_register_livestock_panel`, `allowed_ops = {INSERT}` (el gateway valida `call_sp` como INSERT), `allowed_roles_insert =
+  ADMIN,EDITOR` (sin OWNER, igual que el insert directo de `cattle_livestock`), `select/update/delete = NONE`, `is_global = false`,
+  `sp_requires_tenant = true`. `allowed_fields`: los 18 argumentos después del tenant (sin `id`, `tenant_id` ni `id_company`). Rollback:
+  `103_rollback.sql` (borra solo esa fila).
+
 ### `vw_cattle_event_log`
 *Añadido en v1.13.0, migración 060 (`CREATE OR REPLACE VIEW`, idempotente). Extendida en
 v1.15.0 (compras/destetes/solicitudes) y en v1.16.0, migración 063 (reproducción/

@@ -5,6 +5,13 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🐄 Alta del panel web: modelo del gateway (migración 103 y gateway v6)
+
+* El gateway v6 (`Build Query`) conoce `sp_register_livestock_panel` y la migración 103 registra su modelo `register_livestock_panel` en
+  `crud_models` (solo ADMIN y EDITOR; tenant obligatorio; correo del actor siempre el del token). Aún sin consumidores: **no cambia ningún
+  comportamiento visible** hasta la pantalla del panel. Primero la 102, luego la 103 y al final importar el workflow (orden y pruebas en
+  `database/migrations/103_RUNBOOK.md`; los SQL están pendientes de ejecutar y reportar).
+
 ### 🐄 Alta del panel web: función de vista previa y confirmación (migración 102, solo base de datos)
 
 * Nueva función `sp_register_livestock_panel`: alta de ganado en dos pasos (vista previa y confirmación) con los resguardos de la
