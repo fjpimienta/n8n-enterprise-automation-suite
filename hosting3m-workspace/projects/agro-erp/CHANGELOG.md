@@ -5,6 +5,13 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🐄 Folio de guía normalizado en la regularización por chat (migración 100)
+
+* `sp_register_livestock_regularization` guarda el folio de la guía en mayúsculas y con los espacios internos repetidos
+  colapsados a uno; los guiones se conservan. Folios que solo difieren en mayúsculas o espacios producen la misma vista previa.
+* Solo cambia una función de la base de datos (más una auxiliar); no rellena animales ya registrados y no hay cambios de
+  workflows ni de frontend. Runbook: `database/migrations/100_RUNBOOK.md`.
+
 ### 🐄 WhatsApp: audio y herramientas de alta
 
 * El agente de WhatsApp ya no escribe un resumen propio antes de llamar a las herramientas de alta por regularización o
