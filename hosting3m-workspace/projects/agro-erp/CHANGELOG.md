@@ -5,6 +5,12 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🐄 WhatsApp: audio y herramientas de alta
+
+* El agente de WhatsApp ya no escribe un resumen propio antes de llamar a las herramientas de alta por regularización o
+  compra cuando el mensaje es un audio: obtiene primero la vista previa de la herramienta y repite el arete dígito por
+  dígito en ella. Solo cambia el texto del nodo `AI Agent` de WhatsApp; sin cambios de base de datos ni de frontend.
+
 ### 🐄 Confirmación única de las herramientas de alta del chat: ajustes
 
 * Chat Web y WhatsApp: tras pedir o corregir datos, el agente vuelve a llamar la herramienta para obtener la vista previa
