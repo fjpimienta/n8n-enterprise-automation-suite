@@ -34,17 +34,20 @@ La Bitácora sigue siendo solo ADMIN (migración 064, `crud_models`); la 101 no 
 
 ## Comportamiento entre la base y el frontend
 
-El componente de la Bitácora tolera cualquier `event_type` que no conozca: muestra el tipo tal cual como etiqueta, con un badge
-neutro (gris), y el orden, la agrupación y la exportación CSV por tipo funcionan sin error. Por eso aplicar la base y desplegar
-el frontend en **cualquier orden** no rompe la pantalla. Con la base aplicada y el frontend anterior, las filas nuevas se ven con
-el texto `REGULARIZACION` en el badge (sin la etiqueta «Regularización» ni la opción en el filtro de tipo) hasta que se despliegue
-el frontend. No se pierde ni se escribe ningún dato.
+⚠️ El endurecimiento del componente (tipos desconocidos mostrados tal cual, badge neutro, orden, agrupación y CSV sin error)
+protege **solo el frontend nuevo**. El frontend que está hoy en producción **no** lo tiene: con la base ya aplicada y ese
+frontend anterior, las filas `REGULARIZACION` se listan con el badge vacío y sin color, y **ordenar la Bitácora por «Tipo de
+evento» falla** (la tabla deja de renderizarse) mientras haya una fila `REGULARIZACION` junto a otras. Agrupar por tipo crea un
+grupo sin nombre y el CSV deja vacía la columna de tipo. No se pierde ni se escribe ningún dato.
+
+Por eso el orden es obligatorio y la ventana debe ser mínima: aplicar la base, hacer el merge a `main` y desplegar el frontend
+con Plesk **Deploy now** enseguida (ver el orden de despliegue).
 
 ## Orden de despliegue
 
 1. Base de datos: migración 101 (primero).
 2. n8n: sin cambios.
-3. Frontend (Plesk), enseguida. `main` lo publica solo; si el sitio no refleja la release, en la sección Git del dominio usa
+3. Merge a `main` y frontend (Plesk **Deploy now**) **enseguida** después de aplicar la base; no dejes la base aplicada con el frontend anterior. `main` lo publica solo; si el sitio no refleja la release, en la sección Git del dominio usa
    **Deploy now** y fuerza la recarga del navegador. Solo cuando se libere a `main`.
 
 ## Parte 1 — base de datos
@@ -169,4 +172,9 @@ Restaura exactamente la definición de la 067 (mismas 18 columnas). **No toca da
   psql -X -v ON_ERROR_STOP=1 -d <BASE_DESCARTABLE> -f 101_tests.sql
   ```
 * `101_state_check.sql`: `before`, `applied` y `rolled_back` (sinónimo de `before`).
+* **Resultado de la ejecución local** (copia descartable `scratch_100`, PostgreSQL 15.4, ejecutada por el responsable del
+  proyecto): `101_tests.sql` completo con todos los casos en PASS (A1–A3, B1–B12, C1, D1–D2, E1–E6, F1–F2); verificación de
+  estado `before` / `applied` / `before`; dry run, aplicación y rollback correctos. Huellas: `md5` normalizado de la vista 067 =
+  `726fdf2e20ca6848deb0b1d7cfef66b9`; con la rama nueva = `554ef4c142662231c69799f0bfe4a1f0`; huella de las 18 columnas =
+  `e8d03ea948ef51a6d533127c34d990a9` (idéntica antes y después). **Pendiente solo la aplicación en producción.**
 * Frontend: `ng test agro-erp` (incluye `cattle-event-log.component.spec.ts`) y `ng build agro-erp --configuration=production`.
