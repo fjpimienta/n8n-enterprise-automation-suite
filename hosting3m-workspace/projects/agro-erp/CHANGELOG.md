@@ -5,6 +5,14 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🐄 Flujo de confirmación simplificado en las herramientas de alta del chat
+
+* Chat Web y WhatsApp: en `register_livestock_regularization` y `register_livestock_purchase` el agente llama primero a la
+  herramienta para obtener su vista previa, la muestra y pide un solo "Sí"; no vuelve a preguntar datos ya dados (modelo de
+  negocio, empresa, UPP nombrada). El resto de las herramientas de NIVEL 3 no cambia.
+* WhatsApp: la transcripción de audio se fija en español (`Transcribe`, `options.language = es`).
+* Solo cambian los nodos `AI Agent` (Chat y WhatsApp) y `Transcribe` (WhatsApp); sin cambios de base de datos ni de frontend.
+
 ### 🐄 Alta por regularización de padrón y compra endurecida por chat (migración 099) — desplegado el 2026-11-10
 
 *Runbook: `database/migrations/099_RUNBOOK.md` (⛔ base de datos → n8n en orden MCP, Chat, WhatsApp; sin cambios de frontend).*

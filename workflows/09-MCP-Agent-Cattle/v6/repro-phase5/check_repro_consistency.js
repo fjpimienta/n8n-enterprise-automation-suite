@@ -542,7 +542,9 @@ for (const [ch, f] of Object.entries(AGENTS)) {
   const strip = (n) => { const c = JSON.parse(JSON.stringify(n)); delete c.parameters.options.systemMessage; return JSON.stringify(c); };
   ok(`${ch}: in the node "AI Agent" ONLY options.systemMessage changed (model, tools wiring, memory and every other parameter identical to ${REF})`, strip(agentNow) === strip(agentPrev));
   const others = prev.nodes.filter((n) => n.name !== 'AI Agent');
-  ok(`${ch}: no other node of the workflow changed (${others.length} nodes)`, others.every((n) => JSON.stringify(n) === JSON.stringify(docs[f].nodes.find((x) => x.name === n.name))));
+  // The only allowed difference outside "AI Agent": the audio language of the WhatsApp "Transcribe" node (options.language = 'es').
+  const sameNode = (n) => { const now = docs[f].nodes.find((x) => x.name === n.name); if (JSON.stringify(n) === JSON.stringify(now)) return true; if (n.name !== 'Transcribe' || !now || !now.parameters || !now.parameters.options || now.parameters.options.language !== 'es') return false; const c = JSON.parse(JSON.stringify(now)); delete c.parameters.options.language; return JSON.stringify(c) === JSON.stringify(n); };
+  ok(`${ch}: no other node of the workflow changed (${others.length} nodes)`, others.every(sameNode));
 }
 for (const ch of Object.keys(AGENTS)) {
   ok(`${ch}: prompt size ${sys[ch].length} characters (limit 64 000; it was ~32 000 before phase 5; the growth to ~62 000 comes from migration 099, any further growth needs a review)`, sys[ch].length < 64000);
