@@ -5,7 +5,7 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
-### 🐄 Alta por regularización de padrón y compra endurecida por chat (migración 099) — pendiente de despliegue
+### 🐄 Alta por regularización de padrón y compra endurecida por chat (migración 099) — desplegado el 2026-11-10
 
 *Runbook: `database/migrations/099_RUNBOOK.md` (⛔ base de datos → n8n en orden MCP, Chat, WhatsApp; sin cambios de frontend).*
 * **Por qué:** el 2026-11-05 un becerro real que faltaba en el sistema se dio de alta por Chat Web con la herramienta de compra:
@@ -34,6 +34,11 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 * **Deuda registrada:** `DELETE` físico permitido en `crud_models` `cattle_livestock` (prioritaria); la Bitácora no muestra
   `REGULARIZACION_PADRON`; memoria de WhatsApp por teléfono; comas en `Guardar Pregunta Pendiente`; 197 bovinos de la empresa 5
   sin UPP; 1 BUFALO con categoría NOVILLO (calidad de datos); catálogo de etapas sin especies no bovinas.
+
+### 🐄 Aviso de animales sin peso en el valor estimado del hato (solo frontend)
+
+* En el Resumen de gastos (solo ADMIN), el «Valor estimado del hato» indica cuántos animales sin peso registrado no suman al valor, y el aviso de «sin UPP asignada» aclara cuántos de esos animales no tienen peso y por eso suman $0.00. Mismo alcance que el valor y la biomasa (`isValuedHead`). Si no hay nada que señalar, no se muestra texto nuevo.
+* Sin cambios: totales, conteos de cabezas, filtros y bloque de mortandad; no se agrega ninguna valoración alternativa.
 
 ### 🐄 Valor estimado y biomasa del hato: sin animales dados de baja por mortandad (solo frontend)
 

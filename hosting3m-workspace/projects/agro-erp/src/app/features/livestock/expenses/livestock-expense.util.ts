@@ -7,7 +7,7 @@ import type { Expense } from '../models/expense.model';
 import type { Livestock } from '../models/livestock.model';
 import { DateRange, PeriodGrain, PeriodPreset, PeriodTotal, addDays, elapsedDays, previousRange, rangeForPreset } from '@shared/expenses-ui/expenses-period.util';
 import { deltaPercent, sharePercent } from '@shared/expenses-ui/expenses-ui.util';
-import { isValuedHead } from '@shared/utils/herd-status.util';
+import { isValuedHead, uppCodeOf } from '@shared/utils/herd-status.util';
 import { normalizeForSearch } from '@shared/utils/text-normalize.util';
 
 /** Reference price used for the estimated value of the herd (MXN per kg). Not configurable yet. */
@@ -199,7 +199,6 @@ export function perHead(total: number, heads: number): number | null {
   return heads > 0 && Number.isFinite(total) ? total / heads : null;
 }
 
-const uppCodeOf = (a: Livestock | null | undefined): string => (a?.production_unit_id && String(a.upp_code ?? '').trim()) || '';
 
 export type UppRowKind = 'upp' | 'none' | 'general';
 export interface UppRow {
