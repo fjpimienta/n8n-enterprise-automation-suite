@@ -2,10 +2,9 @@
 > `main` publica automáticamente los frontends por Plesk. Este PR no cambia el frontend, pero el estado del repositorio no debe
 > divergir del de producción.
 
-> ⚠️ **ESTADO: los SQL de la 103 están SIN EJECUTAR.** Quien los escribió no tiene base de datos ni n8n y no pudo correrlos. Lo que
-> sí se ejecutó (Node, sin base ni n8n): la prueba `workflows/06-dynamic-crud-engine/v6/tests/test_v6_panel_sp.mjs` (12 comprobaciones del
-> nodo `Build Query`). Hasta que quien los ejecute en una base local descartable reporte los resultados (sección «Resultados de la
-> ejecución»), lo que dice este runbook sobre los SQL es **diseño, no evidencia**. Producción no se ha tocado.
+> ⚠️ **ESTADO: probado en una base local descartable (scratch_100, PostgreSQL 15.4); NO aplicado en producción; la importación del
+> workflow en n8n está pendiente.** Los resultados de las pruebas y del ciclo local están en «Resultados de la ejecución». Producción no
+> se ha tocado (solo una consulta de lectura sobre los roles de `cattle_livestock`): antes de aplicar, haz el respaldo, el estado «before» y el dry run (Parte 1).
 
 # Runbook 103 — modelo del gateway para el alta de ganado del panel (PR 2 de 6)
 
@@ -36,8 +35,8 @@ Sigue el patrón de los modelos `call_sp` de la 081 (`agri_record_expense`, `agr
 ⚠️ **Consecuencia de no agregar OWNER:** el gateway toma el rol de la membresía de la empresa activa (`Get Membresia` →
 `Extract Auth Context`). La función de la 102 sí admite OWNER, pero un usuario con rol OWNER recibirá `403` del gateway (`Security Validation`).
 Si el dueño quiere que OWNER use la pantalla, es un cambio de `allowed_roles_insert` decidido aparte (y primero en el insert directo).
-`103_state_check.sql` imprime el `allowed_roles_insert` actual del modelo directo `cattle_livestock` para comparar; **confírmalo en producción
-antes de aplicar** (el repositorio no lo registra).
+`103_state_check.sql` imprime el `allowed_roles_insert` actual del modelo directo `cattle_livestock` para comparar. **Verificado en producción
+(solo lectura): es `ADMIN,EDITOR`**, igual que el de esta fila, así que no se amplían privilegios. Se vuelve a ver en la salida del paso 2.
 
 ## Verificaciones hechas con el código (sin ejecutar n8n ni SQL)
 
@@ -160,14 +159,20 @@ el respaldo (paso 1) y el dry run (paso 4).**
 
 ## Resultados de la ejecución
 
-**Pendiente.** Los SQL no se han ejecutado. Quien los ejecute pega aquí (o en el PR) la salida real:
+Ejecutado por el dueño en una base local descartable (`scratch_100`, PostgreSQL 15.4). **Producción: solo la consulta de lectura de roles; la 103 y
+el workflow no se han aplicado.**
 
 | Paso | Resultado |
 |---|---|
-| `test_v6_panel_sp.mjs` (Node, sin base) | 12 passed, 0 failed (ejecutado por el autor del cambio, sin base ni n8n) |
-| `103_tests.sql` (base descartable) | _pendiente_ |
-| Ciclo completo local (before → dry run → apply → applied → rollback → before) | _pendiente_ |
-| `allowed_roles_insert` del modelo `cattle_livestock` en producción (solo lectura) | _pendiente_ |
+| `test_v6_panel_sp.mjs` (Node, sin base) | 12 de 12 |
+| Preparación local | 102 aplicada con `apply=true` (`102 COMMITTED`); huella de la función `c93653e5a45221e446e80945d1622fc2` |
+| `103_state_check.sql -v expect=before` | `STATE OK: before` (fila ausente; `other_crud_models_count` 86, md5 `3fe5a9b610500dc39f905018de0544c2`) |
+| Dry run de la 103 | `103: OK` y `DRY RUN: 103 rolled back` |
+| Aplicación de la 103 | `103 COMMITTED` |
+| `103_state_check.sql -v expect=applied` | `STATE OK: applied`; fila `register_livestock_panel` → `sp_register_livestock_panel`, `allowed_ops {INSERT}`, select/update/delete `NONE`, insert `ADMIN,EDITOR`, `is_global f`, `sp_requires_tenant t`, 18 campos; las otras 86 filas y la función de la 102 con las mismas huellas; la fila directa `cattle_livestock` sigue en `ADMIN,EDITOR` |
+| `103_tests.sql` | `27 assertions passed` y `no trace left (crud_models is as before the run)`. PASS: A1, B1-B9, C1-C5, D1, D2, E1-E4, F1-F6. Los mensajes `ERROR` de la salida son esperados: E1 y E3 comprueban que la migración se niega a correr sin la 102 y con un modelo del mismo nombre apuntando a otra tabla |
+| Rollback y limpieza locales | `103_rollback.sql` con `apply=true` (`DELETE 1`, `103 ROLLBACK COMMITTED`), `103_state_check.sql -v expect=before` (`STATE OK: before`) y `102_rollback.sql` con `apply=true` (`102 ROLLBACK COMMITTED`); `scratch_100` quedó como antes de la corrida |
+| `allowed_roles_insert` de `cattle_livestock` en producción (solo lectura) | `ADMIN,EDITOR` |
 | 102 en producción | _pendiente_ |
 | 103 en producción (estado antes / dry run / aplicación / después y `diff`) | _pendiente_ |
 | Importación del workflow, `wf_compare.py` antes y después | _pendiente_ |
