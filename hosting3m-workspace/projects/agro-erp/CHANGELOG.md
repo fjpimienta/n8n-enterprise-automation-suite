@@ -5,6 +5,12 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🐄 Bitácora: altas por regularización de padrón (migración 101)
+
+* La Bitácora de eventos muestra ahora las altas hechas por la regularización de padrón (tipo «Regularización», con su filtro y
+  su color). La vista `vw_cattle_event_log` gana una rama nueva sin cambiar columnas ni tipos; el frontend agrega el tipo.
+  Orden: primero la base de datos, después el frontend. Runbook: `database/migrations/101_RUNBOOK.md`.
+
 ### 📝 Documentación: borrado vía Meta-CRUD
 
 * Se corrige la documentación de `crud_models`: el borrado del gateway es una baja lógica (`is_active`), no un `DELETE`

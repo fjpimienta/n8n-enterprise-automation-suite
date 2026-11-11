@@ -1087,6 +1087,7 @@ Agente IA" arriba para el detalle de esta última extensión.*
   solo lectura, con filtro y agrupación por Lote agregados en v1.Unreleased sin migración
   nueva (ver `vw_cattle_kpi.lot_name` arriba).
 * Cumple el contrato de `created_at` señalado arriba (todas las tablas fuente ya lo tienen).
+* **Migración 101:** rama nueva `REGULARIZACION` (una fila por animal con `cattle_livestock.metadata->>'source' = 'REGULARIZACION_PADRON'`, alta por chat de la 099), calcada de `COMPRA`; mismas 18 columnas y tipos. La descripción no incluye `preview_hash` ni el correo de quien registró.
 * **Verificado en LOCAL y PRODUCCIÓN el 2026-09-22** (migración 060) **y el 2026-10-04**
   (migración 063) (`n8n-enterprise-db`/`hosting3m_db`), con backup previo y checksum de
   integridad tras transferir el archivo de migración — runbook estándar, ver `CLAUDE.md`.

@@ -20,6 +20,7 @@
                 <option value="PARTO">Parto (madre)</option>
                 <option value="NACIMIENTO">Nacimiento (cría)</option>
                 <option value="COMPRA">Compra</option>
+                <option value="REGULARIZACION">Regularización</option>
                 <option value="DESTETE">Destete</option>
                 <option value="SOLICITUD_BAJA">Solicitud de Baja</option>
                 <option value="SOLICITUD_VENTA">Solicitud de Venta</option>
@@ -150,6 +151,7 @@
                         [class.bg-purple-lt]="entry.eventType === 'PARTO'"
                         [class.bg-green-lt]="entry.eventType === 'NACIMIENTO'"
                         [class.bg-orange-lt]="entry.eventType === 'COMPRA'"
+                        [class.bg-secondary-lt]="entry.eventType === 'REGULARIZACION'"
                         [class.bg-cyan-lt]="entry.eventType === 'DESTETE'"
                         [class.bg-danger-lt]="entry.eventType === 'SOLICITUD_BAJA'"
                         [class.bg-yellow-lt]="entry.eventType === 'SOLICITUD_VENTA'"
@@ -192,6 +194,9 @@
                     <span class="font-weight-bold">{{ entry.weightKg | number:'1.2-2' }} kg</span> —
                     }
                     <span>{{ entry.description || 'Sin datos de compra registrados.' }}</span>
+                    }
+                    @case ('REGULARIZACION') {
+                    <span>{{ entry.description || 'Sin datos de regularización registrados.' }}</span>
                     }
                     @case ('DESTETE') {
                     <span class="badge bg-secondary-lt me-1">{{ entry.healthEventType || 'NATURAL' }}</span>
@@ -250,6 +255,7 @@
                         [class.bg-purple-lt]="entry.eventType === 'PARTO'"
                         [class.bg-green-lt]="entry.eventType === 'NACIMIENTO'"
                         [class.bg-orange-lt]="entry.eventType === 'COMPRA'"
+                        [class.bg-secondary-lt]="entry.eventType === 'REGULARIZACION'"
                         [class.bg-cyan-lt]="entry.eventType === 'DESTETE'"
                         [class.bg-danger-lt]="entry.eventType === 'SOLICITUD_BAJA'"
                         [class.bg-yellow-lt]="entry.eventType === 'SOLICITUD_VENTA'"
@@ -292,6 +298,9 @@
                     <span class="font-weight-bold">{{ entry.weightKg | number:'1.2-2' }} kg</span> —
                     }
                     <span>{{ entry.description || 'Sin datos de compra registrados.' }}</span>
+                    }
+                    @case ('REGULARIZACION') {
+                    <span>{{ entry.description || 'Sin datos de regularización registrados.' }}</span>
                     }
                     @case ('DESTETE') {
                     <span class="badge bg-secondary-lt me-1">{{ entry.healthEventType || 'NATURAL' }}</span>
