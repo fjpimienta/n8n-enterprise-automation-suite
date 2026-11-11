@@ -553,6 +553,12 @@ for (const ch of Object.keys(AGENTS)) {
   ok(`${ch}: D4 passes production_unit_name exactly as the user said it (including "UPP") and uses the exact option name on not_found`, d4.includes('production_unit_name EXACTAMENTE lo que dijo el usuario, incluida la palabra "UPP"') && d4.includes('nombre exacto de la opción elegida'));
   ok(`${ch}: D4 requires the 32-hex preview_hash of the last tool response and forbids call ids ("call_")`, d4.includes('32 caracteres hexadecimales del campo \'preview_hash\'') && d4.includes('empiece por "call_"'));
 }
+{
+  // WhatsApp audio paragraph: the digit-by-digit rule must not force a self-made summary for the two intake tools
+  const wa = sys.whatsapp || '';
+  const audio = wa.slice(wa.indexOf('AUDIO (CANAL WHATSAPP)'), wa.indexOf('🛑 A. SEGURIDAD'));
+  ok('whatsapp: AUDIO paragraph exempts register_livestock_regularization / register_livestock_purchase from a self-made summary (tool preview first, tag digit by digit in it)', audio.includes("Excepción: para 'register_livestock_regularization' y 'register_livestock_purchase' NO escribas un resumen propio antes") && audio.includes('llama PRIMERO la herramienta con confirmed="false"') && audio.includes('repite el arete dígito por dígito'));
+}
 for (const ch of Object.keys(AGENTS)) {
   ok(`${ch}: prompt size ${sys[ch].length} characters (limit 64 000; it was ~32 000 before phase 5; the growth to ~62 000 comes from migration 099, any further growth needs a review)`, sys[ch].length < 64000);
 }
