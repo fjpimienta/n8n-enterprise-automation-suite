@@ -880,6 +880,160 @@
           "name": "Postgres account"
         }
       }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "154b824d-1e34-5bce-8d46-13e29dec4003",
+              "leftValue": "={{ (() => { const f = ($('Webhook').first().json.body || $('Webhook').first().json || {}).file; if (!f || typeof f !== 'object' || Array.isArray(f)) return false; const n = String(f.name || '').toLowerCase(); const t = String(f.type || '').toLowerCase(); return n.endsWith('.xml') && ['text/xml', 'application/xml', 'application/octet-stream'].includes(t); })() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        7312,
+        2144
+      ],
+      "id": "3c4eb5b1-26bc-5d4f-b498-ca5f19fb0910",
+      "name": "Palma: XML adjunto"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "PalmSaleXml0001a",
+          "mode": "list",
+          "cachedResultName": "v6/palm sale from xml"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id_company": "={{ Number($('Resolver Empresa Chat').first().json.id_company) }}",
+            "actor_email": "={{ $('Validar Token').first().json.data.user.user }}",
+            "role": "={{ $('Resolver Empresa Chat').first().json.role }}",
+            "file_name": "={{ (($('Webhook').first().json.body || $('Webhook').first().json || {}).file || {}).name }}",
+            "file_type": "={{ (($('Webhook').first().json.body || $('Webhook').first().json || {}).file || {}).type }}",
+            "file_size": "={{ (($('Webhook').first().json.body || $('Webhook').first().json || {}).file || {}).size }}",
+            "xml_base64": "={{ (($('Webhook').first().json.body || $('Webhook').first().json || {}).file || {}).base64 }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "id_company",
+              "displayName": "id_company",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            },
+            {
+              "id": "actor_email",
+              "displayName": "actor_email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "role",
+              "displayName": "role",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "file_name",
+              "displayName": "file_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "file_type",
+              "displayName": "file_type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "file_size",
+              "displayName": "file_size",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "number",
+              "removed": false
+            },
+            {
+              "id": "xml_base64",
+              "displayName": "xml_base64",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        7536,
+        2144
+      ],
+      "id": "d4676bd7-ea8e-5b98-8552-ea45ae8bb16c",
+      "name": "Venta Palma XML",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Always answer the webhook: if the sale sub-workflow failed (Execute Workflow continues on error) the user gets a fixed text.\nconst j = ($input.first() || {}).json || {};\nconst output = typeof j.output === 'string' && j.output.trim() !== ''\n  ? j.output\n  : '⚠️ El servicio de facturas no está disponible por ahora. Intenta de nuevo en unos minutos.';\nreturn [{ json: { output } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7792,
+        2144
+      ],
+      "id": "44393b97-0a92-59a7-ac9f-602cb742ef66",
+      "name": "Palma: respuesta de venta"
     }
   ],
   "pinData": {},
@@ -994,7 +1148,7 @@
       "main": [
         [
           {
-            "node": "Catálogo Palma",
+            "node": "Palma: XML adjunto",
             "type": "main",
             "index": 0
           }
@@ -1284,6 +1438,46 @@
           {
             "node": "AI Agent",
             "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Palma: XML adjunto": {
+      "main": [
+        [
+          {
+            "node": "Venta Palma XML",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Catálogo Palma",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Venta Palma XML": {
+      "main": [
+        [
+          {
+            "node": "Palma: respuesta de venta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Palma: respuesta de venta": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
             "index": 0
           }
         ]

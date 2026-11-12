@@ -29,6 +29,7 @@ jobs:
           node-version: 22
       - run: git fetch origin +refs/heads/develop:refs/remotes/origin/develop
       - run: node workflows/09-MCP-Agent-Cattle/v6/repro-phase5/check_repro_consistency.js
+      - run: node workflows/09-MCP-Agent-Cattle/v6/tests/test_palm_sale_route.mjs
 
   shell-checks:
     name: Shell checks

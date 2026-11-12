@@ -5,6 +5,14 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🌴 Web chat: register a palm sale by attaching the XML (PR D)
+
+* In the palm domain an attached XML (`.xml` with an xml-like type) now takes a deterministic route: a new sub-workflow `v6/palm sale from xml` parses it
+  (`profile: "sale"`), checks the SAT status, stores the original and calls `sp_agri_register_sale`, then answers with a fixed Spanish text (warnings in the same
+  message). No model sees the file; only an ADMIN registers; tenant, role and e-mail come from the verified session; the sub-workflow saves no execution data.
+  The chat workflow gets one IF in front of `Catálogo Palma` (three nodes added, one connection changed; every other node is byte-identical). Any other file keeps
+  today's behavior. **Not imported anywhere yet** (n8n UI only, owner): runbook `workflows/09-MCP-Agent-Cattle/v6/PALM_SALE_CHAT_RUNBOOK.md`. Void and balance by chat are out of scope.
+
 ### 🌴 cfdi-service: `sale` parse profile for the palm sale register
 
 * `POST /parse` accepts an optional `"profile":"sale"` that adds `tipoComprobante`, `formaPago`, `metodoPago` and, per concept, `claveUnidad`,
