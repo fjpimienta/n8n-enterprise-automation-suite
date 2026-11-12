@@ -1,13 +1,18 @@
 -- 104_seed_issuer_rfc.sql: platform seed. Registers one issuer RFC for a TEST company (default: company 10).
--- NOT part of migration 104. Dry run by default; -v apply=true commits. The RFC is supplied ONLY at apply time through the psql
--- variable issuer_rfc; this file contains no RFC and the script never prints it (only a short fingerprint).
+-- NOT part of migration 104. Dry run by default; -v apply=true commits. The RFC is supplied ONLY at apply time, through the environment
+-- variable ISSUER_RFC or the psql variable issuer_rfc; this file contains no RFC and the script never prints it (only a short fingerprint).
 -- Refuses to run for a company that is not flagged is_test in company_flags, unless -v allow_non_test=yes is passed explicitly.
--- Usage: psql -X -v ON_ERROR_STOP=1 -v issuer_rfc="$RFC" [-v company=10] -f 104_seed_issuer_rfc.sql
+-- Usage: psql -X -v ON_ERROR_STOP=1 [-v issuer_rfc="$RFC"] [-v company=10] -f 104_seed_issuer_rfc.sql
+--        When -v issuer_rfc is not given, the RFC is read from the environment variable ISSUER_RFC (so it never appears on a command line).
 --        ... -v apply=true ... to commit. Re-running with the same RFC is harmless (it only re-activates the row).
 \set ON_ERROR_STOP on
 \if :{?issuer_rfc}
 \else
-\echo 'usage: psql -v issuer_rfc=RFC [-v company=10] [-v allow_non_test=yes] [-v apply=true] -f 104_seed_issuer_rfc.sql'
+\set issuer_rfc `printenv ISSUER_RFC`
+\endif
+SELECT (btrim(:'issuer_rfc') = '') AS rfc_missing \gset
+\if :rfc_missing
+\echo 'usage: ISSUER_RFC=... psql -v company=10 [-v allow_non_test=yes] [-v apply=true] -f 104_seed_issuer_rfc.sql  (or -v issuer_rfc=RFC)'
 \quit
 \endif
 \if :{?company}
