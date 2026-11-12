@@ -1112,6 +1112,14 @@ its absence fails at runtime, not at deploy time (see CLAUDE.md, Contrato Meta-C
   A backup of exactly those two rows is kept in `crud_models_backup_20261112_106`; `106_rollback.sql` restores `allowed_fields` from it. A permanent offline test in the *v5 CRUD tests* CI job
   (`workflows/06-dynamic-crud-engine/v5/tests/test_hotel_models_fields.mjs`) checks that the SQL built by the v5 workflow for the two models is identical with and without the field.
 
+### Palm sales: void and balance through the gateway (migration 107)
+*Data only (two `crud_models` rows) plus two gateway entries; see `database/migrations/107_RUNBOOK.md`.*
+* `crud_models`: `agri_sale_void` (procedure `sp_agri_void_sale`, primary key `sale_id`, `allowed_fields` `sale_id, reason, actor_email`) and `agri_sale_balance` (procedure `sp_agri_sales_balance`, primary key `date_from`,
+  `allowed_fields` `date_from, date_to, grain, plantation_id, lot_id, actor_email`). Both: operations `{INSERT}` (the gateway validates `call_sp` as an insert), write role `ADMIN`, select / update / delete `NONE`, `sp_requires_tenant = true`.
+  A `call_sp` model names a procedure in `table_name`, so the rule "a model lists the tenant column of its table" does not apply to it; the company comes from the verified header and the actor e-mail from the verified token.
+* Answers: the void returns `{status, ...}` without a `success` key (`OK`, `ALREADY_VOID`, `NOT_FOUND`, `INVALID_REASON`, `FORBIDDEN`, `NOT_PALM`); the balance returns `success: true` and raises on a non-ADMIN actor (`P0084`), a plantation or lot of another company (`P0080`), an invalid range or grain and a non-palm company (codes in the header of migration 104).
+* Backup of the rows: `crud_models_backup_20261112_107`; `107_rollback.sql` disables the two rows (no operation, no role) and deletes nothing.
+
 ### `vw_cattle_event_log`
 *Añadido en v1.13.0, migración 060 (`CREATE OR REPLACE VIEW`, idempotente). Extendida en
 v1.15.0 (compras/destetes/solicitudes) y en v1.16.0, migración 063 (reproducción/

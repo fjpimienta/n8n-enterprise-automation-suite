@@ -30,6 +30,7 @@ jobs:
       - run: git fetch origin +refs/heads/develop:refs/remotes/origin/develop
       - run: node workflows/09-MCP-Agent-Cattle/v6/repro-phase5/check_repro_consistency.js
       - run: node workflows/09-MCP-Agent-Cattle/v6/tests/test_palm_sale_route.mjs
+      - run: node workflows/06-dynamic-crud-engine/v6/tests/test_agri_sale_sp.mjs
 
   shell-checks:
     name: Shell checks

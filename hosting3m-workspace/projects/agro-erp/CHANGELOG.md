@@ -5,6 +5,13 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🌴 Palm sales: void and balance through the gateway (migration 107, PR C2)
+
+* Registers two ADMIN-only `call_sp` models, `agri_sale_void` (`sp_agri_void_sale`) and `agri_sale_balance` (`sp_agri_sales_balance`), and adds the matching two `spConfigByModel` entries to the `Build Query` node of `v6/CRUD`
+  (the company comes from the verified header and the actor e-mail from the verified token, as for the expense procedures). Nothing in the application calls them yet (the dashboard section is a later pull request), so there is **no visible behavior
+  change**. A new offline test of the real node code (`workflows/06-dynamic-crud-engine/v6/tests/test_agri_sale_sp.mjs`) runs in CI. Tested on a throwaway local database; not applied to production, not imported into n8n
+  (runbook, database first and then n8n: `database/migrations/107_RUNBOOK.md`).
+
 ### 🏨 Hotel models: allowed_fields aligned with the tenant column (migration 106)
 
 * Lists `id_company` in `allowed_fields` of the `crud_models` rows `hotel_rooms` and `hotel_maintenance_tickets`, as tenant-scoped models do; nothing else in the two rows changes. Data only; **no visible behavior change**
