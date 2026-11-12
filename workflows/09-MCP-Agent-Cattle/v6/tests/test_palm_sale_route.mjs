@@ -261,8 +261,8 @@ const OKR = (extra = {}, summary = {}) => ({ status: 'OK', sale_id: '11111111-11
   ok(UNAV.test(reply({})), 'nothing ran -> safe text');
   ok(/administrador/.test(reply({ entry: { ok: false, output: '⛔ Solo un administrador de la empresa puede registrar ventas por chat.' } })), 'input refusals are passed through (cfdi-service was never called)');
   // nothing from the services is echoed
-  const leak = reply({ parse: { status: 'invalid', code: 'NOT_XML', message: 'SECRET-DETAIL', uuid: undefined } });
-  ok(!/SECRET-DETAIL/.test(leak), 'service error details are never echoed');
+  const echoed = reply({ parse: { status: 'invalid', code: 'NOT_XML', message: 'SECRET-DETAIL', uuid: undefined } });
+  ok(!/SECRET-DETAIL/.test(echoed), 'service error details are never echoed');
 }
 
 console.log('Palma: respuesta de venta (fallback when the sub-workflow fails)');
