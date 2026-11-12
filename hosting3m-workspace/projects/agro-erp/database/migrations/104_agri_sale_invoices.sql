@@ -12,7 +12,8 @@
 --   company_issuer_rfcs   RFCs a palm company may issue sales vouchers with. Platform-managed like company_flags, never filled from a
 --                         voucher. is_test is copied from company_flags on insert and is immutable.
 --   agri_sale_invoices    one row per sale voucher. Append-only: the only UPDATE allowed is the ACTIVE -> VOID transition made by
---                         sp_agri_void_sale. UNIQUE (id_company, uuid) everywhere and UNIQUE (uuid) among non-test companies.
+--                         sp_agri_void_sale. At most one ACTIVE row per (id_company, uuid) and one ACTIVE row per uuid among non-test companies; a
+--                         voided voucher can be loaded again by the same company (a new row; the VOID row stays).
 --   agri_sale_audit       append-only trail of REGISTER / VOID / REJECT events. Stores codes only (never a voucher UUID).
 -- Procedures
 --   sp_agri_register_sale  direct load of a parsed voucher (no draft, no preview). ADMIN only, checked inside against the membership
@@ -26,8 +27,10 @@
 --   subtotalCents, descuentoCents, totalCents (integer cents), traslados[], retenciones[] ({impuesto,tipoFactor,tasaOCuota,baseCents,
 --   importeCents}), formaPago, metodoPago, sourceSha256 (optional, must equal p_source_sha256 when present) and
 --   conceptos[] with exactly one {claveProdServ, claveUnidad, cantidad, valorUnitario, descripcion, importeCents}; cantidad and
---   valorUnitario are decimal strings or numbers with up to 6 decimals. Totals are taken from the voucher as issued; the only
---   arithmetic is the reconciliation subtotal - discount + transferred - withheld = total, exact to the cent. No tax is computed.
+--   valorUnitario are decimal strings or numbers with up to 6 decimals; importeCents is the concept amount in integer cents. Totals are
+--   taken from the voucher as issued; the only arithmetic is: (1) concept amount versus quantity x unit price, within one cent for issuer
+--   rounding; (2) subtotal = concept amount (single concept); (3) subtotal - discount + transferred - withheld = total, exact to the
+--   cent. No tax is computed.
 --
 -- Answers (jsonb 'status'): OK | ALREADY_REGISTERED | FORBIDDEN | NOT_PALM | ISSUER_RFC_NOT_CONFIGURED | ISSUER_RFC_MISMATCH |
 --   INVALID_VOUCHER (+ 'reason') | DUPLICATE. Expected failures are answers, never exceptions.
@@ -130,7 +133,6 @@ CREATE TABLE IF NOT EXISTS public.agri_sale_invoices (
     voided_at           timestamptz,
     registered_by_email text        NOT NULL CONSTRAINT ck_agri_sale_invoices_by CHECK (registered_by_email = lower(btrim(registered_by_email)) AND registered_by_email <> ''),
     created_at          timestamptz NOT NULL DEFAULT now(),
-    CONSTRAINT uq_agri_sale_invoices_company_uuid UNIQUE (id_company, uuid),
     CONSTRAINT uq_agri_sale_invoices_id_company UNIQUE (id, id_company),
     CONSTRAINT fk_agri_sale_invoices_plantation FOREIGN KEY (plantation_id, id_company)
         REFERENCES public.agri_plantations (id, id_company),
@@ -145,8 +147,10 @@ CREATE TABLE IF NOT EXISTS public.agri_sale_invoices (
         (status = 'ACTIVE' AND void_reason IS NULL AND voided_by_email IS NULL AND voided_at IS NULL)
         OR (status = 'VOID' AND coalesce(length(btrim(void_reason)), 0) BETWEEN 5 AND 300 AND btrim(coalesce(voided_by_email, '')) <> '' AND voided_at IS NOT NULL))
 );
--- A real (non-test) voucher UUID is registered once across companies; test companies may reuse any UUID.
-CREATE UNIQUE INDEX IF NOT EXISTS uq_agri_sale_invoices_uuid_real ON public.agri_sale_invoices (uuid) WHERE NOT is_test;
+-- One ACTIVE row per voucher in a company (a voided voucher can be loaded again), and one ACTIVE row per real (non-test) voucher UUID across
+-- companies; test companies may reuse any UUID.
+CREATE UNIQUE INDEX IF NOT EXISTS uq_agri_sale_invoices_company_uuid_active ON public.agri_sale_invoices (id_company, uuid) WHERE status = 'ACTIVE';
+CREATE UNIQUE INDEX IF NOT EXISTS uq_agri_sale_invoices_uuid_real ON public.agri_sale_invoices (uuid) WHERE NOT is_test AND status = 'ACTIVE';
 CREATE INDEX IF NOT EXISTS idx_agri_sale_invoices_company_date ON public.agri_sale_invoices (id_company, (issued_at::date)) WHERE status = 'ACTIVE';
 CREATE INDEX IF NOT EXISTS idx_agri_sale_invoices_company_ticket ON public.agri_sale_invoices (id_company, upper(ticket_ref)) WHERE ticket_ref IS NOT NULL AND status = 'ACTIVE';
 CREATE INDEX IF NOT EXISTS idx_agri_sale_invoices_company_created ON public.agri_sale_invoices (id_company, created_at DESC);
@@ -346,6 +350,7 @@ DECLARE
     v_unit         text;
     v_qty_txt      text;
     v_price_txt    text;
+    v_conc_txt     text;
     v_qty          numeric;
     v_price        numeric;
     v_desc         text;
@@ -415,6 +420,7 @@ BEGIN
             v_unit      := upper(c ->> 'claveUnidad');
             v_qty_txt   := c ->> 'cantidad';
             v_price_txt := c ->> 'valorUnitario';
+            v_conc_txt  := c ->> 'importeCents';
             v_desc      := regexp_replace(coalesce(c ->> 'descripcion', ''), '[[:cntrl:]]', ' ', 'g');
         END IF;
     EXCEPTION WHEN others THEN
@@ -425,16 +431,13 @@ BEGIN
     ELSIF v_uuid IS NULL OR v_uuid !~ c_uuid THEN v_reason := 'UUID';
     END IF;
 
-    -- Idempotency inside the company: the same voucher answers with the existing sale.
+    -- Idempotency inside the company: the same voucher answers with its ACTIVE sale. A voided sale does not block a new load.
     IF v_reason IS NULL THEN
         SELECT s.id, s.status, s.total_cents, s.issued_at, s.ticket_ref INTO v_ex
-          FROM public.agri_sale_invoices s WHERE s.id_company = p_tenant_id AND s.uuid = v_uuid;
+          FROM public.agri_sale_invoices s WHERE s.id_company = p_tenant_id AND s.uuid = v_uuid AND s.status = 'ACTIVE';
         IF FOUND THEN
-            IF v_ex.status = 'ACTIVE' THEN
-                RETURN jsonb_build_object('status', 'ALREADY_REGISTERED', 'sale_id', v_ex.id, 'warnings', '[]'::jsonb,
-                    'message', 'Esta venta ya estaba registrada.');
-            END IF;
-            RETURN public.fn_agri_sale_reject(p_tenant_id, v_actor, 'DUPLICATE', 'DUPLICATE_UUID', 'No se pudo registrar la factura.');
+            RETURN jsonb_build_object('status', 'ALREADY_REGISTERED', 'sale_id', v_ex.id, 'warnings', '[]'::jsonb,
+                'message', 'Esta venta ya estaba registrada.');
         END IF;
     END IF;
 
@@ -455,6 +458,7 @@ BEGIN
         ELSIF v_product IS NULL OR v_product !~ '^[0-9]{8}$' THEN v_reason := 'PRODUCT_KEY';
         ELSIF v_unit IS DISTINCT FROM 'KGM' THEN v_reason := 'UNIT';
         ELSIF v_qty_txt IS NULL OR v_qty_txt !~ c_qty OR v_price_txt IS NULL OR v_price_txt !~ c_qty THEN v_reason := 'QUANTITY';
+        ELSIF v_conc_txt IS NULL OR v_conc_txt !~ '^[0-9]{1,13}$' THEN v_reason := 'CONCEPT_AMOUNT';
         END IF;
     END IF;
     IF v_reason IS NULL THEN
@@ -463,6 +467,8 @@ BEGIN
         IF v_qty <= 0 OR v_price <= 0 THEN v_reason := 'QUANTITY';
         ELSIF v_sub IS NULL OR v_total IS NULL OR v_sub < 0 OR v_disc < 0 OR v_disc > v_sub OR v_total <= 0 OR v_total > 999999999999 THEN v_reason := 'AMOUNTS';
         ELSIF v_sub - v_disc + v_tr - v_ret <> v_total THEN v_reason := 'AMOUNTS_MISMATCH';
+        ELSIF v_sub <> v_conc_txt::bigint
+              OR abs(round(v_qty * v_price * 100) - v_conc_txt::bigint) > 1 THEN v_reason := 'AMOUNTS_MISMATCH_CONCEPT';
         ELSIF v_issued::date > v_today OR v_stamped::date > v_today THEN v_reason := 'DATE_FUTURE';
         ELSIF v_issued::date < v_today - c_max_age_days THEN v_reason := 'DATE_TOO_OLD';
         END IF;
@@ -499,17 +505,18 @@ BEGIN
         v_warnings := v_warnings || to_jsonb('ticket_missing_or_unrecognized'::text);
     END IF;
 
-    -- Serialize concurrent loads of the same voucher, then re-check the company and the global rule for real companies.
+    -- Serialize concurrent loads of the same voucher, then re-check the company and the cross-company rule for real companies.
     PERFORM pg_advisory_xact_lock(hashtextextended('agri_sale:' || v_uuid, 0));
-    SELECT s.id, s.status INTO v_ex FROM public.agri_sale_invoices s WHERE s.id_company = p_tenant_id AND s.uuid = v_uuid;
+    SELECT s.id INTO v_ex FROM public.agri_sale_invoices s WHERE s.id_company = p_tenant_id AND s.uuid = v_uuid AND s.status = 'ACTIVE';
     IF FOUND THEN
-        IF v_ex.status = 'ACTIVE' THEN
-            RETURN jsonb_build_object('status', 'ALREADY_REGISTERED', 'sale_id', v_ex.id, 'warnings', '[]'::jsonb, 'message', 'Esta venta ya estaba registrada.');
-        END IF;
+        RETURN jsonb_build_object('status', 'ALREADY_REGISTERED', 'sale_id', v_ex.id, 'warnings', '[]'::jsonb, 'message', 'Esta venta ya estaba registrada.');
+    END IF;
+    -- A real company cannot load a voucher UUID that another real company holds, ACTIVE or VOID. The answer is the same generic one.
+    IF NOT v_is_test AND EXISTS (SELECT 1 FROM public.agri_sale_invoices s WHERE s.uuid = v_uuid AND NOT s.is_test AND s.id_company <> p_tenant_id) THEN
         RETURN public.fn_agri_sale_reject(p_tenant_id, v_actor, 'DUPLICATE', 'DUPLICATE_UUID', 'No se pudo registrar la factura.');
     END IF;
-    IF NOT v_is_test AND EXISTS (SELECT 1 FROM public.agri_sale_invoices s WHERE s.uuid = v_uuid AND NOT s.is_test) THEN
-        RETURN public.fn_agri_sale_reject(p_tenant_id, v_actor, 'DUPLICATE', 'DUPLICATE_UUID', 'No se pudo registrar la factura.');
+    IF EXISTS (SELECT 1 FROM public.agri_sale_invoices s WHERE s.id_company = p_tenant_id AND s.uuid = v_uuid AND s.status = 'VOID') THEN
+        v_warnings := v_warnings || to_jsonb('previous_sale_voided'::text);
     END IF;
 
     IF v_ticket IS NOT NULL AND EXISTS (SELECT 1 FROM public.agri_sale_invoices s

@@ -171,6 +171,36 @@ BEGIN
     IF pg_temp.reason(ca, a, v || '{"uuid":"not-a-uuid"}') <> 'UUID' THEN RAISE EXCEPTION 'FAIL T4j uuid'; END IF;
     RAISE NOTICE 'OK T4-T8 concepts, USD, PPD, type E, total off by 1 cent, unit, quantity, buyer, payload';
 
+    -- Concept amount consistency (single concept): 7900.000000 x 3.940000 = 31126.00 -> 3112600 cents.
+    v := pg_temp.voucher('B1000000-0000-4000-8000-000000000001', 'AAA010101AAA');
+    v := v || '{"subtotalCents":3112600,"totalCents":3112600,"traslados":[]}';
+    c := jsonb_build_array(((v -> 'conceptos') -> 0) || '{"cantidad":"7900.000000","valorUnitario":"3.940000","importeCents":3112600}');
+    r := pg_temp.reg(ca, a, v || jsonb_build_object('conceptos', c));
+    IF r ->> 'status' <> 'OK' THEN RAISE EXCEPTION 'FAIL T29a valid sample: %', r; END IF;
+    -- one cent of issuer rounding is accepted (concept amount and subtotal both 3112601)
+    v := pg_temp.voucher('B1000000-0000-4000-8000-000000000002', 'AAA010101AAA') || '{"subtotalCents":3112601,"totalCents":3112601,"traslados":[]}';
+    IF pg_temp.reason(ca, a, v || jsonb_build_object('conceptos', jsonb_build_array(((v -> 'conceptos') -> 0) || '{"cantidad":"7900.000000","valorUnitario":"3.940000","importeCents":3112601}'))) <> 'OK' THEN
+        RAISE EXCEPTION 'FAIL T29b one cent off must be accepted'; END IF;
+    -- two cents off is rejected
+    v := pg_temp.voucher('B1000000-0000-4000-8000-000000000003', 'AAA010101AAA') || '{"subtotalCents":3112602,"totalCents":3112602,"traslados":[]}';
+    IF pg_temp.reason(ca, a, v || jsonb_build_object('conceptos', jsonb_build_array(((v -> 'conceptos') -> 0) || '{"cantidad":"7900.000000","valorUnitario":"3.940000","importeCents":3112602}'))) <> 'AMOUNTS_MISMATCH_CONCEPT' THEN
+        RAISE EXCEPTION 'FAIL T29c two cents off must be rejected'; END IF;
+    -- missing or invalid concept amount
+    v := pg_temp.voucher('B1000000-0000-4000-8000-000000000004', 'AAA010101AAA') || '{"subtotalCents":3112600,"totalCents":3112600,"traslados":[]}';
+    IF pg_temp.reason(ca, a, v || jsonb_build_object('conceptos', jsonb_build_array((((v -> 'conceptos') -> 0) || '{"cantidad":"7900.000000","valorUnitario":"3.940000"}') - 'importeCents'))) <> 'CONCEPT_AMOUNT' THEN
+        RAISE EXCEPTION 'FAIL T29d missing importeCents'; END IF;
+    IF pg_temp.reason(ca, a, v || jsonb_build_object('conceptos', jsonb_build_array(((v -> 'conceptos') -> 0) || '{"cantidad":"7900.000000","valorUnitario":"3.940000","importeCents":"31126.00"}'))) <> 'CONCEPT_AMOUNT' THEN
+        RAISE EXCEPTION 'FAIL T29e invalid importeCents'; END IF;
+    -- subtotal different from the concept amount (total reconciled with the subtotal)
+    v := pg_temp.voucher('B1000000-0000-4000-8000-000000000005', 'AAA010101AAA') || '{"subtotalCents":3112700,"totalCents":3112700,"traslados":[]}';
+    IF pg_temp.reason(ca, a, v || jsonb_build_object('conceptos', jsonb_build_array(((v -> 'conceptos') -> 0) || '{"cantidad":"7900.000000","valorUnitario":"3.940000","importeCents":3112600}'))) <> 'AMOUNTS_MISMATCH_CONCEPT' THEN
+        RAISE EXCEPTION 'FAIL T29f subtotal differs from the concept amount'; END IF;
+    -- quantity changed, totals unchanged
+    v := pg_temp.voucher('B1000000-0000-4000-8000-000000000006', 'AAA010101AAA') || '{"subtotalCents":3112600,"totalCents":3112600,"traslados":[]}';
+    IF pg_temp.reason(ca, a, v || jsonb_build_object('conceptos', jsonb_build_array(((v -> 'conceptos') -> 0) || '{"cantidad":"8000.000000","valorUnitario":"3.940000","importeCents":3112600}'))) <> 'AMOUNTS_MISMATCH_CONCEPT' THEN
+        RAISE EXCEPTION 'FAIL T29g quantity changed, total unchanged'; END IF;
+    RAISE NOTICE 'OK T29 concept amount vs quantity x unit price (one cent), subtotal = concept amount';
+
     -- IVA 16 percent: the total is taken from the voucher (subtotal + transferred tax), stored as issued.
     r := pg_temp.reg(ca, a, pg_temp.voucher('B0000000-0000-4000-8000-000000000002', 'AAA010101AAA')
         || '{"totalCents":1160000,"traslados":[{"impuesto":"002","tipoFactor":"Tasa","tasaOCuota":"0.160000","baseCents":1000000,"importeCents":160000}]}');
@@ -284,9 +314,55 @@ BEGIN
     r := public.sp_agri_void_sale(ca, a, v_id, 'A second reason that must not replace the first');
     IF r ->> 'status' <> 'ALREADY_VOID' OR (SELECT void_reason FROM public.agri_sale_invoices WHERE id = v_id) <> 'Duplicated by mistake'
        OR (SELECT count(*) FROM public.agri_sale_audit WHERE sale_id = v_id AND event = 'VOID') <> 1 THEN RAISE EXCEPTION 'FAIL T19g void twice: %', r; END IF;
-    r := pg_temp.reg(ca, a, pg_temp.voucher('D0000000-0000-4000-8000-000000000001', 'AAA010101AAA'));
-    IF r ->> 'status' <> 'DUPLICATE' THEN RAISE EXCEPTION 'FAIL T19h voided uuid stays occupied: %', r; END IF;
-    RAISE NOTICE 'OK T19 void: ADMIN only, reason 5..300, audited, idempotent, uuid stays occupied';
+    RAISE NOTICE 'OK T19 void: ADMIN only, reason 5..300, audited, idempotent';
+END $$;
+
+-- T30. A voided voucher can be loaded again by the same company; cross-company rules still hold.
+DO $$
+DECLARE ca integer := (SELECT v FROM ctx WHERE k = 'a'); cb integer := (SELECT v FROM ctx WHERE k = 'b'); ct integer := (SELECT v FROM ctx WHERE k = 't');
+        a text := 'admin.a@example.invalid'; u text := '1A000000-0000-4000-8000-000000000001'; r jsonb; s1 uuid; s2 uuid; s3 uuid;
+BEGIN
+    r := pg_temp.reg(ca, a, pg_temp.voucher(u, 'AAA010101AAA', 'Fruto (ticket 8801)')); s1 := (r ->> 'sale_id')::uuid;
+    IF r ->> 'status' <> 'OK' OR r -> 'warnings' ? 'previous_sale_voided' THEN RAISE EXCEPTION 'FAIL T30a first load: %', r; END IF;
+    -- an ACTIVE sale still answers ALREADY_REGISTERED
+    IF pg_temp.reg(ca, a, pg_temp.voucher(u, 'AAA010101AAA', 'Fruto (ticket 8801)')) ->> 'status' <> 'ALREADY_REGISTERED' THEN RAISE EXCEPTION 'FAIL T30b'; END IF;
+    -- two ACTIVE rows with the same uuid in one company are impossible
+    PERFORM pg_temp.expect_err(format('SELECT pg_temp.dins(%s, %L, %L)', ca, u, 'AAA010101AAA'), ARRAY['23505']);
+    PERFORM public.sp_agri_void_sale(ca, a, s1, 'Wrong buyer, to be reloaded');
+    -- reload after the first void: new row, warning, the VOID row stays
+    r := pg_temp.reg(ca, a, pg_temp.voucher(u, 'AAA010101AAA', 'Fruto (ticket 8801)')); s2 := (r ->> 'sale_id')::uuid;
+    IF r ->> 'status' <> 'OK' OR NOT (r -> 'warnings') ? 'previous_sale_voided' OR s2 = s1 THEN RAISE EXCEPTION 'FAIL T30c reload after void: %', r; END IF;
+    IF (SELECT count(*) FILTER (WHERE status = 'VOID') FROM public.agri_sale_invoices WHERE id_company = ca AND uuid = u) <> 1
+       OR (SELECT count(*) FILTER (WHERE status = 'ACTIVE') FROM public.agri_sale_invoices WHERE id_company = ca AND uuid = u) <> 1 THEN RAISE EXCEPTION 'FAIL T30c rows'; END IF;
+    -- the ticket warning ignores VOID rows (s1 is void, s2 is the only active one with this ticket)
+    IF (r -> 'warnings') ? 'ticket_already_used' THEN RAISE EXCEPTION 'FAIL T30d void row counted for the ticket warning: %', r; END IF;
+    -- reload twice after two voids
+    PERFORM public.sp_agri_void_sale(ca, a, s2, 'Reloaded by mistake again');
+    r := pg_temp.reg(ca, a, pg_temp.voucher(u, 'AAA010101AAA', 'Fruto (ticket 8801)')); s3 := (r ->> 'sale_id')::uuid;
+    IF r ->> 'status' <> 'OK' OR NOT (r -> 'warnings') ? 'previous_sale_voided' OR s3 IN (s1, s2) THEN RAISE EXCEPTION 'FAIL T30e second reload: %', r; END IF;
+    IF (SELECT count(*) FILTER (WHERE status = 'VOID') FROM public.agri_sale_invoices WHERE id_company = ca AND uuid = u) <> 2
+       OR (SELECT count(*) FILTER (WHERE status = 'ACTIVE') FROM public.agri_sale_invoices WHERE id_company = ca AND uuid = u) <> 1 THEN RAISE EXCEPTION 'FAIL T30e rows'; END IF;
+    -- reads ignore VOID rows
+    IF (SELECT count(*) FROM public.vw_agri_sale_list WHERE id_company = ca AND uuid = u) <> 3
+       OR (SELECT count(*) FROM public.vw_agri_sale_list WHERE id_company = ca AND uuid = u AND status = 'ACTIVE') <> 1
+       OR (SELECT sale_count FROM public.vw_agri_sale_summary WHERE id_company = ca AND grain = 'DAY' AND period_start = public.fn_agri_today_cdmx() - 1 AND plantation_id IS NULL)
+          <> (SELECT count(*) FROM public.agri_sale_invoices WHERE id_company = ca AND status = 'ACTIVE' AND issued_at::date = public.fn_agri_today_cdmx() - 1) THEN
+        RAISE EXCEPTION 'FAIL T30f list shows all rows, summary only the ACTIVE ones'; END IF;
+    RAISE NOTICE 'OK T30a-f void then reload in the same company (new row, warning, VOID rows kept, one ACTIVE row)';
+
+    -- Another real company cannot load it while the first company holds it ACTIVE or VOID; the answer is the same generic one.
+    r := pg_temp.reg(cb, 'admin.b@example.invalid', pg_temp.voucher(u, 'BBB020202BBB', 'Fruto (ticket 9901)'));
+    IF r ->> 'status' <> 'DUPLICATE' OR r ->> 'message' <> 'No se pudo registrar la factura.' THEN RAISE EXCEPTION 'FAIL T30g other company, ACTIVE: %', r; END IF;
+    PERFORM public.sp_agri_void_sale(ca, a, s3, 'Voided by the first company');
+    r := pg_temp.reg(cb, 'admin.b@example.invalid', pg_temp.voucher(u, 'BBB020202BBB', 'Fruto (ticket 9901)'));
+    IF r ->> 'status' <> 'DUPLICATE' OR r ->> 'message' <> 'No se pudo registrar la factura.' OR (SELECT array_agg(k ORDER BY k) FROM jsonb_object_keys(r) k) <> ARRAY['code', 'message', 'status'] THEN
+        RAISE EXCEPTION 'FAIL T30h other company, all rows VOID: %', r; END IF;
+    IF (SELECT count(*) FROM public.agri_sale_invoices WHERE id_company = cb AND uuid = u) <> 0 THEN RAISE EXCEPTION 'FAIL T30h row created'; END IF;
+    -- the first company can still reload it after its own void
+    IF pg_temp.reg(ca, a, pg_temp.voucher(u, 'AAA010101AAA', 'Fruto (ticket 8801)')) ->> 'status' <> 'OK' THEN RAISE EXCEPTION 'FAIL T30i reload by the first company'; END IF;
+    -- a test company may still load a uuid used (ACTIVE or VOID) by a real company
+    IF pg_temp.reg(ct, 'admin.t@example.invalid', pg_temp.voucher(u, 'TTT030303TTT', 'Fruto (ticket 7701)'), 'NO_ENCONTRADO') ->> 'status' <> 'OK' THEN RAISE EXCEPTION 'FAIL T30j test company'; END IF;
+    RAISE NOTICE 'OK T30g-j cross-company rule (ACTIVE or VOID, generic answer); test company unaffected';
 END $$;
 
 -- T20. Balance.
