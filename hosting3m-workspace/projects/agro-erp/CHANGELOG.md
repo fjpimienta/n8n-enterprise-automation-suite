@@ -5,6 +5,12 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🌴 Palm sales: gateway models (migration 105)
+
+* Adds the browser view `vw_agri_sale_ui_list` and two ADMIN-only read models (`agri_sales`, `agri_sale_summary`) with no write operation, and registers the four sale tables of migration 104 as restricted
+  models (no operation, no role). Database only; **no visible behavior change** until the gateway entries (PR C2) and the dashboard (PR E). Tested on a throwaway local database; not applied to production
+  (runbook: `database/migrations/105_RUNBOOK.md`).
+
 ### 🌴 Web chat: register a palm sale by attaching the XML (PR D)
 
 * In the palm domain an attached XML (`.xml` with an xml-like type) now takes a deterministic route: a new sub-workflow `v6/palm sale from xml` parses it

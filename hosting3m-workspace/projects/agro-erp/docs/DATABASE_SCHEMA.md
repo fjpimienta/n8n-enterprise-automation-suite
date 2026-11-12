@@ -1098,6 +1098,14 @@ its absence fails at runtime, not at deploy time (see CLAUDE.md, Contrato Meta-C
   previous period and `delta_pct`. Views `vw_agri_sale_list`, `vw_agri_sale_summary` (to be registered, ADMIN only, by a later pull request).
 * Rollback: `104_rollback.sql` (procedures answer `disabled`; nothing is deleted).
 
+### Gateway models for the palm sales (migration 105)
+*Database only; nothing calls the models yet. See `database/migrations/105_RUNBOOK.md`.*
+* View `vw_agri_sale_ui_list`: the sales of a company for the dashboard, reduced columns (`id, id_company, folio, sale_date, buyer_name, quantity, unit_code, unit_price, total_amount, payment_method,
+  ticket_ref, ticket_warning, plantation_id/code/name, lot_id/code/name, status, void_reason, voided_at, is_test, created_at`); voided sales included with their `status`. No company filter of its own: the gateway adds `id_company`.
+* `crud_models`: `agri_sales` (over that view) and `agri_sale_summary` (over `vw_agri_sale_summary`, active sales only), operations `SELECT, GETONE, GETALL`, read role `ADMIN`, no write role, `id_company` in `allowed_fields`.
+  Four restricted models (`agri_sale_invoices`, `agri_sale_audit`, `company_flags`, `company_issuer_rfcs`): no operation and no role.
+* Rollback: `105_rollback.sql` disables the two read models; the view and the four restricted models stay.
+
 ### `vw_cattle_event_log`
 *Añadido en v1.13.0, migración 060 (`CREATE OR REPLACE VIEW`, idempotente). Extendida en
 v1.15.0 (compras/destetes/solicitudes) y en v1.16.0, migración 063 (reproducción/
