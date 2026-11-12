@@ -64,6 +64,17 @@ function toCentsRounded(value, field) {
   return Number(m[1]) * 100 + Number(frac.slice(0, 2)) + (frac.charCodeAt(2) >= 53 ? 1 : 0);
 }
 
+/**
+ * Concept-level quantity / unit price for the "sale" profile: kept as the exact decimal string of the voucher
+ * (up to 6 decimals, no sign, no exponent), never converted to a float.
+ */
+function exactDecimal(value, field) {
+  if (typeof value !== 'string' || !CONCEPT_AMOUNT_RE.test(value)) {
+    fail('INVALID_AMOUNT', `${field} is not a valid decimal with at most 6 decimals`);
+  }
+  return value;
+}
+
 function decodeText(raw) {
   if (typeof raw !== 'string') return null;
   // Fixed predefined entities only; nothing is ever expanded from the document itself.
@@ -152,7 +163,7 @@ function preflight(xmlText) {
   return body;
 }
 
-function extract(xmlText, body) {
+function extract(xmlText, body, sale) {
   if (XMLValidator.validate(body) !== true) fail('NOT_XML', 'input is not well-formed XML');
   const root = parser.parse(body)['cfdi:Comprobante'];
   if (!root || typeof root !== 'object') fail('UNSUPPORTED_VERSION', 'root element is not cfdi:Comprobante');
@@ -216,13 +227,31 @@ function extract(xmlText, body) {
   const conceptosNode = kids(root, 'cfdi:Conceptos')[0];
   const conceptoNodes = kids(conceptosNode ?? root, 'cfdi:Concepto');
   if (conceptoNodes.length === 0) fail('INVALID_STRUCTURE', 'at least one Concepto is required');
-  const conceptos = conceptoNodes.map((node, i) => ({
-    claveProdServ: decodeText(attr(node, 'ClaveProdServ')),
-    descripcion: (decodeText(attr(node, 'Descripcion')) ?? '').slice(0, MAX_DESCRIPCION),
-    importeCents: toCentsRounded(attr(node, 'Importe'), `Concepto[${i}].Importe`),
-  }));
+  const conceptos = conceptoNodes.map((node, i) => {
+    const base = {
+      claveProdServ: decodeText(attr(node, 'ClaveProdServ')),
+      descripcion: (decodeText(attr(node, 'Descripcion')) ?? '').slice(0, MAX_DESCRIPCION),
+      importeCents: toCentsRounded(attr(node, 'Importe'), `Concepto[${i}].Importe`),
+    };
+    if (!sale) return base;
+    return {
+      ...base,
+      claveUnidad: decodeText(attr(node, 'ClaveUnidad')),
+      cantidad: exactDecimal(attr(node, 'Cantidad'), `Concepto[${i}].Cantidad`),
+      valorUnitario: exactDecimal(attr(node, 'ValorUnitario'), `Concepto[${i}].ValorUnitario`),
+    };
+  });
+
+  const saleKeys = sale
+    ? {
+        tipoComprobante: 'I',
+        formaPago: decodeText(attr(root, 'FormaPago')),
+        metodoPago: decodeText(attr(root, 'MetodoPago')),
+      }
+    : {};
 
   return {
+    ...saleKeys,
     uuid: uuid.toUpperCase(),
     serie: decodeText(attr(root, 'Serie')),
     folio: decodeText(attr(root, 'Folio')),
@@ -248,10 +277,15 @@ function extract(xmlText, body) {
 /**
  * Parses a CFDI 4.0 "Ingreso" invoice. Pure: no I/O, never throws.
  * Does NOT verify the SAT status of the UUID (see README).
+ *
+ * options.profile (optional): 'sale' adds the keys the palm sale register needs (tipoComprobante, formaPago, metodoPago and, per
+ * concept, claveUnidad, cantidad, valorUnitario). Without it the output is exactly the one the expense flow has always received.
  */
-export function parseCfdi(xmlText) {
+export function parseCfdi(xmlText, options) {
   try {
-    return { ok: true, data: extract(xmlText, preflight(xmlText)) };
+    const profile = options?.profile;
+    if (profile !== undefined && profile !== 'sale') fail('INVALID_PROFILE', 'unknown parse profile');
+    return { ok: true, data: extract(xmlText, preflight(xmlText), profile === 'sale') };
   } catch (err) {
     if (err instanceof CfdiError) return { ok: false, code: err.code, message: err.message };
     return { ok: false, code: 'NOT_XML', message: 'input could not be parsed' };

@@ -15,7 +15,8 @@ export type CfdiErrorCode =
   | 'INVALID_RFC'
   | 'INVALID_AMOUNT'
   | 'AMOUNTS_MISMATCH'
-  | 'INVALID_STRUCTURE';
+  | 'INVALID_STRUCTURE'
+  | 'INVALID_PROFILE';
 
 export interface CfdiTax {
   impuesto: string;
@@ -45,8 +46,35 @@ export interface CfdiData {
   sourceSha256: string;
 }
 
+/** Extra keys of the 'sale' profile (palm sale register). Present only when the profile is requested. */
+export interface CfdiSaleConcept {
+  claveProdServ: string | null;
+  /** Unit key as written in the voucher (e.g. 'KGM'); null when absent. */
+  claveUnidad: string | null;
+  /** Exact decimal string of the voucher, up to 6 decimals (never a float). */
+  cantidad: string;
+  /** Exact decimal string of the voucher, up to 6 decimals (never a float). */
+  valorUnitario: string;
+  descripcion: string;
+  /** Concept amount in integer cents, rounded half up from the voucher's decimal string. */
+  importeCents: number;
+}
+
+export interface CfdiSaleData extends Omit<CfdiData, 'conceptos'> {
+  tipoComprobante: 'I';
+  /** FormaPago / MetodoPago as written in the voucher; null when absent. */
+  formaPago: string | null;
+  metodoPago: string | null;
+  conceptos: CfdiSaleConcept[];
+}
+
 export type ParseCfdiResult =
   | { ok: true; data: CfdiData }
   | { ok: false; code: CfdiErrorCode; message: string };
 
+export type ParseCfdiSaleResult =
+  | { ok: true; data: CfdiSaleData }
+  | { ok: false; code: CfdiErrorCode; message: string };
+
 export declare function parseCfdi(xmlText: string): ParseCfdiResult;
+export declare function parseCfdi(xmlText: string, options: { profile: 'sale' }): ParseCfdiSaleResult;
