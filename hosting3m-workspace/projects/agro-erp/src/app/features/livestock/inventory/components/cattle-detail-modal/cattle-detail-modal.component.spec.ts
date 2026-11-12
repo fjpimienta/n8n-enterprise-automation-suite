@@ -34,11 +34,10 @@ describe('CattleDetailModalComponent — ALTA', () => {
   let tenantId: string | null;
   let units: any[];
 
-  function create(panelFlow: boolean) {
+  function create() {
     fixture = TestBed.createComponent(CattleDetailModalComponent);
     component = fixture.componentInstance;
     component.actionType = 'ALTA';
-    component.panelFlow = panelFlow;
     fixture.detectChanges();
     return component;
   }
@@ -64,9 +63,10 @@ describe('CattleDetailModalComponent — ALTA', () => {
     vi.restoreAllMocks();
   });
 
-  describe('switch OFF', () => {
+  describe('tenant not allow-listed', () => {
     it('keeps the legacy form and createLivestock', async () => {
-      create(false);
+      tenantId = '5';
+      create();
       expect(tid('panel-alta')).toBeNull();
       expect(el().querySelector('input[formcontrolname="rfid_siniiga"]')).not.toBeNull();
       component.altaForm.patchValue({ current_weight_kg: 400 });
@@ -75,17 +75,31 @@ describe('CattleDetailModalComponent — ALTA', () => {
       expect(api.registerLivestockPanel).not.toHaveBeenCalled();
     });
 
-    it('ships OFF by default', () => {
-      fixture = TestBed.createComponent(CattleDetailModalComponent);
-      expect(fixture.componentInstance.panelFlow).toBe(false);
+    it('tenant 5 (not allow-listed) gets the legacy form and the legacy submit path', async () => {
+      tenantId = '5';
+      create();
+      expect(component.panelFlow).toBe(false);
+      expect(tid('panel-alta')).toBeNull();
+      component.altaForm.patchValue({ current_weight_kg: 400 });
+      await component.submitForm();
+      expect(api.createLivestock).toHaveBeenCalledTimes(1);
+      expect(api.registerLivestockPanel).not.toHaveBeenCalled();
+    });
+
+    it('no active tenant never gets the new flow', () => {
+      tenantId = null;
+      create();
+      expect(component.panelFlow).toBe(false);
+      expect(component.phase()).toBe('editing');
+      expect(tid('panel-alta')).toBeNull();
     });
   });
 
-  describe('switch ON — step 1', () => {
+  describe('tenant 3 — step 1', () => {
     it('starts empty-tag, with today in CDMX, and loads only active UPPs', async () => {
       vi.useFakeTimers({ toFake: ['Date'] });
       vi.setSystemTime(new Date('2026-11-11T02:30:00Z')); // evening of the 10th in CDMX
-      create(true);
+      create();
       await fixture.whenStable();
       expect(component.panelForm.value.ear_tag).toBe('');
       expect(component.panelForm.value.birth_date).toBe('2026-11-10');
@@ -94,17 +108,18 @@ describe('CattleDetailModalComponent — ALTA', () => {
       expect(tid('panel-alta')).not.toBeNull();
     });
 
-    it('blocks the flow when the active tenant is missing', async () => {
+    it('blocks the flow when the active tenant disappears after opening', async () => {
+      create();
+      expect(component.panelFlow).toBe(true);
       tenantId = null;
-      create(true);
+      await component.review();
       expect(component.phase()).toBe('error');
       expect(component.error()).toBe(PANEL_NO_TENANT_MESSAGE);
-      await component.review();
       expect(api.registerLivestockPanel).not.toHaveBeenCalled();
     });
 
     it('does not pass id_company from the form', async () => {
-      create(true);
+      create();
       api.registerLivestockPanel.mockResolvedValue(PREVIEW);
       await component.review();
       const input = api.registerLivestockPanel.mock.calls[0][0];
@@ -114,7 +129,7 @@ describe('CattleDetailModalComponent — ALTA', () => {
 
     it('a role outside ADMIN/EDITOR gets the forbidden message and no call', async () => {
       role = 'OWNER';
-      create(true);
+      create();
       expect(component.phase()).toBe('blocked');
       expect(component.blockMessage()).toBe(PANEL_FORBIDDEN_MESSAGE);
       await component.review();
@@ -122,7 +137,7 @@ describe('CattleDetailModalComponent — ALTA', () => {
     });
 
     it('shows a weight validation error inline and stays in step 1', async () => {
-      create(true);
+      create();
       component.panelForm.patchValue({ weight_kg: 'abc' });
       await component.review();
       expect(api.registerLivestockPanel).not.toHaveBeenCalled();
@@ -134,7 +149,7 @@ describe('CattleDetailModalComponent — ALTA', () => {
   });
 
   describe('status handling', () => {
-    beforeEach(() => create(true));
+    beforeEach(() => create());
 
     it('preview → step 2 with summary and warning messages, confirm sends the hash', async () => {
       api.registerLivestockPanel.mockResolvedValueOnce(PREVIEW).mockResolvedValueOnce(RECORDED);
@@ -320,7 +335,7 @@ describe('CattleDetailModalComponent — ALTA', () => {
   });
 
   describe('double-click guard', () => {
-    beforeEach(() => create(true));
+    beforeEach(() => create());
 
     it('review() ignores a second call while the first is in flight', async () => {
       const d = deferred<PanelLivestockResponse>();

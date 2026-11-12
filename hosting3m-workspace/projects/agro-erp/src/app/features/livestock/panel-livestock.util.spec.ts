@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { canUsePanelAlta, todayInMexicoCity, validatePanelWeight } from './panel-livestock.util';
-import { PANEL_LIVESTOCK_ALTA_ENABLED, PANEL_LIVESTOCK_ALTA_TENANTS, isPanelAltaEnabledForTenant } from './panel-livestock.switch';
+import { PANEL_LIVESTOCK_ALTA_TENANTS, isPanelAltaEnabledForTenant } from './panel-livestock.switch';
 
 describe('todayInMexicoCity', () => {
   it('returns the CDMX date in the evening, when UTC is already the next day', () => {
@@ -30,12 +30,6 @@ describe('canUsePanelAlta', () => {
   });
   it.each(['OWNER', 'CUSTOMER', '', null, undefined])('denies %s', role => {
     expect(canUsePanelAlta(role as string | null | undefined)).toBe(false);
-  });
-});
-
-describe('PANEL_LIVESTOCK_ALTA_ENABLED', () => {
-  it('ships OFF', () => {
-    expect(PANEL_LIVESTOCK_ALTA_ENABLED).toBe(false);
   });
 });
 
