@@ -39,7 +39,7 @@
                         {{ blockMessage() }}
                     </div>
                     @if (existingRows().length) {
-                    <div class="mb-2 fw-bold">Animal existente</div>
+                    <div class="mb-2 fw-bold" data-testid="panel-existing-title">{{ existingTitle() }}</div>
                     <table class="table table-sm" data-testid="panel-existing">
                         <tbody>
                             @for (row of existingRows(); track row.key) {

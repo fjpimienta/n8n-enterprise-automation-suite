@@ -9,7 +9,7 @@ import { REFERENCE_PRICE_PER_KG, categoryLabel } from '../../../expenses/livesto
 import { TenantService } from 'core-auth';
 import { ProductionUnitLotService } from '@features/admin/services/production-unit-lot.service';
 import { isPanelAltaEnabledForTenant } from '../../../panel-livestock.switch';
-import { canUsePanelAlta, todayInMexicoCity, validatePanelWeight } from '../../../panel-livestock.util';
+import { canUsePanelAlta, orderPanelEntries, todayInMexicoCity, validatePanelWeight } from '../../../panel-livestock.util';
 import {
   PanelLivestockInput,
   PanelLivestockIssue,
@@ -205,11 +205,14 @@ export class CattleDetailModalComponent implements OnInit {
   );
 
   public previewRows = computed(() =>
-    Object.entries(this.preview() ?? {}).map(([key, value]) => ({ key, label: this.previewLabel(key), value: this.previewValue(value) }))
+    orderPanelEntries(this.preview()).map(([key, value]) => ({ key, label: this.previewLabel(key), value: this.previewValue(value) }))
   );
 
+  /** duplicate_recent shows the values just entered, not an existing animal. */
+  public existingTitle = computed(() => (this.blockKind() === 'duplicate_recent' ? 'Datos del registro' : 'Animal existente'));
+
   public existingRows = computed(() =>
-    Object.entries(this.existingAnimal() ?? {}).map(([key, value]) => ({ key, label: this.previewLabel(key), value: this.previewValue(value) }))
+    orderPanelEntries(this.existingAnimal()).map(([key, value]) => ({ key, label: this.previewLabel(key), value: this.previewValue(value) }))
   );
 
   private static readonly PREVIEW_LABELS: Record<string, string> = {
