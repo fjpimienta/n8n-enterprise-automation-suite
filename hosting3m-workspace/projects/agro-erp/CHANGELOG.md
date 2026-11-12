@@ -5,6 +5,13 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🌴 cfdi-service: `sale` parse profile for the palm sale register
+
+* `POST /parse` accepts an optional `"profile":"sale"` that adds `tipoComprobante`, `formaPago`, `metodoPago` and, per concept, `claveUnidad`,
+  `cantidad` and `valorUnitario` (exact decimal strings), the keys `sp_agri_register_sale` (migration 104) expects. Without the profile the
+  response is exactly the previous one, so the livestock expense flow is unaffected. Nothing calls the profile yet. Runbook:
+  `microservices/cfdi-service/SALE_PROFILE_RUNBOOK.md`.
+
 ### 🌴 Palm sales from a CFDI voucher: database layer (migration 104)
 
 * Adds platform-managed company flags and issuer RFC list, an append-only sale register with a void transition and an audit trail, the
