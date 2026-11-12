@@ -13,7 +13,8 @@
                         Descargar Excel
                     </button>
                 </span>
-                <button class="btn btn-primary d-none d-sm-inline-block" (click)="openModal('ALTA')">
+                @if (canRegisterAnimal()) {
+                <button class="btn btn-primary d-none d-sm-inline-block" data-testid="new-record" (click)="openModal('ALTA')">
                     <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
                         stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
                         stroke-linejoin="round">
@@ -23,6 +24,7 @@
                     </svg>
                     Nuevo Registro
                 </button>
+                }
             </div>
         </div>
     </div>
@@ -265,6 +267,13 @@
     </div>
     <app-table-footer [pagedTable]="cattleTable"></app-table-footer>
 </div>
+
+@if (registeredNotice(); as notice) {
+<div class="alert alert-success alert-dismissible" role="status" data-testid="registered-notice">
+    {{ notice }}
+    <button type="button" class="btn-close" aria-label="Cerrar" (click)="registeredNotice.set(null)"></button>
+</div>
+}
 
 @if (isModalOpen) {
 <app-cattle-detail-modal [actionType]="modalAction" [selectedRfid]="selectedRfid" [livestockId]="selectedId"
