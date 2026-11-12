@@ -38,6 +38,9 @@ Order matters: **sub-workflow first, then the chat workflow.**
 
 1. Empty a new canvas and **Import from file** `v6_palm_sale_from_xml.json`. Check that the nodes show the credentials **"CFDI Service Token"** (three HTTP nodes) and
    **"Postgres account"** (`Registrar Venta`); pick them if the editor asks. Open **Settings** and confirm *Save failed/successful production executions* = **Do not save**.
+   In the same Settings, check that **Error workflow** points to an existing workflow of this instance (the exported id is the one used by the other v6 workflows; if the editor
+   cannot find it, pick the instance's own error workflow) and that **This workflow can be called by** allows the chat workflow (same owner or project).
+   The error workflow must not store the payload or any voucher data.
    **Save**, then **Publish**. Note the workflow id from the URL.
 2. Open `v6/ai/chat cattle`, empty the canvas, **Import from file** `v6_ai_chat_cattle.json`. In the node **`Venta Palma XML`** select the workflow
    **`v6/palm sale from xml`** from the list (the id of the repo file is a placeholder; the instance assigns its own) and check that the seven inputs are mapped
@@ -47,6 +50,10 @@ Order matters: **sub-workflow first, then the chat workflow.**
    `diff_workflow_exports.mjs <backup> <new export>` must show the same list as step 3 above. (Optional follow-up PR: commit the instance ids.)
 
 ## Verification (production, palm TEST company, synthetic voucher only)
+
+Before the first check, the palm TEST company needs its issuer RFC configured with the platform seed (see the migration 104 runbook, section on the issuer seed):
+run the dry run first, and apply only with the owner's explicit go-ahead. The RFC value is passed through an environment variable and is never written to a file, a prompt or a commit.
+The synthetic voucher must carry that same issuer RFC.
 
 | # | Action | Expected |
 |---|---|---|
