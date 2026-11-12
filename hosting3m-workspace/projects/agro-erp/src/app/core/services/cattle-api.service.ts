@@ -5,6 +5,9 @@ import { environment } from '@env/environment';
 import { TenantService } from 'core-auth';
 import { LoggerService } from './logger.service';
 import { CattleEventLogRow } from '@features/livestock/models/cattle-event-log.model';
+import {
+    PANEL_LIVESTOCK_STATUSES, PanelLivestockInput, PanelLivestockOptions, PanelLivestockResponse
+} from '@features/livestock/models/panel-livestock.model';
 
 @Injectable({ providedIn: 'root' })
 export class CattleApiService {
@@ -197,6 +200,70 @@ export class CattleApiService {
         );
         if (res && res.error) throw new Error(res.message);
         return res.data;
+    }
+
+    /**
+     * Panel livestock registration through sp_register_livestock_panel (gateway model
+     * `register_livestock_panel`). Two-step: without `confirm` it returns a preview and writes
+     * nothing; with `confirm` and the `previewHash` of that preview it records the animal.
+     *
+     * The tenant travels in the x-tenant-id header (interceptor) and the actor comes from the
+     * JWT, so neither goes in `fields`. Every value is sent as a string. The response is returned
+     * as is (warnings included); an empty response, null data, error=true or an unknown status
+     * throws — only status 'recorded' means the animal was created. Never retried automatically.
+     */
+    public async registerLivestockPanel(
+        input: PanelLivestockInput,
+        opts: PanelLivestockOptions = {}
+    ): Promise<PanelLivestockResponse> {
+        const confirm = opts.confirm === true;
+        const previewHash = (opts.previewHash ?? '').trim();
+        if (confirm && !previewHash) {
+            throw new Error('La confirmación requiere la vista previa (preview_hash).');
+        }
+        const str = (v: unknown): string => (v === null || v === undefined ? '' : String(v).trim());
+        const fields = {
+            upp: str(input.upp),
+            lot: str(input.lot),
+            species: str(input.species),
+            category: str(input.category),
+            business_model: str(input.business_model),
+            ear_tag: str(input.ear_tag),
+            fire_number: str(input.fire_number),
+            electronic_rfid: str(input.electronic_rfid),
+            weight_kg: CattleApiService.normalizePanelWeight(input.weight_kg),
+            birth_date: str(input.birth_date),
+            origin_upp: str(input.origin_upp),
+            tb_test_date: str(input.tb_test_date),
+            br_test_date: str(input.br_test_date),
+            notes: str(input.notes),
+            confirmed: confirm ? 'true' : '',
+            preview_hash: confirm ? previewHash : '',
+            force_duplicate: opts.forceDuplicate === true ? 'true' : ''
+        };
+
+        const res: any = await lastValueFrom(
+            this.http.post(`${this.apiUrl_crud}/register_livestock_panel`, { operation: 'call_sp', fields })
+        );
+        if (!res || res.error) {
+            throw new Error(res?.message || 'El servidor no confirmó el alta del animal.');
+        }
+        const data = res.data;
+        if (!data || typeof data !== 'object' || !PANEL_LIVESTOCK_STATUSES.includes(data.status)) {
+            throw new Error('Respuesta inesperada del servidor al registrar el animal.');
+        }
+        return data as PanelLivestockResponse;
+    }
+
+    /** "412,5" -> "412.5"; strips spaces; '' when empty; throws when not numeric. */
+    private static normalizePanelWeight(value: unknown): string {
+        if (value === null || value === undefined) return '';
+        const raw = String(value).replace(/\s+/g, '').replace(',', '.');
+        if (raw === '') return '';
+        if (!/^\d+(\.\d+)?$/.test(raw)) {
+            throw new Error('El peso debe ser un número (por ejemplo 412.5).');
+        }
+        return raw;
     }
 
     /**
