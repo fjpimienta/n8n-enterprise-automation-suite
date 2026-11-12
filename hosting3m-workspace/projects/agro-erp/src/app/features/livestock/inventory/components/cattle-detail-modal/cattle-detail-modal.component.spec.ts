@@ -163,6 +163,21 @@ describe('CattleDetailModalComponent — ALTA', () => {
       expect(api.registerLivestockPanel.mock.calls[1][1]).toEqual({ confirm: true, previewHash: 'hash-1' });
     });
 
+    it('renders preview rows in the fixed order, unknown keys last', async () => {
+      api.registerLivestockPanel.mockResolvedValue({
+        ...PREVIEW, preview: { notas: 'n', extra: 'x', arete: '9821100005', empresa: 'Rancho Demo', peso_kg: '400' }
+      });
+      await component.review();
+      expect(component.previewRows().map(r => r.key)).toEqual(['empresa', 'arete', 'peso_kg', 'notas', 'extra']);
+    });
+
+    it('rejects a zero weight locally with the inline message', async () => {
+      component.panelForm.patchValue({ weight_kg: '0,0' });
+      await component.review();
+      expect(api.registerLivestockPanel).not.toHaveBeenCalled();
+      expect(component.fieldErrors()['weight_kg']).toBe('El peso debe ser un número de kilos mayor que 0 (o déjalo vacío).');
+    });
+
     it('preview_required shows the new preview and asks to confirm again', async () => {
       api.registerLivestockPanel.mockResolvedValueOnce(PREVIEW).mockResolvedValueOnce({
         ...PREVIEW, status: 'preview_required', preview_hash: 'hash-2', message: 'Los datos cambiaron.'
@@ -227,6 +242,7 @@ describe('CattleDetailModalComponent — ALTA', () => {
         fixture.detectChanges();
         expect(component.phase()).toBe('blocked');
         expect(tid('panel-blocked')?.textContent).toContain('Ese arete ya existe.');
+        expect(tid('panel-existing-title')?.textContent).toContain('Animal existente');
         expect(tid('panel-existing')?.textContent).toContain('VACA');
         expect(tid('panel-force')).toBeNull();
         await component.registerAnyway();
@@ -244,6 +260,7 @@ describe('CattleDetailModalComponent — ALTA', () => {
       fixture.detectChanges();
       expect(component.phase()).toBe('blocked');
       expect(tid('panel-force')?.textContent).toContain('Registrar de todos modos');
+      expect(tid('panel-existing-title')?.textContent).toContain('Datos del registro');
       expect(tid('panel-existing')?.textContent).toContain('Rancho Demo');
       expect(tid('panel-existing')?.textContent).toContain('9821100005');
       await component.registerAnyway();

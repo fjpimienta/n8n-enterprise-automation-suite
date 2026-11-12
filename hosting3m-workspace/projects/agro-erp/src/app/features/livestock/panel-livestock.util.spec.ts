@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canUsePanelAlta, todayInMexicoCity, validatePanelWeight } from './panel-livestock.util';
+import { canUsePanelAlta, orderPanelEntries, todayInMexicoCity, validatePanelWeight } from './panel-livestock.util';
 import { PANEL_LIVESTOCK_ALTA_TENANTS, isPanelAltaEnabledForTenant } from './panel-livestock.switch';
 
 describe('todayInMexicoCity', () => {
@@ -37,8 +37,14 @@ describe('validatePanelWeight', () => {
   it.each(['', '  ', null, undefined, '412', '412.5', '412,5', ' 4 12,5 ', 450])('accepts %s', v => {
     expect(validatePanelWeight(v)).toBeNull();
   });
-  it.each(['abc', '12kg', '-5', '1.2.3', '1,2,3'])('rejects %s', v => {
-    expect(validatePanelWeight(v)).toMatch(/peso/i);
+  it.each(['abc', '12kg', '-5', '1.2.3', '1,2,3', '1,234.5', '.5'])('rejects %s as not a number', v => {
+    expect(validatePanelWeight(v)).toBe('El peso debe ser un número (por ejemplo 412.5).');
+  });
+  it.each(['0', '0,0', '0.00', ' 0 ', 0])('rejects zero %j', v => {
+    expect(validatePanelWeight(v)).toBe('El peso debe ser un número de kilos mayor que 0 (o déjalo vacío).');
+  });
+  it('accepts a small positive weight', () => {
+    expect(validatePanelWeight('0,5')).toBeNull();
   });
 });
 
@@ -59,5 +65,15 @@ describe('isPanelAltaEnabledForTenant', () => {
   it('honors a custom list', () => {
     expect(isPanelAltaEnabledForTenant(5, [3, 5])).toBe(true);
     expect(isPanelAltaEnabledForTenant(6, [3, 5])).toBe(false);
+  });
+});
+
+describe('orderPanelEntries', () => {
+  it('puts known keys in the fixed order and unknown ones last, as received', () => {
+    const out = orderPanelEntries({ zeta: 1, notas: 'n', peso_kg: '400', alfa: 2, empresa: 'E', arete: 'A', upp: 'U' });
+    expect(out.map(([k]) => k)).toEqual(['empresa', 'upp', 'arete', 'peso_kg', 'notas', 'zeta', 'alfa']);
+  });
+  it('handles null', () => {
+    expect(orderPanelEntries(null)).toEqual([]);
   });
 });
