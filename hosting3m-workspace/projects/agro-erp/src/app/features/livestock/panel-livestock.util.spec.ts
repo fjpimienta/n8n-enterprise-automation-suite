@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { canUsePanelAlta, todayInMexicoCity, validatePanelWeight } from './panel-livestock.util';
-import { PANEL_LIVESTOCK_ALTA_ENABLED } from './panel-livestock.switch';
+import { PANEL_LIVESTOCK_ALTA_TENANTS, isPanelAltaEnabledForTenant } from './panel-livestock.switch';
 
 describe('todayInMexicoCity', () => {
   it('returns the CDMX date in the evening, when UTC is already the next day', () => {
@@ -33,17 +33,31 @@ describe('canUsePanelAlta', () => {
   });
 });
 
-describe('PANEL_LIVESTOCK_ALTA_ENABLED', () => {
-  it('ships OFF', () => {
-    expect(PANEL_LIVESTOCK_ALTA_ENABLED).toBe(false);
-  });
-});
-
 describe('validatePanelWeight', () => {
   it.each(['', '  ', null, undefined, '412', '412.5', '412,5', ' 4 12,5 ', 450])('accepts %s', v => {
     expect(validatePanelWeight(v)).toBeNull();
   });
   it.each(['abc', '12kg', '-5', '1.2.3', '1,2,3'])('rejects %s', v => {
     expect(validatePanelWeight(v)).toMatch(/peso/i);
+  });
+});
+
+describe('isPanelAltaEnabledForTenant', () => {
+  it('ships with company 3 only', () => {
+    expect(PANEL_LIVESTOCK_ALTA_TENANTS).toEqual([3]);
+  });
+  it.each([3, '3', ' 3 '])('enables %j', v => {
+    expect(isPanelAltaEnabledForTenant(v)).toBe(true);
+  });
+  it.each([1, 5, 6, 8, null, undefined, '', NaN, '3abc', 3.5, '3.5', true, 'abc', [3], {}, -3])('disables %j', v => {
+    expect(isPanelAltaEnabledForTenant(v)).toBe(false);
+  });
+  it('an empty list is the kill switch, even for 3', () => {
+    expect(isPanelAltaEnabledForTenant(3, [])).toBe(false);
+    expect(isPanelAltaEnabledForTenant('3', [])).toBe(false);
+  });
+  it('honors a custom list', () => {
+    expect(isPanelAltaEnabledForTenant(5, [3, 5])).toBe(true);
+    expect(isPanelAltaEnabledForTenant(6, [3, 5])).toBe(false);
   });
 });

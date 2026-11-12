@@ -13,7 +13,7 @@ import { CattleDataService } from '@core/services/cattle-data.service';
 import { CattleApiService } from '@core/services/cattle-api.service';
 import { HERD_STATUS_FILTER_OPTIONS, HerdStatusFilter, filterByHerdStatus } from '@shared/utils/herd-status.util';
 import { SPECIES_FILTER_ALL, deriveAvailableSpecies, filterBySpecies } from '@shared/utils/species.util';
-import { PANEL_LIVESTOCK_ALTA_ENABLED } from '../../../panel-livestock.switch';
+import { isPanelAltaEnabledForTenant } from '../../../panel-livestock.switch';
 import { canUsePanelAlta } from '../../../panel-livestock.util';
 import { LOT_FILTER_ALL, deriveAvailableLots, filterByLot } from '@shared/utils/lot.util';
 
@@ -43,12 +43,15 @@ export class CattleListComponent implements OnInit {
     (this.tenantService.activeTenant()?.role || '').toUpperCase() === 'ADMIN'
   );
 
-  // "Nuevo Registro": with the panel ALTA flow ON only ADMIN and EDITOR get the entry point (OWNER does not).
-  // Switch OFF = legacy behavior, button always visible. Read as fields so specs can drive them.
-  public panelAltaEnabled: boolean = PANEL_LIVESTOCK_ALTA_ENABLED;
+  // "Nuevo Registro": if the panel ALTA flow is enabled for the ACTIVE tenant (allow-list) only ADMIN and
+  // EDITOR get the entry point (OWNER does not); otherwise legacy behavior (button always visible).
+  // Computed over the tenant signal, so it follows a tenant change within the same session.
+  public panelAltaEnabled = computed(() => isPanelAltaEnabledForTenant(this.tenantService.activeTenantId()));
   public canRegisterAnimal = computed(() =>
-    !this.panelAltaEnabled || canUsePanelAlta(this.tenantService.activeTenant()?.role)
+    !this.panelAltaEnabled() || canUsePanelAlta(this.tenantService.activeTenant()?.role)
   );
+  /** Whether the open modal uses the new flow (fixed when it was opened). */
+  private openedWithPanelFlow = false;
   public registeredNotice = signal<string | null>(null);
 
   // Filtro de estado de vida (venta/mortandad). Default: solo hato vivo.
@@ -203,6 +206,7 @@ export class CattleListComponent implements OnInit {
     if (action === 'COSTOS' && !this.isAdminForActiveTenant()) return;
     if (action === 'ALTA' && !this.canRegisterAnimal()) return;
     this.registeredNotice.set(null);
+    this.openedWithPanelFlow = action === 'ALTA' && this.panelAltaEnabled();
     this.modalAction = action;
     this.selectedRfid = rfid;
     this.selectedId = id;
@@ -212,7 +216,7 @@ export class CattleListComponent implements OnInit {
 
   // Cuando el modal se cierra, verificamos si guardó algo para recargar la tabla
   public onModalClose(saved: boolean) {
-    const wasPanelAlta = this.panelAltaEnabled && this.modalAction === 'ALTA';
+    const wasPanelAlta = this.openedWithPanelFlow && this.modalAction === 'ALTA';
     this.isModalOpen = false;
     if (saved && wasPanelAlta) this.registeredNotice.set('Animal registrado.');
     if (saved) {

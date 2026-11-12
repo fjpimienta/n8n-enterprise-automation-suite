@@ -8,7 +8,7 @@ import { formatMoney } from '@shared/expenses-ui/expenses-ui.util';
 import { REFERENCE_PRICE_PER_KG, categoryLabel } from '../../../expenses/livestock-expense.util';
 import { TenantService } from 'core-auth';
 import { ProductionUnitLotService } from '@features/admin/services/production-unit-lot.service';
-import { PANEL_LIVESTOCK_ALTA_ENABLED } from '../../../panel-livestock.switch';
+import { isPanelAltaEnabledForTenant } from '../../../panel-livestock.switch';
 import { canUsePanelAlta, todayInMexicoCity, validatePanelWeight } from '../../../panel-livestock.util';
 import {
   PanelLivestockInput,
@@ -54,8 +54,8 @@ export class CattleDetailModalComponent implements OnInit {
 
   public isSaving = signal<boolean>(false);
 
-  /** Read once from the code switch. OFF = legacy ALTA flow, untouched. */
-  public panelFlow: boolean = PANEL_LIVESTOCK_ALTA_ENABLED;
+  /** Decided once, when the modal opens, from the ACTIVE tenant's allow-list. Not listed / no tenant = legacy flow. */
+  public panelFlow: boolean = isPanelAltaEnabledForTenant(this.tenantService.activeTenantId());
   private today = new Date().toISOString().split('T')[0];
 
   // Estado del sub-módulo COSTOS
@@ -147,7 +147,7 @@ export class CattleDetailModalComponent implements OnInit {
     br_test_date: ['']
   });
 
-  // ───────────────────────── Panel ALTA flow (behind PANEL_LIVESTOCK_ALTA_ENABLED) ─────────────────────────
+  // ───────────────────────── Panel ALTA flow (enabled per tenant, see panel-livestock.switch.ts) ─────────────────────────
   // editing → checking → previewing → saving → saved, plus blocked / error. `isSubmitting` is checked at the
   // START of every action (a disabled button is not enough against a fast double click or Enter). No retries.
   public readonly panelCategories = ['VACA', 'TORO', 'NOVILLO', 'BECERRA'];
