@@ -1079,6 +1079,24 @@ its absence fails at runtime, not at deploy time (see CLAUDE.md, Contrato Meta-C
   `sp_requires_tenant = true`. `allowed_fields`: los 18 argumentos después del tenant (sin `id`, `tenant_id` ni `id_company`). Rollback:
   `103_rollback.sql` (borra solo esa fila).
 
+### Palm sales from a CFDI voucher (migration 104)
+*Database layer only; no `crud_models` row, no n8n or frontend consumer yet. See `database/migrations/104_RUNBOOK.md`.*
+* `company_flags (id_company PK, is_test, …)` and `company_issuer_rfcs (id, id_company, rfc, is_active, is_test, …)`: platform-managed
+  (changed only inside a transaction with `app.platform_seed = on`, i.e. the two seed files), never deleted, `is_test` derived and fixed
+  once the company has issuer RFCs or sales. `UNIQUE (id_company, rfc)`; `UNIQUE (rfc) WHERE is_active AND NOT is_test`.
+* `agri_sale_invoices`: one row per sale voucher (uuid, issuer/buyer RFC and name, folio, `issued_at` (CFDI `Fecha`, local time), integer-cent
+  subtotal/discount/total, `taxes` jsonb, payment form/method `PUE`, product key, unit `KGM`, `quantity`/`unit_price` `numeric(18,6)`,
+  `ticket_ref`/`ticket_warning`, optional plantation/lot with composite keys, `source_sha256`, `original_path`, `sat_status`, `is_test`,
+  `status` ACTIVE/VOID with reason, actor and time). `UNIQUE (id_company, uuid)` and `UNIQUE (uuid) WHERE NOT is_test`. Append-only guard
+  (`P0110`): the only UPDATE is ACTIVE → VOID by `sp_agri_void_sale`.
+* `agri_sale_audit`: append-only REGISTER / VOID / REJECT trail with a code and the actor; never a voucher UUID.
+* `sp_agri_register_sale(integer, text, jsonb, text, text, text)`: direct load of a parsed voucher; ADMIN of a palm company only; no amount
+  parameter; answers `OK | ALREADY_REGISTERED | FORBIDDEN | NOT_PALM | ISSUER_RFC_NOT_CONFIGURED | ISSUER_RFC_MISMATCH | INVALID_VOUCHER | DUPLICATE`.
+* `sp_agri_void_sale(integer, text, uuid, text)`: ADMIN, any time, reason 5..300 characters, idempotent.
+* `sp_agri_sales_balance(integer, date, date, varchar, uuid, uuid, varchar)`: ADMIN only; totals by period and plantation, voided excluded,
+  previous period and `delta_pct`. Views `vw_agri_sale_list`, `vw_agri_sale_summary` (to be registered, ADMIN only, by a later pull request).
+* Rollback: `104_rollback.sql` (procedures answer `disabled`; nothing is deleted).
+
 ### `vw_cattle_event_log`
 *Añadido en v1.13.0, migración 060 (`CREATE OR REPLACE VIEW`, idempotente). Extendida en
 v1.15.0 (compras/destetes/solicitudes) y en v1.16.0, migración 063 (reproducción/
