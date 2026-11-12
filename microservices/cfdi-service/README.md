@@ -10,13 +10,19 @@ All endpoints take and return JSON (UTF-8). Every endpoint except `/health` requ
 | Endpoint | Body | Response |
 |---|---|---|
 | `GET /health` | – | `{"ok":true}` |
-| `POST /parse` | `{"xmlBase64"}` | `uuid, serie, folio, fechaEmision, fechaTimbrado, emisor{rfc,nombre}, receptor{rfc,nombre}, moneda, subtotalCents, descuentoCents, totalCents, traslados[], retenciones[], conceptos[<=20], sourceSha256` (integer cents) |
+| `POST /parse` | `{"xmlBase64"[, "profile":"sale"]}` | `uuid, serie, folio, fechaEmision, fechaTimbrado, emisor{rfc,nombre}, receptor{rfc,nombre}, moneda, subtotalCents, descuentoCents, totalCents, traslados[], retenciones[], conceptos[<=20], sourceSha256` (integer cents) |
 | `POST /sat-status` | `{"uuid","emisorRfc","receptorRfc","totalCents"}` | `{"status":"VIGENTE"\|"CANCELADO"\|"NO_ENCONTRADO"\|"ERROR"}` |
 | `POST /store` | `{"tenantId","xmlBase64","sha256"}` | `{"originalPath":"<tenantId>/<yyyy>/<mm>/<sha256>.xml"}` |
 
 Errors: `422 {"status":"invalid","code":"UPPER_SNAKE"}` (parser codes such as `DOCTYPE_FORBIDDEN`, `NOT_XML`,
 `AMOUNTS_MISMATCH`, plus `INVALID_BODY`, `INVALID_TENANT`, `SHA256_MISMATCH`), `401`, `404`, `405`, `409 CONFLICT`
 (`/store`: a different file already exists at that path), `413` (body > 7.5 MB), `500`.
+
+## `/parse` profiles
+Without `profile` the response is the one above, unchanged. With `"profile":"sale"` (the only other value; anything else is `422 INVALID_BODY`) the
+response also carries `tipoComprobante`, `formaPago`, `metodoPago` and, per concept, exactly `{claveProdServ, claveUnidad, cantidad, valorUnitario,
+descripcion, importeCents}` (`cantidad` / `valorUnitario` are exact decimal strings with up to 6 decimals). Rounding rule of `importeCents`: exact
+decimal string arithmetic, half up to the cent. `/sat-status` and `/store` are not affected. Deployment: `SALE_PROFILE_RUNBOOK.md`.
 
 ## Behaviour worth knowing
 - `sourceSha256` is the SHA-256 of the **raw bytes received**, not of re-encoded text. `/store` requires `sha256` to

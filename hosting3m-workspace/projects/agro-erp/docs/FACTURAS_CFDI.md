@@ -49,6 +49,7 @@ Internal HTTP sidecar (port 4100, not published; reachable from n8n as `http://c
 
 **Parser** (`lib/cfdi-parser`, pure, never throws): only CFDI 4.0 type `I` (Ingreso) in `MXN`, one valid `TimbreFiscalDigital`; up to 2 MB and 200 concepts; no `DOCTYPE` / `ENTITY`, no control characters; amounts converted from text to integer cents without floating point; seals, certificates and addenda are never returned. `Serie` / `Folio` are optional.
 Amounts: comprobante-level fields (`SubTotal`, `Total`, `Descuento`, tax totals and lines) have at most 2 decimals and `Total = SubTotal − Descuento + traslados − retenciones` must match to the cent (`ROUNDING_TOLERANCE_CENTS = 0`; do not change silently). **Concept-level `Importe` may carry up to 6 decimals** (SAT Anexo 20) and is rounded half-up to cents for display only; it is not used to reconcile totals.
+**Sale profile** (palm sales, migration 104): `POST /parse` with `"profile":"sale"` adds `tipoComprobante`, `formaPago`, `metodoPago` and, per concept, `claveUnidad`, `cantidad`, `valorUnitario` (exact decimal strings); the default response used by the expense flow is unchanged. See `microservices/cfdi-service/SALE_PROFILE_RUNBOOK.md`.
 Error codes: `NOT_XML`, `TOO_LARGE`, `DOCTYPE_FORBIDDEN`, `INVALID_CHARS`, `TOO_MANY_CONCEPTS`, `UNSUPPORTED_VERSION`, `UNSUPPORTED_TYPE`, `UNSUPPORTED_CURRENCY`, `NOT_STAMPED`, `INVALID_STRUCTURE`, `INVALID_RFC`, `INVALID_AMOUNT`, `AMOUNTS_MISMATCH`.
 
 ## Operation

@@ -55,7 +55,7 @@ async function readJson(req) {
 }
 
 /** Decodes xmlBase64 into raw bytes, then runs the parser on them. Returns { bytes, data }. */
-function parseXmlField(body) {
+function parseXmlField(body, profile) {
   const b64 = body.xmlBase64;
   if (typeof b64 !== 'string' || b64.length === 0 || b64.length % 4 !== 0 || !BASE64_RE.test(b64)) {
     throw invalid('INVALID_BODY');
@@ -70,13 +70,13 @@ function parseXmlField(body) {
   } catch {
     throw invalid('NOT_XML');
   }
-  const res = parseCfdi(text);
+  const res = parseCfdi(text, profile ? { profile } : undefined);
   if (!res.ok) throw invalid(res.code);
   return { bytes, data: res.data };
 }
 
 /** Public shape consumed by the SQL procedure: exactly these keys, nothing from the raw XML. */
-function toPublic(d, bytes) {
+function toPublic(d, bytes, sale = false) {
   const tax = (t) => ({
     impuesto: t.impuesto,
     tipoFactor: t.tipoFactor,
@@ -84,7 +84,13 @@ function toPublic(d, bytes) {
     baseCents: t.baseCents,
     importeCents: t.importeCents,
   });
+  // Sale profile: the concept shape is exactly the contract of the palm sale register (migration 104).
+  const concept = (c) =>
+    sale
+      ? { claveProdServ: c.claveProdServ, claveUnidad: c.claveUnidad, cantidad: c.cantidad, valorUnitario: c.valorUnitario, descripcion: c.descripcion, importeCents: c.importeCents }
+      : { claveProdServ: c.claveProdServ, descripcion: c.descripcion, importeCents: c.importeCents };
   return {
+    ...(sale ? { tipoComprobante: d.tipoComprobante, formaPago: d.formaPago, metodoPago: d.metodoPago } : {}),
     uuid: d.uuid,
     serie: d.serie,
     folio: d.folio,
@@ -98,11 +104,7 @@ function toPublic(d, bytes) {
     totalCents: d.totalCents,
     traslados: d.traslados.map(tax),
     retenciones: d.retenciones.map(tax),
-    conceptos: d.conceptos.slice(0, MAX_CONCEPTOS_OUT).map((c) => ({
-      claveProdServ: c.claveProdServ,
-      descripcion: c.descripcion,
-      importeCents: c.importeCents,
-    })),
+    conceptos: d.conceptos.slice(0, MAX_CONCEPTOS_OUT).map(concept),
     // Hash of the raw bytes received, not of the re-encoded text the parser saw.
     sourceSha256: createHash('sha256').update(bytes).digest('hex'),
   };
@@ -117,8 +119,12 @@ export function createApp({ token, storageRoot, fetch: fetchImpl, satTimeoutMs, 
     '/health': async () => ({ status: 200, body: { ok: true } }),
 
     '/parse': async (req) => {
-      const { bytes, data } = parseXmlField(await readJson(req));
-      return { status: 200, body: toPublic(data, bytes) };
+      const body = await readJson(req);
+      // Optional profile: only 'sale' exists. Without it the response is unchanged.
+      if (body.profile !== undefined && body.profile !== 'sale') throw invalid('INVALID_BODY');
+      const sale = body.profile === 'sale';
+      const { bytes, data } = parseXmlField(body, sale ? 'sale' : undefined);
+      return { status: 200, body: toPublic(data, bytes, sale) };
     },
 
     '/sat-status': async (req) => {

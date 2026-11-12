@@ -5,6 +5,21 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🌴 cfdi-service: `sale` parse profile for the palm sale register
+
+* `POST /parse` accepts an optional `"profile":"sale"` that adds `tipoComprobante`, `formaPago`, `metodoPago` and, per concept, `claveUnidad`,
+  `cantidad` and `valorUnitario` (exact decimal strings), the keys `sp_agri_register_sale` (migration 104) expects. Without the profile the
+  response is exactly the previous one, so the livestock expense flow is unaffected. Nothing calls the profile yet. Runbook:
+  `microservices/cfdi-service/SALE_PROFILE_RUNBOOK.md`.
+
+### 🌴 Palm sales from a CFDI voucher: database layer (migration 104)
+
+* Adds platform-managed company flags and issuer RFC list, an append-only sale register with a void transition and an audit trail, the
+  procedures `sp_agri_register_sale`, `sp_agri_void_sale` and `sp_agri_sales_balance`, and two dashboard views. ADMIN only, palm companies only,
+  amounts only from the voucher; the concept amount must agree with quantity × unit price (one cent) and the subtotal; a voided voucher can
+  be loaded again by the same company. **No visible behavior change:** nothing in n8n, the gateway or the frontend uses these objects yet.
+  Tested on a throwaway local database; not applied to production (runbook: `database/migrations/104_RUNBOOK.md`).
+
 ### 🐄 Alta del panel web: modelo del gateway (migración 103 y gateway v6)
 
 * El gateway v6 (`Build Query`) conoce `sp_register_livestock_panel` y la migración 103 registra su modelo `register_livestock_panel` en
