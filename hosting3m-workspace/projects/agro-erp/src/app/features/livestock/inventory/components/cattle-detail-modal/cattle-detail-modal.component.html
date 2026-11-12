@@ -21,6 +21,177 @@
                 @switch (actionType) {
 
                 @case ('ALTA') {
+
+                @if (panelFlow) {
+                <div data-testid="panel-alta">
+                    @if (error(); as msg) {
+                    <div class="alert alert-danger" role="alert" data-testid="panel-error">{{ msg }}</div>
+                    }
+                    @if (success(); as msg) {
+                    <div class="alert alert-success" role="status" data-testid="panel-success">{{ msg }}</div>
+                    }
+
+                    @switch (phase()) {
+
+                    @case ('blocked') {
+                    <div class="alert" [class.alert-warning]="blockKind() === 'duplicate_recent'"
+                        [class.alert-danger]="blockKind() !== 'duplicate_recent'" role="alert" data-testid="panel-blocked">
+                        {{ blockMessage() }}
+                    </div>
+                    @if (existingRows().length) {
+                    <div class="mb-2 fw-bold">Animal existente</div>
+                    <table class="table table-sm" data-testid="panel-existing">
+                        <tbody>
+                            @for (row of existingRows(); track row.key) {
+                            <tr><th class="w-50">{{ row.label }}</th><td>{{ row.value }}</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                    }
+                    }
+
+                    @case ('previewing') {
+                    <p class="text-muted">Vista previa: todavía no se guardó nada. Revisa los datos y confirma.</p>
+                    @if (previewNotice(); as msg) {
+                    <div class="alert alert-info" data-testid="panel-notice">{{ msg }}</div>
+                    }
+                    <table class="table table-sm" data-testid="panel-preview">
+                        <tbody>
+                            @for (row of previewRows(); track row.key) {
+                            <tr><th class="w-50">{{ row.label }}</th><td>{{ row.value }}</td></tr>
+                            }
+                        </tbody>
+                    </table>
+                    @if (warnings().length) {
+                    <div class="alert alert-warning" data-testid="panel-warnings">
+                        <ul class="mb-0 ps-3">
+                            @for (w of warnings(); track $index) { <li>{{ w.message }}</li> }
+                        </ul>
+                    </div>
+                    }
+                    }
+
+                    @case ('saved') {
+                    <p class="text-muted">Listo.</p>
+                    }
+
+                    @default {
+                    @if (phase() !== 'error') {
+                    @if (formMessage(); as msg) {
+                    <div class="alert alert-warning" role="alert" data-testid="panel-form-message">{{ msg }}</div>
+                    }
+                    @if (generalIssues().length) {
+                    <div class="alert alert-warning" data-testid="panel-general-issues">
+                        <ul class="mb-0 ps-3">
+                            @for (i of generalIssues(); track $index) { <li>{{ fieldLabel(i.field) }}: {{ i.message }}</li> }
+                        </ul>
+                    </div>
+                    }
+                    <form [formGroup]="panelForm" (ngSubmit)="review()">
+                        <div class="row">
+                            <div class="col-md-4 col-12 mb-3">
+                                <label class="form-label">UPP</label>
+                                <select class="form-select" [class.is-invalid]="!!fieldError('upp')" formControlName="upp">
+                                    <option value="">Automática (si hay una sola)</option>
+                                    @for (o of uppOptions(); track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+                                </select>
+                                @if (fieldError('upp'); as msg) { <div class="invalid-feedback d-block">{{ msg }}</div> }
+                                @if (uppIssueOptions().length) {
+                                <div class="mt-1" data-testid="panel-upp-options">
+                                    @for (o of uppIssueOptions(); track o.value) {
+                                    <button type="button" class="btn btn-sm btn-outline-primary me-1 mb-1" (click)="pickUpp(o.value)">{{ o.label }}</button>
+                                    }
+                                </div>
+                                }
+                            </div>
+                            <div class="col-md-4 col-12 mb-3">
+                                <label class="form-label">Lote</label>
+                                <input type="text" class="form-control" [class.is-invalid]="!!fieldError('lot')" formControlName="lot">
+                                @if (fieldError('lot'); as msg) { <div class="invalid-feedback d-block">{{ msg }}</div> }
+                            </div>
+                            <div class="col-md-4 col-12 mb-3">
+                                <label class="form-label">Especie</label>
+                                <select class="form-select" [class.is-invalid]="!!fieldError('species')" formControlName="species">
+                                    @for (sp of panelSpecies; track sp) { <option [value]="sp">{{ sp }}</option> }
+                                </select>
+                                @if (fieldError('species'); as msg) { <div class="invalid-feedback d-block">{{ msg }}</div> }
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 col-12 mb-3">
+                                <label class="form-label">Categoría</label>
+                                <select class="form-select" [class.is-invalid]="!!fieldError('category')" formControlName="category">
+                                    @for (c of panelCategories; track c) { <option [value]="c">{{ categoryLabel(c) }}</option> }
+                                </select>
+                                @if (fieldError('category'); as msg) { <div class="invalid-feedback d-block">{{ msg }}</div> }
+                            </div>
+                            <div class="col-md-4 col-12 mb-3">
+                                <label class="form-label">Modelo de negocio</label>
+                                <select class="form-select" [class.is-invalid]="!!fieldError('business_model')" formControlName="business_model">
+                                    <option value="CRIA">Cría (Cow-Calf)</option>
+                                    <option value="ENGORDA">Engorda (Feedlot)</option>
+                                    <option value="REPRODUCCION">Reproducción</option>
+                                </select>
+                                @if (fieldError('business_model'); as msg) { <div class="invalid-feedback d-block">{{ msg }}</div> }
+                            </div>
+                            <div class="col-md-4 col-12 mb-3">
+                                <label class="form-label">Peso (kg, opcional)</label>
+                                <input type="text" inputmode="decimal" class="form-control" [class.is-invalid]="!!fieldError('weight_kg')" formControlName="weight_kg" placeholder="Ej. 412.5">
+                                @if (fieldError('weight_kg'); as msg) { <div class="invalid-feedback d-block" data-testid="panel-weight-error">{{ msg }}</div> }
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 col-12 mb-3">
+                                <label class="form-label">Arete (SINIIGA)</label>
+                                <input type="text" class="form-control font-monospace text-uppercase" [class.is-invalid]="!!fieldError('ear_tag')" formControlName="ear_tag" placeholder="S/N si no tiene">
+                                @if (fieldError('ear_tag'); as msg) { <div class="invalid-feedback d-block">{{ msg }}</div> }
+                            </div>
+                            <div class="col-md-4 col-12 mb-3">
+                                <label class="form-label">Nº a fuego</label>
+                                <input type="text" class="form-control font-monospace text-uppercase" [class.is-invalid]="!!fieldError('fire_number')" formControlName="fire_number" placeholder="Ej. 2012-9 P">
+                                @if (fieldError('fire_number'); as msg) { <div class="invalid-feedback d-block">{{ msg }}</div> }
+                            </div>
+                            <div class="col-md-4 col-12 mb-3">
+                                <label class="form-label">Chip RFID (15 dígitos)</label>
+                                <input type="text" class="form-control font-monospace" [class.is-invalid]="!!fieldError('electronic_rfid')" formControlName="electronic_rfid" placeholder="Ej. 984000123456789">
+                                @if (fieldError('electronic_rfid'); as msg) { <div class="invalid-feedback d-block">{{ msg }}</div> }
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 col-12 mb-3">
+                                <label class="form-label">Fecha de nacimiento</label>
+                                <input type="date" class="form-control" [class.is-invalid]="!!fieldError('birth_date')" formControlName="birth_date">
+                                @if (fieldError('birth_date'); as msg) { <div class="invalid-feedback d-block">{{ msg }}</div> }
+                            </div>
+                            <div class="col-md-4 col-12 mb-3">
+                                <label class="form-label">Fecha prueba TB</label>
+                                <input type="date" class="form-control" [class.is-invalid]="!!fieldError('tb_test_date')" formControlName="tb_test_date">
+                                @if (fieldError('tb_test_date'); as msg) { <div class="invalid-feedback d-block">{{ msg }}</div> }
+                            </div>
+                            <div class="col-md-4 col-12 mb-3">
+                                <label class="form-label">Fecha brucelosis</label>
+                                <input type="date" class="form-control" [class.is-invalid]="!!fieldError('br_test_date')" formControlName="br_test_date">
+                                @if (fieldError('br_test_date'); as msg) { <div class="invalid-feedback d-block">{{ msg }}</div> }
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 col-12 mb-3">
+                                <label class="form-label">UPP de origen</label>
+                                <input type="text" class="form-control" [class.is-invalid]="!!fieldError('origin_upp')" formControlName="origin_upp">
+                                @if (fieldError('origin_upp'); as msg) { <div class="invalid-feedback d-block">{{ msg }}</div> }
+                            </div>
+                            <div class="col-md-6 col-12 mb-3">
+                                <label class="form-label">Notas</label>
+                                <input type="text" class="form-control" [class.is-invalid]="!!fieldError('notes')" formControlName="notes">
+                                @if (fieldError('notes'); as msg) { <div class="invalid-feedback d-block">{{ msg }}</div> }
+                            </div>
+                        </div>
+                    </form>
+                    }
+                    }
+                    }
+                </div>
+                } @else {
                 <form [formGroup]="altaForm">
                     <div class="row">
                         <div class="row">
@@ -103,6 +274,7 @@
                         </div>
                     </div>
                 </form>
+                }
                 }
 
                 @case ('SALUD') {
@@ -390,7 +562,34 @@
                 <a href="javascript:void(0)" class="btn btn-link link-secondary me-auto"
                     (click)="closeModal()">Cerrar</a>
 
-                @if (actionType !== 'COSTOS') {
+                @if (panelFlow && actionType === 'ALTA') {
+                @switch (phase()) {
+                @case ('editing') {
+                <button type="button" class="btn btn-primary" data-testid="panel-review" (click)="review()" [disabled]="isSubmitting()">Revisar</button>
+                }
+                @case ('checking') {
+                <button type="button" class="btn btn-primary" disabled><span class="spinner-border spinner-border-sm me-2" role="status"></span>Revisando...</button>
+                }
+                @case ('previewing') {
+                <button type="button" class="btn btn-outline-secondary" data-testid="panel-back" (click)="backToEditing()" [disabled]="isSubmitting()">Volver a editar</button>
+                <button type="button" class="btn btn-primary" data-testid="panel-confirm" (click)="confirm()" [disabled]="isSubmitting()">Confirmar alta</button>
+                }
+                @case ('saving') {
+                <button type="button" class="btn btn-primary" disabled><span class="spinner-border spinner-border-sm me-2" role="status"></span>Guardando...</button>
+                }
+                @case ('blocked') {
+                @if (blockKind() === 'duplicate_recent') {
+                <button type="button" class="btn btn-outline-secondary" data-testid="panel-force" (click)="registerAnyway()" [disabled]="isSubmitting()">Registrar de todos modos</button>
+                }
+                @if (blockKind() !== 'forbidden') {
+                <button type="button" class="btn btn-outline-secondary" data-testid="panel-back" (click)="backToEditing()" [disabled]="isSubmitting()">Volver a editar</button>
+                }
+                }
+                @case ('error') {
+                <button type="button" class="btn btn-outline-secondary" data-testid="panel-back" (click)="backToEditing()" [disabled]="isSubmitting()">Volver a editar</button>
+                }
+                }
+                } @else if (actionType !== 'COSTOS') {
                 <button type="button" class="btn" [class.btn-primary]="actionType !== 'SALIDA'"
                     [class.btn-danger]="actionType === 'SALIDA'" (click)="submitForm()" [disabled]="isSaving()">
                     @if (isSaving()) {

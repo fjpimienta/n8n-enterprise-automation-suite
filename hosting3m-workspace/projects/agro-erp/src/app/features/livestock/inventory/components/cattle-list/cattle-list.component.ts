@@ -13,6 +13,8 @@ import { CattleDataService } from '@core/services/cattle-data.service';
 import { CattleApiService } from '@core/services/cattle-api.service';
 import { HERD_STATUS_FILTER_OPTIONS, HerdStatusFilter, filterByHerdStatus } from '@shared/utils/herd-status.util';
 import { SPECIES_FILTER_ALL, deriveAvailableSpecies, filterBySpecies } from '@shared/utils/species.util';
+import { PANEL_LIVESTOCK_ALTA_ENABLED } from '../../../panel-livestock.switch';
+import { canUsePanelAlta } from '../../../panel-livestock.util';
 import { LOT_FILTER_ALL, deriveAvailableLots, filterByLot } from '@shared/utils/lot.util';
 
 type SortableColumn = 'rfid_siniiga' | 'lot_name' | 'category' | 'business_model' | 'current_weight_kg' | 'current_status';
@@ -40,6 +42,14 @@ export class CattleListComponent implements OnInit {
   public isAdminForActiveTenant = computed(() =>
     (this.tenantService.activeTenant()?.role || '').toUpperCase() === 'ADMIN'
   );
+
+  // "Nuevo Registro": with the panel ALTA flow ON only ADMIN and EDITOR get the entry point (OWNER does not).
+  // Switch OFF = legacy behavior, button always visible. Read as fields so specs can drive them.
+  public panelAltaEnabled: boolean = PANEL_LIVESTOCK_ALTA_ENABLED;
+  public canRegisterAnimal = computed(() =>
+    !this.panelAltaEnabled || canUsePanelAlta(this.tenantService.activeTenant()?.role)
+  );
+  public registeredNotice = signal<string | null>(null);
 
   // Filtro de estado de vida (venta/mortandad). Default: solo hato vivo.
   // Criterio compartido con main-dashboard vía @shared/utils/herd-status.util.
@@ -191,6 +201,8 @@ export class CattleListComponent implements OnInit {
     // Defensa en profundidad: aunque el botón "Costos" esté oculto en el template, bloquea abrir
     // el modal financiero por consola/binding forzado para un rol no-ADMIN.
     if (action === 'COSTOS' && !this.isAdminForActiveTenant()) return;
+    if (action === 'ALTA' && !this.canRegisterAnimal()) return;
+    this.registeredNotice.set(null);
     this.modalAction = action;
     this.selectedRfid = rfid;
     this.selectedId = id;
@@ -200,7 +212,9 @@ export class CattleListComponent implements OnInit {
 
   // Cuando el modal se cierra, verificamos si guardó algo para recargar la tabla
   public onModalClose(saved: boolean) {
+    const wasPanelAlta = this.panelAltaEnabled && this.modalAction === 'ALTA';
     this.isModalOpen = false;
+    if (saved && wasPanelAlta) this.registeredNotice.set('Animal registrado.');
     if (saved) {
       this.cattleDataService.loadCattleData();
       this.loadLotHistory();

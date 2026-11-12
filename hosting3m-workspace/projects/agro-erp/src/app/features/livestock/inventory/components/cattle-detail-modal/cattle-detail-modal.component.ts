@@ -6,6 +6,32 @@ import { ExpenseModalComponent } from '../../../expenses/components/expense-moda
 import { KpiCardComponent } from '@shared/expenses-ui/kpi-card.component';
 import { formatMoney } from '@shared/expenses-ui/expenses-ui.util';
 import { REFERENCE_PRICE_PER_KG, categoryLabel } from '../../../expenses/livestock-expense.util';
+import { TenantService } from 'core-auth';
+import { ProductionUnitLotService } from '@features/admin/services/production-unit-lot.service';
+import { PANEL_LIVESTOCK_ALTA_ENABLED } from '../../../panel-livestock.switch';
+import { canUsePanelAlta, todayInMexicoCity, validatePanelWeight } from '../../../panel-livestock.util';
+import {
+  PanelLivestockInput,
+  PanelLivestockIssue,
+  PanelLivestockOptions,
+  PanelLivestockResponse,
+  PanelLivestockStatus,
+  PanelLivestockWarning
+} from '../../../models/panel-livestock.model';
+
+/** Steps of the panel ALTA flow. `blocked` = hard/soft duplicate or forbidden; `error` = nothing was confirmed. */
+export type PanelPhase = 'editing' | 'checking' | 'previewing' | 'saving' | 'saved' | 'blocked' | 'error';
+export type PanelBlockKind = 'duplicate' | 'duplicate_other_company' | 'exists_without_upp' | 'duplicate_recent' | 'forbidden';
+
+export const PANEL_FORBIDDEN_MESSAGE = 'Tu rol no permite dar de alta animales.';
+export const PANEL_NO_TENANT_MESSAGE = 'No hay un rancho activo claro. Selecciona la empresa en la que vas a registrar el animal.';
+export const PANEL_UNCERTAIN_SAVE_MESSAGE =
+  'No pudimos confirmar si el animal se guardó. Revisa la lista de ganado antes de volver a intentarlo.';
+export const PANEL_SAVED_MESSAGE = 'Animal registrado.';
+
+function assertNever(value: never): never {
+  throw new Error(`Estado no manejado del alta de ganado: ${String(value)}`);
+}
 
 @Component({
   selector: 'app-cattle-detail-modal',
@@ -17,6 +43,8 @@ import { REFERENCE_PRICE_PER_KG, categoryLabel } from '../../../expenses/livesto
 export class CattleDetailModalComponent implements OnInit {
   private fb = inject(FormBuilder);
   private cattleApi = inject(CattleApiService);
+  private tenantService = inject(TenantService);
+  private unitService = inject(ProductionUnitLotService);
 
   @Input() actionType: 'ALTA' | 'SALUD' | 'PESO' | 'EDITAR' | 'COSTOS' | 'SALIDA' = 'ALTA';
   @Input() selectedRfid: string = '';
@@ -25,6 +53,9 @@ export class CattleDetailModalComponent implements OnInit {
   @Output() close = new EventEmitter<boolean>();
 
   public isSaving = signal<boolean>(false);
+
+  /** Read once from the code switch. OFF = legacy ALTA flow, untouched. */
+  public panelFlow: boolean = PANEL_LIVESTOCK_ALTA_ENABLED;
   private today = new Date().toISOString().split('T')[0];
 
   // Estado del sub-módulo COSTOS
@@ -116,7 +147,309 @@ export class CattleDetailModalComponent implements OnInit {
     br_test_date: ['']
   });
 
+  // ───────────────────────── Panel ALTA flow (behind PANEL_LIVESTOCK_ALTA_ENABLED) ─────────────────────────
+  // editing → checking → previewing → saving → saved, plus blocked / error. `isSubmitting` is checked at the
+  // START of every action (a disabled button is not enough against a fast double click or Enter). No retries.
+  public readonly panelCategories = ['VACA', 'TORO', 'NOVILLO', 'BECERRA'];
+  public readonly panelSpecies = ['BOVINO', 'EQUINO', 'OVINO', 'CAPRINO', 'PORCINO'];
+
+  public phase = signal<PanelPhase>('editing');
+  public isSubmitting = signal<boolean>(false);
+  public success = signal<string | null>(null);
+  public error = signal<string | null>(null);
+  /** Message of palm / invalid answers: the user stays in step 1. */
+  public formMessage = signal<string | null>(null);
+  public issues = signal<PanelLivestockIssue[]>([]);
+  public fieldErrors = signal<Record<string, string>>({});
+  public warnings = signal<PanelLivestockWarning[]>([]);
+  public preview = signal<Record<string, unknown> | null>(null);
+  public previewNotice = signal<string | null>(null);
+  public blockKind = signal<PanelBlockKind | null>(null);
+  public blockMessage = signal<string | null>(null);
+  public existingAnimal = signal<Record<string, unknown> | null>(null);
+  public uppOptions = signal<{ value: string; label: string }[]>([]);
+  public uppOptionsLoaded = signal<boolean>(false);
+  private previewHash = '';
+
+  public panelForm: FormGroup = this.fb.group({
+    upp: [''],
+    lot: [''],
+    species: ['BOVINO'],
+    category: ['VACA'],
+    business_model: ['CRIA'],
+    ear_tag: [''], // empty = no tag (the old 'S/N' literal is not sent)
+    fire_number: [''],
+    electronic_rfid: [''],
+    weight_kg: [''],
+    birth_date: [todayInMexicoCity()],
+    origin_upp: [''],
+    tb_test_date: [''],
+    br_test_date: [''],
+    notes: ['']
+  });
+
+  /** UPP options offered by the SP's `need_info` for the `upp` field. */
+  public uppIssueOptions = computed(() => {
+    const issue = this.issues().find(i => i.field === 'upp' && Array.isArray(i.options) && i.options.length > 0);
+    return (issue?.options ?? []).map(o => {
+      const opt = (o ?? {}) as Record<string, unknown>;
+      const code = String(opt['upp_code'] ?? '');
+      const name = String(opt['upp'] ?? code);
+      return { value: code || name, label: code && name !== code ? `${name} (${code})` : name };
+    });
+  });
+
+  /** Issues whose field has no control in the form: shown in a general list. */
+  public generalIssues = computed(() =>
+    this.issues().filter(i => !(i.field in this.panelForm.controls))
+  );
+
+  public previewRows = computed(() =>
+    Object.entries(this.preview() ?? {}).map(([key, value]) => ({ key, label: this.previewLabel(key), value: this.previewValue(value) }))
+  );
+
+  public existingRows = computed(() =>
+    Object.entries(this.existingAnimal() ?? {}).map(([key, value]) => ({ key, label: this.previewLabel(key), value: this.previewValue(value) }))
+  );
+
+  private static readonly PREVIEW_LABELS: Record<string, string> = {
+    empresa: 'Empresa', upp: 'UPP', upp_code: 'Clave UPP', lote: 'Lote', especie: 'Especie', categoria: 'Categoría',
+    modelo_negocio: 'Modelo de negocio', arete: 'Arete', sin_arete_oficial: 'Sin arete oficial', numero_fuego: 'Nº a fuego',
+    rfid_electronico: 'Chip RFID', peso_kg: 'Peso (kg)', fecha_nacimiento: 'Fecha de nacimiento', upp_origen: 'UPP de origen',
+    prueba_tb: 'Prueba TB', prueba_br: 'Prueba brucelosis', notas: 'Notas', category: 'Categoría', current_status: 'Estado',
+    campo: 'Campo', identificador: 'Identificador'
+  };
+
+  /** Human label for a field name (form control or SP key). */
+  public fieldLabel(field: string): string {
+    return CattleDetailModalComponent.FIELD_LABELS[field] ?? CattleDetailModalComponent.PREVIEW_LABELS[field] ?? field;
+  }
+
+  private static readonly FIELD_LABELS: Record<string, string> = {
+    upp: 'UPP', lot: 'Lote', species: 'Especie', category: 'Categoría', business_model: 'Modelo de negocio',
+    ear_tag: 'Arete', fire_number: 'Nº a fuego', electronic_rfid: 'Chip RFID', weight_kg: 'Peso',
+    birth_date: 'Fecha de nacimiento', origin_upp: 'UPP de origen', tb_test_date: 'Fecha prueba TB',
+    br_test_date: 'Fecha brucelosis', notes: 'Notas', tenant_id: 'Empresa', actor_email: 'Usuario'
+  };
+
+  private previewLabel(key: string): string {
+    return CattleDetailModalComponent.PREVIEW_LABELS[key] ?? key;
+  }
+
+  private previewValue(value: unknown): string {
+    if (value === true) return 'Sí';
+    if (value === false) return 'No';
+    return value === null || value === undefined ? '' : String(value);
+  }
+
+  /** Role of the ACTIVE tenant (same source as cattle-list); the gateway re-checks it. */
+  public canUsePanel = computed(() => canUsePanelAlta(this.tenantService.activeTenant()?.role));
+
+  public issueFor(field: string): PanelLivestockIssue | undefined {
+    return this.issues().find(i => i.field === field);
+  }
+
+  public fieldError(field: string): string | null {
+    return this.fieldErrors()[field] ?? this.issueFor(field)?.message ?? null;
+  }
+
+  public pickUpp(value: string): void {
+    this.panelForm.patchValue({ upp: value });
+    this.issues.set(this.issues().filter(i => i.field !== 'upp'));
+  }
+
+  private get hasActiveTenant(): boolean {
+    const id = this.tenantService.activeTenantId();
+    return id !== null && id !== undefined && String(id).trim() !== '';
+  }
+
+  private async loadPanelUpps(): Promise<void> {
+    try {
+      const units = await this.unitService.getProductionUnits();
+      this.uppOptions.set(
+        units.filter(u => u.isActive).map(u => ({ value: u.uppCode, label: `${u.ranchName} (${u.uppCode})` }))
+      );
+    } catch {
+      // Not fatal: with several UPPs the SP answers need_info with the options.
+      this.uppOptions.set([]);
+    } finally {
+      this.uppOptionsLoaded.set(true);
+    }
+  }
+
+  private resetOutcome(): void {
+    this.error.set(null);
+    this.formMessage.set(null);
+    this.issues.set([]);
+    this.fieldErrors.set({});
+    this.blockKind.set(null);
+    this.blockMessage.set(null);
+    this.existingAnimal.set(null);
+  }
+
+  private panelInput(): PanelLivestockInput {
+    return this.panelForm.getRawValue() as PanelLivestockInput;
+  }
+
+  /** Step 1 → SP with confirmed=false. */
+  public async review(): Promise<void> {
+    if (this.isSubmitting()) return;
+    if (this.phase() !== 'editing') return;
+    this.resetOutcome();
+    if (!this.canUsePanel()) return this.blockForbidden();
+    if (!this.hasActiveTenant) return this.fail(PANEL_NO_TENANT_MESSAGE);
+    const weightError = validatePanelWeight(this.panelForm.getRawValue().weight_kg);
+    if (weightError) {
+      this.fieldErrors.set({ weight_kg: weightError });
+      return;
+    }
+
+    this.isSubmitting.set(true);
+    this.phase.set('checking');
+    try {
+      const res = await this.cattleApi.registerLivestockPanel(this.panelInput());
+      this.handleResponse(res);
+    } catch (e: any) {
+      this.handleFailure(e, 'review');
+    } finally {
+      this.isSubmitting.set(false);
+    }
+  }
+
+  /** Step 2 → SP with confirmed=true and the hash of the preview the user is looking at. */
+  public async confirm(): Promise<void> {
+    if (this.isSubmitting()) return;
+    if (this.phase() !== 'previewing' || !this.previewHash) return;
+    await this.send({ confirm: true, previewHash: this.previewHash });
+  }
+
+  /** duplicate_recent only: the user says it is another animal. Reuses the current preview hash. */
+  public async registerAnyway(): Promise<void> {
+    if (this.isSubmitting()) return;
+    if (this.phase() !== 'blocked' || this.blockKind() !== 'duplicate_recent' || !this.previewHash) return;
+    await this.send({ confirm: true, previewHash: this.previewHash, forceDuplicate: true });
+  }
+
+  private async send(opts: PanelLivestockOptions): Promise<void> {
+    this.resetOutcome();
+    if (!this.canUsePanel()) return this.blockForbidden();
+    if (!this.hasActiveTenant) return this.fail(PANEL_NO_TENANT_MESSAGE);
+
+    this.isSubmitting.set(true);
+    this.phase.set('saving');
+    try {
+      const res = await this.cattleApi.registerLivestockPanel(this.panelInput(), opts);
+      this.handleResponse(res);
+    } catch (e: any) {
+      this.handleFailure(e, 'confirm');
+    } finally {
+      this.isSubmitting.set(false);
+    }
+  }
+
+  public backToEditing(): void {
+    if (this.isSubmitting()) return;
+    this.previewHash = '';
+    this.preview.set(null);
+    this.warnings.set([]);
+    this.previewNotice.set(null);
+    this.resetOutcome();
+    this.phase.set('editing');
+  }
+
+  private handleFailure(e: any, step: 'review' | 'confirm'): void {
+    // A confirm that threw may or may not have reached the database: never say it failed cleanly.
+    if (step === 'confirm') return this.fail(PANEL_UNCERTAIN_SAVE_MESSAGE);
+    this.fail(e?.message || 'Error de conexión');
+  }
+
+  private fail(message: string): void {
+    // Whatever happened, nothing is confirmed: never success. The hash is dropped so a retry needs a new preview.
+    this.previewHash = '';
+    this.error.set(message);
+    this.phase.set('error');
+  }
+
+  private blockForbidden(): void {
+    this.blockKind.set('forbidden');
+    this.blockMessage.set(PANEL_FORBIDDEN_MESSAGE);
+    this.phase.set('blocked');
+  }
+
+  private handleResponse(res: PanelLivestockResponse): void {
+    const status: PanelLivestockStatus = res?.status;
+    switch (status) {
+      case 'preview':
+      case 'preview_required': {
+        if (!res.preview_hash || !res.preview) return this.fail('El servidor no devolvió la vista previa del alta.');
+        this.previewHash = res.preview_hash;
+        this.preview.set(res.preview);
+        this.warnings.set(res.warnings ?? []);
+        this.previewNotice.set(status === 'preview_required' ? (res.message ?? 'Los datos cambiaron: revisa la nueva vista previa.') : null);
+        this.phase.set('previewing');
+        return;
+      }
+      case 'recorded': {
+        if (!res.livestock_id) return this.fail(this.phase() === 'saving' ? PANEL_UNCERTAIN_SAVE_MESSAGE : 'El servidor no confirmó el alta del animal.');
+        this.previewHash = '';
+        this.success.set(res.message || PANEL_SAVED_MESSAGE);
+        this.phase.set('saved');
+        this.closeModal(true);
+        return;
+      }
+      case 'need_info': {
+        const issues = res.issues ?? [];
+        this.previewHash = '';
+        this.issues.set(issues);
+        this.formMessage.set(issues.length ? null : (res.message ?? 'Faltan datos para registrar el animal.'));
+        this.phase.set('editing');
+        return;
+      }
+      case 'duplicate':
+      case 'duplicate_other_company':
+      case 'exists_without_upp':
+        this.block(status, res);
+        return;
+      case 'duplicate_recent':
+        // Keep the hash of the preview already shown: this answer does not carry a new one.
+        this.block(status, res);
+        return;
+      case 'forbidden':
+        this.blockKind.set('forbidden');
+        this.blockMessage.set(PANEL_FORBIDDEN_MESSAGE);
+        this.phase.set('blocked');
+        return;
+      case 'palm':
+      case 'invalid':
+        this.previewHash = '';
+        this.formMessage.set(res.message || 'No se pudo registrar el animal con estos datos.');
+        this.phase.set('editing');
+        return;
+      default:
+        return assertNever(status);
+    }
+  }
+
+  private block(kind: Exclude<PanelBlockKind, 'forbidden'>, res: PanelLivestockResponse): void {
+    if (kind !== 'duplicate_recent') this.previewHash = '';
+    this.blockKind.set(kind);
+    this.blockMessage.set(res.message || 'Este animal ya está registrado.');
+    // Existing animal data the procedure returned (never anything about another company).
+    const known = ['category', 'current_status', 'upp', 'arete', 'campo', 'identificador'];
+    const existing: Record<string, unknown> = {};
+    // duplicate_recent returns the values of the animal already saved as `preview`.
+    if (kind === 'duplicate_recent' && res.preview) Object.assign(existing, res.preview);
+    for (const k of known) if (res[k] !== undefined && res[k] !== null && res[k] !== '') existing[k] = res[k];
+    this.existingAnimal.set(Object.keys(existing).length ? existing : null);
+    this.phase.set('blocked');
+  }
+
   ngOnInit() {
+    if (this.panelFlow && this.actionType === 'ALTA') {
+      if (!this.canUsePanel()) this.blockForbidden();
+      else if (!this.hasActiveTenant) this.fail(PANEL_NO_TENANT_MESSAGE);
+      else void this.loadPanelUpps();
+    }
     if (this.selectedRfid) {
       this.saludForm.patchValue({ rfid_siniiga: this.selectedRfid, livestock_id: this.livestockId });
       this.pesoForm.patchValue({ rfid_siniiga: this.selectedRfid, livestock_id: this.livestockId });
@@ -142,6 +475,8 @@ export class CattleDetailModalComponent implements OnInit {
   }
 
   public async submitForm() {
+    // The new ALTA flow has its own actions (review / confirm); never fall into the legacy createLivestock.
+    if (this.panelFlow && this.actionType === 'ALTA') return;
     if (this.actionType === 'ALTA' && this.altaForm.invalid) return alert('Completa los campos obligatorios./ALTA');
     if (this.actionType === 'SALUD' && this.saludForm.invalid) return alert('Completa los campos obligatorios./SALUD');
     if (this.actionType === 'PESO' && this.pesoForm.invalid) return alert('Completa los campos obligatorios./PESO');
