@@ -5,6 +5,26 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🐄 Alta del panel web: modelo del gateway (migración 103 y gateway v6)
+
+* El gateway v6 (`Build Query`) conoce `sp_register_livestock_panel` y la migración 103 registra su modelo `register_livestock_panel` en
+  `crud_models` (solo ADMIN y EDITOR; tenant obligatorio; correo del actor siempre el del token). Aún sin consumidores: **no cambia ningún
+  comportamiento visible** hasta la pantalla del panel. Primero la 102, luego la 103 y al final importar el workflow (orden y pruebas en
+  `database/migrations/103_RUNBOOK.md`; los SQL están pendientes de ejecutar y reportar).
+
+### 🐄 Alta del panel web: función de vista previa y confirmación (migración 102, solo base de datos)
+
+* Nueva función `sp_register_livestock_panel`: alta de ganado en dos pasos (vista previa y confirmación) con los resguardos de la
+  migración 099 (empresa y usuario verificados, UPP, duplicados). Peso, TB y BR opcionales con avisos; un animal sin arete recibe un
+  identificador interno único `S/N-…`. Aún sin consumidores: **no cambia ningún comportamiento visible** hasta que el gateway y la
+  pantalla del panel la usen (PR siguientes). Runbook: `database/migrations/102_RUNBOOK.md`; los SQL están pendientes de ejecutar y
+  reportar.
+
+### 🐄 WhatsApp: pregunta pendiente completa
+
+* La pregunta pendiente del agente de WhatsApp ya se guarda completa aunque el mensaje tenga comas. Solo cambia el nodo
+  `Guardar Pregunta Pendiente`; sin cambios de base de datos ni de frontend.
+
 ### 🐄 Bitácora: altas por regularización de padrón (migración 101)
 
 * La Bitácora de eventos muestra ahora las altas hechas por la regularización de padrón (tipo «Regularización», con su filtro y
