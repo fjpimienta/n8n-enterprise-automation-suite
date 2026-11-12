@@ -9,7 +9,7 @@ import { REFERENCE_PRICE_PER_KG, categoryLabel } from '../../../expenses/livesto
 import { TenantService } from 'core-auth';
 import { ProductionUnitLotService } from '@features/admin/services/production-unit-lot.service';
 import { PANEL_LIVESTOCK_ALTA_ENABLED } from '../../../panel-livestock.switch';
-import { canUsePanelAlta, todayInMexicoCity } from '../../../panel-livestock.util';
+import { canUsePanelAlta, todayInMexicoCity, validatePanelWeight } from '../../../panel-livestock.util';
 import {
   PanelLivestockInput,
   PanelLivestockIssue,
@@ -25,6 +25,8 @@ export type PanelBlockKind = 'duplicate' | 'duplicate_other_company' | 'exists_w
 
 export const PANEL_FORBIDDEN_MESSAGE = 'Tu rol no permite dar de alta animales.';
 export const PANEL_NO_TENANT_MESSAGE = 'No hay un rancho activo claro. Selecciona la empresa en la que vas a registrar el animal.';
+export const PANEL_UNCERTAIN_SAVE_MESSAGE =
+  'No pudimos confirmar si el animal se guardó. Revisa la lista de ganado antes de volver a intentarlo.';
 export const PANEL_SAVED_MESSAGE = 'Animal registrado.';
 
 function assertNever(value: never): never {
@@ -218,6 +220,18 @@ export class CattleDetailModalComponent implements OnInit {
     campo: 'Campo', identificador: 'Identificador'
   };
 
+  /** Human label for a field name (form control or SP key). */
+  public fieldLabel(field: string): string {
+    return CattleDetailModalComponent.FIELD_LABELS[field] ?? CattleDetailModalComponent.PREVIEW_LABELS[field] ?? field;
+  }
+
+  private static readonly FIELD_LABELS: Record<string, string> = {
+    upp: 'UPP', lot: 'Lote', species: 'Especie', category: 'Categoría', business_model: 'Modelo de negocio',
+    ear_tag: 'Arete', fire_number: 'Nº a fuego', electronic_rfid: 'Chip RFID', weight_kg: 'Peso',
+    birth_date: 'Fecha de nacimiento', origin_upp: 'UPP de origen', tb_test_date: 'Fecha prueba TB',
+    br_test_date: 'Fecha brucelosis', notes: 'Notas', tenant_id: 'Empresa', actor_email: 'Usuario'
+  };
+
   private previewLabel(key: string): string {
     return CattleDetailModalComponent.PREVIEW_LABELS[key] ?? key;
   }
@@ -284,6 +298,11 @@ export class CattleDetailModalComponent implements OnInit {
     this.resetOutcome();
     if (!this.canUsePanel()) return this.blockForbidden();
     if (!this.hasActiveTenant) return this.fail(PANEL_NO_TENANT_MESSAGE);
+    const weightError = validatePanelWeight(this.panelForm.getRawValue().weight_kg);
+    if (weightError) {
+      this.fieldErrors.set({ weight_kg: weightError });
+      return;
+    }
 
     this.isSubmitting.set(true);
     this.phase.set('checking');
@@ -339,14 +358,9 @@ export class CattleDetailModalComponent implements OnInit {
   }
 
   private handleFailure(e: any, step: 'review' | 'confirm'): void {
-    const message: string = e?.message || 'Error de conexión';
-    // The service rejects a non-numeric weight before sending anything: show it next to the field.
-    if (step === 'review' && /peso/i.test(message)) {
-      this.fieldErrors.set({ weight_kg: message });
-      this.phase.set('editing');
-      return;
-    }
-    this.fail(message);
+    // A confirm that threw may or may not have reached the database: never say it failed cleanly.
+    if (step === 'confirm') return this.fail(PANEL_UNCERTAIN_SAVE_MESSAGE);
+    this.fail(e?.message || 'Error de conexión');
   }
 
   private fail(message: string): void {
@@ -376,7 +390,7 @@ export class CattleDetailModalComponent implements OnInit {
         return;
       }
       case 'recorded': {
-        if (!res.livestock_id) return this.fail('El servidor no confirmó el alta del animal.');
+        if (!res.livestock_id) return this.fail(this.phase() === 'saving' ? PANEL_UNCERTAIN_SAVE_MESSAGE : 'El servidor no confirmó el alta del animal.');
         this.previewHash = '';
         this.success.set(res.message || PANEL_SAVED_MESSAGE);
         this.phase.set('saved');
@@ -423,6 +437,8 @@ export class CattleDetailModalComponent implements OnInit {
     // Existing animal data the procedure returned (never anything about another company).
     const known = ['category', 'current_status', 'upp', 'arete', 'campo', 'identificador'];
     const existing: Record<string, unknown> = {};
+    // duplicate_recent returns the values of the animal already saved as `preview`.
+    if (kind === 'duplicate_recent' && res.preview) Object.assign(existing, res.preview);
     for (const k of known) if (res[k] !== undefined && res[k] !== null && res[k] !== '') existing[k] = res[k];
     this.existingAnimal.set(Object.keys(existing).length ? existing : null);
     this.phase.set('blocked');

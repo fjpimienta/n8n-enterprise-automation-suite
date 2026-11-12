@@ -22,3 +22,13 @@ const PANEL_ALTA_ROLES: readonly string[] = ['ADMIN', 'EDITOR'];
 export function canUsePanelAlta(role: string | null | undefined): boolean {
   return PANEL_ALTA_ROLES.includes((role ?? '').trim().toUpperCase());
 }
+
+export const PANEL_WEIGHT_ERROR = 'El peso debe ser un número (por ejemplo 412.5).';
+
+/** Same rule as `CattleApiService.registerLivestockPanel`: "412,5" is fine, empty is fine, anything else non-numeric is not. */
+export function validatePanelWeight(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  const raw = String(value).replace(/\s+/g, '').replace(',', '.');
+  if (raw === '') return null;
+  return /^\d+(\.\d+)?$/.test(raw) ? null : PANEL_WEIGHT_ERROR;
+}

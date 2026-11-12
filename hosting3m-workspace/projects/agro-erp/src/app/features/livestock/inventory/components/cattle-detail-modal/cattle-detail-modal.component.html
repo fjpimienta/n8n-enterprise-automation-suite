@@ -83,7 +83,7 @@
                     @if (generalIssues().length) {
                     <div class="alert alert-warning" data-testid="panel-general-issues">
                         <ul class="mb-0 ps-3">
-                            @for (i of generalIssues(); track $index) { <li>{{ i.field }}: {{ i.message }}</li> }
+                            @for (i of generalIssues(); track $index) { <li>{{ fieldLabel(i.field) }}: {{ i.message }}</li> }
                         </ul>
                     </div>
                     }

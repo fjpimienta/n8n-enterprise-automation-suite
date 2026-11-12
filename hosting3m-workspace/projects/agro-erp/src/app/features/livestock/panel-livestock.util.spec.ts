@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { canUsePanelAlta, todayInMexicoCity } from './panel-livestock.util';
+import { canUsePanelAlta, todayInMexicoCity, validatePanelWeight } from './panel-livestock.util';
 import { PANEL_LIVESTOCK_ALTA_ENABLED } from './panel-livestock.switch';
 
 describe('todayInMexicoCity', () => {
@@ -36,5 +36,14 @@ describe('canUsePanelAlta', () => {
 describe('PANEL_LIVESTOCK_ALTA_ENABLED', () => {
   it('ships OFF', () => {
     expect(PANEL_LIVESTOCK_ALTA_ENABLED).toBe(false);
+  });
+});
+
+describe('validatePanelWeight', () => {
+  it.each(['', '  ', null, undefined, '412', '412.5', '412,5', ' 4 12,5 ', 450])('accepts %s', v => {
+    expect(validatePanelWeight(v)).toBeNull();
+  });
+  it.each(['abc', '12kg', '-5', '1.2.3', '1,2,3'])('rejects %s', v => {
+    expect(validatePanelWeight(v)).toMatch(/peso/i);
   });
 });

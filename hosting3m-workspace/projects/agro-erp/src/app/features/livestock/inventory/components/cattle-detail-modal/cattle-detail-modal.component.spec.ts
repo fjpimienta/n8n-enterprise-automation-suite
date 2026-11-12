@@ -8,7 +8,8 @@ import { todayInMexicoCity } from '../../../panel-livestock.util';
 import {
   CattleDetailModalComponent,
   PANEL_FORBIDDEN_MESSAGE,
-  PANEL_NO_TENANT_MESSAGE
+  PANEL_NO_TENANT_MESSAGE,
+  PANEL_UNCERTAIN_SAVE_MESSAGE
 } from './cattle-detail-modal.component';
 
 const PREVIEW: PanelLivestockResponse = {
@@ -122,9 +123,9 @@ describe('CattleDetailModalComponent — ALTA', () => {
 
     it('shows a weight validation error inline and stays in step 1', async () => {
       create(true);
-      api.registerLivestockPanel.mockRejectedValue(new Error('El peso debe ser un número (por ejemplo 412.5).'));
       component.panelForm.patchValue({ weight_kg: 'abc' });
       await component.review();
+      expect(api.registerLivestockPanel).not.toHaveBeenCalled();
       expect(component.phase()).toBe('editing');
       fixture.detectChanges();
       expect(tid('panel-weight-error')?.textContent).toContain('El peso debe ser un número');
@@ -228,6 +229,8 @@ describe('CattleDetailModalComponent — ALTA', () => {
       fixture.detectChanges();
       expect(component.phase()).toBe('blocked');
       expect(tid('panel-force')?.textContent).toContain('Registrar de todos modos');
+      expect(tid('panel-existing')?.textContent).toContain('Rancho Demo');
+      expect(tid('panel-existing')?.textContent).toContain('9821100005');
       await component.registerAnyway();
       expect(api.registerLivestockPanel.mock.calls[2][1]).toEqual({ confirm: true, previewHash: 'hash-1', forceDuplicate: true });
       expect(component.phase()).toBe('saved');
@@ -262,6 +265,47 @@ describe('CattleDetailModalComponent — ALTA', () => {
       expect(component.error()).toBeTruthy();
       expect(component.success()).toBeNull();
       expect(closed).toEqual([]);
+    });
+
+    it('a weight with a decimal comma passes the local validation', async () => {
+      api.registerLivestockPanel.mockResolvedValue(PREVIEW);
+      component.panelForm.patchValue({ weight_kg: '412,5' });
+      await component.review();
+      expect(component.phase()).toBe('previewing');
+    });
+
+    it('a service error mentioning "peso" is not treated as a field error', async () => {
+      api.registerLivestockPanel.mockRejectedValue(new Error('Error del peso en el servidor'));
+      await component.review();
+      expect(component.phase()).toBe('error');
+      expect(component.fieldErrors()).toEqual({});
+    });
+
+    it.each([
+      ['throws', () => Promise.reject(new Error('timeout'))],
+      ['empty response', () => Promise.resolve(null as any)],
+      ['recorded without id', () => Promise.resolve({ status: 'recorded' } as any)]
+    ])('confirm that %s shows the uncertain-save message and keeps the form', async (_n, impl) => {
+      api.registerLivestockPanel.mockResolvedValueOnce(PREVIEW).mockImplementationOnce(impl);
+      component.panelForm.patchValue({ lot: 'L-7', notes: 'hola' });
+      await component.review();
+      await component.confirm();
+      expect(component.phase()).toBe('error');
+      expect(component.error()).toBe(PANEL_UNCERTAIN_SAVE_MESSAGE);
+      expect(component.success()).toBeNull();
+      component.backToEditing();
+      expect(component.panelForm.value.lot).toBe('L-7');
+      expect(component.panelForm.value.notes).toBe('hola');
+    });
+
+    it('general issues use a human field label', async () => {
+      api.registerLivestockPanel.mockResolvedValue({
+        status: 'need_info', issues: [{ type: 'invalid', field: 'tenant_id', message: 'Falta.' }]
+      });
+      await component.review();
+      fixture.detectChanges();
+      expect(tid('panel-general-issues')?.textContent).toContain('Empresa: Falta.');
+      expect(tid('panel-general-issues')?.textContent).not.toContain('tenant_id');
     });
 
     it('an error while confirming drops the preview hash (no confirm without a new preview)', async () => {
