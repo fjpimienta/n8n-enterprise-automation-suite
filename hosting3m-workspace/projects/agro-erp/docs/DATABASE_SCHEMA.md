@@ -1106,6 +1106,12 @@ its absence fails at runtime, not at deploy time (see CLAUDE.md, Contrato Meta-C
   Four restricted models (`agri_sale_invoices`, `agri_sale_audit`, `company_flags`, `company_issuer_rfcs`): no operation and no role.
 * Rollback: `105_rollback.sql` disables the two read models; the view and the four restricted models stay.
 
+### Hotel models: `allowed_fields` aligned with the tenant column (migration 106)
+*Data only, no visible behavior change; see `database/migrations/106_RUNBOOK.md`.*
+* `crud_models` rows `hotel_rooms` and `hotel_maintenance_tickets`: `"id_company"` is added to `allowed_fields` (both tables have an `id_company` column), as tenant-scoped models list it. Nothing else in the two rows changes.
+  A backup of exactly those two rows is kept in `crud_models_backup_20261112_106`; `106_rollback.sql` restores `allowed_fields` from it. A permanent offline test in the *v5 CRUD tests* CI job
+  (`workflows/06-dynamic-crud-engine/v5/tests/test_hotel_models_fields.mjs`) checks that the SQL built by the v5 workflow for the two models is identical with and without the field.
+
 ### `vw_cattle_event_log`
 *Añadido en v1.13.0, migración 060 (`CREATE OR REPLACE VIEW`, idempotente). Extendida en
 v1.15.0 (compras/destetes/solicitudes) y en v1.16.0, migración 063 (reproducción/
