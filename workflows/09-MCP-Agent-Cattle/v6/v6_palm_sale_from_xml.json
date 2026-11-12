@@ -1,0 +1,439 @@
+{
+  "name": "v6/palm sale from xml",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "workflowInputs",
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "id_company",
+              "type": "number"
+            },
+            {
+              "name": "actor_email"
+            },
+            {
+              "name": "role"
+            },
+            {
+              "name": "file_name"
+            },
+            {
+              "name": "file_type"
+            },
+            {
+              "name": "file_size",
+              "type": "number"
+            },
+            {
+              "name": "xml_base64"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "8a72213d-1776-53af-8493-0746408736e4",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validates what the parent workflow passed in. No network, no database, no logging of voucher data.\n// The tenant, the actor e-mail and the role come from the verified session of the parent workflow (never from the message text);\n// sp_agri_register_sale re-checks membership and the ADMIN role on its own.\nconst i = $input.first().json;\nconst stop = (output) => [{ json: { ok: false, output } }];\n\nconst tenant = Number(i.id_company);\nif (!Number.isInteger(tenant) || tenant <= 0) return stop('⚠️ No pude identificar la empresa activa de tu sesión. Selecciónala en la plataforma y vuelve a intentar.');\nif (typeof i.actor_email !== 'string' || i.actor_email.trim() === '') return stop('⚠️ No pude identificar a tu usuario. Vuelve a iniciar sesión.');\n\n// Only an ADMIN of the company registers sales; cfdi-service is not called otherwise.\nif (String(i.role || '').toUpperCase() !== 'ADMIN') return stop('⛔ Solo un administrador de la empresa puede registrar ventas por chat.');\n\nconst name = String(i.file_name || '').toLowerCase();\nconst type = String(i.file_type || '').toLowerCase();\nif (!name.endsWith('.xml') || !['text/xml', 'application/xml', 'application/octet-stream'].includes(type)) {\n  return stop('⚠️ Para registrar una venta adjunta la factura en formato XML.');\n}\nconst b64 = i.xml_base64;\nif (typeof b64 !== 'string' || b64.length === 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(b64)) return stop('⚠️ El archivo no es una factura CFDI 4.0 en XML válida.');\nif (b64.length > 7200000) return stop('⚠️ El archivo es demasiado grande o tiene demasiados conceptos.');\n\nreturn [{ json: { ok: true } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        0
+      ],
+      "id": "da984b42-33d6-5e8f-b4fc-d54d2de07437",
+      "name": "Validar Entrada"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d23bfa09-a6a0-5411-9ffa-3eb462138792",
+              "leftValue": "={{ $json.ok === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        480,
+        0
+      ],
+      "id": "6559d2a1-5ef4-57cb-98b6-76def3638c69",
+      "name": "Entrada OK"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://cfdi-service:4100/parse",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ xmlBase64: $('When Executed by Another Workflow').first().json.xml_base64, profile: 'sale' }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 20000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        720,
+        -96
+      ],
+      "id": "c9d95585-db3d-5360-9ac4-27ca7cbdcb1a",
+      "name": "CFDI Parse",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "62YFK7Qu4Vc32Qe8",
+          "name": "CFDI Service Token"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b870db76-e319-5ba5-9858-92c05f9c55bb",
+              "leftValue": "={{ !!$json.uuid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        960,
+        -96
+      ],
+      "id": "3d36cbb5-d42c-5482-9aaf-ce1b0885bace",
+      "name": "Parse OK"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://cfdi-service:4100/sat-status",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ uuid: $json.uuid, emisorRfc: $json.emisor.rfc, receptorRfc: $json.receptor.rfc, totalCents: $json.totalCents }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1200,
+        -192
+      ],
+      "id": "e8744c20-1827-5dd5-ad6f-0d8141e3c3dd",
+      "name": "CFDI SAT Status",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "62YFK7Qu4Vc32Qe8",
+          "name": "CFDI Service Token"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://cfdi-service:4100/store",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tenantId: String($('When Executed by Another Workflow').first().json.id_company), xmlBase64: $('When Executed by Another Workflow').first().json.xml_base64, sha256: $('CFDI Parse').first().json.sourceSha256 }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 20000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1440,
+        -192
+      ],
+      "id": "24f6d3a3-4fce-5068-ba4d-dc802c29b507",
+      "name": "CFDI Store",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "62YFK7Qu4Vc32Qe8",
+          "name": "CFDI Service Token"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "2135e0c3-9d38-54b0-ad1c-af1b78e22bc4",
+              "leftValue": "={{ !!$json.originalPath }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1680,
+        -192
+      ],
+      "id": "f8907793-7b25-5ba4-b95a-988874e4793b",
+      "name": "Store OK"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT public.sp_agri_register_sale($1::integer, $2::text, $3::jsonb, $4::text, $5::text, $6::text) AS result;",
+        "options": {
+          "queryReplacement": "={{ [ Number($('When Executed by Another Workflow').first().json.id_company), $('When Executed by Another Workflow').first().json.actor_email, JSON.stringify($('CFDI Parse').first().json), (['VIGENTE','CANCELADO','NO_ENCONTRADO','ERROR'].includes($('CFDI SAT Status').first().json.status) ? $('CFDI SAT Status').first().json.status : 'ERROR'), $('CFDI Store').first().json.originalPath, $('CFDI Parse').first().json.sourceSha256 ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1920,
+        -192
+      ],
+      "id": "1746c1d1-7329-5e48-bf07-453a0e09a8fb",
+      "name": "Registrar Venta",
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Builds the ONLY text the user sees. Fixed Spanish texts, plain text. No model is involved and nothing is logged.\n// Echoed from the voucher: folio, date, buyer name, kilograms, unit price, total and ticket (sanitized). Never the UUID, the XML or any seal.\nconst safe = (v, n) => String(v === undefined || v === null ? '' : v).replace(/[\\u0000-\\u001f\\u007f<>`\\[\\]]/g, ' ').replace(/\\s+/g, ' ').trim().slice(0, n || 80);\nconst money = (v) => { const n = Number(v); return Number.isFinite(n) ? n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : safe(v, 20); };\nconst qty = (v) => { const n = Number(v); return Number.isFinite(n) ? n.toLocaleString('en-US', { maximumFractionDigits: 6 }) : safe(v, 20); };\nconst reply = (output) => [{ json: { output } }];\nconst ran = (name) => { try { return $(name).isExecuted; } catch (e) { return false; } };\n\nconst TX = {\n  unavailable: '⚠️ El servicio de facturas no está disponible por ahora. Intenta de nuevo en unos minutos.',\n  disabled: '⚠️ El registro de ventas está desactivado temporalmente.',\n  invalidFile: '⚠️ El archivo no es una factura CFDI 4.0 en XML válida.',\n  unsupported: '⚠️ Solo registro facturas CFDI 4.0 de ingreso en pesos mexicanos.',\n  invalidVoucher: '⚠️ La factura no es válida (timbre, RFC o importes). Revisa el archivo.',\n  tooLarge: '⚠️ El archivo es demasiado grande o tiene demasiados conceptos.',\n  forbiddenContent: '⚠️ El archivo contiene contenido no permitido.',\n  storeFailed: '⚠️ No pude guardar el archivo original de la factura. Intenta de nuevo en unos minutos.',\n  forbidden: '⛔ Solo un administrador de la empresa puede registrar ventas por chat.',\n  notPalm: '⚠️ La empresa activa no es de palma.',\n  issuerNotConfigured: '⚠️ La empresa no tiene un RFC emisor configurado para registrar ventas. Pide a la plataforma que lo configure.',\n  issuerMismatch: '⚠️ El RFC emisor de la factura no corresponde a esta empresa. Verifica que seleccionaste la empresa correcta.',\n  duplicate: '⚠️ No se pudo registrar la factura.',\n  alreadyRegistered: 'ℹ️ Esta factura ya estaba registrada; no se hizo ningún cambio.',\n  generic: '⚠️ No se pudo registrar la factura.',\n};\n\nconst PARSE_TEXT = {\n  NOT_XML: TX.invalidFile, INVALID_STRUCTURE: TX.invalidFile, INVALID_BODY: TX.invalidFile, INVALID_PROFILE: TX.invalidFile,\n  UNSUPPORTED_VERSION: TX.unsupported, UNSUPPORTED_TYPE: TX.unsupported, UNSUPPORTED_CURRENCY: TX.unsupported,\n  NOT_STAMPED: TX.invalidVoucher, INVALID_RFC: TX.invalidVoucher, INVALID_AMOUNT: TX.invalidVoucher, AMOUNTS_MISMATCH: TX.invalidVoucher,\n  TOO_LARGE: TX.tooLarge, TOO_MANY_CONCEPTS: TX.tooLarge, PAYLOAD_TOO_LARGE: TX.tooLarge,\n  DOCTYPE_FORBIDDEN: TX.forbiddenContent, INVALID_CHARS: TX.forbiddenContent,\n};\n\nconst REASON_TEXT = {\n  TIPO: 'solo se registran facturas de ingreso (tipo I)',\n  CURRENCY: 'solo se aceptan pesos mexicanos (MXN)',\n  PAYMENT_METHOD: 'solo se acepta pago en una sola exhibición (PUE)',\n  CONCEPT_COUNT: 'la factura debe traer exactamente un concepto',\n  UNIT: 'la unidad debe ser kilogramo (KGM)',\n  QUANTITY: 'la cantidad o el precio unitario no son válidos',\n  CONCEPT_AMOUNT: 'el importe del concepto no es válido',\n  AMOUNTS: 'los importes no son válidos',\n  AMOUNTS_MISMATCH: 'los importes no cuadran',\n  AMOUNTS_MISMATCH_CONCEPT: 'el importe no coincide con cantidad × precio unitario',\n  DATE_FUTURE: 'la fecha de la factura es futura',\n  DATE_TOO_OLD: 'la factura tiene más de 365 días',\n  BUYER_IS_ISSUER: 'el comprador no puede ser el emisor',\n  PAYMENT_FORM: 'falta la forma de pago',\n};\n\nconst entry = $('Validar Entrada').first().json;\nif (!entry.ok) return reply(entry.output);\n\nif (ran('Registrar Venta')) {\n  const r = ($('Registrar Venta').first().json || {}).result;\n  if (!r || typeof r !== 'object') return reply(TX.unavailable);\n\n  if (r.status === 'OK') {\n    const s = r.summary || {};\n    const lines = ['✅ Venta registrada.'];\n    const head = [];\n    if (safe(s.folio, 40)) head.push('Folio ' + safe(s.folio, 40));\n    if (safe(s.sale_date, 12)) head.push(safe(s.sale_date, 12));\n    if (head.length) lines.push(head.join(' · '));\n    if (safe(s.buyer_name, 120)) lines.push('Comprador: ' + safe(s.buyer_name, 120));\n    lines.push(qty(s.quantity_kg) + ' kg a $' + money(s.unit_price) + '/kg');\n    lines.push('Total: $' + money(s.total_amount) + ' MXN');\n    if (safe(s.ticket_ref, 30)) lines.push('Ticket: ' + safe(s.ticket_ref, 30));\n    const notes = [];\n    for (const w of Array.isArray(r.warnings) ? r.warnings : []) {\n      if (w === 'ticket_missing_or_unrecognized') notes.push('No encontré el número de ticket en el concepto; la venta quedó registrada sin ticket.');\n      else if (w === 'ticket_already_used') notes.push('El ticket ' + safe(s.ticket_ref, 30) + ' ya está en otra venta activa de la empresa. Revisa que no sea un duplicado.');\n      else if (w === 'previous_sale_voided') notes.push('Esta factura había sido anulada antes; se registró de nuevo.');\n    }\n    if (s.sat_status === 'SKIPPED_TEST') notes.push('Empresa de pruebas: el SAT no se verificó.');\n    if (notes.length) lines.push('Avisos:', ...notes.map((n) => '• ' + n));\n    return reply(lines.join('\\n'));\n  }\n  if (r.status === 'ALREADY_REGISTERED') return reply(TX.alreadyRegistered);\n  if (r.status === 'FORBIDDEN') return reply(TX.forbidden);\n  if (r.status === 'NOT_PALM') return reply(TX.notPalm);\n  if (r.status === 'ISSUER_RFC_NOT_CONFIGURED') return reply(TX.issuerNotConfigured);\n  if (r.status === 'ISSUER_RFC_MISMATCH') return reply(TX.issuerMismatch);\n  if (r.status === 'DUPLICATE') return reply(TX.duplicate);\n  if (r.status === 'disabled') return reply(TX.disabled);\n  if (r.status === 'INVALID_VOUCHER') {\n    const reason = String(r.reason || '');\n    if (reason === 'SAT_NOT_VALID') {\n      const sat = ran('CFDI SAT Status') ? String(($('CFDI SAT Status').first().json || {}).status || '') : '';\n      if (sat === 'CANCELADO') return reply('⚠️ No se pudo registrar la factura: está cancelada ante el SAT.');\n      if (sat === 'NO_ENCONTRADO') return reply('⚠️ No se pudo registrar la factura: el SAT no la encontró.');\n      return reply('⚠️ No pude verificar la factura con el SAT. Intenta de nuevo en unos minutos.');\n    }\n    return reply('⚠️ No se pudo registrar la factura: ' + (REASON_TEXT[reason] || 'datos del comprobante no válidos') + '.');\n  }\n  return reply(TX.generic);\n}\n\nif (ran('CFDI Store')) {\n  const s = $('CFDI Store').first().json || {};\n  return reply(s.status === 'invalid' || s.status === 'error' ? TX.storeFailed : TX.unavailable);\n}\n\nif (ran('CFDI Parse')) {\n  const p = $('CFDI Parse').first().json || {};\n  if (p.status === 'invalid' && typeof p.code === 'string') return reply(PARSE_TEXT[p.code] || TX.invalidFile);\n  return reply(TX.unavailable);\n}\n\nreturn reply(TX.unavailable);"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2160,
+        0
+      ],
+      "id": "0d83a76a-557c-5844-90c8-9af54bef8a59",
+      "name": "Armar Respuesta"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Validar Entrada",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validar Entrada": {
+      "main": [
+        [
+          {
+            "node": "Entrada OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Entrada OK": {
+      "main": [
+        [
+          {
+            "node": "CFDI Parse",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Armar Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CFDI Parse": {
+      "main": [
+        [
+          {
+            "node": "Parse OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse OK": {
+      "main": [
+        [
+          {
+            "node": "CFDI SAT Status",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Armar Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CFDI SAT Status": {
+      "main": [
+        [
+          {
+            "node": "CFDI Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CFDI Store": {
+      "main": [
+        [
+          {
+            "node": "Store OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store OK": {
+      "main": [
+        [
+          {
+            "node": "Registrar Venta",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Armar Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Venta": {
+      "main": [
+        [
+          {
+            "node": "Armar Respuesta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "saveDataSuccessExecution": "none",
+    "saveDataErrorExecution": "none",
+    "saveExecutionProgress": false,
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false,
+    "errorWorkflow": "9SrVXdATmlrZemJT",
+    "timeSavedMode": "fixed",
+    "timeSavedPerExecution": 3
+  },
+  "versionId": "2f49be32-a7ca-56f8-b4ff-4658d34512e6",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "id": "PalmSaleXml0001a",
+  "tags": []
+}
