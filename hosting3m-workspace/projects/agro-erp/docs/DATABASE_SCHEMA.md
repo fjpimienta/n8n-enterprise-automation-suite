@@ -1087,7 +1087,8 @@ its absence fails at runtime, not at deploy time (see CLAUDE.md, Contrato Meta-C
 * `agri_sale_invoices`: one row per sale voucher (uuid, issuer/buyer RFC and name, folio, `issued_at` (CFDI `Fecha`, local time), integer-cent
   subtotal/discount/total, `taxes` jsonb, payment form/method `PUE`, product key, unit `KGM`, `quantity`/`unit_price` `numeric(18,6)`,
   `ticket_ref`/`ticket_warning`, optional plantation/lot with composite keys, `source_sha256`, `original_path`, `sat_status`, `is_test`,
-  `status` ACTIVE/VOID with reason, actor and time). `UNIQUE (id_company, uuid)` and `UNIQUE (uuid) WHERE NOT is_test`. Append-only guard
+  `status` ACTIVE/VOID with reason, actor and time). Partial unique indexes: `(id_company, uuid) WHERE status = 'ACTIVE'` and `(uuid) WHERE NOT is_test AND status = 'ACTIVE'` (a voided voucher can be
+  loaded again by the same company; another real company cannot load a UUID held ACTIVE or VOID). Append-only guard
   (`P0110`): the only UPDATE is ACTIVE → VOID by `sp_agri_void_sale`.
 * `agri_sale_audit`: append-only REGISTER / VOID / REJECT trail with a code and the actor; never a voucher UUID.
 * `sp_agri_register_sale(integer, text, jsonb, text, text, text)`: direct load of a parsed voucher; ADMIN of a palm company only; no amount
