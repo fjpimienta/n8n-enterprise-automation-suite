@@ -7,6 +7,17 @@ import { CattleApiService } from './cattle-api.service';
 import { LoggerService } from './logger.service';
 import { PANEL_LIVESTOCK_STATUSES } from '@features/livestock/models/panel-livestock.model';
 
+const WARNINGS = [
+  {
+    type: 'no_official_tag', field: 'ear_tag',
+    message: 'Sin arete oficial: el animal se registrará con un identificador interno (S/N-…) y NO podrá venderse ni darse de salida hasta que tenga un arete SINIIGA de 10 dígitos.'
+  },
+  {
+    type: 'tb_missing_or_expired', field: 'tb_test_date',
+    message: 'Prueba TB no registrada: la venta o salida de este animal se bloqueará hasta registrarla (salvo dictamen de hato libre de la UPP).'
+  }
+];
+
 describe('CattleApiService.registerLivestockPanel', () => {
   let service: CattleApiService;
   let http: HttpTestingController;
@@ -94,10 +105,22 @@ describe('CattleApiService.registerLivestockPanel', () => {
 
   it('returns every known status typed, warnings included', async () => {
     for (const status of PANEL_LIVESTOCK_STATUSES) {
-      const { result } = await call({}, {}, { data: { status, warnings: ['w'], message: 'm' } });
+      const { result } = await call({}, {}, { data: { status, warnings: WARNINGS, message: 'm' } });
       const r = await result;
       expect(r.status).toBe(status);
-      expect(r.warnings).toEqual(['w']);
+      expect(r.warnings).toEqual(WARNINGS);
+    }
+  });
+
+  it('keeps type, field and message of every warning object', async () => {
+    const { result } = await call({}, {}, { data: { status: 'preview', warnings: WARNINGS } });
+    const warnings = (await result).warnings!;
+    expect(warnings.length).toBe(2);
+    for (const [i, w] of warnings.entries()) {
+      expect(typeof w).toBe('object');
+      expect(w.type).toBe(WARNINGS[i].type);
+      expect(w.field).toBe(WARNINGS[i].field);
+      expect(w.message).toBe(WARNINGS[i].message);
     }
   });
 
