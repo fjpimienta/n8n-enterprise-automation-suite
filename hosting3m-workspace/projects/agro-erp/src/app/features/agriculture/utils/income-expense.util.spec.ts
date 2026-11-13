@@ -125,6 +125,7 @@ describe('balanceAvailability', () => {
     expect(balanceAvailability(base({ sales: null, salesError: 'boom' }))).toEqual({ status: 'unavailable', reason: 'No se pudieron cargar las ventas.' });
     expect(balanceAvailability(base({ expense: null }))).toEqual({ status: 'unavailable', reason: 'No se pudieron cargar los gastos.' });
     expect(balanceAvailability(base({ expenseError: 'boom' })).reason).toBe('No se pudieron cargar los gastos.');
+    expect(balanceAvailability(base({ salesError: 'boom' }))).toEqual({ status: 'unavailable', reason: 'No se pudieron cargar las ventas.' }); // a stale figure with an error is not used
     expect(balanceAvailability(base({ sales: null, expense: null, salesError: 'a', expenseError: 'b' })).reason).toBe('No se pudieron cargar las ventas ni los gastos.');
   });
   it('answers of another range: unavailable', () => {
