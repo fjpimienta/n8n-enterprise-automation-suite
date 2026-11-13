@@ -69,8 +69,8 @@ No los uses como única fuente de verdad.
 - Todo runbook que toque base de datos o n8n debe comenzar con este aviso:
 
   > ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (base de datos y n8n,
-  verificadas con sus huellas). `main` publica automáticamente los frontends por Plesk:
-  si se mergea antes, la pantalla nueva puede fallar en producción.
+  verificadas con sus huellas). `main` se despliega manualmente por Plesk con git:
+  si el frontend se despliega antes, la pantalla nueva puede fallar en producción.
 
 - Para cada operación destructiva o irreversible contra datos/servicios, exige backup o
   dry-run aprobado antes de ejecutarla. Nunca ejecutes `DROP`, `TRUNCATE`, borrados en

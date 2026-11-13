@@ -1,7 +1,7 @@
 # Runbook — Palma Fase 2b, Etapa 1: bloquear las tools de ganadería en empresas de palma (082 + n8n)
 
 > ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (base de datos y n8n, verificadas con sus huellas).
-> `main` despliega el frontend solo (Plesk): si se mergea antes, la pantalla nueva falla en producción.
+> `main` se despliega manualmente: el dueño entra a Plesk y despliega con git. Si el frontend se despliega antes, la pantalla nueva falla en producción.
 > *Este cambio no toca el frontend; aun así el merge va al final, por la regla.*
 
 **Por qué es urgente:** el 2026-10-21, con la empresa 10 (palma, de pruebas) activa, el Chat Web llamó a

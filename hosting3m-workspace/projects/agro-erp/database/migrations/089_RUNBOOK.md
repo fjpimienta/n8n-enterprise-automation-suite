@@ -1,7 +1,7 @@
 # Runbook — Reproduction tracking, phase 4c: disable the `nacimiento` Meta-CRUD gateway model (migration 089, OPTIONAL)
 
 > ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (base de datos y n8n, verificadas con sus huellas).
-> `main` despliega el frontend solo (Plesk): si se mergea antes, la pantalla nueva falla en producción.
+> `main` se despliega manualmente: el dueño entra a Plesk y despliega con git. Si el frontend se despliega antes, la pantalla nueva falla en producción.
 > *This phase does not touch the frontend; the merge still goes last, per the rule.*
 
 **Optional and independent:** 089 can be omitted without affecting 087 / 088. It only needs 085 (the append-only trigger function). Recommended order: **after 087 is verified in

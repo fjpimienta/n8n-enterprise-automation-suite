@@ -1,5 +1,5 @@
 > ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (base de datos y n8n, verificadas con sus huellas).
-> `main` publica automáticamente los frontends por Plesk: si se mergea antes, la pantalla nueva falla en producción.
+> `main` se despliega manualmente: el dueño entra a Plesk y despliega con git. Si el frontend se despliega antes, si se mergea antes, la pantalla nueva falla en producción.
 
 > **Status: tested on a throwaway LOCAL database (PostgreSQL 15.4) and with an offline gateway test. NOT applied to production, NOT imported into n8n.**
 > TODO(verify): the status line above was not re-checked in this review; confirm with the owner whether 107 is applied in production and imported in n8n before using this runbook.
@@ -126,7 +126,7 @@ Not part of this pull request. The dashboard "Ventas" section and the void dialo
 
 ## Known risks
 
-- **Merge order.** `main` publishes the frontends automatically through Plesk: do not merge to `main` before Parts 1 and 2 are done and verified (see the banner at the top).
+- **Merge order.** `main` is deployed manually: the owner logs in to Plesk and deploys with git. Do not merge to `main` before Parts 1 and 2 are done and verified (see the banner at the top).
 - **Nothing calls the new models yet.** Part 3 (the "Ventas" screen) is not part of this pull request.
 - **Tenant isolation.** The company is always the verified `x-tenant-id` header (after the membership check), the models have `sp_requires_tenant = true`, and the procedures check the `ADMIN` role again. The generic rule "every model whose table has a tenant column lists it" does **not** cover these two models, because a `call_sp` model names a procedure in `table_name`; any future check that relies on that rule will not see them.
 - **Verification writes data.** Part 2, step 7 voids a sale. Use only the test company 10 and a synthetic sale. A void is not undone by the rollback.

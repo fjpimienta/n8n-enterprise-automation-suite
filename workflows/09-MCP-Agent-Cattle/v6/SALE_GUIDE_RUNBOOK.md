@@ -1,5 +1,5 @@
 > ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (migración 096 de base de datos verificada y cambio de n8n publicado y verificado).
-> `main` publica automáticamente los frontends por Plesk. No publiques esta versión antes de completar las dos partes.
+> `main` se despliega manualmente: el dueño entra a Plesk y despliega con git. No publiques esta versión antes de completar las dos partes.
 
 # Runbook: guía de tránsito según especie
 
@@ -77,7 +77,7 @@ No cambies otros nodos, parámetros, conexiones ni credenciales. `AI Agent Palma
 8. **Rollback:** si falla la comparación o una prueba, vuelve a importar en el editor el respaldo del paso 2 para cada workflow afectado, pulsa **Save** y **Publish**, y verifica que el export publicado vuelva a coincidir con el respaldo.
 9. **Release:** solo después de verificar las partes 1 y 2 puede continuar el proceso de release hacia `main`. La parte 3 se entrega mediante su PR posterior; este runbook no la despliega.
 > ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (base de datos y n8n verificados con sus huellas).
-> `main` publica automáticamente los frontends por Plesk. El orden de despliegue es base de datos → workflows →
+> `main` se despliega manualmente: el dueño entra a Plesk y despliega con git. El orden de despliegue es base de datos → workflows →
 > frontend; no publiques la interfaz antes de verificar las partes 1 y 2.
 
 # Runbook: órdenes FIFO de animales no identificados (migración 097)

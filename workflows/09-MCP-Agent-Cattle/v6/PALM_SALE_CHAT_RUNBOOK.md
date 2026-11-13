@@ -1,5 +1,5 @@
 > ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (base de datos y n8n, verificadas con sus huellas).
-> `main` publica automáticamente los frontends por Plesk: si se mergea antes, la pantalla nueva falla en producción.
+> `main` se despliega manualmente: el dueño entra a Plesk y despliega con git. Si el frontend se despliega antes, si se mergea antes, la pantalla nueva falla en producción.
 
 > **Status: tested offline and with a local end-to-end run that does NOT use n8n. NOT imported anywhere.** Part 1 (database: migration 104) and the
 > cfdi-service `sale` profile are already in production. **Part 2 (n8n) is this pull request:** two workflow files, imported by the owner only through the n8n
