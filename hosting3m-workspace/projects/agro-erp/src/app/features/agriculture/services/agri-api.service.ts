@@ -30,7 +30,9 @@ import {
   ExpenseSummaryRow,
   ExpenseUnit,
 } from '@core/models/agri-expense.model';
+import { AgriSale, SaleBalance, SaleBalanceQuery, SaleListQuery } from '@core/models/agri-sale.model';
 import { buildCategoryFields, buildExpenseFields, parseExpenseBalance } from '../utils/expense.util';
+import { parseSalesBalance } from '../utils/sale.util';
 import {
   UNCONFIRMED_MESSAGE,
   buildLotFields,
@@ -365,6 +367,33 @@ export class AgriApiService {
   }
 
   // ------------------------------------------------------------------------------------------------
+  // Sales (migrations 104 / 105 / 107, ADMIN only)
+  // ------------------------------------------------------------------------------------------------
+
+  /** Sales of the active company between two dates (voided ones included unless filtered), newest first. */
+  async getSales(query: SaleListQuery): Promise<ListResult<AgriSale>> {
+    const tenant = this.requireTenant();
+    const filters: Record<string, unknown> = { id_company: tenant, sale_date: { _gte: query.dateFrom, _lte: query.dateTo } };
+    if (query.plantationId) filters['plantation_id'] = query.plantationId;
+    if (query.lotId) filters['lot_id'] = query.lotId;
+    if (query.status !== 'ALL') filters['status'] = query.status;
+    const res = await this.post('agri_sales', { operation: 'getall', filters, limit: 2000, sort_by: 'sale_date' });
+    const raw = stripPhantomRows(this.rows(res), 'id');
+    const items = raw.filter(r => toInt(r['id_company']) === tenant).map(r => this.mapSale(r))
+      .sort((a, b) => b.saleDate.localeCompare(a.saleDate) || b.createdAt.localeCompare(a.createdAt));
+    return { items, possiblyTruncated: isPossiblyTruncated(raw.length) };
+  }
+
+  /** Totals of any filter combination, computed by sp_agri_sales_balance (voided sales are not counted). */
+  async getSalesBalance(query: SaleBalanceQuery): Promise<SaleBalance> {
+    const data = await this.callSp('agri_sale_balance', {
+      date_from: query.dateFrom || null, date_to: query.dateTo || null, grain: query.grain || null,
+      plantation_id: query.plantationId || null, lot_id: query.lotId || null,
+    });
+    return parseSalesBalance(data);
+  }
+
+  // ------------------------------------------------------------------------------------------------
   // Plumbing
   // ------------------------------------------------------------------------------------------------
 
@@ -509,6 +538,21 @@ export class AgriApiService {
       lotId: r['lot_id'] ?? null, lotCode: r['lot_code'] ?? null, lotName: r['lot_name'] ?? null,
       categoryId: r['category_id'], categoryCode: r['category_code'] ?? '', categoryName: r['category_name'] ?? '',
       totalAmount: toNumber(r['total_amount']) ?? 0, expenseCount: toInt(r['expense_count']),
+    };
+  }
+
+  private mapSale(r: Row): AgriSale {
+    // sale_date is a date that arrives as an ISO timestamp (T06:00Z): only its first 10 characters are the day.
+    const date = (v: unknown) => (v ? String(v).slice(0, 10) : '');
+    return {
+      id: r['id'], idCompany: toInt(r['id_company']), folio: r['folio'] ?? '', saleDate: date(r['sale_date']),
+      buyerName: r['buyer_name'] ?? '', quantityKg: toNumber(r['quantity']) ?? 0, unitCode: r['unit_code'] ?? 'KGM',
+      unitPrice: toNumber(r['unit_price']), totalAmount: toNumber(r['total_amount']) ?? 0,
+      paymentMethod: r['payment_method'] ?? null, ticketRef: r['ticket_ref'] ?? null, ticketWarning: toBool(r['ticket_warning']),
+      plantationId: r['plantation_id'] ?? null, plantationCode: r['plantation_code'] ?? null, plantationName: r['plantation_name'] ?? null,
+      lotId: r['lot_id'] ?? null, lotCode: r['lot_code'] ?? null, lotName: r['lot_name'] ?? null,
+      status: r['status'] === 'VOID' ? 'VOID' : 'ACTIVE', voidReason: r['void_reason'] ?? null,
+      voidedAt: r['voided_at'] ?? null, isTest: toBool(r['is_test']), createdAt: r['created_at'] ?? '',
     };
   }
 
