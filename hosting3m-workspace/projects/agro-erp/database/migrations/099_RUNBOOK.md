@@ -1,5 +1,5 @@
 > ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (base de datos y n8n, verificadas con sus huellas).
-> `main` publica automáticamente los frontends por Plesk: si se mergea antes, la pantalla nueva falla en producción.
+> `main` se despliega manualmente: el dueño entra a Plesk y despliega con git. Si el frontend se despliega antes, si se mergea antes, la pantalla nueva falla en producción.
 
 > **Nota de alcance.** Este PR no cambia el frontend (la Parte 3 solo es el merge final). El recuadro aplica igual: los
 > agentes nuevos llaman funciones de la 099 y el MCP neutraliza la compra vieja; si los workflows llegaran antes que la base,
