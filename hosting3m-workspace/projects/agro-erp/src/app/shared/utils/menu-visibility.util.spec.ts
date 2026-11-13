@@ -8,7 +8,7 @@ describe('menuVisibility', () => {
   it('palm ADMIN: palm entries and shared config, no livestock entries, "Personal"', () => {
     expect(menuVisibility(palm('ADMIN'))).toEqual({
       livestockIntelligence: false, palmIntelligence: true, palmAdministration: true, palmExpenses: true,
-      sharedConfig: true, livestockConfig: false, intelligenceSection: true, configSection: true,
+      palmSales: true, sharedConfig: true, livestockConfig: false, intelligenceSection: true, configSection: true,
       personalLabel: 'Personal',
     });
   });
@@ -30,7 +30,7 @@ describe('menuVisibility', () => {
   it('livestock ADMIN: livestock entries and catalogs, nothing of palm, "Personal UPP"', () => {
     expect(menuVisibility(cattle('ADMIN'))).toEqual({
       livestockIntelligence: true, palmIntelligence: false, palmAdministration: false, palmExpenses: false,
-      sharedConfig: true, livestockConfig: true, intelligenceSection: true, configSection: true,
+      palmSales: false, sharedConfig: true, livestockConfig: true, intelligenceSection: true, configSection: true,
       personalLabel: 'Personal UPP',
     });
   });
@@ -57,8 +57,17 @@ describe('menuVisibility', () => {
     expect(menuVisibility({ industry: 'Generic', role: 'ADMIN' }).palmExpenses).toBe(false);
   });
 
+  it('palm "Ventas": ADMIN only; OWNER, EDITOR, CUSTOMER, livestock and unknown domains never see it', () => {
+    expect(menuVisibility(palm('ADMIN')).palmSales).toBe(true);
+    expect(menuVisibility(palm('admin')).palmSales).toBe(true);
+    for (const role of ['OWNER', 'EDITOR', 'CUSTOMER', 'GUEST', '']) expect(menuVisibility(palm(role)).palmSales, role).toBe(false);
+    expect(menuVisibility(cattle('ADMIN')).palmSales).toBe(false);
+    expect(menuVisibility({ industry: 'Generic', role: 'ADMIN' }).palmSales).toBe(false);
+    expect(menuVisibility({ role: 'ADMIN' }).palmSales).toBe(false);
+  });
+
   it('no active company: nothing visible', () => {
     const v = menuVisibility(null);
-    expect(v.intelligenceSection || v.configSection || v.palmAdministration || v.palmExpenses).toBe(false);
+    expect(v.intelligenceSection || v.configSection || v.palmAdministration || v.palmExpenses || v.palmSales).toBe(false);
   });
 });

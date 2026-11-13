@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { palmAdminGuard, palmDomainGuard, palmExpenseGuard } from './guards/palm.guards';
+import { palmAdminGuard, palmDomainGuard, palmExpenseGuard, palmSalesGuard } from './guards/palm.guards';
 
 export const agricultureRoutes: Routes = [
     {
@@ -31,6 +31,12 @@ export const agricultureRoutes: Routes = [
         path: 'gastos',
         canActivate: [palmExpenseGuard],
         loadComponent: () => import('./expenses/expense-page.component').then(m => m.ExpensePageComponent)
+    },
+    {
+        // Sales: summary, list and void, ADMIN of the active company only (re-checked inside the screen and by the gateway).
+        path: 'ventas',
+        canActivate: [palmSalesGuard],
+        loadComponent: () => import('./sales/sale-page.component').then(m => m.SalePageComponent)
     },
     { path: '', redirectTo: 'dashboard', pathMatch: 'full' }
 ];

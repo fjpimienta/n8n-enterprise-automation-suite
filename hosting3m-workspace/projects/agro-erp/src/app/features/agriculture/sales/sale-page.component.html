@@ -1,0 +1,33 @@
+<div class="container-fluid p-3 p-md-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h2 class="page-title mb-0"><i class="ti ti-cash me-2 text-success" aria-hidden="true"></i>Ventas</h2>
+            <div class="text-muted small mt-1">Resumen y ventas registradas de la empresa activa</div>
+        </div>
+    </div>
+
+    @if (!allowed()) {
+    <div class="card shadow-sm border-0">
+        <div class="card-body text-center py-5">
+            <i class="ti ti-lock fs-1 text-muted d-block mb-2" aria-hidden="true"></i>
+            <h3 class="mb-1">Solo para administradores</h3>
+            <p class="text-muted mb-0">Solo un administrador de la empresa ve las ventas.</p>
+        </div>
+    </div>
+    } @else {
+
+    <ul class="nav nav-tabs mb-3">
+        @for (tab of tabs(); track tab) {
+        <li class="nav-item">
+            <button type="button" class="nav-link" [class.active]="activeTab() === tab" [attr.aria-current]="activeTab() === tab ? 'page' : null" (click)="activeTab.set(tab)">{{ tabLabels[tab] }}</button>
+        </li>
+        }
+    </ul>
+
+    @switch (activeTab()) {
+    @case ('RESUMEN') { <app-sale-balance [refreshToken]="refreshToken()" (openSales)="activeTab.set('VENTAS')"></app-sale-balance> }
+    @case ('VENTAS') { <app-sale-list [refreshToken]="refreshToken()" (onVoided)="refreshToken.update(n => n + 1)"></app-sale-list> }
+    }
+    }
+</div>
