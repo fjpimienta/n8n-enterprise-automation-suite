@@ -1,5 +1,5 @@
 > ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LA PARTE 1** (base de datos, verificada con sus huellas).
-> `main` publica automáticamente los frontends por Plesk: si se mergea antes, la pantalla nueva falla en producción.
+> `main` se despliega manualmente: el dueño entra a Plesk y despliega con git. Si el frontend se despliega antes, si se mergea antes, la pantalla nueva falla en producción.
 
 > **Nota de alcance.** Este PR **no** cambia workflows de n8n. Cambia una vista de la base de datos (migración 101) y el
 > componente de la Bitácora del frontend. No hay Parte 2 de n8n. La parte del frontend (Parte 3) es siempre la última y empieza
@@ -47,7 +47,7 @@ con Plesk **Deploy now** enseguida (ver el orden de despliegue).
 
 1. Base de datos: migración 101 (primero).
 2. n8n: sin cambios.
-3. Merge a `main` y frontend (Plesk **Deploy now**) **enseguida** después de aplicar la base; no dejes la base aplicada con el frontend anterior. `main` lo publica solo; si el sitio no refleja la release, en la sección Git del dominio usa
+3. Merge a `main` y frontend (Plesk **Deploy now**) **enseguida** después de aplicar la base; no dejes la base aplicada con el frontend anterior. `main` se despliega manualmente: el dueño lo hace en Plesk con git; si el sitio no refleja la release, en la sección Git del dominio usa
    **Deploy now** y fuerza la recarga del navegador. Solo cuando se libere a `main`.
 
 ## Parte 1 — base de datos

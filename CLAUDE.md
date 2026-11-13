@@ -151,9 +151,8 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
 
 ## 🚀 Despliegue (aplica a toda la suite)
 
-- **Despliegue de producción:** `main` publica automáticamente los frontends por Plesk. Si el sitio no refleja la
-  release después de unos minutos, abre la sección Git del dominio en Plesk, revisa el último despliegue y usa
-  **Deploy now**; después fuerza la recarga del navegador. El backend (compose, n8n y base de datos) se despliega
+- **Despliegue de producción:** `main` se despliega manualmente: el dueño entra a Plesk, abre la sección Git del dominio
+  y usa **Deploy now**; después fuerza la recarga del navegador para ver la release. El backend (compose, n8n y base de datos) se despliega
   manualmente en el VPS con su runbook.
   `deploy.sh <service> [<service>...]` actualiza con `git pull --ff-only origin main`, crea una
   etiqueta de rollback antes de compilar y recrea solo los servicios solicitados; `upload-file`
@@ -177,7 +176,7 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
   comentario del PR lo repite en su primera línea):
 
   > ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (base de datos y n8n, verificadas con sus huellas).
-  > `main` publica automáticamente los frontends por Plesk: si se mergea antes, la pantalla nueva falla en producción.
+  > `main` se despliega manualmente por Plesk con git: si el frontend se despliega antes, la pantalla nueva falla en producción.
 
   Motivo: el frontend llegó a `main` antes que la base **dos veces** (v1.18.0 el 2026-10-17 y v1.19.0 el
   2026-10-20). La parte del frontend es siempre la última del runbook y empieza con "solo si 1 y 2 están OK".

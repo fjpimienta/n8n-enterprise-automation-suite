@@ -1,7 +1,7 @@
 # Runbook — Reproduction tracking, phase 3b: what the ranch's uterine codes mean (migration 090)
 
 > ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (base de datos y n8n, verificadas con sus huellas).
-> `main` despliega el frontend solo (Plesk): si se mergea antes, la pantalla nueva falla en producción.
+> `main` se despliega manualmente: el dueño entra a Plesk y despliega con git. Si el frontend se despliega antes, la pantalla nueva falla en producción.
 > *This phase does not touch the frontend and changes no n8n node (Part 2 says so explicitly); the merge still goes last, per the rule.*
 
 **Requires migrations 084 – 088** (it replaces 7 bodies created by 086 and 088 and calls a function of 087). 089 is independent. 090 aborts at its first block if they are missing,

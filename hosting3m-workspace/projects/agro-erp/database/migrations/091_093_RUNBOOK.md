@@ -1,7 +1,7 @@
 # Runbook — CFDI expense invoices from the web chat (migrations 091, 092, 093)
 
 > ⛔ **ORDEN DE DESPLIEGUE: base de datos → cfdi-service → n8n → frontend (`main`) AL FINAL.**
-> `main` despliega el frontend solo (Plesk) y el frontend activa el botón de adjuntar (`attachments.enabled`): si se mergea antes de tener las partes 1 a 3, el chat acepta archivos que el backend no sabe procesar.
+> `main` se despliega manualmente: el dueño entra a Plesk y despliega con git. El frontend activa el botón de adjuntar (`attachments.enabled`): si se mergea antes de tener las partes 1 a 3, el chat acepta archivos que el backend no sabe procesar.
 > *Production status: parts 1-4 are live since 2026-10-31 (see "Status in production"). This runbook is for audit, LOCAL rehearsals and any new environment.*
 
 **Requires migration 084** (`fn_repro_ctx`). Order: **091 → 092 → 093**. Each file aborts at its first block if its predecessor is missing, and 092 / 093 abort if 091 was rolled back (the register function answers `disabled`).
@@ -86,7 +86,7 @@ $P -v tenant=3 -v admin=<ACTIVE_ADMIN_EMAIL> -f 093_tests.sql
 
 ## Part 4. Frontend
 
-`attachments: { enabled: true }` in `projects/agro-erp/src/app/app.config.ts`. **The merge to `main` deploys it (Plesk).** Roll back by setting it to `false` and redeploying.
+`attachments: { enabled: true }` in `projects/agro-erp/src/app/app.config.ts`. **Deploying `main` manually through Plesk (git) releases it.** Roll back by setting it to `false` and redeploying.
 
 ## Part 5. Verification
 

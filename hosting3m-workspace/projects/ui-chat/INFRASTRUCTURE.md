@@ -3,29 +3,29 @@
 ## 📝 Descripción
 **Project:** UI Chat (Shared Angular Library)  
 **Type:** Angular Library (Standalone)  
-**Version:** v0.3.0  
-**Stack:** Angular 21 (Signals) | Markdown Rendering | HTTP Client  
-**Consumer:** Dashboard Hotel, Pista de Hielo WebApp
+**Version:** v0.0.1 (`package.json`)  
+**Stack:** Angular 21 (Signals) | HTTP Client  
+**Consumers:** `agro-erp`, `dashboard`, `hotel-website`; `pista-hielo` (legacy)
 
 **UI Chat** es un micro-frontend encapsulado como librería, diseñado para proporcionar una interfaz de conversación ("Chat Widget") agnóstica. Su única responsabilidad es renderizar mensajes y gestionar la comunicación HTTP con el Agente de IA en n8n.
 
 ## 1. High-Level Design
-La librería sigue el patrón **Smart Service / Dumb Component**. El componente visual no sabe *qué* es la IA, solo sabe mostrar mensajes. El servicio gestiona la sesión y el transporte de datos.
+La librería sigue el patrón **Smart Service / Dumb Component**. El servicio (`AiService`) gestiona la sesión y el transporte de datos; el componente muestra los mensajes y además guarda el borrador y el archivo adjunto (`userInput`, `selectedFile`, `previewUrl`, `attachmentError`). Known deviation (#1038): no hay `ChatService` y no hay streaming; cada mensaje es un `http.post` que resuelve con la respuesta completa (`output`).
 
 ```mermaid
 graph LR
-    Host["Host App (Dashboard)"] -->|"Config (API URL)"| Lib["UI Chat Library"]
+    Host["Host App (Dashboard)"] -->|"Config (provideUiChat)"| Lib["UI Chat Library"]
     Lib -->|"POST (User Prompt)"| N8N["n8n Webhook"]
-    N8N -->|"Stream/JSON"| Lib
+    N8N -->|"JSON"| Lib
     Lib -->|"Render"| UI["Chat Bubble UI"]
 
 ```
 
 ### Principios de Diseño:
 
-1. **Zero-Config Logic:** La librería maneja internamente el `sessionId` (generación y persistencia en localStorage/SessionStorage) para mantener el contexto de la conversación.
-2. **Configurable Injection:** La URL del webhook y los estilos base se inyectan desde la aplicación padre mediante `InjectionToken`, permitiendo que el mismo chat apunte a diferentes agentes (Hotel vs Pista) sin cambiar el código.
-3. **Reactive State:** Uso de **Signals** para el manejo de la lista de mensajes, asegurando un renderizado eficiente sin Zone.js overhead.
+1. **Zero-Config Logic:** La librería maneja internamente el `sessionId` (`'web-' + crypto.randomUUID()`, generado una vez por instancia de `AiService`). Known deviation (#1038): no se persiste en `localStorage`/`sessionStorage`; una nueva instancia inicia una conversación nueva.
+2. **Configurable Injection:** La configuración (`apiUrl_ai`, `logoUrl`, `title`, `primaryColor` y `attachments` opcional) se inyecta desde la aplicación padre con `provideUiChat(config)`, que registra `CHAT_CONFIG_TOKEN`, permitiendo que el mismo chat apunte a diferentes agentes sin cambiar el código. Known deviation (#1038): `primaryColor` no se lee en `src/lib`; la hoja de estilos usa `var(--primary-color, #206bc4)`.
+3. **Reactive State:** Uso de **Signals** para la lista de mensajes (`messages`) y el estado de carga (`isLoading`). Known deviation (#1038): no es solo signals; `userInput` es un campo simple enlazado con `[(ngModel)]`.
 
 ---
 
@@ -36,25 +36,34 @@ projects/ui-chat/src/lib/
 ├── components/
 │   └── ai-chat/          # El Widget visual (Burbujas, Input, Scroll)
 ├── services/
-│   └── chat.service.ts   # Cliente HTTP y Gestión de Estado (Signals)
+│   └── ai.service.ts     # Cliente HTTP y Gestión de Estado (Signals); define ChatMessage
 ├── interfaces/
-│   ├── message.type.ts   # { role: 'user'|'assistant', text: string }
-│   └── config.token.ts   # Definición de InjectionTokens
-└── ui-chat.component.ts  # Punto de entrada (Barrel file)
+│   └── chat-config.ts    # ChatConfig y ChatAttachmentsConfig
+├── tokens/
+│   └── chat.token.ts     # CHAT_CONFIG_TOKEN
+├── utils/
+│   └── attachment.util.ts # Validación y lectura Base64 de adjuntos
+├── styles/
+│   └── theme.scss
+└── ui-chat-modele.ts     # Archivo del scaffold (nombre tal cual en el código)
+
+projects/ui-chat/src/public-api.ts  # Punto de entrada: exporta componente, AiService, interfaces, token y provideUiChat()
 
 ```
 
 ### Componentes Clave
 
 * **AiChatComponent:**
-* **Inputs:** `isOpen` (Visibilidad), `title` (Encabezado).
-* **Features:** Auto-scroll al recibir mensajes, detección de "Enter" para enviar, estado de "Escribiendo...".
-* **Rendering:** Soporte básico para Markdown (negritas, listas) en las respuestas del bot.
+* **Inputs:** ninguno. Known deviation (#1038): `isOpen` es un `signal(false)` interno y el encabezado sale de `title` en `ChatConfig`; tampoco existen outputs.
+* **Features:** Auto-scroll al cambiar el historial de mensajes, envío con "Enter" (`keyup.enter`), indicador de escritura mientras `isLoading()` es verdadero, y adjunto opcional (un archivo por mensaje, desactivado por defecto).
+* **Rendering:** Known deviation (#1038): el texto se interpola sin Markdown (`{{ msg.text }}`).
 
 
 * **ChatService:**
-* **Http Client:** Envía POST a la URL configurada.
-* **Session Handler:** Genera un UUID v4 al iniciar y lo envía en cada request headers para que n8n mantenga la memoria (`Memory Buffer Window`).
+* **AiService (no existe `ChatService`):**
+* **Http Client:** Envía POST a `apiUrl_ai`.
+* **Session Handler:** Genera `'web-' + crypto.randomUUID()` y lo envía como `sessionId` en el cuerpo (no en headers) de cada request para que n8n mantenga la memoria.
+* **Tenant:** Envía `tenant_id` (`TenantService.activeTenant()?.id_company` de `core-auth`) en el cuerpo. Known deviation (#1038): no hay verificación previa; si no hay tenant activo, la petición se envía sin `tenant_id`.
 
 
 
@@ -64,10 +73,10 @@ projects/ui-chat/src/lib/
 
 1. **User Input:** El usuario escribe y presiona Enviar.
 2. **Optimistic Update:** La UI muestra inmediatamente el mensaje del usuario y un loader ("...").
-3. **Transport:** `ChatService` envía el payload `{ text: "...", sessionId: "xyz" }`.
+3. **Transport:** `AiService` envía el payload `{ chatInput: "...", sessionId: "web-<uuid>", tenant_id: <id_company> }` (más `file: { name, type, size, base64 }` si hay adjunto) y lee `response.output`.
 4. **Response:**
-* *Éxito:* Se reemplaza el loader con la respuesta de texto del agente.
-* *Error:* Se muestra un toast de error y se permite reintentar.
+* *Éxito:* Se agrega la respuesta de texto del agente (`output`) al historial y se apaga el loader.
+* *Error:* Se agrega un mensaje del bot en español con el aviso de error (no hay toast). Con adjunto, el mensaje del usuario se retira del historial y el borrador y el archivo se conservan para reintentar; sin adjunto, el mensaje del usuario permanece.
 
 ## 📦 Authors
 
