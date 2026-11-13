@@ -10,9 +10,9 @@
 **Core Auth** es una librería transversal diseñada para unificar la autenticación y la resolución de contexto multi-empresa (Tenant). Su responsabilidad principal es interceptar peticiones, inyectar credenciales y bloquear rutas no autorizadas.
 
 ## 1. High-Level Design
-La librería utiliza el `InjectionToken` `AUTH_ENV_CONFIG` para recibir las URLs de la API desde la aplicación host (`apiUrl_crud`, `apiUrl_token`, `apiUrl_ai`, `system_id` y, opcionalmente, `apiUrl_upload`)[cite: 29]. El `authInterceptor`[cite: 27] adjunta el JWT (`Authorization: Bearer`) solo a las peticiones cuya URL empieza por `apiUrl_crud`, `apiUrl_ai` o `apiUrl_upload`. El `tenantInterceptor` (`interceptors/tenant.interceptor.ts`) adjunta el `id_company` activo como cabecera `X-Tenant-ID` (y `x-tenant-id`) a toda petición cuando hay tenant activo; un host debe registrarlo explícitamente (hoy lo hace `agro-erp`).
+La librería utiliza el `InjectionToken` `AUTH_ENV_CONFIG` para recibir las URLs de la API desde la aplicación host (`apiUrl_crud`, `apiUrl_token`, `apiUrl_ai`, `system_id` y, opcionalmente, `apiUrl_upload`)[cite: 29]. El `authInterceptor`[cite: 27] adjunta el JWT (`Authorization: Bearer`) solo a las peticiones cuyo origen (esquema + host + puerto) coincide exactamente con el de `apiUrl_crud`, `apiUrl_token`, `apiUrl_ai` o `apiUrl_upload`. El `tenantInterceptor` (`interceptors/tenant.interceptor.ts`) adjunta el `id_company` activo como cabecera `X-Tenant-ID` (y `x-tenant-id`) solo a esos mismos orígenes cuando hay tenant activo; un host debe registrarlo explícitamente (hoy lo hace `agro-erp`).
 
-> **Known deviation (#1037):** ninguno de los dos interceptores es fail-closed. Sin token o sin tenant activo, la petición sale sin modificar. Ver [`README.md`](README.md#multi-tenant-behavior).
+> **Known deviation (#1037):** ninguno de los dos interceptores es fail-closed. Sin token o sin tenant activo, la petición sale sin modificar (la cabecera y el JWT sí salen solo a los orígenes permitidos). Ver [`README.md`](README.md#multi-tenant-behavior).
 
 ```mermaid
 graph TD

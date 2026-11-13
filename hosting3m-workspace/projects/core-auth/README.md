@@ -11,7 +11,7 @@ It abstracts the complexity of token management and tenant selection (Multi-empr
 * **Multi-Tenant Context:** Built-in `CompanyContext` management supporting multi-company environments (`id_company`, `company_name`, `role`)[cite: 29].
 * **Standalone Architecture:** Fully compatible with modern Angular using standalone components and functional interceptors.
 * **Zero-Config Logic:** Relies on the consuming app to provide environment variables via the `AUTH_ENV_CONFIG` InjectionToken[cite: 29].
-* **Integrated Security:** Ships with `authGuard`, `roleGuard`, `authInterceptor` and `tenantInterceptor`. `authInterceptor` attaches the JWT only to requests under the configured API base URLs; `tenantInterceptor` attaches the active company header to all outgoing requests. Both must be registered by the host (see Setup). Neither one is fail-closed (see [Multi-tenant behavior](#multi-tenant-behavior)).
+* **Integrated Security:** Ships with `authGuard`, `roleGuard`, `authInterceptor` and `tenantInterceptor`. Both interceptors attach the JWT / the active company header only to requests whose origin exactly matches the origin of `apiUrl_crud`, `apiUrl_token`, `apiUrl_ai` or `apiUrl_upload`. Both must be registered by the host (see Setup). Neither one is fail-closed (see [Multi-tenant behavior](#multi-tenant-behavior)).
 
 ## 🛠 Installation & Integration
 
@@ -70,8 +70,8 @@ Register `authInterceptor` and `tenantInterceptor` explicitly with
 | `TenantService` | service | `availableTenants`, `activeTenant`, `activeTenantId`, `setAvailableTenants()`, `setActiveTenant()`, `clearContext()`, `hydrate()` |
 | `authGuard` | `CanActivateFn` | Allows navigation when a non-expired token exists; otherwise redirects to `/login` |
 | `roleGuard(roles)` | factory returning `CanActivateFn` | Requires an authenticated user whose JWT role is in `roles` (case-insensitive); otherwise redirects to `/login` or `/unauthorized` |
-| `authInterceptor` | `HttpInterceptorFn` | Adds `Authorization: Bearer <token>` to requests under the configured API base URLs; handles HTTP 401 |
-| `tenantInterceptor` | `HttpInterceptorFn` | Adds `X-Tenant-ID` and `x-tenant-id` when an active tenant is set |
+| `authInterceptor` | `HttpInterceptorFn` | Adds `Authorization: Bearer <token>` to requests whose origin matches a configured API origin; handles HTTP 401 |
+| `tenantInterceptor` | `HttpInterceptorFn` | Adds `X-Tenant-ID` and `x-tenant-id` when an active tenant is set and the request origin matches a configured API origin |
 | `CoreAuth` | component (`lib-core-auth`) | Placeholder generated with the library. Not a feature; see [Limitations](#limitations-and-todoverify) |
 
 `TenantSelectorComponent` is not part of the public API. Host applications provide their own
@@ -143,13 +143,15 @@ authentication signals, and calls `TenantService.clearContext()`.
   must be enforced server-side by the gateway. TODO(verify): confirm the `x-tenant-id` membership
   check in the n8n gateway workflows for this suite.
 - **Propagation.** [`tenant.interceptor.ts`](src/lib/interceptors/tenant.interceptor.ts)
-  sets `X-Tenant-ID` and `x-tenant-id` on every outgoing `HttpClient` request when an active tenant
-  exists. It does not filter by URL, so the header is sent to any host the app calls.
+  sets `X-Tenant-ID` and `x-tenant-id` on an outgoing `HttpClient` request when an active tenant
+  exists and the request origin exactly matches the origin of `apiUrl_crud`, `apiUrl_token`,
+  `apiUrl_ai` or `apiUrl_upload`. Other, relative or unparseable URLs get no header (a warning is
+  logged in dev mode only).
 - **Fail-closed: not implemented.** The project governance requires fail-closed behavior, but the
   code does not provide it:
   - [`auth.interceptor.ts`](src/lib/auth/auth.interceptor.ts)
-    sends the request without `Authorization` when there is no token or the URL is not a protected
-    base URL.
+    sends the request without `Authorization` when there is no token or the URL's origin is not an
+    allowed origin.
   - `tenantInterceptor` sends the request without tenant headers when there is no active tenant.
 
   In both cases the request is sent unchanged, without the missing credential or header. See RISK-1.
@@ -195,9 +197,10 @@ TODO(verify): confirm that the suite passes on the current `main` branch.
   as an error.
 - **RISK-3 (token storage).** The JWT is stored in `localStorage` under `authToken`. Any script running
   in the page can read it.
-- **RISK-4 (prefix match).** `authInterceptor` uses `req.url.startsWith(baseUrl)`. A base URL without a
-  trailing slash also matches look-alike hosts, which would receive the token. Keep base URLs as exact
-  origins and paths.
+- **RISK-4 (prefix match) — mitigated (#1037).** Both interceptors compare the exact origin
+  (`new URL(...).origin`) instead of a string prefix, so look-alike hosts and other ports or schemes get
+  no token or tenant header. Matching is by origin only, not by path: any path on an allowed origin
+  receives the credentials.
 - **RISK-5 (missing peer dependencies).** `package.json` declares only `@angular/common` and
   `@angular/core` as peers. The source imports `@angular/router`, `rxjs` and `jwt-decode`.
   TODO(verify): confirm how consumers get `jwt-decode` and whether the build bundles it.
