@@ -10,7 +10,7 @@
 ## TECH STACK & ARCHITECTURE
 - Framework: Angular 21 (Standalone Components ONLY, Signal-based state management).
 - NO NgModules. Avoid RxJS unless handling complex async streams/interceptors.
-- UI: Tailwind CSS v3 / Tabler UI.
+- UI: Tailwind CSS v4 (`hotel-website`, via `@tailwindcss/postcss`) / Tabler UI (`dashboard`).
 - DB / Backend: PostgreSQL (JSONB + pgvector), Node.js, n8n Enterprise webhooks.
 
 ## REPOSITORY MAP
