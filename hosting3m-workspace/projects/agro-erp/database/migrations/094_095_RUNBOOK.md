@@ -68,7 +68,7 @@ There is **no script that undoes 094**. The file `094_rollback.sql` undoes **095
 
 ## 9. Known risks
 
-- **Wrapper argument handling.** In `dry` and `apply`, any second argument that is not exactly `094` selects the 095 script. A typo such as `apply 94` applies **095**. Type the number exactly and read the last line of the dry run before the real run. (The `check` and `rollback-*` commands are not affected.)
+- **Wrapper argument handling.** In `dry` and `apply`, the second argument must be exactly `094` or `095`. Any other value, or a missing argument, prints `migration must be 094 or 095` and exits with code 2 before any SQL file is read. Still read the last line of the dry run before the real run. (The `check` and `rollback-*` commands are not affected.)
 - **Tenant isolation.** The 094 script assigns `id_company = 1` to every existing ticket and checks only that company 1 exists. It cannot check that all those tickets really belong to company 1; that premise comes from the SQL header and must be confirmed by the owner. After this change, hotel screens show data for company 1 only, and users who belong to several companies get the company they select at login.
 - **095 and the old workflow.** After 095, any insert into `hotel_maintenance_tickets` without `id_company` fails (`NOT NULL`, no default).
 - **Lock timeout.** All three scripts use `lock_timeout = 5s`: if the table is busy they abort instead of waiting. Re-run later; nothing is left half-done because each script is one transaction.
