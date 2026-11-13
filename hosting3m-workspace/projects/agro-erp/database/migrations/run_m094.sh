@@ -6,8 +6,13 @@ cd "$(dirname "$0")"
 p() { docker exec -i n8n-enterprise-db sh -c 'psql -U "$POSTGRES_USER" -d hosting3m_db -v ON_ERROR_STOP=1 "$@"' sh "$@"; }
 case "${1:-}" in
   check)          p -v expect="$2" -f - < 094_state_check.sql ;;
-  dry)            p -f - < "$( [ "$2" = 094 ] && echo 094_hotel_tickets_tenant.sql || echo 095_hotel_tickets_drop_default.sql )" ;;
-  apply)          p -v apply=true -f - < "$( [ "$2" = 094 ] && echo 094_hotel_tickets_tenant.sql || echo 095_hotel_tickets_drop_default.sql )" ;;
+  dry|apply)
+    case "${2:-}" in
+      094) sql=094_hotel_tickets_tenant.sql ;;
+      095) sql=095_hotel_tickets_drop_default.sql ;;
+      *) echo "migration must be 094 or 095" >&2; exit 2 ;;
+    esac
+    if [ "$1" = apply ]; then p -v apply=true -f - < "$sql"; else p -f - < "$sql"; fi ;;
   rollback-dry)   p -f - < 094_rollback.sql ;;
   rollback-apply) p -v apply=true -f - < 094_rollback.sql ;;
   *) echo "see header"; exit 2 ;;
