@@ -1,5 +1,5 @@
 > ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (base de datos y n8n verificados con sus huellas).
-> `main` publica automáticamente los frontends por Plesk. El orden obligatorio es base de datos → workflows →
+> `main` se despliega manualmente: el dueño entra a Plesk y despliega con git. El orden obligatorio es base de datos → workflows →
 > frontend. No publiques el frontend antes de completar y verificar las partes 1 y 2.
 
 # Runbook 097 — selección FIFO para ventas de animales no identificados
