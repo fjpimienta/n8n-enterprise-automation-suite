@@ -440,6 +440,55 @@ describe('palm dashboard income vs. expense block', () => {
     expect(card(t, 'Balance')).toContain('+$60.00');
   });
 
+  it('a failed sales request followed by a successful one after a period change leaves no error behind', async () => {
+    let n = 0;
+    const t = setup({ balance: echo(1500), sales: q => (n++ === 0 ? Promise.reject(new Error('Sin conexión con ventas')) : echoSales(3000)(q)) });
+    await t.settle();
+    expect(card(t, 'Ventas (total con impuestos)')).toContain('Sin conexión con ventas');
+    expect(card(t, 'Balance')).toContain('No se pudieron cargar las ventas.');
+    await t.press('Año');
+    expect(card(t, 'Ventas (total con impuestos)')).toContain('$3,000.00');
+    expect(card(t, 'Ventas (total con impuestos)')).not.toContain('Sin conexión con ventas');
+    expect(card(t, 'Balance')).toContain('+$1,500.00');
+    expect(card(t, 'Balance')).not.toContain('No se pudieron cargar las ventas.');
+  });
+
+  it('the same after a scope change', async () => {
+    let n = 0;
+    const t = setup({ balance: echo(1500), sales: q => (n++ === 0 ? Promise.reject(new Error('Sin conexión con ventas')) : echoSales(2000)(q)) });
+    await t.settle();
+    await t.press('Esta plantación');
+    expect(card(t, 'Ventas (total con impuestos)')).not.toContain('Sin conexión con ventas');
+    expect(card(t, 'Balance')).toContain('+$500.00');
+  });
+
+  it('while the new period loads, the sales total of the previous period is not shown', async () => {
+    const pending = defer<SaleBalance>();
+    let n = 0;
+    const t = setup({ balance: echo(1500), sales: q => (n++ === 0 ? echoSales(2468)(q) : pending.promise) });
+    await t.settle();
+    expect(card(t, 'Ventas (total con impuestos)')).toContain('$2,468.00');
+    await t.press('Año');
+    expect(card(t, 'Ventas (total con impuestos)')).not.toContain('2,468');
+    expect(card(t, 'Ventas (total con impuestos)')).toContain('Calculando…');
+    expect(card(t, 'Balance')).not.toMatch(/[+−]\$/);
+    pending.resolve(salesBal(4000, { dateFrom: t.salesCalls[1].dateFrom, dateTo: t.salesCalls[1].dateTo }));
+    await t.settle();
+    expect(card(t, 'Ventas (total con impuestos)')).toContain('$4,000.00');
+  });
+
+  it('if the reload fails, the previous period total does not stay and there is no balance', async () => {
+    let n = 0;
+    const t = setup({ balance: echo(1500), sales: q => (n++ === 0 ? echoSales(2468)(q) : Promise.reject(new Error('Sin conexión con ventas'))) });
+    await t.settle();
+    expect(card(t, 'Balance')).toContain('+$968.00');
+    await t.press('Año');
+    expect(card(t, 'Ventas (total con impuestos)')).not.toContain('2,468');
+    expect(card(t, 'Ventas (total con impuestos)')).toContain('Sin conexión con ventas');
+    expect(card(t, 'Balance')).toContain('No se pudieron cargar las ventas.');
+    expect(card(t, 'Balance')).not.toMatch(/[+−]\$/);
+  });
+
   it('no active company: nothing is requested', async () => {
     const t = setup({ balance: echo(1500), sales: echoSales(2468) });
     await t.settle();
