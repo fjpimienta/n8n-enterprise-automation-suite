@@ -1,7 +1,7 @@
 # Runbook — Palma Fase 2a: gastos agrícolas (081 + `v6/CRUD` + frontend)
 
-Orden obligatorio: **base de datos → n8n → frontend**. El frontend llega con el merge a `main` (Plesk lo
-publica solo), así que **el merge va al final**, cuando 1 y 2 estén verificados. Cada paso se corre en un
+Orden obligatorio: **base de datos → n8n → frontend**. El frontend llega con el merge a `main` (se despliega
+manualmente por Plesk con git), así que **el merge va al final**, cuando 1 y 2 estén verificados. Cada paso se corre en un
 comando aparte, revisando la salida antes del siguiente; nunca `apply=true` en el mismo comando que las pruebas.
 
 Pruebas en producción: **solo la empresa 10** ("Plantación de Pruebas"). La empresa 7 es cliente real: nunca se
@@ -165,10 +165,10 @@ se trata como fecha).
 
 ## 3. Frontend: merge a `main` (solo con 1 y 2 verificados)
 
-1. Merge por el flujo habitual (rama → `develop` → `main`). Plesk publica `agroerp.hosting3m.com` desde `main`.
+1. Merge por el flujo habitual (rama → `develop` → `main`). El dueño despliega `agroerp.hosting3m.com` desde `main` manualmente en Plesk con git.
 2. Recargar sin caché y confirmar que la empresa 10 muestra **Gastos** en el menú de palma.
 
-**Rollback del frontend:** PR con `git revert -m 1 <merge de main>`; Plesk vuelve a publicar. Los datos capturados
+**Rollback del frontend:** PR con `git revert -m 1 <merge de main>`; el dueño vuelve a desplegar manualmente en Plesk. Los datos capturados
 se conservan.
 
 ## 4. Pruebas en producción (empresa 10)
