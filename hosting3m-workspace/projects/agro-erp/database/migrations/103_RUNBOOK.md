@@ -1,5 +1,5 @@
 > ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (base de datos y n8n, verificadas con sus huellas).
-> `main` publica automáticamente los frontends por Plesk. Este PR no cambia el frontend, pero el estado del repositorio no debe
+> `main` se despliega manualmente: el dueño entra a Plesk y despliega con git. Este PR no cambia el frontend, pero el estado del repositorio no debe
 > divergir del de producción.
 
 > ⚠️ **ESTADO: probado en una base local descartable (scratch_100, PostgreSQL 15.4); NO aplicado en producción; la importación del
