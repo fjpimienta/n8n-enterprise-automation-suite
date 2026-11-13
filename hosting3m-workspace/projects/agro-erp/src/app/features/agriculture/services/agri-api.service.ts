@@ -32,13 +32,14 @@ import {
 } from '@core/models/agri-expense.model';
 import { AgriSale, SaleBalance, SaleBalanceQuery, SaleListQuery } from '@core/models/agri-sale.model';
 import { buildCategoryFields, buildExpenseFields, parseExpenseBalance } from '../utils/expense.util';
-import { parseSalesBalance } from '../utils/sale.util';
+import { normalizeVoidReason, parseSalesBalance, validateSaleVoidReason } from '../utils/sale.util';
 import {
   UNCONFIRMED_MESSAGE,
   buildLotFields,
   buildPlantationFields,
   friendlyGatewayError,
   interpretSpResponse,
+  interpretStatusSpResponse,
   isPossiblyTruncated,
   toBool,
   toInt,
@@ -384,6 +385,20 @@ export class AgriApiService {
     return { items, possiblyTruncated: isPossiblyTruncated(raw.length) };
   }
 
+  /**
+   * Voids a sale (ADMIN only). The sale is re-read with a tenant-scoped getone first (the id from the UI is never trusted);
+   * the reason is normalized and validated before any call. OK and ALREADY_VOID are both final: the second one resolves
+   * with `alreadyVoid: true`. Any other status is thrown with a fixed Spanish text.
+   */
+  async voidSale(id: string, reason: string): Promise<{ alreadyVoid: boolean }> {
+    const clean = normalizeVoidReason(reason);
+    const invalid = validateSaleVoidReason(clean);
+    if (invalid) throw new Error(invalid);
+    const current = await this.getOwned('agri_sales', id, 'La venta no existe o no pertenece a la empresa activa.');
+    const outcome = await this.callStatusSp('agri_sale_void', { sale_id: current['id'], reason: clean });
+    return { alreadyVoid: outcome.status === 'ALREADY_VOID' };
+  }
+
   /** Totals of any filter combination, computed by sp_agri_sales_balance (voided sales are not counted). */
   async getSalesBalance(query: SaleBalanceQuery): Promise<SaleBalance> {
     const data = await this.callSp('agri_sale_balance', {
@@ -430,6 +445,15 @@ export class AgriApiService {
     const outcome = interpretSpResponse(res);
     if (!outcome.ok) throw new Error(outcome.message);
     return outcome.data;
+  }
+
+  /** call_sp whose procedure answers a `status` (no `success` key): see interpretStatusSpResponse. */
+  private async callStatusSp(model: string, fields: Record<string, unknown>): Promise<{ status: string; data: Record<string, unknown> }> {
+    this.requireTenant();
+    const res = await firstValueFrom(this.http.post(`${this.apiUrl}/${model}`, { operation: 'call_sp', fields }));
+    const outcome = interpretStatusSpResponse(res);
+    if (!outcome.ok) throw new Error(outcome.message);
+    return outcome;
   }
 
   private rows(res: any): Row[] {

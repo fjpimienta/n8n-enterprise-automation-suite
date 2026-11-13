@@ -17,15 +17,19 @@ const saleRow = (o: Record<string, unknown> = {}) => ({
   created_at: '2026-11-12T18:30:00.000Z', ...o,
 });
 
+let current: HttpTestingController | null = null;
+// Every request of a test must have been answered; a test that rebuilds the module verifies and clears this itself.
+afterEach(() => { current?.verify(); current = null; });
+
 function setup(tenant: string | null = String(TENANT)) {
   TestBed.configureTestingModule({
     providers: [provideHttpClient(), provideHttpClientTesting(), { provide: TenantService, useValue: { activeTenantId: () => tenant } }],
   });
-  return { service: TestBed.inject(AgriApiService), http: TestBed.inject(HttpTestingController) };
+  current = TestBed.inject(HttpTestingController);
+  return { service: TestBed.inject(AgriApiService), http: current };
 }
 
 describe('AgriApiService.getSales', () => {
-  afterEach(() => TestBed.inject(HttpTestingController).verify());
   const query = { dateFrom: '2026-11-01', dateTo: '2026-11-30', plantationId: null, lotId: null, status: 'ALL' as const };
 
   it('posts a getall on agri_sales with the company, the date range, limit 2000 and sort_by sale_date', async () => {
@@ -125,7 +129,6 @@ describe('AgriApiService.getSales', () => {
 });
 
 describe('AgriApiService.getSalesBalance', () => {
-  afterEach(() => TestBed.inject(HttpTestingController).verify());
   const answer = { success: true, grain: 'MONTH', date_from: '2026-11-01', date_to: '2026-11-30', total_amount: '500.25', sale_count: 2, total_quantity_kg: '60', by_period: [], by_plantation: [] };
 
   it('calls agri_sale_balance with call_sp, ids as null instead of "" and no company or e-mail in the payload', async () => {
@@ -169,5 +172,84 @@ describe('AgriApiService.getSalesBalance', () => {
     const { service, http } = setup(null);
     await expect(service.getSalesBalance({ dateFrom: '', dateTo: '', grain: 'MONTH', plantationId: null, lotId: null })).rejects.toBeInstanceOf(AgriTenantContextError);
     http.expectNone(`${environment.apiUrl_crud}/agri_sale_balance`);
+  });
+});
+
+describe('AgriApiService.voidSale', () => {
+  const url = (model: string) => `${environment.apiUrl_crud}/${model}`;
+  const flushOwned = (http: HttpTestingController, row: Record<string, unknown> | null) =>
+    http.expectOne(url('agri_sales')).flush({ error: false, data: row ? [row] : [{}] });
+  const tick = async () => { for (let i = 0; i < 5; i++) await Promise.resolve(); };
+
+  it('re-reads the sale with getone, then calls agri_sale_void with only {sale_id, reason} and resolves on OK', async () => {
+    const { service, http } = setup();
+    const pending = service.voidSale('s1', '  Capturada\ndos veces  ');
+    const getone = http.expectOne(url('agri_sales'));
+    expect(getone.request.body).toEqual({ operation: 'getone', filters: { id: 's1' } });
+    getone.flush({ error: false, data: [saleRow()] });
+    await tick();
+    const call = http.expectOne(url('agri_sale_void'));
+    expect(call.request.body).toEqual({ operation: 'call_sp', fields: { sale_id: 's1', reason: 'Capturada dos veces' } });
+    expect(JSON.stringify(call.request.body)).not.toMatch(/id_company|tenant|actor_email/);
+    call.flush({ error: false, data: { status: 'OK', sale_id: 's1' } });
+    expect(await pending).toEqual({ alreadyVoid: false });
+  });
+
+  it('ALREADY_VOID resolves with alreadyVoid: true', async () => {
+    const { service, http } = setup();
+    const pending = service.voidSale('s1', 'Motivo válido');
+    flushOwned(http, saleRow({ status: 'VOID' }));
+    await tick();
+    http.expectOne(url('agri_sale_void')).flush({ error: false, data: { status: 'ALREADY_VOID', sale_id: 's1' } });
+    expect(await pending).toEqual({ alreadyVoid: true });
+  });
+
+  it('NOT_FOUND, FORBIDDEN, NOT_PALM, INVALID_REASON and unknown statuses are thrown with fixed Spanish texts', async () => {
+    const cases: Array<[string, string]> = [
+      ['NOT_FOUND', 'La venta no existe en la empresa activa. Vuelve a cargar la lista.'],
+      ['FORBIDDEN', 'Solo un administrador de la empresa puede anular ventas.'],
+      ['NOT_PALM', 'La empresa activa no es de palma.'],
+      ['INVALID_REASON', 'El motivo debe tener entre 5 y 300 caracteres.'],
+      ['WHATEVER', 'El servidor no confirmó la operación. Revisa la lista antes de reintentar.'],
+    ];
+    for (const [status, message] of cases) {
+      const { service, http } = setup();
+      const pending = service.voidSale('s1', 'Motivo válido');
+      flushOwned(http, saleRow());
+      await tick();
+      http.expectOne(url('agri_sale_void')).flush({ error: false, data: { status, message: 'texto sin acentos' } });
+      await expect(pending).rejects.toThrow(message);
+      http.verify();
+      current = null;
+      TestBed.resetTestingModule();
+    }
+  });
+
+  it('an invalid reason makes no call at all', async () => {
+    const { service, http } = setup();
+    for (const reason of ['', '    ', 'abcd', '\n\n\n\n\n', 'x'.repeat(301)]) {
+      await expect(service.voidSale('s1', reason)).rejects.toThrow();
+    }
+    http.expectNone(url('agri_sales'));
+    http.expectNone(url('agri_sale_void'));
+  });
+
+  it('a sale that is not found, or belongs to another company, is not voided: no procedure call', async () => {
+    for (const row of [null, saleRow({ id_company: OTHER }), saleRow({ id: 'other-id' })]) {
+      const { service, http } = setup();
+      const pending = service.voidSale('s1', 'Motivo válido');
+      flushOwned(http, row);
+      await expect(pending).rejects.toBeInstanceOf(AgriTenantContextError);
+      http.expectNone(url('agri_sale_void'));
+      http.verify();
+      current = null;
+      TestBed.resetTestingModule();
+    }
+  });
+
+  it('fails closed without an active company: no request', async () => {
+    const { service, http } = setup(null);
+    await expect(service.voidSale('s1', 'Motivo válido')).rejects.toBeInstanceOf(AgriTenantContextError);
+    http.expectNone(url('agri_sales'));
   });
 });
