@@ -273,9 +273,15 @@ export class App implements OnInit {
 
     this.http.post(`${this.apiUrl_public}/lead`, payload).subscribe({
       next: (res: any) => {
-        this.formStatus.set('success');
         this.isSubmitting.set(false);
-        setTimeout(() => this.resetWizard(), 20000);
+        // A failed n8n execution answers HTTP 200 with an empty body: only an explicit success counts.
+        if (res?.status === 'success' && res?.booking_id) {
+          this.formStatus.set('success');
+          setTimeout(() => this.resetWizard(), 20000);
+        } else {
+          this.formStatus.set('error');
+          console.error('Unexpected response from the booking endpoint:', res);
+        }
       },
       error: (err) => {
         this.isSubmitting.set(false);
