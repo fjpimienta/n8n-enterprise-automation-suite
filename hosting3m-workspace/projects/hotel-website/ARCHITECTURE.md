@@ -57,7 +57,7 @@ triggering a deployment.
 Automatic deployment is not active. After a release reaches `main`, trigger the action
 manually in Plesk with **Deploy now**.
 
-TODO(verify): the root `CLAUDE.md` says `main` publishes the frontends automatically through Plesk, which conflicts with this section and `README.md`; the Plesk action itself is not defined in the repository.
+TODO(verify): the Plesk action itself (its build steps) is not defined in the repository.
 
 #### Tailwind v4 deployment troubleshooting
 
