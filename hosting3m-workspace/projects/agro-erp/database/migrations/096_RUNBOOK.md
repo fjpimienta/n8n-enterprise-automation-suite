@@ -1,6 +1,6 @@
 > ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (base de datos y n8n, verificadas con sus huellas).
 > Las partes 1 y 2 ya están completadas y verificadas; este PR completa la parte 3 mostrando «Sin guía» en el
-> panel de autorizaciones. `main` publica automáticamente los frontends por Plesk: integrar y publicar solo como
+> panel de autorizaciones. `main` se despliega manualmente: el dueño entra a Plesk y despliega con git; integrar y desplegar solo como
 > parte del release planificado.
 
 # Runbook 096 — cumplimiento de venta según especie
