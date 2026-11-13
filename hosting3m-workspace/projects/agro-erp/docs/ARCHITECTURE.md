@@ -960,3 +960,16 @@ procedure contracts for migrations 080–093.
 * **Void reason.** 5 to 300 characters after turning control characters (line breaks included) into spaces and trimming, as the procedure does; the expense validator (500) is not reused.
 * **Variation.** Like the expenses: a second balance call for the comparable previous range (`comparisonFor`); the quarter or year in progress has no comparison.
 
+## 💰 13. Palm dashboard: income vs. expense block
+
+* **Where.** Inside the expense overview of `dashboard/components/palm-dashboard/` (it shares the period and scope selectors); the pure rules live in `utils/income-expense.util.ts`.
+* **Access.** `canSeeBalance = canManageSales(role of the active company)`, i.e. ADMIN only. The expense overview keeps its own ADMIN/OWNER rule, so an OWNER sees the expenses but the sales are never requested. Fail-closed:
+  no company or no permission means no request; both figures are cleared on a company or role change.
+* **Data.** Sales: `getSalesBalance` (`sp_agri_sales_balance`) with the dates, grain and plantation of the expense plan and the lot always null. Expenses: the current-period balance the overview already loads. Totals always come from the
+  database; the client only subtracts the two totals, in integer cents (`toCents`, `netBalance`), and formats with `formatMoney` / `formatSignedMoney`.
+* **No half balance.** `buildIncomeExpense` returns a balance only when both figures exist, are finite and both answers carry the requested `date_from` / `date_to`; `balanceAvailability` turns every other case into a status and a short
+  Spanish reason ("No se pudieron cargar las ventas.", "...los gastos.", "Las cifras no corresponden al mismo periodo.", "Elige una plantación para ver el balance."). Each figure has its own loading and error signal.
+* **Races.** The sales request uses the same `seq` / `live()` guard as the expense requests, so an answer of a previous selection or company is dropped; the range check is a second defense.
+* **Basis of the figures.** Sales are the voucher total (taxes included) by voucher date; expenses are the amount as captured, by the captured date, with no tax breakdown. Neither procedure filters test records, so in a test company both sides include them.
+  The block is labelled "Cifra orientativa, no es un resultado contable".
+

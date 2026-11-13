@@ -5,6 +5,15 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🌴 Palm dashboard: income vs. expense block
+
+* New block "Ingresos vs. gastos" on the palm dashboard, **ADMIN of the active company only** (other roles see the dashboard exactly as before and make no sales request). It uses the same period (month, quarter, year) and scope
+  (whole company or this plantation) as the expense overview: "Ventas (total con impuestos)" from `sp_agri_sales_balance`, "Gastos (monto capturado)" from the expense balance the dashboard already loads, and "Balance"
+  (sales minus expenses, shown with its sign). Voided sales and expenses are not counted.
+* Each figure has its own loading and error state. The balance is shown only when both figures are present and both answers carry the requested `date_from` / `date_to`; otherwise it reads "No disponible" with a short reason.
+  The subtraction is done in integer cents. A visible note states that the figure is indicative and not an accounting result (the expense amount is the captured one, without a tax breakdown).
+* Frontend only: no database, gateway or n8n change; no previous-period comparison in this block.
+
 ### 🌴 Palm dashboard: Ventas screen (PR E)
 
 * New screen `agricultura/ventas` (sidebar entry "Ventas"), **ADMIN of the active palm company only** (OWNER, EDITOR and CUSTOMER do not see it and are sent back to the palm dashboard; the gateway refuses them regardless).
