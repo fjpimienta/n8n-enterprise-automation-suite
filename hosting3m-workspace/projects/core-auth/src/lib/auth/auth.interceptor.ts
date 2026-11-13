@@ -4,6 +4,7 @@ import { catchError, throwError } from 'rxjs';
 import { Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 import { AUTH_ENV_CONFIG } from '../auth.config'; // <-- Importa tu token
+import { isAllowedOrigin } from '../allowed-origin';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
@@ -13,11 +14,8 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   let clonedReq = req;
   const token = authService.getStoredToken();
 
-  // apiUrl_upload added: without it, requests to the upload service never
-  // receive the Authorization header, since the service now requires
-  // authentication (JWT or internal secret) on both upload and read.
-  const protectedApis = [envConfig.apiUrl_crud, envConfig.apiUrl_ai, envConfig.apiUrl_upload].filter(Boolean);
-  const isApiRequest = protectedApis.some(url => req.url.startsWith(url!));
+  // Exact-origin allowlist derived from AUTH_ENV_CONFIG (crud, token, ai, upload); see #1037.
+  const isApiRequest = isAllowedOrigin(req.url, envConfig);
 
   if (token && isApiRequest) {
     clonedReq = req.clone({
