@@ -1,7 +1,7 @@
 # Runbook — Reproduction tracking, phase 2: empadre (migration 085 + n8n tools)
 
 > ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (base de datos y n8n, verificadas con sus huellas).
-> `main` despliega el frontend solo (Plesk): si se mergea antes, la pantalla nueva falla en producción.
+> `main` se despliega manualmente: el dueño entra a Plesk y despliega con git. Si el frontend se despliega antes, la pantalla nueva falla en producción.
 > *This phase does not touch the frontend; the merge still goes last, per the rule.*
 
 **Requires migration 084.** 085 aborts at its first block if `fn_repro_ctx` / `vw_animal_effective_birth` are missing. 084 is **not**
