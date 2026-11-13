@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { TenantService } from 'core-auth';
 import { LotSummary, PlantationSummary, STAGE_OPTIONS } from '@core/models/agri.model';
 import { ExpenseBalance } from '@core/models/agri-expense.model';
+import { SaleBalance } from '@core/models/agri-sale.model';
 import { KpiCardComponent, KpiTone } from '@shared/expenses-ui/kpi-card.component';
 import { PeriodChipsComponent } from '@shared/expenses-ui/period-chips.component';
 import { ShareBarListComponent, ShareItem } from '@shared/expenses-ui/share-bar-list.component';
@@ -18,12 +19,17 @@ import {
   OVERVIEW_PRESETS, OVERVIEW_SCOPES, OverviewPlan, OverviewPreset, OverviewScope, categoryGroups, plantationGroups, planOverview,
 } from '../../../utils/expense-overview.util';
 import { densityComparison, lotsByStage, plantTotals } from '../../../utils/palm-dashboard.util';
+import { balanceAvailability, buildIncomeExpense, formatSignedMoney } from '../../../utils/income-expense.util';
+import { canManageSales } from '../../../utils/sale.util';
 
 /**
  * Palm dashboard (read-only) for the ACTIVE plantation, from vw_agri_plantation_summary and
  * vw_agri_lot_summary. The only financial block is the expense overview, for ADMIN / OWNER only, from
  * sp_agri_expense_balance (totals computed by the database; here only ratios of what it returns are derived).
  * Each part of the overview (current period, previous period, company total) loads and fails on its own.
+ * ADMIN only, on top of that: an income-vs-expense block (sales from sp_agri_sales_balance, expenses from the balance above)
+ * for the same period and scope. Each figure has its own loading and error state; the balance (income minus expense, in
+ * integer cents) exists only when both are present and both answers match the requested range.
  */
 @Component({
   selector: 'app-palm-dashboard',
@@ -39,6 +45,8 @@ export class PalmDashboardComponent {
   context = inject(PlantationContextService);
 
   canAdminister = computed(() => canAdministerPalm(this.tenantService.activeTenant()?.role));
+  /** Income-vs-expense block: ADMIN of the ACTIVE company only (sales are ADMIN-only; OWNER keeps just the expense block). */
+  canSeeBalance = computed(() => canManageSales(this.tenantService.activeTenant()?.role));
   plantation = this.context.activePlantation;
 
   summary = signal<PlantationSummary | null>(null);
@@ -68,6 +76,9 @@ export class PalmDashboardComponent {
   previous = signal<ExpenseBalance | null>(null);
   /** Company-wide balance of the same period: only the denominator of "Parte de la empresa" (plantation scope). */
   companyBalance = signal<ExpenseBalance | null>(null);
+  salesBalance = signal<SaleBalance | null>(null);
+  salesLoading = signal(false);
+  salesError = signal<string | null>(null);
   private seq = 0;
 
   rangeLabel = computed(() => {
@@ -112,6 +123,47 @@ export class PalmDashboardComponent {
   fourthHint = computed(() => (this.scope() === 'COMPANY' ? 'Sin plantación asignada'
     : this.companyBalance() ? 'Del gasto total de la empresa' : 'Total de la empresa no disponible'));
 
+  // Income vs. expense (ADMIN only). Everything below is derived from the two answers; nothing is added up in the client.
+  /** The range both procedures were asked for. */
+  requested = computed(() => {
+    const p = this.plan();
+    return p ? { dateFrom: p.query.dateFrom, dateTo: p.query.dateTo } : null;
+  });
+  incomeExpense = computed(() => buildIncomeExpense(this.salesBalance(), this.balance(), this.requested()));
+  availability = computed(() => balanceAvailability({
+    scopeReady: !this.noPlantation(), salesLoading: this.salesLoading(), expenseLoading: this.loading(),
+    salesError: this.salesError(), expenseError: this.error(), sales: this.salesBalance(), expense: this.balance(), requested: this.requested(),
+  }));
+  incomeText = computed(() => {
+    const s = this.salesBalance();
+    return s ? formatMoney(s.totalAmount) : this.salesLoading() ? 'Calculando…' : 'No disponible';
+  });
+  incomeHint = computed(() => {
+    const s = this.salesBalance();
+    return this.salesError() ?? (s ? `${s.saleCount} ${s.saleCount === 1 ? 'venta vigente' : 'ventas vigentes'}` : '');
+  });
+  expenseText = computed(() => {
+    const b = this.balance();
+    return b ? formatMoney(b.totalAmount) : this.loading() ? 'Calculando…' : 'No disponible';
+  });
+  expenseHint = computed(() => {
+    const b = this.balance();
+    return this.error() ?? (b ? `${b.expenseCount} ${b.expenseCount === 1 ? 'gasto vigente' : 'gastos vigentes'}` : '');
+  });
+  balanceText = computed(() => {
+    const status = this.availability().status;
+    const net = this.incomeExpense();
+    if ((status === 'ready' || status === 'empty') && net) return formatSignedMoney(net.net);
+    return status === 'loading' ? 'Calculando…' : 'No disponible';
+  });
+  balanceHint = computed(() => this.availability().reason ?? 'Ventas menos gastos');
+  /** Text next to the arrow of the balance card (never colour alone); empty when there is nothing to say. */
+  balanceBadge = computed(() => {
+    const net = this.availability().status === 'ready' ? this.incomeExpense() : null;
+    return net?.direction === 'up' ? 'A favor' : net?.direction === 'down' ? 'En contra' : '';
+  });
+  balanceTone = computed<KpiTone>(() => (this.availability().status === 'ready' ? this.incomeExpense()?.direction ?? 'flat' : 'flat'));
+
   bars = computed(() => {
     const b = this.balance();
     return b ? buildTrendBars(b.byPeriod, b.grain, this.today(), formatMoney) : [];
@@ -133,6 +185,7 @@ export class PalmDashboardComponent {
     effect(() => {
       const tenantId = this.tenantService.activeTenantId();
       this.canAdminister();
+      this.canSeeBalance();
       untracked(() => {
         this.seq++;
         this.clearOverview();
@@ -145,6 +198,7 @@ export class PalmDashboardComponent {
     effect(() => {
       const tenantId = this.tenantService.activeTenantId();
       const canSee = this.canAdminister();
+      this.canSeeBalance(); // a role change between ADMIN and OWNER reloads too
       const preset = this.preset();
       const scope = this.scope();
       const plantationId = scope === 'PLANTATION' ? this.context.activePlantationId() : null;
@@ -164,6 +218,9 @@ export class PalmDashboardComponent {
     this.plan.set(null);
     this.error.set(null);
     this.loading.set(false);
+    this.salesBalance.set(null);
+    this.salesError.set(null);
+    this.salesLoading.set(false);
   }
 
   setPreset(value: string) { this.preset.set(value as OverviewPreset); }
@@ -184,6 +241,20 @@ export class PalmDashboardComponent {
     if (!plan) return; // plantation scope without an active plantation
     const live = () => seq === this.seq;
     this.loading.set(true);
+
+    // Income of the same range and scope (lot always null). ADMIN only: any other role makes no sales request at all.
+    if (this.canSeeBalance()) {
+      this.salesLoading.set(true);
+      this.api.getSalesBalance({
+        dateFrom: plan.query.dateFrom, dateTo: plan.query.dateTo, grain: plan.query.grain, plantationId: plan.query.plantationId, lotId: null,
+      }).then(b => { if (live()) this.salesBalance.set(b); })
+        .catch((error: any) => {
+          if (!live()) return;
+          console.error('[Agro-ERP] Error al cargar las ventas del periodo:', error);
+          this.salesError.set(error?.message || 'No se pudieron cargar las ventas.');
+        })
+        .finally(() => { if (live()) this.salesLoading.set(false); });
+    }
 
     if (plan.previous) {
       this.api.getExpenseBalance(plan.previous).then(p => { if (live()) this.previous.set(p); })

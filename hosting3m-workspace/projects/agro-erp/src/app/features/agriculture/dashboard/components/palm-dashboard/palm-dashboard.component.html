@@ -106,6 +106,28 @@
             @if (error()) { <div class="exp-alert err" role="alert"><i class="ti ti-alert-triangle me-1" aria-hidden="true"></i>{{ error() }}</div> }
         </div>
 
+        @if (canSeeBalance()) {
+        <!-- Ingresos vs. gastos (ADMIN only): sales from sp_agri_sales_balance, expenses from the balance below; same period and scope -->
+        <div class="exp-card mb-3" role="group" aria-labelledby="income-expense-title">
+            <h3 class="exp-card-title" id="income-expense-title">Ingresos vs. gastos</h3>
+            @if (availability().status === 'no-scope') {
+            <div class="exp-state">{{ availability().reason }}</div>
+            } @else {
+            <div aria-live="polite">
+                @if (availability().status === 'loading') {
+                <div class="exp-state" role="status"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Calculando ingresos y gastos…</div>
+                }
+                <div class="exp-grid-kpi">
+                    <exp-kpi-card label="Ventas (total con impuestos)" [value]="incomeText()" [hint]="incomeHint()"></exp-kpi-card>
+                    <exp-kpi-card label="Gastos (monto capturado)" [value]="expenseText()" [hint]="expenseHint()"></exp-kpi-card>
+                    <exp-kpi-card label="Balance" [value]="balanceText()" [deltaText]="balanceBadge()" [tone]="balanceTone()" [hint]="balanceHint()"></exp-kpi-card>
+                </div>
+            </div>
+            <p class="exp-muted small mb-0">Cifra orientativa, no es un resultado contable. Las ventas incluyen impuestos (total del CFDI); los gastos son el monto capturado, sin desglose de impuestos. Las anuladas no cuentan.</p>
+            }
+        </div>
+        }
+
         @if (noPlantation()) {
         <div class="exp-state">No hay una plantación activa: elige una para ver su gasto.</div>
         } @else if (loading() && !balance()) {
