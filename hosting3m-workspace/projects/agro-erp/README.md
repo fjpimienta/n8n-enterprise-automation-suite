@@ -16,9 +16,14 @@ La última versión identificada como liberada en el [CHANGELOG.md](./CHANGELOG.
 **v1.20.0** (migración 083). Las notas de esta sección describen código y SQL versionados:
 que un archivo exista en el repositorio no significa que se haya aplicado en cada ambiente.
 
+Sin liberar (sección `[Unreleased]` de [CHANGELOG.md](./CHANGELOG.md)): pantalla de ventas de palma y
+ventas desde CFDI (migraciones 104–107), altas por chat y regularización de padrón (099–103), repasto con
+retorno (098) y cumplimiento de venta por especie (096). El estado de cada migración en producción no se
+infiere de este README: `TODO(verify)` contra el ambiente (ver la tabla de migraciones).
+
 ### 🌴 Palma: estructura y gastos (migraciones 080–083)
 * La migración 080 define la jerarquía por empresa de plantaciones, lotes, filas y conteos con historial append-only. La 081 agrega unidades, categorías por empresa, gastos agrícolas, anulaciones y consultas de balance.
-* Las rutas Angular actuales son `/agricultura/dashboard`, `/agricultura/plantaciones`, `/agricultura/lotes`, `/agricultura/lotes/:lotId/filas` y `/agricultura/gastos`. La pantalla de gastos incluye balance, gastos registrados y categorías; la captura y la lectura financiera tienen permisos distintos.
+* Las rutas Angular actuales son `/agricultura/dashboard`, `/agricultura/plantaciones`, `/agricultura/lotes`, `/agricultura/lotes/:lotId/filas`, `/agricultura/gastos` y `/agricultura/ventas` (la última solo para ADMIN de la empresa activa; guardas en [palm.guards.ts](./src/app/features/agriculture/guards/palm.guards.ts)). La pantalla de gastos incluye balance, gastos registrados y categorías; la captura y la lectura financiera tienen permisos distintos.
 * La migración 082 añade `fn_reject_palm_company` para impedir que las herramientas ganaderas operen sobre empresas PALM. La 083 define wrappers SQL para el agente de Palma; sus pruebas y estado de despliegue están descritos en el changelog.
 
 ### 🐄 Reproducción (migraciones 084–090)
@@ -139,6 +144,22 @@ adicionales. Los huecos se conservan explícitamente.
 | `091` | RFC por empresa y registros CFDI vinculados a gastos ganaderos (**aplicada en producción el 2026-10-30; el SQL conserva su nota de pruebas LOCAL**) |
 | `092` | Borradores server-side de CFDI con vista previa y confirmación |
 | `093` | Registro automático de RFC receptor al confirmar una factura |
+| `094` | Tickets del hotel con columna de empresa (`094_hotel_tickets_tenant.sql`; contenido `TODO(verify)`) |
+| `095` | Tickets del hotel: retiro del default de la columna (`095_hotel_tickets_drop_default.sql`; `TODO(verify)`; runbook `094_095_RUNBOOK.md`) |
+| `096` | Cumplimiento de venta por especie: requisito de arete SINIIGA solo para bovinos (`[Unreleased]`) |
+| `097` | Venta FIFO de animales sin identificador (`097_fifo_sale_unidentified.sql`; `TODO(verify)` contra el CHANGELOG) |
+| `098` | Repasto con retorno: movimiento por guía a una UPP de tercero (`[Unreleased]`, prototipo en la empresa 3) |
+| `099` | Alta por regularización de padrón y compra endurecida por chat (desplegada 2026-11-10 según el CHANGELOG) |
+| `100` | Folio de guía normalizado en la regularización por chat |
+| `101` | Bitácora: rama de altas por regularización en `vw_cattle_event_log` |
+| `102` | Función `sp_register_livestock_panel` (alta del panel web en dos pasos); SQL pendiente de ejecutar según el CHANGELOG |
+| `103` | Modelo `register_livestock_panel` en `crud_models`; pendiente según el CHANGELOG |
+| `104` | Ventas de palma desde CFDI: banderas por empresa, RFC emisores, registro, `sp_agri_register_sale`, `sp_agri_void_sale`, `sp_agri_sales_balance` (no aplicada en producción según el CHANGELOG) |
+| `105` | Modelos de solo lectura de ventas de palma (`agri_sales`, `agri_sale_summary`) y vista `vw_agri_sale_ui_list` |
+| `106` | `id_company` en `allowed_fields` de `hotel_rooms` y `hotel_maintenance_tickets` (solo datos) |
+| `107` | Modelos `call_sp` de ventas de palma: `agri_sale_void` y `agri_sale_balance` (`sp_agri_void_sale`, `sp_agri_sales_balance`) |
+
+> Las migraciones `094`–`107` son el estado de `[Unreleased]` del [CHANGELOG.md](./CHANGELOG.md). Las descripciones de `094`, `095` y `097` salen del nombre del archivo; su contenido no se revisó (`TODO(verify)`).
 
 ---
 
@@ -321,7 +342,7 @@ adicionales. Los huecos se conservan explícitamente.
 El proyecto está optimizado para entornos rurales de baja conectividad garantizando un rendimiento extremo:
 * **Framework:** Angular 21 (Standalone Components, Signals).
 * **Styling:** Tabler UI + SCSS dinámico (`theme-cattle` / `theme-palm`).
-* **Communication:** REST API via n8n Meta-CRUD (workflow `v6/crud`) & Webhooks.
+* **Communication:** REST API via n8n Meta-CRUD (workflow `v6/crud`, export en [v6-crud.json](../../../workflows/06-dynamic-crud-engine/v6/v6-crud.json)) & Webhooks.
 * **Data Processing:** PostgreSQL 15+ (Views & JSONB GIN Indexes).
 * **File Storage:** Microservicio propio (`upload-file`, Node/Express) autenticado vía JWT compartido con `core-auth`/`jwt-service` — sin dependencia de almacenamiento externo.
 
@@ -346,6 +367,94 @@ Genera el compilado AOT para despliegue en el VPS:
 ng build agro-erp --configuration=production
 
 ```
+
+### 3. Pruebas unitarias
+
+```bash
+ng test agro-erp
+```
+
+### 4. Entorno de build (⚠️ riesgo abierto)
+
+* El único archivo de entorno es [`src/environments/environment.ts`](./src/environments/environment.ts), con URLs de desarrollo (`http://localhost:5678/...`). No existe `environment.production.ts` y `angular.json` no declara `fileReplacements` para `agro-erp`, así que `--configuration=production` compila esas mismas URLs.
+* `TODO(verify)`: cómo se genera el artefacto que publica Plesk desde `main` (si se sustituye el entorno antes de publicar). Mientras no se confirme, no asumir que el build de producción apunta al gateway de producción.
+
+---
+
+## 🔐 Tenant y gateway Meta-CRUD (verificado contra el código)
+
+La app no exporta API pública (no es una librería). Esta sección documenta cómo se determina el tenant y qué valida el cliente antes y después de llamar al gateway `v6/CRUD`. Cada punto apunta al archivo que lo implementa; si cambia el código, cambia esta sección.
+
+### Rutas y guardas
+
+| Ruta | Guarda | Quién entra |
+|---|---|---|
+| `/login` | — | Pública |
+| `/ganaderia/*` (`dashboard`, `inventario`, `pesajes`) | `authGuard`, `livestockDomainGuard` | Empresa de dominio ganadero ([livestock.routes.ts](./src/app/features/livestock/livestock.routes.ts), [livestock-domain.guard.ts](./src/app/shared/guards/livestock-domain.guard.ts)) |
+| `/agricultura/*` | `authGuard`; guardas por pantalla (`palmDomainGuard`, `palmAdminGuard`, `palmExpenseGuard`, `palmSalesGuard`) | Empresa de dominio palma ([agriculture.routes.ts](./src/app/features/agriculture/agriculture.routes.ts)) |
+| `/admin/tenants`, `/admin/personal`, `/admin/razas`, `/admin/etapas-vida`, `/admin/precios-referencia`, `/admin/autorizaciones` | `roleGuard(['ADMIN'])` (de `core-auth`) | ADMIN; las cuatro últimas además `livestockDomainGuard` ([admin.routes.ts](./src/app/features/admin/admin.routes.ts)) |
+| `/admin/tenants/:tenantId/production-units` y `.../:uppId/lots` | `roleGuard(['ADMIN'])`, `activeTenantRouteGuard`, `livestockDomainGuard` | ADMIN, y solo si `:tenantId` es la empresa activa ([active-tenant-route.guard.ts](./src/app/features/admin/guards/active-tenant-route.guard.ts)) |
+| `/cumplimiento/upp`, `/cumplimiento/upp/:id` | `livestockDomainGuard` | Solo lectura ([compliance.routes.ts](./src/app/features/compliance/compliance.routes.ts)) |
+
+Las guardas son solo UX. El aislamiento real lo hace `id_company` en el gateway (comentario explícito en [admin.routes.ts](./src/app/features/admin/admin.routes.ts) y [livestock-domain.guard.ts](./src/app/shared/guards/livestock-domain.guard.ts)).
+
+### Cómo se determina el tenant
+
+```mermaid
+sequenceDiagram
+    participant U as Usuario
+    participant L as LoginComponent
+    participant A as jwt-service (vía n8n, apiUrl_token)
+    participant T as TenantService (core-auth)
+    participant I as tenantInterceptor (core-auth)
+    participant G as Gateway crud/v6
+
+    U->>L: usuario, contraseña (y empresa si hay varias)
+    L->>A: POST login (system_id)
+    A-->>L: token + lista companies (+ company activa)
+    L->>T: setAvailableTenants / setActiveTenant (localStorage)
+    L->>I: cada petición HTTP
+    I->>G: header X-Tenant-ID y x-tenant-id = id_company activo
+    G-->>U: filas filtradas por id_company (según el gateway)
+```
+
+1. **Origen:** la lista de empresas y la empresa activa vienen de la respuesta de login ([login.component.ts](./src/app/features/admin/components/login/login.component.ts), `res.data.companies` y `res.data.company`). Si hay varias y no hay una activa, se toma la primera; con `select_company` el usuario elige.
+2. **Estado cliente:** `TenantService` guarda la lista en `user_tenants` y la activa en `active_tenant_context` (localStorage). `activeTenantId()` es el único id que usa la app ([tenant.service.ts](../core-auth/src/lib/services/tenant.service.ts)). El selector de empresa cambia la activa sin volver a pedir el token ([tenant-selector.component.ts](./src/app/shared/components/tenant-selector/tenant-selector.component.ts)).
+3. **Envío:** `tenantInterceptor` añade `X-Tenant-ID` y `x-tenant-id` a **toda** petición mientras haya empresa activa, incluidas las de `upload-file` y `ui-chat` ([tenant.interceptor.ts](../core-auth/src/lib/interceptors/tenant.interceptor.ts)). El `Authorization` lo añade `authInterceptor` solo a `apiUrl_crud`, `apiUrl_ai` y `apiUrl_upload` ([auth.interceptor.ts](../core-auth/src/lib/auth/auth.interceptor.ts)).
+4. **Gateway:** el tenant de una petición es el header, no el cuerpo. [v6-crud.json](../../../workflows/06-dynamic-crud-engine/v6/v6-crud.json) (nodo `Build Query`, código minificado) lee `x-tenant-id`, agrega el filtro `id_company`/`tenant_id` solo a modelos cuyo `allowed_fields` lo incluye, y lanza error si falta el header en `update`/`insert` de esos modelos. Según el mismo código, `getone`/`delete` filtran solo si el header llega. `TODO(verify)`: el comentario del propio workflow dice que la membresía (`Get Membresia`) ya rechaza peticiones sin `x-tenant-id`; confirmarlo contra el `workflow_entity` vivo.
+
+### Qué valida el cliente frente al gateway
+
+| Validación | Dónde | Comportamiento |
+|---|---|---|
+| Empresa activa presente antes de cada llamada de palma y ventas | [agri-api.service.ts](./src/app/features/agriculture/services/agri-api.service.ts) (`requireTenant`), [sale.service.ts](./src/app/core/services/sale.service.ts) (`requireTenant`) | Sin empresa válida lanza `AgriTenantContextError` / `SaleTenantContextError`; no hay llamada |
+| Filas re-filtradas por empresa | `agri-api.service.ts` (`raw.filter(r => toInt(r['id_company']) === tenant)`), `sale.service.ts` (`Number(row.tenant_id) === tenantId`), `admin.service.ts` (`loadMembers`) | Una fila de otra empresa se descarta, aunque el gateway la haya devuelto |
+| Lectura por id antes de editar | `agri-api.service.ts` (`getOwned`), `sale.service.ts` (`getOwnedReferencePrice`) | `getone` y comparación de `id_company`/`tenant_id`; si no coincide, error. El id de la ruta o de la UI no se confía |
+| Respuesta descartada si la empresa cambió | `admin.service.ts` (`loadMembers`) | Una respuesta de otra empresa activa no se aplica |
+| Empresa activa en el cliente con `CattleApiService` | [cattle-api.service.ts](./src/app/core/services/cattle-api.service.ts) | `getAllLivestock`, `getCattleLotHistory`, `getExpenses` y `getCattleEventLog` no llaman sin empresa. **`createHealthLog`, `createWeightLog`, `updateLivestock` y `procesarSalidaGanado` no comprueban empresa en el cliente**: dependen del gateway |
+| `error: true` con HTTP 200 | `agri-api.service.ts` (`post`), `cattle-api.service.ts`, `sale.service.ts` | Se lanza como error; nunca se toma como "cero resultados" |
+| Colección vacía `data: [{}]` | `gateway-empty-row.util.ts` (`stripPhantomRows`, `isPhantomRow`) | Se elimina antes de contar o renderizar |
+| Numéricos como texto | `agri.util.ts` (`toInt`, `toNumber`), `sale-income.util.ts` (`parseOptionalNumber`) | Se parsean explícitamente |
+| `call_sp` con éxito | `agri.util.ts` (`interpretSpResponse`, `interpretStatusSpResponse`) | Éxito solo con `error:false` y `data.success:true` (o `status` según el procedimiento) |
+| Listado posiblemente truncado | `agri.util.ts` (`isPossiblyTruncated`) | Exactamente 1500 o 2000 filas se marcan como posible corte |
+| Mutación sin tenant | Gateway | Sin `x-tenant-id` el gateway rechaza `update`/`insert` de modelos con tenant (ver arriba) |
+
+La validación del cliente es una defensa en profundidad: el filtro de la base y del gateway es el que cuenta. Ver también las reglas de aislamiento de [CLAUDE.md](./CLAUDE.md): `n8n_user` es superusuario y no hay RLS, así que el aislamiento depende de cada capa de aplicación.
+
+### Riesgos abiertos de tenant (RISK)
+
+* **RISK — `tenantInterceptor` no es fail-closed.** Si no hay empresa activa, deja pasar la petición sin el header en lugar de detenerla. La protección depende de que el gateway rechace la petición. Esto contradice la guardia de fail-closed de `core-auth` (ver [CLAUDE.md](../core-auth/CLAUDE.md)); el cambio, si se decide, vive en `core-auth`, no en esta app.
+* **RISK — escrituras de ganado sin comprobación de empresa en el cliente** (`cattle-api.service.ts`, ver tabla). Hoy dependen solo del gateway.
+* **RISK — empresa activa en `localStorage`.** Cualquiera con acceso al navegador puede editar `active_tenant_context`. El gateway debe validar la membresía en cada petición; `TODO(verify)` que `Get Membresia` lo haga para todos los modelos.
+* **RISK — `AdminService.saveUserCompany`** (marcado `@deprecated`). Según su comentario en [admin.service.ts](./src/app/features/admin/services/admin.service.ts), desde la migración `073` el gateway rechaza las escrituras a `user_companies` (las membresías se escriben solo vía `sp_access_*`), y su único llamador (alta de empresa en [tenant-list.component.ts](./src/app/features/admin/components/tenant-list/tenant-list.component.ts)) nunca llega a ejecutarlo porque el JWT trae el correo en `user`, no en `email`. Las migraciones confirman la retirada de `INSERT`/`UPDATE`/`DELETE` sobre `user_companies` en `073`; la `065` es un borrador (según su cabecera, no aplicado en producción) que solo restringe esas operaciones a ADMIN. El método sigue en el código, así que el riesgo residual es que otro llamador lo use. `TODO(verify)` contra el `crud_models` vivo (`allowed_ops` de `user_companies`) y contra un JWT real.
+* **RISK — build de producción con URLs de desarrollo** (ver "Entorno de build").
+
+### Limitaciones y TODO(verify)
+
+* `TODO(verify)`: tratamiento de `Fiscal`/impuestos. La app no contiene lógica de IVA ni ISH (búsqueda vacía en `src/app`); los importes de venta (`agri_sales`, `sp_agri_sales_balance`) llegan del servidor. Ubicar el cálculo real en `cfdi-service` o en la base antes de documentarlo. No recalcular nada desde el cliente.
+* `TODO(verify)`: el contenido de las migraciones `094`, `095` y `097` y el estado de `102`–`107` en producción (ver la tabla de migraciones).
+* `TODO(verify)`: versión de PostgreSQL usada en producción (la sección de arquitectura menciona 15+).
+
 ---
 
 ## 📋 Roadmap del Proyecto (Hito Q3 2026)
