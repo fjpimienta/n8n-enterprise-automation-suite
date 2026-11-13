@@ -195,3 +195,185 @@ describe('sale list', () => {
 });
 
 function setupList2() { TestBed.resetTestingModule(); return setupList(); }
+
+describe('sale void dialog', () => {
+  type T = ReturnType<typeof setupList>;
+  const selectFirst = async (t: T) => {
+    (t.el.querySelector('table tbody .exp-row-btn') as HTMLButtonElement).click();
+    await t.settle();
+  };
+  const openDialog = async (t: T) => {
+    await t.settle();
+    await selectFirst(t);
+    (Array.from(t.el.querySelectorAll('exp-detail-panel button')).find(b => b.textContent?.includes('Anular venta')) as HTMLButtonElement).click();
+    await t.settle();
+  };
+  const dialog = (t: T) => t.el.querySelector('.modal') as HTMLElement | null;
+  const confirmBtn = (t: T) => Array.from(t.el.querySelectorAll('.modal-footer button')).find(b => b.textContent?.includes('Anular venta')) as HTMLButtonElement;
+  const type = async (t: T, value: string) => {
+    const area = t.el.querySelector('#sale-void-reason') as HTMLTextAreaElement;
+    area.value = value;
+    area.dispatchEvent(new Event('input'));
+    await t.settle();
+  };
+
+  it('opens from the detail panel with the sale summary, an empty reason and the confirm button disabled', async () => {
+    const t = setupList();
+    await openDialog(t);
+    expect(dialog(t)).not.toBeNull();
+    expect(dialog(t)!.getAttribute('aria-modal')).toBe('true');
+    expect(dialog(t)!.textContent).toContain('¿Anular esta venta?');
+    expect(dialog(t)!.textContent).toContain('$10,000.00');
+    expect(dialog(t)!.textContent).toContain('0 / 300 caracteres');
+    expect(confirmBtn(t).disabled).toBe(true);
+  });
+
+  it('validation limits: 5 to 300 characters after normalizing (line breaks count as one space each)', async () => {
+    const t = setupList();
+    await openDialog(t);
+    const area = t.el.querySelector('#sale-void-reason') as HTMLTextAreaElement;
+    expect(area.getAttribute('maxlength')).toBe('300');
+    await type(t, 'abcd');
+    expect(confirmBtn(t).disabled).toBe(true);
+    await type(t, 'abcde');
+    expect(confirmBtn(t).disabled).toBe(false);
+    await type(t, '  \n\n abcd \n ');
+    expect(confirmBtn(t).disabled).toBe(true); // "abcd" after trimming
+    await type(t, 'ab\ncd');
+    expect(dialog(t)!.textContent).toContain('5 / 300 caracteres');
+    expect(confirmBtn(t).disabled).toBe(false);
+    await type(t, 'x'.repeat(300));
+    expect(confirmBtn(t).disabled).toBe(false);
+    (t.fixture.componentInstance as any).voidReason.set('x'.repeat(301));
+    await t.settle();
+    expect(confirmBtn(t).disabled).toBe(true);
+  });
+
+  it('an invalid reason makes no call and the message stays inside the dialog', async () => {
+    const t = setupList();
+    await openDialog(t);
+    (t.fixture.componentInstance as any).voidReason.set('abc');
+    await t.fixture.componentInstance.confirmVoid();
+    await t.settle();
+    expect(t.voids).toHaveLength(0);
+    expect(dialog(t)!.querySelector('.alert-danger')?.textContent).toContain('al menos 5');
+    (t.fixture.componentInstance as any).voidReason.set('x'.repeat(400));
+    await t.fixture.componentInstance.confirmVoid();
+    await t.settle();
+    expect(t.voids).toHaveLength(0);
+    expect(dialog(t)!.querySelector('.alert-danger')?.textContent).toContain('300');
+  });
+
+  it('OK: calls voidSale with the id and the reason, closes, confirms and asks the page to reload', async () => {
+    const t = setupList();
+    let emitted = 0;
+    t.fixture.componentInstance.onVoided.subscribe(() => emitted++);
+    await openDialog(t);
+    await type(t, 'Comprador equivocado');
+    confirmBtn(t).click();
+    await t.settle();
+    expect(t.voids).toEqual([{ id: 's1', reason: 'Comprador equivocado' }]);
+    expect(dialog(t)).toBeNull();
+    expect(t.text()).toContain('Venta S1 por $10,000.00 anulada.');
+    expect(emitted).toBe(1);
+  });
+
+  it('after OK the list reloads when the page bumps the refresh token', async () => {
+    const t = setupList();
+    t.fixture.componentInstance.onVoided.subscribe(() => t.fixture.componentRef.setInput('refreshToken', 1));
+    await openDialog(t);
+    const before = t.calls.length;
+    await type(t, 'Comprador equivocado');
+    confirmBtn(t).click();
+    await t.settle();
+    expect(t.calls.length).toBe(before + 1);
+  });
+
+  it('ALREADY_VOID is informative, closes the dialog and reloads like OK', async () => {
+    const t = setupList({ voidSale: async () => ({ alreadyVoid: true }) });
+    let emitted = 0;
+    t.fixture.componentInstance.onVoided.subscribe(() => emitted++);
+    await openDialog(t);
+    await type(t, 'Comprador equivocado');
+    confirmBtn(t).click();
+    await t.settle();
+    expect(dialog(t)).toBeNull();
+    expect(t.text()).toContain('La venta S1 ya estaba anulada. Se actualizó la lista.');
+    expect(emitted).toBe(1);
+  });
+
+  it('an error stays inside the dialog with the typed reason, nothing reloads and the dialog can be retried', async () => {
+    let fail = true;
+    const t = setupList({ voidSale: async () => { if (fail) throw new Error('Solo un administrador de la empresa puede anular ventas.'); return { alreadyVoid: false }; } });
+    let emitted = 0;
+    t.fixture.componentInstance.onVoided.subscribe(() => emitted++);
+    await openDialog(t);
+    await type(t, 'Comprador equivocado');
+    const before = t.calls.length;
+    confirmBtn(t).click();
+    await t.settle();
+    expect(dialog(t)).not.toBeNull();
+    expect(dialog(t)!.querySelector('.alert-danger')?.textContent).toContain('Solo un administrador');
+    expect((t.el.querySelector('#sale-void-reason') as HTMLTextAreaElement).value).toBe('Comprador equivocado');
+    expect(emitted).toBe(0);
+    expect(t.calls.length).toBe(before);
+    expect(t.text()).not.toContain('anulada.');
+    fail = false;
+    confirmBtn(t).click();
+    await t.settle();
+    expect(dialog(t)).toBeNull();
+    expect(emitted).toBe(1);
+  });
+
+  it('while the call is in flight both buttons are disabled and cancelling does nothing', async () => {
+    const d = defer<{ alreadyVoid: boolean }>();
+    const t = setupList({ voidSale: () => d.promise });
+    await openDialog(t);
+    await type(t, 'Comprador equivocado');
+    confirmBtn(t).click();
+    await t.settle();
+    const cancel = Array.from(t.el.querySelectorAll('.modal-footer button')).find(b => b.textContent?.includes('Cancelar')) as HTMLButtonElement;
+    expect(cancel.disabled).toBe(true);
+    expect(confirmBtn(t).disabled).toBe(true);
+    t.fixture.componentInstance.cancelVoid();
+    await t.settle();
+    expect(dialog(t)).not.toBeNull();
+    confirmBtn(t).click(); // a second click must not send a second call
+    expect(t.voids).toHaveLength(1);
+    d.resolve({ alreadyVoid: false });
+    await t.settle();
+    expect(dialog(t)).toBeNull();
+  });
+
+  it('cancelling closes the dialog without any call', async () => {
+    const t = setupList();
+    await openDialog(t);
+    (Array.from(t.el.querySelectorAll('.modal-footer button')).find(b => b.textContent?.includes('Cancelar')) as HTMLButtonElement).click();
+    await t.settle();
+    expect(dialog(t)).toBeNull();
+    expect(t.voids).toHaveLength(0);
+  });
+
+  it('a voided sale offers no void button', async () => {
+    const t = setupList({ getSales: async () => result([sale({ status: 'VOID', voidReason: 'Capturada dos veces' })]) });
+    await t.settle();
+    await selectFirst(t);
+    const panel = t.el.querySelector('exp-detail-panel')!;
+    expect(panel.textContent).toContain('Una venta anulada no se puede modificar.');
+    expect(Array.from(panel.querySelectorAll('button')).some(b => b.textContent?.includes('Anular venta'))).toBe(false);
+    t.fixture.componentInstance.requestVoid(sale({ status: 'VOID' }));
+    await t.settle();
+    expect(dialog(t)).toBeNull();
+  });
+
+  it('a role that is not ADMIN cannot open the dialog', async () => {
+    const t = setupList();
+    await t.settle();
+    t.role.set('OWNER');
+    await t.settle();
+    t.fixture.componentInstance.requestVoid(sale());
+    await t.settle();
+    expect(dialog(t)).toBeNull();
+    expect(t.voids).toHaveLength(0);
+  });
+});

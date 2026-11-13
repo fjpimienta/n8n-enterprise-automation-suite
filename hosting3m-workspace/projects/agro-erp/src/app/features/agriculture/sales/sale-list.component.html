@@ -39,6 +39,12 @@
     <div aria-live="polite">
         @if (filterError()) { <div class="exp-alert warn" role="alert">{{ filterError() }}</div> }
         @if (loadError()) { <div class="exp-alert err" role="alert">{{ loadError() }}</div> }
+        @if (actionSuccess()) {
+        <div class="exp-alert d-flex justify-content-between align-items-center gap-2">
+            <span><i class="ti ti-check me-2" aria-hidden="true"></i>{{ actionSuccess() }}</span>
+            <button type="button" class="exp-btn" aria-label="Cerrar aviso" (click)="actionSuccess.set(null)"><i class="ti ti-x" aria-hidden="true"></i></button>
+        </div>
+        }
     </div>
     @if (possiblyTruncated()) {
     <div class="exp-alert warn" role="alert">La lista llegó con el máximo de registros que entrega el servidor: reduce el rango de fechas.</div>
@@ -115,10 +121,49 @@
                 }
             </dl>
             <div panelFooter>
-                <span class="exp-muted small">Una venta no se edita ni se borra.</span>
+                @if (s.status === 'ACTIVE') {
+                <button type="button" class="exp-btn danger w-100" (click)="requestVoid(s)"><i class="ti ti-ban me-1" aria-hidden="true"></i>Anular venta</button>
+                } @else {
+                <span class="exp-muted small">Una venta anulada no se puede modificar.</span>
+                }
             </div>
         </exp-detail-panel>
         }
     </div>
-    <div class="exp-muted small mt-2">Los totales están en la pestaña Resumen.@if (voidedCount()) { Anuladas en la lista: {{ voidedCount() }}. }</div>
+    <div class="exp-muted small mt-2">Los totales están en la pestaña Resumen. Una venta no se edita ni se borra: solo se anula.@if (voidedCount()) { Anuladas en la lista: {{ voidedCount() }}. }</div>
 </div>
+
+@if (toVoid(); as s) {
+<div class="modal-backdrop fade show"></div>
+<div class="modal modal-blur fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="sale-void-title">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-status bg-danger"></div>
+            <div class="modal-body py-4">
+                <h3 class="mb-2" id="sale-void-title"><i class="ti ti-ban text-danger me-2" aria-hidden="true"></i>¿Anular esta venta?</h3>
+                <div class="mb-3">
+                    <div><strong>{{ money(s.totalAmount) }}</strong> · {{ s.folio || 'Sin folio' }} · {{ day(s.saleDate) }}</div>
+                    <div class="text-muted small">{{ s.buyerName }} · {{ place(s) }} · {{ kg(s.quantityKg) }}</div>
+                </div>
+                <div class="text-muted small mb-3">No se borra: queda en la lista como anulada, con el motivo, y deja de contar en el resumen. No se puede deshacer.</div>
+                <div aria-live="assertive">
+                @if (voidError()) {
+                <div class="alert alert-danger" role="alert"><i class="ti ti-alert-triangle me-2" aria-hidden="true"></i>{{ voidError() }}</div>
+                }
+                </div>
+                <label class="form-label fw-bold" for="sale-void-reason">Motivo <span class="text-danger">*</span></label>
+                <textarea id="sale-void-reason" class="form-control" rows="2" [attr.maxlength]="maxVoidReason" placeholder="Ej. Comprador equivocado" [disabled]="isVoiding()"
+                    [ngModel]="voidReason()" (ngModelChange)="voidReason.set($event)"></textarea>
+                <div class="text-muted small mt-1">{{ voidReasonLength() }} / {{ maxVoidReason }} caracteres (mínimo 5)</div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" [disabled]="isVoiding()" (click)="cancelVoid()">Cancelar</button>
+                <button class="btn btn-danger" [disabled]="isVoiding() || voidReasonInvalid()" (click)="confirmVoid()">
+                    @if (isVoiding()) { <span class="spinner-border spinner-border-sm me-2" role="status"></span> }
+                    Anular venta
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+}

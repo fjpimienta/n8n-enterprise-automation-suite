@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DetailPanelComponent } from '@shared/expenses-ui/detail-panel.component';
 import { TenantService } from 'core-auth';
@@ -14,8 +14,11 @@ import {
   emptySalesMessage,
   formatKg,
   formatPricePerKg,
+  MAX_VOID_REASON,
+  normalizeVoidReason,
   paymentMethodLabel,
   salePlace,
+  validateSaleVoidReason,
 } from '../utils/sale.util';
 
 /**
@@ -37,6 +40,8 @@ export class SaleListComponent {
   context = inject(PlantationContextService);
 
   refreshToken = input<number>(0);
+  /** A sale was voided (or was already void): the page bumps its refresh token so the list and the summary reload. */
+  onVoided = output<void>();
 
   readonly money = formatMoney;
   readonly kg = formatKg;
@@ -66,8 +71,19 @@ export class SaleListComponent {
   loadError = signal<string | null>(null);
   filterError = signal<string | null>(null);
   possiblyTruncated = signal(false);
+  actionSuccess = signal<string | null>(null);
   private seq = 0;
   private lotSeq = 0;
+
+  // Void dialog
+  readonly maxVoidReason = MAX_VOID_REASON;
+  toVoid = signal<AgriSale | null>(null);
+  voidReason = signal('');
+  voidError = signal<string | null>(null);
+  isVoiding = signal(false);
+  /** Length of the reason as the procedure measures it (control characters as spaces, ends trimmed). */
+  voidReasonLength = computed(() => normalizeVoidReason(this.voidReason()).length);
+  voidReasonInvalid = computed(() => validateSaleVoidReason(this.voidReason()) !== null);
 
   constructor() {
     // A company or role change clears everything at once (fail-closed) and reloads with the defaults.
@@ -83,6 +99,10 @@ export class SaleListComponent {
         this.loadError.set(null);
         this.isLoading.set(false);
         this.selectedId.set(null);
+        this.toVoid.set(null);
+        this.voidError.set(null);
+        this.isVoiding.set(false);
+        this.actionSuccess.set(null);
         if (tenantId && allowed) void this.load();
       });
     });
@@ -187,6 +207,52 @@ export class SaleListComponent {
       this.loadError.set(error?.message || 'No se pudieron cargar las ventas.');
     } finally {
       if (seq === this.seq) this.isLoading.set(false);
+    }
+  }
+  // Void -----------------------------------------------------------------------------------------------
+
+  requestVoid(sale: AgriSale) {
+    if (sale.status === 'VOID' || !this.allowed()) return;
+    this.actionSuccess.set(null);
+    this.voidReason.set('');
+    this.voidError.set(null);
+    this.toVoid.set(sale);
+  }
+
+  cancelVoid() {
+    if (!this.isVoiding()) this.toVoid.set(null);
+  }
+
+  async confirmVoid() {
+    const sale = this.toVoid();
+    if (!sale || this.isVoiding()) return;
+    if (!this.allowed()) {
+      this.voidError.set('Solo un administrador de la empresa puede anular ventas.');
+      return;
+    }
+    const invalid = validateSaleVoidReason(this.voidReason());
+    if (invalid) {
+      // Nothing is sent: the message stays inside the dialog.
+      this.voidError.set(invalid);
+      return;
+    }
+    this.isVoiding.set(true);
+    this.voidError.set(null);
+    try {
+      const { alreadyVoid } = await this.api.voidSale(sale.id, this.voidReason());
+      this.toVoid.set(null);
+      this.selectedId.set(null);
+      const label = sale.folio || sale.buyerName;
+      this.actionSuccess.set(alreadyVoid
+        ? `La venta ${label} ya estaba anulada. Se actualizó la lista.`
+        : `Venta ${label} por ${formatMoney(sale.totalAmount)} anulada.`);
+      this.onVoided.emit();
+    } catch (error: any) {
+      // Shown inside the dialog, in Spanish (fixed texts), never only in the console.
+      console.error('[Agro-ERP] Error al anular la venta:', error);
+      this.voidError.set(error?.message || 'No se pudo anular la venta.');
+    } finally {
+      this.isVoiding.set(false);
     }
   }
 }
