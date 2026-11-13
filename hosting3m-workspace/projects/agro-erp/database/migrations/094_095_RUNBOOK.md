@@ -23,7 +23,7 @@ Status: 094 and 095 applied on 2026-11-01.
 1. Container is up: `docker ps --filter name=n8n-enterprise-db`.
 2. Disk space for the backup: `df -h /root/backups`.
 3. Current state, read-only: `./run_m094.sh check before`. It must print `STATE OK: before`. **Write down the three fingerprint values** (`tickets_rows`, `tickets_data_md5`, `crud_models_md5`); they must not change across the steps.
-4. Local tests of the workflow code: `cd workflows/06-dynamic-crud-engine/v5/tests && npm install && npm test` (PostgreSQL in WASM; reads the node code from `v5-crud.json`). TODO(verify): base directory of that `cd` (repository root?).
+4. Local tests of the workflow code: from the repository root: `cd workflows/06-dynamic-crud-engine/v5/tests && npm install && npm test` (PostgreSQL in WASM; reads the node code from `v5-crud.json`).
 
 ## 4. Backup (mandatory)
 
