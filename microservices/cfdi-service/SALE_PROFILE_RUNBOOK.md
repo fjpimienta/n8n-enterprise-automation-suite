@@ -1,5 +1,5 @@
 > ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (base de datos y n8n, verificadas con sus huellas).
-> `main` publica automáticamente los frontends por Plesk: si se mergea antes, la pantalla nueva falla en producción.
+> `main` se despliega manualmente: el dueño entra a Plesk y despliega con git. Si el frontend se despliega antes, si se mergea antes, la pantalla nueva falla en producción.
 
 > **Status: tested locally (unit tests and an end-to-end check on a throwaway database). NOT deployed.** Part 1 (database) is migration 104,
 > already merged and applied. Part 2 (n8n) does not apply to this pull request: no workflow calls the new profile yet. The only deployable
