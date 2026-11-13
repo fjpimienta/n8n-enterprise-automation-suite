@@ -5,6 +5,16 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### 🌴 Palm dashboard: Ventas screen (PR E)
+
+* New screen `agricultura/ventas` (sidebar entry "Ventas"), **ADMIN of the active palm company only** (OWNER, EDITOR and CUSTOMER do not see it and are sent back to the palm dashboard; the gateway refuses them regardless).
+  Tab **Resumen**: total sold with the variation against the comparable previous period, number of sales, kilograms sold, average price per kilogram (total divided by kilograms), trend by period and share by plantation
+  ("Sin plantación" included), all from `agri_sale_balance`. Tab **Ventas registradas**: list from `agri_sales` with date range, status, plantation and lot filters, a truncated-list warning, a "Prueba" badge for test sales,
+  voided sales flagged with their reason, and a detail panel. **Anular venta**: dialog with a mandatory reason of 5 to 300 characters, an error that stays inside the dialog, and a reload of the list and the summary after
+  `OK` or `ALREADY_VOID` (the second one is shown as an informative message).
+* `AgriApiService`: `getSales`, `getSalesBalance`, `voidSale`; new `interpretStatusSpResponse` for procedures that answer a `status` without a `success` key (the existing `interpretSpResponse` is unchanged).
+* Frontend only: the database (migrations 104, 105, 107) and the gateway entries are already in production, so this pull request has no database or n8n part.
+
 ### 🌴 Palm sales: void and balance through the gateway (migration 107, PR C2)
 
 * Registers two ADMIN-only `call_sp` models, `agri_sale_void` (`sp_agri_void_sale`) and `agri_sale_balance` (`sp_agri_sales_balance`), and adds the matching two `spConfigByModel` entries to the `Build Query` node of `v6/CRUD`

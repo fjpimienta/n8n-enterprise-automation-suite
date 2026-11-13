@@ -944,3 +944,19 @@ The livestock Angular route file declares `/ganaderia/dashboard`, `/ganaderia/in
 
 See `docs/DATABASE_SCHEMA.md` for exact table columns, constraints, void/append-only rules and
 procedure contracts for migrations 080–093.
+
+## 💰 12. Palm sales screen (frontend of migrations 104, 105 and 107)
+
+* **Route and access.** `agricultura/ventas` (lazy, `agriculture.routes.ts`) behind `palmSalesGuard`; the sidebar flag is `palmSales` in `shared/utils/menu-visibility.util.ts`. The rule is **ADMIN of the ACTIVE palm company**
+  (`canManageSales` in `utils/sale.util.ts`, role from `tenantService.activeTenant()`, never the JWT role). OWNER is not included, unlike the expense screens: the models `agri_sales`, `agri_sale_balance`, `agri_sale_void` and the
+  procedures accept `ADMIN` only. Each component re-checks the role live and requests nothing otherwise.
+* **Structure.** `sales/sale-page` (tabs and a refresh token), `sales/sale-balance` (Resumen) and `sales/sale-list` (list, detail, void dialog), built from the shared `exp-*` components of the expenses screens.
+* **Data.** `getSales` (model `agri_sales`, limit 2000, `sort_by sale_date`, client filter by `id_company`, phantom rows stripped), `getSalesBalance` (`call_sp agri_sale_balance`, optional ids as `null`) and `voidSale`
+  (tenant-scoped `getone` first, then `call_sp agri_sale_void {sale_id, reason}`). The company and the actor e-mail are never in the payload.
+* **Procedure answers.** `sp_agri_void_sale` answers `{status}` without `success`; `interpretStatusSpResponse` (`utils/agri.util.ts`) treats `OK` and `ALREADY_VOID` as final and maps `NOT_FOUND`, `FORBIDDEN`,
+  `NOT_PALM`, `INVALID_REASON` and any unknown status to fixed Spanish texts (the procedure messages carry no accents and are not shown).
+* **Dates and instants.** `sale_date` is a date that arrives as an ISO timestamp at 06:00Z: only `String(value).slice(0, 10)` is used (no `Date`, no `date` pipe). `created_at` and `voided_at` are `timestamptz`, so they are
+  real instants and are shown with `formatInstantInCdmx`; `formatAuthorizationTimestamp` is not used for them because it undoes the shift of naive-UTC columns and would show them six hours early.
+* **Void reason.** 5 to 300 characters after turning control characters (line breaks included) into spaces and trimming, as the procedure does; the expense validator (500) is not reused.
+* **Variation.** Like the expenses: a second balance call for the comparable previous range (`comparisonFor`); the quarter or year in progress has no comparison.
+

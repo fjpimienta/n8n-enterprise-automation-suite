@@ -1,0 +1,74 @@
+<div class="exp-screen">
+    <!-- Filters -->
+    <div class="exp-toolbar">
+        <div class="exp-field">
+            <span class="exp-label" id="sale-period-label">Periodo</span>
+            <exp-period-chips [options]="presets" [value]="preset()" ariaLabel="Periodo" (valueChange)="setPreset($event)"></exp-period-chips>
+        </div>
+        <div class="exp-field">
+            <label for="sale-bal-plantation">Plantación</label>
+            <select id="sale-bal-plantation" class="exp-input" [ngModel]="plantationId()" (ngModelChange)="setPlantation($event)">
+                <option value="">Todas (incluye sin plantación)</option>
+                @for (p of context.allPlantations(); track p.id) {
+                <option [value]="p.id">{{ p.code }} · {{ p.name }}{{ p.isActive ? '' : ' (inactiva)' }}</option>
+                }
+            </select>
+        </div>
+        <div class="exp-field">
+            <label for="sale-bal-lot">Lote</label>
+            <select id="sale-bal-lot" class="exp-input" [disabled]="!plantationId()" [ngModel]="lotId()" (ngModelChange)="setLot($event)">
+                <option value="">Todos</option>
+                @for (l of lots(); track l.id) { <option [value]="l.id">{{ l.code }}{{ l.isActive ? '' : ' (inactivo)' }}</option> }
+            </select>
+        </div>
+    </div>
+    @if (preset() === 'CUSTOM') {
+    <div class="exp-toolbar">
+        <div class="exp-field">
+            <label for="sale-bal-from">Desde</label>
+            <input id="sale-bal-from" type="date" class="exp-input" [ngModel]="customFrom()" (ngModelChange)="customFrom.set($event)">
+        </div>
+        <div class="exp-field">
+            <label for="sale-bal-to">Hasta</label>
+            <input id="sale-bal-to" type="date" class="exp-input" [ngModel]="customTo()" (ngModelChange)="customTo.set($event)">
+        </div>
+        <button type="button" class="exp-btn primary" [disabled]="isLoading()" (click)="apply()">Aplicar</button>
+    </div>
+    }
+    <div class="exp-muted small mb-3">
+        @if (applied()) { Periodo aplicado: <strong>{{ appliedLabel() }}</strong>. }
+        Las ventas anuladas no cuentan.
+    </div>
+
+    <div aria-live="polite">
+        @if (filterError()) { <div class="exp-alert warn" role="alert">{{ filterError() }}</div> }
+        @if (loadError()) { <div class="exp-alert err" role="alert">{{ loadError() }}</div> }
+    </div>
+
+    @if (isLoading() && !balance()) {
+    <div class="exp-state" role="status"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Calculando resumen…</div>
+    }
+
+    @if (balance(); as b) {
+    <!-- KPIs -->
+    <div class="exp-grid-kpi">
+        <exp-kpi-card label="Total vendido" [value]="money(b.totalAmount)" [deltaText]="deltaText()" [tone]="deltaTone()" [hint]="deltaHint()"></exp-kpi-card>
+        <exp-kpi-card label="Número de ventas" [value]="'' + b.saleCount" hint="Vigentes"></exp-kpi-card>
+        <exp-kpi-card label="Kilos vendidos" [value]="kg(b.totalQuantityKg)" hint="Suma de las cantidades vendidas"></exp-kpi-card>
+        <exp-kpi-card label="Precio promedio por kg" [value]="pricePerKg(avgPrice())" [hint]="avgPrice() === null ? 'Sin kilos vendidos' : 'Total entre kilos'"></exp-kpi-card>
+    </div>
+
+    <div class="exp-card mb-3">
+        <h3 class="exp-card-title">{{ trendTitle() }}</h3>
+        <exp-trend-bars [bars]="bars()" emptyText="Sin ventas en el periodo"></exp-trend-bars>
+    </div>
+
+    <div class="exp-card mb-3">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h3 class="exp-card-title mb-0">Por plantación</h3>
+            <button type="button" class="exp-link" (click)="openSales.emit()">Ver ventas registradas</button>
+        </div>
+        <exp-share-bar-list [items]="plantationItems()" emptyText="Sin ventas en el periodo."></exp-share-bar-list>
+    </div>
+    }
+</div>

@@ -91,6 +91,14 @@
                     </a>
                 </li>
                 }
+                @if (showPalmSales()) {
+                <li class="nav-item">
+                    <a class="nav-link" routerLink="/agricultura/ventas" routerLinkActive="active" (click)="closeMenu()">
+                        <span class="nav-link-icon text-muted">💰</span>
+                        <span class="nav-link-title">Ventas</span>
+                    </a>
+                </li>
+                }
                 @if (canAdministerPalm()) {
                 <li class="nav-item">
                     <a class="nav-link" routerLink="/agricultura/plantaciones" routerLinkActive="active"
