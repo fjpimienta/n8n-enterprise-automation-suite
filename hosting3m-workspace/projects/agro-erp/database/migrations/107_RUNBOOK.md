@@ -2,6 +2,7 @@
 > `main` publica automáticamente los frontends por Plesk: si se mergea antes, la pantalla nueva falla en producción.
 
 > **Status: tested on a throwaway LOCAL database (PostgreSQL 15.4) and with an offline gateway test. NOT applied to production, NOT imported into n8n.**
+> TODO(verify): the status line above was not re-checked in this review; confirm with the owner whether 107 is applied in production and imported in n8n before using this runbook.
 > Parts 1 and 2 are required. Part 3 (frontend) is **not** part of this pull request (the "Ventas" screen is a later one): until it exists nothing in the application calls the new models.
 
 # Runbook 107 — void and balance of the palm sales through the gateway (ADMIN only)
@@ -26,6 +27,16 @@ function, trigger or data, and no other `crud_models` row.
 | `107_tests.sql` | one rolled-back transaction (throwaway database only) |
 | `107_static_check.sh` | no line starting with DROP, TRUNCATE or DELETE in the migration, the rollback and the state check |
 | `workflows/06-dynamic-crud-engine/v6/tests/test_agri_sale_sp.mjs` | offline test of the real `Build Query` code (runs in the *Agent workflow consistency* CI job) |
+
+## Prerequisites
+
+- Parts 1 and 2 are owner only (database and n8n).
+- Migrations 104 and 105 applied (checked in Part 1, step 2).
+- Shell on the VPS host with `docker exec` access to the container `n8n-enterprise-db` (database `hosting3m_db`, user `n8n_user`).
+- The `107_*` files from the repository, compared by `md5sum` (Part 1, step 0).
+- `python3` for `node_fingerprints.py` and `compare_workflow_export.py`.
+- Access to the n8n editor for `v6/CRUD`.
+- Part 2, step 7: the token of an ADMIN of the palm test company (company 10), kept only in the shell variable `TOKEN`, and the real gateway base URL in `BASE`.
 
 ## Gateway change (Part 2) — expected fingerprints
 
@@ -52,14 +63,14 @@ P='docker exec -w /root/repro/vps107 -i n8n-enterprise-db psql -X -U n8n_user -d
 ```
 Apply and roll back **without** `--single-transaction`. Without `-v apply=true` every file is a dry run (it ends in `ROLLBACK`).
 
-0. **Files.** Copy the `107_*` files to the host and compare `md5sum` with the repo. `bash 107_static_check.sh` must print three `OK` lines.
+0. **Files.** Copy the `107_*` files to the host and compare `md5sum` with the repo. `bash 107_static_check.sh` must print three `OK` lines. TODO(verify): `$P` reads the files from `/root/repro/vps107` inside the container (`-w`); how they get there from the host is not described.
 1. **Backup and size check.** `docker exec n8n-enterprise-db pg_dump -U n8n_user -d hosting3m_db -Fc > backup_pre107_$(date +%Y%m%d_%H%M%S).dump`; confirm the file is larger than 100 KB.
 2. **Read-only pre-check.** Migrations 104 and 105 must be applied, and nothing may already serve these objects:
    `SELECT model_name, table_name, allowed_ops FROM crud_models WHERE model_name IN ('agri_sale_void','agri_sale_balance') OR table_name IN ('sp_agri_void_sale','sp_agri_sales_balance');` → **0 rows**.
    `SELECT proname, pg_get_function_identity_arguments(oid) FROM pg_proc WHERE proname IN ('sp_agri_void_sale','sp_agri_sales_balance') ORDER BY 1;` → exactly **two rows**, with the signatures of migration 104.
 3. **State before.** `$P -v expect=before -f 107_state_check.sql` must print `STATE OK: before`. Save the FINGERPRINT block.
 4. **Dry run.** `$P -f 107_agri_sale_gateway_sp.sql` must end with `107: OK` and `DRY RUN: 107 rolled back`.
-5. **Apply — only with the owner's explicit go-ahead.** `$P -v apply=true -f 107_agri_sale_gateway_sp.sql` → `107 COMMITTED`.
+5. **MUTATES (database). Apply — only with the owner's explicit go-ahead.** `$P -v apply=true -f 107_agri_sale_gateway_sp.sql` → `107 COMMITTED`.
 6. **State after.** `$P -v expect=applied -f 107_state_check.sql` → `STATE OK: applied`. The FINGERPRINT block must be **identical** to step 3 (every other `crud_models` row, the migration 104 tables, functions, views and guard triggers,
    and the migration 105 view and model rows).
 7. **Verification queries (read-only).** `SELECT model_name, table_name, primary_key, allowed_ops, allowed_roles_select, allowed_roles_insert, allowed_roles_update, allowed_roles_delete, allowed_fields FROM crud_models WHERE model_name IN ('agri_sale_void','agri_sale_balance') ORDER BY 1;`
@@ -77,7 +88,7 @@ Precondition: Part 1 is applied and verified, the pull request is merged to `dev
    → must print `RESULT: IDENTICAL (nodes, connections, settings)` (an information line about node ids is fine). **If it prints anything else, STOP**: first incorporate the production differences into the repository (a separate pull request), then start again.
    Also `python3 -I node_fingerprints.py prod_v6_crud.json` → `Build Query` must be `12326918f2ff2e2639a802785e02e591`.
 3. **Compare production with this branch.** The same command against the file of this branch must list **only** `Build Query` (`parameters: ['jsCode']`) under *NODES WITH DIFFERENT CONTENT* and no connection difference.
-4. **Import.** In the n8n editor: **⋯ → Import from file…**, choose `workflows/06-dynamic-crud-engine/v6/v6-crud.json` of this branch, **Save**, then **Publish**. Confirm that the workflow name and its published state did not change.
+4. **MUTATES (n8n, production workflow). Import.** In the n8n editor: **⋯ → Import from file…**, choose `workflows/06-dynamic-crud-engine/v6/v6-crud.json` of this branch, **Save**, then **Publish**. Confirm that the workflow name and its published state did not change.
 5. **Export again and compare.** Download the workflow again and compare it with the file of this branch: `RESULT: IDENTICAL (nodes, connections, settings)`, and `Build Query` fingerprint `e270195a5f8f2643e1f050d3c8055c78`. Do not call it deployed until both match
    (the editor can leave a saved version unpublished).
 6. **Regression (production, normal accounts).**
@@ -86,7 +97,7 @@ Precondition: Part 1 is applied and verified, the pull request is merged to `dev
    * Palm dashboard: expenses list and the expense balance load; no error.
    * Hotel dashboard: sign in and open reservations (the hotel uses `v5/CRUD`; this import must not change it).
    * An unauthenticated request to the gateway is denied with HTTP 403 and a clean JSON body.
-7. **Verification on the palm TEST company (company 10), through the gateway** (use a synthetic sale of that company; if none exists, register one with a synthetic voucher in the test company first). Read the token without echo and never paste it or write it to a file:
+7. **MUTATES (test data of company 10). Verification on the palm TEST company (company 10), through the gateway** (use a synthetic sale of that company; if none exists, register one with a synthetic voucher in the test company first). Read the token without echo and never paste it or write it to a file:
    ```bash
    read -rs TOKEN        # paste the token of an ADMIN of the test company, press Enter; nothing is shown
    BASE='https://<n8n-host>/webhook/crud/v6'      # placeholder: use the real gateway base URL
@@ -109,9 +120,18 @@ Not part of this pull request. The dashboard "Ventas" section and the void dialo
 
 ## Rollback
 
-1. n8n: re-import the backup saved in Part 2 step 1 (**⋯ → Import from file…**, **Save**, **Publish**) and compare it with the backup (`IDENTICAL`; `Build Query` back to `12326918f2ff2e2639a802785e02e591`).
-2. Database: `$P -v apply=true -f 107_rollback.sql`, then `$P -v expect=rolled_back -f 107_state_check.sql` → `STATE OK: rolled_back` with the same fingerprints. The two rows are disabled (no operation, no role) and stay registered; nothing is deleted.
+1. **MUTATES (n8n, production workflow).** n8n: re-import the backup saved in Part 2 step 1 (**⋯ → Import from file…**, **Save**, **Publish**) and compare it with the backup (`IDENTICAL`; `Build Query` back to `12326918f2ff2e2639a802785e02e591`).
+2. **MUTATES (database).** Database: first the dry run `$P -f 107_rollback.sql` (it ends in `ROLLBACK`; nothing changes), then `$P -v apply=true -f 107_rollback.sql`, then `$P -v expect=rolled_back -f 107_state_check.sql` → `STATE OK: rolled_back` with the same fingerprints. The two rows are disabled (no operation, no role) and stay registered; nothing is deleted.
    The rollback contains no `DROP`, `DELETE` or `TRUNCATE` (`bash 107_static_check.sh` asserts it). A sale already voided stays voided (the void is an audited business event, not undone by a rollback).
+
+## Known risks
+
+- **Merge order.** `main` publishes the frontends automatically through Plesk: do not merge to `main` before Parts 1 and 2 are done and verified (see the banner at the top).
+- **Nothing calls the new models yet.** Part 3 (the "Ventas" screen) is not part of this pull request.
+- **Tenant isolation.** The company is always the verified `x-tenant-id` header (after the membership check), the models have `sp_requires_tenant = true`, and the procedures check the `ADMIN` role again. The generic rule "every model whose table has a tenant column lists it" does **not** cover these two models, because a `call_sp` model names a procedure in `table_name`; any future check that relies on that rule will not see them.
+- **Verification writes data.** Part 2, step 7 voids a sale. Use only the test company 10 and a synthetic sale. A void is not undone by the rollback.
+- **Rollback scope.** The database rollback disables the two rows (no operation, no role); they stay registered and nothing is deleted.
+- **Unverified.** How the `107_*` files reach `/root/repro/vps107` inside the container, and the current deployment state (see the `TODO(verify)` notes).
 
 ## Results of the local run (throwaway database, PostgreSQL 15.4, schema + the gateway model definitions copied from a local clone, migrations 104, 105 and 106 applied, synthetic data)
 

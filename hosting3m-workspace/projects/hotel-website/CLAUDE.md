@@ -15,6 +15,7 @@
 - **Design System:** Biophilic "Eco-Boutique" styling powered natively by Tailwind CSS v4 using custom design tokens (`eco`, `tierra`).
 - **Visual Pattern:** Immersive layouts utilizing fluid responsive scaling, "Fat-Finger Design" rules for forms, and Glassmorphism layers via backdrop filters (`backdrop-filter`).
 - **State Management:** Strict lifecycle management tracking explicit asynchronous UI states (`isSubmitting`, `success`, `error`) for interactive user feedback.
+  - **Known deviation (#1042):** `submitForm()` in `src/app/app.ts` sets `formStatus` to `success` on any 2xx response without checking the payload. A failed n8n execution can return HTTP 200 with an empty body, so the visitor sees a success message even when no booking is saved.
 - **Shared Modules Integration:** - `@hosting3m/ui-chat` (AI Concierge): Injected cleanly via `CHAT_CONFIG_TOKEN`.
   - `@hosting3m/ui-pdf-export` (Optional): Pre-allocated for public quotation previews.
 
@@ -25,7 +26,7 @@ Always execute these scripts from the workspace root:
 - **Production Build Artifact:** `ng build hotel-website --configuration=production`
 
 ## 📝 Code Style & UI Optimization Checklist
-- **AI Chat Provisioning:** Never instantiate `<lib-ai-chat>` without checking its `CHAT_CONFIG_TOKEN` token definition providing `apiUrl_ai`, `title: 'Hotel Assistant'`, `logoUrl`, and `primaryColor: '#003366'`.
+- **AI Chat Provisioning:** Never instantiate `<lib-ai-chat>` without checking its `CHAT_CONFIG_TOKEN` token definition providing `apiUrl_ai`, `title: 'Asistente Hotel San José'`, `logoUrl`, and `primaryColor: '#6c9a40'` (values as defined in `src/app/app.config.ts`).
 - **SEO & Semantics:** All content structures must maintain high HTML5 semantic readability, layout hierarchy (Inter font for body / Merriweather for headings), and dynamic metadata binding.
 - **Lead Capture Pattern:** Form handlers must interact via Angular's `HttpClient` forwarding reactive data models straight to the n8n orchestrator webhooks.
 

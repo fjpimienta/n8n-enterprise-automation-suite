@@ -32,8 +32,20 @@ La versión documentada más reciente es **v0.11.0** ([CHANGELOG](./CHANGELOG.md
 ## 🚀 Key Features (v0.11.0 Update)
 
 ### 1. 🛡️ Resiliencia y Manejo de Errores (MetaCRUD Shield)
-* **Zero-Ghost States:** `BookingService` interpreta las respuestas `error: true` de Meta-CRUD aunque lleguen con HTTP 200 y evita presentarlas como una mutación exitosa.
-* **Timezone Armor:** Funciones blindadas que calculan fechas relativas en hora local (CST/UTC-6), previniendo desfasajes de calendario o bloqueos automáticos en el turno vespertino (post 18:00 hrs).
+* **Zero-Ghost States (parcial):** `BookingService` revisa las respuestas `error: true` de Meta-CRUD aunque lleguen con HTTP 200 en el check-in, el check-out y la creación de huéspedes de reservas futuras, y lanza excepción en lugar de presentar la mutación como exitosa. Las demás mutaciones del servicio no lo revisan (ver tabla).
+* **Timezone Armor (parcial):** `BookingService` calcula «hoy» con evaluadores de hora local (CST/UTC-6), previniendo desfasajes de calendario en el turno vespertino (post 18:00 hrs). Otros puntos siguen usando `toISOString()` (UTC); ver *Limitaciones y riesgos abiertos*.
+
+**Cobertura del Shield en `BookingService`** ([booking.service.ts](./src/app/features/booking/services/booking.service.ts)):
+
+| Operación | Revisa `error: true` | Comportamiento |
+| :--- | :--- | :--- |
+| Check-in (`processCheckin`): reserva, huésped, reserva nueva y estado de habitación | Sí | Lanza excepción a la UI |
+| Check-out (`processCheckout`): cierre de reserva y de habitación | Sí | Lanza excepción a la UI |
+| Reserva futura (`createFutureReservation`): alta de huésped | Indirecto | Sin `id` lanza «No se pudo obtener un ID de huésped válido.» |
+| Reserva futura (`createFutureReservation`): alta de reserva | No | Devuelve `true` aunque venga `error: true` |
+| `updateReservation`, `registerPayment`, `cancelReservation`, `confirmPendingReservation` | No | Se tratan como exitosas |
+| `updateCleaningStatus` | No | Recarga habitaciones sin validar la respuesta |
+| `loadRooms` (lectura) | Sí | Trata el error como lista vacía, sin aviso al usuario |
 
 ### 2. 💰 Motor Financiero Avanzado
 * **Soft-Booking vs Hard-Booking:** Generación de Cotizaciones sin impacto fiscal, con evolución automática a Reservas en firme tras detectar un depósito financiero.
@@ -42,7 +54,7 @@ La versión documentada más reciente es **v0.11.0** ([CHANGELOG](./CHANGELOG.md
 
 ### 3. 📄 Generación de Documentos Digitales (PDF)
 * **Cotizaciones Proactivas:** Generación instantánea de presupuestos ("PRESUPUESTO" vs "COMPROBANTE" dinámico).
-* **Motor Fiscal:** Cálculo automático y desglosado de impuestos locales: Base Imponible, IVA (16%) e ISH (2%).
+* **Motor Fiscal:** Cálculo automático y desglosado de impuestos locales: Base Imponible, IVA (16%) e ISH (2%). El cálculo lo hace `ui-pdf-export` ([pdf-export.service.ts](../ui-pdf-export/src/lib/services/pdf-export.service.ts), tasas por defecto `0.16` y `0.02`). El dashboard solo pasa las tasas cuando la reserva requiere factura: `taxRate: requiresInvoice ? 0.16 : 0` y `ishRate: requiresInvoice ? 0.02 : 0` ([reservation-manager.component.ts](./src/app/features/booking/components/reservation-manager/reservation-manager.component.ts)).
 
 ### 4. 🛏️ Inventario y operación hotelera
 * El Room Rack consulta `hotel_rooms` y presenta las habitaciones agrupadas por tipo: **Sencilla, Kingsize, Doble y Triple**. La suite identifica también los tipos `INDIVIDUAL` y otros valores recibidos del backend.
@@ -77,7 +89,8 @@ Integración de la librería corporativa `@hosting3m/ui-pdf-export` para la form
 Migración a un sistema de **Rutas Hijas (Child Routes)**, permitiendo enlaces directos (Deep Linking) a módulos específicos.
 
 * **Rutas:** `/dashboard/mantenimiento`, `/dashboard/reservas`, `/dashboard/huespedes`, `/dashboard/personal`, `/dashboard/inventario` y `/dashboard/finanzas`.
-* Son rutas hijas de `MainLayoutComponent`; actualmente se registran con imports directos en `app.routes.ts`, no mediante `loadComponent`/lazy loading.
+* Son rutas hijas de `MainLayoutComponent`; actualmente se registran con imports directos en [app.routes.ts](./src/app/app.routes.ts), no mediante `loadComponent`/lazy loading.
+* Acceso: todas las rutas hijas heredan `authGuard`. `personal`, `inventario` y `finanzas` además exigen `roleGuard(['ADMIN'])`. La pantalla de `personal` no tiene datos hasta migrar `users` a `v6/CRUD` (ver *Limitaciones y riesgos abiertos*).
 
 ### 3. ⚡ Optimización de Rendimiento
 
@@ -128,7 +141,7 @@ La aplicación implementa una arquitectura **Distributed Data-Access Pattern**:
 | **Room Rack** | 🟢 Activo | Inventario dinámico del hotel (18 habitaciones operativas) y estados de cuarto/limpieza. |
 | **Booking Engine** | 🟢 Activo | Motor de reservas con validación de conflictos y **Exportación PDF**. |
 | **Mantenimiento** | 🟢 Activo | Sistema de Tickets con trazabilidad de resolución. |
-| **Activos (Assets)** | 🟢 Activo | CRUD de inventario físico por habitación. |
+| **Activos (Assets)** | 🟢 Activo | CRUD de inventario físico por habitación o bodega. |
 | **Finanzas** | 🟢 Activo | Corte Z, gestión de CAPEX/OPEX y desglose fiscal automático. |
 | **AI Concierge** | 🟢 Activo | Asistencia vía `ui-chat`; sin adjuntos habilitados en esta aplicación. |
 
@@ -139,12 +152,34 @@ La aplicación implementa una arquitectura **Distributed Data-Access Pattern**:
 ### 4. Huéspedes: Inteligencia de Cliente (CRM) ⏳ [EN PROGRESO]
 
 * **Objetivo:** Implementación de `tags` (Senior, Nómada, Familia) y `travel_reason`.
+* **Estado en código:** no se encontraron `tags` ni `travel_reason` en el código fuente inspeccionado. TODO(verify): confirmar si el trabajo está en otra rama.
 
-### 5. PWA Offline Mode ⏳ [PLANEADO]
+### 5. PWA Offline Mode ⏳ [PARCIAL]
 
 * **Tecnología:** Service Workers para caché de rutas críticas como `/inventario`.
+* **Estado en código:** existe [sw.js](./public/sw.js), registrado desde `src/index.html`, con caché de respuestas de navegación y de estáticos (js, css, imágenes, fuentes) y [manifest.webmanifest](./public/manifest.webmanifest). No hay caché específica de `/inventario`. Las peticiones a otro origen (el gateway) no se interceptan, así que los datos del CRUD no se guardan sin conexión.
 
 ---
+
+## 🏢 Aislamiento por empresa (`id_company`)
+
+* **Origen:** el contexto activo es `TenantService.activeTenantId()` (librería `core-auth`). `BookingService` lo envía como `id_company` en las altas de huéspedes y reservas ([booking.service.ts](./src/app/features/booking/services/booking.service.ts)).
+* **Filtros en el cliente:** `AdminService.loadUsers()` y `loadGuests()` filtran por `id_company` ([admin.service.ts](./src/app/features/admin/services/admin.service.ts)). Las lecturas de habitaciones, reservas y tickets, y las actualizaciones por `id`, no incluyen `id_company`.
+* **Validación:** el cliente no comprueba el tenant antes de enviar una petición. La validación está en el gateway `v5/CRUD`: toma la empresa del token verificado, responde `403 NO_TENANT` si falta y deniega tablas sin mapeo de tenant. Los datos del hotel pertenecen a la empresa `<COMPANY_ID>` ([README del workflow v5](../../../workflows/06-dynamic-crud-engine/v5/README.md)). TODO(verify): confirmar ese scoping en los nodos `Extract Auth Context` y `Build Query` del workflow exportado.
+* **Límite:** es aislamiento en la capa de aplicación (gateway), no en PostgreSQL. `n8n_user` es superusuario y no hay RLS.
+
+## ⚠️ Limitaciones y riesgos abiertos
+
+Verificado contra el código fuente el 2026-11-13.
+
+1. **Shield parcial:** ver la tabla de cobertura en *Key Features (v0.11.0)*. `loadRooms` trata `error: true` como lista vacía sin avisar al usuario (riesgo).
+2. **Colecciones vacías:** `loadRooms` no descarta filas sin `id`; un `data: [{}]` produciría una habitación sin datos (riesgo). TODO(verify) con el gateway real.
+3. **Pantalla de personal sin datos:** `/dashboard/personal` existe en las rutas, pero `users` está bloqueado en `v5/CRUD` (nota de suite; TODO(verify) en el workflow). Hasta migrar a `v6/CRUD` no carga usuarios.
+4. **Vista `user_mgmt` sin comprobación de rol:** `DashboardComponent` conserva `openUserManagement()` ([dashboard.component.ts](./src/app/features/dashboard/components/dashboard/dashboard.component.ts)) sin `roleGuard`. Hoy ningún elemento lo dispara: `RoomFiltersComponent` declara `onManageUsers` pero no lo emite ([room-filters.component.html](./src/app/features/dashboard/components/room-filters/room-filters.component.html)). Riesgo si se vuelve a conectar sin una comprobación de rol.
+5. **Fechas en UTC:** después de las 18:00 hora de CDMX, `toISOString()` devuelve el día siguiente. Afecta la fecha de inicio por defecto del cálculo de precio ([checkin-form.component.ts](./src/app/features/booking/components/checkin-form/checkin-form.component.ts)), la fecha del checklist y `inspection_date` ([hotel.service.ts](./src/app/features/dashboard/services/hotel.service.ts)), `expense_date` ([expense-form-modal.component.ts](./src/app/features/finance/components/expense-form-modal/expense-form-modal.component.ts)) y los timestamps `check_in`/`check_out` de `BookingService` (riesgo).
+6. **Fechas `YYYY-MM-DD` parseadas como UTC:** `checkAvailability` e `isRoomFree` pasan fechas de solo día a `new Date(...)` y luego usan `setHours(0,0,0,0)` local. En UTC-6 esto puede desplazar un día el límite de traslape (riesgo). TODO(verify) con datos reales.
+7. **Entornos:** el `CLAUDE.md` del proyecto indica que `environment.ts` apunta a producción también en desarrollo, así que `ng serve` puede leer y escribir datos de producción. Los archivos de `src/environments/` no están en este checkout; TODO(verify).
+8. **Lecturas sin tenant:** ver *Aislamiento por empresa*. Las lecturas dependen del gateway `v5/CRUD`, no del cliente.
 
 ## 🛠️ Comandos de Desarrollo
 
@@ -173,6 +208,8 @@ ng serve dashboard
 ng build dashboard --configuration=production
 
 ```
+
+**Pruebas:** las specs (`*.spec.ts`) están junto a servicios y componentes, por ejemplo [booking.service.spec.ts](./src/app/features/booking/services/booking.service.spec.ts). El script raíz `npm test` (en `hosting3m-workspace/`) ejecuta `ng test`; no verifiqué que lo limite a `dashboard`. TODO(verify).
 
 ---
 

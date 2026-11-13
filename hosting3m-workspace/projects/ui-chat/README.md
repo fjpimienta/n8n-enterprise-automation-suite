@@ -22,10 +22,13 @@ It is currently the core communication module for:
 ## ⚡ Key Features
 * **Standalone Architecture:** Fully compatible with modern Angular (no NgModules required).
 * **Zero-Config Logic:** The library does not hold environment variables. It relies on the consuming app to provide them via DI Tokens.
-* **Auto-Reconnect:** Built-in logic to handle network interruptions.
-* **Typing Indicators:** Visual feedback when the AI is processing logic in n8n.
+* **Error Fallback:** On an HTTP error the service shows a fallback bot message instead of throwing. There is no automatic reconnect or retry; the user resends manually.
+* **Typing Indicators:** Visual feedback while `AiService.isLoading()` is true (the AI is processing in n8n).
+* **Tenant Context:** Every request carries `tenant_id` taken from `TenantService.activeTenant()?.id_company` (`core-auth`).
 
 ## 🛠 Installation & Integration
+
+> **Dependency:** `AiService` injects `TenantService` from `core-auth`. The host application must provide `core-auth` (and `HttpClient`) or the service cannot be created.
 
 ### 1. Import the Component
 In your application's layout or feature component (e.g., `main-layout.component.ts`):
@@ -75,6 +78,18 @@ export const appConfig: ApplicationConfig = {
 
 ```
 
+#### Alternative: `provideUiChat()`
+
+`public-api.ts` also exports `provideUiChat(config: ChatConfig): EnvironmentProviders`, which registers both `CHAT_CONFIG_TOKEN` and `AiService` in one call:
+
+```typescript
+import { provideUiChat } from '@hosting3m/ui-chat';
+
+export const appConfig: ApplicationConfig = {
+  providers: [provideUiChat(chatConfig)]
+};
+```
+
 ## 📎 Optional File Attachments (disabled by default)
 
 Opt in via `CHAT_CONFIG_TOKEN`. Without `attachments` (or with `enabled: false`) the UI and the HTTP request remain text-only. Enable it only when the host application's backend supports the attachment request contract.
@@ -118,24 +133,27 @@ The Base64 exists only inside the in-flight request: never in the message histor
 
 ### `<lib-ai-chat>`
 
-**Inputs:**
-| Name | Type | Default | Description |
-|------|------|---------|-------------|
-| `[sessionId]` | `string` | `uuid()` | Unique identifier for the conversation context (Memory). |
-| `[isOpen]` | `boolean` | `false` | Controls the visibility of the chat widget. |
+`AiChatComponent` currently declares **no `@Input()` or `@Output()`**. Configuration comes only from `CHAT_CONFIG_TOKEN`.
 
-**Outputs:**
-| Name | Type | Description |
-|------|------|-------------|
-| `(onMessageSent)` | `EventEmitter<string>` | Emits when the user sends a message. Useful for analytics. |
-| `(onClose)` | `EventEmitter<void>` | Emits when the user minimizes the chat. |
+* **Open/closed state:** `isOpen` is an internal signal toggled by the widget itself (`toggleChat()`); the host cannot bind it.
+* **Session ID:** generated inside `AiService` as `'web-' + crypto.randomUUID()` when the service is created (private, in memory only). It is not an input and is not persisted, so a new service instance means a new conversation.
+* **Events:** no `onMessageSent` / `onClose` outputs exist.
+* **Send:** the "Enter" key (`keyup.enter`) and the send button call `send()`; the message list auto-scrolls on updates.
+
+`TODO(verify)`: `CLAUDE.md` still documents `[sessionId]`, `[isOpen]`, `(onMessageSent)` and `(onClose)` as the public interface and markdown rendering of replies; none of these are in the source. Decide whether to implement them or update `CLAUDE.md`.
+
+### `AiService` and `ChatMessage`
+
+`AiService` is exported but not `providedIn: 'root'`. It exposes the `messages` and `isLoading` signals and `sendMessage(query, file?): Promise<boolean>` (resolves `true` when delivered). `ChatMessage` is `{ text, sender: 'user' | 'bot', timestamp, file? }`, where `file` holds metadata only (`name`, `type`, `size`, optional `previewUrl`).
 
 ## 🏗 Architecture
 
 The library is structured to enforce separation of concerns:
 
 * **`/tokens`**: Contains `InjectionToken` definitions to avoid circular dependencies.
-* **`/services`**: Handles HTTP/WS communication with the n8n Orchestrator.
+* **`/interfaces`**: `ChatConfig` and `ChatAttachmentsConfig`.
+* **`/services`**: `AiService` handles HTTP POST communication with the n8n Orchestrator (no WebSocket code exists).
+* **`/utils`**: `attachment.util.ts` (internal, not exported from `public-api.ts`): size/type checks, file-name sanitizing, Base64 reading.
 * **`/components`**: Standalone components responsible for rendering.
 
 ## 📦 Authors
