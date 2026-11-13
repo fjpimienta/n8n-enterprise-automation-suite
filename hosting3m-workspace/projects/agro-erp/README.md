@@ -144,10 +144,10 @@ adicionales. Los huecos se conservan explícitamente.
 | `091` | RFC por empresa y registros CFDI vinculados a gastos ganaderos (**aplicada en producción el 2026-10-30; el SQL conserva su nota de pruebas LOCAL**) |
 | `092` | Borradores server-side de CFDI con vista previa y confirmación |
 | `093` | Registro automático de RFC receptor al confirmar una factura |
-| `094` | Tickets del hotel con columna de empresa (`094_hotel_tickets_tenant.sql`; contenido `TODO(verify)`) |
-| `095` | Tickets del hotel: retiro del default de la columna (`095_hotel_tickets_drop_default.sql`; `TODO(verify)`; runbook `094_095_RUNBOOK.md`) |
+| `094` | Tickets del hotel con columna de empresa (`094_hotel_tickets_tenant.sql`: agrega `id_company integer NOT NULL DEFAULT 1`, una FK a `companys` y un índice; no reescribe datos) |
+| `095` | Tickets del hotel: retiro del default de la columna (`095_hotel_tickets_drop_default.sql`: solo quita el `DEFAULT 1` de `id_company`; runbook `094_095_RUNBOOK.md`) |
 | `096` | Cumplimiento de venta por especie: requisito de arete SINIIGA solo para bovinos (`[Unreleased]`) |
-| `097` | Venta FIFO de animales sin identificador (`097_fifo_sale_unidentified.sql`; `TODO(verify)` contra el CHANGELOG) |
+| `097` | Venta FIFO de animales sin identificador (`097_fifo_sale_unidentified.sql`: reemplaza solo `sp_solicitar_venta_orden` con selección FIFO determinista para animales sin identificador en un lote; no cambia tablas ni datos) |
 | `098` | Repasto con retorno: movimiento por guía a una UPP de tercero (`[Unreleased]`, prototipo en la empresa 3) |
 | `099` | Alta por regularización de padrón y compra endurecida por chat (desplegada 2026-11-10 según el CHANGELOG) |
 | `100` | Folio de guía normalizado en la regularización por chat |
@@ -159,7 +159,7 @@ adicionales. Los huecos se conservan explícitamente.
 | `106` | `id_company` en `allowed_fields` de `hotel_rooms` y `hotel_maintenance_tickets` (solo datos) |
 | `107` | Modelos `call_sp` de ventas de palma: `agri_sale_void` y `agri_sale_balance` (`sp_agri_void_sale`, `sp_agri_sales_balance`) |
 
-> Las migraciones `094`–`107` son el estado de `[Unreleased]` del [CHANGELOG.md](./CHANGELOG.md). Las descripciones de `094`, `095` y `097` salen del nombre del archivo; su contenido no se revisó (`TODO(verify)`).
+> Las migraciones `094`–`107` son el estado de `[Unreleased]` del [CHANGELOG.md](./CHANGELOG.md). Las descripciones de `094`, `095` y `097` se comprobaron contra el contenido de sus archivos SQL.
 
 ---
 
@@ -445,14 +445,14 @@ La validación del cliente es una defensa en profundidad: el filtro de la base y
 
 * **RISK — `tenantInterceptor` no es fail-closed.** Si no hay empresa activa, deja pasar la petición sin el header en lugar de detenerla. La protección depende de que el gateway rechace la petición. Esto contradice la guardia de fail-closed de `core-auth` (ver [CLAUDE.md](../core-auth/CLAUDE.md)); el cambio, si se decide, vive en `core-auth`, no en esta app.
 * **RISK — escrituras de ganado sin comprobación de empresa en el cliente** (`cattle-api.service.ts`, ver tabla). Hoy dependen solo del gateway.
-* **RISK — empresa activa en `localStorage`.** Cualquiera con acceso al navegador puede editar `active_tenant_context`. El gateway debe validar la membresía en cada petición; `TODO(verify)` que `Get Membresia` lo haga para todos los modelos.
-* **RISK — `AdminService.saveUserCompany`** (marcado `@deprecated`). Según su comentario en [admin.service.ts](./src/app/features/admin/services/admin.service.ts), desde la migración `073` el gateway rechaza las escrituras a `user_companies` (las membresías se escriben solo vía `sp_access_*`), y su único llamador (alta de empresa en [tenant-list.component.ts](./src/app/features/admin/components/tenant-list/tenant-list.component.ts)) nunca llega a ejecutarlo porque el JWT trae el correo en `user`, no en `email`. Las migraciones confirman la retirada de `INSERT`/`UPDATE`/`DELETE` sobre `user_companies` en `073`; la `065` es un borrador (según su cabecera, no aplicado en producción) que solo restringe esas operaciones a ADMIN. El método sigue en el código, así que el riesgo residual es que otro llamador lo use. `TODO(verify)` contra el `crud_models` vivo (`allowed_ops` de `user_companies`) y contra un JWT real.
+* **RISK — empresa activa en `localStorage`.** Cualquiera con acceso al navegador puede editar `active_tenant_context`. El gateway debe validar la membresía en cada petición. Verificado en `v6-crud.json`: la única rama de `If` que no pasa por `Verify Token` va directo a `Get Model Config`; el resto pasa por `IsValid` → `Get Membresia` → `Existe Membresia`, y sin fila de membresía responde `Respond Tenant Forbidden`.
+* **RISK — `AdminService.saveUserCompany`** (marcado `@deprecated`). Según su comentario en [admin.service.ts](./src/app/features/admin/services/admin.service.ts), desde la migración `073` el gateway rechaza las escrituras a `user_companies` (las membresías se escriben solo vía `sp_access_*`), y su único llamador (alta de empresa en [tenant-list.component.ts](./src/app/features/admin/components/tenant-list/tenant-list.component.ts)) nunca llega a ejecutarlo porque el JWT trae el correo en `user`, no en `email`. Las migraciones confirman la retirada de `INSERT`/`UPDATE`/`DELETE` sobre `user_companies` en `073`; la `065` es un borrador (según su cabecera, no aplicado en producción) que solo restringe esas operaciones a ADMIN. El método sigue en el código, así que el riesgo residual es que otro llamador lo use. Verificado: el claim `user` del JWT es el correo (`microservices/jwt-service/index.js:95-97` busca el login en `u.email` y `:151-153` firma `user`; `Get Membresia` lee `data.user.user`). `TODO(verify)`: `allowed_ops` de `user_companies` en el `crud_models` vivo.
 * **RISK — build de producción con URLs de desarrollo** (ver "Entorno de build").
 
 ### Limitaciones y TODO(verify)
 
 * `TODO(verify)`: tratamiento de `Fiscal`/impuestos. La app no contiene lógica de IVA ni ISH (búsqueda vacía en `src/app`); los importes de venta (`agri_sales`, `sp_agri_sales_balance`) llegan del servidor. Ubicar el cálculo real en `cfdi-service` o en la base antes de documentarlo. No recalcular nada desde el cliente.
-* `TODO(verify)`: el contenido de las migraciones `094`, `095` y `097` y el estado de `102`–`107` en producción (ver la tabla de migraciones).
+* `TODO(verify)`: el estado de `102`–`107` en producción (ver la tabla de migraciones).
 * `TODO(verify)`: versión de PostgreSQL usada en producción (la sección de arquitectura menciona 15+).
 
 ---
