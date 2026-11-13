@@ -36,7 +36,7 @@ graph LR
 1. **Shared monorepo:** The public website and dashboard are separate Angular applications; only dependencies actually imported by this app are listed as integrations.
 2. **Backend mediation:** The browser sends HTTP requests to n8n; it does not connect directly to PostgreSQL.
 3. **Booking safety:** The availability handler is currently disabled in code and does not issue its normal request to the public booking endpoint.
-4. **Public UI:** Tailwind CSS provides the website presentation; dashboard routing and theming are outside this application's architecture.
+4. **Public UI:** Tailwind CSS provides the website presentation. `src/styles.css` also imports the Tabler CSS, Font Awesome and Tabler Icons stylesheets from CDNs (Tabler and Tabler Icons from `@latest`); dashboard routing and theming are outside this application's architecture.
 
 ### Tailwind build and deployment
 
@@ -56,6 +56,8 @@ triggering a deployment.
 
 Automatic deployment is not active. After a release reaches `main`, trigger the action
 manually in Plesk with **Deploy now**.
+
+TODO(verify): the root `CLAUDE.md` says `main` publishes the frontends automatically through Plesk, which conflicts with this section and `README.md`; the Plesk action itself is not defined in the repository.
 
 #### Tailwind v4 deployment troubleshooting
 
@@ -110,9 +112,14 @@ component is dormant code and is not an available public booking capability.
 
 ## 5. 🗄️ Backend and data scope
 
-The app's current HTTP paths include the public n8n API (`apiUrl_public`) and hotel Meta-CRUD
-(`apiUrl_crud`, `crud/v5`), used for review reads and submissions. The shared chat calls the
-configured AI webhook. These services mediate persistence in PostgreSQL.
+The app's current HTTP paths include the public n8n API (`apiUrl_public`: `/availability` and `/lead`, both only reachable from the dormant booking flow) and hotel Meta-CRUD
+(`apiUrl_crud`, `crud/v5`), used for review reads (`getall`) and submissions. The shared chat calls the
+configured AI webhook (`apiUrl_ai`). These services mediate persistence in PostgreSQL.
+The app registers `provideHttpClient()` without interceptors and does not import `core-auth`, so none of
+these requests carries an `Authorization` header.
+
+Known deviation (#1042): `submitForm()` (the `/lead` call) sets `formStatus` to `success` on any 2xx
+response without checking the payload, so an empty HTTP 200 from a failed n8n execution is shown as success.
 
 No `hotel_metrics` table, energy readings, CFE/water sub-meter integration, or `ui-pdf-export`
 usage was found in the website source. Such items should be treated as proposals only, not as
