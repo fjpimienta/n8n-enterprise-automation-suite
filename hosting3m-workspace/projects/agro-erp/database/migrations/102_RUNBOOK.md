@@ -1,5 +1,5 @@
 > ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LA PARTE 1** (base de datos, verificada con sus huellas).
-> `main` publica automáticamente los frontends por Plesk: si se mergea antes, el estado del repositorio y el de producción
+> `main` se despliega manualmente: el dueño entra a Plesk y despliega con git. Si el frontend se despliega antes, el estado del repositorio y el de producción
 > divergen.
 
 > **Nota de alcance.** Este PR **no** cambia workflows de n8n, el gateway (`v6-crud.json`), `crud_models` ni el frontend: solo
