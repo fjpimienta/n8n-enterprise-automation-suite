@@ -4,6 +4,7 @@ import { TenantService } from 'core-auth';
 import { PALM_DASHBOARD_ROUTE, isPalmDomain, palmRouteRedirect } from '@shared/utils/business-domain.util';
 import { canAdministerPalm } from '../utils/agri.util';
 import { canCaptureExpense } from '../utils/expense.util';
+import { canManageSales } from '../utils/sale.util';
 
 /**
  * Palm screens exist only for palm companies. A livestock (or unknown) company is sent to its own
@@ -32,5 +33,15 @@ export const palmAdminGuard: CanActivateFn = () => {
 export const palmExpenseGuard: CanActivateFn = () => {
   const tenant = inject(TenantService).activeTenant();
   if (isPalmDomain(tenant) && canCaptureExpense(tenant?.role)) return true;
+  return inject(Router).parseUrl(PALM_DASHBOARD_ROUTE);
+};
+
+/**
+ * "Ventas": ADMIN of the ACTIVE palm company only (read, summary and void are ADMIN-only in the gateway). Uses
+ * tenantService.activeTenant()?.role, never the JWT role. OWNER, EDITOR and CUSTOMER go back to the palm dashboard.
+ */
+export const palmSalesGuard: CanActivateFn = () => {
+  const tenant = inject(TenantService).activeTenant();
+  if (isPalmDomain(tenant) && canManageSales(tenant?.role)) return true;
   return inject(Router).parseUrl(PALM_DASHBOARD_ROUTE);
 };

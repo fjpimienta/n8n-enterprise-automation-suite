@@ -1,0 +1,169 @@
+<div class="exp-screen">
+    <div class="exp-toolbar">
+        <div class="exp-field">
+            <label for="sale-list-from">Desde</label>
+            <input id="sale-list-from" type="date" class="exp-input" [ngModel]="dateFrom()" (ngModelChange)="dateFrom.set($event)">
+        </div>
+        <div class="exp-field">
+            <label for="sale-list-to">Hasta</label>
+            <input id="sale-list-to" type="date" class="exp-input" [ngModel]="dateTo()" (ngModelChange)="dateTo.set($event)">
+        </div>
+        <div class="exp-field">
+            <label for="sale-list-status">Estado</label>
+            <select id="sale-list-status" class="exp-input" [ngModel]="status()" (ngModelChange)="setStatus($event)">
+                @for (o of statusOptions; track o.value) { <option [value]="o.value">{{ o.label }}</option> }
+            </select>
+        </div>
+        <div class="exp-field">
+            <label for="sale-list-plantation">Plantación</label>
+            <select id="sale-list-plantation" class="exp-input" [ngModel]="plantationId()" (ngModelChange)="setPlantation($event)">
+                <option value="">Todas (incluye sin plantación)</option>
+                @for (p of context.allPlantations(); track p.id) {
+                <option [value]="p.id">{{ p.code }} · {{ p.name }}{{ p.isActive ? '' : ' (inactiva)' }}</option>
+                }
+            </select>
+        </div>
+        <div class="exp-field">
+            <label for="sale-list-lot">Lote</label>
+            <select id="sale-list-lot" class="exp-input" [disabled]="!plantationId()" [ngModel]="lotId()" (ngModelChange)="setLot($event)">
+                <option value="">Todos</option>
+                @for (l of lots(); track l.id) { <option [value]="l.id">{{ l.code }}{{ l.isActive ? '' : ' (inactivo)' }}</option> }
+            </select>
+        </div>
+        <button type="button" class="exp-btn primary" [disabled]="isLoading()" (click)="load()">
+            @if (isLoading()) { <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> }
+            Buscar
+        </button>
+    </div>
+
+    <div aria-live="polite">
+        @if (filterError()) { <div class="exp-alert warn" role="alert">{{ filterError() }}</div> }
+        @if (loadError()) { <div class="exp-alert err" role="alert">{{ loadError() }}</div> }
+        @if (actionSuccess()) {
+        <div class="exp-alert d-flex justify-content-between align-items-center gap-2">
+            <span><i class="ti ti-check me-2" aria-hidden="true"></i>{{ actionSuccess() }}</span>
+            <button type="button" class="exp-btn" aria-label="Cerrar aviso" (click)="actionSuccess.set(null)"><i class="ti ti-x" aria-hidden="true"></i></button>
+        </div>
+        }
+    </div>
+    @if (possiblyTruncated()) {
+    <div class="exp-alert warn" role="alert">La lista llegó con el máximo de registros que entrega el servidor: reduce el rango de fechas.</div>
+    }
+
+    <div class="exp-split" [class.has-detail]="selected()">
+        <div class="exp-card" style="padding: .5rem;">
+            @if (isLoading() && !loaded()) {
+            <div class="exp-state" role="status"><span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Cargando ventas…</div>
+            } @else if (!sales().length) {
+            <div class="exp-state">
+                @if (loadError()) { No se pudo mostrar la lista. } @else { {{ emptyText() }} }
+            </div>
+            } @else {
+            <div class="exp-table-wrap exp-desktop">
+                <table class="exp-table">
+                    <thead><tr><th scope="col">Fecha</th><th scope="col">Folio</th><th scope="col">Comprador</th><th scope="col">Lugar</th><th scope="col" class="r">Cantidad</th><th scope="col" class="r">Total</th></tr></thead>
+                    <tbody>
+                        @for (s of sales(); track s.id) {
+                        <tr>
+                            <td class="text-nowrap">{{ day(s.saleDate) }}</td>
+                            <td>
+                                <button type="button" class="exp-row-btn" [attr.aria-pressed]="selectedId() === s.id" [attr.aria-label]="'Ver detalle de la venta ' + (s.folio || s.buyerName)" (click)="select(s)">{{ s.folio || 'Sin folio' }}</button>
+                                @if (s.status === 'VOID') { <span class="exp-pill void ms-1">Anulada</span> }
+                                @if (s.isTest) { <span class="exp-pill ms-1">Prueba</span> }
+                                @if (s.status === 'VOID' && s.voidReason) { <div class="exp-muted small">Motivo: {{ s.voidReason }}</div> }
+                            </td>
+                            <td>{{ s.buyerName }}</td>
+                            <td>{{ place(s) }}</td>
+                            <td class="r">{{ kg(s.quantityKg) }}</td>
+                            <td class="r" [class.exp-void-text]="s.status === 'VOID'">{{ money(s.totalAmount) }}</td>
+                        </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <div class="exp-cards">
+                @for (s of sales(); track s.id) {
+                <div class="exp-card-item">
+                    <div class="d-flex justify-content-between gap-2">
+                        <span class="exp-muted small">{{ day(s.saleDate) }}</span>
+                        <strong [class.exp-void-text]="s.status === 'VOID'">{{ money(s.totalAmount) }}</strong>
+                    </div>
+                    <button type="button" class="exp-row-btn" style="min-height: 44px;" [attr.aria-pressed]="selectedId() === s.id" (click)="select(s)">{{ s.folio || 'Sin folio' }} · {{ s.buyerName }}</button>
+                    <div class="exp-muted small">{{ place(s) }} · {{ kg(s.quantityKg) }}</div>
+                    <div>
+                        @if (s.status === 'VOID') { <span class="exp-pill void">Anulada</span> }
+                        @if (s.isTest) { <span class="exp-pill ms-1">Prueba</span> }
+                    </div>
+                    @if (s.status === 'VOID' && s.voidReason) { <div class="exp-muted small">Motivo: {{ s.voidReason }}</div> }
+                </div>
+                }
+            </div>
+            }
+        </div>
+
+        @if (selected(); as s) {
+        <exp-detail-panel heading="Detalle de la venta" (closed)="selectedId.set(null)">
+            <dl class="exp-dl">
+                <dt>Total</dt><dd [class.exp-void-text]="s.status === 'VOID'"><strong>{{ money(s.totalAmount) }}</strong></dd>
+                <dt>Fecha</dt><dd>{{ day(s.saleDate) }}</dd>
+                <dt>Folio</dt><dd>{{ s.folio || '—' }}</dd>
+                <dt>Comprador</dt><dd>{{ s.buyerName }}</dd>
+                <dt>Cantidad</dt><dd>{{ kg(s.quantityKg) }}</dd>
+                <dt>Precio por kg</dt><dd>{{ pricePerKg(s.unitPrice) }}</dd>
+                <dt>Forma de pago</dt><dd>{{ paymentLabel(s.paymentMethod) }}</dd>
+                <dt>Ticket</dt><dd>{{ s.ticketRef || '—' }}@if (s.ticketWarning) { <span class="exp-pill ms-1">Sin ticket</span> }</dd>
+                <dt>Lugar</dt><dd>{{ place(s) }}</dd>
+                <dt>Registrada</dt><dd>{{ instant(s.createdAt) }}</dd>
+                <dt>Estado</dt><dd>{{ s.status === 'VOID' ? 'Anulada' : 'Vigente' }}@if (s.isTest) { <span class="exp-pill ms-1">Prueba</span> }</dd>
+                @if (s.status === 'VOID') {
+                <dt>Motivo</dt><dd>{{ s.voidReason || '—' }}</dd>
+                <dt>Anulada</dt><dd>{{ instant(s.voidedAt) }}</dd>
+                }
+            </dl>
+            <div panelFooter>
+                @if (s.status === 'ACTIVE') {
+                <button type="button" class="exp-btn danger w-100" (click)="requestVoid(s)"><i class="ti ti-ban me-1" aria-hidden="true"></i>Anular venta</button>
+                } @else {
+                <span class="exp-muted small">Una venta anulada no se puede modificar.</span>
+                }
+            </div>
+        </exp-detail-panel>
+        }
+    </div>
+    <div class="exp-muted small mt-2">Los totales están en la pestaña Resumen. Una venta no se edita ni se borra: solo se anula.@if (voidedCount()) { Anuladas en la lista: {{ voidedCount() }}. }</div>
+</div>
+
+@if (toVoid(); as s) {
+<div class="modal-backdrop fade show"></div>
+<div class="modal modal-blur fade show d-block" tabindex="-1" role="dialog" aria-modal="true" aria-labelledby="sale-void-title">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow-lg border-0">
+            <div class="modal-status bg-danger"></div>
+            <div class="modal-body py-4">
+                <h3 class="mb-2" id="sale-void-title"><i class="ti ti-ban text-danger me-2" aria-hidden="true"></i>¿Anular esta venta?</h3>
+                <div class="mb-3">
+                    <div><strong>{{ money(s.totalAmount) }}</strong> · {{ s.folio || 'Sin folio' }} · {{ day(s.saleDate) }}</div>
+                    <div class="text-muted small">{{ s.buyerName }} · {{ place(s) }} · {{ kg(s.quantityKg) }}</div>
+                </div>
+                <div class="text-muted small mb-3">No se borra: queda en la lista como anulada, con el motivo, y deja de contar en el resumen. No se puede deshacer.</div>
+                <div aria-live="assertive">
+                @if (voidError()) {
+                <div class="alert alert-danger" role="alert"><i class="ti ti-alert-triangle me-2" aria-hidden="true"></i>{{ voidError() }}</div>
+                }
+                </div>
+                <label class="form-label fw-bold" for="sale-void-reason">Motivo <span class="text-danger">*</span></label>
+                <textarea id="sale-void-reason" class="form-control" rows="2" [attr.maxlength]="maxVoidReason" placeholder="Ej. Comprador equivocado" [disabled]="isVoiding()"
+                    [ngModel]="voidReason()" (ngModelChange)="voidReason.set($event)"></textarea>
+                <div class="text-muted small mt-1">{{ voidReasonLength() }} / {{ maxVoidReason }} caracteres (mínimo 5)</div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" [disabled]="isVoiding()" (click)="cancelVoid()">Cancelar</button>
+                <button class="btn btn-danger" [disabled]="isVoiding() || voidReasonInvalid()" (click)="confirmVoid()">
+                    @if (isVoiding()) { <span class="spinner-border spinner-border-sm me-2" role="status"></span> }
+                    Anular venta
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+}

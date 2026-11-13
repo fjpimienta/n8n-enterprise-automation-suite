@@ -77,6 +77,41 @@ export function interpretSpResponse<T = Record<string, unknown>>(res: unknown): 
   return { ok: true, data: res['data'] as unknown as T };
 }
 
+/** Procedures that answer `{status, ...}` without a `success` key (for example sp_agri_void_sale). */
+export type StatusSpOutcome<T = Record<string, unknown>> =
+  | { ok: true; status: string; data: T }
+  | { ok: false; message: string; status?: string };
+
+/**
+ * Spanish texts of the non-final statuses of the palm sale procedures. The messages of the procedures are not shown
+ * (they carry no accents); an unknown status is "not confirmed", never a success.
+ */
+const STATUS_MESSAGES: Readonly<Record<string, string>> = {
+  NOT_FOUND: 'La venta no existe en la empresa activa. Vuelve a cargar la lista.',
+  FORBIDDEN: 'Solo un administrador de la empresa puede anular ventas.',
+  NOT_PALM: 'La empresa activa no es de palma.',
+  INVALID_REASON: 'El motivo debe tener entre 5 y 300 caracteres.',
+};
+
+/**
+ * Fail-closed reading of a call_sp answer that carries a `status`: only `error === false`, an object `data` and a status
+ * listed in `finalStatuses` count as success (OK and ALREADY_VOID by default; both are final states).
+ * `interpretSpResponse` stays as it was for the procedures that answer `success: true`.
+ */
+export function interpretStatusSpResponse<T = Record<string, unknown>>(
+  res: unknown,
+  finalStatuses: readonly string[] = ['OK', 'ALREADY_VOID'],
+): StatusSpOutcome<T> {
+  if (!isRecord(res)) return { ok: false, message: UNCONFIRMED_MESSAGE };
+  if (res['error'] === true) return { ok: false, message: friendlyGatewayError(String(res['message'] ?? '')) };
+  const data = res['data'];
+  if (res['error'] !== false || !isRecord(data) || typeof data['status'] !== 'string') return { ok: false, message: UNCONFIRMED_MESSAGE };
+  const status = data['status'];
+  if (finalStatuses.includes(status)) return { ok: true, status, data: data as unknown as T };
+  const known = Object.prototype.hasOwnProperty.call(STATUS_MESSAGES, status);
+  return { ok: false, status, message: known ? STATUS_MESSAGES[status] : UNCONFIRMED_MESSAGE };
+}
+
 const CONSTRAINT_MESSAGES: ReadonlyArray<[RegExp, string]> = [
   [/uq_agri_plantations_code_active/i, 'Ya existe una plantación activa con esa clave en esta empresa.'],
   [/uq_agri_lots_code_active/i, 'Ya existe un lote activo con esa clave en esta plantación.'],

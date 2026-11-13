@@ -8,6 +8,7 @@ import {
   canRecordCensus,
   friendlyGatewayError,
   interpretSpResponse,
+  interpretStatusSpResponse,
   isPossiblyTruncated,
   parseDecimal,
   toBool,
@@ -153,5 +154,43 @@ describe('todayCdmx', () => {
   it('uses America/Mexico_City, not UTC', () => {
     // 2026-10-18 03:00 UTC is still 2026-10-17 in CDMX (UTC-6).
     expect(todayCdmx(new Date('2026-10-18T03:00:00Z'))).toBe('2026-10-17');
+  });
+});
+
+describe('interpretStatusSpResponse (fail-closed, procedures that answer a status)', () => {
+  const ok = (status: string, extra: Record<string, unknown> = {}) => ({ error: false, data: { status, ...extra } });
+
+  it('OK and ALREADY_VOID are final states', () => {
+    expect(interpretStatusSpResponse(ok('OK', { sale_id: 's1' }))).toEqual({ ok: true, status: 'OK', data: { status: 'OK', sale_id: 's1' } });
+    expect(interpretStatusSpResponse(ok('ALREADY_VOID', { sale_id: 's1' }))).toMatchObject({ ok: true, status: 'ALREADY_VOID' });
+  });
+  it('every other status maps to a fixed Spanish text and the raw message is never shown', () => {
+    const raw = 'La venta no existe en la empresa activa.';
+    expect(interpretStatusSpResponse(ok('NOT_FOUND', { message: raw }))).toEqual({
+      ok: false, status: 'NOT_FOUND', message: 'La venta no existe en la empresa activa. Vuelve a cargar la lista.' });
+    expect(interpretStatusSpResponse(ok('FORBIDDEN', { message: 'x' }))).toEqual({
+      ok: false, status: 'FORBIDDEN', message: 'Solo un administrador de la empresa puede anular ventas.' });
+    expect(interpretStatusSpResponse(ok('NOT_PALM'))).toEqual({ ok: false, status: 'NOT_PALM', message: 'La empresa activa no es de palma.' });
+    expect(interpretStatusSpResponse(ok('INVALID_REASON', { message: 'El motivo de la anulacion debe tener' }))).toEqual({
+      ok: false, status: 'INVALID_REASON', message: 'El motivo debe tener entre 5 y 300 caracteres.' });
+  });
+  it('an unknown status (including names of Object.prototype) is "not confirmed", never a success', () => {
+    for (const status of ['SOMETHING_NEW', '', 'constructor', 'toString', 'ok']) {
+      expect(interpretStatusSpResponse(ok(status))).toMatchObject({ ok: false, message: UNCONFIRMED_MESSAGE });
+    }
+  });
+  it('a flagged error shows the (friendly) gateway message', () => {
+    expect(interpretStatusSpResponse({ error: true, message: 'Sin permiso para esta operación.' }))
+      .toEqual({ ok: false, message: 'Sin permiso para esta operación.' });
+    expect(interpretStatusSpResponse({ error: true, message: '' }).ok).toBe(false);
+  });
+  it('anything else is "not confirmed": no status, success without status, error flag missing, wrong shapes', () => {
+    const bad = [null, undefined, 'x', [], {}, { error: false }, { error: false, data: {} }, { error: false, data: [] }, { error: false, data: { success: true } },
+      { error: false, data: { status: 1 } }, { data: { status: 'OK' } }, { error: 'false', data: { status: 'OK' } }, { error: false, data: 'OK' }];
+    for (const res of bad) expect(interpretStatusSpResponse(res)).toEqual({ ok: false, message: UNCONFIRMED_MESSAGE });
+  });
+  it('the list of final statuses can be narrowed, and interpretSpResponse is unchanged by it', () => {
+    expect(interpretStatusSpResponse(ok('ALREADY_VOID'), ['OK'])).toMatchObject({ ok: false, status: 'ALREADY_VOID' });
+    expect(interpretSpResponse(ok('OK'))).toEqual({ ok: false, message: UNCONFIRMED_MESSAGE });
   });
 });
