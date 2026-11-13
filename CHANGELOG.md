@@ -105,7 +105,7 @@ cuando actualizan las reglas compartidas de contribución o despliegue.
   como legacy/fuera de producción.
 * Se documentó la separación entre los gateways CRUD utilizados por los proyectos del workspace.
 * `CONTRIBUTING.md` y `CLAUDE.md` comparten los mismos Conventional Commit types y el mismo
-  gate de despliegue: `main` publica automáticamente los frontends por Plesk; el backend
+  gate de despliegue: `main` se despliega manualmente por Plesk con git; el backend
   se despliega manualmente en el VPS con runbook, verificación y rollback.
 * La documentación registra la finalización de la actualización de credenciales el
   2026-10-25, sin incluir detalles operativos.
