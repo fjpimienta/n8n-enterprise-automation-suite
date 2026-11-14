@@ -45,8 +45,10 @@ export class AiChatComponent implements OnDestroy {
   async send() {
     const file = this.selectedFile();
     if (!file) {
-      this.aiService.sendMessage(this.userInput);
+      const text = this.userInput;
       this.userInput = '';
+      const delivered = await this.aiService.sendMessage(text);
+      if (!delivered && !this.destroyed && !this.userInput) this.userInput = text;
       return;
     }
 

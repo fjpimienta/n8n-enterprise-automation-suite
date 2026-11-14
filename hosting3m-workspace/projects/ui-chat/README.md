@@ -24,7 +24,7 @@ It is currently the core communication module for:
 * **Zero-Config Logic:** The library does not hold environment variables. It relies on the consuming app to provide them via DI Tokens.
 * **Error Fallback:** On an HTTP error the service shows a fallback bot message instead of throwing. There is no automatic reconnect or retry; the user resends manually.
 * **Typing Indicators:** Visual feedback while `AiService.isLoading()` is true (the AI is processing in n8n).
-* **Tenant Context:** Every request carries `tenant_id` taken from `TenantService.activeTenant()?.id_company` (`core-auth`), read at `ai.service.ts:44`. There is no guard: if no tenant is active, `tenant_id` is left out of the body (JSON drops `undefined`) and the request is still sent (`ai.service.ts:46-49`). See "Documented but not implemented (#1038)".
+* **Tenant Context:** Every request includes `tenant_id` only when `TenantService.activeTenant()?.id_company` is a positive safe integer. Without a valid active tenant, `AiService` refuses to send and prompts the user to select a company. File requests check the tenant before reading and again before dispatch. See [`ai.service.ts`](src/lib/services/ai.service.ts).
 
 ## 🛠 Installation & Integration
 
@@ -187,7 +187,6 @@ Behavior that earlier docs (`CLAUDE.md`, `INFRASTRUCTURE.md`) described but the 
 * **Signals-only state** (`CLAUDE.md`, State Management; `INFRASTRUCTURE.md`, Reactive State): documented as signals exclusively. Actual: `userInput` (`ai-chat.component.ts:20`) and `destroyed` (`:30`) are plain fields; the draft uses `[(ngModel)]` (`ai-chat.component.html:69`).
 * **Stateless component** (`CLAUDE.md`, Design Pattern): documented as holding no draft or file state. Actual: the component holds `userInput`, `selectedFile`, `previewUrl`, `attachmentError` (`ai-chat.component.ts:20-29`) and creates object URLs (`:113`).
 * **Session persistence** (`CLAUDE.md`, Session Lifecycle Stability): documented as requiring "proper persistence mechanisms". Actual: none; `src/lib` has no `localStorage`/`sessionStorage`, so a new `AiService` instance starts a new conversation (`ai.service.ts:24`).
-* **Tenant guard before sending** (root `CLAUDE.md` §2, fail-closed; referenced by `CLAUDE.md`, Communication Layer): documented as refusing to send without tenant. Actual: no check; the request is sent with `tenant_id` omitted (`ai.service.ts:44`, `:46-49`, `:84`, `:87-91`).
 * **English-only code and i18n of user-facing text** (`CLAUDE.md`, Language Guardrail): documented as English. Actual: Spanish comments at `ai.service.ts:6`, `:17`, `:21-22`, `:43`; Spanish user messages at `ai.service.ts:54`, `:70`, `:98` and `ai-chat.component.ts:73-75`.
 * **`primaryColor` applied to the widget** (`CLAUDE.md`, Token Configuration; `INFRASTRUCTURE.md`, Configurable Injection): documented as styling the widget. Actual: declared in `chat-config.ts:14` and never read in `src/lib`; the stylesheet uses `var(--primary-color, #206bc4)` (`ai-chat.component.css:171`), and nothing in `src/lib` sets that variable.
 
