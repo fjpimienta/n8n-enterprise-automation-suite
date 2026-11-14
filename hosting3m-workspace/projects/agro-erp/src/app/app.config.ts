@@ -1,9 +1,11 @@
-import { ApplicationConfig, provideZonelessChangeDetection } from '@angular/core';
+import { ApplicationConfig, isDevMode, provideAppInitializer, provideZonelessChangeDetection } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
+import { provideServiceWorker } from '@angular/service-worker';
 
 import { routes } from './app.routes';
 import { environment } from '@env/environment';
+import { purgeLegacySwCaches } from '@core/utils/legacy-sw-cache.util';
 import { AUTH_ENV_CONFIG, authInterceptor, tenantInterceptor } from 'core-auth';
 
 // ✅ 1. Importar el Token y el Servicio desde la librería ui-chat
@@ -14,6 +16,17 @@ export const appConfig: ApplicationConfig = {
     provideZonelessChangeDetection(),
     provideRouter(routes),
     provideHttpClient(withInterceptors([authInterceptor, tenantInterceptor])),
+
+    // PWA app shell (Refs #1087): Angular's service worker, production builds only. It caches the
+    // app shell and chunks; it does NOT cache gateway data (offline data is phase 1b).
+    provideServiceWorker('ngsw-worker.js', {
+      enabled: !isDevMode(),
+      registrationStrategy: 'registerWhenStable:30000',
+    }),
+    // Drop the cache of the retired hand-written worker (see public/sw.js).
+    provideAppInitializer(() => {
+      void purgeLegacySwCaches();
+    }),
 
     // Configuración de la librería core-auth
     {

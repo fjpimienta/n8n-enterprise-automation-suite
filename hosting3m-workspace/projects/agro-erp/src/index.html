@@ -10,8 +10,8 @@
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
 
   <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css">
+  <link rel="stylesheet" crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/@tabler/core@1.0.0-beta20/dist/css/tabler.min.css">
+  <link rel="stylesheet" crossorigin="anonymous" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css">
 
   <link rel="manifest" href="/manifest.webmanifest">
 
@@ -33,15 +33,6 @@
 
 <body> <app-root></app-root>
 
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js')
-          .then(reg => console.log('AGRO ERP Service Worker ready:', reg.scope))
-          .catch(err => console.error('AGRO ERP Service Worker failed:', err));
-      });
-    }
-  </script>
 </body>
 
 </html>
