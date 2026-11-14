@@ -49,7 +49,7 @@ El proyecto sigue una estructura desacoplada para facilitar el mantenimiento:
 * **Reseñas:** `App.loadDbReviews()` y `App.submitReview()` usan `POST {apiUrl_crud}/hotel_reviews` con `getall` o `insert` (`is_approved: false`). Las peticiones no llevan token: `app.config.ts` no registra interceptores. Deshabilitadas por `reviewsEnabled`.
 * **Chat de atención:** `AiChatComponent` (`lib-ai-chat`) con `AiService` de `ui-chat`, que envía a `apiUrl_ai`. Sin adjuntos: `attachments` no se configura y `ui-chat` lo deja desactivado por defecto.
 * **Bases de URL:** `apiUrl_public`, `apiUrl_crud` y `apiUrl_ai` vienen de los archivos de entorno, que no están versionados. TODO(verify): valores por entorno y su origen.
-* **Tenant:** el sitio no envía `id_company` ni token en ninguna petición. Cómo n8n determina la empresa en `/lead` y en `hotel_reviews` no se puede comprobar desde este repositorio. TODO(verify): confirmarlo en los workflows.
+* **Tenant:** el sitio no envía `id_company` ni token en ninguna petición. En `/lead` la empresa es fija: el nodo `Site Config` de `workflows/08-public-booking-engine/v4/v4_public_booking_engine.json` asigna `id_company = 1` y todas las consultas lo usan. Cómo se determina la empresa en `hotel_reviews` no se puede comprobar desde este repositorio. TODO(verify): confirmarlo en los workflows de `hotel_reviews`.
 
 ### Recursos externos
 

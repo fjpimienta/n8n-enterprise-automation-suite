@@ -11,7 +11,7 @@ It abstracts the complexity of token management and tenant selection (Multi-empr
 * **Multi-Tenant Context:** Built-in `CompanyContext` management supporting multi-company environments (`id_company`, `company_name`, `role`)[cite: 29].
 * **Standalone Architecture:** Fully compatible with modern Angular using standalone components and functional interceptors.
 * **Zero-Config Logic:** Relies on the consuming app to provide environment variables via the `AUTH_ENV_CONFIG` InjectionToken[cite: 29].
-* **Integrated Security:** Ships with `authGuard`, `roleGuard`, `authInterceptor` and `tenantInterceptor`. `authInterceptor` attaches the JWT only to requests under the configured API base URLs; `tenantInterceptor` attaches the active company header to all outgoing requests. Both must be registered by the host (see Setup). Neither one is fail-closed (see [Multi-tenant behavior](#multi-tenant-behavior)).
+* **Integrated Security:** Ships with `authGuard`, `roleGuard`, `authInterceptor` and `tenantInterceptor`. Both interceptors attach the JWT / the active company header only to requests whose origin exactly matches the origin of `apiUrl_crud`, `apiUrl_token`, `apiUrl_ai` or `apiUrl_upload`. Both must be registered by the host (see Setup). Neither one is fail-closed (see [Multi-tenant behavior](#multi-tenant-behavior)).
 
 ## 🛠 Installation & Integration
 
@@ -65,13 +65,13 @@ Register `authInterceptor` and `tenantInterceptor` explicitly with
 | `AuthEnvironmentConfig` | interface | `apiUrl_crud`, `apiUrl_token`, `apiUrl_ai`, `apiUrl_upload?`, `system_id` |
 | `CompanyContext` | interface | `id_company`, `company_name`, `role` |
 | `TenantContext` | interface | `id_company`, `company_name`, `role`, `industry`, `business_type`. Shape stored by `TenantService` ([`tenant.service.ts`](src/lib/services/tenant.service.ts)) |
-| `UserPayload` | interface | `id`, `email`, `role`, `id_company`, `name`. Decoded from the JWT ([`auth.service.ts`](src/lib/services/auth.service.ts)) |
+| `UserPayload` | interface | `id`, `email`, `role`, `id_company`, `name`. Decoded from the JWT ([`auth.service.ts`](src/lib/services/auth.service.ts)). The JWT issued by `jwt-service` carries `user`, `name`, `id_company`, `role` and `system_id` (`jwt-service/index.js:151-158`): it has no `id` and no `email`, so those fields are not set from login. |
 | `AuthService` | service | `login()`, `logout()`, `getStoredToken()`, `hasRole()`, signals `currentUser` and `isAuthenticated` |
 | `TenantService` | service | `availableTenants`, `activeTenant`, `activeTenantId`, `setAvailableTenants()`, `setActiveTenant()`, `clearContext()`, `hydrate()` |
 | `authGuard` | `CanActivateFn` | Allows navigation when a non-expired token exists; otherwise redirects to `/login` |
 | `roleGuard(roles)` | factory returning `CanActivateFn` | Requires an authenticated user whose JWT role is in `roles` (case-insensitive); otherwise redirects to `/login` or `/unauthorized` |
-| `authInterceptor` | `HttpInterceptorFn` | Adds `Authorization: Bearer <token>` to requests under the configured API base URLs; handles HTTP 401 |
-| `tenantInterceptor` | `HttpInterceptorFn` | Adds `X-Tenant-ID` and `x-tenant-id` when an active tenant is set |
+| `authInterceptor` | `HttpInterceptorFn` | Adds `Authorization: Bearer <token>` to requests whose origin matches a configured API origin; handles HTTP 401 |
+| `tenantInterceptor` | `HttpInterceptorFn` | Adds `X-Tenant-ID` and `x-tenant-id` when an active tenant is set and the request origin matches a configured API origin |
 | `CoreAuth` | component (`lib-core-auth`) | Placeholder generated with the library. Not a feature; see [Limitations](#limitations-and-todoverify) |
 
 `TenantSelectorComponent` is not part of the public API. Host applications provide their own
@@ -105,7 +105,7 @@ import { AuthService, TenantService } from 'core-auth';
 this.authService.login({ user: email, pass: password }).subscribe(res => {
   if (res.status === 'select_company') {
     // The host shows its own selector, then calls login() again with id_company.
-    // TODO(verify): exact payload shape of the select_company response.
+    // Payload: res.data.companies, an array of { id_company, company_name, role, industry }; no token (jwt-service/index.js:132).
     return;
   }
   // status === 'success': the token is stored and currentUser() is set.
@@ -140,16 +140,19 @@ authentication signals, and calls `TenantService.clearContext()`.
 - **Validation.** The library does not validate `id_company`. `setActiveTenant()` accepts any object
   and does not check that the company is in `availableTenants` or matches the JWT. `activeTenantId`
   is `activeTenant()?.id_company || null`, so `0` is treated as no tenant. The authoritative check
-  must be enforced server-side by the gateway. TODO(verify): confirm the `x-tenant-id` membership
-  check in the n8n gateway workflows for this suite.
+  must be enforced server-side by the gateway. The `v6/CRUD` gateway checks `x-tenant-id` against an
+  active `user_companies` membership (`Get Membresia` and `Existe Membresia` in
+  `workflows/06-dynamic-crud-engine/v6/v6-crud.json`; non-members get `403 TENANT_FORBIDDEN`).
 - **Propagation.** [`tenant.interceptor.ts`](src/lib/interceptors/tenant.interceptor.ts)
-  sets `X-Tenant-ID` and `x-tenant-id` on every outgoing `HttpClient` request when an active tenant
-  exists. It does not filter by URL, so the header is sent to any host the app calls.
+  sets `X-Tenant-ID` and `x-tenant-id` on an outgoing `HttpClient` request when an active tenant
+  exists and the request origin exactly matches the origin of `apiUrl_crud`, `apiUrl_token`,
+  `apiUrl_ai` or `apiUrl_upload`. Other, relative or unparseable URLs get no header (a warning is
+  logged in dev mode only).
 - **Fail-closed: not implemented.** The project governance requires fail-closed behavior, but the
   code does not provide it:
   - [`auth.interceptor.ts`](src/lib/auth/auth.interceptor.ts)
-    sends the request without `Authorization` when there is no token or the URL is not a protected
-    base URL.
+    sends the request without `Authorization` when there is no token or the URL's origin is not an
+    allowed origin.
   - `tenantInterceptor` sends the request without tenant headers when there is no active tenant.
 
   In both cases the request is sent unchanged, without the missing credential or header. See RISK-1.
@@ -195,9 +198,10 @@ TODO(verify): confirm that the suite passes on the current `main` branch.
   as an error.
 - **RISK-3 (token storage).** The JWT is stored in `localStorage` under `authToken`. Any script running
   in the page can read it.
-- **RISK-4 (prefix match).** `authInterceptor` uses `req.url.startsWith(baseUrl)`. A base URL without a
-  trailing slash also matches look-alike hosts, which would receive the token. Keep base URLs as exact
-  origins and paths.
+- **RISK-4 (prefix match) — mitigated (#1037).** Both interceptors compare the exact origin
+  (`new URL(...).origin`) instead of a string prefix, so look-alike hosts and other ports or schemes get
+  no token or tenant header. Matching is by origin only, not by path: any path on an allowed origin
+  receives the credentials.
 - **RISK-5 (missing peer dependencies).** `package.json` declares only `@angular/common` and
   `@angular/core` as peers. The source imports `@angular/router`, `rxjs` and `jwt-decode`.
   TODO(verify): confirm how consumers get `jwt-decode` and whether the build bundles it.
@@ -205,11 +209,11 @@ TODO(verify): confirm that the suite passes on the current `main` branch.
   [`src/lib/core-auth.ts`](src/lib/core-auth.ts) and renders
   placeholder text. TODO(verify): remove it from the public API in a separate change.
 - **Two company shapes.** `CompanyContext` (`auth.config.ts`) and `TenantContext` (`tenant.service.ts`)
-  describe the same concept with different fields. TODO(verify): confirm which one the login response uses.
+  describe the same concept with different fields. The `companies` list in the `select_company` response carries `id_company`, `company_name`, `role` and `industry` (`jwt-service/index.js:122-126`): `TenantContext` is the closer match (it also requires `business_type`), and `CompanyContext` has no `industry`.
 - **Role source.** `roleGuard` reads the JWT role, not the active company role. TODO(verify): confirm
   the intended behavior with consuming apps.
-- **`localStorage.role`** is removed on logout but never written by the library. TODO(verify): confirm
-  whether a consuming app writes it.
+- **`localStorage.role`** is removed on logout but never written by the library. No file in this repository writes it;
+  `agro-erp` only reads it (`sidebar.component.ts:42`, fallback `EDITOR`). Writers outside this repository are not checked.
 
 ## 📦 Authors
 

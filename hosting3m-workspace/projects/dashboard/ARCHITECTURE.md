@@ -68,7 +68,7 @@ graph LR
     Browser --> PDF
 ```
 
-- **Authentication:** the login delegates to `AuthService` from `core-auth`; `TenantService` stores the selected company context. `authGuard`, `roleGuard` and `authInterceptor` are provided by the shared library. The interceptor adds the stored token to requests under the configured n8n API base.
+- **Authentication:** the login delegates to `AuthService` from `core-auth`; `TenantService` stores the selected company context. `authGuard`, `roleGuard` and `authInterceptor` are provided by the shared library. The interceptor adds the stored token only to requests whose origin exactly matches one of the origins in `AUTH_ENV_CONFIG` (#1037).
 - **CRUD and persistence:** dashboard services call the configured n8n `crud/v5` endpoint over HTTP; the browser does not connect directly to PostgreSQL. The services access models including `hotel_rooms`, `hotel_bookings`, `hotel_guests`, `hotel_room_inspections`, `hotel_maintenance_tickets`, `hotel_assets`, `hotel_expenses`, `users` and `companys`.
 - **Tenant context:** booking and expense operations include `id_company` from `TenantService` in relevant requests. This client-side context is not itself a security boundary. The hotel uses `v5/CRUD`; its tenant header/filter behavior does not enforce company membership or guarantee row isolation. Do not treat PostgreSQL RLS as protection for this gateway.
 - **Shared chat:** `AiChatComponent` is included at the application root and configured with `apiUrl_ai`. The dashboard does not set `attachments.enabled`, so UI Chat attachment support is not enabled here.
