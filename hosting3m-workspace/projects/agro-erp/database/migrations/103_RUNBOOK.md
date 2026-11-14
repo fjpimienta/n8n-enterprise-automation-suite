@@ -50,7 +50,7 @@ Nodos de `v6-crud.json` (los números son líneas del código de cada nodo; el J
   no puede estar vacío (69-79) y el rol debe estar en la lista (81-91). Rol = el de la membresía en la empresa del header
   (`Extract Auth Context`), no el del JWT.
 * **`Get Membresia` / `Existe Membresia`:** sin membresía activa en `x-tenant-id` responde `Respond Tenant Forbidden` antes de leer el modelo.
-* **`Schema Validate` (líneas 7-26):** solo valida requeridos en `insert`/`update`; `call_sp` no entra, y `schema_json` es `{}`.
+* **`Schema Validate` (líneas 7-26):** copia la configuración del modelo. Su chequeo de requeridos en `insert`/`update` no tiene efecto (**Known deviation (#1054)**: el `return` de error queda dentro del `forEach` y no llega a `If Error`); los requeridos no se aplican hoy. `call_sp` no entra, y `schema_json` es `{}`.
 * **Filtro de campos:** `allowed_fields` solo se usa en `Build Query` para inyectar `tenant_id`/`id_company` (líneas 18-22) y en las ramas
   `insert`/`update`/`getall` (líneas 82, 146, 224), **no** en `call_sp`. Por eso `confirmed`, `preview_hash` y `force_duplicate` no se
   eliminan (la prueba de Node lo comprueba).

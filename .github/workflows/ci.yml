@@ -72,6 +72,22 @@ jobs:
       - run: npm ci
       - run: npm test
 
+  core-auth-tests:
+    name: core-auth tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: hosting3m-workspace
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: hosting3m-workspace/package-lock.json
+      - run: npm ci --legacy-peer-deps
+      - run: npm test -- core-auth --watch=false
+
   workspace-build:
     name: Workspace build
     runs-on: ubuntu-latest

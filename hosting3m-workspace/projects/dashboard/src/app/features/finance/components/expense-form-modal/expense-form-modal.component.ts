@@ -5,6 +5,7 @@ import { ExpenseService } from '../../services/expense.service';
 import { BookingService } from '@features/booking/services/booking.service';
 import { MaintenanceService } from '@features/dashboard/services/maintenance.service';
 import { AuthService } from 'core-auth';
+import { toLocalDateString } from '@shared/services/data-utils.service';
 
 @Component({
   selector: 'app-expense-form-modal',
@@ -33,7 +34,7 @@ export class ExpenseFormModalComponent implements OnChanges {
     amount: 0,
     category: 'Insumos',
     payment_method: 'Efectivo',
-    expense_date: new Date().toISOString().split('T')[0], // Formato YYYY-MM-DD
+    expense_date: toLocalDateString(), // Formato YYYY-MM-DD
     room_id: null as number | null,
     maintenance_ticket_id: null as number | null,
     expense_type: 'OPEX',
@@ -132,7 +133,7 @@ export class ExpenseFormModalComponent implements OnChanges {
       amount: 0,
       category: 'Insumos',
       payment_method: 'Efectivo',
-      expense_date: new Date().toISOString().split('T')[0], // Formato YYYY-MM-DD
+      expense_date: toLocalDateString(), // Formato YYYY-MM-DD
       room_id: null as number | null,
       maintenance_ticket_id: null as number | null,
       expense_type: 'OPEX',

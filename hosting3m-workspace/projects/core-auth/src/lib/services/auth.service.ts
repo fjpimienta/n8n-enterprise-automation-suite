@@ -93,6 +93,16 @@ export class AuthService {
     return this.http.post<any>(this.apiUrl_token, payload).pipe(
       // 🛡️ PATRÓN ADAPTADOR: Normalización del Contrato Multi-Tenant
       map(response => {
+        // Meta-CRUD / n8n report failures as HTTP 200 with `error: true` (see #1037): surface them as errors.
+        if (response?.error === true) {
+          const message = typeof response.message === 'string' && response.message
+            ? response.message
+            : (typeof response.error_message === 'string' && response.error_message
+              ? response.error_message
+              : 'El servidor rechazó la solicitud.');
+          throw Object.assign(new Error(message), { error: true, body: response });
+        }
+
         // Si n8n envolvió la respuesta estructurada del microservicio dentro de su propio 'data'
         if (response?.data && (response.data.status === 'select_company' || response.data.status === 'success')) {
           return response.data;

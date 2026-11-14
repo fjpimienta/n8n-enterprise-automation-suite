@@ -6,6 +6,7 @@ import { lastValueFrom, map, Observable, shareReplay } from 'rxjs';
 import { BookingService } from '@features/booking/services/booking.service';
 import { AdminService } from '@features/admin/services/admin.service';
 import { TenantService } from 'core-auth';
+import { toLocalDateString } from '@shared/services/data-utils.service';
 
 @Injectable({ providedIn: 'root' })
 export class HotelService {
@@ -89,7 +90,7 @@ export class HotelService {
    * Obtiene el checklist de hoy para una habitación. Usa caché para evitar peticiones duplicadas.
    */
   getTodayChecklist(roomId: number): Observable<any | null> {
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateString();
     const key = `${roomId}-${today}`;
 
     if (!this.checklistCache.has(key)) {
@@ -116,7 +117,7 @@ export class HotelService {
   /** Invalida caché de checklist tras save/update para que el próximo getTodayChecklist traiga datos frescos */
   invalidateChecklistCache(roomId?: number): void {
     if (roomId) {
-      const today = new Date().toISOString().split('T')[0];
+      const today = toLocalDateString();
       this.checklistCache.delete(`${roomId}-${today}`);
     } else {
       this.checklistCache.clear();
@@ -139,7 +140,7 @@ export class HotelService {
         room_id: roomId,
         checklist_data: checklist,
         observaciones: observaciones || "",
-        inspection_date: new Date().toISOString().split('T')[0],
+        inspection_date: toLocalDateString(),
         id_company: this.tenantService.activeTenantId()
       }
     };

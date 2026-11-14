@@ -166,3 +166,62 @@ describe('CattleApiService.createLivestock (unchanged)', () => {
     http.verify();
   });
 });
+
+describe('CattleApiService tenant check on writes (#1040)', () => {
+  const base = environment.apiUrl_crud;
+  const NO_TENANT = 'Sesión inválida: No hay un rancho activo.';
+  let tenant: string | null;
+  let service: CattleApiService;
+  let http: HttpTestingController;
+
+  beforeEach(() => {
+    tenant = null;
+    TestBed.configureTestingModule({
+      providers: [
+        provideHttpClient(), provideHttpClientTesting(),
+        { provide: TenantService, useValue: { activeTenantId: () => tenant } },
+        { provide: LoggerService, useValue: { warn: () => {}, error: () => {}, log: () => {} } }
+      ]
+    });
+    service = TestBed.inject(CattleApiService);
+    http = TestBed.inject(HttpTestingController);
+  });
+
+  afterEach(() => {
+    // Drain requests a failing (old-code) run leaves open so one failure does not cascade.
+    http.match(() => true).forEach(r => r.flush({ data: {} }));
+    http.verify();
+  });
+
+  const cases: { name: string; path: string; body: any; run: () => Promise<any> }[] = [
+    { name: 'createHealthLog', path: 'cattle_health_logs',
+      body: { operation: 'insert', fields: { livestock_id: 'a1', event_type: 'VACUNA' } },
+      run: () => service.createHealthLog({ livestock_id: 'a1', event_type: 'VACUNA' }) },
+    { name: 'createWeightLog', path: 'cattle_weight_logs',
+      body: { operation: 'insert', fields: { livestock_id: 'a1', weight_kg: 410 } },
+      run: () => service.createWeightLog({ livestock_id: 'a1', weight_kg: 410 }) },
+    { name: 'updateLivestock', path: 'cattle_livestock',
+      body: { operation: 'update', id: 'a1', fields: { notes: 'x' } },
+      run: () => service.updateLivestock('a1', { notes: 'x' }) },
+    { name: 'procesarSalidaGanado', path: 'salida_ganado',
+      body: { operation: 'call_sp', fields: { electronic_rfid: '482000000000001' } },
+      run: () => service.procesarSalidaGanado('482000000000001') }
+  ];
+
+  for (const c of cases) {
+    it(`${c.name}: without an active tenant makes no request and throws the createLivestock error`, async () => {
+      await expect(c.run()).rejects.toThrow(NO_TENANT);
+      http.expectNone(`${base}/${c.path}`);
+    });
+
+    it(`${c.name}: with an active tenant sends the same URL and body as before`, async () => {
+      tenant = '3';
+      const p = c.run();
+      const req = http.expectOne(`${base}/${c.path}`);
+      expect(req.request.method).toBe('POST');
+      expect(req.request.body).toEqual(c.body);
+      req.flush({ data: { success: true } });
+      await p;
+    });
+  }
+});

@@ -45,7 +45,7 @@ projects/ui-chat/src/lib/
 │   └── attachment.util.ts # Validación y lectura Base64 de adjuntos
 ├── styles/
 │   └── theme.scss
-└── ui-chat-modele.ts     # Archivo del scaffold (nombre tal cual en el código)
+└── ui-chat-modele.ts     # Archivo del scaffold: vacío (0 bytes), sin exports y sin uso
 
 projects/ui-chat/src/public-api.ts  # Punto de entrada: exporta componente, AiService, interfaces, token y provideUiChat()
 
@@ -56,12 +56,11 @@ projects/ui-chat/src/public-api.ts  # Punto de entrada: exporta componente, AiSe
 * **AiChatComponent:**
 * **Inputs:** ninguno. Known deviation (#1038): `isOpen` es un `signal(false)` interno y el encabezado sale de `title` en `ChatConfig`; tampoco existen outputs.
 * **Features:** Auto-scroll al cambiar el historial de mensajes, envío con "Enter" (`keyup.enter`), indicador de escritura mientras `isLoading()` es verdadero, y adjunto opcional (un archivo por mensaje, desactivado por defecto).
-* **Rendering:** Known deviation (#1038): el texto se interpola sin Markdown (`{{ msg.text }}`).
+* **Rendering:** Known deviation (#1038): el texto se interpola sin Markdown (`{{ msg.text }}`, `ai-chat.component.html:25`). Lo que no existe en el código (inputs, outputs, Markdown, `ChatService`, streaming) está en la sección "Documented but not implemented (#1038)" del README.
 
 
-* **ChatService:**
-* **AiService (no existe `ChatService`):**
-* **Http Client:** Envía POST a `apiUrl_ai`.
+* **AiService (único servicio; `ai.service.ts:19`):**
+* **Http Client:** Envía POST a `apiUrl_ai` (`ai.service.ts:46`, `:87`).
 * **Session Handler:** Genera `'web-' + crypto.randomUUID()` y lo envía como `sessionId` en el cuerpo (no en headers) de cada request para que n8n mantenga la memoria.
 * **Tenant:** Envía `tenant_id` (`TenantService.activeTenant()?.id_company` de `core-auth`) en el cuerpo. Known deviation (#1038): no hay verificación previa; si no hay tenant activo, la petición se envía sin `tenant_id`.
 
@@ -75,7 +74,7 @@ projects/ui-chat/src/public-api.ts  # Punto de entrada: exporta componente, AiSe
 2. **Optimistic Update:** La UI muestra inmediatamente el mensaje del usuario y un loader ("...").
 3. **Transport:** `AiService` envía el payload `{ chatInput: "...", sessionId: "web-<uuid>", tenant_id: <id_company> }` (más `file: { name, type, size, base64 }` si hay adjunto) y lee `response.output`.
 4. **Response:**
-* *Éxito:* Se agrega la respuesta de texto del agente (`output`) al historial y se apaga el loader.
+* *Éxito:* Se agrega la respuesta de texto del agente (`output`) al historial y se apaga el loader. En mensajes de texto, `sendMessage` resuelve `true` al despachar la petición, antes de la respuesta (`ai.service.ts:60`); con adjunto, resuelve al terminar (`ai.service.ts:93-94`).
 * *Error:* Se agrega un mensaje del bot en español con el aviso de error (no hay toast). Con adjunto, el mensaje del usuario se retira del historial y el borrador y el archivo se conservan para reintentar; sin adjunto, el mensaje del usuario permanece.
 
 ## 📦 Authors

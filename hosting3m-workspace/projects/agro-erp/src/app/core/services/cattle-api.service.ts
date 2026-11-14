@@ -85,6 +85,9 @@ export class CattleApiService {
 
     // 2. Crear Evento Sanitario
     public async createHealthLog(fields: any): Promise<void> {
+        const idRanchoActivo = this.tenantService.activeTenantId();
+        if (!idRanchoActivo) throw new Error('Sesión inválida: No hay un rancho activo.');
+
         const res: any = await lastValueFrom(
             this.http.post(`${this.apiUrl_crud}/cattle_health_logs`, {
                 operation: 'insert',
@@ -96,6 +99,9 @@ export class CattleApiService {
 
     // 3. Crear Registro de Peso
     public async createWeightLog(fields: any): Promise<void> {
+        const idRanchoActivo = this.tenantService.activeTenantId();
+        if (!idRanchoActivo) throw new Error('Sesión inválida: No hay un rancho activo.');
+
         const res: any = await lastValueFrom(
             this.http.post(`${this.apiUrl_crud}/cattle_weight_logs`, {
                 operation: 'insert',
@@ -128,6 +134,9 @@ export class CattleApiService {
      * 5. Actualizar características de un Animal (por UUID interno)
      */
     public async updateLivestock(id: string, fields: any): Promise<void> {
+        const idRanchoActivo = this.tenantService.activeTenantId();
+        if (!idRanchoActivo) throw new Error('Sesión inválida: No hay un rancho activo.');
+
         const res: any = await lastValueFrom(
             this.http.post(`${this.apiUrl_crud}/cattle_livestock`, {
                 operation: 'update',
@@ -192,6 +201,9 @@ export class CattleApiService {
         electronic_rfid?: string;
         current_status?: string;
     }> {
+        const idRanchoActivo = this.tenantService.activeTenantId();
+        if (!idRanchoActivo) throw new Error('Sesión inválida: No hay un rancho activo.');
+
         const res: any = await lastValueFrom(
             this.http.post(`${this.apiUrl_crud}/salida_ganado`, {
                 operation: 'call_sp',
