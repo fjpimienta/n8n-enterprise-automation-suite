@@ -35,8 +35,20 @@ Main path for an authenticated request:
    **`Respond Tenant Forbidden`** answers `403` with code `TENANT_FORBIDDEN`.
 6. **`Get Model Config`** reads the `crud_models` row for the model. **`ModelExist`** checks that a row (`id`)
    exists.
-7. **`Schema Validate`** copies the model config forward. Its required-field check for `insert`/`update` is
-   effectively inert: the `return` that builds the error sits inside a `forEach`, so it never ends the node.
+7. **`Schema Validate`** copies the model config forward (`{ ...modelConfig, validated: true }`). For `insert`/`update`
+   it loops over `schema_json` with `Object.keys(schema).forEach(...)` and checks `required === true` fields against
+   `WebhookCRUD.body.fields`. **This check has no effect (known deviation, #1054):** the `return { json: { error: true,
+   status: 400, code: "SCHEMA_VALIDATION" } }` sits inside the `forEach` callback, so it only ends that callback and
+   is discarded. The node never emits an error, and the required fields are not enforced. Even if the object were
+   returned, nothing would deliver it: `Extract Auth Context` replaces the item with `{ user, id_company/email }`, and
+   `Security Validation` reads `$('Schema Validate').first().json` directly, then returns `error: false`, so no `400`
+   reaches `If Error`. A `throw` would not help either: a failed execution does not return the gateway's
+   `{ error: true }` format. Fixing it would take two changes: validate required fields only on `insert` (partial
+   `update` calls such as `updateProductionUnit` in agro-erp send a subset of fields) and route the error to `If Error`
+   from `Security Validation`. Both change behavior for existing callers, so they are deferred until the impact is
+   measured; see #1054. The v5 gateway has the same code and the same behavior.
+   TODO(verify): how many models in live `crud_models.schema_json` have `required: true`, and which callers send partial
+   `update` payloads. The migrations (12 files, 73 `"required": true` occurrences) do not give the live state.
 8. **`Extract Auth Context`** builds the actor: role from the membership row, email from the token's `user`
    claim (never from the body). The public `companys` path gets role `CUSTOMER`. No role: `401` `NO_ROLE`.
 9. **`Security Validation`** checks the operation against the model's `allowed_ops`, then the role against
