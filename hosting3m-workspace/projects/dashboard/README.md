@@ -152,7 +152,7 @@ La aplicación implementa una arquitectura **Distributed Data-Access Pattern**:
 ### 4. Huéspedes: Inteligencia de Cliente (CRM) ⏳ [EN PROGRESO]
 
 * **Objetivo:** Implementación de `tags` (Senior, Nómada, Familia) y `travel_reason`.
-* **Estado en código:** no se encontraron `tags` ni `travel_reason` en el código fuente inspeccionado. TODO(verify): confirmar si el trabajo está en otra rama.
+* **Estado en código:** no se encontraron `tags` ni `travel_reason` en el código fuente inspeccionado. Verificado: `tags` y `travel_reason` no aparecen en ninguna rama local ni remota del repositorio (`git grep` sobre `refs/heads` y `refs/remotes`); solo existen en este README.
 
 ### 5. PWA Offline Mode ⏳ [PARCIAL]
 
@@ -165,7 +165,7 @@ La aplicación implementa una arquitectura **Distributed Data-Access Pattern**:
 
 * **Origen:** el contexto activo es `TenantService.activeTenantId()` (librería `core-auth`). `BookingService` lo envía como `id_company` en las altas de huéspedes y reservas ([booking.service.ts](./src/app/features/booking/services/booking.service.ts)).
 * **Filtros en el cliente:** `AdminService.loadUsers()` y `loadGuests()` filtran por `id_company` ([admin.service.ts](./src/app/features/admin/services/admin.service.ts)). Las lecturas de habitaciones, reservas y tickets, y las actualizaciones por `id`, no incluyen `id_company`.
-* **Validación:** el cliente no comprueba el tenant antes de enviar una petición. La validación está en el gateway `v5/CRUD`: toma la empresa del token verificado, responde `403 NO_TENANT` si falta y deniega tablas sin mapeo de tenant. Los datos del hotel pertenecen a la empresa `<COMPANY_ID>` ([README del workflow v5](../../../workflows/06-dynamic-crud-engine/v5/README.md)). TODO(verify): confirmar ese scoping en los nodos `Extract Auth Context` y `Build Query` del workflow exportado.
+* **Validación:** el cliente no comprueba el tenant antes de enviar una petición. La validación está en el gateway `v5/CRUD`: toma la empresa del token verificado, responde `403 NO_TENANT` si falta y deniega tablas sin mapeo de tenant. Los datos del hotel pertenecen a la empresa `<COMPANY_ID>` ([README del workflow v5](../../../workflows/06-dynamic-crud-engine/v5/README.md)). Verificado en el export `v5-crud.json`: `Extract Auth Context` toma `id_company` solo del token verificado y responde `403 NO_TENANT` si falta; `Build Query` descarta el tenant que envía el cliente, lo sustituye por el del token y lanza error para tablas sin mapeo; `hotel_reviews` queda sin aislamiento por decisión pendiente (ver `TENANT_COLUMN` / `UNSCOPED_TABLES`).
 * **Límite:** es aislamiento en la capa de aplicación (gateway), no en PostgreSQL. `n8n_user` es superusuario y no hay RLS.
 
 ## ⚠️ Limitaciones y riesgos abiertos
