@@ -3,6 +3,7 @@ import { FormGroup, FormControl, Validators, ReactiveFormsModule } from '@angula
 import { CommonModule } from '@angular/common';
 import { Room } from '@core/models/hotel.types';
 import { AdminService } from '@features/admin/services/admin.service';
+import { toLocalDateString } from '@shared/services/data-utils.service';
 
 @Component({
   selector: 'app-checkin-form',
@@ -134,7 +135,7 @@ export class CheckinFormComponent implements OnInit {
     const checkOutDate = this.checkinForm.get('check_out')?.value;
 
     if (roomData && checkOutDate) {
-      let startDateStr = new Date().toISOString().split('T')[0];
+      let startDateStr = toLocalDateString();
       const res = this.activeRes;
 
       if (res && res.check_in) {

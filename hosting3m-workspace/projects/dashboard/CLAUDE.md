@@ -14,29 +14,27 @@ Architecture overview, tech stack, and data-flow diagram: @ARCHITECTURE.md
   calculations. Always use local time evaluators (`getFullYear()`, `getMonth()`, etc.) —
   operations run on UTC-6 (CDMX/Mérida), and `toISOString()` silently skips a day after
   18:00 hrs local time. This already caused a real bug (see CHANGELOG v0.11.0).
-  - **Known deviation (#1039):** `toISOString()` is still used in 16 places under `src/`.
-    Date-only keys (`toISOString().split('T')[0]`, UTC day):
-    [expense-form-modal.component.ts](src/app/features/finance/components/expense-form-modal/expense-form-modal.component.ts) L36, L135;
-    [data-utils.service.ts](src/app/shared/services/data-utils.service.ts) L9, L18;
-    [hotel.service.ts](src/app/features/dashboard/services/hotel.service.ts) L92, L119, L142;
-    [checkin-form.component.ts](src/app/features/booking/components/checkin-form/checkin-form.component.ts) L137.
-    Full timestamps (`check_in`/`check_out`, `created_at`, `now`):
-    [booking.service.ts](src/app/features/booking/services/booking.service.ts) L338, L354, L392, L450;
-    [maintenance.service.ts](src/app/features/dashboard/services/maintenance.service.ts) L70;
-    [dashboard.component.ts](src/app/features/dashboard/components/dashboard/dashboard.component.ts) L497, L505;
-    [maintenance-monitor-modal.component.ts](src/app/features/dashboard/components/maintenance-monitor-modal/maintenance-monitor-modal.component.ts) L123.
-    The rule above is unchanged; the code does not yet follow it.
+  - **Known deviation (#1039):** date-only keys now use `toLocalDateString()`
+    ([data-utils.service.ts](src/app/shared/services/data-utils.service.ts)). `toISOString()` is still
+    used for full timestamps (`check_in`/`check_out`, `created_at`, `now`):
+    [booking.service.ts](src/app/features/booking/services/booking.service.ts) (check-in/out and the
+    `isRoomFree` call in `processCheckin`/`processCheckout`);
+    [maintenance.service.ts](src/app/features/dashboard/services/maintenance.service.ts),
+    [dashboard.component.ts](src/app/features/dashboard/components/dashboard/dashboard.component.ts),
+    [maintenance-monitor-modal.component.ts](src/app/features/dashboard/components/maintenance-monitor-modal/maintenance-monitor-modal.component.ts).
+    TODO(verify): choosing the timezone policy for stored timestamps is not decided (#1039).
 - **MetaCRUD Silent Error Shield — implementation location:** `BookingService`
   intercepts `HTTP 200 OK` responses carrying `error: true` and throws them as real
   exceptions at the UI boundary. The pattern itself is suite-wide (root `CLAUDE.md`); this
   is where it's actually implemented in this app.
-  - **Known deviation (#1039):** the `error` flag is checked only in `processCheckin`
-    ([booking.service.ts](src/app/features/booking/services/booking.service.ts) L348, L380, L404, L418)
-    and `processCheckout` (L460, L494). Not checked: `createFutureReservation` (booking insert
-    L619–636 is awaited and ignored; the guest insert L610 is only read to pick an ID, so a failed
-    guest insert fails indirectly at L617), `updateCleaningStatus` (L504), `updateReservation`
-    (L666), `registerPayment` (L712), `cancelReservation` (L763) and `confirmPendingReservation`
-    (L783). On those paths an HTTP 200 with `error: true` resolves as success.
+  - **Known deviation (#1039):** every `BookingService` mutation now throws on HTTP 200 with
+    `error: true` (`processCheckin`, `processCheckout`, `createFutureReservation`,
+    `updateCleaningStatus`, `updateReservation`, `registerPayment`, `cancelReservation`,
+    `confirmPendingReservation`). TODO(verify): callers must show the thrown error in the UI; the
+    guest insert in `createFutureReservation` still fails only indirectly. `loadUsers` still
+    sends `filter: { id_company }` from the client (`UserListComponent` passes none);
+    TODO(verify): how the gateway combines that filter with the token scope, and whether `users`
+    is served at all in v5. Client-side tenant scoping is not a control.
 
 ## Verified Pitfalls (pulled forward from CHANGELOG.md — don't repeat these)
 

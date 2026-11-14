@@ -501,7 +501,7 @@ export class BookingService {
   public async updateCleaningStatus(roomId: number, status: 'dirty' | 'clean' | 'inspected'): Promise<void> {
     const crudUrl = environment.apiUrl_crud;
 
-    await lastValueFrom(
+    const res: any = await lastValueFrom(
       this.http.post(`${crudUrl}/hotel_rooms`, {
         operation: 'update',
         id: roomId,
@@ -510,6 +510,8 @@ export class BookingService {
         }
       }, { headers: this.adminService.getAuthHeaders() })
     );
+    // 🛑 ESCUDO ANTI-ERRORES SILENCIOSOS
+    if (res?.error) throw new Error(res.message || 'Fallo DB: Update Limpieza');
 
     this.loadRooms();
   }
@@ -616,7 +618,7 @@ export class BookingService {
 
       if (!guestIdToUse) throw new Error("No se pudo obtener un ID de huésped válido.");
 
-      await lastValueFrom(
+      const bookingRes: any = await lastValueFrom(
         this.http.post(`${this.apiUrl_crud}/hotel_bookings`, {
           operation: 'insert',
           fields: {
@@ -634,6 +636,8 @@ export class BookingService {
           }
         }, { headers: this.adminService.getAuthHeaders() })
       );
+      // 🛑 ESCUDO ANTI-ERRORES SILENCIOSOS
+      if (bookingRes?.error) throw new Error(bookingRes.message || 'Fallo DB: Insert Reserva');
 
       return true;
 
@@ -663,7 +667,7 @@ export class BookingService {
         newPaymentStatus = 'pending';
       }
 
-      await lastValueFrom(
+      const res: any = await lastValueFrom(
         this.http.post(`${this.apiUrl_crud}/hotel_bookings`, {
           operation: 'update',
           id: formData.id, // 🛠️ ESTRICTAMENTE EN LA RAÍZ
@@ -678,6 +682,8 @@ export class BookingService {
           }
         }, { headers: this.adminService.getAuthHeaders() })
       );
+      // 🛑 ESCUDO ANTI-ERRORES SILENCIOSOS
+      if (res?.error) throw new Error(res.message || 'Fallo DB: Update Reserva');
     } catch (error) {
       console.error("Error al actualizar reserva:", error);
       throw error;
@@ -709,7 +715,7 @@ export class BookingService {
         newBookingStatus = 'confirmed';
       }
 
-      await lastValueFrom(
+      const res: any = await lastValueFrom(
         this.http.post(`${this.apiUrl_crud}/hotel_bookings`, {
           operation: 'update',
           id: booking.id,
@@ -720,6 +726,8 @@ export class BookingService {
           }
         }, { headers: this.adminService.getAuthHeaders() })
       );
+      // 🛑 ESCUDO ANTI-ERRORES SILENCIOSOS
+      if (res?.error) throw new Error(res.message || 'Fallo DB: Registrar Abono');
     } catch (error) {
       console.error("Error al registrar abono:", error);
       throw error;
@@ -760,7 +768,7 @@ export class BookingService {
   public async cancelReservation(bookingId: number): Promise<void> {
     this.isProcessing.set(true);
     try {
-      await lastValueFrom(
+      const res: any = await lastValueFrom(
         this.http.post(`${this.apiUrl_crud}/hotel_bookings`, {
           operation: 'update',
           id: bookingId,
@@ -769,6 +777,8 @@ export class BookingService {
           }
         }, { headers: this.adminService.getAuthHeaders() })
       );
+      // 🛑 ESCUDO ANTI-ERRORES SILENCIOSOS
+      if (res?.error) throw new Error(res.message || 'Fallo DB: Cancelar Reserva');
     } catch (error) {
       console.error("Error al cancelar reserva:", error);
       throw error;
@@ -780,7 +790,7 @@ export class BookingService {
   public async confirmPendingReservation(bookingId: number): Promise<void> {
     this.isProcessing.set(true);
     try {
-      await lastValueFrom(
+      const res: any = await lastValueFrom(
         this.http.post(`${this.apiUrl_crud}/hotel_bookings`, {
           operation: 'update',
           id: bookingId,
@@ -789,6 +799,8 @@ export class BookingService {
           }
         }, { headers: this.adminService.getAuthHeaders() })
       );
+      // 🛑 ESCUDO ANTI-ERRORES SILENCIOSOS
+      if (res?.error) throw new Error(res.message || 'Fallo DB: Confirmar Reserva');
     } catch (error) {
       console.error("Error al confirmar reserva:", error);
       throw error;

@@ -9,6 +9,12 @@
     ],
     "baseUrl": ".",
     "paths": {
+      "core-auth": [
+        "../core-auth/src/public-api.ts"
+      ],
+      "core-auth/*": [
+        "../core-auth/src/lib/*"
+      ],
       "ui-chat": [
         "../ui-chat/src/public-api.ts"
       ],
