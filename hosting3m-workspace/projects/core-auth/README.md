@@ -65,7 +65,7 @@ Register `authInterceptor` and `tenantInterceptor` explicitly with
 | `AuthEnvironmentConfig` | interface | `apiUrl_crud`, `apiUrl_token`, `apiUrl_ai`, `apiUrl_upload?`, `system_id` |
 | `CompanyContext` | interface | `id_company`, `company_name`, `role` |
 | `TenantContext` | interface | `id_company`, `company_name`, `role`, `industry`, `business_type`. Shape stored by `TenantService` ([`tenant.service.ts`](src/lib/services/tenant.service.ts)) |
-| `UserPayload` | interface | `id`, `email`, `role`, `id_company`, `name`. Decoded from the JWT ([`auth.service.ts`](src/lib/services/auth.service.ts)) |
+| `UserPayload` | interface | `id`, `email`, `role`, `id_company`, `name`. Decoded from the JWT ([`auth.service.ts`](src/lib/services/auth.service.ts)). The JWT issued by `jwt-service` carries `user`, `name`, `id_company`, `role` and `system_id` (`jwt-service/index.js:151-158`): it has no `id` and no `email`, so those fields are not set from login. |
 | `AuthService` | service | `login()`, `logout()`, `getStoredToken()`, `hasRole()`, signals `currentUser` and `isAuthenticated` |
 | `TenantService` | service | `availableTenants`, `activeTenant`, `activeTenantId`, `setAvailableTenants()`, `setActiveTenant()`, `clearContext()`, `hydrate()` |
 | `authGuard` | `CanActivateFn` | Allows navigation when a non-expired token exists; otherwise redirects to `/login` |
@@ -105,7 +105,7 @@ import { AuthService, TenantService } from 'core-auth';
 this.authService.login({ user: email, pass: password }).subscribe(res => {
   if (res.status === 'select_company') {
     // The host shows its own selector, then calls login() again with id_company.
-    // TODO(verify): exact payload shape of the select_company response.
+    // Payload: res.data.companies, an array of { id_company, company_name, role, industry }; no token (jwt-service/index.js:132).
     return;
   }
   // status === 'success': the token is stored and currentUser() is set.
@@ -140,8 +140,9 @@ authentication signals, and calls `TenantService.clearContext()`.
 - **Validation.** The library does not validate `id_company`. `setActiveTenant()` accepts any object
   and does not check that the company is in `availableTenants` or matches the JWT. `activeTenantId`
   is `activeTenant()?.id_company || null`, so `0` is treated as no tenant. The authoritative check
-  must be enforced server-side by the gateway. TODO(verify): confirm the `x-tenant-id` membership
-  check in the n8n gateway workflows for this suite.
+  must be enforced server-side by the gateway. The `v6/CRUD` gateway checks `x-tenant-id` against an
+  active `user_companies` membership (`Get Membresia` and `Existe Membresia` in
+  `workflows/06-dynamic-crud-engine/v6/v6-crud.json`; non-members get `403 TENANT_FORBIDDEN`).
 - **Propagation.** [`tenant.interceptor.ts`](src/lib/interceptors/tenant.interceptor.ts)
   sets `X-Tenant-ID` and `x-tenant-id` on an outgoing `HttpClient` request when an active tenant
   exists and the request origin exactly matches the origin of `apiUrl_crud`, `apiUrl_token`,
@@ -208,11 +209,11 @@ TODO(verify): confirm that the suite passes on the current `main` branch.
   [`src/lib/core-auth.ts`](src/lib/core-auth.ts) and renders
   placeholder text. TODO(verify): remove it from the public API in a separate change.
 - **Two company shapes.** `CompanyContext` (`auth.config.ts`) and `TenantContext` (`tenant.service.ts`)
-  describe the same concept with different fields. TODO(verify): confirm which one the login response uses.
+  describe the same concept with different fields. The `companies` list in the `select_company` response carries `id_company`, `company_name`, `role` and `industry` (`jwt-service/index.js:122-126`): `TenantContext` is the closer match (it also requires `business_type`), and `CompanyContext` has no `industry`.
 - **Role source.** `roleGuard` reads the JWT role, not the active company role. TODO(verify): confirm
   the intended behavior with consuming apps.
-- **`localStorage.role`** is removed on logout but never written by the library. TODO(verify): confirm
-  whether a consuming app writes it.
+- **`localStorage.role`** is removed on logout but never written by the library. No file in this repository writes it;
+  `agro-erp` only reads it (`sidebar.component.ts:42`, fallback `EDITOR`). Writers outside this repository are not checked.
 
 ## 📦 Authors
 
