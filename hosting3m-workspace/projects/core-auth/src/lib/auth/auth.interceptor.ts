@@ -13,7 +13,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   const token = authService.getStoredToken();
   const isApiRequest = isAllowedOrigin(req.url, envConfig);
-  const isExempt = isExemptRoute(req.url, envConfig);
+  const isExempt = isExemptRoute(req, envConfig);
 
   if (!token && isApiRequest && !isExempt) {
     return throwError(() => new HttpErrorResponse({

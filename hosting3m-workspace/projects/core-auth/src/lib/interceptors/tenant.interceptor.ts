@@ -11,7 +11,7 @@ export const tenantInterceptor: HttpInterceptorFn = (req, next) => {
   const activeTenantId = tenantService.activeTenantId();
   const hasValidActiveTenant = typeof activeTenantId === 'number' && Number.isInteger(activeTenantId) && activeTenantId > 0;
   const isApiRequest = isAllowedOrigin(req.url, envConfig);
-  const isExempt = isExemptRoute(req.url, envConfig);
+  const isExempt = isExemptRoute(req, envConfig);
 
   if (isApiRequest && !isExempt && !hasValidActiveTenant) {
     return throwError(() => new HttpErrorResponse({

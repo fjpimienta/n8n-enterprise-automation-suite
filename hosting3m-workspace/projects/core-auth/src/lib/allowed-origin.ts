@@ -1,4 +1,5 @@
 import { isDevMode } from '@angular/core';
+import { HttpRequest } from '@angular/common/http';
 import { AuthEnvironmentConfig } from './auth.config';
 
 /** Returns the origin (scheme + host + port) of an absolute URL, or null if it cannot be parsed. */
@@ -29,21 +30,59 @@ export function isAllowedOrigin(requestUrl: string, config: AuthEnvironmentConfi
   return isAllowed;
 }
 
-export function isExemptRoute(requestUrl: string, config: AuthEnvironmentConfig): boolean {
-  try {
-    const url = new URL(requestUrl);
-    const tokenOrigin = originOf(config.apiUrl_token);
-    const crudOrigin = originOf(config.apiUrl_crud);
-    if (!tokenOrigin || !crudOrigin) return false;
+/**
+ * True when the request is one of the public routes that intentionally carry no JWT and no tenant:
+ *
+ * - `POST` to the exact `apiUrl_token` endpoint (origin and path), i.e. the login call.
+ * - `POST` to `<apiUrl_crud>/companys` whose body is exactly the `companys getall` read:
+ *   `operation === 'getall'`, with `entity` and/or `table_name` present and equal to `'companys'`.
+ *
+ * Matching is by method, origin, exact path and body fields, never by origin alone or by path
+ * substring. Any other request, including other `companys` operations, is not exempt and must
+ * carry a JWT and an active tenant. The gateway remains responsible for authorization.
+ */
+export function isExemptRoute(req: HttpRequest<unknown>, config: AuthEnvironmentConfig): boolean {
+  if (req.method !== 'POST') return false;
 
-    if (url.origin === tokenOrigin) return true;
-    if (url.origin === crudOrigin) {
-      const path = url.pathname.toLowerCase();
-      return path.includes('/companys') || path.includes('/companys/getall');
-    }
+  const url = parseUrl(req.url);
+  if (!url) return false;
 
-    return false;
-  } catch {
-    return false;
+  const tokenUrl = parseUrl(config.apiUrl_token);
+  if (tokenUrl && url.origin === tokenUrl.origin && trimmedPath(url) === trimmedPath(tokenUrl)) {
+    return true;
   }
+
+  const crudUrl = parseUrl(config.apiUrl_crud);
+  if (crudUrl && url.origin === crudUrl.origin && trimmedPath(url) === `${trimmedPath(crudUrl)}/companys`) {
+    return isCompanysGetallBody(req.body);
+  }
+
+  return false;
+}
+
+function parseUrl(value: string | undefined): URL | null {
+  if (!value) return null;
+  try {
+    return new URL(value);
+  } catch {
+    return null;
+  }
+}
+
+/** Pathname without trailing slashes, so `/x/` and `/x` compare equal. */
+function trimmedPath(url: URL): string {
+  return url.pathname.replace(/\/+$/, '');
+}
+
+/**
+ * Identifies the public `companys getall` read sent by the dashboard and agro-erp services:
+ * `{ entity: 'companys', table_name: 'companys', operation: 'getall', ... }`.
+ * Every identifying field that is present must be `'companys'`, and at least one must be present.
+ */
+function isCompanysGetallBody(body: unknown): boolean {
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) return false;
+  const { entity, table_name, operation } = body as Record<string, unknown>;
+  if (operation !== 'getall') return false;
+  const identifiers = [entity, table_name].filter((value) => value !== undefined);
+  return identifiers.length > 0 && identifiers.every((value) => value === 'companys');
 }

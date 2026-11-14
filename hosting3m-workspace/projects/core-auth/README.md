@@ -154,7 +154,12 @@ authentication signals, and calls `TenantService.clearContext()`.
     when no JWT is present.
   - [`tenant.interceptor.ts`](src/lib/interceptors/tenant.interceptor.ts) rejects the request with `403 No active tenant`
     when there is no valid positive `id_company` in the active tenant context.
-  - Public routes such as `companys getall` remain exempt by design; they are allowed to bypass the tenant header.
+  - Two public routes are exempt from both checks, and only these: (1) `POST` to the exact `apiUrl_token` endpoint (login);
+    (2) `POST` to `<apiUrl_crud>/companys` with a body where `operation` is `getall` and `entity` and/or `table_name` are
+    `companys` (the public company directory). Exemption is decided per request by method, exact origin and path, and
+    body fields (`isExemptRoute` in [`allowed-origin.ts`](src/lib/allowed-origin.ts)); a shared origin does not exempt
+    other routes, and other `companys` operations (`getone`, `insert`, `update`, `delete`) or other tables are not exempt.
+    Exempt requests get neither the JWT nor the tenant header.
 
   The server remains the final authority for membership validation and authorization. See RISK-1.
 - **Logout** clears the active tenant and the available tenant list.
@@ -189,8 +194,9 @@ ng test core-auth   # unit tests, target "test" in angular.json
 ng build core-auth  # library build (ng-packagr)
 ```
 
-The project has seven spec files under [`src/lib`](src/lib/).
-TODO(verify): confirm that the suite passes on the current `main` branch.
+The project has eight spec files under [`src/lib`](src/lib/). The runner is Vitest, configured by the
+`@angular/build:unit-test` builder (`test` target in `angular.json`). On `fix/1037-core-auth-fail-closed`,
+`ng test core-auth --watch=false` passes 46 of 46 tests. TODO(verify): confirm the same on `main`.
 
 ## Limitations and TODO(verify)
 
