@@ -134,7 +134,7 @@ The library is structured to enforce separation of concerns between Data and Ren
 ## ⚠️ Error Handling
 
 - `generate()` returns `void`. There is no error object, Promise, or input validation.
-- Required fields are not validated. `config.title.toUpperCase()` and `config.items.map()` throw a `TypeError` in the caller's context when `title` or `items` is undefined. TODO(verify) the runtime behavior for other missing values.
+- Required fields are not validated. `config.title.toUpperCase()` and `config.items.map()` throw a `TypeError` in the caller's context when `title` or `items` is undefined. A missing `fileName` throws a `TypeError` at [pdf-export.service.ts](src/lib/services/pdf-export.service.ts) line 181, after the document is built and before `save()`, so nothing is downloaded. Other missing fields are not validated; how jsPDF renders them is TODO(verify).
 - `total` is summed with `+` and is not parsed. The Meta-CRUD gateway returns numerics as strings (root `CLAUDE.md`), so callers must convert them to `number` before mapping. Otherwise the subtotal is concatenated as text.
 - `dailyRate || 0` and `nights || 1` treat falsy values as absent.
 - `doc.save()` triggers the browser download. A blocked download is not reported to the caller. TODO(verify).
@@ -155,7 +155,7 @@ The library is structured to enforce separation of concerns between Data and Ren
 - **Unused field.** `unitPrice` is not read by the service.
 - **Locale.** Dates use `es-MX`. Amounts use `en-US` separators with the symbol from `currencySymbol` (default `$`).
 - **Filename.** Accents, spaces and symbols become `_`, so "Cotización Juan" becomes "Cotizaci_n_Juan".
-- **Package metadata.** [package.json](hosting3m-workspace/projects/ui-pdf-export/package.json) declares peer dependencies on Angular `^17 || ^18`, while the workspace runs Angular 21. It also does not list `jspdf-autotable`, which the service imports. TODO(verify) how the workspace resolves it. Its version is `0.10.0`, while the top [CHANGELOG.md](CHANGELOG.md) entry is `1.0.0`. TODO(verify) which one is authoritative.
+- **Package metadata.** [package.json](hosting3m-workspace/projects/ui-pdf-export/package.json) declares peer dependencies on Angular `^17 || ^18`, while the workspace runs Angular 21. It also does not list `jspdf-autotable`, which the service imports. The workspace resolves it from the root [package.json](../../package.json), which declares `jspdf-autotable` `^5.0.9`. Its version is `0.10.0`, while the top [CHANGELOG.md](CHANGELOG.md) entry is `1.0.0`. TODO(verify) which one is authoritative.
 
 ## 📦 Authors
 
