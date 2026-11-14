@@ -7,7 +7,8 @@
   "display": "standalone",
   "orientation": "portrait",
   "scope": "/",
-  "start_url": "/agroerp",
+  "id": "/agroerp",
+  "start_url": "/",
   "icons": [
     {
       "src": "/assets/images/icon-192x192.png",
