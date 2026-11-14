@@ -64,8 +64,20 @@ describe('tenantInterceptor', () => {
     expect(tenantHeadersFor('not a url')).toEqual([null, null]);
   });
 
-  it('still forwards the request without the header when there is no active tenant', () => {
+  it('rejects protected requests when there is no active tenant', () => {
     tenantId = null;
-    expect(tenantHeadersFor(config.apiUrl_crud + '/x')).toEqual([null, null]);
+    let result: unknown;
+
+    http.post(config.apiUrl_crud + '/x', {}).subscribe({
+      next: () => fail('Expected a rejected request'),
+      error: (error) => { result = error; }
+    });
+
+    expect(result).toEqual(jasmine.objectContaining({ status: 403, statusText: 'No active tenant' }));
+  });
+
+  it('allows the public company directory without a tenant', () => {
+    tenantId = null;
+    expect(tenantHeadersFor(config.apiUrl_crud + '/companys/getall')).toEqual([null, null]);
   });
 });

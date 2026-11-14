@@ -149,14 +149,14 @@ authentication signals, and calls `TenantService.clearContext()`.
   `apiUrl_ai` or `apiUrl_upload`. Other, relative or unparseable URLs get no header (a warning is
   logged in dev mode only).
   Note: `companys getall` is public in the gateway (`v6/CRUD`) and uses neither tenant nor membership, so the missing header does not affect it (Refs #1064).
-- **Fail-closed: not implemented.** The project governance requires fail-closed behavior, but the
-  code does not provide it:
-  - [`auth.interceptor.ts`](src/lib/auth/auth.interceptor.ts)
-    sends the request without `Authorization` when there is no token or the URL's origin is not an
-    allowed origin.
-  - `tenantInterceptor` sends the request without tenant headers when there is no active tenant.
+- **Fail-closed behavior.** Protected requests on allowed origins now fail closed:
+  - [`auth.interceptor.ts`](src/lib/auth/auth.interceptor.ts) rejects the request with `401 No auth token`
+    when no JWT is present.
+  - [`tenant.interceptor.ts`](src/lib/interceptors/tenant.interceptor.ts) rejects the request with `403 No active tenant`
+    when there is no valid positive `id_company` in the active tenant context.
+  - Public routes such as `companys getall` remain exempt by design; they are allowed to bypass the tenant header.
 
-  In both cases the request is sent unchanged, without the missing credential or header. See RISK-1.
+  The server remains the final authority for membership validation and authorization. See RISK-1.
 - **Logout** clears the active tenant and the available tenant list.
 - **Isolation statement.** Client-side headers and guards are not a data isolation boundary. Do not
   rely on them for tenant isolation.

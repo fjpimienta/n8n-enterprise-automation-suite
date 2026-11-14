@@ -75,8 +75,20 @@ describe('authInterceptor', () => {
     expect(authHeaderFor('not a url')).toBeNull();
   });
 
-  it('sends no Authorization header when there is no token', () => {
+  it('rejects protected requests when there is no token', () => {
     token = null;
-    expect(authHeaderFor(config.apiUrl_crud + '/x')).toBeNull();
+    let result: unknown;
+
+    http.post(config.apiUrl_crud + '/x', {}).subscribe({
+      next: () => fail('Expected a rejected request'),
+      error: (error) => { result = error; }
+    });
+
+    expect(result).toEqual(jasmine.objectContaining({ status: 401, statusText: 'No auth token' }));
+  });
+
+  it('allows the public company directory without a token', () => {
+    token = null;
+    expect(authHeaderFor(config.apiUrl_crud + '/companys/getall')).toBeNull();
   });
 });

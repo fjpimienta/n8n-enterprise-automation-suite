@@ -28,3 +28,22 @@ export function isAllowedOrigin(requestUrl: string, config: AuthEnvironmentConfi
   }
   return isAllowed;
 }
+
+export function isExemptRoute(requestUrl: string, config: AuthEnvironmentConfig): boolean {
+  try {
+    const url = new URL(requestUrl);
+    const tokenOrigin = originOf(config.apiUrl_token);
+    const crudOrigin = originOf(config.apiUrl_crud);
+    if (!tokenOrigin || !crudOrigin) return false;
+
+    if (url.origin === tokenOrigin) return true;
+    if (url.origin === crudOrigin) {
+      const path = url.pathname.toLowerCase();
+      return path.includes('/companys') || path.includes('/companys/getall');
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+}

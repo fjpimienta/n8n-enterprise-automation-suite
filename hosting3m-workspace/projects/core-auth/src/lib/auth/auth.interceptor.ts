@@ -4,20 +4,27 @@ import { catchError, throwError } from 'rxjs';
 import { Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 import { AUTH_ENV_CONFIG } from '../auth.config'; // <-- Importa tu token
-import { isAllowedOrigin } from '../allowed-origin';
+import { isAllowedOrigin, isExemptRoute } from '../allowed-origin';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
   const router = inject(Router);
-  const envConfig = inject(AUTH_ENV_CONFIG); // <-- Inyecta la configuración
+  const envConfig = inject(AUTH_ENV_CONFIG);
+
+  const token = authService.getStoredToken();
+  const isApiRequest = isAllowedOrigin(req.url, envConfig);
+  const isExempt = isExemptRoute(req.url, envConfig);
+
+  if (!token && isApiRequest && !isExempt) {
+    return throwError(() => new HttpErrorResponse({
+      status: 401,
+      statusText: 'No auth token',
+      url: req.url
+    }));
+  }
 
   let clonedReq = req;
-  const token = authService.getStoredToken();
-
-  // Exact-origin allowlist derived from AUTH_ENV_CONFIG (crud, token, ai, upload); see #1037.
-  const isApiRequest = isAllowedOrigin(req.url, envConfig);
-
-  if (token && isApiRequest) {
+  if (token && isApiRequest && !isExempt) {
     clonedReq = req.clone({
       setHeaders: { Authorization: `Bearer ${token}` }
     });
