@@ -149,14 +149,19 @@ authentication signals, and calls `TenantService.clearContext()`.
   `apiUrl_ai` or `apiUrl_upload`. Other, relative or unparseable URLs get no header (a warning is
   logged in dev mode only).
   Note: `companys getall` is public in the gateway (`v6/CRUD`) and uses neither tenant nor membership, so the missing header does not affect it (Refs #1064).
-- **Fail-closed: not implemented.** The project governance requires fail-closed behavior, but the
-  code does not provide it:
-  - [`auth.interceptor.ts`](src/lib/auth/auth.interceptor.ts)
-    sends the request without `Authorization` when there is no token or the URL's origin is not an
-    allowed origin.
-  - `tenantInterceptor` sends the request without tenant headers when there is no active tenant.
+- **Fail-closed behavior.** Protected requests on allowed origins now fail closed:
+  - [`auth.interceptor.ts`](src/lib/auth/auth.interceptor.ts) rejects the request with `401 No auth token`
+    when no JWT is present.
+  - [`tenant.interceptor.ts`](src/lib/interceptors/tenant.interceptor.ts) rejects the request with `403 No active tenant`
+    when there is no valid positive `id_company` in the active tenant context.
+  - Two public routes are exempt from both checks, and only these: (1) `POST` to the exact `apiUrl_token` endpoint (login);
+    (2) `POST` to `<apiUrl_crud>/companys` with a body where `operation` is `getall` and `entity` and/or `table_name` are
+    `companys` (the public company directory). Exemption is decided per request by method, exact origin and path, and
+    body fields (`isExemptRoute` in [`allowed-origin.ts`](src/lib/allowed-origin.ts)); a shared origin does not exempt
+    other routes, and other `companys` operations (`getone`, `insert`, `update`, `delete`) or other tables are not exempt.
+    Exempt requests get neither the JWT nor the tenant header.
 
-  In both cases the request is sent unchanged, without the missing credential or header. See RISK-1.
+  The server remains the final authority for membership validation and authorization. See RISK-1.
 - **Logout** clears the active tenant and the available tenant list.
 - **Isolation statement.** Client-side headers and guards are not a data isolation boundary. Do not
   rely on them for tenant isolation.
@@ -189,8 +194,9 @@ ng test core-auth   # unit tests, target "test" in angular.json
 ng build core-auth  # library build (ng-packagr)
 ```
 
-The project has seven spec files under [`src/lib`](src/lib/).
-TODO(verify): confirm that the suite passes on the current `main` branch.
+The project has eight spec files under [`src/lib`](src/lib/). The runner is Vitest, configured by the
+`@angular/build:unit-test` builder (`test` target in `angular.json`). On `fix/1037-core-auth-fail-closed`,
+`ng test core-auth --watch=false` passes 46 of 46 tests. TODO(verify): confirm the same on `main`.
 
 ## Limitations and TODO(verify)
 
