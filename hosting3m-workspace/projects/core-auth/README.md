@@ -167,9 +167,10 @@ authentication signals, and calls `TenantService.clearContext()`.
   it logs a `console.warn` and does not log out. The error is always re-thrown to the caller.
 - **Other HTTP errors** are re-thrown unchanged.
 - **`login()`** stores the token and sets the signals only when `res.status === 'success'` and
-  `res.data.token` is present. Any other response, including HTTP 200 with `error: true` from the
-  Meta-CRUD gateway, is passed to the subscriber without an error. The caller must inspect `status`.
-  The library does not handle the `error: true` contract (see RISK-2).
+  `res.data.token` is present. An HTTP 200 response with a top-level `error: true` is turned into an
+  error (`Error` with `error: true` and the raw `body`). Any other response is passed to the
+  subscriber without an error, so the caller must inspect `status`. The interceptors do not handle
+  the `error: true` contract (see RISK-2).
 - **Token expiry** is evaluated at construction, on login, and on `getStoredToken()`. There is no timer,
   so `isAuthenticated()` can stay `true` after the token expires until a request reads the token.
 - **Malformed storage**: an unparseable `authToken` is treated as expired. Unparseable
@@ -194,8 +195,9 @@ TODO(verify): confirm that the suite passes on the current `main` branch.
 
 - **RISK-1 (fail-closed).** See [Multi-tenant behavior](#multi-tenant-behavior). The governance rule
   and the implementation differ.
-- **RISK-2 (gateway errors).** `login()` and the interceptors do not treat HTTP 200 with `error: true`
-  as an error.
+- **RISK-2 (gateway errors) — partly mitigated (#1037).** `login()` now maps an HTTP 200 response whose
+  top-level `error` is `true` to an error (message from `message`, `error_message` or a fixed fallback;
+  nothing is stored). The interceptors still do not inspect response bodies.
 - **RISK-3 (token storage).** The JWT is stored in `localStorage` under `authToken`. Any script running
   in the page can read it.
 - **RISK-4 (prefix match) — mitigated (#1037).** Both interceptors compare the exact origin
