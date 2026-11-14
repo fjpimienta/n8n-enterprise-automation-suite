@@ -58,8 +58,10 @@ Side branches:
   (OpenAI chat model) -> `Parse IA` -> `Execute a SQL query` (inserts the `crud_models` row) -> back to
   `Extract Auth Context`. `Parse IA` refuses tables without a `tenant_id`/`id_company` column and reserved names
   (`crud_*`, `pg_*`, `n8n*`, `*_backup_*`), and takes columns from the real catalog, not from the model output.
-  TODO(verify): the chain re-enters `Extract Auth Context` and then `Security Validation`, which reads
-  `Schema Validate`; confirm in a live execution that this path completes for a new model.
+  The chain re-enters `Extract Auth Context` and then `Security Validation`, which reads `Schema Validate`
+  (`v6-crud.json`: `Execute a SQL query` and `Schema Validate` both connect to `Extract Auth Context`, which
+  connects to `Security Validation`). TODO(verify): a live execution that completes this path for a new model
+  has not been run.
 * `If1` (`error` true) is connected to `Respond to Webhook`; nothing in the export connects into `If1`.
 
 ## Operations
