@@ -326,7 +326,8 @@
                   "maximumError": "8kB"
                 }
               ],
-              "outputHashing": "all"
+              "outputHashing": "all",
+              "serviceWorker": "projects/agro-erp/ngsw-config.json"
             },
             "development": {
               "optimization": false,

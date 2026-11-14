@@ -235,6 +235,14 @@ de un AI Agent, usar `.first()` en lugar de `.item` en `$('Node')`.
 * **Datos de prueba en producción (empresa 10):** un gasto de 80 a nombre de `qa-073-prod@example.test`, que quedó como miembro de la 10 por error de autocompletado (`access_audit_log`, 2026-10-25 00:19 UTC); dato de prueba, la membresía se desactiva desde Personal. Ver `083_RUNBOOK.md`.
 * Códigos de error: la 083 no define nuevos; reutiliza `P0080`–`P0094` de los SP que llama.
 
+## PWA / service worker (Refs #1087, fase 1a)
+- El service worker es `@angular/service-worker` (`ngsw-config.json`, solo producción). **No hay datos offline
+  todavía (fase 1b):** nunca pongas el gateway en `dataGroups` (todo es `POST`; el SW solo cachea `GET`/`HEAD`).
+- `public/sw.js` es un worker de **transición** (borra la caché `agroerp-pwa-v2`, sin `fetch`, no se
+  desregistra). No lo borres ni lo registres desde `index.html`; `ngsw-worker.js` lo reemplaza en el mismo scope.
+- `sw.js`, `ngsw.json` y `ngsw-worker.js` deben servirse sin caché larga (`TODO(verify)` en Plesk/Cloudflare).
+- Tabler/Inter siguen en CDN (`TODO(verify)`, ver README).
+
 ## Contrato Meta-CRUD (verificado en producción)
 - Payload: `{ entity, table_name, operation (minúsculas), filters|fields, id }`
 - Errores de Postgres llegan como HTTP 200 con `error:true` — inspeccionar siempre, nunca confiar solo en el status HTTP
