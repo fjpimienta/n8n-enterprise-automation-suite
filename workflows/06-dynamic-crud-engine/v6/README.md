@@ -27,7 +27,7 @@ Main path for an authenticated request:
 1. **`WebhookCRUD`** receives the request.
 2. **`Get Model Name`** validates the model name and carries the body and headers forward.
 3. **`If`** sends `companys` + `getall` (read from `$json.operation`) to `Get Model Config` without a token (the
-   public company list). Every other request goes to `Verify Token`.
+   public company list, a documented exception, #1064; see the rules below). Every other request goes to `Verify Token`.
 4. **`Verify Token`** runs the `v3/SW ValidaToken` sub-workflow. **`IsValid`** requires `status = success`;
    otherwise **`Respond Denegate`** answers `401` `{"mensaje": "Acceso denegado"}`.
 5. **`Get Membresia`** looks up the active `user_companies` row for the token's user and the `x-tenant-id` header
@@ -85,8 +85,13 @@ Other rules in the same node:
 * `users`: explicit safe column list (never `password`), `insert` is `DO NOTHING`, `update` only touches members
   of the requesting company and of no other company, `delete` throws, `getall`/`getone` require `x-tenant-id`;
   `getall` joins `user_companies` and `getone` filters with an `EXISTS` on it.
-* `companys`: `insert` never takes `id_company` and never upserts; `getall` returns only `id_company` and
-  `company_name`.
+* `companys`: `insert` never takes `id_company` and never upserts.
+* **Documented exception (#1064): public `companys` `getall`.** This is a deliberate decision by the owner, not an
+  oversight. `companys` + `getall` skips `Verify Token`, membership (`Get Membresia`) and `X-Tenant-ID`; it is the
+  only branch of `If` that does so. `Build Query` forces the columns to `id_company` and `company_name` only (no
+  `metadata`, notes or revenue). Current callers do not rely on it without a token: `loadCompanies` in `agro-erp`
+  is cancelled when there is no token, and `dashboard` has no callers. TODO(verify): no external client or workflow
+  calls this route without a token.
 
 ## Tenant, actor and roles
 
