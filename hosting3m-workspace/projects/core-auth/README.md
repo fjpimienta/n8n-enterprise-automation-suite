@@ -148,6 +148,7 @@ authentication signals, and calls `TenantService.clearContext()`.
   exists and the request origin exactly matches the origin of `apiUrl_crud`, `apiUrl_token`,
   `apiUrl_ai` or `apiUrl_upload`. Other, relative or unparseable URLs get no header (a warning is
   logged in dev mode only).
+  Note: `companys getall` is public in the gateway (`v6/CRUD`) and uses neither tenant nor membership, so the missing header does not affect it (Refs #1064).
 - **Fail-closed: not implemented.** The project governance requires fail-closed behavior, but the
   code does not provide it:
   - [`auth.interceptor.ts`](src/lib/auth/auth.interceptor.ts)
