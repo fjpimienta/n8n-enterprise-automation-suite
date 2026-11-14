@@ -368,11 +368,12 @@ canónicos se mantiene en `README.md`; no hay un README propio en la raíz de
   descifrados), `livestock_producers` y `employee_credentials` (`nombre`, `curp`, `email`; deja a
   **EDITOR** leer CURP). En `v6` filtran por empresa (verificado 2026-10-17); en `v5` ya están
   bloqueados. Propuesta (PR aparte): desactivarlos con `allowed_ops = '{}'`.
-- **Ruta pública de `companys`:** el `If` de `v5`/`v6` salta `Verify Token` para `companys getall`.
-  Desde v1.17.1 solo devuelve `id_company`/`company_name`. Ya no tiene consumidor (era el login de
-  `pista-hielo`; los logins de `agro-erp` y del hotel reciben la lista solo de `jwt-service` vía
-  `v3`/`v4/GeneraToken`, verificado 2026-10-17). Propuesta (PR aparte): quitarla en `v6` para que
-  `companys getall` exija token y membresía como cualquier modelo.
+- **Ruta pública de `companys` — excepción documentada (#1064, decisión del dueño):** el `If` de `v6` salta
+  `Verify Token` para `companys getall`, sin membresía ni `X-Tenant-ID`. Se mantiene público a propósito;
+  `Build Query` fuerza solo `id_company`/`company_name`. Detalle en
+  [`workflows/06-dynamic-crud-engine/v6/README.md`](workflows/06-dynamic-crud-engine/v6/README.md). Los llamadores
+  actuales no la usan sin token (`loadCompanies` de `agro-erp` cancela sin token; `dashboard` no tiene llamadores).
+  TODO(verify): ningún cliente externo o workflow la usa sin token.
 - `SECURITY.md` contiene el proceso vigente de reporte privado de vulnerabilidades;
   mantenerlo sincronizado con el alcance, el contacto y los límites reales de la suite.
 - ⚠️ **`N8N_BLOCK_ENV_ACCESS_IN_NODE=false`:** cualquier workflow (y quien pueda editarlos) lee con
