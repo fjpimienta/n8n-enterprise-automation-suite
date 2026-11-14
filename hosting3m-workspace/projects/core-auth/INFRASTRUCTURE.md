@@ -12,7 +12,7 @@
 ## 1. High-Level Design
 La librería utiliza el `InjectionToken` `AUTH_ENV_CONFIG` para recibir las URLs de la API desde la aplicación host (`apiUrl_crud`, `apiUrl_token`, `apiUrl_ai`, `system_id` y, opcionalmente, `apiUrl_upload`)[cite: 29]. El `authInterceptor`[cite: 27] adjunta el JWT (`Authorization: Bearer`) solo a las peticiones cuyo origen (esquema + host + puerto) coincide exactamente con el de `apiUrl_crud`, `apiUrl_token`, `apiUrl_ai` o `apiUrl_upload`. El `tenantInterceptor` (`interceptors/tenant.interceptor.ts`) adjunta el `id_company` activo como cabecera `X-Tenant-ID` (y `x-tenant-id`) solo a esos mismos orígenes cuando hay tenant activo; un host debe registrarlo explícitamente (hoy lo hace `agro-erp`).
 
-> **Known deviation (#1037):** ninguno de los dos interceptores es fail-closed. Sin token o sin tenant activo, la petición sale sin modificar (la cabecera y el JWT sí salen solo a los orígenes permitidos). Ver [`README.md`](README.md#multi-tenant-behavior).
+> **Known deviation (#1037):** ninguno de los dos interceptores es fail-closed. Sin token o sin tenant activo, la petición sale sin modificar (`login()` sí convierte HTTP 200 con `error: true` en error) (la cabecera y el JWT sí salen solo a los orígenes permitidos). Ver [`README.md`](README.md#multi-tenant-behavior).
 
 ```mermaid
 graph TD
