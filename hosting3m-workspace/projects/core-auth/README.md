@@ -196,7 +196,7 @@ ng build core-auth  # library build (ng-packagr)
 
 The project has eight spec files under [`src/lib`](src/lib/). The runner is Vitest, configured by the
 `@angular/build:unit-test` builder (`test` target in `angular.json`). On `fix/1037-core-auth-fail-closed`,
-`ng test core-auth --watch=false` passes 46 of 46 tests. TODO(verify): confirm the same on `main`.
+`ng test core-auth --watch=false` passes 46 of 46 tests. The `core-auth tests` job in CI passes on `main` (verified after the release of #1085).
 
 ## Limitations and TODO(verify)
 
