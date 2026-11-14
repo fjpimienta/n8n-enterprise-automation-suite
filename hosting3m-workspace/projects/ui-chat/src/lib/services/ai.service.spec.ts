@@ -8,13 +8,13 @@ import { ChatConfig } from '../interfaces/chat-config';
 
 const URL_AI = 'http://localhost:test/chat';
 
-function setup(config: Partial<ChatConfig> = {}) {
+function setup(config: Partial<ChatConfig> = {}, activeTenant: { id_company: number } | null = { id_company: 7 }) {
   TestBed.configureTestingModule({
     providers: [
       AiService,
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: TenantService, useValue: { activeTenant: () => ({ id_company: 7 }) } },
+      { provide: TenantService, useValue: { activeTenant: () => activeTenant } },
       { provide: CHAT_CONFIG_TOKEN, useValue: { apiUrl_ai: URL_AI, title: 'T', logoUrl: '', primaryColor: '', ...config } }
     ]
   });
@@ -39,6 +39,15 @@ describe('AiService', () => {
     req.flush({ output: 'ok' });
   });
 
+  it('refuses to send a message without a valid active tenant', async () => {
+    const { service, http } = setup({}, null);
+    expect(await service.sendMessage('hola')).toBe(false);
+    http.expectNone(URL_AI);
+    expect(service.messages().some(m => m.sender === 'user' && m.text === 'hola')).toBe(false);
+    expect(service.messages().at(-1)?.text).toContain('empresa activa');
+    expect(service.isLoading()).toBe(false);
+  });
+
   it('still ignores the file path when attachments are not enabled (defaults)', async () => {
     const { service, http } = setup();
     const ok = await service.sendMessage('hola', new File(['<a/>'], 'a.xml', { type: 'text/xml' }));
@@ -49,6 +58,18 @@ describe('AiService', () => {
 
   describe('with attachments enabled', () => {
     const enabled = { attachments: { enabled: true } };
+
+    it('refuses to read or send a file without an active tenant', async () => {
+      const { service, http } = setup(enabled, null);
+      const file = new File(['<a/>'], 'inv.xml', { type: 'text/xml' });
+      const read = vi.fn().mockResolvedValue(new ArrayBuffer(4));
+      Object.defineProperty(file, 'arrayBuffer', { value: read });
+      expect(await service.sendMessage('factura', file)).toBe(false);
+      expect(read).not.toHaveBeenCalled();
+      http.expectNone(URL_AI);
+      expect(service.messages().some(m => m.sender === 'user')).toBe(false);
+      expect(service.isLoading()).toBe(false);
+    });
 
     it('adds file {name,type,size,base64} to the same body and keeps Base64 out of the history', async () => {
       const { service, http } = setup(enabled);

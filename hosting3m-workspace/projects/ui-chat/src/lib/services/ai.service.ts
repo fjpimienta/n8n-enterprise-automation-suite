@@ -14,6 +14,8 @@ export interface ChatMessage {
   file?: { name: string; type: string; size: number; previewUrl?: string };
 }
 
+const ACTIVE_TENANT_REQUIRED_MESSAGE = '⚠️ Selecciona una empresa activa para enviar tu mensaje.';
+
 // ⚠️ NOTA: Quitamos providedIn: 'root' para forzar su provisión vía configuración
 @Injectable()
 export class AiService {
@@ -37,11 +39,14 @@ export class AiService {
     if (file) return this.sendWithFile(query, file);
     if (!query.trim() || !this.config.apiUrl_ai) return Promise.resolve(false);
 
+    const currentTenantId = this.getActiveTenantId();
+    if (currentTenantId === null) {
+      this.updateChat(ACTIVE_TENANT_REQUIRED_MESSAGE, 'bot');
+      return Promise.resolve(false);
+    }
+
     this.updateChat(query, 'user');
     this.isLoading.set(true);
-
-    // 🚀 Extraemos el ID del rancho activo de forma segura
-    const currentTenantId = this.tenantService.activeTenant()?.id_company;
 
     this.http.post<{ output: string }>(this.config.apiUrl_ai, {
       chatInput: query,
@@ -64,6 +69,12 @@ export class AiService {
     const attachments = resolveAttachmentsConfig(this.config.attachments);
     if (!query.trim() || !this.config.apiUrl_ai || !attachments.enabled) return false;
 
+    const currentTenantId = this.getActiveTenantId();
+    if (currentTenantId === null) {
+      this.updateChat(ACTIVE_TENANT_REQUIRED_MESSAGE, 'bot');
+      return false;
+    }
+
     // Size and type are checked BEFORE reading the file.
     const check = checkAttachment(file, attachments);
     if (!check.ok) {
@@ -81,13 +92,19 @@ export class AiService {
     this.isLoading.set(true);
 
     try {
-      const currentTenantId = this.tenantService.activeTenant()?.id_company;
       // The Base64 lives only in this request scope: no signal, history, storage or log.
       const base64 = await readAsBase64(file, attachments.maxBytes);
+      const requestTenantId = this.getActiveTenantId();
+      if (requestTenantId === null) {
+        this.messages.update(msgs => msgs.filter(m => m !== userMessage));
+        this.updateChat(ACTIVE_TENANT_REQUIRED_MESSAGE, 'bot');
+        return false;
+      }
+
       const response = await firstValueFrom(this.http.post<{ output: string }>(this.config.apiUrl_ai, {
         chatInput: query,
         sessionId: this.sessionId,
-        tenant_id: currentTenantId,
+        tenant_id: requestTenantId,
         file: { name: check.name, type: check.type, size: check.size, base64 }
       }));
       this.updateChat(response?.output || '⚠️ Sin respuesta del servidor.', 'bot');
@@ -100,6 +117,13 @@ export class AiService {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  private getActiveTenantId(): number | null {
+    const tenantId = this.tenantService.activeTenant()?.id_company;
+    return typeof tenantId === 'number' && Number.isSafeInteger(tenantId) && tenantId > 0
+      ? tenantId
+      : null;
   }
 
   private updateChat(text: string, sender: 'user' | 'bot') {

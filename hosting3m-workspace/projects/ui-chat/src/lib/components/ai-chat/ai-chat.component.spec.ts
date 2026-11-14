@@ -7,13 +7,13 @@ import { AiService } from '../../services/ai.service';
 import { CHAT_CONFIG_TOKEN } from '../../tokens/chat.token';
 import { ChatConfig } from '../../interfaces/chat-config';
 
-function create(config: Partial<ChatConfig> = {}) {
+function create(config: Partial<ChatConfig> = {}, activeTenant: { id_company: number } | null = { id_company: 7 }) {
   TestBed.configureTestingModule({
     providers: [
       AiService,
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: TenantService, useValue: { activeTenant: () => ({ id_company: 7 }) } },
+      { provide: TenantService, useValue: { activeTenant: () => activeTenant } },
       { provide: CHAT_CONFIG_TOKEN, useValue: { apiUrl_ai: 'http://localhost:test/chat', title: 'T', logoUrl: '', primaryColor: '', ...config } }
     ]
   });
@@ -139,5 +139,25 @@ describe('AiChatComponent attachments', () => {
     const { cmp } = create({ attachments: { enabled: true } });
     expect(cmp.displayName({ name: 'a\u0000b‮c.xml' })).toBe('abc.xml');
     expect(cmp.displayName({ name: 'a'.repeat(300) }).length).toBe(255);
+  });
+});
+
+describe('AiChatComponent tenant guard', () => {
+  it('keeps the draft when there is no active tenant', async () => {
+    const { cmp, http } = create({}, null);
+    cmp.userInput = 'hola';
+    await cmp.send();
+    expect(cmp.userInput).toBe('hola');
+    http.expectNone('http://localhost:test/chat');
+  });
+
+  it('clears the draft when a message is sent successfully', async () => {
+    const { cmp, http } = create();
+    cmp.userInput = 'hola';
+    const sending = cmp.send();
+    expect(cmp.userInput).toBe('');
+    http.expectOne('http://localhost:test/chat').flush({ output: 'ok' });
+    await sending;
+    expect(cmp.userInput).toBe('');
   });
 });
