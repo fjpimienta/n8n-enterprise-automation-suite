@@ -18,8 +18,8 @@ const COMPANYS_GETALL_BODY = {
 
 describe('authInterceptor', () => {
   const config = {
-    apiUrl_crud: 'https://n8n.example.com/webhook/abc/crud/v6',
-    apiUrl_token: 'https://n8n.example.com/webhook/v3/genera-token',
+    apiUrl_crud: 'https://n8n-gateway/webhook/abc/crud/v6',
+    apiUrl_token: 'https://n8n-gateway/webhook/v3/genera-token',
     apiUrl_ai: 'https://ai.example.com',
     apiUrl_upload: 'https://files.example.com:3001/upload',
     system_id: 'test'
@@ -80,7 +80,7 @@ describe('authInterceptor', () => {
 
   describe('origin matching', () => {
     it('does not send the JWT to a look-alike host sharing the allowed host as prefix', () => {
-      expect(authHeaderFor('https://n8n.example.com.evil.example/webhook/abc/crud/v6/x')).toBeNull();
+      expect(authHeaderFor('https://n8n-gateway.evil.example/webhook/abc/crud/v6/x')).toBeNull();
     });
 
     it('does not send the JWT to a prefix look-alike of a base URL without path', () => {
@@ -88,12 +88,12 @@ describe('authInterceptor', () => {
     });
 
     it('does not send the JWT to the same host on another port or scheme', () => {
-      expect(authHeaderFor('https://n8n.example.com:8443/webhook/abc/crud/v6/x')).toBeNull();
-      expect(authHeaderFor('http://n8n.example.com/webhook/abc/crud/v6/x')).toBeNull();
+      expect(authHeaderFor('https://n8n-gateway:8443/webhook/abc/crud/v6/x')).toBeNull();
+      expect(authHeaderFor('http://n8n-gateway/webhook/abc/crud/v6/x')).toBeNull();
     });
 
     it('does not send the JWT to a userinfo-spoofed URL', () => {
-      expect(authHeaderFor('https://n8n.example.com@evil.example/x')).toBeNull();
+      expect(authHeaderFor('https://n8n-gateway@evil.example/x')).toBeNull();
     });
 
     it('does not send the JWT to a foreign origin', () => {
@@ -124,7 +124,7 @@ describe('authInterceptor', () => {
 
     it('rejects other paths on the apiUrl_token origin', () => {
       expect(rejectionFor(config.apiUrl_token + '/other', {})?.status).toBe(401);
-      expect(rejectionFor('https://n8n.example.com/webhook/v3/other', {})?.status).toBe(401);
+      expect(rejectionFor('https://n8n-gateway/webhook/v3/other', {})?.status).toBe(401);
     });
 
     it('rejects a GET to the token endpoint, which is exempt only as a POST', () => {

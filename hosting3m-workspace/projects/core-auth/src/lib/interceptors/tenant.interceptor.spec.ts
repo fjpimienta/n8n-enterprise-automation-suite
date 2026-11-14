@@ -17,8 +17,8 @@ const COMPANYS_GETALL_BODY = {
 
 describe('tenantInterceptor', () => {
   const config = {
-    apiUrl_crud: 'https://n8n.example.com/webhook/abc/crud/v6',
-    apiUrl_token: 'https://n8n.example.com/webhook/v3/genera-token',
+    apiUrl_crud: 'https://n8n-gateway/webhook/abc/crud/v6',
+    apiUrl_token: 'https://n8n-gateway/webhook/v3/genera-token',
     apiUrl_ai: 'https://ai.example.com',
     apiUrl_upload: 'https://files.example.com:3001/upload',
     system_id: 'test'
@@ -77,9 +77,9 @@ describe('tenantInterceptor', () => {
     });
 
     it('does not send the tenant header to look-alike, other-port or other-scheme hosts', () => {
-      expect(tenantHeadersFor('https://n8n.example.com.evil.example/x')).toEqual([null, null]);
-      expect(tenantHeadersFor('https://n8n.example.com:8443/x')).toEqual([null, null]);
-      expect(tenantHeadersFor('http://n8n.example.com/x')).toEqual([null, null]);
+      expect(tenantHeadersFor('https://n8n-gateway.evil.example/x')).toEqual([null, null]);
+      expect(tenantHeadersFor('https://n8n-gateway:8443/x')).toEqual([null, null]);
+      expect(tenantHeadersFor('http://n8n-gateway/x')).toEqual([null, null]);
     });
 
     it('does not send the tenant header to a foreign origin', () => {
@@ -118,7 +118,7 @@ describe('tenantInterceptor', () => {
 
     it('rejects other paths on the apiUrl_token origin', () => {
       tenantId = null;
-      expect(rejectionFor('https://n8n.example.com/webhook/v3/other')?.status).toBe(403);
+      expect(rejectionFor('https://n8n-gateway/webhook/v3/other')?.status).toBe(403);
     });
 
     it('allows the public companys getall without a tenant and sends no tenant header', () => {
