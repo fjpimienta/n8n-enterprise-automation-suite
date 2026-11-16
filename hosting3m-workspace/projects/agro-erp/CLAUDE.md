@@ -244,9 +244,9 @@ de un AI Agent, usar `.first()` en lugar de `.item` en `$('Node')`.
 - Tabler/Inter siguen en CDN (`TODO(verify)`, ver README).
 
 ## Almacén de lectura offline (Refs #1087, fase 1b-ii)
-- `OfflineStoreService` (`core/services/offline-store.service.ts`, IndexedDB `agroerp-offline` vía `idb`) **existe pero
-  no está conectado** a ningún servicio ni pantalla; no lo conectes sin la decisión del dueño sobre PIN, limpieza al
-  cerrar sesión y fin de gracia.
+- `OfflineStoreService` (`core/services/offline-store.service.ts`, IndexedDB `agroerp-offline` vía `idb`) solo lo usa `CattleDataService`
+  (inventario, fase 1b-iii-a, ver sección siguiente); no lo conectes a otros datasets sin la decisión del dueño sobre PIN
+  y fin de gracia.
 - API: `put(dataset, data, expectedScope)`, `get(dataset)`, `wipeScope(scope)`, `wipeAll()`. `get` usa
   `AuthService.getSessionScope()` al momento de la llamada. `put` **exige el scope con el que se pidieron los datos**:
   quien llama lo captura cuando **empieza** el fetch (no al llegar la respuesta). `put` resuelve `false` sin escribir en
@@ -261,6 +261,36 @@ de un AI Agent, usar `.first()` en lugar de `.item` en `$('Node')`.
 - Allowlist cerrada `'livestock' | 'catalogs'`, validada también en ejecución. **Nunca cachear datasets de dinero**
   (gastos, ventas, ingresos) ni agregar uno a la allowlist sin decisión del dueño. IndexedDB en texto plano (aceptado).
 - Nunca lanza a quien llama (`get` → `null`, `put` → `false`) y nunca registra datos, scope ni tokens.
+
+## Lectura offline del inventario (Refs #1087, fase 1b-iii-a)
+- `CattleDataService.loadCattleData()` es read-through **solo para el inventario** (`vw_cattle_kpi`). Captura
+  `getSessionScope()` y `getSessionState()` **antes** de pedir nada; la caché solo se aplica si la llamada sigue siendo
+  la última (latest-wins) y el scope no cambió.
+  - `'valid'`: HTTP como siempre; al tener éxito guarda una copia saneada (`put`, fire-and-forget; si el scope es `null`
+    no guarda). **Solo** un fallo de red (`HttpErrorResponse` status 0 o `navigator.onLine === false`, ver
+    `shared/utils/network-failure.util.ts`) cae a la caché. `error:true` del gateway o HTTP >= 400 conservan el
+    comportamiento de siempre (`loadError`, último dato bueno) y **nunca** sustituyen datos con la caché.
+  - `'grace'`: **cero HTTP**; solo `offlineStore.get('livestock')`. Sin snapshot: `loadError` y lista vacía.
+  - `'expired'`: igual que antes; nunca lee ni escribe la caché.
+- Señales `servedFromCache` y `cacheSavedAt`; `<app-offline-banner>` se muestra en el dashboard principal y en el
+  inventario. No hay cola de escrituras: las mutaciones no se guardan sin conexión.
+- **Sanitización (fail-closed, `shared/utils/offline-livestock.util.ts`):** `metadata` **nunca** se cachea (se guarda
+  `null` en cada fila: puede traer precios de compra, vendedores y notas libres). Las demás columnas se conservan;
+  cualquier columna de nivel superior con nombre financiero (price, cost, precio, costo, monto, amount, valor) se
+  reporta en el log (solo el nombre). Al leer, **todas** las filas deben traer `tenant_id` igual a `scope.id_company`;
+  si una no coincide se descarta el snapshot completo (log sin datos).
+- **`offlineGraceGuard`** (`core/interceptors/offline-grace.interceptor.ts`) va **antes** de `authInterceptor` en
+  `app.config.ts`. En `'grace'` corta con `HttpErrorResponse` status 0 (`OfflineGrace`) toda petición a un origen de API
+  que no sea ruta exenta, sin llamar a `next`, porque `authInterceptor` llama a `getStoredToken()` en cada petición y
+  éste hace `logout()` con un token vencido. Reutiliza `isAllowedOrigin`/`isExemptRoute` de `core-auth`. Si
+  `getSessionState()` lanza, deja pasar.
+- **Limitación conocida:** en `'grace'` TODA pantalla que consulte el gateway falla con ese error de red controlado,
+  salvo el inventario (dashboard e inventario, que sirven la caché). Entre ellas `lot-list` (`getLots`/`getProductionUnit`,
+  muestra `loadError`), `production-unit-list` (`getProductionUnits`) y la carga de UPP de `cattle-detail-modal`.
+  `ProductionUnitLotService.getLots()` sigue llamando `getAllLivestock()` directo (no pasa por `CattleDataService`).
+- Al evento `'logout'` de `AuthService.sessionEvents$` se ejecuta `offlineStore.wipeAll()` (fire-and-forget, solo la caché
+  de lectura), conectado una vez en un app initializer (`core/utils/offline-logout-wipe.util.ts`).
+- Fuera de alcance: catálogos, PIN, borrado al terminar la gracia, outbox y datos de dinero (nunca se cachean).
 
 ## Contrato Meta-CRUD (verificado en producción)
 - Payload: `{ entity, table_name, operation (minúsculas), filters|fields, id }`
