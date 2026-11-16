@@ -25,6 +25,9 @@ export class MainLayoutComponent implements OnInit {
   public layoutService = inject(LayoutService);
   private session = inject(OfflineSessionService);
 
+  /** Dormant without offlineGraceMs (production): the PIN prompt is not mounted at all. */
+  readonly graceEnabled = this.session.graceEnabled;
+
   /** The chat calls the API, which is blocked in grace. */
   readonly inGrace = computed(() => this.session.state() === 'grace');
 

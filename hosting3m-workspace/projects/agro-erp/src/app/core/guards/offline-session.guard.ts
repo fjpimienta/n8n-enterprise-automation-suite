@@ -24,10 +24,11 @@ export const unlockRouteGuard: CanActivateFn = () => {
   return session.readState() === 'grace' && !session.isUnlockedForCurrentScope() ? true : router.parseUrl('/');
 };
 
-/** PIN setup requires a valid (online-login) session. */
+/** PIN setup requires offline grace to be configured (dormant in production) and a valid (online-login) session. */
 export const pinSetupRouteGuard: CanActivateFn = () => {
   const session = inject(OfflineSessionService);
   const router = inject(Router);
+  if (!session.graceEnabled) return router.parseUrl('/');
   return session.readState() === 'valid' ? true : router.parseUrl('/');
 };
 

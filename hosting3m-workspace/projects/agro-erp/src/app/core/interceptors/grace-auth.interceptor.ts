@@ -4,6 +4,7 @@ import { Observable, catchError, throwError } from 'rxjs';
 import { AUTH_ENV_CONFIG, AuthService, authInterceptor, isAllowedOrigin, isExemptRoute } from 'core-auth';
 import { LoginHandoffService } from '@core/services/login-handoff.service';
 import { isLoginRequest, userFromStoredToken } from '@core/utils/session-user.util';
+import { isOfflineGraceEnabled } from '@core/utils/offline-grace-config.util';
 
 /**
  * Grace-aware wrapper around core-auth's `authInterceptor` (#1087, phase 1b-iii-b). Register it AFTER
@@ -31,6 +32,11 @@ export const graceAuthInterceptor: HttpInterceptorFn = (req, next) => {
   // The login replaces the stored token: record who is signed in BEFORE the request leaves the device.
   if (isLoginRequest(req, config)) {
     inject(LoginHandoffService).begin(userFromStoredToken());
+  }
+
+  // Without offlineGraceMs the grace state cannot exist: exactly core-auth's authInterceptor, nothing else.
+  if (!isOfflineGraceEnabled(config)) {
+    return authInterceptor(req, next);
   }
 
   if (!isInGrace(auth)) {

@@ -8,7 +8,9 @@
     <div class="page-wrapper" [class.expanded-content]="layoutService.sidebarCollapsed()">
         <div class="page-body">
             <div class="container-xl pt-4">
-                <app-pin-setup-prompt></app-pin-setup-prompt>
+                @if (graceEnabled) {
+                    <app-pin-setup-prompt></app-pin-setup-prompt>
+                }
                 <router-outlet></router-outlet>
             </div>
         </div>

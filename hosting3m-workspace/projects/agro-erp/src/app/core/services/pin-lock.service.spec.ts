@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 import { TestBed } from '@angular/core/testing';
 import { openDB } from 'idb';
 import { Subject } from 'rxjs';
-import { AuthService, SessionEvent, SessionScope, SessionState } from 'core-auth';
+import { AUTH_ENV_CONFIG, AuthService, SessionEvent, SessionScope, SessionState } from 'core-auth';
 import { wirePinLogoutWipe } from '@core/utils/pin-logout-wipe.util';
 import {
   PIN_DB_NAME,
@@ -26,6 +26,8 @@ describe('PinLockService', () => {
   let events: Subject<SessionEvent>;
   let logs: unknown[][];
   let current: PinLockService | null;
+  /** `offlineGraceMs` of the mocked AUTH_ENV_CONFIG. Enabled by default; `undefined` is production. */
+  let graceMs: number | undefined;
 
   /** A fresh service instance over the same IndexedDB, as after an app restart. */
   function fresh(): PinLockService {
@@ -39,6 +41,9 @@ describe('PinLockService', () => {
           getSessionScope: () => scope,
           sessionEvents$: events.asObservable(),
         },
+      }, {
+        provide: AUTH_ENV_CONFIG,
+        useValue: { apiUrl_crud: '', apiUrl_token: '', apiUrl_ai: '', apiUrl_upload: '', system_id: 'test', offlineGraceMs: graceMs },
       }],
     });
     current = TestBed.inject(PinLockService);
@@ -48,6 +53,7 @@ describe('PinLockService', () => {
   beforeEach(() => {
     state = 'valid';
     scope = { ...SCOPE };
+    graceMs = 16 * 60 * 60 * 1000;
     events = new Subject<SessionEvent>();
     logs = [];
     vi.spyOn(console, 'warn').mockImplementation((...args: unknown[]) => { logs.push(args); });
@@ -114,6 +120,47 @@ describe('PinLockService', () => {
       expect(await svc.createPin(PIN)).toBe('error');
       vi.unstubAllGlobals();
       expect(await svc.hasRecord()).toBe(false);
+    });
+  });
+
+  describe('create with offline grace disabled (production configuration)', () => {
+    beforeEach(() => {
+      graceMs = undefined;
+    });
+
+    it('refuses to create a PIN: no derivation, no IndexedDB access, nothing written', async () => {
+      const svc = fresh();
+      const derive = vi.spyOn(svc as any, 'derive');
+      const open = vi.spyOn(svc as any, 'open');
+      state = 'valid';
+      expect(await svc.createPin(PIN)).toBe('disabled');
+      expect(derive).not.toHaveBeenCalled();
+      expect(open).not.toHaveBeenCalled();
+    });
+
+    it('says disabled before any PIN format check, even for a malformed PIN in a valid session', async () => {
+      const svc = fresh();
+      state = 'valid';
+      scope = { ...SCOPE };
+      expect(await svc.createPin('12345')).toBe('disabled');
+    });
+
+    it('does not create the PIN database at all', async () => {
+      const svc = fresh();
+      await svc.createPin(PIN);
+      if (typeof indexedDB.databases === 'function') {
+        const names = (await indexedDB.databases()).map(db => db.name);
+        expect(names).not.toContain(PIN_DB_NAME);
+      }
+    });
+
+    it('the logout wipe does not open the PIN database', async () => {
+      const svc = fresh();
+      const open = vi.spyOn(svc as any, 'open');
+      TestBed.runInInjectionContext(() => wirePinLogoutWipe());
+      events.next({ type: 'logout' });
+      await new Promise(resolve => setTimeout(resolve, 0));
+      expect(open).not.toHaveBeenCalled();
     });
   });
 

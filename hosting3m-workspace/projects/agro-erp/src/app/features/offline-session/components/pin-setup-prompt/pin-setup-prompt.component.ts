@@ -41,6 +41,8 @@ export class PinSetupPromptComponent implements OnInit {
   private dismissed = false;
 
   ngOnInit(): void {
+    // Dormant without offlineGraceMs: no check, no router subscription, never visible.
+    if (!this.session.graceEnabled) return;
     void this.check();
     this.router.events
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd), takeUntilDestroyed(this.destroyRef))

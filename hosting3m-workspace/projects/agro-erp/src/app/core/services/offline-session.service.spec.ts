@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { Router, provideRouter } from '@angular/router';
 import { Subject } from 'rxjs';
-import { AuthService, SessionScope, SessionState, TenantService } from 'core-auth';
+import { AUTH_ENV_CONFIG, AuthService, SessionScope, SessionState, TenantService } from 'core-auth';
 import { OfflineSessionService, UNLOCK_ROUTE, isSameScope } from './offline-session.service';
 import { OFFLINE_SESSION_CHECK_MS, startOfflineSessionWatch } from '@core/utils/offline-session-watch.util';
 
@@ -134,6 +134,7 @@ describe('startOfflineSessionWatch', () => {
         provideRouter([]),
         { provide: AuthService, useValue: { getSessionState: () => 'valid', getSessionScope: () => null, sessionEvents$: new Subject() } },
         { provide: TenantService, useValue: { activeTenantChanges$: new Subject(), activeTenantId: () => null } },
+        { provide: AUTH_ENV_CONFIG, useValue: { apiUrl_crud: '', apiUrl_token: '', apiUrl_ai: '', apiUrl_upload: '', system_id: 'test', offlineGraceMs: 16 * 60 * 60 * 1000 } },
       ],
     });
   });

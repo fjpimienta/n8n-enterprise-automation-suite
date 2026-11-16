@@ -29,7 +29,12 @@ describe('MainLayoutComponent (render smoke)', () => {
   let fixture: ComponentFixture<MainLayoutComponent>;
   let errors: unknown[][];
 
-  beforeEach(async () => {
+  /** Production configuration: no `offlineGraceMs`. The second case turns grace on. */
+  function authConfig(extra: { offlineGraceMs?: number } = {}) {
+    return { apiUrl_crud: `${API}/crud/v6`, apiUrl_token: `${API}/token`, apiUrl_ai: `${API}/ai`, apiUrl_upload: '', system_id: 'agro_erp', ...extra };
+  }
+
+  async function configure(extra: { offlineGraceMs?: number } = {}): Promise<void> {
     localStorage.clear();
     const exp = Math.floor(Date.now() / 1000) + 3600;
     localStorage.setItem('authToken', `${b64url({ alg: 'HS256' })}.${b64url({ user: 'ana', name: 'Ana', role: 'ADMIN', id_company: 7, exp })}.sig`);
@@ -48,13 +53,12 @@ describe('MainLayoutComponent (render smoke)', () => {
         provideRouter([{ path: '**', children: [] }]),
         provideHttpClient(withInterceptors([offlineGraceGuard, graceAuthInterceptor, tenantInterceptor])),
         provideHttpClientTesting(),
-        // Dormant configuration, exactly as app.config.ts (no offlineGraceMs).
-        { provide: AUTH_ENV_CONFIG, useValue: { apiUrl_crud: `${API}/crud/v6`, apiUrl_token: `${API}/token`, apiUrl_ai: `${API}/ai`, apiUrl_upload: '', system_id: 'agro_erp' } },
+        { provide: AUTH_ENV_CONFIG, useValue: authConfig(extra) },
         AiService,
         { provide: CHAT_CONFIG_TOKEN, useValue: { apiUrl_ai: `${API}/ai`, logoUrl: '', title: 'Asistente', primaryColor: '#6c9a40' } },
       ],
     }).compileComponents();
-  });
+  }
 
   afterEach(() => {
     vi.unstubAllGlobals();
@@ -62,27 +66,45 @@ describe('MainLayoutComponent (render smoke)', () => {
     localStorage.clear();
   });
 
-  it('renders the whole private area without throwing (valid session, grace off)', async () => {
+  /** Renders the layout and waits for the prompt's asynchronous IndexedDB check to settle. */
+  async function render(): Promise<HTMLElement> {
     expect(() => {
       fixture = TestBed.createComponent(MainLayoutComponent);
       fixture.detectChanges();
     }).not.toThrow();
     await new Promise(resolve => setTimeout(resolve, 0));
     fixture.detectChanges();
+    return fixture.nativeElement as HTMLElement;
+  }
 
-    const el = fixture.nativeElement as HTMLElement;
+  it('renders the whole private area without throwing (valid session, production config: grace off)', async () => {
+    await configure();
+    const el = await render();
     expect(el.querySelector('app-sidebar')).not.toBeNull();
     expect(el.querySelector('app-header')).not.toBeNull();
     expect(el.querySelector('app-toast-container')).not.toBeNull();
     expect(el.querySelector('router-outlet')).not.toBeNull();
-    // Valid session, online, no PIN record: the setup prompt is mounted and visible.
+    // The PIN setup prompt is dormant without offlineGraceMs: not mounted and never visible, even with
+    // a valid online session and no PIN record. Give its async check time to (wrongly) appear.
+    await new Promise(resolve => setTimeout(resolve, 20));
+    fixture.detectChanges();
+    expect(el.querySelector('app-pin-setup-prompt')).toBeNull();
+    expect(el.querySelector('[aria-label="Crear PIN sin conexión"]')).toBeNull();
+    // The chat widget is part of the layout whenever the session is not in grace.
+    expect(el.querySelector('lib-ai-chat')).not.toBeNull();
+    // No Angular runtime error (NG0xxx) was reported while rendering.
+    expect(errors.some(args => /NG0\d+/.test(String(args[0])))).toBe(false);
+  });
+
+  it('shows the PIN setup prompt when offlineGraceMs is configured (valid session, no PIN record)', async () => {
+    await configure({ offlineGraceMs: 16 * 60 * 60 * 1000 });
+    const el = await render();
     expect(el.querySelector('app-pin-setup-prompt')).not.toBeNull();
     // The prompt checks IndexedDB asynchronously, so it appears after a few ticks.
     await vi.waitFor(() => {
       fixture.detectChanges();
       expect(el.querySelector('[aria-label="Crear PIN sin conexión"]')).not.toBeNull();
     });
-    // No Angular runtime error (NG0xxx) was reported while rendering.
     expect(errors.some(args => /NG0\d+/.test(String(args[0])))).toBe(false);
   });
 });

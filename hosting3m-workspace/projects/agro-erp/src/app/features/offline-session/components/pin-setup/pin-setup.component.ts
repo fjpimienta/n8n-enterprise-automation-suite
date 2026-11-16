@@ -98,6 +98,7 @@ function messageFor(result: PinCreateResult): string {
     case 'offline': return 'Necesitas conexión para crear el PIN.';
     case 'not-valid-session': return 'Inicia sesión en línea para crear el PIN.';
     case 'no-scope': return 'No se pudo identificar la sesión. Inicia sesión de nuevo.';
+    case 'disabled': return 'El PIN sin conexión no está disponible en este dispositivo.';
     default: return 'No se pudo guardar el PIN en este dispositivo.';
   }
 }
