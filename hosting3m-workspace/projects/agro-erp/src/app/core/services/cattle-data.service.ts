@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, effect } from '@angular/core';
+import { Injectable, inject, signal, effect, untracked } from '@angular/core';
 import { CattleApiService } from './cattle-api.service';
 import { AuthService, SessionScope, SessionState, TenantService } from 'core-auth';
 import { OfflineStoreService } from './offline-store.service';
@@ -40,6 +40,8 @@ export class CattleDataService {
   // un refresh manual/automático, etc.), la respuesta vieja se descarta sin tocar ningún signal
   // — nunca "gana" una respuesta tardía sobre una más reciente, sin importar el orden de llegada.
   private requestSeq = 0;
+  // Last logged set of financial-looking column names (per instance), to avoid logging on every refresh.
+  private lastFlaggedKey: string | null = null;
   // Conteo de llamadas en vuelo — permite que `isLoading` se apague solo cuando la ÚLTIMA
   // llamada pendiente termina, evitando que una llamada vieja apague el spinner mientras una
   // más nueva (ej. un segundo cambio de tenant disparado antes de que el primero resuelva)
@@ -54,7 +56,9 @@ export class CattleDataService {
     effect(() => {
       const tenantId = this.tenantService.activeTenantId();
       if (tenantId) {
-        this.loadCattleData();
+        // untracked: loadCattleData() reads session scope/state (-> TenantService.availableTenants())
+        // synchronously; those reads must not become dependencies of this effect.
+        untracked(() => this.loadCattleData());
       }
     }, { allowSignalWrites: true });
   }
@@ -149,8 +153,11 @@ export class CattleDataService {
   private storeSnapshot(rows: unknown, scope: SessionScope): void {
     try {
       const flagged = findFinancialLookingColumns(Array.isArray(rows) ? rows : []);
-      if (flagged.length) {
-        // Column names only (never values). They are stored as-is; review before enabling offline.
+      const flaggedKey = flagged.join('|');
+      if (flagged.length && flaggedKey !== this.lastFlaggedKey) {
+        this.lastFlaggedKey = flaggedKey;
+        // Column names only (never values). Logged once per distinct set of names per instance.
+        // They are stored as-is; review before enabling offline.
         this.logger.warn('CattleData: financial-looking columns in livestock rows: ' + flagged.join(', '));
       }
       void this.offlineStore.put('livestock', sanitizeLivestockForOffline(rows), scope).catch(() => undefined);

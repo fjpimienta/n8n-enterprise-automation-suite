@@ -20,6 +20,7 @@ describe('CattleDataService offline read-through', () => {
   let scope: SessionScope | null;
   let state: 'valid' | 'grace' | 'expired';
   let tenantId: ReturnType<typeof signal<string | null>>;
+  let available: ReturnType<typeof signal<unknown[]>>;
   let api: { getAllLivestock: ReturnType<typeof vi.fn> };
   let store: { put: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn> };
   let svc: CattleDataService;
@@ -29,8 +30,12 @@ describe('CattleDataService offline read-through', () => {
     TestBed.configureTestingModule({
       providers: [
         { provide: CattleApiService, useValue: api },
-        { provide: TenantService, useValue: { activeTenantId: tenantId } },
-        { provide: AuthService, useValue: { getSessionScope: () => scope, getSessionState: () => state } },
+        { provide: TenantService, useValue: { activeTenantId: tenantId, availableTenants: available } },
+        { provide: AuthService, useValue: {
+          // Mirrors the real AuthService: scope/state reads touch TenantService.availableTenants().
+          getSessionScope: () => { available(); return scope; },
+          getSessionState: () => { available(); return state; }
+        } },
         { provide: OfflineStoreService, useValue: store }
       ]
     });
@@ -47,6 +52,7 @@ describe('CattleDataService offline read-through', () => {
   beforeEach(async () => {
     scope = S1;
     state = 'valid';
+    available = signal<unknown[]>([]);
     tenantId = signal<string | null>(null); // keep the constructor effect idle
     api = { getAllLivestock: vi.fn().mockResolvedValue([liveRow()]) };
     store = { put: vi.fn().mockResolvedValue(true), get: vi.fn().mockResolvedValue(null) };
@@ -215,5 +221,36 @@ describe('CattleDataService offline read-through', () => {
     store.get.mockResolvedValue({ data: [{ id: 'SECRET-ID', tenant_id: 2, rfid_siniiga: 'SECRET-RFID' }], savedAt: SAVED });
     await load();
     expect(JSON.stringify(warn.mock.calls)).not.toContain('SECRET');
+  });
+
+  it('changing only the available tenants does not trigger a load; switching the active tenant triggers exactly one', async () => {
+    tenantId.set('1');
+    await init();
+    TestBed.tick();
+    await Promise.resolve();
+    expect(api.getAllLivestock).toHaveBeenCalledTimes(1);
+    api.getAllLivestock.mockClear();
+
+    available.set([{ id: 'x' }]);
+    TestBed.tick();
+    await Promise.resolve();
+    expect(api.getAllLivestock).not.toHaveBeenCalled();
+
+    tenantId.set('2');
+    TestBed.tick();
+    await Promise.resolve();
+    expect(api.getAllLivestock).toHaveBeenCalledTimes(1);
+  });
+
+  it('logs financial-looking column names once per distinct set per instance', async () => {
+    const warn = vi.spyOn(console, 'warn');
+    const flaggedCalls = () => warn.mock.calls.filter(c => String(c[1] ?? c[0]).includes('financial-looking')).length;
+    api.getAllLivestock.mockResolvedValue([{ ...liveRow(), precio_compra: 1 }]);
+    await load();
+    await load();
+    expect(flaggedCalls()).toBe(1);
+    api.getAllLivestock.mockResolvedValue([{ ...liveRow(), precio_compra: 1, costo_total: 2 }]);
+    await load();
+    expect(flaggedCalls()).toBe(2);
   });
 });
