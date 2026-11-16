@@ -55,7 +55,9 @@ import { CompanyContext, TenantService } from 'core-auth';
 ```
 
 The public API also exports `AuthService`, `authGuard`, `roleGuard`, `authInterceptor`, and
-`tenantInterceptor` (all re-exported from [`src/public-api.ts`](src/public-api.ts)).
+`tenantInterceptor` (all re-exported from [`src/public-api.ts`](src/public-api.ts)). It also exports the
+pure helpers `isAllowedOrigin` and `isExemptRoute`, so an app can write its own interceptor with the same
+origin and exempt-route rules as `authInterceptor`.
 Register `authInterceptor` and `tenantInterceptor` explicitly with
 `provideHttpClient(withInterceptors([...]))`; the library does not register them automatically.
 
