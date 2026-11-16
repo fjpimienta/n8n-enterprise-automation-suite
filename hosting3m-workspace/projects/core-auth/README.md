@@ -152,12 +152,17 @@ const authConfig: AuthEnvironmentConfig = {
   `now <= exp + offlineGraceMs`. Without a positive finite `offlineGraceMs` it never returns `grace`.
 - **Fail-closed to `expired`:** no token, unparseable token, missing / non-numeric `exp` (the legacy
   methods treat a missing `exp` as non-expiring; this API does not), missing user (`user` or `email`
-  claim), `id_company` that is not a positive integer, or an active tenant (`TenantService`) that is
-  missing or differs from the JWT `id_company`.
+  claim), a JWT `id_company` that is not a positive integer (malformed token), or an active tenant
+  (`TenantService`) that is missing or not a member of `TenantService.availableTenants()` (empty list
+  included).
+- **Partition rule.** `SessionScope.id_company` is the **active tenant id**, not the JWT claim. The JWT
+  is issued for the company chosen at login and is not re-issued on a tenant switch, so the JWT
+  `id_company` only has to be well-formed and does not have to equal the active tenant. After a switch
+  to another available tenant the state stays `valid` and the scope follows the active tenant.
 - `AuthService.getSessionScope(): { user, id_company } | null`: partition key for a future offline
   store, `null` under the same fail-closed rules. Independent of expiry; combine with `getSessionState()`.
 - `AuthService.sessionEvents$`: emits `{ type: 'login', scope }` (scope is `null` if the active tenant
-  is not yet set or does not match; listen to `activeTenantChanges$` as well) and `{ type: 'logout' }`.
+  is not yet set or not in `availableTenants()`; listen to `activeTenantChanges$` as well) and `{ type: 'logout' }`.
   Never carries the token.
 - `TenantService.activeTenantChanges$`: emits the new `id_company` on `setActiveTenant()` and `null` on
   `clearContext()` (which `logout()` calls).

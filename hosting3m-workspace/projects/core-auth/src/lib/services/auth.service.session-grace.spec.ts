@@ -28,10 +28,16 @@ describe('AuthService session grace (additive, opt-in)', () => {
     system_id: 'test_app'
   };
 
-  function setup(config: AuthEnvironmentConfig, token?: string, activeId: number | null = 7): AuthService {
+  function setup(
+    config: AuthEnvironmentConfig,
+    token?: string,
+    activeId: number | null = 7,
+    available: number[] = [7, 8, 9]
+  ): AuthService {
     localStorage.clear();
     if (token) localStorage.setItem('authToken', token);
     if (activeId !== null) localStorage.setItem('active_tenant_context', JSON.stringify(tenant(activeId)));
+    if (available.length) localStorage.setItem('user_tenants', JSON.stringify(available.map(tenant)));
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       providers: [provideHttpClient(), provideHttpClientTesting(), { provide: AUTH_ENV_CONFIG, useValue: config }]
@@ -88,7 +94,7 @@ describe('AuthService session grace (additive, opt-in)', () => {
       expect(setup(cfg, 'not-a-jwt').getSessionState()).toBe('expired');
     });
 
-    it('fails closed when user or id_company is missing or invalid', () => {
+    it('fails closed when user is missing or the JWT id_company is malformed', () => {
       const exp = NOW_S + 100;
       expect(setup(cfg, makeToken({ ...baseClaims, user: undefined, exp })).getSessionState()).toBe('expired');
       expect(setup(cfg, makeToken({ ...baseClaims, id_company: undefined, exp })).getSessionState()).toBe('expired');
@@ -97,11 +103,45 @@ describe('AuthService session grace (additive, opt-in)', () => {
       expect(setup(cfg, makeToken({ ...baseClaims, id_company: 1.5, exp })).getSessionState()).toBe('expired');
     });
 
-    it('fails closed when the active tenant is missing or differs from the JWT', () => {
+    it('fails closed when the active tenant is missing', () => {
       const exp = NOW_S + 100;
-      expect(setup(cfg, tokenExp(exp), null).getSessionState()).toBe('expired');
-      expect(setup(cfg, tokenExp(exp), 8).getSessionState()).toBe('expired');
-      expect(setup(cfg, tokenExp(NOW_S - 60), 8).getSessionState()).toBe('expired');
+      const missing = setup(cfg, tokenExp(exp), null);
+      expect(missing.getSessionState()).toBe('expired');
+      expect(missing.getSessionScope()).toBeNull();
+    });
+
+    it('fails closed when the active tenant is not in availableTenants', () => {
+      const s = setup(cfg, tokenExp(NOW_S + 100), 5, [7, 8, 9]);
+      expect(s.getSessionState()).toBe('expired');
+      expect(s.getSessionScope()).toBeNull();
+      const g = setup(cfg, tokenExp(NOW_S - 60), 5, [7, 8, 9]);
+      expect(g.getSessionState()).toBe('expired');
+      expect(g.getSessionScope()).toBeNull();
+    });
+
+    it('fails closed when availableTenants is empty', () => {
+      const s = setup(cfg, tokenExp(NOW_S + 100), 7, []);
+      expect(s.getSessionState()).toBe('expired');
+      expect(s.getSessionScope()).toBeNull();
+    });
+
+    it('stays valid after switching to another available tenant and the scope follows it', () => {
+      const s = setup(cfg, tokenExp(NOW_S + 100), 7); // JWT company is 7
+      expect(s.getSessionScope()).toEqual({ user: 'ana', id_company: 7 });
+      TestBed.inject(TenantService).setActiveTenant(tenant(8));
+      expect(s.getSessionState()).toBe('valid');
+      expect(s.getSessionScope()).toEqual({ user: 'ana', id_company: 8 });
+    });
+
+    it('keeps grace after a tenant switch, scoped to the new tenant, and fails closed on an unknown one', () => {
+      const s = setup(cfg, tokenExp(NOW_S - 60), 7);
+      const tenants = TestBed.inject(TenantService);
+      tenants.setActiveTenant(tenant(9));
+      expect(s.getSessionState()).toBe('grace');
+      expect(s.getSessionScope()).toEqual({ user: 'ana', id_company: 9 });
+      tenants.setActiveTenant(tenant(99));
+      expect(s.getSessionState()).toBe('expired');
+      expect(s.getSessionScope()).toBeNull();
     });
   });
 
@@ -165,8 +205,8 @@ describe('AuthService session grace (additive, opt-in)', () => {
       expect(JSON.stringify(events)).not.toContain(token);
     });
 
-    it('emits null scope on login when no matching active tenant is set (fail-closed)', () => {
-      const service = setup(cfg, undefined, null);
+    it('emits null scope on login when no available active tenant is set (fail-closed)', () => {
+      const service = setup(cfg, undefined, null, []);
       const http = TestBed.inject(HttpTestingController);
       const events: SessionEvent[] = [];
       service.sessionEvents$.subscribe(e => events.push(e));

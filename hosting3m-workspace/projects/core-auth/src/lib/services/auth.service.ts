@@ -69,7 +69,7 @@ export class AuthService {
    * - `'valid'`: token not expired (same rule as `getStoredToken()`), with a usable identity.
    * - `'grace'`: token expired, but within `offlineGraceMs` (from `AUTH_ENV_CONFIG`) after `exp`.
    * - `'expired'`: no token, malformed token, missing/invalid `exp`, grace not configured or elapsed,
-   *   missing user or `id_company`, or the active tenant is missing or differs from the JWT's.
+   *   missing user, malformed JWT `id_company`, or an active tenant that is missing or not in `TenantService.availableTenants()`.
    */
   getSessionState(): SessionState {
     const token = localStorage.getItem(TOKEN_KEY);
@@ -112,11 +112,16 @@ export class AuthService {
   private resolveScope(decoded: JwtPayload): SessionScope | null {
     const user = [decoded.user, decoded.email]
       .find((v): v is string => typeof v === 'string' && v.trim().length > 0);
-    const idCompany = decoded.id_company;
-    if (!user || typeof idCompany !== 'number' || !Number.isInteger(idCompany) || idCompany <= 0) return null;
+    if (!user) return null;
+    // The JWT company is the one chosen at login and is NOT re-issued on a tenant switch, so it
+    // only has to be well-formed; it is not the partition key.
+    const jwtCompany = decoded.id_company;
+    if (typeof jwtCompany !== 'number' || !Number.isInteger(jwtCompany) || jwtCompany <= 0) return null;
     const active = this.tenantService.activeTenantId();
-    if (active !== idCompany) return null;
-    return { user, id_company: idCompany };
+    if (typeof active !== 'number' || !Number.isInteger(active) || active <= 0) return null;
+    const isMember = this.tenantService.availableTenants().some(t => t?.id_company === active);
+    if (!isMember) return null;
+    return { user, id_company: active };
   }
 
   getStoredToken(): string | null {
