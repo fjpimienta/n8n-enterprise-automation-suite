@@ -1,7 +1,7 @@
 import { LoggerService } from './logger.service';
 import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { catchError, tap, throwError, map } from 'rxjs';
+import { catchError, tap, throwError, map, Observable, Subject } from 'rxjs';
 import { jwtDecode } from 'jwt-decode';
 
 // ✅ Importación consolidada de configuración y contexto
@@ -20,7 +20,22 @@ export interface UserPayload {
 
 interface JwtPayload extends UserPayload {
   exp?: number;
+  user?: string;
 }
+
+/** Side-effect-free session classification (see `AuthService.getSessionState()`). */
+export type SessionState = 'valid' | 'grace' | 'expired';
+
+/** Identity partition key for a future offline store. Never contains the token. */
+export interface SessionScope {
+  user: string;
+  id_company: number;
+}
+
+/** Login/logout notification. Carries no token. */
+export type SessionEvent =
+  | { type: 'login'; scope: SessionScope | null }
+  | { type: 'logout' };
 
 @Injectable({
   providedIn: 'root'
@@ -41,6 +56,73 @@ export class AuthService {
 
   readonly currentUser = this._currentUser.asReadonly();
   readonly isAuthenticated = this._isAuthenticated.asReadonly();
+
+  private readonly _sessionEvents = new Subject<SessionEvent>();
+  /** Read-only stream of login/logout events. Additive; carries no token. */
+  readonly sessionEvents$: Observable<SessionEvent> = this._sessionEvents.asObservable();
+
+  /**
+   * Classifies the stored session without side effects: it never calls `logout()`, never
+   * refreshes anything and never touches storage. Fail-closed: anything missing, malformed or
+   * ambiguous is `'expired'`.
+   *
+   * - `'valid'`: token not expired (same rule as `getStoredToken()`), with a usable identity.
+   * - `'grace'`: token expired, but within `offlineGraceMs` (from `AUTH_ENV_CONFIG`) after `exp`.
+   * - `'expired'`: no token, malformed token, missing/invalid `exp`, grace not configured or elapsed,
+   *   missing user, malformed JWT `id_company`, or an active tenant that is missing or not in `TenantService.availableTenants()`.
+   */
+  getSessionState(): SessionState {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) return 'expired';
+    const decoded = this.decodeSafely(token);
+    if (!decoded || !this.resolveScope(decoded)) return 'expired';
+    const exp = decoded.exp;
+    if (typeof exp !== 'number' || !Number.isFinite(exp)) return 'expired';
+
+    const nowMs = Date.now();
+    if (exp >= Math.floor(nowMs / 1000)) return 'valid';
+
+    const grace = this.envConfig.offlineGraceMs;
+    if (typeof grace === 'number' && Number.isFinite(grace) && grace > 0
+      && Math.floor(nowMs / 1000) * 1000 <= exp * 1000 + grace) {
+      return 'grace';
+    }
+    return 'expired';
+  }
+
+  /**
+   * (user, id_company) of the stored session for partitioning, or `null` when it is missing,
+   * malformed or ambiguous. Independent of expiry; combine with `getSessionState()`.
+   */
+  getSessionScope(): SessionScope | null {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const decoded = token ? this.decodeSafely(token) : null;
+    return decoded ? this.resolveScope(decoded) : null;
+  }
+
+  private decodeSafely(token: string): JwtPayload | null {
+    try {
+      const decoded = jwtDecode<JwtPayload>(token);
+      return decoded && typeof decoded === 'object' ? decoded : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private resolveScope(decoded: JwtPayload): SessionScope | null {
+    const user = [decoded.user, decoded.email]
+      .find((v): v is string => typeof v === 'string' && v.trim().length > 0);
+    if (!user) return null;
+    // The JWT company is the one chosen at login and is NOT re-issued on a tenant switch, so it
+    // only has to be well-formed; it is not the partition key.
+    const jwtCompany = decoded.id_company;
+    if (typeof jwtCompany !== 'number' || !Number.isInteger(jwtCompany) || jwtCompany <= 0) return null;
+    const active = this.tenantService.activeTenantId();
+    if (typeof active !== 'number' || !Number.isInteger(active) || active <= 0) return null;
+    const isMember = this.tenantService.availableTenants().some(t => t?.id_company === active);
+    if (!isMember) return null;
+    return { user, id_company: active };
+  }
 
   getStoredToken(): string | null {
     const token = localStorage.getItem(TOKEN_KEY);
@@ -126,6 +208,7 @@ export class AuthService {
           const decoded = jwtDecode<any>(token);
           this._currentUser.set(decoded);
           this._isAuthenticated.set(true);
+          this._sessionEvents.next({ type: 'login', scope: this.getSessionScope() });
         }
       }),
       catchError(err => throwError(() => err))
@@ -141,6 +224,7 @@ export class AuthService {
     // el `user_tenants`/`active_tenant_context` de la sesión anterior si esa cuenta
     // tiene una sola empresa (ver incidente de Context Switcher, 2026-10-04).
     this.tenantService.clearContext();
+    this._sessionEvents.next({ type: 'logout' });
   }
 
   hasRole(role: string): boolean {

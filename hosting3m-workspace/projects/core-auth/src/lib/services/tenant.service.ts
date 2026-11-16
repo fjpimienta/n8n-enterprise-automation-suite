@@ -1,4 +1,5 @@
 import { Injectable, signal, computed } from '@angular/core';
+import { Observable, Subject } from 'rxjs';
 
 export interface TenantContext {
   id_company: number;
@@ -17,6 +18,13 @@ export class TenantService {
     if (this._availableTenants().length === 0) this.hydrate();
     return this._availableTenants();
   });
+
+  private readonly _activeTenantChanges = new Subject<number | null>();
+  /**
+   * Read-only stream of active-tenant changes: emits the new `id_company` on `setActiveTenant()`
+   * and `null` on `clearContext()`. Additive; it does not change how the tenant is stored.
+   */
+  public readonly activeTenantChanges$: Observable<number | null> = this._activeTenantChanges.asObservable();
 
   public readonly activeTenant = this._activeTenant.asReadonly();
   public readonly activeTenantId = computed(() => this._activeTenant()?.id_company || null);
@@ -56,6 +64,7 @@ export class TenantService {
   public setActiveTenant(tenant: TenantContext): void {
     this._activeTenant.set(tenant);
     localStorage.setItem('active_tenant_context', JSON.stringify(tenant));
+    this._activeTenantChanges.next(tenant?.id_company ?? null);
   }
 
   public clearContext(): void {
@@ -63,6 +72,7 @@ export class TenantService {
     this._availableTenants.set([]);
     localStorage.removeItem('active_tenant_context');
     localStorage.removeItem('user_tenants');
+    this._activeTenantChanges.next(null);
   }
 
   private loadActiveFromStorage(): TenantContext | null {
