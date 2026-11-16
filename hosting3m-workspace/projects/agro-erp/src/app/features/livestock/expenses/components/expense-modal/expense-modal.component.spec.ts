@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
+import { AuthService } from 'core-auth';
 import { ExpenseModalComponent } from './expense-modal.component';
 
 describe('ExpenseModalComponent', () => {
@@ -8,7 +9,8 @@ describe('ExpenseModalComponent', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [ExpenseModalComponent]
+      imports: [ExpenseModalComponent],
+      providers: [{ provide: AuthService, useValue: { getSessionScope: () => null, getSessionState: () => 'expired' } }]
     })
     .compileComponents();
 

@@ -1,4 +1,5 @@
 import { Component, inject, signal, computed, OnInit, ChangeDetectionStrategy, effect, DestroyRef } from '@angular/core';
+import { OfflineBannerComponent } from '@shared/components/offline-banner/offline-banner.component';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
@@ -38,7 +39,7 @@ import { LivestockAnimalCostsComponent } from '../../../expenses/components/live
 @Component({
   selector: 'app-main-dashboard',
   standalone: true,
-  imports: [CommonModule, LivestockExpenseSummaryComponent, LivestockExpenseHistoryComponent, LivestockAnimalCostsComponent, ReproductiveDashboardComponent, EngordaDashboardComponent, ReproduccionDashboardComponent, ExpenseModalComponent, ComplianceAlertCardComponent, MetadataDetailModalComponent, CattleEventLogComponent, SaleIncomeLogComponent, TableToolbarComponent, TableFooterComponent],
+  imports: [CommonModule, LivestockExpenseSummaryComponent, LivestockExpenseHistoryComponent, LivestockAnimalCostsComponent, ReproductiveDashboardComponent, EngordaDashboardComponent, ReproduccionDashboardComponent, ExpenseModalComponent, ComplianceAlertCardComponent, MetadataDetailModalComponent, CattleEventLogComponent, SaleIncomeLogComponent, TableToolbarComponent, TableFooterComponent, OfflineBannerComponent],
   templateUrl: './main-dashboard.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
@@ -58,6 +59,8 @@ export class MainDashboardComponent implements OnInit {
   // Misma fuente que cattle-list, adg-alerts, etc. — evita que el dashboard muestre
   // una copia del hato desincronizada del resto de la app.
   public cattleList = this.cattleDataService.cattleList;
+  public servedFromCache = this.cattleDataService.servedFromCache;
+  public cacheSavedAt = this.cattleDataService.cacheSavedAt;
   public expensesList = signal<Expense[]>([]);
 
   // Sale incomes (cattle_sale_income, ADMIN only): loaded ONCE here and shared by the Resumen and the Ingresos tab.

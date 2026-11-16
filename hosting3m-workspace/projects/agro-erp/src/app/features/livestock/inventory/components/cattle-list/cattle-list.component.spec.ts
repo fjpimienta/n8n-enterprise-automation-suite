@@ -25,7 +25,7 @@ describe('CattleListComponent — "Nuevo Registro" entry point', () => {
       providers: [
         {
           provide: CattleDataService,
-          useValue: { cattleList: signal([]), isLoading: signal(false), loadCattleData: () => Promise.resolve() }
+          useValue: { cattleList: signal([]), servedFromCache: signal(false), cacheSavedAt: signal<string | null>(null), isLoading: signal(false), loadCattleData: () => Promise.resolve() }
         },
         { provide: CattleApiService, useValue: { getCattleLotHistory: () => Promise.resolve([]) } },
         { provide: TenantService, useValue: { activeTenant: computed(() => ({ role: role(), company_name: 'Demo' })), activeTenantId: computed(() => tenant()) } }
