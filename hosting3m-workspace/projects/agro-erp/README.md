@@ -337,6 +337,30 @@ adicionales. Los huecos se conservan explícitamente.
 
 ---
 
+## 📱 PWA y app shell (Refs #1087, fase 1a)
+
+El app shell se sirve con `@angular/service-worker` (`ngsw-worker.js`), activo solo en builds de
+producción (`provideServiceWorker`, `enabled: !isDevMode()`; el `serviceWorker` de `angular.json` solo
+está en la configuración `production`). `ngsw-config.json` define `assetGroups`: `app-shell` (prefetch de
+`index.html`, manifest, iconos, `*.css`, `*.js` y los chunks lazy), `assets` (lazy) y `cdn-styles` (lazy,
+estilos de Tabler e Inter del CDN).
+
+- **Límite explícito: todavía no hay datos offline.** Ninguna respuesta del gateway se cachea (todas las
+  llamadas son `POST` y `dataGroups` solo cachea `GET`/`HEAD`). Sin red, la app abre pero las pantallas no
+  cargan datos. Lectura offline y cola de escrituras son la fase 1b/2 (#1087).
+- **Migración desde el `sw.js` anterior** (caché `agroerp-pwa-v2`): `public/sw.js` ahora es un worker de
+  transición sin `fetch`; los clientes ya instalados lo reciben en su siguiente revisión de actualización
+  (el navegador compara `/sw.js` byte a byte), borra la caché antigua y toma el control. La app registra
+  `ngsw-worker.js` en el mismo scope (`/`), lo que reemplaza ese registro. Además, `purgeLegacySwCaches()`
+  borra la caché antigua al arrancar la app. No borrar `public/sw.js` hasta que no queden instalaciones viejas.
+- **Manifest:** `start_url: "/"` (la ruta raíz redirige al dashboard del dominio de la empresa activa);
+  `id: "/agroerp"` conserva la identidad de la app ya instalada.
+- **Pendiente `TODO(verify)`:** los estilos/iconos de Tabler e Inter siguen en CDN (el CDN usa
+  `@tabler/core@1.0.0-beta20` y el paquete local es 1.7.3: cambiarlo altera el aspecto; `@tabler/icons-webfont`
+  e Inter no son dependencias). Se cachean en tiempo de ejecución al primer uso en línea.
+- Pruebas en local: `ng build agro-erp` (genera `ngsw.json` y `ngsw-worker.js`) o
+  `ng serve agro-erp --configuration=production`.
+
 ## 🏗️ Arquitectura Técnica
 
 El proyecto está optimizado para entornos rurales de baja conectividad garantizando un rendimiento extremo:
