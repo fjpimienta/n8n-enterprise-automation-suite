@@ -1,9 +1,10 @@
 import { DestroyRef, inject } from '@angular/core';
-import { AuthService } from 'core-auth';
+import { AUTH_ENV_CONFIG, AuthService } from 'core-auth';
 import { OfflineStoreService } from '@core/services/offline-store.service';
 import { PinLockService } from '@core/services/pin-lock.service';
 import { LoginHandoffService } from '@core/services/login-handoff.service';
 import { userFromStoredToken } from '@core/utils/session-user.util';
+import { isOfflineGraceEnabled } from '@core/utils/offline-grace-config.util';
 
 /**
  * On a successful login, keeps the offline data only when the new user is the SAME user whose data is
@@ -18,6 +19,7 @@ export function wireLoginIdentityWipe(): void {
   const handoff = inject(LoginHandoffService);
   const store = inject(OfflineStoreService);
   const pinLock = inject(PinLockService);
+  const config = inject(AUTH_ENV_CONFIG, { optional: true });
 
   const subscription = auth.sessionEvents$.subscribe(event => {
     if (event.type !== 'login') return;
@@ -28,7 +30,8 @@ export function wireLoginIdentityWipe(): void {
     if (previousUser !== null && previousUser === currentUser) return;
     try {
       void store.wipeAll().catch(() => undefined);
-      void pinLock.deleteOthers(currentUser).catch(() => undefined);
+      // Without offlineGraceMs there are no PIN records to delete, and the PIN database is never opened.
+      if (isOfflineGraceEnabled(config)) void pinLock.deleteOthers(currentUser).catch(() => undefined);
     } catch {
       // swallowed on purpose
     }

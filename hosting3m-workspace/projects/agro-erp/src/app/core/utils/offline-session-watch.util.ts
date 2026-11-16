@@ -1,8 +1,9 @@
 import { DestroyRef, inject } from '@angular/core';
 import { NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs';
-import { AuthService, TenantService } from 'core-auth';
+import { AUTH_ENV_CONFIG, AuthService, TenantService } from 'core-auth';
 import { OfflineSessionService } from '@core/services/offline-session.service';
+import { isOfflineGraceEnabled } from '@core/utils/offline-grace-config.util';
 
 /** Low-frequency re-check so an open session re-locks when it enters grace. */
 export const OFFLINE_SESSION_CHECK_MS = 60_000;
@@ -14,6 +15,8 @@ export const OFFLINE_SESSION_CHECK_MS = 60_000;
  */
 export function startOfflineSessionWatch(): void {
   if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  // Production (no offlineGraceMs): no listener, no timer, no subscription. Nothing would ever change.
+  if (!isOfflineGraceEnabled(inject(AUTH_ENV_CONFIG, { optional: true }))) return;
   const session = inject(OfflineSessionService);
   const auth = inject(AuthService);
   const tenants = inject(TenantService);

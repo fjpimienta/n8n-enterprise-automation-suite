@@ -1,6 +1,7 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { AuthService, SessionScope, SessionState } from 'core-auth';
+import { AUTH_ENV_CONFIG, AuthService, SessionScope, SessionState } from 'core-auth';
+import { isOfflineGraceEnabled } from '@core/utils/offline-grace-config.util';
 
 /** Route of the PIN unlock screen (outside the main layout). */
 export const UNLOCK_ROUTE = '/unlock';
@@ -28,6 +29,12 @@ export class OfflineSessionService {
   private readonly router = inject(Router);
 
   private unlockedFor: SessionScope | null = null;
+
+  /**
+   * False in production (no `offlineGraceMs`). Every grace UI and route is dormant then; see
+   * `isOfflineGraceEnabled`.
+   */
+  readonly graceEnabled = isOfflineGraceEnabled(inject(AUTH_ENV_CONFIG, { optional: true }));
 
   private readonly _state = signal<SessionState>('expired');
   private readonly _scope = signal<SessionScope | null>(null);

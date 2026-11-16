@@ -1,8 +1,9 @@
 import { Injectable, OnDestroy, inject } from '@angular/core';
 import { IDBPDatabase, openDB } from 'idb';
-import { AuthService, SessionScope, SessionState } from 'core-auth';
+import { AUTH_ENV_CONFIG, AuthService, SessionScope, SessionState } from 'core-auth';
 import { LoggerService } from './logger.service';
 import { isPinFormat, isTrivialPin } from '@core/utils/pin-policy.util';
+import { isOfflineGraceEnabled } from '@core/utils/offline-grace-config.util';
 
 /**
  * Separate database on purpose: `agroerp-offline` keeps its version (OFFLINE_DB_VERSION), and a cache
@@ -35,6 +36,7 @@ export interface PinRecord {
 
 export type PinCreateResult =
   | 'created'
+  | 'disabled'
   | 'invalid-format'
   | 'trivial'
   | 'not-valid-session'
@@ -67,6 +69,7 @@ export type PinVerifyResult =
 export class PinLockService implements OnDestroy {
   private readonly auth = inject(AuthService);
   private readonly logger = inject(LoggerService);
+  private readonly config = inject(AUTH_ENV_CONFIG, { optional: true });
 
   private dbPromise: Promise<IDBPDatabase> | null = null;
   private queue: Promise<unknown> = Promise.resolve();
@@ -77,6 +80,8 @@ export class PinLockService implements OnDestroy {
   }
 
   private async createPinNow(pin: string): Promise<PinCreateResult> {
+    // Dormant without offlineGraceMs: nothing is derived and nothing is written to IndexedDB.
+    if (!isOfflineGraceEnabled(this.config)) return 'disabled';
     if (!isPinFormat(pin)) return 'invalid-format';
     if (isTrivialPin(pin)) return 'trivial';
 

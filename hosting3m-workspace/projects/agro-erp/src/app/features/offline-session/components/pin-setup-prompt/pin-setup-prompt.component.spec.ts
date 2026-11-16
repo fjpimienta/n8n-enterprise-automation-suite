@@ -14,6 +14,8 @@ describe('PinSetupPromptComponent', () => {
   let hasRecord: boolean;
   let state: 'valid' | 'grace' | 'expired';
   let online: ReturnType<typeof signal<boolean>>;
+  let graceEnabled: boolean;
+  let hasRecordSpy: ReturnType<typeof vi.fn>;
 
   /** Mounts the component the way the main layout does: inside a real router, outside any injection context. */
   async function mount(): Promise<void> {
@@ -22,8 +24,8 @@ describe('PinSetupPromptComponent', () => {
       imports: [PinSetupPromptComponent],
       providers: [
         provideRouter([{ path: '', children: [] }, { path: 'a', children: [] }, { path: 'seguridad/pin', children: [] }]),
-        { provide: PinLockService, useValue: { hasRecord: async () => hasRecord } },
-        { provide: OfflineSessionService, useValue: { readState: () => state, online } },
+        { provide: PinLockService, useValue: { hasRecord: hasRecordSpy } },
+        { provide: OfflineSessionService, useValue: { readState: () => state, online, graceEnabled } },
       ],
     });
     router = TestBed.inject(Router);
@@ -41,9 +43,30 @@ describe('PinSetupPromptComponent', () => {
     hasRecord = false;
     state = 'valid';
     online = signal(true);
+    graceEnabled = true;
+    hasRecordSpy = vi.fn(async () => hasRecord);
   });
 
-  it('renders and shows the prompt when valid, online and there is no PIN record', async () => {
+  describe('with offline grace disabled (production configuration)', () => {
+    beforeEach(() => {
+      graceEnabled = false;
+    });
+
+    it('is never visible, even for a valid, online session with no PIN record', async () => {
+      await mount();
+      expect(prompt()).toBeNull();
+      expect(el().querySelector('a[href="/seguridad/pin"]')).toBeNull();
+    });
+
+    it('does not even check the PIN record (no IndexedDB access) on init or on navigation', async () => {
+      await mount();
+      await router.navigateByUrl('/a');
+      await settle();
+      expect(hasRecordSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  it('renders and shows the prompt when valid, online and there is no PIN record (grace enabled)', async () => {
     await mount();
     expect(prompt()).not.toBeNull();
     expect(el().querySelector('a[href="/seguridad/pin"]')).not.toBeNull();

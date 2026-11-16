@@ -1,6 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRouteSnapshot, Router, RouterStateSnapshot, UrlTree, provideRouter } from '@angular/router';
-import { AuthService, SessionScope, SessionState, TenantService } from 'core-auth';
+import { AUTH_ENV_CONFIG, AuthService, SessionScope, SessionState, TenantService } from 'core-auth';
 import { OfflineSessionService } from '@core/services/offline-session.service';
 import { notInGraceGuard, offlineSessionGuard, pinSetupRouteGuard, unlockRouteGuard } from './offline-session.guard';
 
@@ -11,11 +11,14 @@ describe('offline session guards', () => {
   let state: SessionState;
   let authed: boolean;
   let scope: SessionScope | null;
+  /** Shared config object: the grace-off case flips `offlineGraceMs` before the service is created. */
+  const authConfig = { apiUrl_crud: '', apiUrl_token: '', apiUrl_ai: '', apiUrl_upload: '', system_id: 'test', offlineGraceMs: 16 * 60 * 60 * 1000 as number | undefined };
 
   beforeEach(() => {
     state = 'valid';
     authed = true;
     scope = { user: 'ana', id_company: 1 };
+    authConfig.offlineGraceMs = 16 * 60 * 60 * 1000;
     TestBed.resetTestingModule();
     TestBed.configureTestingModule({
       providers: [
@@ -30,6 +33,7 @@ describe('offline session guards', () => {
           },
         },
         { provide: TenantService, useValue: { activeTenant: () => ({ industry: 'Ganadería', business_type: 'LIVESTOCK' }) } },
+        { provide: AUTH_ENV_CONFIG, useValue: authConfig },
       ],
     });
   });
@@ -84,10 +88,24 @@ describe('offline session guards', () => {
   });
 
   describe('pinSetupRouteGuard', () => {
-    it('allows PIN setup only in a valid session', () => {
+    it('allows PIN setup only in a valid session (grace configured)', () => {
       expect(run(pinSetupRouteGuard)).toBe(true);
       state = 'grace';
       expect(String(run(pinSetupRouteGuard))).toBe('/');
+    });
+
+    it('redirects to / with grace NOT configured (production), even for a valid online session', () => {
+      authConfig.offlineGraceMs = undefined;
+      state = 'valid';
+      expect(String(run(pinSetupRouteGuard))).toBe('/');
+    });
+
+    it('redirects to / with grace not configured, whatever the session state', () => {
+      authConfig.offlineGraceMs = undefined;
+      for (const s of ['valid', 'grace', 'expired'] as const) {
+        state = s;
+        expect(String(run(pinSetupRouteGuard))).toBe('/');
+      }
     });
   });
 
