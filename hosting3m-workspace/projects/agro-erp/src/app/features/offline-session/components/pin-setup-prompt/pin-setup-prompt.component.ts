@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, OnInit, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, inject, signal } from '@angular/core';
 import { RouterLink, Router, NavigationEnd } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { filter } from 'rxjs';
@@ -34,6 +34,8 @@ export class PinSetupPromptComponent implements OnInit {
   private readonly pinLock = inject(PinLockService);
   private readonly session = inject(OfflineSessionService);
   private readonly router = inject(Router);
+  // Captured in a field initializer: takeUntilDestroyed() needs an injection context, and ngOnInit is not one.
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly visible = signal(false);
   private dismissed = false;
@@ -41,7 +43,7 @@ export class PinSetupPromptComponent implements OnInit {
   ngOnInit(): void {
     void this.check();
     this.router.events
-      .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd), takeUntilDestroyed())
+      .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd), takeUntilDestroyed(this.destroyRef))
       .subscribe(() => void this.check());
   }
 
