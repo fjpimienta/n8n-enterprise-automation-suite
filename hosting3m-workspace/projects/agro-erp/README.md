@@ -534,3 +534,23 @@ La validación del cliente es una defensa en profundidad: el filtro de la base y
 **Francisco Jesus Pérez Pimienta**
 *Senior Systems Architect & Project Lead*
 Hosting3M Automation Suite
+## 💾 Almacén de lectura offline (Refs #1087, fase 1b-ii) — aún sin conectar
+
+`OfflineStoreService` (`src/app/core/services/offline-store.service.ts`) es la caché de **solo lectura**
+sobre IndexedDB (librería `idb`, base `agroerp-offline`, un object store). **Todavía no lo usa ninguna
+pantalla ni servicio**: no está conectado a `CattleDataService`, no hay PIN, cola de escrituras ni limpieza al
+cerrar sesión (decisión pendiente).
+
+- **API (promesas):** `put(dataset, data): Promise<boolean>`, `get(dataset): Promise<{ data, savedAt } | null>`,
+  `wipeScope(scope)` y `wipeAll()`. `put`/`get` **no reciben scope**: leen `AuthService.getSessionScope()` en
+  cada llamada. Sin scope (nulo, malformado o ambiguo) no leen ni escriben (`false` / `null`).
+- **Partición obligatoria:** llave `${user}|${id_company}|${dataset}` (el usuario va codificado con
+  `encodeURIComponent` para que un `|` no pueda mezclar particiones). Cada entrada guarda además su scope,
+  dataset, `savedAt` (ISO UTC) y `schemaVersion`; `get()` los verifica contra el scope **actual** (también
+  después de la lectura asíncrona) y devuelve `null` si no coinciden.
+- **Allowlist cerrada:** `'livestock' | 'catalogs'` (tipo y validación en tiempo de ejecución). Cualquier otro
+  nombre se rechaza. **No se cachean datasets de dinero** (gastos, ventas, ingresos), nunca.
+- **Resiliencia:** IndexedDB no disponible, cuota, bloqueo o datos corruptos no lanzan excepciones; los logs solo
+  llevan el nombre del error, nunca datos, scope ni tokens.
+- Texto plano en IndexedDB (decisión del dueño); no hay cifrado.
+- Pruebas: `fake-indexeddb` (devDependency) en `offline-store.service.spec.ts`.
