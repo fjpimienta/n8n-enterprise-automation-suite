@@ -327,7 +327,12 @@ de un AI Agent, usar `.first()` en lugar de `.item` en `$('Node')`.
     éxito, el contador vuelve a 0. A los 5 fallos se borra el registro; la recuperación es el login en línea.
   - Fail-closed: scope nulo, registro ausente o malformado, WebCrypto o IndexedDB fallando = bloqueado.
   - Logout: `wirePinLogoutWipe()` borra **todos** los registros del dispositivo (el evento no trae scope).
-- **Pantallas**: `/unlock` (PIN, intentos restantes, "Iniciar sesión" solo en línea, que hace logout antes),
+  - Concurrencia: `verify()` y `createPin()` van en serie dentro de la página (cola), y el paso leer-validar-incrementar
+    del contador es **una sola transacción `readwrite`** de IndexedDB: dos llamadas o dos ventanas de la app cuentan
+    cada intento (prueba de concurrencia en `pin-lock.service.spec.ts`). El reinicio a 0 tras un PIN correcto solo
+    se aplica si nadie contó otro intento mientras tanto.
+- **Pantallas**: `/unlock` (PIN, intentos restantes, "Iniciar sesión" solo en línea; **no** hace logout: navega a
+  `/login` y la copia y el PIN se conservan si el login falla),
   `/seguridad/pin` (alta con confirmación, solo en valid + online) y un aviso descartable en el layout tras login online
   sin registro. Descartarlo deja la gracia inutilizable para ese usuario (hace falta login); el aviso reaparece al
   reiniciar la app.
@@ -337,6 +342,18 @@ de un AI Agent, usar `.first()` en lugar de `.item` en `$('Node')`.
   gracia (`shared/utils/plantation-clear.util.ts`).
 - **Cabecera**: en gracia muestra el usuario del scope y el rol de la empresa activa, nunca los respaldos
   "Administrador" / "Socio Operativo" (`shared/utils/session-identity.util.ts`).
+
+- **Identidad al iniciar sesión** (`core/utils/login-identity-wipe.util.ts`):
+  - El interceptor (`graceAuthInterceptor`) registra en `LoginHandoffService` (solo en memoria) el usuario del token
+    **antes** de enviar el POST de login, leído de las claims del JWT (`userFromStoredToken`). Cada POST sobrescribe
+    el valor, así que un intento fallido no deja un valor viejo.
+  - Login **exitoso** (evento `'login'`): si el usuario nuevo es **el mismo** que el anterior, se conserva la caché y los
+    registros de PIN. Si es **otro** usuario, o el anterior no se pudo determinar (sin POST capturado, recarga entre
+    POST y respuesta, sin token), se borra la caché (`wipeAll`) y se borran los registros de PIN de los demás
+    (`deleteOthers(nuevo)`). Fail-closed.
+  - El usuario nuevo se lee del token almacenado y no de `event.scope`: ese scope depende de la lista de empresas, que
+    el login guarda **después** del evento, así que puede venir `null` en un login nuevo.
+  - Un login fallido no emite `'login'`: copia y PIN intactos.
 
 ### Modelo de amenazas (acordado con el dueño)
 - El PIN **solo protege la interfaz**. El JWT vive en `localStorage` (`authToken`) y la caché de IndexedDB

@@ -87,12 +87,18 @@ describe('UnlockComponent', () => {
     expect(text()).toContain('Sin conexión');
   });
 
-  it('"Iniciar sesión" logs out first and then goes to /login', async () => {
+  it('"Iniciar sesión" goes to /login WITHOUT logging out (the cache and PIN survive a failed login)', async () => {
     await create({ hasRecord: false, online: true });
     const button = Array.from(el().querySelectorAll('button')).find(b => b.textContent?.includes('Iniciar sesión'))!;
     button.click();
-    expect(auth.logout).toHaveBeenCalled();
+    expect(auth.logout).not.toHaveBeenCalled();
     expect(navigate).toHaveBeenCalledWith('/login');
+  });
+
+  it('explains that a failed login keeps the copy and the PIN, and that another user wipes it', async () => {
+    await create({ hasRecord: true, online: true });
+    expect(text()).toContain('tu copia y tu PIN se conservan');
+    expect(text()).toContain('otro usuario');
   });
 
   it('a locked-out record shows the lockout message and no form', async () => {

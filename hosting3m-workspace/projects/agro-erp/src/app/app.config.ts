@@ -9,6 +9,7 @@ import { purgeLegacySwCaches } from '@core/utils/legacy-sw-cache.util';
 import { wireOfflineLogoutWipe } from '@core/utils/offline-logout-wipe.util';
 import { wirePinLogoutWipe } from '@core/utils/pin-logout-wipe.util';
 import { startOfflineSessionWatch } from '@core/utils/offline-session-watch.util';
+import { wireLoginIdentityWipe } from '@core/utils/login-identity-wipe.util';
 import { offlineGraceGuard } from '@core/interceptors/offline-grace.interceptor';
 import { graceAuthInterceptor } from '@core/interceptors/grace-auth.interceptor';
 import { AUTH_ENV_CONFIG, tenantInterceptor } from 'core-auth';
@@ -36,6 +37,8 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => wireOfflineLogoutWipe()),
     // PIN records are deleted on logout too (separate database, #1087 phase 1b-iii-b).
     provideAppInitializer(() => wirePinLogoutWipe()),
+    // A login as a different (or unknown) user wipes the offline copy; the same user keeps it.
+    provideAppInitializer(() => wireLoginIdentityWipe()),
     // Re-checks the session (no HTTP) so an open app re-locks when it enters grace.
     provideAppInitializer(() => startOfflineSessionWatch()),
 

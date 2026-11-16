@@ -4,6 +4,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { Router, provideRouter } from '@angular/router';
 import { AUTH_ENV_CONFIG, AuthEnvironmentConfig, AuthService, TenantContext, TenantService } from 'core-auth';
 import { graceAuthInterceptor } from './grace-auth.interceptor';
+import { LoginHandoffService } from '@core/services/login-handoff.service';
 
 const GRACE_MS = 16 * 60 * 60 * 1000;
 const NOW_MS = Date.UTC(2026, 10, 15, 12, 0, 0);
@@ -160,6 +161,32 @@ describe('graceAuthInterceptor', () => {
       const err = await errorOf(http.get(`${API}/vw_cattle_kpi`));
       expect(err.status).toBe(401);
       expect(logout).toHaveBeenCalled();
+    });
+  });
+
+  describe('login handoff', () => {
+    it('records the signed-in user before the login POST leaves the device (grace)', () => {
+      setSession('grace');
+      http.post(TOKEN_URL, { user: 'ana', pass: 'x' }).subscribe({ error: () => undefined });
+      // The login is still pending: the identity is captured now, not after the response.
+      expect(TestBed.inject(LoginHandoffService).consume()).toEqual({ previousUser: 'ana' });
+      ctrl.expectOne(TOKEN_URL).flush({});
+    });
+
+    it('a rejected login still captured the identity, and leaves the stored token untouched', () => {
+      setSession('grace');
+      const before = localStorage.getItem('authToken');
+      http.post(TOKEN_URL, {}).subscribe({ error: () => undefined });
+      ctrl.expectOne(TOKEN_URL).flush({ error: true }, { status: 401, statusText: 'Unauthorized' });
+      expect(localStorage.getItem('authToken')).toBe(before);
+      expect(logout).not.toHaveBeenCalled();
+    });
+
+    it('is not captured for ordinary API requests', () => {
+      setSession('valid');
+      http.get(`${API}/vw_cattle_kpi`).subscribe();
+      ctrl.expectOne(`${API}/vw_cattle_kpi`).flush({});
+      expect(TestBed.inject(LoginHandoffService).consume()).toBeNull();
     });
   });
 });

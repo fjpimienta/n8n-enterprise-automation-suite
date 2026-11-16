@@ -51,6 +51,10 @@ import { PIN_LENGTH } from '@core/utils/pin-policy.util';
               <button type="button" class="btn btn-outline-secondary w-100 mt-3" (click)="signInOnline()">
                 Iniciar sesión
               </button>
+              <p class="small text-muted text-center mt-2">
+                Si el inicio de sesión falla, tu copia y tu PIN se conservan. Si entras con <strong>otro usuario</strong>,
+                la copia de este dispositivo se borrará.
+              </p>
             } @else {
               <p class="small text-muted text-center mt-3">
                 Sin conexión: el inicio de sesión en línea estará disponible cuando vuelva la conexión.
@@ -102,8 +106,12 @@ export class UnlockComponent implements OnInit {
     this.handle(result);
   }
 
+  /**
+   * Goes to the login WITHOUT logging out: a failed login must keep the offline copy and the PIN. The
+   * login screen is exempt, so it never triggers a logout in grace. If a different user signs in, the
+   * copy is wiped after the login succeeds (see `wireLoginIdentityWipe`).
+   */
   signInOnline(): void {
-    this.auth.logout();
     void this.router.navigateByUrl('/login');
   }
 
