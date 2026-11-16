@@ -50,11 +50,10 @@
                 <a href="#" class="nav-link d-flex lh-1 text-reset p-0" data-bs-toggle="dropdown"
                     aria-label="Abrir menú de usuario">
                     <span class="avatar avatar-sm bg-blue-lt font-weight-bold">{{
-                        authService.currentUser()?.name?.charAt(0) || 'U' }}</span>
+                        identity().initial }}</span>
                     <div class="d-none d-xl-block ps-2">
-                        <div class="font-weight-bold">{{ authService.currentUser()?.name || 'Administrador' }}</div>
-                        <div class="mt-1 small text-muted text-uppercase">{{ authService.currentUser()?.role || 'Socio
-                            Operativo' }}</div>
+                        <div class="font-weight-bold">{{ identity().name }}</div>
+                        <div class="mt-1 small text-muted text-uppercase">{{ identity().role }}</div>
                     </div>
                 </a>
 
