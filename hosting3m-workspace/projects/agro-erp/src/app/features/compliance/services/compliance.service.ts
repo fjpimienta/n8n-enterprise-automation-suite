@@ -1,6 +1,6 @@
 import { Injectable, inject, signal, computed } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { catchError, of } from 'rxjs';
+import { Observable, catchError, map, of } from 'rxjs';
 import { environment } from '@env/environment';
 import { ApiResponse } from '@core/interfaces/api-response.interface';
 import {
@@ -10,6 +10,7 @@ import {
 } from '../models/agro-registry.model';
 import { UppComplianceStatusView, ProductionUnitView } from '../models/compliance-view.model';
 import { isPhantomRow, stripPhantomRows } from '@core/utils/gateway-empty-row.util';
+import { isNetworkFailure } from '@shared/utils/network-failure.util';
 
 const STATUS_WEIGHT: Record<string, number> = {
   EXPIRED: 0,
@@ -18,6 +19,26 @@ const STATUS_WEIGHT: Record<string, number> = {
   OK: 3
 };
 
+const UPP_UNAVAILABLE = 'No se pudo conectar con el servicio de cumplimiento normativo.';
+const PSG_UNAVAILABLE = 'No se pudo conectar con el servicio de vigencia de licencias PSG.';
+const DETAIL_UNAVAILABLE = 'No se pudo cargar el detalle de la unidad de producción.';
+
+/**
+ * `idle` = never requested, `loading` = request in flight, `loaded` = last request succeeded,
+ * `failed` = last request failed (transport error, gateway `error:true`, null body or non-array data).
+ */
+export type ComplianceSourceState = 'idle' | 'loading' | 'loaded' | 'failed';
+
+export interface ComplianceFailure {
+  /** `network` = browser offline or no response (status 0); `unavailable` = server or payload problem. */
+  reason: 'network' | 'unavailable';
+  message: string;
+}
+
+type ReadOutcome =
+  | { ok: true; rows: any[] }
+  | { ok: false; failure: ComplianceFailure };
+
 @Injectable({ providedIn: 'root' })
 export class ComplianceService {
   private http = inject(HttpClient);
@@ -25,17 +46,25 @@ export class ComplianceService {
 
   public uppList = signal<UppComplianceStatusView[]>([]);
   public psgList = signal<PsgComplianceStatus[]>([]);
-  public loadingUpp = signal<boolean>(false);
-  public loadingPsg = signal<boolean>(false);
-  public error = signal<string | null>(null);
+
+  /** Per-source state. Each source's failure only affects that source. */
+  public uppState = signal<ComplianceSourceState>('idle');
+  public psgState = signal<ComplianceSourceState>('idle');
+  public uppError = signal<ComplianceFailure | null>(null);
+  public psgError = signal<ComplianceFailure | null>(null);
+  public loadingUpp = computed(() => this.uppState() === 'loading');
+  public loadingPsg = computed(() => this.psgState() === 'loading');
 
   public uppDetail = signal<ProductionUnitView | null>(null);
   public uppDetailCensus = signal<LivestockCensusSnapshot | null>(null);
   public loadingDetail = signal<boolean>(false);
+  /** Detail-screen error. Separate from the list errors so each screen only sees its own. */
+  public detailError = signal<string | null>(null);
 
-  /** Guards against redundant getall calls when list and alert card share this service. */
-  private uppLoaded = signal<boolean>(false);
-  private psgLoaded = signal<boolean>(false);
+  /** Latest-wins: a response only applies if no newer request for the same source started. */
+  private uppRequestId = 0;
+  private psgRequestId = 0;
+  private detailRequestId = 0;
 
   public expiredUppCount = computed(() =>
     this.uppList().filter(u => u.update_status === 'EXPIRED').length
@@ -49,78 +78,73 @@ export class ComplianceService {
     this.psgList().filter(p => p.validity_status === 'EXPIRED').length
   );
 
-  /** Idempotent: no-ops if the list is already loaded, unless force is passed. */
+  /**
+   * Loads the UPP status. Skips when already loaded or loading, unless `force` is passed.
+   * A failed load clears the list and marks the source `failed`.
+   */
   public loadUppStatus(force = false): void {
-    if (this.uppLoaded() && !force) return;
+    const state = this.uppState();
+    if (!force && (state === 'loaded' || state === 'loading')) return;
 
-    this.loadingUpp.set(true);
-    this.error.set(null);
+    const requestId = ++this.uppRequestId;
+    this.uppState.set('loading');
+    this.uppError.set(null);
 
-    const payload = {
-      entity: 'upp_compliance_status',
-      table_name: 'vw_upp_compliance_status',
-      operation: 'getall',
-      filters: {}
-    };
-
-    this.http.post<ApiResponse<any>>(`${this.apiUrl_crud}/upp_compliance_status`, payload)
-      .pipe(
-        catchError(() => {
-          this.error.set('No se pudo conectar con el servicio de cumplimiento normativo.');
-          return of<ApiResponse<any>>({ error: true, operation: 'getall', message: '', data: [] });
-        })
-      )
-      .subscribe(res => {
-        if (res.error) {
-          this.error.set(res.message || 'El servidor reportó un error al consultar el estado de cumplimiento de las UPP.');
-          this.uppList.set([]);
-        } else {
-          const rawRows = Array.isArray(res.data) ? res.data : [];
-          const rows = stripPhantomRows(rawRows, 'production_unit_id');
-          this.uppList.set(rows.map(row => this.mapUppRow(row)).sort(this.byCriticality));
-          this.uppLoaded.set(true);
+    this.fetchRows('upp_compliance_status', 'vw_upp_compliance_status', UPP_UNAVAILABLE)
+      .subscribe(outcome => {
+        if (requestId !== this.uppRequestId) return;
+        if (!outcome.ok) {
+          this.failUpp(outcome.failure);
+          return;
         }
-        this.loadingUpp.set(false);
+        try {
+          const rows = stripPhantomRows(outcome.rows, 'production_unit_id');
+          this.uppList.set(rows.map(row => this.mapUppRow(row)).sort(this.byCriticality));
+          this.uppState.set('loaded');
+        } catch {
+          this.failUpp({ reason: 'unavailable', message: UPP_UNAVAILABLE });
+        }
       });
   }
 
-  /** Idempotent: no-ops if the list is already loaded, unless force is passed. */
+  /**
+   * Loads the PSG licence status. Skips when already loaded or loading, unless `force` is passed.
+   * A failed load clears the list and marks the source `failed`.
+   */
   public loadPsgStatus(force = false): void {
-    if (this.psgLoaded() && !force) return;
+    const state = this.psgState();
+    if (!force && (state === 'loaded' || state === 'loading')) return;
 
-    this.loadingPsg.set(true);
-    this.error.set(null);
+    const requestId = ++this.psgRequestId;
+    this.psgState.set('loading');
+    this.psgError.set(null);
 
-    const payload = {
-      entity: 'psg_compliance_status',
-      table_name: 'vw_psg_compliance_status',
-      operation: 'getall',
-      filters: {}
-    };
-
-    this.http.post<ApiResponse<PsgComplianceStatus>>(`${this.apiUrl_crud}/psg_compliance_status`, payload)
-      .pipe(
-        catchError(() => {
-          this.error.set('No se pudo conectar con el servicio de vigencia de licencias PSG.');
-          return of<ApiResponse<PsgComplianceStatus>>({ error: true, operation: 'getall', message: '', data: [] });
-        })
-      )
-      .subscribe(res => {
-        if (res.error) {
-          this.error.set(res.message || 'El servidor reportó un error al consultar la vigencia de las licencias PSG.');
-          this.psgList.set([]);
-        } else {
-          const rawRows = Array.isArray(res.data) ? res.data : [];
-          this.psgList.set(stripPhantomRows(rawRows, 'psg_license_id'));
-          this.psgLoaded.set(true);
+    this.fetchRows('psg_compliance_status', 'vw_psg_compliance_status', PSG_UNAVAILABLE)
+      .subscribe(outcome => {
+        if (requestId !== this.psgRequestId) return;
+        if (!outcome.ok) {
+          this.failPsg(outcome.failure);
+          return;
         }
-        this.loadingPsg.set(false);
+        try {
+          this.psgList.set(stripPhantomRows(outcome.rows, 'psg_license_id'));
+          this.psgState.set('loaded');
+        } catch {
+          this.failPsg({ reason: 'unavailable', message: PSG_UNAVAILABLE });
+        }
       });
+  }
+
+  /** Reloads only the sources that failed. Used by the card's retry action. */
+  public retryFailed(): void {
+    if (this.uppState() === 'failed') this.loadUppStatus(true);
+    if (this.psgState() === 'failed') this.loadPsgStatus(true);
   }
 
   public getUppDetail(id: string): void {
+    const requestId = ++this.detailRequestId;
     this.loadingDetail.set(true);
-    this.error.set(null);
+    this.detailError.set(null);
     this.uppDetail.set(null);
     this.uppDetailCensus.set(null);
 
@@ -133,30 +157,34 @@ export class ComplianceService {
 
     this.http.post<ApiResponse<any>>(`${this.apiUrl_crud}/production_units`, payload)
       .pipe(
-        catchError(() => {
-          this.error.set('No se pudo cargar el detalle de la unidad de producción.');
-          return of<ApiResponse<any>>({ error: true, operation: 'getone', message: '', data: [] });
-        })
+        catchError(() => of<ApiResponse<any>>({ error: true, operation: 'getone', message: '', data: [] }))
       )
       .subscribe(res => {
-        if (res.error) {
-          this.error.set(res.message || 'El servidor reportó un error al consultar la unidad de producción.');
+        if (requestId !== this.detailRequestId) return;
+
+        if (!res || res.error) {
+          this.detailError.set(res?.message || DETAIL_UNAVAILABLE);
           this.loadingDetail.set(false);
           return;
         }
 
-        const raw = Array.isArray(res.data) ? res.data[0] : res.data;
-        if (isPhantomRow(raw, 'id')) {
+        try {
+          const raw = Array.isArray(res.data) ? res.data[0] : res.data;
+          if (isPhantomRow(raw, 'id')) {
+            this.loadingDetail.set(false);
+            return;
+          }
+          this.uppDetail.set(this.mapProductionUnit(raw));
+        } catch {
+          this.detailError.set(DETAIL_UNAVAILABLE);
           this.loadingDetail.set(false);
           return;
         }
-
-        this.uppDetail.set(this.mapProductionUnit(raw));
-        this.loadLatestCensus(id);
+        this.loadLatestCensus(id, requestId);
       });
   }
 
-  private loadLatestCensus(productionUnitId: string): void {
+  private loadLatestCensus(productionUnitId: string, requestId: number): void {
     const payload = {
       entity: 'livestock_census_snapshots',
       table_name: 'livestock_census_snapshots',
@@ -169,16 +197,58 @@ export class ComplianceService {
         catchError(() => of<ApiResponse<LivestockCensusSnapshot>>({ error: true, operation: 'getall', message: '', data: [] }))
       )
       .subscribe(res => {
-        const rawRows = !res.error && Array.isArray(res.data) ? res.data : [];
-        const rows = stripPhantomRows(rawRows, 'id');
-        const latest = rows.reduce<LivestockCensusSnapshot | null>((mostRecent, row) => {
-          if (!mostRecent) return row;
-          return new Date(row.snapshot_date) > new Date(mostRecent.snapshot_date) ? row : mostRecent;
-        }, null);
-
-        this.uppDetailCensus.set(latest);
+        if (requestId !== this.detailRequestId) return;
+        try {
+          const rawRows = !res?.error && Array.isArray(res?.data) ? res.data : [];
+          const rows = stripPhantomRows(rawRows, 'id');
+          const latest = rows.reduce<LivestockCensusSnapshot | null>((mostRecent, row) => {
+            if (!mostRecent) return row;
+            return new Date(row.snapshot_date) > new Date(mostRecent.snapshot_date) ? row : mostRecent;
+          }, null);
+          this.uppDetailCensus.set(latest);
+        } catch {
+          this.uppDetailCensus.set(null);
+        }
         this.loadingDetail.set(false);
       });
+  }
+
+  /**
+   * One gateway `getall`. Any transport error, `error:true`, null body or non-array `data`
+   * is a failure. An empty array is a valid, successful empty load.
+   */
+  private fetchRows(entity: string, tableName: string, unavailable: string): Observable<ReadOutcome> {
+    const payload = {
+      entity,
+      table_name: tableName,
+      operation: 'getall',
+      filters: {}
+    };
+
+    return this.http.post<ApiResponse<any>>(`${this.apiUrl_crud}/${entity}`, payload).pipe(
+      map((res): ReadOutcome => {
+        if (!res) return { ok: false, failure: { reason: 'unavailable', message: unavailable } };
+        if (res.error) return { ok: false, failure: { reason: 'unavailable', message: res.message || unavailable } };
+        if (!Array.isArray(res.data)) return { ok: false, failure: { reason: 'unavailable', message: unavailable } };
+        return { ok: true, rows: res.data };
+      }),
+      catchError((err): Observable<ReadOutcome> => of({
+        ok: false,
+        failure: { reason: isNetworkFailure(err) ? 'network' : 'unavailable', message: unavailable }
+      }))
+    );
+  }
+
+  private failUpp(failure: ComplianceFailure): void {
+    this.uppList.set([]);
+    this.uppError.set(failure);
+    this.uppState.set('failed');
+  }
+
+  private failPsg(failure: ComplianceFailure): void {
+    this.psgList.set([]);
+    this.psgError.set(failure);
+    this.psgState.set('failed');
   }
 
   /** Most critical first: EXPIRED > WARNING > UNKNOWN > OK, then longest-stale within a status. */
