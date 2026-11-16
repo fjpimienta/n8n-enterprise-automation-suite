@@ -293,9 +293,26 @@ de un AI Agent, usar `.first()` en lugar de `.item` en `$('Node')`.
 - Fuera de alcance de esta sección: catálogos, borrado al terminar la gracia, outbox y datos de dinero (nunca se cachean).
 
 ## PIN de desbloqueo en gracia (Refs #1087, fase 1b-iii-b)
-- **Dormido:** nada de esto se activa sin `offlineGraceMs` en `AUTH_ENV_CONFIG`. `app.config.ts` **no** lo configura, así
-  que en producción la gracia nunca existe y el PIN, la pantalla de desbloqueo y el banner no aparecen. Las pruebas lo
-  inyectan (`offlineGraceMs`) para ejercitar el flujo.
+- **Dormido (verificado 2026-11-16):** nada de esto se activa sin `offlineGraceMs` en `AUTH_ENV_CONFIG`. `app.config.ts`
+  **no** lo configura, y **nunca** debe fijarse en el repo sin decisión del dueño. Fuente única:
+  `OfflineSessionService.graceEnabled` (`core/utils/offline-grace-config.util.ts`): `true` solo si `offlineGraceMs` es un
+  número finito y positivo (la misma regla que `getSessionState()`); cualquier error al leerlo = `false` (fail-closed).
+  Con `false` (producción):
+  - el aviso de PIN no se monta en el layout (`main-layout.component.html`) y su `ngOnInit` no hace nada: sin
+    comprobación de IndexedDB ni suscripción a navegación;
+  - `/seguridad/pin` (`pinSetupRouteGuard`) redirige a `/`;
+  - `PinLockService.createPin` responde `'disabled'` antes de derivar y sin abrir IndexedDB;
+  - `startOfflineSessionWatch()` no registra timer, listeners ni suscripciones (el de 60 s no hace nada);
+  - `wirePinLogoutWipe()` no se conecta, así que el logout no abre ni crea `agroerp-pin`; `wireLoginIdentityWipe()` no llama
+    a `deleteOthers` (ver la excepción de la caché abajo);
+  - `graceAuthInterceptor` delega en `authInterceptor` de core-auth sin más lógica (solo registra el usuario del POST de
+    login en memoria, `LoginHandoffService`, sin efecto visible);
+  - las comprobaciones de estado `'grace'` del banner, la cabecera, el chat (`lib-ai-chat` sigue visible), `/unlock`,
+    `notInGraceGuard` y el efecto de plantaciones no cambian nada, porque `getSessionState()` nunca devuelve `'grace'`.
+  - **Excepción deliberada (decisión pendiente del dueño):** `wireLoginIdentityWipe()` **sí** vacía la caché de lectura
+    (`wipeAll`) cuando entra otro usuario o no se conoce el anterior, aunque no haya gracia. Es la defensa contra
+    que un usuario vea la copia de otro en el mismo dispositivo, no un comportamiento de gracia. Quitarla reabre esa
+    exposición. Las pruebas lo inyectan (`offlineGraceMs`) para ejercitar el flujo.
 - **Estado y sesión** (`core/services/offline-session.service.ts`): `OfflineSessionService` lee `getSessionState()` y
   `getSessionScope()` (sin efectos). Nunca hace HTTP ni llama a `getStoredToken()` (ese método hace `logout()`).
   `refresh()` corre al cambiar la visibilidad, cada 60 s (`OFFLINE_SESSION_CHECK_MS`), en cada navegación, en login/logout
@@ -348,7 +365,7 @@ de un AI Agent, usar `.first()` en lugar de `.item` en `$('Node')`.
     **antes** de enviar el POST de login, leído de las claims del JWT (`userFromStoredToken`). Cada POST sobrescribe
     el valor, así que un intento fallido no deja un valor viejo.
   - Login **exitoso** (evento `'login'`): si el usuario nuevo es **el mismo** que el anterior, se conserva la caché y los
-    registros de PIN. Si es **otro** usuario, o el anterior no se pudo determinar (sin POST capturado, recarga entre
+    registros de PIN. Sin `offlineGraceMs` solo se aplica el vaciado de la caché (no se toca `agroerp-pin`). Si es **otro** usuario, o el anterior no se pudo determinar (sin POST capturado, recarga entre
     POST y respuesta, sin token), se borra la caché (`wipeAll`) y se borran los registros de PIN de los demás
     (`deleteOthers(nuevo)`). Fail-closed.
   - El usuario nuevo se lee del token almacenado y no de `event.scope`: ese scope depende de la lista de empresas, que
