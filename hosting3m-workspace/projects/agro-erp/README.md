@@ -534,3 +534,40 @@ La validación del cliente es una defensa en profundidad: el filtro de la base y
 **Francisco Jesus Pérez Pimienta**
 *Senior Systems Architect & Project Lead*
 Hosting3M Automation Suite
+### 📶 Inventario sin conexión (Refs #1087, fase 1b-iii-a)
+
+`CattleDataService` sirve el inventario desde la caché local cuando no hay red (solo ganado; nunca dinero):
+
+- Sesión vigente + **fallo de red** (status 0 / sin conexión): muestra la última copia guardada y un aviso
+  "Mostrando datos guardados el …". Errores del gateway o HTTP >= 400 **no** usan la caché.
+- Sesión en **gracia** (token vencido dentro de `offlineGraceMs`): no se hace ninguna petición; solo se lee la copia.
+  Sin copia, se muestra un error claro. `offlineGraceGuard` bloquea toda petición a la API en gracia para no cerrar la sesión.
+- La copia **no incluye `metadata`** (puede contener precios y notas) y se descarta completa si alguna fila no es de la
+  empresa activa. Al cerrar sesión se borra la caché de lectura.
+- **Limitación conocida:** en gracia el resto de las pantallas que consultan el gateway (p. ej. lotes y UPP) muestran un
+  error de red. Las mutaciones no se guardan sin conexión (no hay cola todavía).
+
+## 💾 Almacén de lectura offline (Refs #1087, fase 1b-ii) — usado solo por el inventario
+
+`OfflineStoreService` (`src/app/core/services/offline-store.service.ts`) es la caché de **solo lectura**
+sobre IndexedDB (librería `idb`, base `agroerp-offline`, un object store). **Solo lo usa
+`CattleDataService` (inventario, ver arriba)**; no hay PIN, cola de escrituras ni borrado al terminar la gracia
+(decisión pendiente). Al cerrar sesión se borra con `wipeAll()`.
+
+- **API (promesas):** `put(dataset, data, expectedScope): Promise<boolean>`, `get(dataset): Promise<{ data, savedAt } | null>`,
+  `wipeScope(scope)` y `wipeAll()`. `get` lee `AuthService.getSessionScope()` en cada llamada. `put` recibe el scope
+  con el que se pidieron los datos (quien llama lo captura **al iniciar** el fetch) y resuelve `false`, sin escribir
+  en ninguna partición, salvo que sea válido, igual al scope actual al llamar y todavía igual tras abrir IndexedDB,
+  justo antes de escribir. Sin scope (nulo, malformado o ambiguo) no leen ni escriben (`false` / `null`).
+- **Compuerta de sesión:** con `getSessionState() === 'expired'` `get` devuelve `null` y `put` `false`
+  (`'valid'` y `'grace'` se permiten); `get` lo revisa también después de la lectura asíncrona.
+- **Partición obligatoria:** llave `${user}|${id_company}|${dataset}` (el usuario va codificado con
+  `encodeURIComponent` para que un `|` no pueda mezclar particiones). Cada entrada guarda además su scope,
+  dataset, `savedAt` (ISO UTC) y `schemaVersion`; `get()` los verifica contra el scope **actual** (también
+  después de la lectura asíncrona) y devuelve `null` si no coinciden.
+- **Allowlist cerrada:** `'livestock' | 'catalogs'` (tipo y validación en tiempo de ejecución). Cualquier otro
+  nombre se rechaza. **No se cachean datasets de dinero** (gastos, ventas, ingresos), nunca.
+- **Resiliencia:** IndexedDB no disponible, cuota, bloqueo o datos corruptos no lanzan excepciones; los logs solo
+  llevan el nombre del error, nunca datos, scope ni tokens.
+- Texto plano en IndexedDB (decisión del dueño); no hay cifrado.
+- Pruebas: `fake-indexeddb` (devDependency) en `offline-store.service.spec.ts`.

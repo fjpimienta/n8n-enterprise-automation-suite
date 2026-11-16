@@ -55,19 +55,22 @@ import { CompanyContext, TenantService } from 'core-auth';
 ```
 
 The public API also exports `AuthService`, `authGuard`, `roleGuard`, `authInterceptor`, and
-`tenantInterceptor` (all re-exported from [`src/public-api.ts`](src/public-api.ts)).
+`tenantInterceptor` (all re-exported from [`src/public-api.ts`](src/public-api.ts)). It also exports the
+pure helpers `isAllowedOrigin` and `isExemptRoute`, so an app can write its own interceptor with the same
+origin and exempt-route rules as `authInterceptor`.
 Register `authInterceptor` and `tenantInterceptor` explicitly with
 `provideHttpClient(withInterceptors([...]))`; the library does not register them automatically.
 
 | Name | Kind | Description |
 |------|------|-------------|
 | `AUTH_ENV_CONFIG` | `InjectionToken<AuthEnvironmentConfig>` | Host-provided configuration. Source: [`auth.config.ts`](src/lib/auth.config.ts) |
-| `AuthEnvironmentConfig` | interface | `apiUrl_crud`, `apiUrl_token`, `apiUrl_ai`, `apiUrl_upload?`, `system_id` |
+| `AuthEnvironmentConfig` | interface | `apiUrl_crud`, `apiUrl_token`, `apiUrl_ai`, `apiUrl_upload?`, `system_id`, `offlineGraceMs?` |
 | `CompanyContext` | interface | `id_company`, `company_name`, `role` |
 | `TenantContext` | interface | `id_company`, `company_name`, `role`, `industry`, `business_type`. Shape stored by `TenantService` ([`tenant.service.ts`](src/lib/services/tenant.service.ts)) |
 | `UserPayload` | interface | `id`, `email`, `role`, `id_company`, `name`. Decoded from the JWT ([`auth.service.ts`](src/lib/services/auth.service.ts)). The JWT issued by `jwt-service` carries `user`, `name`, `id_company`, `role` and `system_id` (`jwt-service/index.js:151-158`): it has no `id` and no `email`, so those fields are not set from login. |
-| `AuthService` | service | `login()`, `logout()`, `getStoredToken()`, `hasRole()`, signals `currentUser` and `isAuthenticated` |
-| `TenantService` | service | `availableTenants`, `activeTenant`, `activeTenantId`, `setAvailableTenants()`, `setActiveTenant()`, `clearContext()`, `hydrate()` |
+| `AuthService` | service | `login()`, `logout()`, `getStoredToken()`, `hasRole()`, signals `currentUser` and `isAuthenticated`; optional offline additions: `getSessionState()`, `getSessionScope()`, `sessionEvents$` |
+| `TenantService` | service | `availableTenants`, `activeTenant`, `activeTenantId`, `setAvailableTenants()`, `setActiveTenant()`, `clearContext()`, `hydrate()`; optional offline addition: `activeTenantChanges$` |
+| `SessionState`, `SessionScope`, `SessionEvent` | types | `'valid' \| 'grace' \| 'expired'`; `{ user, id_company }`; `{ type: 'login', scope } \| { type: 'logout' }` |
 | `authGuard` | `CanActivateFn` | Allows navigation when a non-expired token exists; otherwise redirects to `/login` |
 | `roleGuard(roles)` | factory returning `CanActivateFn` | Requires an authenticated user whose JWT role is in `roles` (case-insensitive); otherwise redirects to `/login` or `/unauthorized` |
 | `authInterceptor` | `HttpInterceptorFn` | Adds `Authorization: Bearer <token>` to requests whose origin matches a configured API origin; handles HTTP 401 |
@@ -129,6 +132,47 @@ this.authService.logout();
 
 `logout()` removes the `authToken` and `role` keys from `localStorage`, resets the user and
 authentication signals, and calls `TenantService.clearContext()`.
+
+## Optional offline session grace (additive, opt-in)
+
+Added for offline support (#1087, phase 1b-i). **Additive guarantee:** `dashboard` and `hotel-website`
+share this library. When `offlineGraceMs` is not supplied, nothing changes: `getStoredToken()` still
+calls `logout()` on an expired token, `isAuthenticated` / `currentUser` / the guards / both interceptors
+behave exactly as before, and tenant storage and header attachment are untouched. The new members are
+read-only and only add API surface.
+
+```typescript
+const authConfig: AuthEnvironmentConfig = {
+  // ...existing fields
+  offlineGraceMs: 16 * 60 * 60 * 1000 // optional; owner decision: 16 h after expiry, to be revisited after real-device tests
+};
+```
+
+- `AuthService.getSessionState(): 'valid' | 'grace' | 'expired'`. Side-effect free: it never calls
+  `logout()`, never refreshes and never writes storage. `valid` uses the same expiry rule as
+  `getStoredToken()` (`exp >= now`, in seconds). `grace` means the token is expired but
+  `now <= exp + offlineGraceMs`. Without a positive finite `offlineGraceMs` it never returns `grace`.
+- **Fail-closed to `expired`:** no token, unparseable token, missing / non-numeric `exp` (the legacy
+  methods treat a missing `exp` as non-expiring; this API does not), missing user (`user` or `email`
+  claim), a JWT `id_company` that is not a positive integer (malformed token), or an active tenant
+  (`TenantService`) that is missing or not a member of `TenantService.availableTenants()` (empty list
+  included).
+- **Partition rule.** `SessionScope.id_company` is the **active tenant id**, not the JWT claim. The JWT
+  is issued for the company chosen at login and is not re-issued on a tenant switch, so the JWT
+  `id_company` only has to be well-formed and does not have to equal the active tenant. After a switch
+  to another available tenant the state stays `valid` and the scope follows the active tenant.
+- `AuthService.getSessionScope(): { user, id_company } | null`: partition key for a future offline
+  store, `null` under the same fail-closed rules. Independent of expiry; combine with `getSessionState()`.
+  Neither method throws: an exception while resolving the scope is treated as `expired` / `null` (no logout, no storage write).
+- `AuthService.sessionEvents$`: emits `{ type: 'login', scope }` (scope is `null` if the active tenant
+  is not yet set or not in `availableTenants()`; listen to `activeTenantChanges$` as well) and `{ type: 'logout' }`.
+  Never carries the token.
+- `TenantService.activeTenantChanges$`: emits the new `id_company` on `setActiveTenant()` and `null` on
+  `clearContext()` (which `logout()` calls).
+- While in `grace`, `isAuthenticated()` is `false` and `getStoredToken()` still logs out: the host
+  must consult `getSessionState()` **before** anything that calls `getStoredToken()` (including any
+  request through `authInterceptor`). Using the grace state to gate local-only access (e.g. cached reads
+  behind an app PIN) is the host's responsibility; the library does not.
 
 ## Multi-tenant behavior
 

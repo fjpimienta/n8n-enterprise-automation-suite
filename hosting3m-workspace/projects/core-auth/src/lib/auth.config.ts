@@ -14,6 +14,13 @@ export interface AuthEnvironmentConfig {
     apiUrl_ai: string;
     apiUrl_upload?: string; // <-- Optional: only required by apps that upload files (e.g. compliance documents). Additive, non-breaking for existing consumers.
     system_id: string; // <-- ID único de la app (ej. 'cattle_dashboard', 'hotel_app')
+    /**
+     * Optional, opt-in offline grace window in milliseconds after JWT expiry.
+     * Only read by `AuthService.getSessionState()`. Undefined (or not a positive finite number)
+     * means no grace: behavior is exactly as before. It never changes `getStoredToken()`,
+     * `isAuthenticated`, the guards or the interceptors.
+     */
+    offlineGraceMs?: number;
 }
 
 // Creamos el token que usaremos para inyectar esta configuración
