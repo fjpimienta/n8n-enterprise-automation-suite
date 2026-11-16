@@ -145,6 +145,48 @@ describe('AuthService session grace (additive, opt-in)', () => {
     });
   });
 
+  describe('fails closed when scope resolution throws', () => {
+    const cfg = { ...baseConfig, offlineGraceMs: GRACE_MS };
+
+    it.each([
+      ['an Error (e.g. NG0600)', () => { throw new Error('NG0600'); }],
+      ['a non-Error value', () => { throw 'boom'; }]
+    ])('returns expired/null without logout or storage writes when availableTenants throws %s', (_label, thrower) => {
+      const service = setup(cfg, tokenExp(NOW_S + 100));
+      const tenants = TestBed.inject(TenantService);
+      vi.spyOn(tenants, 'availableTenants').mockImplementation(thrower as never);
+      const logout = vi.spyOn(service, 'logout');
+      const clear = vi.spyOn(tenants, 'clearContext');
+      const setItem = vi.spyOn(Storage.prototype, 'setItem');
+      const removeItem = vi.spyOn(Storage.prototype, 'removeItem');
+      const clearStorage = vi.spyOn(Storage.prototype, 'clear');
+
+      expect(() => service.getSessionState()).not.toThrow();
+      expect(() => service.getSessionScope()).not.toThrow();
+      expect(service.getSessionState()).toBe('expired');
+      expect(service.getSessionScope()).toBeNull();
+
+      expect(logout).not.toHaveBeenCalled();
+      expect(clear).not.toHaveBeenCalled();
+      expect(setItem).not.toHaveBeenCalled();
+      expect(removeItem).not.toHaveBeenCalled();
+      expect(clearStorage).not.toHaveBeenCalled();
+      expect(localStorage.getItem('authToken')).not.toBeNull();
+      setItem.mockRestore();
+      removeItem.mockRestore();
+      clearStorage.mockRestore();
+    });
+
+    it('fails closed in grace too when activeTenantId throws', () => {
+      const service = setup(cfg, tokenExp(NOW_S - 60));
+      vi.spyOn(TestBed.inject(TenantService), 'activeTenantId').mockImplementation(() => {
+        throw new Error('boom');
+      });
+      expect(service.getSessionState()).toBe('expired');
+      expect(service.getSessionScope()).toBeNull();
+    });
+  });
+
   describe('with offlineGraceMs unset (legacy behavior)', () => {
     it('never reports grace', () => {
       expect(setup(baseConfig, tokenExp(NOW_S - 1)).getSessionState()).toBe('expired');
