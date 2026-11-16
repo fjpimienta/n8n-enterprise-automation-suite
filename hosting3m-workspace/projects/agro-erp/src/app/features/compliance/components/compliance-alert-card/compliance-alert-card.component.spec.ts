@@ -39,6 +39,14 @@ describe('ComplianceAlertCardComponent', () => {
   });
 
   afterEach(() => {
+    // Invariant, checked after every test whatever state it ended in: the only element that may
+    // carry the green class is the explicit all-clear card. Every other state (including the
+    // fail-closed fallback) must be non-green.
+    fixture.detectChanges();
+    el().querySelectorAll('.bg-green-lt').forEach(green =>
+      expect(green.getAttribute('data-testid')).toBe('compliance-allclear')
+    );
+
     // Some loading-state tests intentionally leave requests pending; drain them before verify().
     httpMock.match(() => true);
     httpMock.verify();
