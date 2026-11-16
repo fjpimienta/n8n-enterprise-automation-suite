@@ -252,4 +252,52 @@ describe('PinLockService', () => {
       expect(isWellFormed(record as PinRecord, 'other')).toBe(true);
     });
   });
+
+  describe('concurrency', () => {
+    it('two concurrent wrong verifies in one window count BOTH attempts', async () => {
+      const svc = fresh();
+      await svc.createPin(PIN);
+      state = 'grace';
+      const [a, b] = await Promise.all([svc.verify('193847'), svc.verify('193847')]);
+      expect(a).toEqual({ status: 'wrong', remainingAttempts: 4 });
+      expect(b).toEqual({ status: 'wrong', remainingAttempts: 3 });
+      expect(await svc.remainingAttempts()).toBe(3);
+    }, SLOW);
+
+    it('two windows (two service instances on the same database) count both attempts', async () => {
+      const windowA = fresh();
+      await windowA.createPin(PIN);
+      state = 'grace';
+      const windowB = TestBed.runInInjectionContext(() => new PinLockService());
+      try {
+        const [a, b] = await Promise.all([windowA.verify('193847'), windowB.verify('193847')]);
+        expect([a, b].map(r => (r as { remainingAttempts: number }).remainingAttempts).sort()).toEqual([3, 4]);
+        expect(await windowA.remainingAttempts()).toBe(3);
+      } finally {
+        windowB.closeConnection();
+      }
+    }, SLOW);
+  });
+
+  describe('deleteOthers', () => {
+    it('keeps the named user and deletes every other PIN record', async () => {
+      const svc = fresh();
+      await svc.createPin(PIN);
+      scope = { user: 'beto@example.com', id_company: 1 };
+      await svc.createPin('193847');
+      scope = { ...SCOPE };
+
+      expect(await svc.deleteOthers('ana@example.com')).toBe(true);
+      expect(await svc.hasRecord()).toBe(true);
+      scope = { user: 'beto@example.com', id_company: 1 };
+      expect(await svc.hasRecord()).toBe(false);
+    }, SLOW);
+
+    it('deletes everything when no user is kept', async () => {
+      const svc = fresh();
+      await svc.createPin(PIN);
+      expect(await svc.deleteOthers(null)).toBe(true);
+      expect(await svc.hasRecord()).toBe(false);
+    }, SLOW);
+  });
 });

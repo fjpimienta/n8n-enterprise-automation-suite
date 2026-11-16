@@ -69,9 +69,14 @@ export class PinLockService implements OnDestroy {
   private readonly logger = inject(LoggerService);
 
   private dbPromise: Promise<IDBPDatabase> | null = null;
+  private queue: Promise<unknown> = Promise.resolve();
 
-  /** Creates (or replaces) the PIN for the current session. The PIN is never stored. */
-  async createPin(pin: string): Promise<PinCreateResult> {
+  /** Creates (or replaces) the PIN for the current session. The PIN is never stored. Serialized. */
+  createPin(pin: string): Promise<PinCreateResult> {
+    return this.serialize(() => this.createPinNow(pin));
+  }
+
+  private async createPinNow(pin: string): Promise<PinCreateResult> {
     if (!isPinFormat(pin)) return 'invalid-format';
     if (isTrivialPin(pin)) return 'trivial';
 
@@ -108,8 +113,16 @@ export class PinLockService implements OnDestroy {
     }
   }
 
-  /** Verifies the PIN against the record of the current grace session. */
-  async verify(pin: string): Promise<PinVerifyResult> {
+  /**
+   * Verifies the PIN against the record of the current grace session. Calls are serialized in this page
+   * (queue) and the attempt is counted in one IndexedDB readwrite transaction, so two calls, or two
+   * windows of the app, can never count one attempt for two guesses.
+   */
+  verify(pin: string): Promise<PinVerifyResult> {
+    return this.serialize(() => this.verifyNow(pin));
+  }
+
+  private async verifyNow(pin: string): Promise<PinVerifyResult> {
     let state: SessionState;
     let scope: SessionScope | null;
     try {
@@ -124,21 +137,13 @@ export class PinLockService implements OnDestroy {
     if (!isPinFormat(pin)) return { status: 'invalid-format' };
 
     try {
-      const record = await this.get(scope.user);
-      if (!record) return { status: 'no-record' };
-      if (!isWellFormed(record, scope.user)) {
-        await this.remove(scope.user);
-        return { status: 'locked' };
-      }
-      if (record.failedAttempts >= PIN_MAX_ATTEMPTS) {
-        await this.remove(scope.user);
-        return { status: 'locked' };
-      }
+      // Read, check and increment happen in ONE readwrite transaction, committed before any derivation.
+      // The increment therefore survives a crash, and concurrent writers cannot lose it.
+      const reservation = await this.reserveAttempt(scope.user);
+      if (reservation.kind === 'missing') return { status: 'no-record' };
+      if (reservation.kind === 'locked' || reservation.kind === 'malformed') return { status: 'locked' };
 
-      const attempts = record.failedAttempts + 1;
-      // Persist the increment first: a crash during the derivation still counts this attempt.
-      await this.put({ ...record, failedAttempts: attempts });
-
+      const { record, attempts } = reservation;
       const candidate = await this.derive(pin, record.salt, record.iterations);
       if (!constantTimeEqual(candidate, record.hash)) {
         if (attempts >= PIN_MAX_ATTEMPTS) {
@@ -153,11 +158,75 @@ export class PinLockService implements OnDestroy {
       if (!after || after.user !== scope.user || after.id_company !== scope.id_company) {
         return { status: 'no-scope' };
       }
-      await this.put({ ...record, failedAttempts: 0 });
+      await this.resetAttemptsIfUnchanged(scope.user, attempts);
       return { status: 'ok' };
     } catch (err) {
       this.logError('verify', err);
       return { status: 'error' };
+    }
+  }
+
+  /**
+   * Atomic read-check-increment of the attempt counter (single readwrite transaction). Returns the
+   * attempts count including this one, or why no attempt can be made.
+   */
+  private async reserveAttempt(user: string): Promise<
+    | { kind: 'missing' }
+    | { kind: 'malformed' }
+    | { kind: 'locked' }
+    | { kind: 'reserved'; record: PinRecord; attempts: number }
+  > {
+    const db = await this.open();
+    const tx = db.transaction(PIN_STORE_NAME, 'readwrite');
+    const record = await tx.store.get(user) as PinRecord | undefined;
+    if (!record) {
+      await tx.done;
+      return { kind: 'missing' };
+    }
+    if (!isWellFormed(record, user)) {
+      await tx.store.delete(user);
+      await tx.done;
+      return { kind: 'malformed' };
+    }
+    if (record.failedAttempts >= PIN_MAX_ATTEMPTS) {
+      await tx.store.delete(user);
+      await tx.done;
+      return { kind: 'locked' };
+    }
+    const attempts = record.failedAttempts + 1;
+    await tx.store.put({ ...record, failedAttempts: attempts });
+    await tx.done;
+    return { kind: 'reserved', record, attempts };
+  }
+
+  /** Resets the counter after a correct PIN, only if nobody else counted an attempt meanwhile. */
+  private async resetAttemptsIfUnchanged(user: string, expectedAttempts: number): Promise<void> {
+    const db = await this.open();
+    const tx = db.transaction(PIN_STORE_NAME, 'readwrite');
+    const current = await tx.store.get(user) as PinRecord | undefined;
+    if (current && current.failedAttempts === expectedAttempts) {
+      await tx.store.put({ ...current, failedAttempts: 0 });
+    }
+    await tx.done;
+  }
+
+  /**
+   * Deletes the PIN records of every user except `keepUser` (`null` deletes all). Used after a login with
+   * a different (or unknown previous) user. Resolves `false` on failure.
+   */
+  async deleteOthers(keepUser: string | null): Promise<boolean> {
+    try {
+      const db = await this.open();
+      const tx = db.transaction(PIN_STORE_NAME, 'readwrite');
+      const keys = await tx.store.getAllKeys();
+      for (const key of keys) {
+        if (key !== keepUser) await tx.store.delete(key);
+      }
+      await tx.done;
+      return true;
+    } catch (err) {
+      this.logError('deleteOthers', err);
+      return false;
     }
   }
 
@@ -209,6 +278,13 @@ export class PinLockService implements OnDestroy {
 
   ngOnDestroy(): void {
     this.closeConnection();
+  }
+
+  /** Runs `task` after every previously queued task of this service instance (one at a time). */
+  private serialize<T>(task: () => Promise<T>): Promise<T> {
+    const run = this.queue.then(task, task);
+    this.queue = run.catch(() => undefined);
+    return run;
   }
 
   private currentScope(): SessionScope | null {
