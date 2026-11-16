@@ -1,4 +1,5 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { OfflineBannerComponent } from '@shared/components/offline-banner/offline-banner.component';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { CattleDetailModalComponent } from '../cattle-detail-modal/cattle-detail-modal.component';
@@ -22,7 +23,7 @@ type SortableColumn = 'rfid_siniiga' | 'lot_name' | 'category' | 'business_model
 @Component({
   selector: 'app-cattle-list',
   standalone: true,
-  imports: [CommonModule, FormsModule, CattleDetailModalComponent, MetadataDetailModalComponent, TableToolbarComponent, TableFooterComponent],
+  imports: [CommonModule, FormsModule, CattleDetailModalComponent, MetadataDetailModalComponent, TableToolbarComponent, TableFooterComponent, OfflineBannerComponent],
   templateUrl: './cattle-list.component.html',
   styleUrl: './cattle-list.component.scss',
 })
@@ -33,6 +34,8 @@ export class CattleListComponent implements OnInit {
 
   // 2. Exponemos los signals globales directamente hacia el HTML (.html)
   public cattleList = this.cattleDataService.cattleList;
+  public servedFromCache = this.cattleDataService.servedFromCache;
+  public cacheSavedAt = this.cattleDataService.cacheSavedAt;
   public isLoading = this.cattleDataService.isLoading;
   public tenantService = inject(TenantService);
 

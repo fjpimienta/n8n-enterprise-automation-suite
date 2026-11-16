@@ -1,6 +1,12 @@
 import { Injectable, inject, signal, effect } from '@angular/core';
 import { CattleApiService } from './cattle-api.service';
-import { TenantService } from 'core-auth';
+import { AuthService, SessionScope, SessionState, TenantService } from 'core-auth';
+import { OfflineStoreService } from './offline-store.service';
+import { LoggerService } from './logger.service';
+import { isNetworkFailure } from '@shared/utils/network-failure.util';
+import { findFinancialLookingColumns, sanitizeLivestockForOffline, snapshotMatchesTenant } from '@shared/utils/offline-livestock.util';
+
+const OFFLINE_NO_SNAPSHOT_MESSAGE = 'Sin conexión y sin datos guardados del inventario en este dispositivo.';
 
 @Injectable({
   providedIn: 'root'
@@ -8,6 +14,9 @@ import { TenantService } from 'core-auth';
 export class CattleDataService {
   private cattleApi = inject(CattleApiService);
   private tenantService = inject(TenantService);
+  private auth = inject(AuthService);
+  private offlineStore = inject(OfflineStoreService);
+  private logger = inject(LoggerService);
 
   // States reactivos globales del dominio ganadero
   public cattleList = signal<any[]>([]);
@@ -20,6 +29,11 @@ export class CattleDataService {
   // Se vuelve true tras el primer `.set()` exitoso y nunca regresa a false — permite distinguir
   // "0 animales reales" de "nunca llegamos a cargar datos reales" cuando la carga inicial falla.
   public hasLoadedOnce = signal<boolean>(false);
+
+  // Offline read-through (#1087, phase 1b-iii-a): true while `cattleList` holds a cached snapshot
+  // instead of live data; `cacheSavedAt` is that snapshot's ISO timestamp. Reset on a live load.
+  public servedFromCache = signal<boolean>(false);
+  public cacheSavedAt = signal<string | null>(null);
 
   // Guard de concurrencia "latest-wins": cada llamada obtiene un número de secuencia propio.
   // Si para cuando la respuesta llega ya se disparó una llamada más reciente (cambio de tenant,
@@ -53,15 +67,36 @@ export class CattleDataService {
     const seq = ++this.requestSeq;
     this.pendingRequests++;
     this.isLoading.set(true);
+    // Scope and session state are captured BEFORE any request: a tenant switch while the request
+    // is in flight must never store (or show) this response under the new tenant.
+    const scope = this.captureScope();
+    const state = this.captureState();
     try {
+      if (state === 'grace') {
+        // No HTTP at all in grace: the auth interceptor would call logout() on the expired token.
+        await this.serveFromCache(seq, scope, OFFLINE_NO_SNAPSHOT_MESSAGE, true);
+        return;
+      }
+
       const data = await this.cattleApi.getAllLivestock();
       if (seq !== this.requestSeq) return; // una llamada más reciente ya está en curso/resuelta — descartar
+      if (scope && !this.isCurrentScope(scope)) return; // tenant/user changed in flight — nothing stale
 
       this.cattleList.set(data || []);
       this.hasLoadedOnce.set(true);
       this.loadError.set(null);
+      this.servedFromCache.set(false);
+      this.cacheSavedAt.set(null);
+      if (state === 'valid' && scope) this.storeSnapshot(data || [], scope);
     } catch (error: any) {
       if (seq !== this.requestSeq) return; // idem — no pisar un estado más nuevo con un error viejo
+
+      // Only a genuine network failure on a valid session may fall back to the cache. Gateway
+      // error:true, HTTP >= 400 and expired sessions never substitute cached data.
+      if (state === 'valid' && isNetworkFailure(error)) {
+        const served = await this.serveFromCache(seq, scope, null, false);
+        if (served || seq !== this.requestSeq) return;
+      }
 
       console.error('Error crítico en el Data Pipeline de CattleDataService:', error);
       this.loadError.set(error?.message || 'No se pudo cargar el inventario de ganado.');
@@ -70,5 +105,79 @@ export class CattleDataService {
       this.pendingRequests--;
       if (this.pendingRequests === 0) this.isLoading.set(false);
     }
+  }
+
+  /**
+   * Serves the cached snapshot if this call is still the latest and the scope is unchanged.
+   * Returns true when a snapshot was applied. With `failMessage`, a missing snapshot sets that
+   * error and empties the list (grace has no live data to keep); without it nothing is touched.
+   */
+  private async serveFromCache(seq: number, scope: SessionScope | null, failMessage: string | null, clearOnMiss: boolean): Promise<boolean> {
+    const snapshot = scope ? await this.offlineStore.get<unknown>('livestock') : null;
+    if (seq !== this.requestSeq) return false;
+    if (scope && !this.isCurrentScope(scope)) return false;
+
+    let rows: Record<string, unknown>[] | null = null;
+    if (snapshot && scope) {
+      if (snapshotMatchesTenant(snapshot.data, scope.id_company)) {
+        rows = snapshot.data;
+      } else {
+        // Defense in depth: discard the whole snapshot. Log without data contents.
+        this.logger.warn('CattleData: offline snapshot discarded (tenant mismatch or invalid shape)');
+      }
+    }
+
+    if (rows && snapshot) {
+      this.cattleList.set(rows);
+      this.hasLoadedOnce.set(true);
+      this.loadError.set(null);
+      this.servedFromCache.set(true);
+      this.cacheSavedAt.set(snapshot.savedAt);
+      return true;
+    }
+
+    if (failMessage) {
+      if (clearOnMiss) this.cattleList.set([]);
+      this.servedFromCache.set(false);
+      this.cacheSavedAt.set(null);
+      this.loadError.set(failMessage);
+    }
+    return false;
+  }
+
+  /** Fire-and-forget: a failed sanitize or put never affects the UI. */
+  private storeSnapshot(rows: unknown, scope: SessionScope): void {
+    try {
+      const flagged = findFinancialLookingColumns(Array.isArray(rows) ? rows : []);
+      if (flagged.length) {
+        // Column names only (never values). They are stored as-is; review before enabling offline.
+        this.logger.warn('CattleData: financial-looking columns in livestock rows: ' + flagged.join(', '));
+      }
+      void this.offlineStore.put('livestock', sanitizeLivestockForOffline(rows), scope).catch(() => undefined);
+    } catch {
+      // swallowed on purpose
+    }
+  }
+
+  private captureScope(): SessionScope | null {
+    try {
+      return this.auth.getSessionScope();
+    } catch {
+      return null;
+    }
+  }
+
+  /** Fail-closed: an unreadable state counts as 'expired' (plain HTTP path, no cache). */
+  private captureState(): SessionState {
+    try {
+      return this.auth.getSessionState();
+    } catch {
+      return 'expired';
+    }
+  }
+
+  private isCurrentScope(scope: SessionScope): boolean {
+    const now = this.captureScope();
+    return !!now && now.user === scope.user && now.id_company === scope.id_company;
   }
 }
