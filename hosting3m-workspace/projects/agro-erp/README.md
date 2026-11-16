@@ -546,6 +546,11 @@ Hosting3M Automation Suite
   empresa activa. Al cerrar sesión se borra la caché de lectura.
 - **Limitación conocida:** en gracia el resto de las pantallas que consultan el gateway (p. ej. lotes y UPP) muestran un
   error de red. Las mutaciones no se guardan sin conexión (no hay cola todavía).
+- **PIN de desbloqueo (dormido en producción):** solo se activa al configurar `offlineGraceMs`, que el repo **no** fija.
+  Sin esa opción no hay aviso de PIN, `/seguridad/pin` redirige a inicio, `createPin` no escribe nada y no se abre la
+  base `agroerp-pin`. En gracia se pide un PIN de 6 dígitos para abrir la copia; el PIN protege la interfaz, no la caché
+  (que no está cifrada). Detalle, lista completa de lo que cambia con la gracia activa y modelo de amenazas en `CLAUDE.md`,
+  sección "PIN de desbloqueo en gracia". Las pantallas de admin y de palma no están disponibles en gracia.
 
 ## 💾 Almacén de lectura offline (Refs #1087, fase 1b-ii) — usado solo por el inventario
 

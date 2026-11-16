@@ -2,6 +2,8 @@ import { Injectable, computed, effect, inject, signal, untracked } from '@angula
 import { AuthService, TenantService } from 'core-auth';
 import { Plantation } from '@core/models/agri.model';
 import { isPalmDomain } from '@shared/utils/business-domain.util';
+import { shouldClearStoredPlantations } from '@shared/utils/plantation-clear.util';
+import { OfflineSessionService } from '@core/services/offline-session.service';
 import { AgriApiService } from './agri-api.service';
 import {
   StorageLike,
@@ -31,6 +33,7 @@ export class PlantationContextService {
   private tenantService = inject(TenantService);
   private authService = inject(AuthService);
   private api = inject(AgriApiService);
+  private session = inject(OfflineSessionService);
 
   private readonly _plantations = signal<Plantation[]>([]);
   private readonly _activeId = signal<string | null>(null);
@@ -59,7 +62,10 @@ export class PlantationContextService {
       untracked(() => this.switchTo(palm && tenantId ? Number(tenantId) : null));
     });
     effect(() => {
-      if (!this.authService.isAuthenticated()) untracked(() => clearStoredPlantations(this.storage()));
+      // Grace (expired JWT, cached data) is still a session: a cold start there keeps the stored choices.
+      if (shouldClearStoredPlantations(this.authService.isAuthenticated(), this.session.readState())) {
+        untracked(() => clearStoredPlantations(this.storage()));
+      }
     });
   }
 
