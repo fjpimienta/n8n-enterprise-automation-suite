@@ -290,7 +290,92 @@ de un AI Agent, usar `.first()` en lugar de `.item` en `$('Node')`.
   `ProductionUnitLotService.getLots()` sigue llamando `getAllLivestock()` directo (no pasa por `CattleDataService`).
 - Al evento `'logout'` de `AuthService.sessionEvents$` se ejecuta `offlineStore.wipeAll()` (fire-and-forget, solo la caché
   de lectura), conectado una vez en un app initializer (`core/utils/offline-logout-wipe.util.ts`).
-- Fuera de alcance: catálogos, PIN, borrado al terminar la gracia, outbox y datos de dinero (nunca se cachean).
+- Fuera de alcance de esta sección: catálogos, borrado al terminar la gracia, outbox y datos de dinero (nunca se cachean).
+
+## PIN de desbloqueo en gracia (Refs #1087, fase 1b-iii-b)
+- **Dormido:** nada de esto se activa sin `offlineGraceMs` en `AUTH_ENV_CONFIG`. `app.config.ts` **no** lo configura, así
+  que en producción la gracia nunca existe y el PIN, la pantalla de desbloqueo y el banner no aparecen. Las pruebas lo
+  inyectan (`offlineGraceMs`) para ejercitar el flujo.
+- **Estado y sesión** (`core/services/offline-session.service.ts`): `OfflineSessionService` lee `getSessionState()` y
+  `getSessionScope()` (sin efectos). Nunca hace HTTP ni llama a `getStoredToken()` (ese método hace `logout()`).
+  `refresh()` corre al cambiar la visibilidad, cada 60 s (`OFFLINE_SESSION_CHECK_MS`), en cada navegación, en login/logout
+  y en cambio de empresa (`core/utils/offline-session-watch.util.ts`). Al **entrar** en gracia con la app abierta
+  redirige a `/unlock`, salvo que el usuario esté en `/login` o `/unlock`.
+- **Desbloqueo en memoria:** `unlocked` vive solo en memoria y **queda ligado al scope** (user + id_company) con que se
+  desbloqueó. Un arranque en frío en gracia pide el PIN otra vez. Un cambio de empresa re-bloquea; salir de gracia
+  (valid/expired) borra el desbloqueo.
+- **Guardas** (`core/guards/offline-session.guard.ts`): `offlineSessionGuard` reemplaza a `authGuard` en el layout.
+  Fuera de gracia delega en `authGuard` de core-auth (valid/expired sin cambios). En gracia exige desbloqueo para el
+  scope actual. `/admin` se **deniega** en gracia (`notInGraceGuard`, redirige al dashboard del dominio): esas
+  pantallas necesitan la API y no tienen copia. `/seguridad/pin` solo en `'valid'`.
+- **Interceptor** (`core/interceptors/grace-auth.interceptor.ts`): envuelve el `authInterceptor` de core-auth (no se
+  modifica core-auth). Registrado entre `offlineGraceGuard` y `tenantInterceptor`.
+  - En gracia: ninguna petición lleva `Authorization` (se quita); las rutas exentas (login, `companys getall`) pasan sin
+    llamar a `authInterceptor`, así nunca hacen `logout()`; el resto de la API falla con status 0.
+  - Carrera: una petición enviada en `'valid'` cuyo 401 llega en gracia se convierte en status 0 **antes** del
+    `catchError` de `authInterceptor`, así que no cierra la sesión.
+- **`AdminService.loadCompanies()`** no se dispara en gracia (`features/admin/services/admin.service.ts`): la ruta es
+  exenta y enviaba el token vencido en el header manual.
+- **Registro del PIN** (`core/services/pin-lock.service.ts`): base IndexedDB **`agroerp-pin`** (versión 1, almacén
+  `pin_records`, clave `user`). **No** toca `agroerp-offline` ni `OFFLINE_DB_VERSION`. Un registro guarda
+  `{ user, salt (16 B), hash (32 B), iterations, algorithm, failedAttempts, createdAt }`, nunca el PIN.
+  - PIN de 6 dígitos; rechaza repetidos y secuencias ascendentes/descendentes (`core/utils/pin-policy.util.ts`).
+  - PBKDF2-SHA256 vía WebCrypto, `PIN_ITERATIONS = 600_000` (constante exportada). Un registro con otro valor es
+    malformado (sin degradación silenciosa). Comparación en tiempo constante.
+  - Crear: solo en `'valid'` y online, con scope. Verificar: solo en `'grace'`, con scope.
+  - Intentos: el contador se **persiste antes** de derivar; un fallo o reinicio a mitad cuenta el intento. Al reset por
+    éxito, el contador vuelve a 0. A los 5 fallos se borra el registro; la recuperación es el login en línea.
+  - Fail-closed: scope nulo, registro ausente o malformado, WebCrypto o IndexedDB fallando = bloqueado.
+  - Logout: `wirePinLogoutWipe()` borra **todos** los registros del dispositivo (el evento no trae scope).
+  - Concurrencia: `verify()` y `createPin()` van en serie dentro de la página (cola), y el paso leer-validar-incrementar
+    del contador es **una sola transacción `readwrite`** de IndexedDB: dos llamadas o dos ventanas de la app cuentan
+    cada intento (prueba de concurrencia en `pin-lock.service.spec.ts`). El reinicio a 0 tras un PIN correcto solo
+    se aplica si nadie contó otro intento mientras tanto.
+- **Pantallas**: `/unlock` (PIN, intentos restantes, "Iniciar sesión" solo en línea; **no** hace logout: navega a
+  `/login` y la copia y el PIN se conservan si el login falla),
+  `/seguridad/pin` (alta con confirmación, solo en valid + online) y un aviso descartable en el layout tras login online
+  sin registro. Descartarlo deja la gracia inutilizable para ese usuario (hace falta login); el aviso reaparece al
+  reiniciar la app.
+- **Banner offline**: en gracia dice "Sesión vencida…" y que los cambios no se guardarán hasta iniciar sesión en línea.
+  El chat (`lib-ai-chat`) no se muestra en gracia (llama a la API).
+- **Plantaciones**: el efecto de `PlantationContextService` no borra las elecciones guardadas en un arranque en frío en
+  gracia (`shared/utils/plantation-clear.util.ts`).
+- **Cabecera**: en gracia muestra el usuario del scope y el rol de la empresa activa, nunca los respaldos
+  "Administrador" / "Socio Operativo" (`shared/utils/session-identity.util.ts`).
+
+- **Identidad al iniciar sesión** (`core/utils/login-identity-wipe.util.ts`):
+  - El interceptor (`graceAuthInterceptor`) registra en `LoginHandoffService` (solo en memoria) el usuario del token
+    **antes** de enviar el POST de login, leído de las claims del JWT (`userFromStoredToken`). Cada POST sobrescribe
+    el valor, así que un intento fallido no deja un valor viejo.
+  - Login **exitoso** (evento `'login'`): si el usuario nuevo es **el mismo** que el anterior, se conserva la caché y los
+    registros de PIN. Si es **otro** usuario, o el anterior no se pudo determinar (sin POST capturado, recarga entre
+    POST y respuesta, sin token), se borra la caché (`wipeAll`) y se borran los registros de PIN de los demás
+    (`deleteOthers(nuevo)`). Fail-closed.
+  - El usuario nuevo se lee del token almacenado y no de `event.scope`: ese scope depende de la lista de empresas, que
+    el login guarda **después** del evento, así que puede venir `null` en un login nuevo.
+  - Un login fallido no emite `'login'`: copia y PIN intactos.
+
+### Modelo de amenazas (acordado con el dueño)
+- El PIN **solo protege la interfaz**. El JWT vive en `localStorage` (`authToken`) y la caché de IndexedDB
+  (`agroerp-offline`) **no está cifrada** (decisión del dueño). Quien pueda leer el dispositivo puede leer la copia.
+- Un registro de PIN copiado solo sirve a quien ya puede leer esa caché en el mismo dispositivo. Sin clave no
+  extraíble, un atacante con una copia del registro puede probar PINs sin límite fuera del navegador (~0.28 s por intento
+  medido sin throttling; 10⁶ combinaciones). Decisión del dueño: no se añade envoltura con clave no extraíble ni
+  caducidad máxima; el registro se borra al cerrar sesión.
+- El backend rechaza JWT vencidos: `CRUD` → `v3/SW ValidaToken` → `jwt-service /verify-token` → `jwt.verify` (valida
+  `exp`). Verificado leyendo el código; no hay prueba en vivo.
+
+### Limitaciones conocidas
+- **Pantallas de palma en gracia:** no tienen copia offline; cada una muestra el error de red controlado. Aceptado por el
+  dueño (decisión 6).
+- Las mutaciones no se guardan sin conexión (no hay cola).
+- En `expired` (fuera de la gracia) el comportamiento es el de siempre: `getStoredToken()` cierra sesión en la primera
+  petición; no se re-evalúa `isAuthenticated` mientras la app está abierta (pre-existente).
+- `AdminService.loadCompanies()` en `expired` sigue enviando el header manual con el token vencido (comportamiento
+  pre-existente, fuera del alcance de gracia; el interceptor no lo quita en `expired`).
+- **Medición de iteraciones:** ~283 ms por derivación con Node 22 WebCrypto sin throttling (600k) y ~473 ms (1M). **No**
+  se midió en CPU throttled; medir en Chrome DevTools (CPU 4× o 6×) antes de activar la gracia en producción.
+
 
 ## Contrato Meta-CRUD (verificado en producción)
 - Payload: `{ entity, table_name, operation (minúsculas), filters|fields, id }`

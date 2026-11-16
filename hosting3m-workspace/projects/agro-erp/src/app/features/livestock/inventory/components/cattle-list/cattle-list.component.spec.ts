@@ -1,3 +1,4 @@
+import { OfflineSessionService } from '@core/services/offline-session.service';
 import { computed, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { beforeEach, describe, expect, it } from 'vitest';
@@ -28,6 +29,7 @@ describe('CattleListComponent — "Nuevo Registro" entry point', () => {
           useValue: { cattleList: signal([]), servedFromCache: signal(false), cacheSavedAt: signal<string | null>(null), isLoading: signal(false), loadCattleData: () => Promise.resolve() }
         },
         { provide: CattleApiService, useValue: { getCattleLotHistory: () => Promise.resolve([]) } },
+        { provide: OfflineSessionService, useValue: { state: signal('valid') } },
         { provide: TenantService, useValue: { activeTenant: computed(() => ({ role: role(), company_name: 'Demo' })), activeTenantId: computed(() => tenant()) } }
       ]
     });

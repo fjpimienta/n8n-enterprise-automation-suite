@@ -13,7 +13,7 @@ import { DecisionAutorizacion, PendingAuthorization } from '@core/models/pending
 import { SaleData } from '@core/models/sale.model';
 import { stripPhantomRows } from '@core/utils/gateway-empty-row.util';
 import { parseGatewayTimestamp } from '@shared/utils/authorization-deadline.util';
-import { TenantService } from 'core-auth';
+import { AuthService, TenantService } from 'core-auth';
 
 /** fecha_resolucion is a UTC timestamp without offset; rows without it sort last. */
 const resolutionTime = (row: PendingAuthorization): number =>
@@ -26,6 +26,7 @@ export class AdminService {
   private http = inject(HttpClient);
   private apiUrl_crud = environment.apiUrl_crud;
   private tenantService = inject(TenantService);
+  private authService = inject(AuthService);
   public loadingMembers = signal<boolean>(false);
   public members = signal<CompanyMember[]>([]);
   public membersError = signal<string | null>(null);
@@ -56,13 +57,23 @@ export class AdminService {
     });
   }
 
+  private isSessionInGrace(): boolean {
+    try {
+      return this.authService.getSessionState() === 'grace';
+    } catch {
+      return true;
+    }
+  }
+
   /* Companies Refactorizado: Blindaje contra nulos y errores de red */
   public loadCompanies() {
     this.loadingCompanies.set(true);
 
     // Verificación temprana: Si no hay token, no intentamos hacer la petición
     // para evitar saturar el backend con errores 401 obvios.
-    if (!localStorage.getItem('authToken')) {
+    // In grace the stored token is expired: this exempt request would still carry it in the manual
+    // Authorization header. Fail-closed: a grace (or unreadable) session never fires it.
+    if (!localStorage.getItem('authToken') || this.isSessionInGrace()) {
       console.warn('⚠️ loadCompanies cancelado: No hay token de autenticación disponible.');
       this.companies.set([]);
       this.loadingCompanies.set(false);

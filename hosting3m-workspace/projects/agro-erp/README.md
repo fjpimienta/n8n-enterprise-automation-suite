@@ -546,6 +546,9 @@ Hosting3M Automation Suite
   empresa activa. Al cerrar sesión se borra la caché de lectura.
 - **Limitación conocida:** en gracia el resto de las pantallas que consultan el gateway (p. ej. lotes y UPP) muestran un
   error de red. Las mutaciones no se guardan sin conexión (no hay cola todavía).
+- **PIN de desbloqueo (dormido):** solo se activa al configurar `offlineGraceMs`. En gracia se pide un PIN de 6 dígitos
+  para abrir la copia; el PIN protege la interfaz, no la caché (que no está cifrada). Detalle y modelo de amenazas en
+  `CLAUDE.md`, sección "PIN de desbloqueo en gracia". Las pantallas de admin y de palma no están disponibles en gracia.
 
 ## 💾 Almacén de lectura offline (Refs #1087, fase 1b-ii) — usado solo por el inventario
 

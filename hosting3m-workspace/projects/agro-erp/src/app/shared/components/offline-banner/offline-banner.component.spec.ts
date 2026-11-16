@@ -1,5 +1,14 @@
 import { TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
+import { OfflineSessionService } from '@core/services/offline-session.service';
 import { OfflineBannerComponent } from './offline-banner.component';
+
+const session = { state: signal<'valid' | 'grace' | 'expired'>('valid') };
+
+beforeEach(() => {
+  session.state.set('valid');
+  TestBed.configureTestingModule({ providers: [{ provide: OfflineSessionService, useValue: session }] });
+});
 
 describe('OfflineBannerComponent', () => {
   function render(served: boolean, savedAt: string | null): HTMLElement {
@@ -18,6 +27,13 @@ describe('OfflineBannerComponent', () => {
     const el = render(true, '2026-11-16T10:00:00Z');
     expect(el.textContent).toContain('Mostrando datos guardados el');
     expect(el.textContent).toContain('los cambios no se guardarán');
+  });
+
+  it('in grace says the session expired and that changes are not saved until an online login', () => {
+    session.state.set('grace');
+    const text = render(true, '2026-11-16T10:00:00Z').textContent ?? '';
+    expect(text).toContain('Sesión vencida');
+    expect(text).toContain('iniciar sesión en línea');
   });
 
   it('omits the date when savedAt is missing or invalid', () => {

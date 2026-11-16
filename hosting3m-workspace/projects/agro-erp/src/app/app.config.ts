@@ -7,8 +7,12 @@ import { routes } from './app.routes';
 import { environment } from '@env/environment';
 import { purgeLegacySwCaches } from '@core/utils/legacy-sw-cache.util';
 import { wireOfflineLogoutWipe } from '@core/utils/offline-logout-wipe.util';
+import { wirePinLogoutWipe } from '@core/utils/pin-logout-wipe.util';
+import { startOfflineSessionWatch } from '@core/utils/offline-session-watch.util';
+import { wireLoginIdentityWipe } from '@core/utils/login-identity-wipe.util';
 import { offlineGraceGuard } from '@core/interceptors/offline-grace.interceptor';
-import { AUTH_ENV_CONFIG, authInterceptor, tenantInterceptor } from 'core-auth';
+import { graceAuthInterceptor } from '@core/interceptors/grace-auth.interceptor';
+import { AUTH_ENV_CONFIG, tenantInterceptor } from 'core-auth';
 
 // ✅ 1. Importar el Token y el Servicio desde la librería ui-chat
 import { AiService, CHAT_CONFIG_TOKEN } from 'ui-chat';
@@ -17,7 +21,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([offlineGraceGuard, authInterceptor, tenantInterceptor])),
+    provideHttpClient(withInterceptors([offlineGraceGuard, graceAuthInterceptor, tenantInterceptor])),
 
     // PWA app shell (Refs #1087): Angular's service worker, production builds only. It caches the
     // app shell and chunks; it does NOT cache gateway data (offline data is phase 1b).
@@ -31,6 +35,12 @@ export const appConfig: ApplicationConfig = {
     }),
     // Wipe the offline read cache when the session ends (Refs #1087).
     provideAppInitializer(() => wireOfflineLogoutWipe()),
+    // PIN records are deleted on logout too (separate database, #1087 phase 1b-iii-b).
+    provideAppInitializer(() => wirePinLogoutWipe()),
+    // A login as a different (or unknown) user wipes the offline copy; the same user keeps it.
+    provideAppInitializer(() => wireLoginIdentityWipe()),
+    // Re-checks the session (no HTTP) so an open app re-locks when it enters grace.
+    provideAppInitializer(() => startOfflineSessionWatch()),
 
     // Configuración de la librería core-auth
     {

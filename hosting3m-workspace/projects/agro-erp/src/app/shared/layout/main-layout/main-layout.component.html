@@ -8,12 +8,15 @@
     <div class="page-wrapper" [class.expanded-content]="layoutService.sidebarCollapsed()">
         <div class="page-body">
             <div class="container-xl pt-4">
+                <app-pin-setup-prompt></app-pin-setup-prompt>
                 <router-outlet></router-outlet>
             </div>
         </div>
     </div>
 
-    <lib-ai-chat></lib-ai-chat>
+    @if (!inGrace()) {
+        <lib-ai-chat></lib-ai-chat>
+    }
 
     <app-toast-container></app-toast-container>
 
