@@ -39,9 +39,10 @@ interface OfflineEntry {
 /**
  * Partitioned offline read-cache (#1087, phase 1b-ii). Not wired into any feature yet.
  *
- * - One object store keyed by `${user}|${id_company}|${dataset}`; the scope always comes from
- *   `AuthService.getSessionScope()` at call time, never from the caller (fail-closed: no scope,
- *   no read and no write).
+ * - One object store keyed by `${user}|${id_company}|${dataset}`; `get()` reads the scope from
+ *   `AuthService.getSessionScope()` at call time; `put()` takes the scope the data was fetched for and
+ *   requires it to equal the current one (fail-closed: no scope, no read and no write).
+ * - `'expired'` sessions (`AuthService.getSessionState()`) can neither read nor write; `'grace'` can.
  * - Every entry stores its scope and schema version, and `get()` re-verifies both.
  * - Plaintext IndexedDB (owner decision); only `livestock` and `catalogs` can be stored.
  * - Never throws to callers: failures resolve `get` to `null` and `put` to `false`. Logs carry the
@@ -54,15 +55,30 @@ export class OfflineStoreService implements OnDestroy {
 
   private dbPromise: Promise<IDBPDatabase> | null = null;
 
-  /** Stores `data` for the active session scope. Resolves `true` only when it was persisted. */
-  async put(dataset: OfflineDataset, data: unknown): Promise<boolean> {
+  /**
+   * Stores `data` under the partition of `expectedScope`. Resolves `true` only when it was persisted.
+   *
+   * **Callers must capture the scope (`AuthService.getSessionScope()`) when the fetch STARTS** and
+   * pass that value here, not a scope read after the response arrives: otherwise a tenant switch
+   * between the fetch and the write could store company A's data under company B's partition.
+   *
+   * Fail-closed: resolves `false` and stores nothing, in any partition, unless `expectedScope` is
+   * valid AND equals the current session scope at call time AND still equals it after the
+   * IndexedDB connection is open (immediately before the write), and the session state is not
+   * `'expired'` (`'valid'` and `'grace'` are allowed).
+   */
+  async put(dataset: OfflineDataset, data: unknown, expectedScope: SessionScope): Promise<boolean> {
     try {
       if (!this.isAllowedDataset(dataset)) {
         this.logger.warn('OfflineStore: dataset rejected (not in allowlist)');
         return false;
       }
-      const scope = this.currentScope();
-      if (!scope) return false;
+      if (!this.isValidScope(expectedScope)) return false;
+      // Snapshot: later mutation of the caller's object must not change the partition written.
+      const scope: SessionScope = { user: expectedScope.user, id_company: expectedScope.id_company };
+      const current = this.currentScope();
+      if (!current || !this.sameScope(scope, current)) return false;
+      if (this.isExpired()) return false;
       const entry: OfflineEntry = {
         user: scope.user,
         id_company: scope.id_company,
@@ -72,6 +88,9 @@ export class OfflineStoreService implements OnDestroy {
         data
       };
       const db = await this.open();
+      // The scope or session may have changed while the connection was opening: re-verify.
+      const after = this.currentScope();
+      if (!after || !this.sameScope(scope, after) || this.isExpired()) return false;
       await db.put(OFFLINE_STORE_NAME, entry, this.key(scope, dataset));
       return true;
     } catch (err) {
@@ -88,14 +107,14 @@ export class OfflineStoreService implements OnDestroy {
         return null;
       }
       const scope = this.currentScope();
-      if (!scope) return null;
+      if (!scope || this.isExpired()) return null;
       const db = await this.open();
       const raw: unknown = await db.get(OFFLINE_STORE_NAME, this.key(scope, dataset));
       if (raw === undefined) return null;
 
       // The scope may have changed while awaiting IndexedDB: re-read it and require a match.
       const after = this.currentScope();
-      if (!after || !this.sameScope(scope, after)) return null;
+      if (!after || !this.sameScope(scope, after) || this.isExpired()) return null;
       if (!this.isValidEntry(raw, after, dataset)) return null;
       return { data: raw.data as T, savedAt: raw.savedAt };
     } catch (err) {
@@ -110,10 +129,19 @@ export class OfflineStoreService implements OnDestroy {
       if (!this.isValidScope(scope)) return false;
       const db = await this.open();
       const tx = db.transaction(OFFLINE_STORE_NAME, 'readwrite');
+      // Await every delete together with `tx.done` so an aborted transaction rejects into the
+      // catch below instead of leaving unhandled rejections.
+      // A synchronous throw (e.g. the transaction already aborted) is turned into a rejected
+      // promise so the ones already created are still attached to the same Promise.all.
+      const pending: Promise<unknown>[] = [tx.done];
       for (const dataset of OFFLINE_DATASETS) {
-        void tx.store.delete(this.key(scope, dataset));
+        try {
+          pending.push(tx.store.delete(this.key(scope, dataset)));
+        } catch (err) {
+          pending.push(Promise.reject(err));
+        }
       }
-      await tx.done;
+      await Promise.all(pending);
       return true;
     } catch (err) {
       this.logFailure('wipeScope', err);
@@ -193,6 +221,16 @@ export class OfflineStoreService implements OnDestroy {
   private currentScope(): SessionScope | null {
     const scope = this.auth.getSessionScope();
     return this.isValidScope(scope) ? { user: scope.user, id_company: scope.id_company } : null;
+  }
+
+  /** Fail-closed: anything but `'valid'` or `'grace'` (including a throwing check) counts as expired. */
+  private isExpired(): boolean {
+    try {
+      const state = this.auth.getSessionState();
+      return state !== 'valid' && state !== 'grace';
+    } catch {
+      return true;
+    }
   }
 
   private isValidScope(scope: unknown): scope is SessionScope {

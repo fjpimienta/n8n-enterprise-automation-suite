@@ -541,9 +541,13 @@ sobre IndexedDB (librería `idb`, base `agroerp-offline`, un object store). **To
 pantalla ni servicio**: no está conectado a `CattleDataService`, no hay PIN, cola de escrituras ni limpieza al
 cerrar sesión (decisión pendiente).
 
-- **API (promesas):** `put(dataset, data): Promise<boolean>`, `get(dataset): Promise<{ data, savedAt } | null>`,
-  `wipeScope(scope)` y `wipeAll()`. `put`/`get` **no reciben scope**: leen `AuthService.getSessionScope()` en
-  cada llamada. Sin scope (nulo, malformado o ambiguo) no leen ni escriben (`false` / `null`).
+- **API (promesas):** `put(dataset, data, expectedScope): Promise<boolean>`, `get(dataset): Promise<{ data, savedAt } | null>`,
+  `wipeScope(scope)` y `wipeAll()`. `get` lee `AuthService.getSessionScope()` en cada llamada. `put` recibe el scope
+  con el que se pidieron los datos (quien llama lo captura **al iniciar** el fetch) y resuelve `false`, sin escribir
+  en ninguna partición, salvo que sea válido, igual al scope actual al llamar y todavía igual tras abrir IndexedDB,
+  justo antes de escribir. Sin scope (nulo, malformado o ambiguo) no leen ni escriben (`false` / `null`).
+- **Compuerta de sesión:** con `getSessionState() === 'expired'` `get` devuelve `null` y `put` `false`
+  (`'valid'` y `'grace'` se permiten); `get` lo revisa también después de la lectura asíncrona.
 - **Partición obligatoria:** llave `${user}|${id_company}|${dataset}` (el usuario va codificado con
   `encodeURIComponent` para que un `|` no pueda mezclar particiones). Cada entrada guarda además su scope,
   dataset, `savedAt` (ISO UTC) y `schemaVersion`; `get()` los verifica contra el scope **actual** (también
