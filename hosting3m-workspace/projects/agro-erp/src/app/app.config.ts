@@ -6,6 +6,8 @@ import { provideServiceWorker } from '@angular/service-worker';
 import { routes } from './app.routes';
 import { environment } from '@env/environment';
 import { purgeLegacySwCaches } from '@core/utils/legacy-sw-cache.util';
+import { wireOfflineLogoutWipe } from '@core/utils/offline-logout-wipe.util';
+import { offlineGraceGuard } from '@core/interceptors/offline-grace.interceptor';
 import { AUTH_ENV_CONFIG, authInterceptor, tenantInterceptor } from 'core-auth';
 
 // ✅ 1. Importar el Token y el Servicio desde la librería ui-chat
@@ -15,7 +17,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([authInterceptor, tenantInterceptor])),
+    provideHttpClient(withInterceptors([offlineGraceGuard, authInterceptor, tenantInterceptor])),
 
     // PWA app shell (Refs #1087): Angular's service worker, production builds only. It caches the
     // app shell and chunks; it does NOT cache gateway data (offline data is phase 1b).
@@ -27,6 +29,8 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => {
       void purgeLegacySwCaches();
     }),
+    // Wipe the offline read cache when the session ends (Refs #1087).
+    provideAppInitializer(() => wireOfflineLogoutWipe()),
 
     // Configuración de la librería core-auth
     {
