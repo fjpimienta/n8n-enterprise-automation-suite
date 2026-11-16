@@ -243,6 +243,25 @@ de un AI Agent, usar `.first()` en lugar de `.item` en `$('Node')`.
 - `sw.js`, `ngsw.json` y `ngsw-worker.js` deben servirse sin caché larga (`TODO(verify)` en Plesk/Cloudflare).
 - Tabler/Inter siguen en CDN (`TODO(verify)`, ver README).
 
+## Almacén de lectura offline (Refs #1087, fase 1b-ii)
+- `OfflineStoreService` (`core/services/offline-store.service.ts`, IndexedDB `agroerp-offline` vía `idb`) **existe pero
+  no está conectado** a ningún servicio ni pantalla; no lo conectes sin la decisión del dueño sobre PIN, limpieza al
+  cerrar sesión y fin de gracia.
+- API: `put(dataset, data, expectedScope)`, `get(dataset)`, `wipeScope(scope)`, `wipeAll()`. `get` usa
+  `AuthService.getSessionScope()` al momento de la llamada. `put` **exige el scope con el que se pidieron los datos**:
+  quien llama lo captura cuando **empieza** el fetch (no al llegar la respuesta). `put` resuelve `false` sin escribir en
+  ninguna partición salvo que `expectedScope` sea válido, igual al scope actual al llamar **y** todavía igual después de
+  `await open()`, justo antes de escribir (evita envenenar la partición de otra empresa si el tenant cambia a medio fetch).
+  Sin scope no leen ni escriben (fail-closed). Llave `${user}|${id_company}|${dataset}`; cada entrada lleva su scope y
+  `schemaVersion` y `get()` los revalida.
+- **Compuerta de sesión:** con `AuthService.getSessionState() === 'expired'` (o si la consulta falla) `get` devuelve
+  `null` y `put` `false`; `'valid'` y `'grace'` se permiten. `get` lo revisa también después de la lectura a IndexedDB.
+- `wipeScope` espera todos los `delete` junto con `tx.done` (`Promise.all`): una transacción abortada resuelve `false`
+  sin promesas sin manejar.
+- Allowlist cerrada `'livestock' | 'catalogs'`, validada también en ejecución. **Nunca cachear datasets de dinero**
+  (gastos, ventas, ingresos) ni agregar uno a la allowlist sin decisión del dueño. IndexedDB en texto plano (aceptado).
+- Nunca lanza a quien llama (`get` → `null`, `put` → `false`) y nunca registra datos, scope ni tokens.
+
 ## Contrato Meta-CRUD (verificado en producción)
 - Payload: `{ entity, table_name, operation (minúsculas), filters|fields, id }`
 - Errores de Postgres llegan como HTTP 200 con `error:true` — inspeccionar siempre, nunca confiar solo en el status HTTP

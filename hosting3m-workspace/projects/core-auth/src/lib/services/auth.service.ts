@@ -109,7 +109,18 @@ export class AuthService {
     }
   }
 
+  /** Fail-closed wrapper: any exception while resolving the scope yields `null` (never throws). */
   private resolveScope(decoded: JwtPayload): SessionScope | null {
+    try {
+      return this.resolveScopeUnsafe(decoded);
+    } catch (err) {
+      // Log only the error name: never the token, claims or tenant data.
+      this.logger.warn('Session scope resolution failed; failing closed', (err as Error)?.name);
+      return null;
+    }
+  }
+
+  private resolveScopeUnsafe(decoded: JwtPayload): SessionScope | null {
     const user = [decoded.user, decoded.email]
       .find((v): v is string => typeof v === 'string' && v.trim().length > 0);
     if (!user) return null;

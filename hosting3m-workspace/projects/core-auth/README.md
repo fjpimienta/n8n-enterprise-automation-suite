@@ -161,6 +161,7 @@ const authConfig: AuthEnvironmentConfig = {
   to another available tenant the state stays `valid` and the scope follows the active tenant.
 - `AuthService.getSessionScope(): { user, id_company } | null`: partition key for a future offline
   store, `null` under the same fail-closed rules. Independent of expiry; combine with `getSessionState()`.
+  Neither method throws: an exception while resolving the scope is treated as `expired` / `null` (no logout, no storage write).
 - `AuthService.sessionEvents$`: emits `{ type: 'login', scope }` (scope is `null` if the active tenant
   is not yet set or not in `availableTenants()`; listen to `activeTenantChanges$` as well) and `{ type: 'logout' }`.
   Never carries the token.
