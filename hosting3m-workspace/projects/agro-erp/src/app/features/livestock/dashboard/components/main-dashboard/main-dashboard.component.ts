@@ -287,7 +287,12 @@ export class MainDashboardComponent implements OnInit {
         this.saleIncomes.set([]);
         this.incomesLoaded.set(false);
         this.incomesError.set(null);
+        this.expensesList.set([]);
       }
+      // Compliance is forced for the active tenant before the Promise.all below, so a failing
+      // cattle/expenses call can never skip it (#1109). The service's latest-wins guard discards any older response.
+      this.complianceService.loadUppStatus(true);
+      this.complianceService.loadPsgStatus(true);
       // Incomes never fail the whole load: their own error is reported separately (see incomesError).
       const incomesAttempt: Promise<{ ok: true; rows: SaleIncome[] } | { ok: false; message: string } | null> = isAdmin
         ? this.saleService.getSaleIncome().then(
@@ -313,11 +318,6 @@ export class MainDashboardComponent implements OnInit {
 
       this.expensesList.set((Array.isArray(expensesRaw) ? expensesRaw : []) as Expense[]);
 
-      // Recarga forzada de los hijos con fetch propio, acotada al mismo guard de tenant que el
-      // resto de esta carga (el `return` de arriba ya descartó cualquier respuesta de un tenant
-      // que dejó de ser el activo antes de llegar aquí).
-      this.complianceService.loadUppStatus(true);
-      this.complianceService.loadPsgStatus(true);
       if (kind === 'refresh') this.refreshToken.update(n => n + 1); // CattleEventLogComponent reacciona a esto
 
       this.lastRefreshedAt.set(new Date());
