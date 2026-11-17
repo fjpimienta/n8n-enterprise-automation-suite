@@ -4,15 +4,15 @@
   </h2>
 </div>
 
-@if (complianceService.error()) {
-<div class="alert alert-danger" role="alert">{{ complianceService.error() }}</div>
+@if (complianceService.uppError(); as failure) {
+<div class="alert alert-danger" role="alert">{{ failure.message }}</div>
 }
 
 <div class="card shadow-sm border-0">
   <div class="card-body p-0">
     @if (complianceService.loadingUpp()) {
     <div class="text-center text-muted py-5">Cargando estado de cumplimiento…</div>
-    } @else if (!complianceService.error()) {
+    } @else if (!complianceService.uppError()) {
     <div class="table-responsive">
       <table class="table card-table table-vcenter text-nowrap datatable table-hover mb-0">
         <thead>
