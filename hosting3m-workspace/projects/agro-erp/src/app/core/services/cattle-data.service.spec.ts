@@ -1,5 +1,6 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { Subject } from 'rxjs';
 import { HttpErrorResponse } from '@angular/common/http';
 import { AuthService, SessionScope, TenantService } from 'core-auth';
 import { CattleApiService } from './cattle-api.service';
@@ -25,16 +26,28 @@ describe('CattleDataService offline read-through', () => {
   let store: { put: ReturnType<typeof vi.fn>; get: ReturnType<typeof vi.fn> };
   let svc: CattleDataService;
 
+  let tenantChanges: Subject<number | null>;
+  let sessionEvents: Subject<{ type: string }>;
+
+  /** Mirrors TenantService.setActiveTenant()/clearContext(): the signal is set before the emission. */
+  function switchTenant(id: string | null): void {
+    tenantId.set(id);
+    tenantChanges.next(id as unknown as number | null);
+  }
+
   async function init(): Promise<void> {
     TestBed.resetTestingModule();
+    tenantChanges = new Subject();
+    sessionEvents = new Subject();
     TestBed.configureTestingModule({
       providers: [
         { provide: CattleApiService, useValue: api },
-        { provide: TenantService, useValue: { activeTenantId: tenantId, availableTenants: available } },
+        { provide: TenantService, useValue: { activeTenantId: tenantId, availableTenants: available, activeTenantChanges$: tenantChanges } },
         { provide: AuthService, useValue: {
           // Mirrors the real AuthService: scope/state reads touch TenantService.availableTenants().
           getSessionScope: () => { available(); return scope; },
-          getSessionState: () => { available(); return state; }
+          getSessionState: () => { available(); return state; },
+          sessionEvents$: sessionEvents
         } },
         { provide: OfflineStoreService, useValue: store }
       ]
@@ -83,11 +96,41 @@ describe('CattleDataService offline read-through', () => {
     }
   });
 
-  it('skips the put when the scope is null', async () => {
+  it('a null session scope fails closed: no HTTP, no cache read or write, nothing shown, an error instead (#1111)', async () => {
     scope = null;
     await load();
-    expect(svc.cattleList().length).toBe(1);
+    expect(api.getAllLivestock).not.toHaveBeenCalled();
+    expect(store.get).not.toHaveBeenCalled();
     expect(store.put).not.toHaveBeenCalled();
+    expect(svc.cattleList()).toEqual([]);
+    expect(svc.servedFromCache()).toBe(false);
+    expect(svc.loadError()).not.toBeNull();
+  });
+
+  it('a null session scope never serves the cache, in grace or after a network failure (#1111)', async () => {
+    scope = null;
+    store.get.mockResolvedValue({ data: [liveRow()], savedAt: SAVED });
+    state = 'grace';
+    await load();
+    expect(svc.cattleList()).toEqual([]);
+    expect(svc.servedFromCache()).toBe(false);
+    expect(store.get).not.toHaveBeenCalled();
+
+    state = 'valid';
+    api.getAllLivestock.mockRejectedValue(new HttpErrorResponse({ status: 0 }));
+    await load();
+    expect(svc.cattleList()).toEqual([]);
+    expect(svc.servedFromCache()).toBe(false);
+    expect(store.get).not.toHaveBeenCalled();
+    expect(svc.loadError()).not.toBeNull();
+  });
+
+  it('a null session scope clears a list left from an earlier valid session (#1111)', async () => {
+    await load();
+    expect(svc.cattleList().length).toBe(1);
+    scope = null;
+    await load();
+    expect(svc.cattleList()).toEqual([]);
   });
 
   it('a failed or rejected put is silent', async () => {
@@ -236,7 +279,7 @@ describe('CattleDataService offline read-through', () => {
     await Promise.resolve();
     expect(api.getAllLivestock).not.toHaveBeenCalled();
 
-    tenantId.set('2');
+    switchTenant('2');
     TestBed.tick();
     await Promise.resolve();
     expect(api.getAllLivestock).toHaveBeenCalledTimes(1);
