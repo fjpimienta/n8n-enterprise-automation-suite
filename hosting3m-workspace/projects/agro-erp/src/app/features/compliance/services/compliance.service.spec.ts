@@ -247,4 +247,96 @@ describe('ComplianceService', () => {
       expect(service.loadingDetail()).toBe(false);
     });
   });
+
+  describe('resetState (#1109)', () => {
+    it('clears lists, per-source states and errors, and detail', () => {
+      service.loadUppStatus();
+      httpMock.expectOne(UPP_URL).flush(ok([uppRow({ ranch_name: 'Previo' })]));
+      service.loadPsgStatus();
+      httpMock.expectOne(PSG_URL).flush(ok([psgRow()]));
+      service.getUppDetail('upp-1');
+      httpMock.expectOne(DETAIL_URL).flush(ok([{ id: 'upp-1', ranch_name: 'Previo' }]));
+      httpMock.expectOne(`${environment.apiUrl_crud}/livestock_census_snapshots`).flush(ok([]));
+      expect(service.uppList().length).toBe(1);
+      expect(service.uppDetail()).not.toBeNull();
+
+      service.resetState();
+
+      expect(service.uppList()).toEqual([]);
+      expect(service.psgList()).toEqual([]);
+      expect(service.uppState()).toBe('idle');
+      expect(service.psgState()).toBe('idle');
+      expect(service.uppError()).toBeNull();
+      expect(service.psgError()).toBeNull();
+      expect(service.uppDetail()).toBeNull();
+      expect(service.uppDetailCensus()).toBeNull();
+      expect(service.loadingDetail()).toBe(false);
+      expect(service.detailError()).toBeNull();
+    });
+
+    it('discards a UPP response that was in flight when the state was reset', () => {
+      service.loadUppStatus();
+      service.resetState();
+      httpMock.expectOne(UPP_URL).flush(ok([uppRow({ ranch_name: 'Tenant previo' })]));
+
+      expect(service.uppList()).toEqual([]);
+      expect(service.uppState()).toBe('idle');
+    });
+
+    it('discards a PSG response that was in flight when the state was reset', () => {
+      service.loadPsgStatus();
+      service.resetState();
+      httpMock.expectOne(PSG_URL).flush(ok([psgRow({ validity_status: 'EXPIRED' })]));
+
+      expect(service.psgList()).toEqual([]);
+      expect(service.psgState()).toBe('idle');
+    });
+
+    it('discards a failed in-flight response too, so an old error cannot replace the reset state', () => {
+      service.loadUppStatus();
+      service.resetState();
+      httpMock.expectOne(UPP_URL).flush(serverError);
+
+      expect(service.uppState()).toBe('idle');
+      expect(service.uppError()).toBeNull();
+    });
+
+    it('invalidates in-flight requests even when the state is already idle', () => {
+      service.loadUppStatus();
+      service.resetState();
+      service.resetState();
+      httpMock.expectOne(UPP_URL).flush(ok([uppRow()]));
+
+      expect(service.uppList()).toEqual([]);
+      expect(service.uppState()).toBe('idle');
+    });
+
+    it('discards a detail response (and its census) that was in flight when the state was reset', () => {
+      service.getUppDetail('upp-1');
+      service.resetState();
+      httpMock.expectOne(DETAIL_URL).flush(ok([{ id: 'upp-1', ranch_name: 'Tenant previo' }]));
+
+      expect(service.uppDetail()).toBeNull();
+      expect(service.loadingDetail()).toBe(false);
+    });
+
+    it('A to B to A: only the last request for A applies when the responses arrive out of order', () => {
+      service.loadUppStatus(); // request 1, tenant A
+      service.resetState();
+      service.loadUppStatus(); // request 2, tenant B
+      service.resetState();
+      service.loadUppStatus(); // request 3, tenant A again
+
+      const pending = httpMock.match(UPP_URL);
+      expect(pending.length).toBe(3);
+
+      pending[0].flush(ok([uppRow({ production_unit_id: 'a-old', ranch_name: 'A (anterior)' })]));
+      pending[1].flush(ok([uppRow({ production_unit_id: 'b', ranch_name: 'B' })]));
+      expect(service.uppList()).toEqual([]);
+
+      pending[2].flush(ok([uppRow({ production_unit_id: 'a-new', ranch_name: 'A (actual)' })]));
+      expect(service.uppList().map(row => row.ranch_name)).toEqual(['A (actual)']);
+      expect(service.uppState()).toBe('loaded');
+    });
+  });
 });

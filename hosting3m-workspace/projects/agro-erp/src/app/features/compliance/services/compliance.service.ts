@@ -135,6 +135,30 @@ export class ComplianceService {
       });
   }
 
+  /**
+   * Clears every compliance signal (lists, per-source states and errors, detail, census) and
+   * invalidates every request in flight. Called on logout and on every active-tenant change, so no
+   * value or late response from the previous tenant can render (#1109). The counters are bumped even
+   * when a source is already idle, so a response started before the reset is always discarded.
+   */
+  public resetState(): void {
+    this.uppRequestId++;
+    this.psgRequestId++;
+    this.detailRequestId++;
+
+    this.uppList.set([]);
+    this.psgList.set([]);
+    this.uppState.set('idle');
+    this.psgState.set('idle');
+    this.uppError.set(null);
+    this.psgError.set(null);
+
+    this.uppDetail.set(null);
+    this.uppDetailCensus.set(null);
+    this.loadingDetail.set(false);
+    this.detailError.set(null);
+  }
+
   /** Reloads only the sources that failed. Used by the card's retry action. */
   public retryFailed(): void {
     if (this.uppState() === 'failed') this.loadUppStatus(true);
