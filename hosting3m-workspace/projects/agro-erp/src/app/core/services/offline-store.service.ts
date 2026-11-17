@@ -2,6 +2,7 @@ import { Injectable, OnDestroy, inject } from '@angular/core';
 import { IDBPDatabase, openDB } from 'idb';
 import { AuthService, SessionScope } from 'core-auth';
 import { LoggerService } from './logger.service';
+import { isWipePending } from '@core/utils/offline-wipe-pending.util';
 
 /**
  * Closed allowlist of datasets that may be cached offline (#1087, phase 1b).
@@ -56,6 +57,12 @@ export class OfflineStoreService implements OnDestroy {
   private dbPromise: Promise<IDBPDatabase> | null = null;
 
   /**
+   * Incremented at the START of every `wipeAll()`. A `put` that captured an older value must not write:
+   * it would land after the clear and survive the wipe (#1087, phase 1b-iii-c).
+   */
+  private wipeEpoch = 0;
+
+  /**
    * Stores `data` under the partition of `expectedScope`. Resolves `true` only when it was persisted.
    *
    * **Callers must capture the scope (`AuthService.getSessionScope()`) when the fetch STARTS** and
@@ -74,6 +81,8 @@ export class OfflineStoreService implements OnDestroy {
         return false;
       }
       if (!this.isValidScope(expectedScope)) return false;
+      if (isWipePending()) return false;
+      const epoch = this.wipeEpoch;
       // Snapshot: later mutation of the caller's object must not change the partition written.
       const scope: SessionScope = { user: expectedScope.user, id_company: expectedScope.id_company };
       const current = this.currentScope();
@@ -88,9 +97,11 @@ export class OfflineStoreService implements OnDestroy {
         data
       };
       const db = await this.open();
-      // The scope or session may have changed while the connection was opening: re-verify.
+      // The scope, the session or a wipe may have changed while the connection was opening: re-verify.
+      // The checks and the `db.put` call below run in the same synchronous step, so no wipe can start in between.
       const after = this.currentScope();
       if (!after || !this.sameScope(scope, after) || this.isExpired()) return false;
+      if (epoch !== this.wipeEpoch || isWipePending()) return false;
       await db.put(OFFLINE_STORE_NAME, entry, this.key(scope, dataset));
       return true;
     } catch (err) {
@@ -106,6 +117,7 @@ export class OfflineStoreService implements OnDestroy {
         this.logger.warn('OfflineStore: dataset rejected (not in allowlist)');
         return null;
       }
+      if (isWipePending()) return null;
       const scope = this.currentScope();
       if (!scope || this.isExpired()) return null;
       const db = await this.open();
@@ -114,7 +126,7 @@ export class OfflineStoreService implements OnDestroy {
 
       // The scope may have changed while awaiting IndexedDB: re-read it and require a match.
       const after = this.currentScope();
-      if (!after || !this.sameScope(scope, after) || this.isExpired()) return null;
+      if (!after || !this.sameScope(scope, after) || this.isExpired() || isWipePending()) return null;
       if (!this.isValidEntry(raw, after, dataset)) return null;
       return { data: raw.data as T, savedAt: raw.savedAt };
     } catch (err) {
@@ -151,6 +163,7 @@ export class OfflineStoreService implements OnDestroy {
 
   /** Deletes everything this store holds, for all users and companies. */
   async wipeAll(): Promise<boolean> {
+    this.wipeEpoch++;
     try {
       const db = await this.open();
       await db.clear(OFFLINE_STORE_NAME);

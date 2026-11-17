@@ -30,6 +30,14 @@ describe('wireOfflineLogoutWipe', () => {
     expect(wipeAll).not.toHaveBeenCalled();
   });
 
+  it('wipes on every logout event, with no skip condition', () => {
+    events.next({ type: 'logout' });
+    events.next({ type: 'login', scope: { user: 'a', id_company: 1 } });
+    events.next({ type: 'logout' });
+    events.next({ type: 'logout' });
+    expect(wipeAll).toHaveBeenCalledTimes(3);
+  });
+
   it('never throws when wipeAll rejects or throws synchronously', () => {
     wipeAll.mockRejectedValueOnce(new Error('x'));
     expect(() => events.next({ type: 'logout' })).not.toThrow();
