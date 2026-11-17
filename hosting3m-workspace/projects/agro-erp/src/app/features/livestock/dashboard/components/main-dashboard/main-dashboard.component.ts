@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit, ChangeDetectionStrategy, effect, DestroyRef } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, ChangeDetectionStrategy, effect, DestroyRef, untracked } from '@angular/core';
 import { OfflineBannerComponent } from '@shared/components/offline-banner/offline-banner.component';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -190,10 +190,16 @@ export class MainDashboardComponent implements OnInit {
      */
     effect(() => {
       const activeTenantId = this.tenantService.activeTenantId();
+      // The active tenant's role also re-runs the load, as it did before the compliance reload moved
+      // ahead of the Promise.all. Read here, outside the untracked load, so it stays a deliberate dependency.
+      void this.isAdminForActiveTenant();
 
       if (activeTenantId) {
         //console.log(`🔄 [Dashboard Pipeline] Detectado cambio de rancho a ID: ${activeTenantId}. Re-indexando KPIs...`);
-        this.loadDashboardData('initial');
+        // untracked: the load synchronously reads and writes compliance state (its forced reloads read
+        // uppState/psgState before their first await). Tracked there, the effect re-ran on every state change
+        // and requested compliance again: an endless loop (#1109). The effect depends on the tenant only.
+        untracked(() => this.loadDashboardData('initial'));
       }
     }, { allowSignalWrites: true }); // Permite que la escritura de isLoading y listas ocurra en cascada
 
