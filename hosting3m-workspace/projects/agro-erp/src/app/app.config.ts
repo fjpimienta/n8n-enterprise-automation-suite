@@ -7,6 +7,7 @@ import { routes } from './app.routes';
 import { environment } from '@env/environment';
 import { purgeLegacySwCaches } from '@core/utils/legacy-sw-cache.util';
 import { wireOfflineLogoutWipe } from '@core/utils/offline-logout-wipe.util';
+import { wireComplianceSessionReset } from '@core/utils/compliance-session-reset.util';
 import { wirePinLogoutWipe } from '@core/utils/pin-logout-wipe.util';
 import { startOfflineSessionWatch } from '@core/utils/offline-session-watch.util';
 import { wireLoginIdentityWipe } from '@core/utils/login-identity-wipe.util';
@@ -35,6 +36,8 @@ export const appConfig: ApplicationConfig = {
     }),
     // Wipe the offline read cache when the session ends (Refs #1087).
     provideAppInitializer(() => wireOfflineLogoutWipe()),
+    // Compliance state is cleared on logout and on every tenant change, and reloads for the new tenant (#1109).
+    provideAppInitializer(() => wireComplianceSessionReset()),
     // PIN records are deleted on logout too (separate database, #1087 phase 1b-iii-b).
     provideAppInitializer(() => wirePinLogoutWipe()),
     // A login as a different (or unknown) user wipes the offline copy; the same user keeps it.

@@ -1,9 +1,12 @@
-import { Component } from '@angular/core';
+import { Component, Injectable, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { provideHttpClient } from '@angular/common/http';
+import { HttpRequest, provideHttpClient, withInterceptors } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { AUTH_ENV_CONFIG, AuthService, TenantService, tenantInterceptor } from 'core-auth';
+import { Subject } from 'rxjs';
 import { environment } from '@env/environment';
+import { wireComplianceSessionReset } from '@core/utils/compliance-session-reset.util';
 import { ComplianceAlertCardComponent } from './compliance-alert-card.component';
 
 const UPP_URL = `${environment.apiUrl_crud}/upp_compliance_status`;
@@ -185,5 +188,101 @@ describe('ComplianceAlertCardComponent', () => {
 
       expect(el().querySelector('[data-testid="compliance-allclear"]')).not.toBeNull();
     });
+  });
+});
+
+/** Tenant switch through the real reset wiring (#1109): the card must never show the previous tenant's verdict. */
+@Injectable()
+class FakeTenantService {
+  readonly activeTenantId = signal<number | null>(null);
+  readonly activeTenantChanges$ = new Subject<number | null>();
+
+  setActiveTenant(id: number): void {
+    this.activeTenantId.set(id);
+    this.activeTenantChanges$.next(id);
+  }
+}
+
+@Injectable()
+class FakeAuthService {
+  readonly sessionEvents$ = new Subject<{ type: string }>();
+}
+
+describe('ComplianceAlertCardComponent across a tenant switch (#1109)', () => {
+  let fixture: ComponentFixture<HostComponent>;
+  let httpMock: HttpTestingController;
+  let tenant: FakeTenantService;
+
+  const forTenant = (url: string, id: number) => (req: HttpRequest<unknown>) =>
+    req.url === url && req.headers.get('X-Tenant-ID') === String(id);
+  const el = (): HTMLElement => fixture.nativeElement;
+  const testId = (id: string): Element | null => el().querySelector(`[data-testid="${id}"]`);
+
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      imports: [HostComponent],
+      providers: [
+        provideRouter([]),
+        provideHttpClient(withInterceptors([tenantInterceptor])),
+        provideHttpClientTesting(),
+        { provide: TenantService, useClass: FakeTenantService },
+        { provide: AuthService, useClass: FakeAuthService },
+        {
+          provide: AUTH_ENV_CONFIG,
+          useValue: {
+            apiUrl_crud: environment.apiUrl_crud,
+            apiUrl_token: environment.apiUrl_token,
+            apiUrl_ai: environment.apiUrl_ai,
+            apiUrl_upload: environment.apiUrl_upload
+          }
+        }
+      ]
+    });
+    httpMock = TestBed.inject(HttpTestingController);
+    tenant = TestBed.inject(TenantService) as unknown as FakeTenantService;
+    TestBed.runInInjectionContext(() => wireComplianceSessionReset());
+    tenant.setActiveTenant(1);
+    fixture = TestBed.createComponent(HostComponent);
+    fixture.detectChanges();
+  });
+
+  afterEach(() => httpMock.verify());
+
+  it('never shows tenant A verdict after the switch to B, and shows B verdict only after B reloads', () => {
+    httpMock.expectOne(forTenant(UPP_URL, 1)).flush(ok([uppRow('EXPIRED')]));
+    httpMock.expectOne(forTenant(PSG_URL, 1)).flush(ok([psgRow('OK')]));
+    fixture.detectChanges();
+    expect(testId('compliance-attention')).not.toBeNull();
+
+    tenant.setActiveTenant(2);
+    fixture.detectChanges();
+    expect(testId('compliance-attention')).toBeNull();
+    expect(testId('compliance-allclear')).toBeNull();
+    expect(testId('compliance-loading')).not.toBeNull();
+
+    httpMock.expectOne(forTenant(UPP_URL, 2)).flush(ok([]));
+    httpMock.expectOne(forTenant(PSG_URL, 2)).flush(ok([psgRow('OK')]));
+    fixture.detectChanges();
+    expect(testId('compliance-allclear')).not.toBeNull();
+    expect(testId('compliance-attention')).toBeNull();
+  });
+
+  it('discards tenant A response that arrives after the switch, so it cannot render', () => {
+    const upA = httpMock.expectOne(forTenant(UPP_URL, 1));
+    const psgA = httpMock.expectOne(forTenant(PSG_URL, 1));
+
+    tenant.setActiveTenant(2);
+    fixture.detectChanges();
+    upA.flush(ok([uppRow('EXPIRED')]));
+    psgA.flush(ok([psgRow('EXPIRED')]));
+    fixture.detectChanges();
+
+    expect(testId('compliance-attention')).toBeNull();
+    expect(testId('compliance-loading')).not.toBeNull();
+
+    httpMock.expectOne(forTenant(UPP_URL, 2)).flush(ok([]));
+    httpMock.expectOne(forTenant(PSG_URL, 2)).flush(ok([psgRow('OK')]));
+    fixture.detectChanges();
+    expect(testId('compliance-allclear')).not.toBeNull();
   });
 });

@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit, ChangeDetectionStrategy, effect, DestroyRef } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, ChangeDetectionStrategy, effect, DestroyRef, untracked } from '@angular/core';
 import { OfflineBannerComponent } from '@shared/components/offline-banner/offline-banner.component';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -190,10 +190,16 @@ export class MainDashboardComponent implements OnInit {
      */
     effect(() => {
       const activeTenantId = this.tenantService.activeTenantId();
+      // The active tenant's role also re-runs the load, as it did before the compliance reload moved
+      // ahead of the Promise.all. Read here, outside the untracked load, so it stays a deliberate dependency.
+      void this.isAdminForActiveTenant();
 
       if (activeTenantId) {
         //console.log(`🔄 [Dashboard Pipeline] Detectado cambio de rancho a ID: ${activeTenantId}. Re-indexando KPIs...`);
-        this.loadDashboardData('initial');
+        // untracked: the load synchronously reads and writes compliance state (its forced reloads read
+        // uppState/psgState before their first await). Tracked there, the effect re-ran on every state change
+        // and requested compliance again: an endless loop (#1109). The effect depends on the tenant only.
+        untracked(() => this.loadDashboardData('initial'));
       }
     }, { allowSignalWrites: true }); // Permite que la escritura de isLoading y listas ocurra en cascada
 
@@ -287,7 +293,12 @@ export class MainDashboardComponent implements OnInit {
         this.saleIncomes.set([]);
         this.incomesLoaded.set(false);
         this.incomesError.set(null);
+        this.expensesList.set([]);
       }
+      // Compliance is forced for the active tenant before the Promise.all below, so a failing
+      // cattle/expenses call can never skip it (#1109). The service's latest-wins guard discards any older response.
+      this.complianceService.loadUppStatus(true);
+      this.complianceService.loadPsgStatus(true);
       // Incomes never fail the whole load: their own error is reported separately (see incomesError).
       const incomesAttempt: Promise<{ ok: true; rows: SaleIncome[] } | { ok: false; message: string } | null> = isAdmin
         ? this.saleService.getSaleIncome().then(
@@ -313,11 +324,6 @@ export class MainDashboardComponent implements OnInit {
 
       this.expensesList.set((Array.isArray(expensesRaw) ? expensesRaw : []) as Expense[]);
 
-      // Recarga forzada de los hijos con fetch propio, acotada al mismo guard de tenant que el
-      // resto de esta carga (el `return` de arriba ya descartó cualquier respuesta de un tenant
-      // que dejó de ser el activo antes de llegar aquí).
-      this.complianceService.loadUppStatus(true);
-      this.complianceService.loadPsgStatus(true);
       if (kind === 'refresh') this.refreshToken.update(n => n + 1); // CattleEventLogComponent reacciona a esto
 
       this.lastRefreshedAt.set(new Date());
