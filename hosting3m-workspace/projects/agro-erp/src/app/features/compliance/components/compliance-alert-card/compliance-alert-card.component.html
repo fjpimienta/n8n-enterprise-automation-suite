@@ -1,40 +1,111 @@
-@if (complianceService.loadingUpp() || complianceService.loadingPsg()) {
-<div class="card shadow-sm border-0 mb-4">
+@switch (verdict()) {
+@case ('loading') {
+<div class="card shadow-sm border-0 mb-4" role="status" data-testid="compliance-loading">
   <div class="card-body text-muted">Verificando cumplimiento normativo…</div>
 </div>
-} @else {
-<div class="card shadow-sm border-0 mb-4" [class.bg-red-lt]="totalAttentionCount() > 0"
-  [class.bg-green-lt]="totalAttentionCount() === 0">
+}
+@case ('unknown') {
+<ng-container *ngTemplateOutlet="couldNotVerify" />
+}
+@case ('partial') {
+<div class="card shadow-sm border-0 mb-4"
+  [class.bg-red-lt]="totalAttentionCount() > 0" [class.bg-yellow-lt]="totalAttentionCount() === 0"
+  role="alert" data-testid="compliance-partial">
   <div class="card-body d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
     <div class="d-flex align-items-center gap-3">
       <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-lg" width="32" height="32" viewBox="0 0 24 24"
         stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
         <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-        @if (totalAttentionCount() > 0) {
         <path d="M12 9v2m0 4v.01" />
         <path
           d="M5.07 19H19a2 2 0 0 0 1.75 -2.75L13.75 3.5a2 2 0 0 0 -3.5 0L3.25 16.25A2 2 0 0 0 5.07 19" />
-        } @else {
-        <path d="M5 12l5 5l10 -10" />
-        }
       </svg>
       <div>
         @if (totalAttentionCount() > 0) {
-        <div class="font-weight-bold">
-          {{ complianceService.expiredUppCount() + complianceService.warningUppCount() }} UPP requieren atención
-          normativa
-          @if (complianceService.expiredPsgCount() > 0) {
-          · {{ complianceService.expiredPsgCount() }} PSG vencidas
-          }
-        </div>
-        <div class="text-muted small">Padrón ganadero SENASICA-SINIIGA sin actualizar a tiempo.</div>
+        <div class="font-weight-bold">{{ attentionTitle() }}</div>
         } @else {
-        <div class="font-weight-bold">Cumplimiento normativo al día</div>
-        <div class="text-muted small">No hay UPP ni licencias PSG que requieran atención.</div>
+        <div class="font-weight-bold">Verificación incompleta</div>
         }
+        <div class="text-muted small">No se pudo verificar {{ failedLabel() }}. Los datos mostrados son parciales.</div>
+      </div>
+    </div>
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-outline-secondary btn-sm text-nowrap" data-testid="compliance-retry"
+        (click)="retry()">Reintentar</button>
+      <a routerLink="/cumplimiento/upp" class="btn btn-outline-secondary btn-sm text-nowrap">Ver detalle</a>
+    </div>
+  </div>
+</div>
+}
+@case ('attention') {
+<div class="card shadow-sm border-0 mb-4 bg-red-lt" data-testid="compliance-attention">
+  <div class="card-body d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+    <div class="d-flex align-items-center gap-3">
+      <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-lg" width="32" height="32" viewBox="0 0 24 24"
+        stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+        <path d="M12 9v2m0 4v.01" />
+        <path
+          d="M5.07 19H19a2 2 0 0 0 1.75 -2.75L13.75 3.5a2 2 0 0 0 -3.5 0L3.25 16.25A2 2 0 0 0 5.07 19" />
+      </svg>
+      <div>
+        <div class="font-weight-bold">{{ attentionTitle() }}</div>
+        <div class="text-muted small">Padrón ganadero SENASICA-SINIIGA sin actualizar a tiempo.</div>
       </div>
     </div>
     <a routerLink="/cumplimiento/upp" class="btn btn-outline-secondary btn-sm text-nowrap">Ver detalle</a>
   </div>
 </div>
 }
+@case ('allclear') {
+<div class="card shadow-sm border-0 mb-4 bg-green-lt" data-testid="compliance-allclear">
+  <div class="card-body d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+    <div class="d-flex align-items-center gap-3">
+      <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-lg" width="32" height="32" viewBox="0 0 24 24"
+        stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+        <path d="M5 12l5 5l10 -10" />
+      </svg>
+      <div>
+        <div class="font-weight-bold">Cumplimiento normativo al día</div>
+        <div class="text-muted small">No hay UPP ni licencias PSG que requieran atención.</div>
+      </div>
+    </div>
+    <a routerLink="/cumplimiento/upp" class="btn btn-outline-secondary btn-sm text-nowrap">Ver detalle</a>
+  </div>
+</div>
+}
+@default {
+<!-- Unreachable with the typed verdict. Fail closed: render the non-green state, never all-clear. -->
+<ng-container *ngTemplateOutlet="couldNotVerify" />
+}
+}
+
+<!-- Shared non-green "could not verify" markup, used by 'unknown' and by the fail-closed @default. -->
+<ng-template #couldNotVerify>
+<div class="card shadow-sm border-0 mb-4 bg-yellow-lt" role="alert" data-testid="compliance-unknown">
+  <div class="card-body d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+    <div class="d-flex align-items-center gap-3">
+      <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-lg" width="32" height="32" viewBox="0 0 24 24"
+        stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+        <path d="M12 9v2m0 4v.01" />
+        <path
+          d="M5.07 19H19a2 2 0 0 0 1.75 -2.75L13.75 3.5a2 2 0 0 0 -3.5 0L3.25 16.25A2 2 0 0 0 5.07 19" />
+      </svg>
+      <div>
+        <div class="font-weight-bold">No se pudo verificar el cumplimiento normativo</div>
+        <div class="text-muted small">
+          @if (networkFailure()) {
+          Sin conexión: la verificación requiere conexión con el servidor.
+          } @else {
+          El servicio no respondió. Intenta de nuevo.
+          }
+        </div>
+      </div>
+    </div>
+    <button type="button" class="btn btn-outline-secondary btn-sm text-nowrap" data-testid="compliance-retry"
+      (click)="retry()">Reintentar</button>
+  </div>
+</div>
+</ng-template>

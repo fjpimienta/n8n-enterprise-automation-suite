@@ -7,8 +7,8 @@
   </h2>
 </div>
 
-@if (complianceService.error()) {
-<div class="alert alert-danger" role="alert">{{ complianceService.error() }}</div>
+@if (complianceService.detailError(); as message) {
+<div class="alert alert-danger" role="alert">{{ message }}</div>
 }
 
 @if (complianceService.loadingDetail()) {
@@ -98,6 +98,6 @@
     </div>
   </div>
 </div>
-} @else if (!complianceService.error()) {
+} @else if (!complianceService.detailError()) {
 <div class="text-center text-muted py-5">No se encontró la unidad de producción solicitada.</div>
 }
