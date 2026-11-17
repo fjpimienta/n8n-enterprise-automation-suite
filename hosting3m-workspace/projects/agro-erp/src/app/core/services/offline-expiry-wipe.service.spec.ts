@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto';
 import { TestBed } from '@angular/core/testing';
 import { AUTH_ENV_CONFIG } from 'core-auth';
 import { vi } from 'vitest';
-import { isWipePending } from '@core/utils/offline-wipe-pending.util';
+import { isWipePending, setWipePending } from '@core/utils/offline-wipe-pending.util';
 import { OfflineStoreService, OFFLINE_DB_NAME } from './offline-store.service';
 import { PinLockService, PIN_DB_NAME } from './pin-lock.service';
 import { OfflineExpiryWipeService } from './offline-expiry-wipe.service';
@@ -182,6 +182,19 @@ describe('OfflineExpiryWipeService', () => {
     }
     expect(store.wipeAll).toHaveBeenCalledTimes(1);
     expect(pin.clearAll).toHaveBeenCalledTimes(1);
+  });
+
+  it('wipes again when a token retried under a valid session later expires', async () => {
+    const service = create();
+    localStorage.setItem('authToken', tokenWith({ user: 'ana', id_company: 1, exp: NOW_S + 60 }));
+    setWipePending(true);
+    await service.check(); // valid session, pending retry: wipes, nothing is held for an ended session
+    expect(store.wipeAll).toHaveBeenCalledTimes(1);
+
+    vi.setSystemTime(NOW_MS + 120_000); // the same token is now past its exp
+    await service.check();
+
+    expect(store.wipeAll).toHaveBeenCalledTimes(2);
   });
 
   it('does not wipe when the wipe pending flag is clear and the token is valid (no extra work per tick)', async () => {
