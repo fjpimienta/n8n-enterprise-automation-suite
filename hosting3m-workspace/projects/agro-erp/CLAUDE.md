@@ -290,7 +290,8 @@ de un AI Agent, usar `.first()` en lugar de `.item` en `$('Node')`.
   `ProductionUnitLotService.getLots()` sigue llamando `getAllLivestock()` directo (no pasa por `CattleDataService`).
 - Al evento `'logout'` de `AuthService.sessionEvents$` se ejecuta `offlineStore.wipeAll()` (fire-and-forget, solo la caché
   de lectura), conectado una vez en un app initializer (`core/utils/offline-logout-wipe.util.ts`).
-- Fuera de alcance de esta sección: catálogos, borrado al terminar la gracia, outbox y datos de dinero (nunca se cachean).
+- Fuera de alcance de esta sección: catálogos, outbox y datos de dinero (nunca se cachean). El borrado al vencer el
+  token está en la sección siguiente.
 
 ## PIN de desbloqueo en gracia (Refs #1087, fase 1b-iii-b)
 - **Dormido (verificado 2026-11-16):** nada de esto se activa sin `offlineGraceMs` en `AUTH_ENV_CONFIG`. `app.config.ts`
@@ -370,7 +371,38 @@ de un AI Agent, usar `.first()` en lugar de `.item` en `$('Node')`.
     (`deleteOthers(nuevo)`). Fail-closed.
   - El usuario nuevo se lee del token almacenado y no de `event.scope`: ese scope depende de la lista de empresas, que
     el login guarda **después** del evento, así que puede venir `null` en un login nuevo.
-  - Un login fallido no emite `'login'`: copia y PIN intactos.
+  - Un login fallido no emite `'login'`, **pero con el token guardado ya vencido el POST de login sí dispara
+    `logout()` antes de salir** (`graceAuthInterceptor` → `authInterceptor` → `getStoredToken()`, que hace logout):
+    eso borra la caché y, con gracia, los PIN aunque el login falle. En `'grace'` el login está exento y no ocurre
+    (`grace-auth.interceptor.ts`). Corregido en la fase 1b-iii-c, que además borra al vencer el token (ver abajo).
+
+## Borrado al vencer el token (Refs #1087, fase 1b-iii-c)
+- **Regla (D1, D2, D5):** se borra cuando `exp` del `authToken` guardado más `offlineGraceMs` (0 sin gracia) ya
+  pasó; o si el token es ilegible o no tiene `exp`; o si no hay token y la base `agroerp-offline` existe. **Nunca**
+  con sesión `valid` o en gracia (#1096). Se decide solo con `exp` leído de `localStorage` (no con
+  `getSessionState()`, para que un tenant ambiguo no borre por error). Ver `core/utils/stored-token-expiry.util.ts`.
+- **Qué borra:** `agroerp-offline` completa (`wipeAll`, todos los usuarios del dispositivo). `agroerp-pin` solo
+  con gracia configurada. En memoria: el inventario (`CattleDataService`, evento `wiped$`) y el desbloqueo PIN.
+- **Nunca crea bases para borrarlas:** la presencia se mira con `indexedDB.databases()`
+  (`core/utils/indexeddb-presence.util.ts`). Si no se puede saber y no hay token, no se crea nada y el borrado no se
+  confirma. Con grace apagada, `agroerp-pin` nunca se abre.
+- **Cuándo se revisa** (`core/utils/offline-expiry-watch.util.ts`, initializer no bloqueante): al arrancar, en
+  `visibilitychange`, cada 60 s y al cambiar `authToken` en otra pestaña (evento `storage`). Sin HTTP, sin
+  `getStoredToken()`. Coste por tick: una lectura de `localStorage` y una decodificación del JWT. La base solo se toca
+  una vez por token en cada carga de página (memoria `confirmedFor`).
+- **Coste en producción (no medido en navegador):** el chequeo corre cada 60 s aunque la gracia esté apagada. Con
+  token válido no abre IndexedDB; sin token guardado y con la base ya vaciada tampoco (se consulta una vez por carga).
+- **Fallo:** si el borrado no se confirma, se levanta la bandera `agroerp-offline-wipe-pending` en `localStorage`
+  (solo `'1'`, sin datos). Mientras esté, `get` y `put` no sirven ni escriben la caché, y cada chequeo reintenta
+  (también con un token válido: el borrado de la caché se reconstruye con la siguiente lectura en línea).
+- **Carrera de escritura:** `wipeAll` incrementa un epoch al empezar; `put` lo captura al entrar y lo revalida justo
+  antes de su `db.put`, así que una escritura que llega después del borrado no sobrevive (`offline-store.service.ts`).
+- **Pruebas:** `stored-token-expiry.util.spec.ts` (frontera T1), `offline-expiry-wipe.service.spec.ts` (T2–T5, T8,
+  T11, D5 y el conteo de operaciones), `offline-expiry-watch.util.spec.ts` (disparadores y limpieza),
+  `offline-store.wipe.spec.ts` (carrera, bandera, T10) y `cattle-data.service.wipe-reset.spec.ts`.
+- **Fuera de alcance / pendiente:** la sesión vencida con la app abierta no redirige a `/login` (pre-existente); el
+  `storage` de otra pestaña dispara la misma revisión; `authToken` no se elimina de `localStorage` (D7, lo hace
+  `logout()`).
 
 ### Modelo de amenazas (acordado con el dueño)
 - El PIN **solo protege la interfaz**. El JWT vive en `localStorage` (`authToken`) y la caché de IndexedDB

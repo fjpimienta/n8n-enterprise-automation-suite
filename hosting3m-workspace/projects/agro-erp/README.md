@@ -398,6 +398,31 @@ ng build agro-erp --configuration=production
 ng test agro-erp
 ```
 
+### 4. Solución de problemas: simular un token vencido
+
+Para probar el borrado al vencer el token en el navegador (sin tocar ningún servidor), abre la consola en
+`http://localhost:4200` (en Firefox escribe `allow pasting` si lo pide), con una sesión iniciada. El script reescribe
+el `exp` del `authToken` guardado a hace 60 s, conservando el encabezado y la firma (el cliente no verifica la firma):
+
+```js
+(() => {
+  const k = 'authToken';
+  const t = localStorage.getItem(k);
+  const [h, p, s] = t.split('.');
+  const dec = x => JSON.parse(decodeURIComponent(escape(atob(x.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(x.length / 4) * 4, '=')))));
+  const enc = o => btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  const pay = dec(p);
+  pay.exp = Math.floor(Date.now() / 1000) - 60;
+  localStorage.setItem(k, [h, enc(pay), s].join('.'));
+  console.log('exp now:', new Date(pay.exp * 1000).toString());
+})();
+```
+
+Después, recarga la página o cambia de pestaña: la caché `agroerp-offline` debe quedar vacía (DevTools › Almacenamiento
+› IndexedDB) y no debe haber peticiones a la API. Sin `offlineGraceMs` la sesión vence al instante; con la gracia
+configurada solo vence cuando pasa la ventana. La `exp` reescrita queda inválida para el servidor: vuelve a iniciar
+sesión para seguir usando la app.
+
 ### 4. Entorno de build (⚠️ riesgo abierto)
 
 * El único archivo de entorno es [`src/environments/environment.ts`](./src/environments/environment.ts), con URLs de desarrollo (`http://localhost:5678/...`). No existe `environment.production.ts` y `angular.json` no declara `fileReplacements` para `agro-erp`, así que `--configuration=production` compila esas mismas URLs.
@@ -543,7 +568,8 @@ Hosting3M Automation Suite
 - Sesión en **gracia** (token vencido dentro de `offlineGraceMs`): no se hace ninguna petición; solo se lee la copia.
   Sin copia, se muestra un error claro. `offlineGraceGuard` bloquea toda petición a la API en gracia para no cerrar la sesión.
 - La copia **no incluye `metadata`** (puede contener precios y notas) y se descarta completa si alguna fila no es de la
-  empresa activa. Al cerrar sesión se borra la caché de lectura.
+  empresa activa. Al cerrar sesión se borra la caché de lectura. **Al vencer el token** (pasado `exp` más la gracia,
+  o 0 sin gracia) también se borra, en producción y sin HTTP: ver "Borrado al vencer el token" abajo.
 - **Limitación conocida:** en gracia el resto de las pantallas que consultan el gateway (p. ej. lotes y UPP) muestran un
   error de red. Las mutaciones no se guardan sin conexión (no hay cola todavía).
 - **PIN de desbloqueo (dormido en producción):** solo se activa al configurar `offlineGraceMs`, que el repo **no** fija.
@@ -556,8 +582,8 @@ Hosting3M Automation Suite
 
 `OfflineStoreService` (`src/app/core/services/offline-store.service.ts`) es la caché de **solo lectura**
 sobre IndexedDB (librería `idb`, base `agroerp-offline`, un object store). **Solo lo usa
-`CattleDataService` (inventario, ver arriba)**; no hay PIN, cola de escrituras ni borrado al terminar la gracia
-(decisión pendiente). Al cerrar sesión se borra con `wipeAll()`.
+`CattleDataService` (inventario, ver arriba)**; no hay cola de escrituras. Se borra al cerrar sesión (`wipeAll()`) y
+al vencer el token (ver abajo).
 
 - **API (promesas):** `put(dataset, data, expectedScope): Promise<boolean>`, `get(dataset): Promise<{ data, savedAt } | null>`,
   `wipeScope(scope)` y `wipeAll()`. `get` lee `AuthService.getSessionScope()` en cada llamada. `put` recibe el scope
