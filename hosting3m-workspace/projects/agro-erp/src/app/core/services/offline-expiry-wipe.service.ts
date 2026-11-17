@@ -32,8 +32,10 @@ export class OfflineExpiryWipeService {
   private readonly logger = inject(LoggerService);
   private readonly config = inject(AUTH_ENV_CONFIG, { optional: true });
 
-  /** Key of the stored value already confirmed wiped in this page session (kept in memory only). */
-  private confirmedFor: string | null = null;
+  /** Stored value (token, unreadable raw value or 'none') of the last confirmed wipe for an ended session. */
+  private wipedFor: string | null = null;
+  /** Stored value for which `wipe$` was already emitted in this page session. */
+  private announcedFor: string | null = null;
   private running: Promise<void> | null = null;
 
   /** Runs one check. Never rejects; safe to call from timers, listeners and the app initializer. */
@@ -49,22 +51,34 @@ export class OfflineExpiryWipeService {
   private async run(): Promise<void> {
     const expiry = readStoredTokenExpiry();
     const pending = isWipePending();
-    // One confirmed wipe per stored value: the token itself, or the unreadable raw value, or 'none'.
+    // The stored value: the token itself, the unreadable raw value, or 'none'.
     const key = expiry.kind === 'none' ? 'none' : `${expiry.kind}:${expiry.kind === 'expiry' ? expiry.token : expiry.raw ?? ''}`;
-    const due = pending
-      || expiry.kind !== 'expiry'
+    // The session has ended: the token is past its grace window, unreadable, or absent.
+    const endedSession = expiry.kind !== 'expiry'
       || isPastGraceWindow(expiry.exp, Date.now(), graceMsOf(this.config));
-    if (!due) return;
-    if (!pending && key === this.confirmedFor) return;
 
-    const noToken = expiry.kind === 'none';
-    const confirmed = await this.wipeStores(noToken);
-    if (confirmed) {
-      setWipePending(false);
-      this.confirmedFor = key;
-      this.events.notifyWiped();
-    } else {
+    if (!endedSession && !pending) {
+      // A valid or in-grace session: a copy wiped for an earlier ended session no longer applies.
+      this.events.setExpiredWipeHeld(false);
+      return;
+    }
+    if (endedSession && !pending && key === this.wipedFor) return;
+    if (expiry.kind === 'none' && !pending && this.events.isExpiredWipeHeld()) return;
+
+    const confirmed = await this.wipeStores(expiry.kind === 'none');
+    if (!confirmed) {
       this.markPending();
+      return;
+    }
+    setWipePending(false);
+    // A pending retry of a valid or in-grace session wipes the stores (fail-closed) and leaves the herd alone.
+    if (!endedSession) return;
+
+    this.wipedFor = key;
+    this.events.setExpiredWipeHeld(true);
+    if (key !== this.announcedFor) {
+      this.announcedFor = key;
+      this.events.notifyWiped();
     }
   }
 
