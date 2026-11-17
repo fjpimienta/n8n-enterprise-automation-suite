@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 
+import { Subject } from 'rxjs';
 import { AuthService } from 'core-auth';
 import { ExpenseModalComponent } from './expense-modal.component';
 
@@ -10,7 +11,8 @@ describe('ExpenseModalComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [ExpenseModalComponent],
-      providers: [{ provide: AuthService, useValue: { getSessionScope: () => null, getSessionState: () => 'expired' } }]
+      // sessionEvents$ is subscribed by CattleDataService (#1111); the herd is not read by these tests.
+      providers: [{ provide: AuthService, useValue: { getSessionScope: () => null, getSessionState: () => 'expired', sessionEvents$: new Subject() } }]
     })
     .compileComponents();
 
