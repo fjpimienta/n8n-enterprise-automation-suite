@@ -7,6 +7,7 @@ import { isNetworkFailure } from '@shared/utils/network-failure.util';
 import { findFinancialLookingColumns, sanitizeLivestockForOffline, snapshotMatchesTenant } from '@shared/utils/offline-livestock.util';
 
 const OFFLINE_NO_SNAPSHOT_MESSAGE = 'Sin conexión y sin datos guardados del inventario en este dispositivo.';
+const NO_SESSION_MESSAGE = 'No hay una sesión válida para cargar el inventario de ganado.';
 
 @Injectable({
   providedIn: 'root'
@@ -76,6 +77,14 @@ export class CattleDataService {
     const scope = this.captureScope();
     const state = this.captureState();
     try {
+      if (!scope) {
+        // Fail closed (#1111): without a verified session scope nothing is requested, cached or shown.
+        this.cattleList.set([]);
+        this.servedFromCache.set(false);
+        this.cacheSavedAt.set(null);
+        this.loadError.set(NO_SESSION_MESSAGE);
+        return;
+      }
       if (state === 'grace') {
         // No HTTP at all in grace: the auth interceptor would call logout() on the expired token.
         await this.serveFromCache(seq, scope, OFFLINE_NO_SNAPSHOT_MESSAGE, true);
