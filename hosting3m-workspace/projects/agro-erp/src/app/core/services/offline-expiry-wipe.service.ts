@@ -57,13 +57,8 @@ export class OfflineExpiryWipeService {
     const endedSession = expiry.kind !== 'expiry'
       || isPastGraceWindow(expiry.exp, Date.now(), graceMsOf(this.config));
 
-    if (!endedSession && !pending) {
-      // A valid or in-grace session: a copy wiped for an earlier ended session no longer applies.
-      this.events.setExpiredWipeHeld(false);
-      return;
-    }
+    if (!endedSession && !pending) return;
     if (endedSession && !pending && key === this.wipedFor) return;
-    if (expiry.kind === 'none' && !pending && this.events.isExpiredWipeHeld()) return;
 
     const confirmed = await this.wipeStores(expiry.kind === 'none');
     if (!confirmed) {
@@ -75,7 +70,6 @@ export class OfflineExpiryWipeService {
     if (!endedSession) return;
 
     this.wipedFor = key;
-    this.events.setExpiredWipeHeld(true);
     if (key !== this.announcedFor) {
       this.announcedFor = key;
       this.events.notifyWiped();
