@@ -10,6 +10,7 @@ import { wireOfflineLogoutWipe } from '@core/utils/offline-logout-wipe.util';
 import { wireComplianceSessionReset } from '@core/utils/compliance-session-reset.util';
 import { wirePinLogoutWipe } from '@core/utils/pin-logout-wipe.util';
 import { startOfflineSessionWatch } from '@core/utils/offline-session-watch.util';
+import { startOfflineExpiryWatch } from '@core/utils/offline-expiry-watch.util';
 import { wireLoginIdentityWipe } from '@core/utils/login-identity-wipe.util';
 import { offlineGraceGuard } from '@core/interceptors/offline-grace.interceptor';
 import { graceAuthInterceptor } from '@core/interceptors/grace-auth.interceptor';
@@ -44,6 +45,8 @@ export const appConfig: ApplicationConfig = {
     provideAppInitializer(() => wireLoginIdentityWipe()),
     // Re-checks the session (no HTTP) so an open app re-locks when it enters grace.
     provideAppInitializer(() => startOfflineSessionWatch()),
+    // Wipes the offline copies once the stored token is past its grace window, in production too (#1087, 1b-iii-c).
+    provideAppInitializer(() => startOfflineExpiryWatch()),
 
     // Configuración de la librería core-auth
     {

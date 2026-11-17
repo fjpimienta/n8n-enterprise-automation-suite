@@ -1,7 +1,8 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { DestroyRef, Injectable, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { AUTH_ENV_CONFIG, AuthService, SessionScope, SessionState } from 'core-auth';
 import { isOfflineGraceEnabled } from '@core/utils/offline-grace-config.util';
+import { OfflineWipeEventsService } from './offline-wipe-events.service';
 
 /** Route of the PIN unlock screen (outside the main layout). */
 export const UNLOCK_ROUTE = '/unlock';
@@ -27,6 +28,7 @@ export function isSameScope(a: SessionScope | null, b: SessionScope | null): boo
 export class OfflineSessionService {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  private readonly wipeEvents = inject(OfflineWipeEventsService);
 
   private unlockedFor: SessionScope | null = null;
 
@@ -51,6 +53,9 @@ export class OfflineSessionService {
   constructor() {
     // Initial sync without redirect: cold-start redirects belong to the route guards.
     this.sync();
+    // The offline copy was wiped (#1087, 1b-iii-c): a PIN unlock for it no longer applies.
+    const wiped = this.wipeEvents.wiped$.subscribe(() => { this.unlockedFor = null; this.sync(); });
+    inject(DestroyRef).onDestroy(() => wiped.unsubscribe());
   }
 
   /** Side-effect-free state read. Any failure counts as `'expired'` (fail-closed). */
