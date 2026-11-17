@@ -3,6 +3,7 @@ import { CattleApiService } from './cattle-api.service';
 import { AuthService, SessionScope, SessionState, TenantService } from 'core-auth';
 import { OfflineStoreService } from './offline-store.service';
 import { LoggerService } from './logger.service';
+import { OfflineWipeEventsService } from './offline-wipe-events.service';
 import { isNetworkFailure } from '@shared/utils/network-failure.util';
 import { findFinancialLookingColumns, sanitizeLivestockForOffline, snapshotMatchesTenant } from '@shared/utils/offline-livestock.util';
 
@@ -18,6 +19,7 @@ export class CattleDataService {
   private auth = inject(AuthService);
   private offlineStore = inject(OfflineStoreService);
   private logger = inject(LoggerService);
+  private wipeEvents = inject(OfflineWipeEventsService);
 
   // States reactivos globales del dominio ganadero
   public cattleList = signal<any[]>([]);
@@ -66,6 +68,8 @@ export class CattleDataService {
         this.resetState();
         if (tenantId) this.tenantEpoch.update(n => n + 1);
       }),
+      // The offline copy was wiped on expiry (#1087, 1b-iii-c): drop what is held in memory too.
+      this.wipeEvents.wiped$.subscribe(() => this.resetState()),
     ];
     inject(DestroyRef).onDestroy(() => subscriptions.forEach(subscription => subscription.unsubscribe()));
 
