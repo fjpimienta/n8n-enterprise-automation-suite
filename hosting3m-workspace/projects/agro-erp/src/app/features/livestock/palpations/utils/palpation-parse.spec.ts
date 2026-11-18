@@ -90,9 +90,16 @@ describe('parseEventRows', () => {
     expect(r).toEqual({ ok: false, reason: 'foreign-company' });
   });
 
-  it('rejects an invalid event date', () => {
+  it('rejects an invalid event date as an unexpected date shape', () => {
     const r = parseEventRows(envelope([eventWire({ event_date: 'not-a-date' })]), SYNTHETIC_TENANT);
-    expect(r).toEqual({ ok: false, reason: 'unexpected-shape' });
+    expect(r).toEqual({ ok: false, reason: 'unexpected-date-shape' });
+  });
+
+  it('accepts the gateway midnight (06:00Z) and rejects a date whose UTC time is after 12:00 as unexpected date shape', () => {
+    const ok = parseEventRows(envelope([eventWire({ event_date: '2026-11-12T06:00:00.000Z' })]), SYNTHETIC_TENANT);
+    expect(ok.ok && ok.rows[0]?.event_date).toBe('2026-11-12');
+    const bad = parseEventRows(envelope([eventWire({ event_date: '2026-11-12T18:00:00.000Z' })]), SYNTHETIC_TENANT);
+    expect(bad).toEqual({ ok: false, reason: 'unexpected-date-shape' });
   });
 
   it('accepts booleans sent as text', () => {
@@ -112,6 +119,11 @@ describe('parseHerdRows', () => {
     if (!r.ok) return;
     expect(r.rows[0]?.palpation_count).toBe(0);
     expect(r.rows[0]?.last_event_date).toBeNull();
+  });
+
+  it('rejects a last_event_date after 12:00 UTC as unexpected date shape', () => {
+    const r = parseHerdRows(envelope([herdWire({ last_event_date: '2026-11-10T18:00:00.000Z' })]), SYNTHETIC_TENANT);
+    expect(r).toEqual({ ok: false, reason: 'unexpected-date-shape' });
   });
 
   it('rejects a negative palpation count', () => {

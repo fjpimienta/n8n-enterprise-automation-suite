@@ -61,6 +61,9 @@ export function parseEnvelope(text: string | null | undefined): ParseOutcome<Jso
 
 class ShapeError extends Error {}
 
+/** A date that is not the gateway's calendar-day shape. Reported on its own so the UI can say so. */
+class DateShapeError extends Error {}
+
 function toInt(v: unknown, field: string): number {
   const n = typeof v === 'string' && v.trim() !== '' ? Number(v) : v;
   if (typeof n !== 'number' || !Number.isInteger(n)) throw new ShapeError(field);
@@ -97,7 +100,7 @@ function toTextOrNull(v: unknown, field: string): string | null {
 
 function toDate(v: unknown, field: string): string {
   const d = calendarDateOf(typeof v === 'string' ? v : null);
-  if (d === null) throw new ShapeError(field);
+  if (d === null) throw new DateShapeError(field);
   return d;
 }
 
@@ -206,5 +209,6 @@ export function parseHerdRows(text: string | null | undefined, tenantId: number)
 
 function reasonOf(e: unknown): ReportErrorReason {
   if (e instanceof ForeignCompany) return 'foreign-company';
+  if (e instanceof DateShapeError) return 'unexpected-date-shape';
   return 'unexpected-shape';
 }

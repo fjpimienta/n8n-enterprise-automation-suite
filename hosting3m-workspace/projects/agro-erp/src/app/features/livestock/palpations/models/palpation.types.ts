@@ -86,6 +86,7 @@ export type ReportErrorReason =
   | 'gateway-error'     // HTTP 200 with error:true
   | 'http-error'        // any other HTTP status
   | 'unexpected-shape'  // data is not an array, or a row does not match the contract
+  | 'unexpected-date-shape' // a date is not the gateway's calendar-day shape (for example a UTC time after 12:00)
   | 'foreign-company'   // a row belongs to another company: the whole response is discarded
   | 'network'           // offline or interrupted
   | 'session-expired'   // the session changed while the request was in flight, or it is expired
