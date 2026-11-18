@@ -11,6 +11,8 @@ import {
   NgApexchartsModule,
 } from 'ng-apexcharts';
 import { PalpationEventRow, PalpationHerdRow } from '../../models/palpation.types';
+import { FAMILY_COLOR, labelColorOn } from '../../utils/palpation-colors';
+import { PalpationSwatchComponent } from '../palpation-swatch/palpation-swatch.component';
 import {
   describeDistribution,
   describeHerd,
@@ -21,9 +23,17 @@ import {
 } from '../../utils/palpation-chart-data';
 import { Period } from '../../utils/palpation-metrics';
 
-const BAR_COLORS = ['#2fb344', '#2fb344', '#2fb344', '#2fb344', '#d63939', '#d63939', '#d63939', '#d63939', '#ae3ec9', '#8b95a5', '#f76707'];
-const MONTH_COLORS = ['#2fb344', '#d63939', '#ae3ec9', '#8b95a5', '#f76707'];
-const HERD_COLORS = ['#2fb344', '#4299e1', '#f76707', '#8b95a5'];
+/** Colours of the monthly series, one per family, in the order of `resultsByMonth`: the same families as the cards and the table. */
+const MONTH_COLORS: readonly string[] = [FAMILY_COLOR.pregnant, FAMILY_COLOR.empty, FAMILY_COLOR.ranch, FAMILY_COLOR.noResult, FAMILY_COLOR.historical];
+
+/** Text, grid and tooltip colours per theme. The chart background is always transparent so it takes the colour of its card. */
+const THEME_TOKENS = {
+  dark: { fore: '#cbd5e1', grid: '#2d3a4f' },
+  light: { fore: '#374151', grid: '#e3e6ea' },
+} as const;
+
+/** Phone breakpoint of the horizontal bar chart: narrower axis labels so the bars keep their room. */
+const PHONE_MAX_WIDTH = 576;
 
 /**
  * The three charts of the report. Each one sits in a `role="img"` container with a text summary in `aria-label`, shows its numbers as data
@@ -33,7 +43,7 @@ const HERD_COLORS = ['#2fb344', '#4299e1', '#f76707', '#8b95a5'];
 @Component({
   selector: 'app-palpation-charts',
   standalone: true,
-  imports: [NgApexchartsModule],
+  imports: [NgApexchartsModule, PalpationSwatchComponent],
   templateUrl: './palpation-charts.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -59,46 +69,89 @@ export class PalpationChartsComponent {
   protected readonly showHerdTable = signal(false);
 
   protected readonly themeMode = computed(() => ({ mode: this.themeService.currentTheme() }));
+  protected readonly tokens = computed(() => THEME_TOKENS[this.themeService.currentTheme()]);
+  protected readonly monthlyColors = MONTH_COLORS;
 
   protected readonly distributionChart = computed(() => {
     const items = this.distribution();
+    const t = this.tokens();
+    const fullNames = items.map(i => i.label);
+    const max = Math.max(1, ...items.map(i => i.count));
     return {
       series: [{ name: 'Animales', data: items.map(i => i.count) }] as ApexAxisChartSeries,
-      chart: { type: 'bar', height: Math.max(220, items.length * 44 + 60), toolbar: { show: false } } as ApexChart,
-      plotOptions: { bar: { horizontal: true, distributed: true, borderRadius: 3 } } as ApexPlotOptions,
-      xaxis: { categories: items.map(i => i.label) } as ApexXAxis,
-      dataLabels: { enabled: true } as ApexDataLabels,
+      chart: {
+        type: 'bar',
+        height: Math.max(220, items.length * 40 + 60),
+        toolbar: { show: false },
+        background: 'transparent',
+        foreColor: t.fore,
+      } as ApexChart,
+      plotOptions: { bar: { horizontal: true, distributed: true, borderRadius: 3, barHeight: '72%' } } as ApexPlotOptions,
+      xaxis: { categories: items.map(i => i.short), tickAmount: Math.min(max, 5), labels: { formatter: (v: string) => String(Math.round(Number(v))) } } as ApexXAxis,
+      yaxis: { labels: { maxWidth: 175, style: { fontSize: '12px' } } },
+      // Each bar's own colour comes from its category; the number inside is dark or white depending on that colour.
+      dataLabels: { enabled: true, style: { colors: items.map(i => labelColorOn(i.color)), fontSize: '12px' } } as ApexDataLabels,
       legend: { show: false } as ApexLegend,
-      colors: BAR_COLORS,
+      colors: items.map(i => i.color),
+      grid: { borderColor: t.grid },
+      stroke: { show: true, width: 1, colors: ['transparent'] },
+      tooltip: {
+        x: { formatter: (_value: unknown, opts?: { dataPointIndex?: number }) => fullNames[opts?.dataPointIndex ?? -1] ?? '' },
+        y: {
+          title: { formatter: () => '' },
+          formatter: (v: number) => `${v} ${v === 1 ? 'animal' : 'animales'}`,
+        },
+      },
+      responsive: [{ breakpoint: PHONE_MAX_WIDTH, options: { yaxis: { labels: { maxWidth: 140, style: { fontSize: '11px' } } }, dataLabels: { style: { fontSize: '11px' } } } }],
     };
   });
 
   protected readonly monthlyChart = computed(() => {
     const data = this.monthly();
+    const t = this.tokens();
     return {
       series: data.series.map(s => ({ name: s.name, data: [...s.data] })) as ApexAxisChartSeries,
-      chart: { type: 'bar', stacked: true, height: 320, toolbar: { show: false } } as ApexChart,
+      chart: { type: 'bar', stacked: true, height: 320, toolbar: { show: false }, background: 'transparent', foreColor: t.fore } as ApexChart,
       plotOptions: { bar: { columnWidth: '55%' } } as ApexPlotOptions,
       xaxis: { categories: [...data.months] } as ApexXAxis,
-      dataLabels: { enabled: true } as ApexDataLabels,
-      legend: { position: 'bottom' } as ApexLegend,
-      colors: MONTH_COLORS,
+      yaxis: { labels: { formatter: (v: number) => String(Math.round(v)) } },
+      dataLabels: { enabled: true, style: { colors: ['#ffffff'] } } as ApexDataLabels,
+      legend: { position: 'bottom', labels: { colors: t.fore } } as ApexLegend,
+      colors: [...MONTH_COLORS],
+      grid: { borderColor: t.grid },
+      stroke: { show: true, width: 1, colors: ['transparent'] },
+      tooltip: { y: { formatter: (v: number) => `${v} ${v === 1 ? 'evento' : 'eventos'}` } },
     };
   });
 
   protected readonly herdChart = computed(() => {
     const bars = this.herdData().bars;
+    const t = this.tokens();
     return {
       series: bars.map(b => b.count) as ApexNonAxisChartSeries,
       labels: bars.map(b => `${b.label}: ${b.count}`),
-      chart: { type: 'donut', height: 300 } as ApexChart,
+      chart: { type: 'donut', height: 300, background: 'transparent', foreColor: t.fore } as ApexChart,
+      plotOptions: {
+        pie: {
+          donut: {
+            size: '62%',
+            labels: {
+              show: true,
+              name: { color: t.fore },
+              value: { color: t.fore },
+              total: { show: true, label: 'Hato aplicable', color: t.fore, formatter: () => String(this.herdTotal()) },
+            },
+          },
+        },
+      } as ApexPlotOptions,
+      stroke: { show: true, width: 2, colors: ['transparent'] },
       dataLabels: {
         enabled: true,
         formatter: (_value: number, opts: { seriesIndex: number; w: { config: { series: number[] } } }) =>
           String(opts.w.config.series[opts.seriesIndex] ?? 0),
       } as ApexDataLabels,
-      legend: { position: 'bottom' } as ApexLegend,
-      colors: HERD_COLORS,
+      legend: { position: 'bottom', labels: { colors: t.fore } } as ApexLegend,
+      colors: bars.map(b => b.color),
     };
   });
 

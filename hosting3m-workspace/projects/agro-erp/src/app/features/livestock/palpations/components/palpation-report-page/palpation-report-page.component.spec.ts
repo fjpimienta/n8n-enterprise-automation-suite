@@ -14,6 +14,11 @@ class ApexChartDouble {
   readonly chart = input<unknown>();
   readonly labels = input<unknown>();
   readonly plotOptions = input<unknown>();
+  readonly yaxis = input<unknown>();
+  readonly grid = input<unknown>();
+  readonly stroke = input<unknown>();
+  readonly tooltip = input<unknown>();
+  readonly responsive = input<unknown>();
   readonly xaxis = input<unknown>();
   readonly dataLabels = input<unknown>();
   readonly legend = input<unknown>();

@@ -19,6 +19,8 @@
           <div role="img" [attr.aria-label]="distributionLabel()" data-testid="chart-distribution">
             <apx-chart [series]="distributionChart().series" [chart]="distributionChart().chart"
               [plotOptions]="distributionChart().plotOptions" [xaxis]="distributionChart().xaxis"
+              [yaxis]="distributionChart().yaxis" [grid]="distributionChart().grid" [stroke]="distributionChart().stroke"
+              [tooltip]="distributionChart().tooltip" [responsive]="distributionChart().responsive"
               [dataLabels]="distributionChart().dataLabels" [legend]="distributionChart().legend"
               [colors]="distributionChart().colors" [theme]="themeMode()"></apx-chart>
           </div>
@@ -29,7 +31,7 @@
             <thead><tr><th scope="col">Resultado</th><th scope="col" class="text-end">Animales</th></tr></thead>
             <tbody>
               @for (item of distribution(); track item.key) {
-                <tr><th scope="row" class="fw-normal">{{ item.label }}</th><td class="text-end">{{ item.count }}</td></tr>
+                <tr><th scope="row" class="fw-normal"><app-palp-swatch [color]="item.color" />{{ item.label }}</th><td class="text-end">{{ item.count }}</td></tr>
               }
             </tbody>
           </table>
@@ -58,6 +60,7 @@
           <div role="img" [attr.aria-label]="monthlyLabel()" data-testid="chart-monthly">
             <apx-chart [series]="monthlyChart().series" [chart]="monthlyChart().chart"
               [plotOptions]="monthlyChart().plotOptions" [xaxis]="monthlyChart().xaxis"
+              [yaxis]="monthlyChart().yaxis" [grid]="monthlyChart().grid" [stroke]="monthlyChart().stroke" [tooltip]="monthlyChart().tooltip"
               [dataLabels]="monthlyChart().dataLabels" [legend]="monthlyChart().legend"
               [colors]="monthlyChart().colors" [theme]="themeMode()"></apx-chart>
           </div>
@@ -69,7 +72,9 @@
               <thead>
                 <tr>
                   <th scope="col">Mes</th>
-                  @for (s of monthly().series; track s.name) { <th scope="col" class="text-end">{{ s.name }}</th> }
+                  @for (s of monthly().series; track s.name; let i = $index) {
+                    <th scope="col" class="text-end"><app-palp-swatch [color]="monthlyColors[i]" />{{ s.name }}</th>
+                  }
                 </tr>
               </thead>
               <tbody>
@@ -108,6 +113,7 @@
             } @else {
               <div role="img" [attr.aria-label]="herdLabel()" data-testid="chart-herd">
                 <apx-chart [series]="herdChart().series" [labels]="herdChart().labels" [chart]="herdChart().chart"
+                  [plotOptions]="herdChart().plotOptions" [stroke]="herdChart().stroke"
                   [dataLabels]="herdChart().dataLabels" [legend]="herdChart().legend"
                   [colors]="herdChart().colors" [theme]="themeMode()"></apx-chart>
               </div>
@@ -135,7 +141,7 @@
             <thead><tr><th scope="col">Estado</th><th scope="col" class="text-end">Animales</th></tr></thead>
             <tbody>
               @for (bar of herdData().bars; track bar.bucket) {
-                <tr><th scope="row" class="fw-normal">{{ bar.label }}</th><td class="text-end">{{ bar.count }}</td></tr>
+                <tr><th scope="row" class="fw-normal"><app-palp-swatch [color]="bar.color" />{{ bar.label }}</th><td class="text-end">{{ bar.count }}</td></tr>
               }
             </tbody>
           </table>
