@@ -38,6 +38,20 @@ interface Column {
   standalone: true,
   imports: [NgTemplateOutlet, TableToolbarComponent, TableFooterComponent, PalpationSwatchComponent],
   templateUrl: './palpation-table.component.html',
+  // In the dark theme the stock outline-primary button is dark blue on near-black (low contrast): lighten text and border there only.
+  styles: [
+    `
+      :host-context([data-bs-theme='dark']) .palp-open {
+        color: #8ab8ee;
+        border-color: #8ab8ee;
+      }
+      :host-context([data-bs-theme='dark']) .palp-open:hover {
+        color: #ffffff;
+        background-color: #206bc4;
+        border-color: #206bc4;
+      }
+    `,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PalpationTableComponent {

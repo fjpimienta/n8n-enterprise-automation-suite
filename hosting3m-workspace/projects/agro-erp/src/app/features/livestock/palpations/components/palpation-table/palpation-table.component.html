@@ -66,7 +66,7 @@
               <td>{{ row.currentStatus }}</td>
               <td><ng-container *ngTemplateOutlet="detailTpl; context: { $implicit: row }" /></td>
               <td class="text-end">
-                <button type="button" class="btn btn-sm btn-outline-primary" data-testid="open-row"
+                <button type="button" class="btn btn-sm btn-outline-primary palp-open" data-testid="open-row"
                   [attr.aria-label]="'Ver historial de palpaciones de ' + row.identifier" (click)="open($event, row)">Ver historial</button>
               </td>
             </tr>
@@ -93,7 +93,7 @@
           @if (row.technician) {
             <div class="text-muted small mt-1">Técnico: {{ row.technician }}</div>
           }
-          <button type="button" class="btn btn-sm btn-outline-primary mt-2" data-testid="open-card"
+          <button type="button" class="btn btn-sm btn-outline-primary palp-open mt-2" data-testid="open-card"
             [attr.aria-label]="'Ver historial de palpaciones de ' + row.identifier" (click)="open($event, row)">Ver historial</button>
         </li>
       }

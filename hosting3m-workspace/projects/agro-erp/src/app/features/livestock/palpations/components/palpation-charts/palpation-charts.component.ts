@@ -32,8 +32,14 @@ const THEME_TOKENS = {
   light: { fore: '#374151', grid: '#e3e6ea' },
 } as const;
 
-/** Phone breakpoint of the horizontal bar chart: narrower axis labels so the bars keep their room. */
+/**
+ * Phone breakpoint of the horizontal bar chart and the width reserved for its axis labels. ApexCharts cuts a label that is wider than this
+ * with "..." and keeps the full text in a <title>; the longest short name ("Rancho · MATRIZ OCUPADA") has to fit, so it is measured in a real
+ * browser at both sizes (desktop 12px, phone 11px) and not guessed.
+ */
 const PHONE_MAX_WIDTH = 576;
+const AXIS_LABEL_MAX_WIDTH = 215;
+const AXIS_LABEL_MAX_WIDTH_PHONE = 200;
 
 /**
  * The three charts of the report. Each one sits in a `role="img"` container with a text summary in `aria-label`, shows its numbers as data
@@ -45,6 +51,19 @@ const PHONE_MAX_WIDTH = 576;
   standalone: true,
   imports: [NgApexchartsModule, PalpationSwatchComponent],
   templateUrl: './palpation-charts.component.html',
+  // In the dark theme the stock outline-secondary button is grey on near-black (low contrast): lighten text and border there only.
+  styles: [
+    `
+      :host-context([data-bs-theme='dark']) .palp-toggle {
+        color: #c3cedc;
+        border-color: #8696ab;
+      }
+      :host-context([data-bs-theme='dark']) .palp-toggle:hover {
+        color: #ffffff;
+        background-color: #4a5a70;
+      }
+    `,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PalpationChartsComponent {
@@ -88,7 +107,7 @@ export class PalpationChartsComponent {
       } as ApexChart,
       plotOptions: { bar: { horizontal: true, distributed: true, borderRadius: 3, barHeight: '72%' } } as ApexPlotOptions,
       xaxis: { categories: items.map(i => i.short), tickAmount: Math.min(max, 5), labels: { formatter: (v: string) => String(Math.round(Number(v))) } } as ApexXAxis,
-      yaxis: { labels: { maxWidth: 175, style: { fontSize: '12px' } } },
+      yaxis: { labels: { maxWidth: AXIS_LABEL_MAX_WIDTH, style: { fontSize: '12px' } } },
       // Each bar's own colour comes from its category; the number inside is dark or white depending on that colour.
       dataLabels: { enabled: true, style: { colors: items.map(i => labelColorOn(i.color)), fontSize: '12px' } } as ApexDataLabels,
       legend: { show: false } as ApexLegend,
@@ -102,7 +121,7 @@ export class PalpationChartsComponent {
           formatter: (v: number) => `${v} ${v === 1 ? 'animal' : 'animales'}`,
         },
       },
-      responsive: [{ breakpoint: PHONE_MAX_WIDTH, options: { yaxis: { labels: { maxWidth: 140, style: { fontSize: '11px' } } }, dataLabels: { style: { fontSize: '11px' } } } }],
+      responsive: [{ breakpoint: PHONE_MAX_WIDTH, options: { yaxis: { labels: { maxWidth: AXIS_LABEL_MAX_WIDTH_PHONE, style: { fontSize: '11px' } } }, dataLabels: { style: { fontSize: '11px' } } } }],
     };
   });
 
@@ -139,7 +158,7 @@ export class PalpationChartsComponent {
               show: true,
               name: { color: t.fore },
               value: { color: t.fore },
-              total: { show: true, label: 'Hato aplicable', color: t.fore, formatter: () => String(this.herdTotal()) },
+              total: { show: true, label: 'En el gráfico', color: t.fore, formatter: () => String(this.herdTotal()) },
             },
           },
         },

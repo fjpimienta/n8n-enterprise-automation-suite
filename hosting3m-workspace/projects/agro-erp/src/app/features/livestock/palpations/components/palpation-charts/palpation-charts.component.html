@@ -5,7 +5,7 @@
       <div class="card-header">
         <h3 class="card-title" id="palp-chart-1-title">Resultado por animal</h3>
         <div class="card-actions">
-          <button type="button" class="btn btn-sm btn-outline-secondary" data-testid="toggle-distribution"
+          <button type="button" class="btn btn-sm btn-outline-secondary palp-toggle" data-testid="toggle-distribution"
             [attr.aria-expanded]="showDistributionTable()" aria-controls="palp-dist-table"
             (click)="showDistributionTable.set(!showDistributionTable())">
             {{ showDistributionTable() ? 'Ocultar tabla' : 'Ver tabla' }}
@@ -46,7 +46,7 @@
       <div class="card-header">
         <h3 class="card-title" id="palp-chart-2-title">Palpaciones por mes</h3>
         <div class="card-actions">
-          <button type="button" class="btn btn-sm btn-outline-secondary" data-testid="toggle-monthly"
+          <button type="button" class="btn btn-sm btn-outline-secondary palp-toggle" data-testid="toggle-monthly"
             [attr.aria-expanded]="showMonthlyTable()" aria-controls="palp-month-table"
             (click)="showMonthlyTable.set(!showMonthlyTable())">
             {{ showMonthlyTable() ? 'Ocultar tabla' : 'Ver tabla' }}
@@ -98,7 +98,7 @@
       <div class="card-header">
         <h3 class="card-title" id="palp-chart-3-title">Estado del hato</h3>
         <div class="card-actions">
-          <button type="button" class="btn btn-sm btn-outline-secondary" data-testid="toggle-herd"
+          <button type="button" class="btn btn-sm btn-outline-secondary palp-toggle" data-testid="toggle-herd"
             [attr.aria-expanded]="showHerdTable()" aria-controls="palp-herd-table"
             (click)="showHerdTable.set(!showHerdTable())">
             {{ showHerdTable() ? 'Ocultar tabla' : 'Ver tabla' }}
