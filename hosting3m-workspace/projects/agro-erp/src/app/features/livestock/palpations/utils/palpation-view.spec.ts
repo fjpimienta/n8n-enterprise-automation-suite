@@ -4,6 +4,7 @@ import {
   HISTORICAL_BADGE,
   STATE_LABEL,
   buildTableRows,
+  buildTimeline,
   distinctStatuses,
   filterRows,
   formatDate,
@@ -98,6 +99,44 @@ describe('table rows', () => {
     expect(by('A5').ranchTerm).toBe('RP');
     expect(by('A5').state).toBe('TERMINO_RANCHO');
     expect(by('A9').state).toBe('SIN_RESULTADO');
+  });
+});
+
+describe('timeline of one animal', () => {
+  const rows = [
+    eventRow({ livestock_id: 'A', health_log_id: 'a', event_date: '2026-10-01', result: 'VACÍA', repro_condition: 'CICLANDO', mapping_status: 'EXPLICIT' }),
+    eventRow({ livestock_id: 'A', health_log_id: 'b', event_date: '2026-11-05', result: 'PREÑADA', gestation_days: 60, technician: 'Técnico sintético' }),
+    eventRow({ livestock_id: 'A', health_log_id: 'c', event_date: '2026-10-20', result: 'VACÍA', ranch_term: 'NR', counts_as_palpation: false, is_clinical_result: false }),
+    eventRow({ livestock_id: 'A', health_log_id: 'd', event_date: '2023-07-20', result: 'VACÍA', is_historical_load: true }),
+  ];
+
+  it('lists the events newest first', () => {
+    expect(buildTimeline(rows).map(e => e.id)).toEqual(['b', 'c', 'a', 'd']);
+  });
+
+  it('keeps gestation for a pregnant entry, the sub-type for an empty one and the technician', () => {
+    const t = buildTimeline(rows);
+    expect(t[0]?.gestation).toEqual({ months: 2, days: 60 });
+    expect(t[0]?.technician).toBe('Técnico sintético');
+    expect(t[2]?.subtype).toBe('CICLANDO');
+    expect(t[2]?.gestation).toBeNull();
+  });
+
+  it('lists NR but marks it as not counted, and flags the historical load', () => {
+    const t = buildTimeline(rows);
+    expect(t[1]?.counts).toBe(false);
+    expect(t[1]?.ranchTerm).toBe('NR');
+    expect(t[3]?.historical).toBe(true);
+  });
+
+  it('keeps an unconfirmed code as typed and nothing else', () => {
+    const t = buildTimeline([eventRow({ livestock_id: 'A', health_log_id: 'u', result: 'VACÍA', mapping_status: 'UNMAPPED', raw_code: 'IF15' })]);
+    expect(t[0]?.unconfirmed).toBe(true);
+    expect(t[0]?.unconfirmedCode).toBe('IF15');
+  });
+
+  it('is empty for an animal without events', () => {
+    expect(buildTimeline([])).toEqual([]);
   });
 });
 

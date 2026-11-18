@@ -147,6 +147,48 @@ export function buildTableRows(
   return rows;
 }
 
+/** One event of the timeline of an animal, newest first. NR entries are listed but do not count as a palpation. */
+export interface TimelineEntry {
+  readonly id: string;
+  readonly date: string;
+  readonly state: AnimalState;
+  readonly ranchTerm: RanchTerm | null;
+  readonly subtype: EmptySubtype | null;
+  readonly gestation: { readonly months: number; readonly days: number } | null;
+  readonly technician: string | null;
+  /** The code as typed, only when it is unconfirmed. Never interpreted. */
+  readonly unconfirmedCode: string | null;
+  readonly unconfirmed: boolean;
+  readonly historical: boolean;
+  /** False for NR: the animal was not examined. */
+  readonly counts: boolean;
+}
+
+export function buildTimeline(rows: readonly PalpationEventRow[]): TimelineEntry[] {
+  return [...rows]
+    .sort((a, b) =>
+      a.event_date !== b.event_date ? (a.event_date < b.event_date ? 1 : -1)
+        : a.created_at !== b.created_at ? (a.created_at < b.created_at ? 1 : -1)
+          : a.health_log_id < b.health_log_id ? 1 : -1)
+    .map((e): TimelineEntry => {
+      const state = animalState(e);
+      const subtype = state === 'VACÍA' ? emptySubtypeOf(e) : null;
+      return {
+        id: e.health_log_id,
+        date: e.event_date,
+        state,
+        ranchTerm: e.ranch_term,
+        subtype,
+        gestation: state === 'PREÑADA' ? gestationOf(e) : null,
+        technician: e.technician,
+        unconfirmedCode: e.mapping_status === 'UNMAPPED' ? e.raw_code : null,
+        unconfirmed: e.mapping_status === 'UNMAPPED',
+        historical: e.is_historical_load,
+        counts: e.counts_as_palpation,
+      };
+    });
+}
+
 export type RowFilterResult = 'TODOS' | AnimalState;
 
 export interface RowFilter {

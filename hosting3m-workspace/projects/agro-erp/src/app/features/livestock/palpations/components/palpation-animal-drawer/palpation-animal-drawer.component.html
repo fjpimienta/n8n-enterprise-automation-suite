@@ -1,0 +1,100 @@
+<div class="modal modal-blur fade show" style="display: block; background: rgba(0,0,0,0.5);" tabindex="-1"
+  data-testid="drawer-backdrop" (click)="onBackdrop($event)" (keydown)="onKeydown($event)">
+  <div #panel class="modal-dialog palp-drawer-dialog" role="dialog" aria-modal="true" tabindex="-1"
+    aria-labelledby="palp-drawer-title" aria-describedby="palp-drawer-subtitle">
+    <div class="modal-content shadow-lg border-0 palp-drawer-content">
+      <div class="modal-header">
+        <div>
+          <h2 class="modal-title h4" id="palp-drawer-title">Historial de palpaciones</h2>
+          <div class="text-muted small" id="palp-drawer-subtitle">{{ animal().identifier }} · {{ animal().category }}</div>
+        </div>
+        <button #closeButton type="button" class="btn-close" aria-label="Cerrar historial" (click)="closed.emit()"></button>
+      </div>
+
+      <div class="modal-body">
+        @switch (phase()) {
+          @case ('cargando') {
+            <div role="status" aria-live="polite" aria-busy="true" class="text-center py-4">
+              <div class="spinner-border text-primary mb-2" aria-hidden="true"></div>
+              <div>Cargando historial…</div>
+            </div>
+          }
+          @case ('error') {
+            <div class="alert alert-danger" role="alert">
+              <h3 class="alert-title h4">No se pudo cargar el historial</h3>
+              <div class="text-secondary mb-2">{{ detail() }}</div>
+              <button type="button" class="btn btn-sm btn-outline-danger" (click)="load()">Reintentar</button>
+            </div>
+          }
+          @default {
+            @if (entries().length === 0) {
+              <p class="text-muted text-center py-4 m-0" data-testid="drawer-empty">Sin palpaciones registradas</p>
+            } @else {
+              @if (counted() === 1) {
+                <div class="alert alert-info" role="status" data-testid="drawer-single">Este animal tiene una sola palpación</div>
+              }
+              <ol class="list-unstyled m-0" data-testid="timeline">
+                @for (entry of entries(); track entry.id; let first = $first) {
+                  <li class="border-bottom pb-3 mb-3">
+                    <div class="d-flex justify-content-between align-items-center gap-2">
+                      <strong>{{ formatDate(entry.date) }}</strong>
+                      @if (first) {
+                        <span class="badge bg-blue-lt">Más reciente</span>
+                      }
+                    </div>
+                    <div class="mt-1">
+                      @switch (entry.state) {
+                        @case ('PREÑADA') {
+                          <span class="badge bg-green-lt"><span aria-hidden="true">▲ </span>Preñada</span>
+                        }
+                        @case ('VACÍA') {
+                          <span class="badge bg-red-lt"><span aria-hidden="true">▼ </span>Vacía</span>
+                        }
+                        @case ('TERMINO_RANCHO') {
+                          @if (entry.counts) {
+                            <span class="badge bg-purple-lt">Término del rancho: {{ entry.ranchTerm }}</span>
+                          } @else {
+                            <span class="badge bg-purple-lt">No examinada ({{ entry.ranchTerm }})</span>
+                          }
+                          <span class="badge bg-secondary-lt">{{ ranchBadge }}</span>
+                        }
+                        @case ('SIN_RESULTADO') {
+                          <span class="badge bg-secondary-lt">Sin resultado</span>
+                        }
+                        @default {
+                          <span class="badge bg-yellow-lt">Sin interpretar</span>
+                        }
+                      }
+                      @if (entry.historical) {
+                        <span class="badge bg-orange-lt">{{ historicalBadge }}</span>
+                      }
+                      @if (showUnconfirmed(entry)) {
+                        <span class="badge bg-yellow-lt">{{ unconfirmedBadge }}@if (entry.unconfirmedCode) {: {{ entry.unconfirmedCode }}}</span>
+                      }
+                    </div>
+                    @if (entry.state === 'PREÑADA') {
+                      <div class="small mt-1">Gestación: {{ formatGestation(entry.gestation) }}</div>
+                    }
+                    @if (subtypeText(entry); as sub) {
+                      <div class="small mt-1">Subtipo: {{ sub }}</div>
+                    }
+                    @if (entry.technician) {
+                      <div class="text-muted small mt-1">Técnico: {{ entry.technician }}</div>
+                    }
+                    @if (!entry.counts) {
+                      <div class="text-muted small mt-1">No cuenta como palpada.</div>
+                    }
+                  </li>
+                }
+              </ol>
+            }
+          }
+        }
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closed.emit()">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
