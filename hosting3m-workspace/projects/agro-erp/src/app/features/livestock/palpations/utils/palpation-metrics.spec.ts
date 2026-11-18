@@ -209,10 +209,20 @@ describe('herd buckets', () => {
     expect(herdBucket(herd({ current_status: 'BAJA_DEPURACION_DATOS' }), CAMPAIGN)).toBe('fuera-del-hato');
   });
 
-  it('marks toros, becerros, becerras and novillos as "no aplica"', () => {
+  it('marks a bull, calf or steer without palpations as "no aplica"', () => {
     for (const category of ['TORO', 'BECERRO', 'BECERRA', 'NOVILLO']) {
-      expect(herdBucket(herd({ category }), CAMPAIGN)).toBe('no-aplica');
+      expect(herdBucket(herd({ category, palpation_count: 0, last_event_date: null, last_result: null }), CAMPAIGN)).toBe('no-aplica');
     }
+  });
+
+  it('puts a steer WITH palpations in its date bucket, not in "no aplica"', () => {
+    expect(herdBucket(herd({ category: 'NOVILLO', palpation_count: 2, last_event_date: '2026-11-01' }), CAMPAIGN)).toBe('vigente');
+    expect(herdBucket(herd({ category: 'NOVILLO', palpation_count: 1, last_event_date: '2023-07-20', last_is_historical: true }), CAMPAIGN)).toBe('historico');
+  });
+
+  it('marks a VACA or NOVILLONA without palpations as "sin palpar"', () => {
+    expect(herdBucket(herd({ category: 'VACA', palpation_count: 0, last_event_date: null }), CAMPAIGN)).toBe('sin-palpar');
+    expect(herdBucket(herd({ category: 'NOVILLONA', palpation_count: 0, last_event_date: null }), CAMPAIGN)).toBe('sin-palpar');
   });
 
   it('marks an animal never palpated as "sin palpar" (palpation_count 0)', () => {

@@ -201,19 +201,23 @@ export type HerdBucket =
   | 'fuera-del-hato';
 
 /**
- * Bucket of an animal in the herd chart. Order matters: sales and mortality are in their own legend, terminal statuses leave the herd,
- * other categories are "no aplica", then the palpation state of the animal.
+ * Bucket of an animal in the herd chart, in this order:
+ *  1. VENDIDO or BAJA_MORTANDAD: the separate legend. Terminal statuses shared with herd-status.util leave the herd.
+ *  2. Any palpation (palpation_count > 0): its date bucket (histórico, vigente, anterior), whatever its category.
+ *  3. No palpation and a category other than VACA or NOVILLONA: "no aplica".
+ *  4. No palpation and VACA or NOVILLONA: "sin palpar".
  */
 export function herdBucket(row: PalpationHerdRow, campaign: string | null): HerdBucket {
   const status = (row.current_status ?? '').trim().toUpperCase();
   if (status === 'VENDIDO') return 'vendido';
   if (status === 'BAJA_MORTANDAD') return 'baja-mortandad';
   if (!isActiveHead(row)) return 'fuera-del-hato';
-  if (!isApplicable(row)) return 'no-aplica';
-  if (row.palpation_count === 0) return 'sin-palpar';
-  if (row.last_is_historical === true) return 'historico';
-  if (campaign !== null && row.last_event_date !== null && compareCalendarDates(row.last_event_date, campaign) >= 0) return 'vigente';
-  return 'anterior';
+  if (row.palpation_count > 0) {
+    if (row.last_is_historical === true) return 'historico';
+    if (campaign !== null && row.last_event_date !== null && compareCalendarDates(row.last_event_date, campaign) >= 0) return 'vigente';
+    return 'anterior';
+  }
+  return isApplicable(row) ? 'sin-palpar' : 'no-aplica';
 }
 
 function isApplicable(row: PalpationHerdRow): boolean {
