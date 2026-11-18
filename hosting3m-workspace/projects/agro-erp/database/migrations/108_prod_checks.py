@@ -7,9 +7,11 @@ prints a response body, a row, an identifier or the token. The token comes from 
 Who may run it: a user that is a member of company 3 ("Rancho El Palomar", test company) and is NOT a member of company 5. Company 5 data is never read:
 the request with the header of company 5 must be denied (403); if it is not, the script does not even look at the answer, it stops and tells you.
 
-Usage:
-  export PALP_TOKEN='<token of that user; never paste it in a chat>'
+Usage (the token is typed hidden, so it never reaches an argument, the shell history or the screen):
+  read -rs PALP_TOKEN; export PALP_TOKEN
   python3 -I 108_prod_checks.py --base https://<n8n-host>/webhook/<webhook-id>/crud/v6 [--company 3] [--foreign 5]
+  unset PALP_TOKEN
+After 108_rollback.sql was applied, the same user must be denied for his own company: add --after-rollback (2 checks, expected 403 on both models).
 
 Exit codes: 0 all checks passed, 1 a check failed, 2 cannot run, 3 STOP (a row of another company, or a foreign company was served).
 """
@@ -19,6 +21,8 @@ ap = argparse.ArgumentParser()
 ap.add_argument('--base', required=True, help='gateway base URL ending in /crud/v6 (no default on purpose)')
 ap.add_argument('--company', default='3', help='company the user belongs to (default 3, test company)')
 ap.add_argument('--foreign', default='5', help='company the user must NOT belong to (default 5)')
+ap.add_argument('--after-rollback', action='store_true',
+                help='after 108_rollback.sql: only check that getall with the header of --company is denied (403, no rows) on both models')
 args = ap.parse_args()
 
 token = os.environ.get('PALP_TOKEN', '')
@@ -65,6 +69,13 @@ def report(name, ok, counts):
     if not ok:
         failures.append(name)
 
+
+if args.after_rollback:
+    for model in MODELS:
+        code, j = post(model, args.company)
+        report(f'{model}: after the rollback, header of company {args.company} -> 403, no rows', code == 403 and not rows(j), f'http={code}, rows={len(rows(j))}')
+    print(f'\n{2 - len(failures)}/2 checks passed')
+    sys.exit(0 if not failures else 1)
 
 for model in MODELS:
     # 1. no tenant header -> 403, no rows
