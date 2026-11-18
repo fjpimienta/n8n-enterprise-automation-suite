@@ -1,5 +1,6 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { describe, expect, it, vi } from 'vitest';
+import { colorForKey } from '../../utils/palpation-colors';
 import { PalpationTableRow, SortDir, SortKey } from '../../utils/palpation-view';
 import { PalpationTableComponent, RowOpenEvent } from './palpation-table.component';
 
@@ -60,6 +61,30 @@ describe('PalpationTableComponent', () => {
     expect(t).toContain('histórico (carga 2023)');
     expect(t).toContain('código sin confirmar: DF15');
     expect(t).not.toContain('Subtipo: Código sin confirmar');
+  });
+
+  it('puts the chart colour of each result next to its name, and shows an unconfirmed code on a grey badge', () => {
+    const rgb = (hex: string): string => `rgb(${[1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)).join(', ')})`;
+    const f = render([
+      row({ livestockId: 'p', identifier: 'P1', state: 'PREÑADA', subtype: null, gestation: { months: 5, days: 150 } }),
+      row({ livestockId: 'c', identifier: 'C1', state: 'VACÍA', subtype: 'CICLANDO' }),
+      row({ livestockId: 'r', identifier: 'R1', state: 'TERMINO_RANCHO', subtype: null, ranchTerm: 'RP' }),
+      row({ livestockId: 'u', identifier: 'U1', state: 'VACÍA', subtype: 'SIN_CONFIRMAR', unconfirmedCode: 'DF15' }),
+    ]);
+    const dots = [...el(f).querySelectorAll('table .palp-swatch')].map(d => (d as HTMLElement).style.backgroundColor);
+    expect(dots).toEqual([rgb(colorForKey('p-5')), rgb(colorForKey('v-CICLANDO')), rgb(colorForKey('r-RP')), rgb(colorForKey('v-SIN_CONFIRMAR'))]);
+    const unconfirmed = [...el(f).querySelectorAll('table .badge')].find(b => b.textContent?.includes('código sin confirmar'));
+    expect(unconfirmed?.classList.contains('bg-secondary-lt')).toBe(true);
+    expect(unconfirmed?.classList.contains('bg-yellow-lt')).toBe(false);
+  });
+
+  it('gives the same result the same colour in two different rows', () => {
+    const f = render([
+      row({ livestockId: 'a', identifier: 'A1', state: 'PREÑADA', subtype: null, gestation: { months: 3, days: 90 } }),
+      row({ livestockId: 'b', identifier: 'B1', state: 'PREÑADA', subtype: null, gestation: { months: 3.3, days: 100 } }),
+    ]);
+    const dots = [...el(f).querySelectorAll('table .palp-swatch')].map(d => (d as HTMLElement).style.backgroundColor);
+    expect(dots[0]).toBe(dots[1]);
   });
 
   it('shows "Sin interpretar" for an unrecognised value', () => {

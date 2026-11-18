@@ -45,31 +45,31 @@
                     <div class="mt-1">
                       @switch (entry.state) {
                         @case ('PREÑADA') {
-                          <span class="badge bg-green-lt"><span aria-hidden="true">▲ </span>Preñada</span>
+                          <span class="badge bg-green-lt"><app-palp-swatch [color]="resultColor(entry)" /><span aria-hidden="true">▲ </span>Preñada</span>
                         }
                         @case ('VACÍA') {
-                          <span class="badge bg-red-lt"><span aria-hidden="true">▼ </span>Vacía</span>
+                          <span class="badge bg-red-lt"><app-palp-swatch [color]="resultColor(entry)" /><span aria-hidden="true">▼ </span>Vacía</span>
                         }
                         @case ('TERMINO_RANCHO') {
                           @if (entry.counts) {
-                            <span class="badge bg-purple-lt">Término del rancho: {{ entry.ranchTerm }}</span>
+                            <span class="badge bg-purple-lt"><app-palp-swatch [color]="resultColor(entry)" />Término del rancho: {{ entry.ranchTerm }}</span>
                           } @else {
-                            <span class="badge bg-purple-lt">No examinada ({{ entry.ranchTerm }})</span>
+                            <span class="badge bg-purple-lt"><app-palp-swatch [color]="resultColor(entry)" />No examinada ({{ entry.ranchTerm }})</span>
                           }
                           <span class="badge bg-secondary-lt">{{ ranchBadge }}</span>
                         }
                         @case ('SIN_RESULTADO') {
-                          <span class="badge bg-secondary-lt">Sin resultado</span>
+                          <span class="badge bg-secondary-lt"><app-palp-swatch [color]="resultColor(entry)" />Sin resultado</span>
                         }
                         @default {
-                          <span class="badge bg-yellow-lt">Sin interpretar</span>
+                          <span class="badge bg-yellow-lt"><app-palp-swatch [color]="resultColor(entry)" />Sin interpretar</span>
                         }
                       }
                       @if (entry.historical) {
                         <span class="badge bg-orange-lt">{{ historicalBadge }}</span>
                       }
                       @if (showUnconfirmed(entry)) {
-                        <span class="badge bg-yellow-lt">{{ unconfirmedBadge }}@if (entry.unconfirmedCode) {: {{ entry.unconfirmedCode }}}</span>
+                        <span class="badge bg-secondary-lt">{{ unconfirmedBadge }}@if (entry.unconfirmedCode) {: {{ entry.unconfirmedCode }}}</span>
                       }
                     </div>
                     @if (entry.state === 'PREÑADA') {

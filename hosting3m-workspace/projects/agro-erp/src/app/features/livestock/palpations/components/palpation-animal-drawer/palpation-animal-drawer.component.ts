@@ -15,6 +15,8 @@ import {
 } from '@angular/core';
 import { ReportErrorReason } from '../../models/palpation.types';
 import { PalpationReportService } from '../../services/palpation-report.service';
+import { resultColorOf } from '../../utils/palpation-colors';
+import { PalpationSwatchComponent } from '../palpation-swatch/palpation-swatch.component';
 import {
   HISTORICAL_BADGE,
   PalpationTableRow,
@@ -42,6 +44,7 @@ const FOCUSABLE =
 @Component({
   selector: 'app-palpation-animal-drawer',
   standalone: true,
+  imports: [PalpationSwatchComponent],
   templateUrl: './palpation-animal-drawer.component.html',
   styles: [`
     .palp-drawer-dialog { margin: 0 0 0 auto; height: 100%; max-width: min(30rem, 100vw); width: 100%; }
@@ -110,6 +113,11 @@ export class PalpationAnimalDrawerComponent implements OnInit, OnDestroy {
       this.reason.set(result.reason);
       this.phase.set('error');
     }
+  }
+
+  /** Colour of the result of an entry: the same function and key as the bars of the chart. */
+  protected resultColor(entry: TimelineEntry): string {
+    return resultColorOf({ state: entry.state, gestationDays: entry.gestation?.days ?? null, subtype: entry.subtype, ranchTerm: entry.ranchTerm });
   }
 
   protected subtypeText(entry: TimelineEntry): string | null {

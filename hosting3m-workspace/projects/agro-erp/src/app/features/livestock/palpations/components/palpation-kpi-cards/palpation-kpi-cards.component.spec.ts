@@ -1,6 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { describe, expect, it } from 'vitest';
 import { eventRow } from '../../testing/palpation.fixtures';
+import { EMPTY_COLOR, FAMILY_COLOR } from '../../utils/palpation-colors';
 import { PeriodKpis, periodKpis } from '../../utils/palpation-metrics';
 import { PalpationKpiCardsComponent } from './palpation-kpi-cards.component';
 
@@ -43,6 +44,41 @@ describe('PalpationKpiCardsComponent', () => {
     const text = el(f).textContent?.replace(/\s+/g, ' ') ?? '';
     expect(text).toContain('Estática (UNE): 1');
     expect(text).toContain('Código sin confirmar: 1');
+  });
+
+  it('names the empty animals without structured detail "Vacía sin detalle de subtipo" and explains them', () => {
+    const noDetail = [
+      eventRow({ livestock_id: 'S1', health_log_id: 's1', event_date: '2026-11-01', result: 'VACÍA' }),
+      eventRow({ livestock_id: 'S2', health_log_id: 's2', event_date: '2026-11-02', result: 'VACÍA' }),
+    ];
+    const f = render(periodKpis(noDetail, PERIOD));
+    const text = el(f).textContent?.replace(/\s+/g, ' ') ?? '';
+    expect(text).toContain('Vacía sin detalle de subtipo: 2');
+    expect(text).not.toContain('Sin subtipo');
+    expect(el(f).querySelector('[data-testid="empty-line-hint"]')?.textContent?.trim()).toBe(
+      'Registros sin detalle estructurado, por ejemplo de la carga histórica',
+    );
+  });
+
+  it('shows no explanation when there are no empty animals without detail, and keeps the unconfirmed-code text as it was', () => {
+    const f = render(periodKpis(events, PERIOD));
+    expect(el(f).querySelector('[data-testid="empty-line-hint"]')).toBeNull();
+    const text = el(f).textContent?.replace(/\s+/g, ' ') ?? '';
+    expect(text).toContain('Código sin confirmar: 1');
+    expect(text).toContain('Se muestran como se escribieron y no se interpretan.');
+  });
+
+  it('repeats the chart colours next to the names (colour samples are decoration; the names carry the meaning)', () => {
+    const f = render(periodKpis(events, PERIOD));
+    const dots = [...el(f).querySelectorAll('.palp-swatch')] as HTMLElement[];
+    expect(dots.length).toBeGreaterThan(5);
+    expect(dots.every(d => d.getAttribute('aria-hidden') === 'true')).toBe(true);
+    const colors = dots.map(d => d.style.backgroundColor);
+    const rgb = (hex: string): string => `rgb(${[1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)).join(', ')})`;
+    expect(colors).toContain(rgb(FAMILY_COLOR.pregnant));
+    expect(colors).toContain(rgb(FAMILY_COLOR.empty));
+    expect(colors).toContain(rgb(EMPTY_COLOR.ESTATICA));
+    expect(colors).toContain(rgb(EMPTY_COLOR.SIN_CONFIRMAR));
   });
 
   it('keeps ranch terms and animals without a result outside the percentages, with the ranch badge', () => {

@@ -3,6 +3,8 @@ import { ChangeDetectionStrategy, Component, input, output } from '@angular/core
 import { TableFooterComponent } from '@shared/components/table-footer/table-footer.component';
 import { TableToolbarComponent } from '@shared/components/table-toolbar/table-toolbar.component';
 import { PagedTable } from '@shared/utils/paged-table.util';
+import { resultColorOf } from '../../utils/palpation-colors';
+import { PalpationSwatchComponent } from '../palpation-swatch/palpation-swatch.component';
 import {
   HISTORICAL_BADGE,
   PalpationTableRow,
@@ -34,7 +36,7 @@ interface Column {
 @Component({
   selector: 'app-palpation-table',
   standalone: true,
-  imports: [NgTemplateOutlet, TableToolbarComponent, TableFooterComponent],
+  imports: [NgTemplateOutlet, TableToolbarComponent, TableFooterComponent, PalpationSwatchComponent],
   templateUrl: './palpation-table.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -77,6 +79,11 @@ export class PalpationTableComponent {
   }
 
   /** Sub-type of an empty result, from structured data only. An unconfirmed code is shown by its own badge instead. */
+  /** Colour of the result of a row: the same function and key as the bars of the chart. */
+  protected resultColor(row: PalpationTableRow): string {
+    return resultColorOf({ state: row.state, gestationDays: row.gestation?.days ?? null, subtype: row.subtype, ranchTerm: row.ranchTerm });
+  }
+
   protected subtypeText(row: PalpationTableRow): string | null {
     if (row.subtype === null || row.subtype === 'SIN_CONFIRMAR') return null;
     return SUBTYPE_LABEL[row.subtype];

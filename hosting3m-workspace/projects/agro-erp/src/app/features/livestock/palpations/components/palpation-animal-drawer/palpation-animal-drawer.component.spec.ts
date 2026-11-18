@@ -126,6 +126,9 @@ describe('PalpationAnimalDrawerComponent', () => {
     expect(t).toContain('Definido por el rancho');
     expect(t).toContain('código sin confirmar: QUISTE RASTRO');
     expect(t).toContain('histórico (carga 2023)');
+    const unconfirmed = [...(f.nativeElement as HTMLElement).querySelectorAll('.badge')].find(b => b.textContent?.includes('código sin confirmar'));
+    expect(unconfirmed?.classList.contains('bg-secondary-lt')).toBe(true);
+    expect((f.nativeElement as HTMLElement).querySelectorAll('.palp-swatch').length).toBeGreaterThanOrEqual(3);
   });
 
   it('shows an error with a generic reason and retries', async () => {

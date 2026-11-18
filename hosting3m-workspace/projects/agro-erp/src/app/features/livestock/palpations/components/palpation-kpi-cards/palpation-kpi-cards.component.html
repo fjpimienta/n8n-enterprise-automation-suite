@@ -21,7 +21,7 @@
     <div class="col-6 col-lg">
       <div class="card h-100">
         <div class="card-body">
-          <div class="subheader">Preñadas</div>
+          <div class="subheader"><app-palp-swatch [color]="color.pregnant" />Preñadas</div>
           <div class="h1 mb-1" data-testid="kpi-pregnant">{{ kpis().pregnant }}</div>
           <div class="text-muted small">
             de {{ kpis().clinical }} con resultado clínico · <span data-testid="kpi-pregnant-pct">{{ pctPregnant() }}</span>
@@ -33,7 +33,7 @@
     <div class="col-6 col-lg">
       <div class="card h-100">
         <div class="card-body">
-          <div class="subheader">Vacías</div>
+          <div class="subheader"><app-palp-swatch [color]="color.empty" />Vacías</div>
           <div class="h1 mb-1" data-testid="kpi-empty">{{ kpis().empty }}</div>
           <div class="text-muted small">
             de {{ kpis().clinical }} con resultado clínico · <span data-testid="kpi-empty-pct">{{ pctEmpty() }}</span>
@@ -41,7 +41,12 @@
           @if (emptyLines().length > 0) {
             <ul class="list-unstyled small mb-0 mt-2">
               @for (line of emptyLines(); track line.label) {
-                <li>{{ line.label }}: {{ line.count }}</li>
+                <li>
+                  <app-palp-swatch [color]="line.color" />{{ line.label }}: {{ line.count }}
+                  @if (line.hint) {
+                    <div class="text-muted" data-testid="empty-line-hint">{{ line.hint }}</div>
+                  }
+                </li>
               }
             </ul>
           }
@@ -52,7 +57,7 @@
     <div class="col-6 col-lg">
       <div class="card h-100">
         <div class="card-body">
-          <div class="subheader">Códigos sin confirmar</div>
+          <div class="subheader"><app-palp-swatch [color]="color.unconfirmed" />Códigos sin confirmar</div>
           <div class="h1 mb-1" data-testid="kpi-unconfirmed">{{ kpis().unconfirmed }}</div>
           <div class="text-muted small">de {{ kpis().palpated }} animales palpados. Se muestran como se escribieron y no se interpretan.</div>
         </div>
@@ -75,19 +80,19 @@
       <div class="subheader mb-2">Fuera de los porcentajes clínicos</div>
       <div class="d-flex flex-wrap gap-3 align-items-center">
         <div>
-          <span class="badge bg-purple-lt me-1">{{ ranchBadge }}</span>
+          <span class="badge bg-purple-lt me-1"><app-palp-swatch [color]="color.ranch" />{{ ranchBadge }}</span>
           <strong data-testid="kpi-ranch">{{ kpis().ranchTotal }}</strong>
           @if (ranchLines().length > 0) {
             <span class="text-muted small">
               (@for (line of ranchLines(); track line.label; let last = $last) {
-                <span>{{ line.label }} {{ line.count }}{{ last ? '' : ',' }}</span>
+                <span><app-palp-swatch [color]="line.color" />{{ line.label }} {{ line.count }}{{ last ? '' : ',' }} </span>
               })
             </span>
           }
         </div>
-        <div>Sin resultado: <strong data-testid="kpi-no-result">{{ kpis().noResult }}</strong></div>
+        <div><app-palp-swatch [color]="color.noResult" />Sin resultado: <strong data-testid="kpi-no-result">{{ kpis().noResult }}</strong></div>
         @if (kpis().uninterpreted > 0) {
-          <div>Sin interpretar: <strong data-testid="kpi-uninterpreted">{{ kpis().uninterpreted }}</strong></div>
+          <div><app-palp-swatch [color]="color.uninterpreted" />Sin interpretar: <strong data-testid="kpi-uninterpreted">{{ kpis().uninterpreted }}</strong></div>
         }
       </div>
       <div class="text-muted small mt-2">
