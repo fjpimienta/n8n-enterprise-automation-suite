@@ -16,6 +16,8 @@ ap.add_argument('--base', default='http://127.0.0.1:5678/webhook/586606bc-e1df-4
 ap.add_argument('--login', default='http://127.0.0.1:5678/webhook/v3/genera-token')
 ap.add_argument('--container', default='n8n-enterprise-db')
 ap.add_argument('--db', default='hosting3m_db')
+ap.add_argument('--after-rollback', action='store_true',
+                help='only check that both models deny every role after 108_rollback.sql was applied (no seeding)')
 args = ap.parse_args()
 if 'localhost' not in args.base and '127.0.0.1' not in args.base:
     sys.exit('ABORT: this script only runs against a LOCAL gateway.')
@@ -47,6 +49,10 @@ def call(url, body, headers=None, timeout=60):
         return code, raw
 
 
+# Environment guard: the herd of company 5 exists only in production. This script inserts data (bulk events): never run it there.
+if sql("SELECT (EXISTS (SELECT 1 FROM public.companys WHERE id_company = 5) OR EXISTS (SELECT 1 FROM public.cattle_livestock WHERE tenant_id = 5))") != 'f':
+    sys.exit('ABORT: this database looks like production (company 5 or animals of company 5 exist, or the check failed). LOCAL databases only.')
+
 ids = sql("SELECT string_agg(company_name || '=' || id_company, ',' ORDER BY company_name) FROM companys WHERE company_name IN ('GW108 Company A','GW108 Company B')")
 m = dict(p.split('=') for p in ids.split(',')) if ids else {}
 if len(m) != 2:
@@ -61,7 +67,8 @@ if code is None:
     sys.exit(2)
 
 tokens = {}
-for who in ('admin-a', 'editor-a', 'cust-a', 'admin-b'):
+# jwt-service limits logins (20 per 15 minutes per address): log in only the users the selected mode needs.
+for who in (('admin-a', 'editor-a') if args.after_rollback else ('admin-a', 'editor-a', 'cust-a', 'admin-b')):
     cid = B if who == 'admin-b' else A
     code, r = call(args.login, {'user': f'gw108-{who}@example.invalid', 'pass': PW, 'system_id': 'agro_erp', 'id_company': int(cid)})
     tok = None
@@ -75,6 +82,20 @@ for who in ('admin-a', 'editor-a', 'cust-a', 'admin-b'):
         print(f'LOGIN FAILED for {who} (HTTP {code}); cannot continue.')
         sys.exit(2)
     tokens[who] = tok
+
+if args.after_rollback:
+    # After 108_rollback.sql both models must deny every role (allowed_ops '{}', roles NONE): 403 and no rows, for getall and getone.
+    res = []
+    for who in ('admin-a', 'editor-a'):
+        for model in ('/vw_palpation_events', '/vw_palpation_herd'):
+            for op in ({'operation': 'getall'}, {'operation': 'getone', 'id': '00000000-0000-0000-0000-000000000000'}):
+                hd = {'Authorization': 'Bearer ' + tokens[who], 'x-tenant-id': str(A)}
+                c, r = call(args.base + model, op, hd)
+                ok = c == 403 and not (isinstance(r, dict) and isinstance(r.get('data'), list) and any(isinstance(x, dict) and x for x in r['data']))
+                res.append(ok)
+                print(('PASS  ' if ok else 'FAIL  ') + f"after rollback: {who} {op['operation']} {model[1:]} -> 403, no rows  [HTTP {c}, code={r.get('code') if isinstance(r, dict) else None}]")
+    print(f'\n{sum(res)}/{len(res)} checks passed')
+    sys.exit(0 if all(res) else 1)
 
 ev_b = sql(f"SELECT e.health_log_id FROM vw_palpation_events e WHERE e.id_company = {B} LIMIT 1")
 animal_b = sql(f"SELECT livestock_id FROM vw_palpation_herd WHERE id_company = {B} LIMIT 1")

@@ -11,6 +11,13 @@ SELECT current_database() ~ '(test|rehearsal)' AS scratch_ok \gset
 \echo 'ABORT: run this only against a throwaway database (name must contain test or rehearsal).'
 \quit
 \endif
+-- Environment guard: the herd of company 5 exists only in production. This script inserts data: never run it where company 5 or its animals exist.
+SELECT (EXISTS (SELECT 1 FROM public.companys WHERE id_company = 5)
+        OR EXISTS (SELECT 1 FROM public.cattle_livestock WHERE tenant_id = 5)) AS looks_like_production \gset
+\if :looks_like_production
+\echo 'ABORT: this database looks like production (company 5 or animals of company 5 exist). This script inserts or deletes data: LOCAL / throwaway databases only.'
+\quit
+\endif
 BEGIN;
 
 CREATE TEMP TABLE snap (k text PRIMARY KEY, v text) ON COMMIT DROP;
@@ -51,11 +58,12 @@ CREATE TEMP TABLE an  (label text PRIMARY KEY, id uuid) ON COMMIT DROP;
 CREATE TEMP TABLE ev  (label text PRIMARY KEY, id uuid) ON COMMIT DROP;
 CREATE TEMP SEQUENCE seq_ear START 1;
 
-CREATE FUNCTION pg_temp.mk_animal(p_label text, p_company integer, p_status text, p_brand uuid DEFAULT NULL) RETURNS void LANGUAGE plpgsql AS $$
+CREATE FUNCTION pg_temp.mk_animal(p_label text, p_company integer, p_status text, p_brand uuid DEFAULT NULL,
+                                  p_category text DEFAULT 'VACA', p_species text DEFAULT 'BOVINO') RETURNS void LANGUAGE plpgsql AS $$
 DECLARE v_id uuid;
 BEGIN
-    INSERT INTO public.cattle_livestock (tenant_id, rfid_siniiga, business_model, category, current_status, brand_id)
-    VALUES (p_company, '9999' || lpad(nextval('seq_ear')::text, 6, '0'), 'CRIA', 'VACA', p_status, p_brand) RETURNING id INTO v_id;
+    INSERT INTO public.cattle_livestock (tenant_id, rfid_siniiga, business_model, category, species, current_status, brand_id)
+    VALUES (p_company, '9999' || lpad(nextval('seq_ear')::text, 6, '0'), 'CRIA', p_category, p_species, p_status, p_brand) RETURNING id INTO v_id;
     INSERT INTO an VALUES (p_label, v_id);
 END $$;
 
@@ -77,8 +85,9 @@ END $$;
 DO $$
 DECLARE ca integer; cb integer; v_brand uuid;
 BEGIN
-    INSERT INTO public.companys (company_name, industry) VALUES ('T108 Cattle A', 'Ganaderia') RETURNING id_company INTO ca;
-    INSERT INTO public.companys (company_name, industry) VALUES ('T108 Cattle B', 'Ganaderia') RETURNING id_company INTO cb;
+    -- Explicit synthetic ids (never 5, never a sequence value that could reach 5).
+    ca := 9001; cb := 9002;
+    INSERT INTO public.companys (id_company, company_name, industry) VALUES (ca, 'T108 Cattle A', 'Ganaderia'), (cb, 'T108 Cattle B', 'Ganaderia');
     INSERT INTO ctx VALUES ('a', ca::text), ('b', cb::text);
 
     INSERT INTO public.brand_registrations (brand_code, owner_name) VALUES ('ZZ1', 'Synthetic Owner') RETURNING id INTO v_brand;
@@ -106,6 +115,8 @@ BEGIN
     PERFORM pg_temp.mk_animal('A12', ca, 'PREÑADA');      -- two palpations + a non-palpation event
     PERFORM pg_temp.mk_animal('A13', ca, 'VACÍA');        -- accented event type, no detail row
     PERFORM pg_temp.mk_animal('A14', ca, 'ACTIVO');       -- medicines_json is not an object
+    PERFORM pg_temp.mk_animal('A15', ca, 'ACTIVO', NULL, 'TORO');     -- synthetic bull, never palpated
+    PERFORM pg_temp.mk_animal('A16', ca, 'ACTIVO', NULL, 'BECERRO');  -- synthetic calf, never palpated
     -- Company B animals
     PERFORM pg_temp.mk_animal('B01', cb, 'PREÑADA');
     PERFORM pg_temp.mk_animal('B02', cb, 'ACTIVO');       -- never palpated
@@ -193,10 +204,18 @@ SELECT pg_temp.eq('every event row carries the company of its animal',
 SELECT pg_temp.eq('no row of a third company', (SELECT count(*) FROM vw_palpation_events e JOIN ev ON ev.id = e.health_log_id WHERE e.id_company NOT IN (:ca, :cb)), 0::bigint);
 
 -- 3) vw_palpation_herd --------------------------------------------------------------------------------------------------------------------------
-SELECT pg_temp.eq('A herd rows (whole herd, palpated or not)', (SELECT count(*) FROM vw_palpation_herd WHERE id_company = :ca), 14::bigint);
+SELECT pg_temp.eq('A herd rows (whole herd, palpated or not)', (SELECT count(*) FROM vw_palpation_herd WHERE id_company = :ca), 16::bigint);
 SELECT pg_temp.eq('B herd rows', (SELECT count(*) FROM vw_palpation_herd WHERE id_company = :cb), 3::bigint);
 SELECT pg_temp.eq('A animals with at least one counted palpation', (SELECT count(*) FROM vw_palpation_herd WHERE id_company = :ca AND palpation_count > 0), 12::bigint);
-SELECT pg_temp.eq('A never palpated (A10) and NR only (A05)', (SELECT count(*) FROM vw_palpation_herd WHERE id_company = :ca AND palpation_count = 0), 2::bigint);
+SELECT pg_temp.eq('A never palpated (A10, A15, A16) and NR only (A05)', (SELECT count(*) FROM vw_palpation_herd WHERE id_company = :ca AND palpation_count = 0), 4::bigint);
+SELECT pg_temp.eq('A herd by category (bulls and calves appear with their category)',
+       (SELECT string_agg(category || '=' || n, ',' ORDER BY category) FROM (SELECT category, count(*) n FROM vw_palpation_herd WHERE id_company = :ca GROUP BY category) q),
+       'BECERRO=1,TORO=1,VACA=14');
+SELECT pg_temp.eq('A bull keeps category and species', (SELECT category || '/' || species FROM vw_palpation_herd WHERE livestock_id = (SELECT id FROM an WHERE label = 'A15')), 'TORO/BOVINO');
+SELECT pg_temp.eq('A calf keeps category and species', (SELECT category || '/' || species FROM vw_palpation_herd WHERE livestock_id = (SELECT id FROM an WHERE label = 'A16')), 'BECERRO/BOVINO');
+SELECT pg_temp.eq('B herd categories', (SELECT string_agg(DISTINCT category, ',') FROM vw_palpation_herd WHERE id_company = :cb), 'VACA');
+SELECT pg_temp.eq('the herd model lists category and species',
+       (SELECT (allowed_fields ?& ARRAY['category', 'species']) FROM public.crud_models WHERE model_name = 'vw_palpation_herd'), true);
 SELECT pg_temp.eq('A animals with more than one palpation', (SELECT count(*) FROM vw_palpation_herd WHERE id_company = :ca AND palpation_count > 1), 1::bigint);
 SELECT pg_temp.eq('A last palpation of the animal with two',
        (SELECT last_event_date::text || '/' || last_result FROM vw_palpation_herd WHERE livestock_id = (SELECT id FROM an WHERE label = 'A12')), '2026-11-08/PREÑADA');
@@ -206,7 +225,7 @@ SELECT pg_temp.eq('A sold animal keeps status and historical flag',
 SELECT pg_temp.eq('A never palpated has NULL last result', (SELECT last_result FROM vw_palpation_herd WHERE livestock_id = (SELECT id FROM an WHERE label = 'A10')), NULL::text);
 SELECT pg_temp.eq('A ranch term of the last palpation', (SELECT last_ranch_term FROM vw_palpation_herd WHERE livestock_id = (SELECT id FROM an WHERE label = 'A06')), 'RP');
 SELECT pg_temp.eq('brand_code comes only from the registered brand', (SELECT string_agg(brand_code, ',') FROM vw_palpation_herd WHERE id_company = :ca AND brand_code IS NOT NULL), 'ZZ1');
-SELECT pg_temp.eq('herd view carries the animal key', (SELECT count(DISTINCT livestock_id) FROM vw_palpation_herd WHERE id_company = :ca), 14::bigint);
+SELECT pg_temp.eq('herd view carries the animal key', (SELECT count(DISTINCT livestock_id) FROM vw_palpation_herd WHERE id_company = :ca), 16::bigint);
 SELECT pg_temp.eq('no herd row of a third company', (SELECT count(*) FROM vw_palpation_herd h JOIN an ON an.id = h.livestock_id WHERE h.id_company NOT IN (:ca, :cb)), 0::bigint);
 
 -- 4) Columns: nothing sensitive ------------------------------------------------------------------------------------------------------------------

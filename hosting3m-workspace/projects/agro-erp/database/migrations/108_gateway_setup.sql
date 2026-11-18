@@ -9,11 +9,19 @@
 \echo 'ABORT: pass -v i_am_local=yes (LOCAL databases only).'
 \quit
 \endif
+-- Environment guard: the herd of company 5 exists only in production. This script inserts / deletes data: never run it where company 5 or its animals exist.
+SELECT (EXISTS (SELECT 1 FROM public.companys WHERE id_company = 5)
+        OR EXISTS (SELECT 1 FROM public.cattle_livestock WHERE tenant_id = 5)) AS looks_like_production \gset
+\if :looks_like_production
+\echo 'ABORT: this database looks like production (company 5 or animals of company 5 exist). This script inserts or deletes data: LOCAL / throwaway databases only.'
+\quit
+\endif
 BEGIN;
 DO $$ BEGIN
     IF EXISTS (SELECT 1 FROM companys WHERE company_name LIKE 'GW108%') THEN RAISE EXCEPTION 'ABORT: GW108 fixtures already exist. Run 108_gateway_cleanup.sql first.'; END IF;
 END $$;
-INSERT INTO companys (company_name, industry) VALUES ('GW108 Company A', 'Ganaderia'), ('GW108 Company B', 'Ganaderia');
+-- Explicit synthetic ids (never 5, never a sequence value that could reach 5).
+INSERT INTO companys (id_company, company_name, industry) VALUES (9101, 'GW108 Company A', 'Ganaderia'), (9102, 'GW108 Company B', 'Ganaderia');
 CREATE TEMP TABLE c AS SELECT company_name n, id_company id FROM companys WHERE company_name IN ('GW108 Company A', 'GW108 Company B');
 INSERT INTO users (email, names, password, role)
 SELECT e, 'GW108 ' || e, encode(sha256(convert_to('SyntheticPw-108', 'UTF8')), 'hex'), 'ADMIN'

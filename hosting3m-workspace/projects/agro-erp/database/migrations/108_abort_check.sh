@@ -10,6 +10,10 @@ container="${CONTAINER:-n8n-enterprise-db}"
 case "$db" in *test*|*rehearsal*) ;; *) echo "ABORT: database name must contain test or rehearsal"; exit 2;; esac
 dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 work="/tmp/m108_abort"
+
+# Environment guard: the herd of company 5 exists only in production. This script inserts data (inside rolled-back transactions): never run it there.
+prod=$(docker exec -i "$container" psql -X -A -t -U n8n_user -d "$db" -c "SELECT (EXISTS (SELECT 1 FROM public.companys WHERE id_company = 5) OR EXISTS (SELECT 1 FROM public.cattle_livestock WHERE tenant_id = 5))" 2>/dev/null | tr -d '[:space:]')
+if [ "$prod" != "f" ]; then echo "ABORT: this database looks like production (company 5 or animals of company 5 exist, or the check failed). LOCAL / throwaway databases only."; exit 2; fi
 fails=0
 
 docker exec "$container" mkdir -p "$work" >/dev/null
@@ -63,6 +67,10 @@ mutate_and_expect "migration aborts if created_at is removed from the herd model
   '/"palpation_count","created_at"\]/s/,"created_at"\]/]/' "created_at is missing from allowed_fields"
 mutate_and_expect "migration aborts if a forbidden field is added to a model" \
   's/"technician","mapping_status"/"technician","notes","mapping_status"/' "forbidden field|differ from the columns"
+mutate_and_expect "migration aborts if category is removed from the herd model" \
+  's/"numero_fuego","brand_code","category","species","current_status"/"numero_fuego","brand_code","species","current_status"/' "category and species must be in allowed_fields"
+mutate_and_expect "migration aborts if the herd view no longer selects species (model and view differ)" \
+  '/^    l\.species,$/d' "differ from the columns of the view"
 mutate_and_expect "migration aborts if the roles are widened" \
   "s/'ADMIN,EDITOR', 'NONE', 'NONE', 'NONE', '\[\]', false, true\),/'ADMIN,EDITOR,CUSTOMER', 'NONE', 'NONE', 'NONE', '[]', false, true),/" "does not have the expected configuration"
 

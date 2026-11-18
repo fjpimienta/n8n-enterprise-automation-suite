@@ -8,6 +8,13 @@
 \echo 'ABORT: pass -v i_am_local=yes (LOCAL databases only).'
 \quit
 \endif
+-- Environment guard: the herd of company 5 exists only in production. This script inserts / deletes data: never run it where company 5 or its animals exist.
+SELECT (EXISTS (SELECT 1 FROM public.companys WHERE id_company = 5)
+        OR EXISTS (SELECT 1 FROM public.cattle_livestock WHERE tenant_id = 5)) AS looks_like_production \gset
+\if :looks_like_production
+\echo 'ABORT: this database looks like production (company 5 or animals of company 5 exist). This script inserts or deletes data: LOCAL / throwaway databases only.'
+\quit
+\endif
 BEGIN;
 CREATE TEMP TABLE c AS SELECT id_company id FROM companys WHERE company_name LIKE 'GW108 Company %';
 DELETE FROM cattle_health_logs h USING cattle_livestock l WHERE l.id = h.livestock_id AND l.tenant_id IN (SELECT id FROM c);
