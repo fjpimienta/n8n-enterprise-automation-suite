@@ -20,7 +20,9 @@ if [ -f "$mig" ]; then
   views=$(awk '/^CREATE VIEW/{on=1} /^INSERT INTO public.crud_models/{on=0} on{ line=$0; sub(/^[[:space:]]+/, "", line); if (line !~ /^--/) print }' "$mig")
   bad=$(printf '%s\n' "$views" | grep -n -i -E '(\.|[[:space:]])(description|notes|metadata|owner_[a-z_]+)([[:space:],]|$)|medicines_json[[:space:]]+AS|SELECT[[:space:]]+\*|\.\*' | grep -v -i "COMMENT ON" || true)
   if [ -n "$bad" ]; then echo "FAIL the views select a forbidden column or use *:"; echo "$bad"; status=1; else echo "OK   108_palpation_views.sql: views select no description / notes / metadata / owner_* and no *"; fi
-  for needle in "id_company is missing from allowed_fields" "created_at is missing from allowed_fields" "already exists. Not touching it"; do
+  grep -q "l\.category," "$mig" && grep -q "l\.species," "$mig" && echo "OK   vw_palpation_herd selects category and species" || { echo "FAIL vw_palpation_herd must select l.category and l.species"; status=1; }
+  grep -q '"category","species"' "$mig" && echo "OK   vw_palpation_herd model lists category and species" || { echo "FAIL the herd model must list category and species"; status=1; }
+  for needle in "category and species must be in allowed_fields" "id_company is missing from allowed_fields" "created_at is missing from allowed_fields" "already exists. Not touching it"; do
     if grep -q "$needle" "$mig"; then echo "OK   guard present: $needle"; else echo "FAIL guard missing: $needle"; status=1; fi
   done
 fi

@@ -4,7 +4,7 @@
 --
 -- What it creates
 --   vw_palpation_events  one row per PALPACION event of cattle_health_logs, tenant column id_company (from cattle_livestock.tenant_id)
---   vw_palpation_herd    one row per animal of the company (including never palpated), last counted palpation and palpation count
+--   vw_palpation_herd    one row per animal of the company (including never palpated), category and species, last counted palpation and palpation count
 --   crud_models rows vw_palpation_events (PK health_log_id) and vw_palpation_herd (PK livestock_id):
 --     allowed_ops {SELECT}, allowed_roles_select ADMIN,EDITOR, insert / update / delete NONE, joins [], is_global false, sp_requires_tenant true,
 --     no default filter, no hooks. allowed_fields = exactly the view columns, WITH id_company and created_at.
@@ -25,6 +25,8 @@
 --   * counts_as_palpation = ranch_term is not NR (an unexamined animal is not a palpated animal)
 --   * is_clinical_result  = no ranch term and a result exists (only these enter the clinical percentages)
 --   * brand_code        = brand_registrations.brand_code only (R / aR); the owner_* columns are never selected.
+--   * category, species = cattle_livestock.category / species of the animal (bulls and calves are told apart by category).
+--   * ranch_term is a FIXED list (NR, RP, NO APTO, MATRIZ OCUPADA). A new ranch term needs a new version of the view (a new migration), not a data change.
 --   * event_date is timestamp WITHOUT time zone: it is cast to date, no time-zone arithmetic.
 --
 -- Rollback: 108_rollback.sql disables ONLY the two models (no operation, no role); nothing is dropped or deleted.
@@ -123,6 +125,8 @@ SELECT
     l.rfid_siniiga,
     l.numero_fuego,
     b.brand_code,
+    l.category,
+    l.species,
     l.current_status,
     e.event_date               AS last_event_date,
     e.result                   AS last_result,
@@ -158,7 +162,7 @@ VALUES
    NULL, '{}', '{SELECT}', '{"pre":[],"post":[]}',
    'ADMIN,EDITOR', 'NONE', 'NONE', 'NONE', '[]', false, true),
   ('vw_palpation_herd', 'vw_palpation_herd', 'livestock_id',
-   '["id_company","livestock_id","rfid_siniiga","numero_fuego","brand_code","current_status","last_event_date","last_result","last_is_historical","last_repro_condition","last_mapping_status","last_ranch_term","palpation_count","created_at"]',
+   '["id_company","livestock_id","rfid_siniiga","numero_fuego","brand_code","category","species","current_status","last_event_date","last_result","last_is_historical","last_repro_condition","last_mapping_status","last_ranch_term","palpation_count","created_at"]',
    NULL, '{}', '{SELECT}', '{"pre":[],"post":[]}',
    'ADMIN,EDITOR', 'NONE', 'NONE', 'NONE', '[]', false, true);
 
@@ -184,6 +188,10 @@ BEGIN
         END IF;
         IF m.allowed_fields ?| ARRAY['description', 'notes', 'metadata', 'medicines_json', 'owner_name', 'owner_curp_enc', 'owner_curp_hash', 'password'] THEN
             RAISE EXCEPTION '108: ABORT: % exposes a forbidden field', m.model_name;
+        END IF;
+        -- The herd model must carry the animal class and species (bulls and calves are told apart by category).
+        IF m.model_name = 'vw_palpation_herd' AND NOT (m.allowed_fields ?& ARRAY['category', 'species']) THEN
+            RAISE EXCEPTION '108: ABORT: category and species must be in allowed_fields of vw_palpation_herd';
         END IF;
         -- allowed_fields must be exactly the columns of the view.
         SELECT jsonb_agg(column_name::text ORDER BY column_name) INTO v_cols
