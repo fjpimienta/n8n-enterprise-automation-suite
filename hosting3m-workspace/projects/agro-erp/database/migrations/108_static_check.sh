@@ -6,7 +6,7 @@
 # Usage: bash 108_static_check.sh [directory]   (default: the directory of this script). Exit 0 = clean, 1 = a rule was broken.
 set -euo pipefail
 dir="${1:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)}"
-files=("$dir/108_palpation_views.sql" "$dir/108_rollback.sql" "$dir/108_state_check.sql")
+files=("$dir/108_palpation_views.sql" "$dir/108_rollback.sql" "$dir/108_state_check.sql" "$dir/108_reenable.sql")
 status=0
 for f in "${files[@]}"; do
   if [ ! -f "$f" ]; then echo "MISSING $f"; status=1; continue; fi
@@ -25,5 +25,11 @@ if [ -f "$mig" ]; then
   for needle in "category and species must be in allowed_fields" "id_company is missing from allowed_fields" "created_at is missing from allowed_fields" "already exists. Not touching it"; do
     if grep -q "$needle" "$mig"; then echo "OK   guard present: $needle"; else echo "FAIL guard missing: $needle"; status=1; fi
   done
+fi
+# The re-enable is generated from the migration: the committed file must equal the generator output, and it must not insert.
+if [ -f "$dir/108_reenable.sql" ]; then
+  if python3 -I "$dir/108_make_reenable.py" --check >/dev/null 2>&1; then echo "OK   108_reenable.sql matches 108_make_reenable.py (values from the migration)"; else echo "FAIL 108_reenable.sql is out of date with 108_make_reenable.py"; status=1; fi
+  ins=$(awk '{ line=$0; sub(/^[[:space:]]+/, "", line); if (line ~ /^--/) next; if (toupper(line) ~ /^INSERT([[:space:]]|$)/) print FILENAME ":" FNR }' "$dir/108_reenable.sql" || true)
+  if [ -n "$ins" ]; then echo "FAIL 108_reenable.sql contains an INSERT: $ins"; status=1; else echo "OK   108_reenable.sql: no INSERT"; fi
 fi
 exit "$status"
