@@ -193,7 +193,7 @@ SQL
 
 Rules: a user **with membership in company 3 and without membership in company 5** (verified: company 3 has 2 ADMIN and 1 EDITOR, none in 5; use the EDITOR, the least privilege that can read); **no writes, no seeded data**; only **counts** are printed, never a row body; company 5 data is never read. If a row of another company ever appears: **stop, do not show it, tell the owner**.
 
-**Getting the token with ONE login** (the production login is rate-limited like LOCAL's: 20 per 15 minutes; if the login fails, wait 15 minutes, do not retry in a loop; never `curl` a password or a token on the command line):
+**Getting the token with ONE login** (by the code of `jwt-service` the login is rate-limited to 20 per 15 minutes per address; not measured in production; if the login fails, wait 15 minutes, do not retry in a loop; never `curl` a password or a token on the command line):
 
 1. In a private browser window, open the production agro-erp, log in **once** as that user and pick company 3.
 2. In the DevTools console of that page: `copy(localStorage.getItem('authToken'))`. The token goes to the clipboard without being printed.
@@ -233,13 +233,14 @@ If #2 or #3 fail: **roll back immediately** (below) and report.
 
 ## Rollback
 
+Both models then deny every role. **Verified against the LOCAL gateway:** apply, 28 / 28 checks, rollback, then `getall` and `getone` of both models for ADMIN and EDITOR answer `403` with no rows (8 / 8; the same users got `200` before the rollback). The views remain (nothing reads them). Nothing is dropped or deleted. If the data (not the gateway) is the problem, the backup of Part 1, step 1 is the recovery point. Re-enabling is a separate reviewed change (the migration aborts when the objects exist).
+
 ```sh
 ssh vps 'docker exec -i n8n-enterprise-db psql -X -v ON_ERROR_STOP=1 -v apply=true -U n8n_user -d hosting3m_db' < 108_rollback.sql
 ssh vps 'docker exec -i -e PGOPTIONS="-c default_transaction_read_only=on" n8n-enterprise-db psql -X -v ON_ERROR_STOP=1 -v expect=rolled_back -U n8n_user -d hosting3m_db' < 108_state_check.sql
 ```
 
 **Check in production after the rollback:** with the same user as Part 3 (the token of Part 3 if it has not expired; otherwise ONE new login by the same procedure), run `python3 -I 108_prod_checks.py --base https://<n8n-host>/webhook/<webhook-id>/crud/v6 --after-rollback`. Expected `2/2`: `getall` with the header of company 3 answers `403` with no rows on both models.
- Both models then deny every role: **verified against the LOCAL gateway** (apply, 28 / 28 checks, rollback, then `getall` and `getone` of both models for ADMIN and EDITOR answer `403` with no rows, 8 / 8; the same users got `200` before the rollback). The views remain (nothing reads them). Nothing is dropped or deleted. If the data (not the gateway) is the problem, the backup of Part 1, step 1 is the recovery point. Re-enabling is a separate reviewed change (the migration aborts when the objects exist).
 
 ## LOCAL evidence (PostgreSQL 15.4, local `n8n-enterprise-core`)
 
