@@ -235,6 +235,25 @@ de un AI Agent, usar `.first()` en lugar de `.item` en `$('Node')`.
 * **Datos de prueba en producción (empresa 10):** un gasto de 80 a nombre de `qa-073-prod@example.test`, que quedó como miembro de la 10 por error de autocompletado (`access_audit_log`, 2026-10-25 00:19 UTC); dato de prueba, la membresía se desactiva desde Personal. Ver `083_RUNBOOK.md`.
 * Códigos de error: la 083 no define nuevos; reutiliza `P0080`–`P0094` de los SP que llama.
 
+### 22. Reporte de palpaciones — solo lectura (rama `feat/agro-erp-palpation-report`)
+* **Qué es:** pantalla `/ganaderia/palpaciones` (lazy), `features/livestock/palpations/`. Lee `vw_palpation_events` (clave `health_log_id`) y
+  `vw_palpation_herd` (clave `livestock_id`) por `v6/CRUD`, migración 108. **Orden de despliegue: base y modelos → pantalla.**
+  Sin escrituras, sin CSV, sin filtro por lote.
+* **Fail-closed:** sin empresa activa no hay petición; el rol permitido vive en UNA constante (`PALPATION_ALLOWED_ROLES = ['ADMIN','EDITOR']`,
+  usada por el servicio y por el menú); con sesión vencida o en gracia no se pide nada; la respuesta de una empresa o sesión anterior se descarta;
+  **una fila de otra empresa invalida TODA la respuesta**; cuerpo vacío o `error:true` en HTTP 200 es error, nunca "0 filas";
+  `data:[{}]` es colección vacía; una fecha con hora UTC > 12:00 es error (`unexpected-date-shape`; no se aplica a `created_at`);
+  paginación de 1500 con clave única (`health_log_id` / `livestock_id`), clave repetida entre páginas = error, tope de 10 páginas = "truncado".
+* **Reglas de negocio (no cambiar sin el dueño):** NR no cuenta como palpada; NR, RP, NO APTO y MATRIZ OCUPADA son términos del rancho
+  ("Definido por el rancho"), fuera del % clínico; un código sin confirmar (`UNMAPPED`) nunca se interpreta; `result` o `ranch_term`
+  desconocidos se conservan como "sin interpretar" (fuera del % clínico, con aviso); la lista de términos del rancho es fija en la vista.
+  "Activa" es `isActiveHead` de `herd-status.util` (un animal en `RIESGO` sigue en el hato); la leyenda aparte de `VENDIDO` y `BAJA_MORTANDAD`
+  y el universo "por palpar" (VACA y NOVILLONA activas sin palpación en la campaña) son reglas de presentación de este reporte.
+* **Zero-Compute (Regla 1):** todos los números de la pantalla (porcentajes, conteos, buckets) se calculan **solo para mostrarlos**, a partir de las filas
+  que devolvió el gateway, con funciones puras (`utils/palpation-metrics.ts`). **Nada se guarda ni se persiste**, ni en base de datos ni en caché offline
+  (los datasets permitidos siguen siendo `livestock` y `catalogs`).
+* **Pruebas:** solo datos sintéticos; nunca datos reales del hato en tests, fixtures ni capturas.
+
 ## PWA / service worker (Refs #1087, fase 1a)
 - El service worker es `@angular/service-worker` (`ngsw-config.json`, solo producción). **No hay datos offline
   todavía (fase 1b):** nunca pongas el gateway en `dataGroups` (todo es `POST`; el SW solo cachea `GET`/`HEAD`).

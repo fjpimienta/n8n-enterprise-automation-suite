@@ -48,6 +48,29 @@ Los detalles de tablas, integridad, procedimientos y límites de estado están e
 [docs/DATABASE_SCHEMA.md](./docs/DATABASE_SCHEMA.md); las rutas y límites entre capas, en
 [docs/ARCHITECTURE.md](./docs/ARCHITECTURE.md).
 
+### 🩺 Reporte de palpaciones (solo lectura)
+
+Pantalla `/ganaderia/palpaciones` (ruta diferida) para ver las palpaciones de la empresa activa: indicadores, tres gráficas,
+tabla de animales y un historial por animal. La ven solo `ADMIN` y `EDITOR` de una empresa de ganadería
+(constante `PALPATION_ALLOWED_ROLES`); cualquier otro rol ve "Sin permiso" y no se envía ninguna petición. Lee los dos
+modelos de solo lectura del gateway `v6` (`vw_palpation_events` y `vw_palpation_herd`, migración 108): la base y los modelos
+deben estar desplegados **antes** que esta pantalla.
+
+- **Periodo por defecto:** "campaña reciente" = desde (la última fecha de palpaciones contables no históricas − 60 días).
+  "Todo el historial" incluye la carga histórica 2023, marcada con la insignia "histórico (carga 2023)".
+- **Cifras:** por animal se toma su última palpación del periodo; los porcentajes son sobre los animales con resultado clínico
+  (preñada o vacía) y siempre se muestran con el número absoluto y su denominador. Un animal no examinado (NR) no cuenta como palpado.
+- **Fuera de los porcentajes:** los términos del rancho (NR, RP, NO APTO, MATRIZ OCUPADA) llevan la insignia "Definido por el rancho";
+  los códigos sin confirmar se muestran tal como se escribieron y nunca se interpretan; un valor que la app no reconoce se muestra
+  como "Sin interpretar" y se avisa.
+- **Gestación** solo en preñadas: meses y, entre paréntesis, días; "—" si falta. Los subtipos de vacía salen solo de los detalles estructurados.
+- **Hato:** vigente / anterior / histórico / sin palpar; vendidos y baja por mortandad en leyenda aparte; "por palpar" = vacas y
+  novillonas activas sin palpación en la campaña; toros, becerros y novillos sin palpaciones = "no aplica".
+- **Estados de la pantalla:** cargando, vacío, error (motivo genérico y reintentar), sin permiso, sin empresa, sin campaña,
+  reporte incompleto (tope de 10 páginas de 1500 filas) y aviso de valores no reconocidos.
+
+Los datos de prueba son siempre sintéticos (`features/livestock/palpations/testing/palpation.fixtures.ts`).
+
 ---
 
 ## 🚀 Key Features (v1.17.0) — Órdenes de venta
