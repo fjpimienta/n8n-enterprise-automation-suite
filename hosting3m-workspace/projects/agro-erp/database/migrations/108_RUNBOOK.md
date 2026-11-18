@@ -1,7 +1,7 @@
 > ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (base de datos y n8n, verificadas con sus huellas).
 > `main` se despliega manualmente por Plesk con git: si el frontend se despliega antes, la pantalla nueva falla en producción.
 
-> **Status: written and tested LOCAL only (throwaway database + the LOCAL n8n gateway). NOT applied to production. No frontend in this change.**
+> **Status (reported by the owner, 2026-11-18, CDMX):** migration 108 was **applied to production at 13:07** and **rolled back with `108_rollback.sql` at 13:23**. Today the two views exist and both models are disabled (`allowed_ops '{}'`, every role `NONE`). The transport check of Part 3 (`--after-rollback`, own User-Agent) returned 2/2. Re-enabling is **not** done yet: it is Part 1b, to be authorised separately. This runbook is otherwise tested on LOCAL only. No frontend in this change.
 > Part 2 (n8n) changes **no node**: it is a verification of the production `v6/CRUD` workflow and a **PRECONDITION OF THE APPLY of Part 1**: it must be recorded as `RESULT: ACCEPTED` and five `PRESENT` lines **before** step 7 of Part 1. If the production `Build Query` does not inject `x-tenant-id`, the two new models would be readable across companies from the apply until the rollback.
 > The Part 0 facts were verified in production by read-only queries on 2026-11-18 (reported by Francisco). They must be re-run before Part 1.
 
@@ -167,6 +167,62 @@ EOF
 
    The `other_crud_models`, `other_crud_models_count` (95) and `source_table_columns` fingerprints must be **identical** to step 3; `crud_models` now has 97 rows.
 
+### Part 1b — Re-enable the two models (after a rollback)
+
+Use only when both models are disabled (the state of 13:23 on 2026-11-18). `108_palpation_views.sql` aborts on existing objects, so it cannot re-enable: this is `108_reenable.sql`, the exact inverse of `108_rollback.sql`. It is **generated** by `108_make_reenable.py` from the migration's `INSERT` (values copied, not retyped; `python3 -I 108_make_reenable.py --check` must print `OK`). It touches **two `crud_models` rows and nothing else**: no INSERT, DELETE, DROP or view change. A backup is not required for this change, because the only state it writes is the one `108_rollback.sql` wrote; the guards below stop it on any other state. Every command is labelled with the place where it runs.
+
+Guards (all inside the script): both views exist; exactly two model rows; both rows reverted (`allowed_ops '{}'`, every role `NONE`) or it aborts without changing anything; after the restore the two row fingerprints must equal the ones printed by the apply, or the transaction is aborted before the commit.
+
+1. **[LAPTOP] Checksums and generator consistency.** From the repo checkout, in `hosting3m-workspace/projects/agro-erp/database/migrations/`:
+
+   ```sh
+   python3 -I 108_make_reenable.py --check   # expected: OK    108_reenable.sql matches the generator and the migration
+   md5sum 108_reenable.sql 108_make_reenable.py 108_palpation_views.sql
+   ```
+
+   Record the three md5 values in the runbook record. **STOP** if the check does not print `OK`.
+
+2. **[VPS, read-only] State before.** It must be `rolled_back`; anything else is a **STOP**:
+
+   ```sh
+   ssh vps 'docker exec -i -e PGOPTIONS="-c default_transaction_read_only=on" n8n-enterprise-db psql -X -v ON_ERROR_STOP=1 -v expect=rolled_back -U n8n_user -d hosting3m_db' < 108_state_check.sql
+   ```
+
+3. **[VPS, dry run, rolled back; no `PGOPTIONS`, because the script writes inside its own transaction and rolls it back.]** Expected: the two `NOTICE` lines with the fingerprints of step 4, then `*** 108 RE-ENABLE DRY RUN: rolled back, nothing changed ***`:
+
+   ```sh
+   ssh vps 'docker exec -i n8n-enterprise-db psql -X -v ON_ERROR_STOP=1 -U n8n_user -d hosting3m_db' < 108_reenable.sql
+   ```
+
+4. **Fingerprints** printed by the dry run (LOCAL, the same values the apply of 108 printed; production must print the same). If any differs, **STOP**:
+
+   | Fingerprint | Expected |
+   |---|---|
+   | model `vw_palpation_events` | `51b93c8cc669c0cb8bb722d874790438` |
+   | model `vw_palpation_herd` | `7d0209677c2bd1189fbdc35792bf4599` |
+
+5. **Authorization.** Do not continue without it:
+
+   `Written authorization of Francisco: ______________________  (date: ____________)`
+
+6. **[VPS, apply] Re-enable.** Only after step 5 is filled in:
+
+   ```sh
+   ssh vps 'docker exec -i n8n-enterprise-db psql -X -v ON_ERROR_STOP=1 -v apply=true -U n8n_user -d hosting3m_db' < 108_reenable.sql
+   ```
+
+   Expected: the two `NOTICE` lines of step 4 and `*** 108 RE-ENABLED (committed) ***`.
+
+7. **[VPS, read-only] State after.** `model_rows` must be **`888bab6298cecf8df9899212cd713f05`** (the value of the apply of 108), and the `other_crud_models` fingerprint must be the one recorded in Part 1 step 3:
+
+   ```sh
+   ssh vps 'docker exec -i -e PGOPTIONS="-c default_transaction_read_only=on" n8n-enterprise-db psql -X -v ON_ERROR_STOP=1 -v expect=applied -U n8n_user -d hosting3m_db' < 108_state_check.sql
+   ```
+
+   If `model_rows` differs, do **not** force anything: the fingerprint printed by the apply is the reference; compare the two rows with `row_to_json` against `108_palpation_views.sql` and stop.
+
+8. **[LAPTOP] Repeat Part 3** (new run, new token, counts only). A run with no new executions in n8n proves nothing (see Part 3).
+
 ### Part 2 — n8n (no change; verification only)
 
 108 needs no workflow change. It does depend on the production `v6/CRUD` `Build Query` node behaving as the repo's export does for `getall` / `getone`, and **that is why this part is a precondition of the apply (Part 1, step 7)**: if the node does not inject the verified `x-tenant-id` for models that list `id_company`, the two new models would be readable across companies from the apply until the rollback. **Compare only the node's `jsCode`, not the whole workflow** (the whole-workflow snippet of the root `CLAUDE.md` is a separate release step and compares `parameters` of every node):
@@ -318,4 +374,6 @@ ssh vps 'docker exec -i -e PGOPTIONS="-c default_transaction_read_only=on" n8n-e
 - `108_gateway_tests.py` against the real LOCAL gateway: **28 / 28**; after `108_rollback.sql` (`--after-rollback`): **8 / 8** (`403`). Negative control without `id_company`: 19 / 28, leak visible (1500 mixed rows).
 - State fingerprints `other_crud_models` (`27178bfa1f57bf93182b401a788d9897`, 87 rows) and `source_table_columns` identical before, after applying and after rolling back.
 - `108_prod_checks.py` after the User-Agent and gateway-403 change, against the LOCAL gateway (test copy with `https` relaxed, as above): normal mode with `--expect-herd-rows 3` **7 / 7**, all 403 classified `gateway` (`TENANT_FORBIDDEN`); after `108_rollback.sql` and `expect=rolled_back`, `--after-rollback` **2 / 2** (403 `gateway`, no code: operation disabled); against a local test double that answers 403 `text/plain` of 17 bytes, and against one answering 403 JSON without the gateway shape, the script prints `FAIL ... blocked before the gateway` and exits **3** (the double received only `User-Agent: hosting3m-108-prod-check/1.0`); a POST to the base without a model returns `404` `application/json` of 388 bytes.
+- Re-enable (`108_reenable.sql`), LOCAL: apply of 108, then the re-enable on the applied state **aborts** (`only 0 of 2 models are in the reverted state`); rollback; with the models absent (one row renamed inside a rolled-back transaction) **aborts** (`expected exactly the two palpation model rows`); with the views absent (renamed inside a rolled-back transaction) **aborts** (`the two palpation views do not exist`); with `default_filter` changed in a rolled-back transaction **aborts** on the fingerprint (nothing committed); dry run prints `51b93c8c…` and `7d020967…` and changes nothing; apply: `state_check applied` with `model_rows` `888bab6298cecf8df9899212cd713f05` and `other_crud_models` `27178bfa…` unchanged.
+- After the re-enable, `108_gateway_tests.py` **28 / 28**; `108_prod_checks.py` normal mode with `--expect-herd-rows 3` **7 / 7**. Negative cases of the normal mode: a CUSTOMER of company 3's test copy gets `FAIL … code=SECURITY_VALIDATION` on the own-company check (exit 1); a gateway-shaped 403 with `SECURITY_VALIDATION` on the local double makes checks #1 and #2 FAIL with the code printed (`0/6`, exit 1); a gateway-shaped 403 with no code likewise (`0/6`, exit 1); after the rollback, the normal mode shows `code=-` on the own-company check (exit 1), and `--after-rollback` is **2 / 2**.
 - LOCAL `hosting3m_db` was returned to its previous state after the gateway tests (models and views removed, fixtures deleted). `rehearsal_108` is kept as a throwaway database.
