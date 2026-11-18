@@ -2,7 +2,7 @@
 > `main` se despliega manualmente por Plesk con git: si el frontend se despliega antes, la pantalla nueva falla en producción.
 
 > **Status: written and tested LOCAL only (throwaway database + the LOCAL n8n gateway). NOT applied to production. No frontend in this change.**
-> Part 2 (n8n) changes **no node**: it is a verification of the production `v6/CRUD` workflow, and it is a precondition (see below).
+> Part 2 (n8n) changes **no node**: it is a verification of the production `v6/CRUD` workflow and a **PRECONDITION OF THE APPLY of Part 1**: it must be recorded as `RESULT: ACCEPTED` and five `PRESENT` lines **before** step 7 of Part 1. If the production `Build Query` does not inject `x-tenant-id`, the two new models would be readable across companies from the apply until the rollback.
 > The Part 0 facts were verified in production by read-only queries on 2026-11-18 (reported by Francisco). They must be re-run before Part 1.
 
 # Runbook 108 — read-only palpation report data (two views, two gateway models)
@@ -39,7 +39,10 @@ Proved in LOCAL (negative control): with `id_company` removed from `vw_palpation
 `cattle_health_logs` has no tenant column, so the company comes from the join to `cattle_livestock` inside the view. The same hole exists today in other cattle models (`cattle_health_logs`, `cattle_weight_logs`, `cattle_task_evidence`, `cattle_identifier_history`, `cattle_movement_event_animals`, `cattle_movement_event_health_certs`, `cattle_tenants`): it is **out of scope of 108** and tracked separately (branch `security/gateway-v6-tenant-less-models`).
 Also: `getall` and `getone` are both authorised as `select`, so `allowed_ops {SELECT}` cannot hide `getone`; it is filtered by company the same way. Default sort is `<table>.created_at`: both views expose `created_at`.
 
-## Order (database → n8n verification → production tests → frontend, last)
+## Order of execution
+
+Part 0 → **Part 2 (n8n verification, precondition)** → Part 1 steps 1-6 (backup, checksums, state before, dry run, fingerprints, authorization) → Part 1 step 7 (**apply, blocked until Part 2 is recorded**) → Part 1 step 8 → Part 3 (production tests) → Part 4 (frontend, last).
+The parts keep their numbers (Part 1 = database, Part 2 = n8n) because the ⛔ box refers to them.
 
 ### Part 0 — Preconditions
 
@@ -63,7 +66,53 @@ The migration itself aborts if any of these facts is false, and the dry run tell
 
 Nothing is copied to the VPS: every command runs on your machine and streams the file over standard input (`ssh` → `docker exec -i … psql`). Apart from the backup of step 1, nothing is left on the server. `vps` is the SSH alias of the production server.
 
-1. **Backup** (before anything else; same procedure as `REPRO_PRODUCTION_RUNBOOK.md`, Step 1): `pg_dump -Fc` of `hosting3m_db`, `pg_restore --list` of the dump, `md5sum`, copy off the VPS. Record the file names. Do not continue without a verified dump.
+1. **Backup** (before anything else). Only operations that neither delete nor overwrite: new file names carrying a timestamp, `noclobber`, `mkdir` without `-p` for the local directory, `scp` into that new directory. The dump contains **real data**: it never goes into the repo; record the file names and the md5 in the runbook record.
+
+   Timestamp (on your machine, used in every name below):
+
+   ```sh
+   export STAMP=$(date -u +%Y%m%dT%H%M%SZ); echo "$STAMP"
+   ```
+
+   1a. **Space** (read-only). **STOP if free space is below about 3 times the database size:**
+
+```sh
+ssh vps bash -s <<'EOF'
+df -h /root /var/lib/docker
+docker exec n8n-enterprise-db psql -U n8n_user -d hosting3m_db -Atc "SELECT pg_size_pretty(pg_database_size('hosting3m_db'))"
+EOF
+```
+
+   1b. **Dump inside the container, list it, md5** (the dump goes to `/root/backups` on the VPS under a name that must not exist yet):
+
+```sh
+ssh vps "STAMP=$STAMP bash -s" <<'EOF'
+set -euo pipefail
+set -o noclobber                      # a '>' can never overwrite an existing file
+umask 077
+BK=/root/backups
+DUMP="$BK/hosting3m_pre108_${STAMP}.dump"
+test -d "$BK" && test ! -e "$DUMP"
+docker exec n8n-enterprise-db pg_dump -U n8n_user -Fc hosting3m_db > "$DUMP"
+test -s "$DUMP"
+docker exec -i n8n-enterprise-db pg_restore --list < "$DUMP" > "$BK/list_pre108_${STAMP}.txt"
+test -s "$BK/list_pre108_${STAMP}.txt"
+( cd "$BK" && md5sum "hosting3m_pre108_${STAMP}.dump" > "pre108_${STAMP}.md5" )
+ls -l "$DUMP" "$BK/list_pre108_${STAMP}.txt" "$BK/pre108_${STAMP}.md5"
+cat "$BK/pre108_${STAMP}.md5"
+EOF
+```
+
+   1c. **Copy OFF the VPS** (from your machine, into a NEW directory outside the repo) and verify:
+
+   ```sh
+   LOCAL_BK="$HOME/backups-hosting3m-pre108"
+   mkdir -m 700 "$LOCAL_BK"             # fails if it already exists: nothing is overwritten
+   scp -p "vps:/root/backups/hosting3m_pre108_${STAMP}.dump" "vps:/root/backups/pre108_${STAMP}.md5" "vps:/root/backups/list_pre108_${STAMP}.txt" "$LOCAL_BK/"
+   ( cd "$LOCAL_BK" && md5sum -c "pre108_${STAMP}.md5" )
+   ```
+
+   **STOP if** a file is missing, the dump or its list is empty, or `md5sum -c` does not print `OK`. Do not continue without a verified dump. (Same commands as step 1 of `REPRO_PRODUCTION_RUNBOOK.md`, whose `pg_dump` / `pg_restore --list` part was executed in production on 2026-10-28, with the additions above.)
 2. **Local checksums** of the three files (from the repo checkout, in `hosting3m-workspace/projects/agro-erp/database/migrations/`); compare them with the reviewed values. Never stream the test, fixture or abort-check scripts.
 
    ```sh
@@ -100,7 +149,10 @@ Nothing is copied to the VPS: every command runs on your machine and streams the
 6. **Authorization.** Do not continue without it:
 
    `Written authorization of Francisco: ______________________  (date: ____________)`
-7. **Apply** (no `PGOPTIONS`):
+7. **Apply** (no `PGOPTIONS`). **BLOCKED until Part 2 is recorded** (the n8n `Build Query` of production must inject `x-tenant-id`; otherwise the models would be readable across companies until the rollback):
+
+   `Part 2 recorded: RESULT ______________  PRESENT lines ____/5  (date: ____________  by: ____________)`
+
 
    ```sh
    ssh vps 'docker exec -i n8n-enterprise-db psql -X -v ON_ERROR_STOP=1 -v apply=true -U n8n_user -d hosting3m_db' < 108_palpation_views.sql
@@ -117,7 +169,7 @@ Nothing is copied to the VPS: every command runs on your machine and streams the
 
 ### Part 2 — n8n (no change; verification only)
 
-108 needs no workflow change. It does depend on the production `v6/CRUD` `Build Query` node behaving as the repo's export does for `getall` / `getone`. **Compare only the node's `jsCode`, not the whole workflow** (the whole-workflow snippet of the root `CLAUDE.md` is a separate release step and compares `parameters` of every node):
+108 needs no workflow change. It does depend on the production `v6/CRUD` `Build Query` node behaving as the repo's export does for `getall` / `getone`, and **that is why this part is a precondition of the apply (Part 1, step 7)**: if the node does not inject the verified `x-tenant-id` for models that list `id_company`, the two new models would be readable across companies from the apply until the rollback. **Compare only the node's `jsCode`, not the whole workflow** (the whole-workflow snippet of the root `CLAUDE.md` is a separate release step and compares `parameters` of every node):
 
 1. Download `v6/CRUD` from the production editor (⋯ → Download), `chmod 600` the file, outside the repo. `git fetch origin main` first.
 2. **Accepted difference:** none, **or** only the two `call_sp` entries of migration 107 (`sp_agri_void_sale`, `sp_agri_sales_balance` in `spConfigByModel`, 12 lines) present in `origin/main` and absent in production (their gateway publication is Part 2 of runbook 107, which may not be done yet). **Any other difference, in either direction, is a STOP.** The snippet below does the comparison and the evidence checks of step 3 (run it from the repo root; it reads the export and `git show`, it connects to nothing):
@@ -141,8 +193,8 @@ end = next(i for i in range(bal, len(repo_l)) if repo_l[i].strip().startswith("}
 block = {l.strip() for l in repo_l[start:end + 1]}
 size = end - start + 1
 
-diff = [l for l in difflib.unified_diff(prod_l, repo_l, "production", "origin/main", lineterm="", n=0)
-        if not l.startswith(("---", "+++", "@@"))]
+raw = list(difflib.unified_diff(prod_l, repo_l, "production", "origin/main", lineterm="", n=0))
+diff = [l for l in raw[2:] if not l.startswith("@@")]   # drop ONLY the two header lines and the @@ hunk lines
 only_prod = [l for l in diff if l.startswith("-")]
 only_repo = [l for l in diff if l.startswith("+")]
 ok_diff = not only_prod and (not only_repo or (len(only_repo) == size and all(l[1:].strip() in block for l in only_repo)))
@@ -174,8 +226,8 @@ sys.exit(0 if ok_diff and not bad else 1)
 PY
 ```
 
-   Expected: `RESULT: ACCEPTED` and five `PRESENT` lines. (Tested only on files: the repo export, the same export without the 107 block, and two mutated copies; it was **not** run against a production export.)
-3. **Evidence in the export** (what the snippet checks in the production `jsCode`): the `x-tenant-id` injection condition (`if (tenantIdHeader && modelHasTenantId) … else if (tenantIdHeader && modelHasIdCompany)`, lines 17-24 of the node code), the `modelHasTenantId` / `modelHasIdCompany` flags read from `allowed_fields`, the default sort `created_at` and `ORDER BY <table>.<sortCol>`, and the default limit 1500 (maximum 2000). An old `Build Query` without the `id_company` injection would make Part 3 fail the isolation checks.
+   Expected: `RESULT: ACCEPTED` and five `PRESENT` lines; **record them in Part 1, step 7**. (Tested only on files, never on a production export: the repo export, the same export without the 107 block, a copy without the injection, a copy with an extra line, and copies with a line that starts with `--` or `++`. An earlier version dropped every line starting with `---` / `+++` and accepted the copy with a `-- ...` line; this one skips only the two header lines and the `@@` lines.)
+3. **Evidence in the export** (what the snippet checks in the production `jsCode`): the `x-tenant-id` injection condition (`if (tenantIdHeader && modelHasTenantId) … else if (tenantIdHeader && modelHasIdCompany)`, lines 17-24 of the node code), the `modelHasTenantId` / `modelHasIdCompany` flags read from `allowed_fields`, the default sort `created_at` and `ORDER BY <table>.<sortCol>`, and the default limit 1500 (maximum 2000). An old `Build Query` without the `id_company` injection must stop the deployment here, before the apply.
 4. **The same export answers whether the hole of company-less models exists in production** (step 0 of the security issue `security/gateway-v6-tenant-less-models`): when the injection of step 3 is present and `getall` has no other company condition (the snippet prints it as `INFO`), every model whose `allowed_fields` lack both `tenant_id` and `id_company` is readable across companies. Which models are in that situation is configuration, readable without touching data (read-only session, aggregated names only):
 
 ```sh
@@ -196,17 +248,23 @@ Rules: a user **with membership in company 3 and without membership in company 5
 **Getting the token with ONE login** (by the code of `jwt-service` the login is rate-limited to 20 per 15 minutes per address; not measured in production; if the login fails, wait 15 minutes, do not retry in a loop; never `curl` a password or a token on the command line):
 
 1. In a private browser window, open the production agro-erp, log in **once** as that user and pick company 3.
-2. In the DevTools console of that page: `copy(localStorage.getItem('authToken'))`. The token goes to the clipboard without being printed.
+2. In the DevTools console of that page: `copy(localStorage.getItem('authToken'))`. The token goes to the clipboard without being printed. (`authToken` is the key `TOKEN_KEY` of `hosting3m-workspace/projects/core-auth/src/lib/services/auth.service.ts:11`, written at login at line 217; `hosting3m-workspace/projects/agro-erp/src/app/features/admin/services/admin.service.ts:53` reads the same key.)
 3. In the terminal, type the token hidden (nothing is echoed, nothing reaches the shell history): `read -rs PALP_TOKEN; export PALP_TOKEN`, paste, Enter.
 4. Clear the clipboard (`copy('')` in the console) and close the private window. Logging out does not revoke a JWT: it stays valid until its `exp`, so treat it as a secret until then and never paste it in a chat.
 
+Recount the herd of company 3 just before (read-only; expected 138 at the time of the Part 0 verification) and pass it as `N`:
+
+```sh
+ssh vps 'docker exec -i -e PGOPTIONS="-c default_transaction_read_only=on" n8n-enterprise-db psql -X -A -t -v ON_ERROR_STOP=1 -U n8n_user -d hosting3m_db -c "SELECT count(*) FROM cattle_livestock WHERE tenant_id = 3"'
+```
+
 ```sh
 read -rs PALP_TOKEN; export PALP_TOKEN
-python3 -I 108_prod_checks.py --base https://<n8n-host>/webhook/<webhook-id>/crud/v6
+python3 -I 108_prod_checks.py --base https://<n8n-host>/webhook/<webhook-id>/crud/v6 --expect-herd-rows N
 unset PALP_TOKEN
 ```
 
-(`108_prod_checks.py` only sends `getall`, takes the token from the environment and prints counts only.)
+(`108_prod_checks.py` only sends `getall`, takes the token from the environment and prints counts only; `--company` only accepts `3`. `--expect-herd-rows N` adds a 7th check: `vw_palpation_herd` must return exactly `N` rows for company 3, fewer than the 1500 limit; expected 138 unless the recount says otherwise. A mismatch is not a leak but must be explained before going on.)
 
 | # | Request (both models) | Expected | The script prints |
 |---|---|---|---|
@@ -214,10 +272,10 @@ unset PALP_TOKEN
 | 2 | `x-tenant-id: 5` with that user | `403`, no rows. A `200` means the user belongs to 5 or the gateway does not enforce membership: **the script does not inspect the answer, stops (exit 3)** | status and row count |
 | 3 | `x-tenant-id: 3` | `200`; **rows with `id_company` ≠ 3 must be 0**. If not 0: stop (exit 3), content not shown | status, total rows, rows of other companies, truncated yes/no |
 
-Then, by hand in n8n (no data shown): open the latest executions of #1 and #2 (they stop at `Respond Tenant Forbidden`) and #3 (reaches `Execute SQL` bound to `3`).
+Then, by hand in n8n: open the latest executions of #1 and #2 (they must stop at `Respond Tenant Forbidden`) and #3 (it must go through `Execute SQL` and finish successfully). **Look only at the route and the status of each execution; do not open the input or output of any node** (they hold rows).
 Writes and the `CUSTOMER` role are **not** tested in production: they are covered by the model fingerprint of Part 1, step 5 (`allowed_ops {SELECT}` and every role are part of the hashed row) and by the LOCAL gateway tests (28 / 28).
 If #2 or #3 fail: **roll back immediately** (below) and report.
-`108_prod_checks.py` was validated against the LOCAL gateway with synthetic companies (6 / 6; and it stops with exit 3 when the company filter is removed from a model). Its `--after-rollback` mode (used below) was only syntax-checked.
+`108_prod_checks.py` was validated against the LOCAL gateway with synthetic companies, including `--expect-herd-rows` and `--after-rollback` (see the LOCAL evidence below), and it stops with exit 3 when the company filter is removed from a model.
 
 ### Part 4 — Frontend
 
@@ -246,6 +304,7 @@ ssh vps 'docker exec -i -e PGOPTIONS="-c default_transaction_read_only=on" n8n-e
 
 - `108_tests.sql` on a throwaway database restored from the LOCAL schema: **67 assertions passed**, rolled back. Covers: the 2023 historical load (key `resultado` without `result`) and the mixed-format event; new events with and without details row; `UNMAPPED` (`code_meaning` forced to NULL even when the code has a meaning); NR (not counted as palpated), RP, NO APTO, MATRIZ OCUPADA (ranch terms, outside the clinical results); pregnant without usable gestation; never-palpated animals; sold animals; **a synthetic bull (`TORO`) and calf (`BECERRO`) that appear with their category and species**; a non-object `medicines_json`; the accented event type; the same code `NR` in company B with another meaning; isolation between companies A and B; the gateway gate and the company filter as `Build Query` builds it; the rollback leaves the views and every other `crud_models` row untouched.
 - `108_abort_check.sh`: **13 / 13**.
+- `108_prod_checks.py` against the LOCAL gateway (synthetic companies; test copy with `https` relaxed and the company choice removed, because LOCAL has no company 3): normal mode **6 / 6**; with `--expect-herd-rows 3` **7 / 7**; with `--expect-herd-rows 99` it fails as it must (**6 / 7**, exit 1); after `108_rollback.sql` and `108_state_check.sql -v expect=rolled_back`, `--after-rollback` **2 / 2** (`403`, no rows); the real script rejects `--company 9101` (argparse choices) and refuses `--expect-herd-rows` together with `--after-rollback`. LOCAL was returned to `before` afterwards.
 - `108_gateway_tests.py` against the real LOCAL gateway: **28 / 28**; after `108_rollback.sql` (`--after-rollback`): **8 / 8** (`403`). Negative control without `id_company`: 19 / 28, leak visible (1500 mixed rows).
 - State fingerprints `other_crud_models` (`27178bfa1f57bf93182b401a788d9897`, 87 rows) and `source_table_columns` identical before, after applying and after rolling back.
 - LOCAL `hosting3m_db` was returned to its previous state after the gateway tests (models and views removed, fixtures deleted). `rehearsal_108` is kept as a throwaway database.
