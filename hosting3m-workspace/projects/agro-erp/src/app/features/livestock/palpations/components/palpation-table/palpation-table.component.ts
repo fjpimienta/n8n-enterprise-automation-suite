@@ -33,6 +33,9 @@ interface Column {
  * per row, and stacked cards on a phone. The rows arrive filtered and sorted from the page; only search and paging live here.
  * Nothing is persisted.
  */
+export const SEARCH_PLACEHOLDER = 'Buscar animal, estado o técnico';
+export const SEARCH_HINT = 'Busca por identificador, categoría, estado, técnico o código sin confirmar.';
+
 @Component({
   selector: 'app-palpation-table',
   standalone: true,
@@ -41,6 +44,11 @@ interface Column {
   // In the dark theme the stock outline-primary button is dark blue on near-black (low contrast): lighten text and border there only.
   styles: [
     `
+      /* The shared toolbar leaves the search field as narrow as its content (about 110px of text on desktop). Widen it here, for this table only. */
+      :host ::ng-deep app-table-toolbar .input-icon {
+        width: 100%;
+        max-width: 320px;
+      }
       :host-context([data-bs-theme='dark']) .palp-open {
         color: #8ab8ee;
         border-color: #8ab8ee;
@@ -70,6 +78,12 @@ export class PalpationTableComponent {
     { key: 'currentStatus', label: 'Estado' },
   ];
 
+  /**
+   * Short on purpose: the field is at most 320px wide, and the old text ("Buscar por identificador, categoría, estado o técnico") was cut.
+   * The full list of searched fields is the hint line under the toolbar, which wraps instead of cutting.
+   */
+  protected readonly searchPlaceholder = SEARCH_PLACEHOLDER;
+  protected readonly searchHint = SEARCH_HINT;
   protected readonly ranchBadge = RANCH_BADGE;
   protected readonly historicalBadge = HISTORICAL_BADGE;
   protected readonly unconfirmedBadge = UNCONFIRMED_BADGE;

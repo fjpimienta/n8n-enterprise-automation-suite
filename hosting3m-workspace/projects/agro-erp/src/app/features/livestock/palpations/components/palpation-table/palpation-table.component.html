@@ -32,7 +32,8 @@
 </ng-template>
 
 <div class="card">
-  <app-table-toolbar [pagedTable]="table" searchPlaceholder="Buscar por identificador, categoría, estado o técnico" />
+  <app-table-toolbar [pagedTable]="table" [searchPlaceholder]="searchPlaceholder" />
+  <p class="text-muted small pt-2 mb-0" style="padding-left: var(--tblr-card-spacer-x, 1.25rem)" data-testid="search-hint">{{ searchHint }}</p>
 
   @if (table.totalItems() === 0) {
     <div class="card-body text-center text-muted" role="status">No hay animales que coincidan con la búsqueda o los filtros.</div>

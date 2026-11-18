@@ -2,7 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { describe, expect, it, vi } from 'vitest';
 import { colorForKey } from '../../utils/palpation-colors';
 import { PalpationTableRow, SortDir, SortKey } from '../../utils/palpation-view';
-import { PalpationTableComponent, RowOpenEvent } from './palpation-table.component';
+import { PalpationTableComponent, RowOpenEvent, SEARCH_HINT, SEARCH_PLACEHOLDER } from './palpation-table.component';
 
 function row(over: Partial<PalpationTableRow> = {}): PalpationTableRow {
   return {
@@ -114,6 +114,18 @@ describe('PalpationTableComponent', () => {
     headers[0]!.click();
     headers[2]!.click();
     expect(spy.mock.calls.map(c => c[0])).toEqual(['identifier', 'state']);
+  });
+
+  it('uses a placeholder short enough not to be cut in the search field, and lists the searched fields in a visible hint', () => {
+    const f = render([row()]);
+    const input = el(f).querySelector('input[type="text"]') as HTMLInputElement;
+    expect(input.placeholder).toBe(SEARCH_PLACEHOLDER);
+    // the old 53-character text was cut in a desktop browser; the field is at most 320px wide (about 36 characters)
+    expect(SEARCH_PLACEHOLDER.length).toBeLessThanOrEqual(34);
+    expect(SEARCH_PLACEHOLDER).not.toContain('…');
+    const hint = el(f).querySelector('[data-testid="search-hint"]');
+    expect(hint?.textContent?.trim()).toBe(SEARCH_HINT);
+    for (const word of ['identificador', 'categoría', 'estado', 'técnico', 'código']) expect(SEARCH_HINT).toContain(word);
   });
 
   it('searches by identifier, category, status, technician and code, ignoring accents', () => {
