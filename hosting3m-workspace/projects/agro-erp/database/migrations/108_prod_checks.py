@@ -18,6 +18,7 @@ After 108_rollback.sql was applied, the same user must be denied for his own com
 A 403 counts only when it is the GATEWAY's own denial: application/json, body with error:true and status:403 (v6-crud.json:
 "Respond Tenant Forbidden" code TENANT_FORBIDDEN; "Security Validation" code SECURITY_VALIDATION, or no code for a disabled operation).
 A 403 of any other shape (text/plain, HTML, a CDN page) was blocked BEFORE the gateway: the script prints FAIL "blocked before the gateway" and exits 3.
+In normal mode the no-tenant-header and foreign-header checks pass ONLY with TENANT_FORBIDDEN; a SECURITY_VALIDATION or code-less 403 there is a FAIL that prints the code.
 A missing token is answered 401 by the gateway ("Respond Denegate"), not 403.
 
 The script identifies itself with User-Agent "hosting3m-108-prod-check/1.0" (it does not impersonate a browser or another client).
@@ -126,10 +127,12 @@ if args.after_rollback:
     sys.exit(0 if not failures else 1)
 
 for model in MODELS:
-    # 1. no tenant header -> gateway 403, no rows
+    # 1. no tenant header -> must be the gateway's TENANT_FORBIDDEN (membership check), no rows.
+    #    Any other 403 (SECURITY_VALIDATION, or no code) is a FAIL that prints its code.
     code, j, ctype = post(model, None)
     stop_if_blocked(f'{model} no x-tenant-id', code, ctype, j)
-    report(f'{model}: no x-tenant-id -> gateway 403, no rows', gateway_denial(code, ctype, j) and not rows(j),
+    report(f'{model}: no x-tenant-id -> gateway 403 TENANT_FORBIDDEN, no rows',
+           gateway_denial(code, ctype, j) and gateway_code(j) == 'TENANT_FORBIDDEN' and not rows(j),
            f'http={code}, class={classify(code, ctype, j)}, code={gateway_code(j)}, rows={len(rows(j))}')
 
     # 2. the foreign company -> gateway 403. A 200 means the user belongs to it or the filter failed: do NOT inspect the answer.
@@ -139,7 +142,8 @@ for model in MODELS:
               f'Either this user belongs to company {args.foreign} or the gateway is not enforcing membership. Tell the owner; roll back if needed.')
         sys.exit(3)
     stop_if_blocked(f'{model} foreign header', code, ctype, j)
-    report(f'{model}: header of company {args.foreign} -> gateway 403, no rows', gateway_denial(code, ctype, j) and not rows(j),
+    report(f'{model}: header of company {args.foreign} -> gateway 403 TENANT_FORBIDDEN, no rows',
+           gateway_denial(code, ctype, j) and gateway_code(j) == 'TENANT_FORBIDDEN' and not rows(j),
            f'http={code}, class={classify(code, ctype, j)}, code={gateway_code(j)}, rows={len(rows(j))}')
 
     # 3. own company: rows of any other company must be 0 (counts only; if not 0, stop without showing anything)
@@ -153,7 +157,7 @@ for model in MODELS:
     empty_body = j is None
     report(f'{model}: header of company {args.company} -> 200, rows of other companies = 0',
            code == 200 and not empty_body and (isinstance(j, dict) and j.get('error') is not True),
-           f'http={code}, class={classify(code, ctype, j)}, rows={len(rs)}, rows_of_other_companies={other}, truncated={len(rs) >= LIMIT}')
+           f'http={code}, class={classify(code, ctype, j)}, code={gateway_code(j) if code == 403 else "-"}, rows={len(rs)}, rows_of_other_companies={other}, truncated={len(rs) >= LIMIT}')
     if len(rs) >= LIMIT:
         print(f'NOTE  {model}: {len(rs)} rows = the gateway limit ({LIMIT}); the list is truncated, not complete.')
     if model == 'vw_palpation_herd' and args.expect_herd_rows is not None:
