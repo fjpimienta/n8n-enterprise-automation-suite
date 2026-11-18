@@ -9,17 +9,36 @@ import {
   latestPerAnimal,
   porPalpar,
 } from './palpation-metrics';
+import { bucketColor, colorForKey, gestationMonthOf } from './palpation-colors';
 import { BUCKET_LABEL, SUBTYPE_LABEL } from './palpation-view';
 
 /** Pure data of the three charts, plus the text that describes each one to a screen reader. No chart library here. */
 
 export interface DistributionItem {
+  /** Category key (`p-3`, `v-CICLANDO`, `r-RP`, ...). The colour depends on it and on nothing else. */
   readonly key: string;
+  /** Full name: tooltip, table and screen-reader text. */
   readonly label: string;
+  /** Short name for the axis of the chart: never needs an ellipsis. */
+  readonly short: string;
+  readonly color: string;
   readonly count: number;
 }
 
 const SUBTYPE_ORDER: readonly EmptySubtype[] = ['ESTATICA', 'CICLANDO', 'OTRO', 'SIN_SUBTIPO', 'SIN_CONFIRMAR'];
+
+const SHORT_SUBTYPE: Readonly<Record<EmptySubtype, string>> = {
+  ESTATICA: 'Vacía · Estática',
+  CICLANDO: 'Vacía · Ciclando',
+  OTRO: 'Vacía · Otro',
+  SIN_SUBTIPO: 'Vacía · Sin detalle',
+  SIN_CONFIRMAR: 'Vacía · Sin confirmar',
+};
+
+function shortMonths(months: number | null): string {
+  if (months === null) return 'Preñada · sin dato';
+  return months < 1 ? 'Preñada · <1 m' : `Preñada · ${months} m`;
+}
 
 function monthsLabel(months: number | null): string {
   if (months === null) return 'Preñada · sin dato de gestación';
@@ -33,40 +52,39 @@ function monthsLabel(months: number | null): string {
  * unrecognised one. Zero items are left out. The counts add up to the animals palpated in the period.
  */
 export function resultDistribution(events: readonly PalpationEventRow[], period: Period): DistributionItem[] {
-  const buckets = new Map<string, { order: number; label: string; count: number }>();
-  const add = (key: string, order: number, label: string): void => {
+  const buckets = new Map<string, { order: number; label: string; short: string; count: number }>();
+  const add = (key: string, order: number, label: string, short: string): void => {
     const current = buckets.get(key);
     if (current) current.count += 1;
-    else buckets.set(key, { order, label, count: 1 });
+    else buckets.set(key, { order, label, short, count: 1 });
   };
 
   for (const e of latestPerAnimal(events, period).values()) {
     switch (animalState(e)) {
       case 'PREÑADA': {
-        const days = e.gestation_days;
-        const months = days !== null && days > 0 ? Math.floor(days / 30) : null;
-        add(`p-${months ?? 'none'}`, months === null ? 99 : months, monthsLabel(months));
+        const months = gestationMonthOf(e.gestation_days);
+        add(`p-${months ?? 'none'}`, months === null ? 99 : months, monthsLabel(months), shortMonths(months));
         break;
       }
       case 'VACÍA': {
         const subtype = emptySubtypeOf(e);
-        add(`v-${subtype}`, 100 + SUBTYPE_ORDER.indexOf(subtype), `Vacía · ${SUBTYPE_LABEL[subtype]}`);
+        add(`v-${subtype}`, 100 + SUBTYPE_ORDER.indexOf(subtype), `Vacía · ${SUBTYPE_LABEL[subtype]}`, SHORT_SUBTYPE[subtype]);
         break;
       }
       case 'TERMINO_RANCHO':
-        if (e.ranch_term !== null) add(`r-${e.ranch_term}`, 200, `Definido por el rancho · ${e.ranch_term}`);
+        if (e.ranch_term !== null) add(`r-${e.ranch_term}`, 200, `Definido por el rancho · ${e.ranch_term}`, `Rancho · ${e.ranch_term}`);
         break;
       case 'SIN_RESULTADO':
-        add('sin-resultado', 300, 'Sin resultado');
+        add('sin-resultado', 300, 'Sin resultado', 'Sin resultado');
         break;
       case 'SIN_INTERPRETAR':
-        add('sin-interpretar', 301, 'Sin interpretar');
+        add('sin-interpretar', 301, 'Sin interpretar', 'Sin interpretar');
         break;
     }
   }
   return [...buckets.entries()]
     .sort((a, b) => a[1].order - b[1].order || a[1].label.localeCompare(b[1].label, 'es'))
-    .map(([key, v]) => ({ key, label: v.label, count: v.count }));
+    .map(([key, v]) => ({ key, label: v.label, short: v.short, color: colorForKey(key), count: v.count }));
 }
 
 export interface MonthlySeries {
@@ -115,6 +133,7 @@ export function resultsByMonth(events: readonly PalpationEventRow[], period: Per
 export interface HerdBar {
   readonly bucket: 'vigente' | 'anterior' | 'historico' | 'sin-palpar';
   readonly label: string;
+  readonly color: string;
   readonly count: number;
 }
 
@@ -136,7 +155,7 @@ export function herdSummary(herd: readonly PalpationHerdRow[], campaign: string 
   for (const row of herd) counts[herdBucket(row, campaign)] += 1;
   const order: HerdBar['bucket'][] = ['vigente', 'anterior', 'historico', 'sin-palpar'];
   return {
-    bars: order.map(bucket => ({ bucket, label: BUCKET_LABEL[bucket], count: counts[bucket] })),
+    bars: order.map(bucket => ({ bucket, label: BUCKET_LABEL[bucket], color: bucketColor(bucket), count: counts[bucket] })),
     legend: {
       vendido: counts.vendido,
       bajaMortandad: counts['baja-mortandad'],

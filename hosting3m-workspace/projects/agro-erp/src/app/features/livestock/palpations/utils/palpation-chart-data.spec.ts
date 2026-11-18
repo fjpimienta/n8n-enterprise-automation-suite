@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { eventRow, herdRow } from '../testing/palpation.fixtures';
 import { describeDistribution, describeHerd, describeMonthly, herdSummary, resultDistribution, resultsByMonth } from './palpation-chart-data';
+import { BUCKET_COLOR, colorForKey } from './palpation-colors';
 
 const PERIOD = { from: '2026-09-11', to: '2026-11-10' };
 const ALL = { from: null, to: null };
@@ -14,6 +15,61 @@ const events = [
   eventRow({ livestock_id: 'A6', health_log_id: 'e6', event_date: '2026-10-20', result: 'VACÍA', mapping_status: 'UNMAPPED', raw_code: 'DF15' }),
   eventRow({ livestock_id: 'A7', health_log_id: 'e7', event_date: '2026-10-22', result: null, is_clinical_result: false }),
 ];
+
+describe('resultDistribution: short names and fixed colours', () => {
+  const all = [
+    eventRow({ livestock_id: 'a', health_log_id: 'a', event_date: '2026-11-01', result: 'PREÑADA', gestation_days: 180 }),
+    eventRow({ livestock_id: 'b', health_log_id: 'b', event_date: '2026-11-01', result: 'PREÑADA', gestation_days: null }),
+    eventRow({ livestock_id: 'c', health_log_id: 'c', event_date: '2026-11-01', result: 'PREÑADA', gestation_days: 20 }),
+    eventRow({ livestock_id: 'd', health_log_id: 'd', event_date: '2026-11-01', result: 'VACÍA', repro_condition: 'CICLANDO', mapping_status: 'EXPLICIT' }),
+    eventRow({ livestock_id: 'e', health_log_id: 'e', event_date: '2026-11-01', result: 'VACÍA', repro_condition: 'ESTATICA', mapping_status: 'EXPLICIT' }),
+    eventRow({ livestock_id: 'f', health_log_id: 'f', event_date: '2026-11-01', result: 'VACÍA', repro_condition: 'OTRO', mapping_status: 'EXPLICIT' }),
+    eventRow({ livestock_id: 'g', health_log_id: 'g', event_date: '2026-11-01', result: 'VACÍA' }),
+    eventRow({ livestock_id: 'h', health_log_id: 'h', event_date: '2026-11-01', result: 'VACÍA', mapping_status: 'UNMAPPED', raw_code: 'DF15' }),
+    eventRow({ livestock_id: 'i', health_log_id: 'i', event_date: '2026-11-01', result: 'VACÍA', ranch_term: 'MATRIZ OCUPADA', is_clinical_result: false }),
+    eventRow({ livestock_id: 'j', health_log_id: 'j', event_date: '2026-11-01', result: null, is_clinical_result: false }),
+    eventRow({ livestock_id: 'k', health_log_id: 'k', event_date: '2026-11-01', result: null, uninterpreted: true, is_clinical_result: false }),
+  ];
+
+  it('gives each item a short axis name and keeps the full name apart for the tooltip and the table', () => {
+    const items = resultDistribution(all, ALL);
+    expect(items.map(i => i.short)).toEqual([
+      'Preñada · <1 m', 'Preñada · 6 m', 'Preñada · sin dato',
+      'Vacía · Estática', 'Vacía · Ciclando', 'Vacía · Otro', 'Vacía · Sin detalle', 'Vacía · Sin confirmar',
+      'Rancho · MATRIZ OCUPADA', 'Sin resultado', 'Sin interpretar',
+    ]);
+    expect(items.find(i => i.key === 'v-ESTATICA')?.label).toBe('Vacía · Estática (UNE)');
+    expect(items.find(i => i.key === 'r-MATRIZ OCUPADA')?.label).toBe('Definido por el rancho · MATRIZ OCUPADA');
+    expect(items.find(i => i.key === 'v-SIN_SUBTIPO')?.label).toBe('Vacía · Sin detalle de subtipo');
+  });
+
+  it('keeps every short name free of an ellipsis and under 24 characters, so desktop and phone never truncate it', () => {
+    for (const i of resultDistribution(all, ALL)) {
+      expect(i.short.includes('…')).toBe(false);
+      expect(i.short.length).toBeLessThanOrEqual(24);
+    }
+  });
+
+  it('colours an item by its category: the same colour whatever the period, the data or the order', () => {
+    const everything = resultDistribution(all, ALL);
+    const onlyTwo = resultDistribution([...all].reverse().filter(e => ['e', 'i'].includes(e.livestock_id)), ALL);
+    for (const item of onlyTwo) expect(item.color).toBe(everything.find(i => i.key === item.key)?.color);
+    for (const item of everything) expect(item.color).toBe(colorForKey(item.key));
+    expect(new Set(everything.map(i => i.color)).size).toBe(everything.length);
+  });
+});
+
+describe('herdSummary colours', () => {
+  it('gives each bar the fixed colour of its bucket', () => {
+    const bars = herdSummary([], '2026-09-11').bars;
+    expect(bars.map(b => [b.bucket, b.color])).toEqual([
+      ['vigente', BUCKET_COLOR.vigente],
+      ['anterior', BUCKET_COLOR.anterior],
+      ['historico', BUCKET_COLOR.historico],
+      ['sin-palpar', BUCKET_COLOR['sin-palpar']],
+    ]);
+  });
+});
 
 describe('resultDistribution (chart 1)', () => {
   it('counts the latest event of each animal and adds up to the animals palpated', () => {

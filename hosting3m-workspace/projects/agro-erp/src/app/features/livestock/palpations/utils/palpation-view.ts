@@ -28,7 +28,7 @@ export const SUBTYPE_LABEL: Readonly<Record<EmptySubtype, string>> = {
   ESTATICA: 'Estática (UNE)',
   CICLANDO: 'Ciclando',
   OTRO: 'Otro',
-  SIN_SUBTIPO: 'Sin subtipo',
+  SIN_SUBTIPO: 'Sin detalle de subtipo',
   SIN_CONFIRMAR: 'Código sin confirmar',
 };
 
