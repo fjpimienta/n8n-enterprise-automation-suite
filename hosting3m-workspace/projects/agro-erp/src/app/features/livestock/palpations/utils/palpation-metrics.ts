@@ -73,10 +73,14 @@ function isLater(a: PalpationEventRow, b: PalpationEventRow): boolean {
   return a.health_log_id > b.health_log_id;
 }
 
-export type AnimalState = 'PREÑADA' | 'VACÍA' | 'TERMINO_RANCHO' | 'SIN_RESULTADO';
+export type AnimalState = 'PREÑADA' | 'VACÍA' | 'TERMINO_RANCHO' | 'SIN_RESULTADO' | 'SIN_INTERPRETAR';
 
-/** State of an animal from its latest counted event. A ranch term takes precedence over the result, so it never counts as clinical. */
+/**
+ * State of an animal from its latest counted event. An unrecognised value is never interpreted: it is its own state, outside every
+ * clinical figure. A ranch term takes precedence over the result, so it never counts as clinical.
+ */
 export function animalState(e: PalpationEventRow): AnimalState {
+  if (e.uninterpreted) return 'SIN_INTERPRETAR';
   if (e.ranch_term !== null) return 'TERMINO_RANCHO';
   if (e.result === 'PREÑADA') return 'PREÑADA';
   if (e.result === 'VACÍA') return 'VACÍA';
@@ -110,13 +114,15 @@ export interface PeriodKpis {
   readonly ranchTotal: number;
   /** Animals whose latest event has no result and no ranch term. */
   readonly noResult: number;
+  /** Animals whose latest event carries an unrecognised result or ranch term. Outside every percentage; the UI warns. */
+  readonly uninterpreted: number;
   /** Animals whose latest event has an unconfirmed code (UNMAPPED). Shown as typed, never interpreted. */
   readonly unconfirmed: number;
   /** Sub-types of the empty animals. Sums to `empty`. */
   readonly emptySubtypes: Readonly<Record<EmptySubtype, number>>;
   /** Latest counted date inside the period, or null when there is none. */
   readonly lastPalpationDate: string | null;
-  /** The identity D = C + ranch + no result. The UI must not show the KPIs when it is false. */
+  /** The identity D = C + ranch + no result + uninterpreted. The UI must not show the KPIs when it is false. */
   readonly identityHolds: boolean;
 }
 
@@ -130,6 +136,7 @@ export function periodKpis(events: readonly PalpationEventRow[], period: Period)
   let pregnant = 0;
   let empty = 0;
   let noResult = 0;
+  let uninterpreted = 0;
   let unconfirmed = 0;
   let last: string | null = null;
 
@@ -150,6 +157,9 @@ export function periodKpis(events: readonly PalpationEventRow[], period: Period)
       case 'SIN_RESULTADO':
         noResult += 1;
         break;
+      case 'SIN_INTERPRETAR':
+        uninterpreted += 1;
+        break;
     }
   }
 
@@ -166,10 +176,11 @@ export function periodKpis(events: readonly PalpationEventRow[], period: Period)
     ranchTerms,
     ranchTotal,
     noResult,
+    uninterpreted,
     unconfirmed,
     emptySubtypes,
     lastPalpationDate: last,
-    identityHolds: palpated === clinical + ranchTotal + noResult,
+    identityHolds: palpated === clinical + ranchTotal + noResult + uninterpreted,
   };
 }
 

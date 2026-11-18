@@ -41,6 +41,11 @@ export interface PalpationEventRow {
   /** Forced to null in SQL when UNMAPPED. The UI never reads it for an unconfirmed code. */
   readonly code_meaning: string | null;
   readonly ranch_term: RanchTerm | null;
+  /**
+   * True when result or ranch_term arrived with a value this app does not recognise. The row is kept, counted as palpated,
+   * left out of the clinical percentages and reported in the state as "no reconocido". Never guessed.
+   */
+  readonly uninterpreted: boolean;
   /** False only for NR (an animal not examined is not a palpated animal). */
   readonly counts_as_palpation: boolean;
   /** True when there is a clinical result (PREÑADA or VACÍA) and no ranch term. */
@@ -66,6 +71,8 @@ export interface PalpationHerdRow {
   readonly last_repro_condition: ReproCondition | null;
   readonly last_mapping_status: MappingStatus | null;
   readonly last_ranch_term: RanchTerm | null;
+  /** True when last_result or last_ranch_term arrived with an unrecognised value (see PalpationEventRow.uninterpreted). */
+  readonly uninterpreted: boolean;
   readonly palpation_count: number;
   readonly created_at: string;
 }

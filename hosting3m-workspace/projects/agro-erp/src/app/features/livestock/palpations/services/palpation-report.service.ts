@@ -59,6 +59,11 @@ export class PalpationReportService {
   readonly herd = signal<readonly PalpationHerdRow[]>([]);
   readonly reason = signal<ReportErrorReason | null>(null);
 
+  /** Rows whose result or ranch term is not recognised (events and herd). The UI shows a warning when it is above zero. */
+  readonly unrecognizedCount = computed<number>(() =>
+    this.events().filter(e => e.uninterpreted).length + this.herd().filter(h => h.uninterpreted).length,
+  );
+
   readonly tenantId = computed<number | null>(() => {
     const id = this.tenant.activeTenantId();
     return typeof id === 'number' && Number.isInteger(id) && id > 0 ? id : null;

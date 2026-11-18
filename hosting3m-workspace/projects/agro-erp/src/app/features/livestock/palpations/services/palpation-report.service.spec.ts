@@ -241,6 +241,15 @@ describe('PalpationReportService', () => {
       expect(svc.herd()).toEqual([]);
     });
 
+    it('stays listed and counts the unrecognised values, so the UI can warn', async () => {
+      const loading = svc.load();
+      http.expectOne((r) => r.url === EV).flush(envelope([eventWire(), eventWire({ health_log_id: 'ev-2', result: 'INDETERMINADA' })]));
+      await answer(HD, envelope([herdWire({ last_result: 'FOO' })]));
+      await loading;
+      expect(svc.status()).toBe('listo');
+      expect(svc.unrecognizedCount()).toBe(2);
+    });
+
     it('clears everything on logout', async () => {
       const loading = svc.load();
       http.expectOne((r) => r.url === EV).flush(envelope([eventWire()]));

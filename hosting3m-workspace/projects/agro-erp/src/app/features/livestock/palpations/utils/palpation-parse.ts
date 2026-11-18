@@ -108,16 +108,15 @@ function toDateOrNull(v: unknown, field: string): string | null {
   return v === null || v === undefined ? null : toDate(v, field);
 }
 
-function toResultOrNull(v: unknown, field: string): PalpationResult | null {
-  if (v === null || v === undefined) return null;
-  if (typeof v === 'string' && (RESULTS as readonly string[]).includes(v)) return v as PalpationResult;
-  throw new ShapeError(field);
-}
-
-function toRanchOrNull(v: unknown, field: string): RanchTerm | null {
-  if (v === null || v === undefined) return null;
-  if (typeof v === 'string' && (RANCH_TERMS as readonly string[]).includes(v)) return v as RanchTerm;
-  throw new ShapeError(field);
+/**
+ * A value of a closed list. null is allowed. A string outside the list is NOT an error: it is returned as `unknown`, so the row can be
+ * kept as "sin interpretar". Any other JSON type (number, boolean, object) is an invalid type and still throws.
+ */
+function readClosed<T extends string>(v: unknown, known: readonly T[], field: string): { readonly value: T | null; readonly unknown: boolean } {
+  if (v === null || v === undefined) return { value: null, unknown: false };
+  if (typeof v !== 'string') throw new ShapeError(field);
+  if ((known as readonly string[]).includes(v)) return { value: v as T, unknown: false };
+  return { value: null, unknown: true };
 }
 
 /** Lenient: an unknown value is not interpreted. */
@@ -149,12 +148,16 @@ export function parseEventRows(text: string | null | undefined, tenantId: number
     assertTenant(env.rows, tenantId);
     const rows = env.rows.map((r): PalpationEventRow => {
       const mapping = toMapping(r['mapping_status']);
+      const result = readClosed(r['result'], RESULTS, 'result');
+      const ranch = readClosed(r['ranch_term'], RANCH_TERMS, 'ranch_term');
+      const uninterpreted = result.unknown || ranch.unknown;
+      const clinical = toBool(r['is_clinical_result'], 'is_clinical_result');
       return {
         id_company: toInt(r['id_company'], 'id_company'),
         health_log_id: toText(r['health_log_id'], 'health_log_id'),
         livestock_id: toText(r['livestock_id'], 'livestock_id'),
         event_date: toDate(r['event_date'], 'event_date'),
-        result: toResultOrNull(r['result'], 'result'),
+        result: result.value,
         gestation_days: r['gestation_days'] === null || r['gestation_days'] === undefined
           ? null
           : toNonNegativeInt(r['gestation_days'], 'gestation_days'),
@@ -165,9 +168,11 @@ export function parseEventRows(text: string | null | undefined, tenantId: number
         raw_code: toTextOrNull(r['raw_code'], 'raw_code'),
         // Never shown for an unconfirmed code: the parser drops it too, in case the view ever returns it.
         code_meaning: mapping === 'UNMAPPED' ? null : toTextOrNull(r['code_meaning'], 'code_meaning'),
-        ranch_term: toRanchOrNull(r['ranch_term'], 'ranch_term'),
+        ranch_term: ranch.value,
+        uninterpreted,
         counts_as_palpation: toBool(r['counts_as_palpation'], 'counts_as_palpation'),
-        is_clinical_result: toBool(r['is_clinical_result'], 'is_clinical_result'),
+        // An uninterpreted row is never clinical, whatever the view says.
+        is_clinical_result: uninterpreted ? false : clinical,
         created_at: toText(r['created_at'], 'created_at'),
       };
     });
@@ -183,24 +188,29 @@ export function parseHerdRows(text: string | null | undefined, tenantId: number)
   if (!env.ok) return env;
   try {
     assertTenant(env.rows, tenantId);
-    const rows = env.rows.map((r): PalpationHerdRow => ({
-      id_company: toInt(r['id_company'], 'id_company'),
-      livestock_id: toText(r['livestock_id'], 'livestock_id'),
-      rfid_siniiga: toTextOrNull(r['rfid_siniiga'], 'rfid_siniiga'),
-      numero_fuego: toTextOrNull(r['numero_fuego'], 'numero_fuego'),
-      brand_code: toTextOrNull(r['brand_code'], 'brand_code'),
-      category: toTextOrNull(r['category'], 'category'),
-      species: toTextOrNull(r['species'], 'species'),
-      current_status: toTextOrNull(r['current_status'], 'current_status'),
-      last_event_date: toDateOrNull(r['last_event_date'], 'last_event_date'),
-      last_result: toResultOrNull(r['last_result'], 'last_result'),
-      last_is_historical: toBoolOrNull(r['last_is_historical'], 'last_is_historical'),
-      last_repro_condition: toReproOrNull(r['last_repro_condition']),
-      last_mapping_status: toMapping(r['last_mapping_status']),
-      last_ranch_term: toRanchOrNull(r['last_ranch_term'], 'last_ranch_term'),
-      palpation_count: toNonNegativeInt(r['palpation_count'], 'palpation_count'),
-      created_at: toText(r['created_at'], 'created_at'),
-    }));
+    const rows = env.rows.map((r): PalpationHerdRow => {
+      const lastResult = readClosed(r['last_result'], RESULTS, 'last_result');
+      const lastRanch = readClosed(r['last_ranch_term'], RANCH_TERMS, 'last_ranch_term');
+      return {
+        id_company: toInt(r['id_company'], 'id_company'),
+        livestock_id: toText(r['livestock_id'], 'livestock_id'),
+        rfid_siniiga: toTextOrNull(r['rfid_siniiga'], 'rfid_siniiga'),
+        numero_fuego: toTextOrNull(r['numero_fuego'], 'numero_fuego'),
+        brand_code: toTextOrNull(r['brand_code'], 'brand_code'),
+        category: toTextOrNull(r['category'], 'category'),
+        species: toTextOrNull(r['species'], 'species'),
+        current_status: toTextOrNull(r['current_status'], 'current_status'),
+        last_event_date: toDateOrNull(r['last_event_date'], 'last_event_date'),
+        last_result: lastResult.value,
+        last_is_historical: toBoolOrNull(r['last_is_historical'], 'last_is_historical'),
+        last_repro_condition: toReproOrNull(r['last_repro_condition']),
+        last_mapping_status: toMapping(r['last_mapping_status']),
+        last_ranch_term: lastRanch.value,
+        uninterpreted: lastResult.unknown || lastRanch.unknown,
+        palpation_count: toNonNegativeInt(r['palpation_count'], 'palpation_count'),
+        created_at: toText(r['created_at'], 'created_at'),
+      };
+    });
     return { ok: true, rows };
   } catch (e) {
     return { ok: false, reason: reasonOf(e) };

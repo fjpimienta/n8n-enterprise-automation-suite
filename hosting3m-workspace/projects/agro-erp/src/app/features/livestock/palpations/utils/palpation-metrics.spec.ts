@@ -8,6 +8,7 @@ import {
   gestationOf,
   herdBucket,
   identifierOf,
+  animalState,
   latestPerAnimal,
   maxCampaignDate,
   periodKpis,
@@ -152,6 +153,22 @@ describe('periodKpis', () => {
     expect(all.palpated).toBe(6); // + A3 (historical)
     expect(all.pregnant).toBe(2);  // A2 and A3
     expect(all.identityHolds).toBe(true);
+  });
+});
+
+describe('unrecognised values', () => {
+  it('counts a row with an unknown result apart: palpated, not clinical, outside the percentages, identity still holds', () => {
+    const rows = [
+      eventRow({ livestock_id: 'U1', health_log_id: 'u1', event_date: '2026-11-10', result: 'VACÍA', repro_condition: 'ESTATICA' }),
+      eventRow({ livestock_id: 'U2', health_log_id: 'u2', event_date: '2026-11-11', result: null, uninterpreted: true, is_clinical_result: false }),
+    ];
+    const k = periodKpis(rows, { from: null, to: null });
+    expect(k.palpated).toBe(2);
+    expect(k.clinical).toBe(1);
+    expect(k.uninterpreted).toBe(1);
+    expect(k.pctEmpty).toBe(100);
+    expect(k.identityHolds).toBe(true);
+    expect(animalState(rows[1]!)).toBe('SIN_INTERPRETAR');
   });
 });
 

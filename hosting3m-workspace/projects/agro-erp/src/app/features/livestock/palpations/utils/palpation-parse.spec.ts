@@ -77,9 +77,31 @@ describe('parseEventRows', () => {
     expect(r.ok && r.rows[0]?.repro_condition).toBeNull();
   });
 
-  it('rejects an unknown clinical result (it would change the percentages)', () => {
-    const r = parseEventRows(envelope([eventWire({ result: 'INDETERMINADA' })]), SYNTHETIC_TENANT);
-    expect(r).toEqual({ ok: false, reason: 'unexpected-shape' });
+  it('keeps a row with an unknown clinical result as "sin interpretar": no result, not clinical, flagged', () => {
+    const r = parseEventRows(envelope([eventWire({ result: 'INDETERMINADA', is_clinical_result: true })]), SYNTHETIC_TENANT);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.rows).toHaveLength(1);
+    expect(r.rows[0]?.result).toBeNull();
+    expect(r.rows[0]?.uninterpreted).toBe(true);
+    expect(r.rows[0]?.is_clinical_result).toBe(false);
+    expect(r.rows[0]?.counts_as_palpation).toBe(true);
+  });
+
+  it('keeps a row with an unknown ranch term as "sin interpretar" too', () => {
+    const r = parseEventRows(envelope([eventWire({ ranch_term: 'INVOLUCIONANDO', is_clinical_result: false, result: 'VACÍA' })]), SYNTHETIC_TENANT);
+    expect(r.ok && r.rows[0]?.ranch_term).toBeNull();
+    expect(r.ok && r.rows[0]?.uninterpreted).toBe(true);
+  });
+
+  it('marks a row as recognised when its values are known', () => {
+    const r = parseEventRows(envelope([eventWire()]), SYNTHETIC_TENANT);
+    expect(r.ok && r.rows[0]?.uninterpreted).toBe(false);
+  });
+
+  it('still rejects an invalid JSON type for a clinical field (a number is not an unknown value)', () => {
+    expect(parseEventRows(envelope([eventWire({ result: 1 })]), SYNTHETIC_TENANT)).toEqual({ ok: false, reason: 'unexpected-shape' });
+    expect(parseEventRows(envelope([eventWire({ ranch_term: { code: 'NR' } })]), SYNTHETIC_TENANT)).toEqual({ ok: false, reason: 'unexpected-shape' });
   });
 
   it('rejects the whole response when a row belongs to another company', () => {
@@ -124,6 +146,18 @@ describe('parseHerdRows', () => {
   it('rejects a last_event_date after 12:00 UTC as unexpected date shape', () => {
     const r = parseHerdRows(envelope([herdWire({ last_event_date: '2026-11-10T18:00:00.000Z' })]), SYNTHETIC_TENANT);
     expect(r).toEqual({ ok: false, reason: 'unexpected-date-shape' });
+  });
+
+  it('keeps an unknown last result or ranch term as "sin interpretar" for the animal', () => {
+    const r = parseHerdRows(envelope([herdWire({ last_result: 'INDETERMINADA' }), herdWire({ livestock_id: 'an-2', last_ranch_term: 'XYZ' })]), SYNTHETIC_TENANT);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.rows.map(x => x.uninterpreted)).toEqual([true, true]);
+    expect(r.rows.map(x => x.last_result)).toEqual([null, 'PREÑADA']);
+  });
+
+  it('rejects a last_result that is not a string', () => {
+    expect(parseHerdRows(envelope([herdWire({ last_result: 2 })]), SYNTHETIC_TENANT)).toEqual({ ok: false, reason: 'unexpected-shape' });
   });
 
   it('rejects a negative palpation count', () => {
