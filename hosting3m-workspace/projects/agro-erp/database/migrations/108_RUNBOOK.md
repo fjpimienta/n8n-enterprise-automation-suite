@@ -41,14 +41,17 @@ Also: `getall` and `getone` are both authorised as `select`, so `allowed_ops {SE
 
 ## Production execution record (2026-11-18, America/Mexico_City)
 
-Reported by the owner. All times are CDMX. Only counts and fingerprints are recorded: no row, token, user name or host.
+Reported by the owner. All times are CDMX; the ones marked "about" are approximate, the others are exact. Only counts and fingerprints are recorded: no row, token, user name or host.
 
 | Time | Step | Result |
 |---|---|---|
-| before 13:07 | Part 1 step 1, backup | verified; md5 `a40ddb802de73820dbc25b664ce94048`; a copy kept **outside the VPS** |
-| before 13:07 | Part 2, n8n verification (precondition) | `RESULT: ACCEPTED`, **5/5 `PRESENT`**, and the three membership nodes present |
-| before 13:07 | Part 1 steps 3-5 | state `before`; the dry run printed the four fingerprints of step 5 |
-| **13:07** | Part 1 step 7, **apply** | committed |
+| about 12:50 | Part 2, n8n verification (precondition) | `RESULT: ACCEPTED`, **5/5 `PRESENT`**, and the three membership nodes present |
+| about 12:57 | Part 1 step 1, backup | verified; md5 `a40ddb802de73820dbc25b664ce94048` |
+| about 12:59 | Part 1 step 1c, copy **outside the VPS** | done |
+| about 13:02 | Part 0, re-verification of the preconditions | done |
+| 13:02 | Part 1 step 3, state before | `before` |
+| about 13:03 | Part 1 steps 4-5, dry run | the four fingerprints of step 5 **matched** the expected values |
+| **about 13:07** | Part 1 step 7, **apply** | committed |
 | 13:22 | first run of `108_prod_checks.py` | **void.** Six `HTTP 403` with `Content-Type: text/plain` from the User-Agent filter of the default Python client; **no execution in n8n**. It proves nothing (see Part 3) |
 | **13:23** | `108_rollback.sql` | both models disabled (`allowed_ops '{}'`, every role `NONE`); the views stay |
 | 13:38 | `108_prod_checks.py --after-rollback` (own User-Agent) | **2/2**: the transport reaches the gateway and the disabled models answer `403` with no rows |
