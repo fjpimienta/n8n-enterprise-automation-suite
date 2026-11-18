@@ -53,6 +53,14 @@ export function calendarDateOf(value: string | null | undefined): string | null 
   return utcSeconds > LATEST_UTC_SECONDS_FOR_CALENDAR_DAY ? null : day;
 }
 
+/** Today's calendar date in the browser's zone, from local fields (never from a UTC serialisation). */
+export function todayLocal(now: Date = new Date()): string {
+  const y = String(now.getFullYear()).padStart(4, '0');
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 /** `date` plus `days` calendar days, as `YYYY-MM-DD`. */
 export function addCalendarDays(date: string, days: number): string {
   const m = CALENDAR_DATE.exec(date);

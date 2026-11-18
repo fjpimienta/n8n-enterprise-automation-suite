@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { eventRow, herdRow } from '../testing/palpation.fixtures';
+import { isActiveHead } from '@shared/utils/herd-status.util';
+import { SYNTHETIC_CATEGORIES, SYNTHETIC_STATUSES, eventRow, herdRow } from '../testing/palpation.fixtures';
 import { PalpationEventRow, PalpationHerdRow } from '../models/palpation.types';
 import {
   campaignStart,
@@ -237,6 +238,38 @@ describe('herd buckets', () => {
 
   it('has no "vigente" without a campaign', () => {
     expect(herdBucket(herd({ last_event_date: '2026-11-10' }), null)).toBe('anterior');
+  });
+});
+
+describe('vocabulary of the herd (synthetic)', () => {
+  const applicable = ['VACA', 'NOVILLONA'];
+
+  it('counts an animal in RIESGO as active, as herd-status.util does: it stays in the herd', () => {
+    expect(isActiveHead({ current_status: 'RIESGO' })).toBe(true);
+    expect(herdBucket(herd({ current_status: 'RIESGO', category: 'VACA', palpation_count: 0, last_event_date: null }), CAMPAIGN)).toBe('sin-palpar');
+    expect(herdBucket(herd({ current_status: 'RIESGO', category: 'VACA', last_event_date: '2026-11-01' }), CAMPAIGN)).toBe('vigente');
+    const r = porPalpar([herd({ livestock_id: 'r1', current_status: 'RIESGO', category: 'VACA', palpation_count: 0, last_event_date: null })], CAMPAIGN);
+    expect(r).toEqual({ eligible: 1, porPalpar: 1 });
+  });
+
+  it('puts every real category without palpations either in "sin palpar" or in "no aplica", never anywhere else', () => {
+    for (const category of SYNTHETIC_CATEGORIES) {
+      const bucket = herdBucket(herd({ category, current_status: 'ACTIVO', palpation_count: 0, last_event_date: null }), CAMPAIGN);
+      expect(bucket).toBe(applicable.includes(category) ? 'sin-palpar' : 'no-aplica');
+    }
+  });
+
+  it('classifies every real status: VENDIDO and BAJA_MORTANDAD in their legend, the rest stay in the herd', () => {
+    for (const current_status of SYNTHETIC_STATUSES) {
+      const bucket = herdBucket(herd({ current_status, category: 'VACA', palpation_count: 0, last_event_date: null }), CAMPAIGN);
+      if (current_status === 'VENDIDO') expect(bucket).toBe('vendido');
+      else if (current_status === 'BAJA_MORTANDAD') expect(bucket).toBe('baja-mortandad');
+      else expect(bucket).toBe('sin-palpar');
+    }
+  });
+
+  it('has no brand code in the synthetic vocabulary (brand_code is null)', () => {
+    expect(herd().brand_code).toBeNull();
   });
 });
 

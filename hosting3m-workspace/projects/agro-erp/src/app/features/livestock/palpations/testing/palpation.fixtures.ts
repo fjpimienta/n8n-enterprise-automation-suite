@@ -10,6 +10,12 @@ import { PalpationEventRow, PalpationHerdRow } from '../models/palpation.types';
 export const SYNTHETIC_TENANT = 9101;
 export const SYNTHETIC_OTHER_TENANT = 9102;
 
+/** Real vocabulary of the herd (synthetic animals only). */
+export const SYNTHETIC_CATEGORIES = [
+  'BECERRA', 'BECERRO', 'VACA', 'NOVILLONA', 'TORO', 'BORREGA', 'BORREGO', 'CABALLO', 'CABALLO_CASTRADO',
+] as const;
+export const SYNTHETIC_STATUSES = ['ACTIVO', 'VACÍA', 'PREÑADA', 'VENDIDO', 'BAJA_MORTANDAD', 'RIESGO'] as const;
+
 /** Wire format of a `date` value: the gateway's local midnight in UTC-6. */
 export const wireDate = (day: string): string => `${day}T06:00:00.000Z`;
 

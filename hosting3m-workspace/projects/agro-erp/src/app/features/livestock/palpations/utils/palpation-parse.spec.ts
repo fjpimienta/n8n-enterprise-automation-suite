@@ -117,6 +117,14 @@ describe('parseEventRows', () => {
     expect(r).toEqual({ ok: false, reason: 'unexpected-date-shape' });
   });
 
+  it('does NOT apply the date rule to created_at: a late-evening timestamp parses', () => {
+    for (const createdAt of ['2026-11-12T22:09:20.048Z', '2026-11-12T23:56:45.806Z']) {
+      const r = parseEventRows(envelope([eventWire({ event_date: '2026-11-12T06:00:00.000Z', created_at: createdAt })]), SYNTHETIC_TENANT);
+      expect(r.ok).toBe(true);
+      expect(r.ok && r.rows[0]?.created_at).toBe(createdAt);
+    }
+  });
+
   it('accepts the gateway midnight (06:00Z) and rejects a date whose UTC time is after 12:00 as unexpected date shape', () => {
     const ok = parseEventRows(envelope([eventWire({ event_date: '2026-11-12T06:00:00.000Z' })]), SYNTHETIC_TENANT);
     expect(ok.ok && ok.rows[0]?.event_date).toBe('2026-11-12');
@@ -141,6 +149,11 @@ describe('parseHerdRows', () => {
     if (!r.ok) return;
     expect(r.rows[0]?.palpation_count).toBe(0);
     expect(r.rows[0]?.last_event_date).toBeNull();
+  });
+
+  it('does NOT apply the date rule to the herd created_at either', () => {
+    const r = parseHerdRows(envelope([herdWire({ last_event_date: '2026-11-10T06:00:00.000Z', created_at: '2026-11-10T23:56:45.806Z' })]), SYNTHETIC_TENANT);
+    expect(r.ok).toBe(true);
   });
 
   it('rejects a last_event_date after 12:00 UTC as unexpected date shape', () => {
