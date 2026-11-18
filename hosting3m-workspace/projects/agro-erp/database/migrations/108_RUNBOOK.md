@@ -1,7 +1,7 @@
 > ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (base de datos y n8n, verificadas con sus huellas).
 > `main` se despliega manualmente por Plesk con git: si el frontend se despliega antes, la pantalla nueva falla en producción.
 
-> **Status (reported by the owner, 2026-11-18, CDMX):** migration 108 was **applied to production at 13:07** and **rolled back with `108_rollback.sql` at 13:23**. Today the two views exist and both models are disabled (`allowed_ops '{}'`, every role `NONE`). The transport check of Part 3 (`--after-rollback`, own User-Agent) returned 2/2. Re-enabling is **not** done yet: it is Part 1b, to be authorised separately. This runbook is otherwise tested on LOCAL only. No frontend in this change.
+> **Status (reported by the owner, 2026-11-18, CDMX):** migration 108 is **applied and enabled in production**. It was applied at 13:07, rolled back at 13:23, and re-enabled with `108_reenable.sql` at 13:52; the production checks of Part 3 passed **7/7** at 13:54. The full record, with times, is in "Production execution record" below. Two decisions are still open (see "Open items"). This runbook was otherwise tested on LOCAL only. No frontend in this change.
 > Part 2 (n8n) changes **no node**: it is a verification of the production `v6/CRUD` workflow and a **PRECONDITION OF THE APPLY of Part 1**: it must be recorded as `RESULT: ACCEPTED` and five `PRESENT` lines **before** step 7 of Part 1. If the production `Build Query` does not inject `x-tenant-id`, the two new models would be readable across companies from the apply until the rollback.
 > The Part 0 facts were verified in production by read-only queries on 2026-11-18 (reported by Francisco). They must be re-run before Part 1.
 
@@ -38,6 +38,37 @@ Nothing else changes: no table, function, trigger, data, workflow node or other 
 Proved in LOCAL (negative control): with `id_company` removed from `vw_palpation_events.allowed_fields`, `getall` for a company-A user returned 1500 rows of both companies and 9 of the 28 gateway checks failed; `108_prod_checks.py` stops with exit code 3 in that situation.
 `cattle_health_logs` has no tenant column, so the company comes from the join to `cattle_livestock` inside the view. The same hole exists today in other cattle models (`cattle_health_logs`, `cattle_weight_logs`, `cattle_task_evidence`, `cattle_identifier_history`, `cattle_movement_event_animals`, `cattle_movement_event_health_certs`, `cattle_tenants`): it is **out of scope of 108** and tracked separately (branch `security/gateway-v6-tenant-less-models`).
 Also: `getall` and `getone` are both authorised as `select`, so `allowed_ops {SELECT}` cannot hide `getone`; it is filtered by company the same way. Default sort is `<table>.created_at`: both views expose `created_at`.
+
+## Production execution record (2026-11-18, America/Mexico_City)
+
+Reported by the owner. All times are CDMX. Only counts and fingerprints are recorded: no row, token, user name or host.
+
+| Time | Step | Result |
+|---|---|---|
+| before 13:07 | Part 1 step 1, backup | verified; md5 `a40ddb802de73820dbc25b664ce94048`; a copy kept **outside the VPS** |
+| before 13:07 | Part 2, n8n verification (precondition) | `RESULT: ACCEPTED`, **5/5 `PRESENT`**, and the three membership nodes present |
+| before 13:07 | Part 1 steps 3-5 | state `before`; the dry run printed the four fingerprints of step 5 |
+| **13:07** | Part 1 step 7, **apply** | committed |
+| 13:22 | first run of `108_prod_checks.py` | **void.** Six `HTTP 403` with `Content-Type: text/plain` from the User-Agent filter of the default Python client; **no execution in n8n**. It proves nothing (see Part 3) |
+| **13:23** | `108_rollback.sql` | both models disabled (`allowed_ops '{}'`, every role `NONE`); the views stay |
+| 13:38 | `108_prod_checks.py --after-rollback` (own User-Agent) | **2/2**: the transport reaches the gateway and the disabled models answer `403` with no rows |
+| 13:50 | Part 1b, dry run of `108_reenable.sql` | rolled back, nothing changed; fingerprints `51b93c8c…` (model `vw_palpation_events`) and `7d020967…` (model `vw_palpation_herd`) |
+| **13:52** | Part 1b, `108_reenable.sql` apply | committed |
+| 13:52 | `108_state_check.sql -v expect=applied` | state `applied`; `model_rows` `888bab62…` |
+| **13:54** | Part 3, `108_prod_checks.py --expect-herd-rows` | **7/7**: `vw_palpation_herd` returned **138** rows and `vw_palpation_events` **20** rows for company 3, and **0** rows of any other company; the two denial checks (no tenant header, a company the user does not belong to) answered the gateway's own `403` |
+| about 15:10 | `108_contract_probe.py` against production (read-only) | `event_date` arrives as a timestamp that is **always `T06:00:00.000Z`** (a calendar date serialized at local midnight, UTC-6) |
+
+Notes on this record:
+
+- **Part 3 ran with an ADMIN of company 3, not with the EDITOR** the Part 3 procedure recommends. The `EDITOR` role is covered by the LOCAL gateway tests (28/28, ADMIN and EDITOR) and by the model fingerprint: `allowed_roles_select` is part of the hashed row of both models, and it matched the expected value at 13:50 and 13:52.
+- Writes and the `CUSTOMER` role were not tested in production, as planned: the models carry `allowed_ops {SELECT}` and `NONE` for insert, update and delete (part of the same fingerprint).
+- Between 13:07 and 13:23 the models were readable by ADMIN and EDITOR, filtered by company: the Part 2 precondition (the production `Build Query` injects the verified tenant) was recorded as ACCEPTED before the apply.
+- The 13:22 run is kept in the record on purpose: a PASS that did not come from the gateway must not be mistaken for a result.
+
+### Open items
+
+1. **Should the `OWNER` role see the report?** Today only `ADMIN` and `EDITOR` can read both models, and the screen shows "sin permiso" to an `OWNER`. Allowing `OWNER` changes the two production models (`allowed_roles_select`), so it needs a new reviewed change with new fingerprints, and the screen constant `PALPATION_ALLOWED_ROLES` must change together with it. Undecided.
+2. **Models without a tenant column.** The gateway only filters by company when `id_company` or `tenant_id` is in `allowed_fields` (see "Why the models MUST carry `id_company`"). Several existing cattle models have no such column and are readable across companies by any authorised role. It is **out of scope of 108** and is tracked separately (branch `security/gateway-v6-tenant-less-models`). TODO(verify): the issue number, to be added by the owner.
 
 ## Order of execution
 
@@ -169,7 +200,7 @@ EOF
 
 ### Part 1b — Re-enable the two models (after a rollback)
 
-Use only when both models are disabled (the state of 13:23 on 2026-11-18). `108_palpation_views.sql` aborts on existing objects, so it cannot re-enable: this is `108_reenable.sql`, the exact inverse of `108_rollback.sql`. It is **generated** by `108_make_reenable.py` from the migration's `INSERT` (values copied, not retyped; `python3 -I 108_make_reenable.py --check` must print `OK`). It touches **two `crud_models` rows and nothing else**: no INSERT, DELETE, DROP or view change. A backup is not required for this change, because the only state it writes is the one `108_rollback.sql` wrote; the guards below stop it on any other state. Every command is labelled with the place where it runs.
+Use only when both models are disabled (the state of 13:23 on 2026-11-18). **Executed on 2026-11-18 between 13:50 and 13:54 (see the execution record).** `108_palpation_views.sql` aborts on existing objects, so it cannot re-enable: this is `108_reenable.sql`, the exact inverse of `108_rollback.sql`. It is **generated** by `108_make_reenable.py` from the migration's `INSERT` (values copied, not retyped; `python3 -I 108_make_reenable.py --check` must print `OK`). It touches **two `crud_models` rows and nothing else**: no INSERT, DELETE, DROP or view change. A backup is not required for this change, because the only state it writes is the one `108_rollback.sql` wrote; the guards below stop it on any other state. Every command is labelled with the place where it runs.
 
 Guards (all inside the script): both views exist; exactly two model rows; both rows reverted (`allowed_ops '{}'`, every role `NONE`) or it aborts without changing anything; after the restore the two row fingerprints must equal the ones printed by the apply, or the transaction is aborted before the commit.
 
@@ -301,7 +332,7 @@ SQL
 
 Rules: a user **with membership in company 3 and without membership in company 5** (verified: company 3 has 2 ADMIN and 1 EDITOR, none in 5; use the EDITOR, the least privilege that can read); **no writes, no seeded data**; only **counts** are printed, never a row body; company 5 data is never read. If a row of another company ever appears: **stop, do not show it, tell the owner**.
 
-**What the first production run showed (2026-11-18) and the rules now.** The first run of `108_prod_checks.py` against production received six `HTTP 403` answers with `Content-Type: text/plain` and a 17-byte body, and the script's default `Python-urllib` User-Agent. None of the six produced an execution in n8n, so **those 403s and the PASS results did not come from the gateway, and that run proves nothing.** The source of the block is **not verified**: the root `CLAUDE.md` states that `n8n.hosting3m.com` sits behind Cloudflare, so a CDN or WAF rule on the default client User-Agent is plausible; the owner must confirm it in the Cloudflare security events for those requests. The script now applies these rules:
+**What the first production run showed (2026-11-18) and the rules now.** The first run of `108_prod_checks.py` against production received six `HTTP 403` answers with `Content-Type: text/plain` and a 17-byte body, and the script's default `Python-urllib` User-Agent. None of the six produced an execution in n8n, so **those 403s and the PASS results did not come from the gateway, and that run proves nothing.** The source of the block is **not verified**: the root `CLAUDE.md` states that the production n8n host sits behind Cloudflare, so a CDN or WAF rule on the default client User-Agent is plausible; the owner must confirm it in the Cloudflare security events for those requests. The script now applies these rules:
 
 - It identifies itself with `User-Agent: hosting3m-108-prod-check/1.0`. It does not imitate a browser or another client.
 - **A 403 counts as a PASS only when it is the gateway's own denial:** `Content-Type: application/json` and a body with `error: true` and `status: 403`. The gateway's codes are `TENANT_FORBIDDEN` (`Respond Tenant Forbidden`, no tenant header or no membership), `SECURITY_VALIDATION` (`Security Validation`, role not allowed) and no code at all (operation disabled, which is what the models answer after the rollback). A missing token is answered **401** by the gateway (`Respond Denegate`), never 403.
@@ -345,7 +376,7 @@ If #2 or #3 fail: **roll back immediately** (below) and report.
 
 ### Part 4 — Frontend
 
-**Only if Parts 1, 2 and 3 are OK.** This pull request contains no frontend. The report screen is a later pull request (branch `feat/agro-erp-palpation-report`) that must not reach `main` before this runbook is completed and recorded.
+**Only if Parts 1, 2 and 3 are OK.** This pull request contains no frontend. The report screen is a later pull request (branch `feat/agro-erp-palpation-report`) that must not reach `main` before this runbook is completed and recorded. Parts 1, 2 and 3 were completed and recorded on 2026-11-18 (see the execution record): the models are active in production, so the frontend can follow.
 
 ## Gateway behaviour the frontend must handle (observed LOCAL)
 
