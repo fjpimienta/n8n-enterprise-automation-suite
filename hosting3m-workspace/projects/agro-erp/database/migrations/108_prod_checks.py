@@ -9,8 +9,10 @@ the request with the header of company 5 must be denied (403); if it is not, the
 
 Usage (the token is typed hidden, so it never reaches an argument, the shell history or the screen):
   read -rs PALP_TOKEN; export PALP_TOKEN
-  python3 -I 108_prod_checks.py --base https://<n8n-host>/webhook/<webhook-id>/crud/v6 [--company 3] [--foreign 5]
+  python3 -I 108_prod_checks.py --base https://<n8n-host>/webhook/<webhook-id>/crud/v6 [--foreign 5] [--expect-herd-rows N]
   unset PALP_TOKEN
+--company only accepts 3 (the test company). --expect-herd-rows N (optional) adds one check: vw_palpation_herd must return exactly N rows for company 3
+(N = SELECT count(*) FROM cattle_livestock WHERE tenant_id = 3, recounted just before; and fewer than the gateway limit of 1500).
 After 108_rollback.sql was applied, the same user must be denied for his own company: add --after-rollback (2 checks, expected 403 on both models).
 
 Exit codes: 0 all checks passed, 1 a check failed, 2 cannot run, 3 STOP (a row of another company, or a foreign company was served).
@@ -19,8 +21,10 @@ import argparse, json, os, sys, urllib.request, urllib.error
 
 ap = argparse.ArgumentParser()
 ap.add_argument('--base', required=True, help='gateway base URL ending in /crud/v6 (no default on purpose)')
-ap.add_argument('--company', default='3', help='company the user belongs to (default 3, test company)')
+ap.add_argument('--company', default='3', choices=['3'], help='company the user belongs to: only 3 (test company) is accepted')
 ap.add_argument('--foreign', default='5', help='company the user must NOT belong to (default 5)')
+ap.add_argument('--expect-herd-rows', type=int, default=None, metavar='N',
+                help='expected number of rows of vw_palpation_herd for the company (one extra PASS/FAIL check)')
 ap.add_argument('--after-rollback', action='store_true',
                 help='after 108_rollback.sql: only check that getall with the header of --company is denied (403, no rows) on both models')
 args = ap.parse_args()
@@ -32,8 +36,8 @@ if not args.base.startswith('https://'):
     sys.exit('Cannot run: --base must be an https:// URL.')
 if args.company == args.foreign:
     sys.exit('Cannot run: --company and --foreign must differ.')
-if args.company == '5':
-    sys.exit('Cannot run: company 5 must never be the tested company.')
+if args.after_rollback and args.expect_herd_rows is not None:
+    sys.exit('Cannot run: --expect-herd-rows does not apply to --after-rollback.')
 
 MODELS = ('vw_palpation_events', 'vw_palpation_herd')
 LIMIT = 1500
@@ -103,6 +107,10 @@ for model in MODELS:
            f'http={code}, rows={len(rs)}, rows_of_other_companies={other}, truncated={len(rs) >= LIMIT}')
     if len(rs) >= LIMIT:
         print(f'NOTE  {model}: {len(rs)} rows = the gateway limit ({LIMIT}); the list is truncated, not complete.')
+    if model == 'vw_palpation_herd' and args.expect_herd_rows is not None:
+        report(f'{model}: rows for company {args.company} = {args.expect_herd_rows} (expected)',
+               len(rs) == args.expect_herd_rows and len(rs) < LIMIT, f'rows={len(rs)}, expected={args.expect_herd_rows}')
 
-print(f'\n{6 - len(failures)}/6 checks passed')
+total = 6 + (1 if args.expect_herd_rows is not None else 0)
+print(f'\n{total - len(failures)}/{total} checks passed')
 sys.exit(0 if not failures else 1)
