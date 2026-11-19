@@ -1,7 +1,10 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { describe, expect, it } from 'vitest';
+import { GOLDEN_A, GOLDEN_B, GOLDEN_MATRIX_ONLY_B, goldenData } from '../../testing/palpation-golden.fixtures';
 import { eventRow, herdRow } from '../../testing/palpation.fixtures';
+import { COMPARE_CATEGORIES, CompareCategory, transitions } from '../../utils/palpation-campaign-compare';
 import { Campaign } from '../../utils/palpation-campaigns';
+import { cellIdOf } from '../../utils/palpation-matrix-cells';
 import { PalpationCampaignCompareComponent } from './palpation-campaign-compare.component';
 
 const camp = (id: string, label: string, from: string, to: string): Campaign => ({ id, label, from, to });
@@ -16,10 +19,15 @@ const preg = (id: string, animal: string, day: string, over: Parameters<typeof e
 
 const herd = Array.from({ length: 30 }, (_, i) => herdRow({ livestock_id: `A${i}`, rfid_siniiga: `99990001${String(i).padStart(2, '0')}`, category: 'VACA', current_status: 'ACTIVO' }));
 
-function render(events: ReturnType<typeof eventRow>[], campaigns: readonly Campaign[], ready?: { status: 'listo' | 'truncado'; tenantId: number }) {
+function render(
+  events: ReturnType<typeof eventRow>[],
+  campaigns: readonly Campaign[],
+  ready?: { status: 'listo' | 'truncado'; tenantId: number },
+  herdRows: ReturnType<typeof herdRow>[] = herd,
+) {
   const f: ComponentFixture<PalpationCampaignCompareComponent> = TestBed.createComponent(PalpationCampaignCompareComponent);
   f.componentRef.setInput('events', events);
-  f.componentRef.setInput('herd', herd);
+  f.componentRef.setInput('herd', herdRows);
   f.componentRef.setInput('campaigns', campaigns);
   if (ready) {
     f.componentRef.setInput('reportStatus', ready.status);
@@ -87,7 +95,7 @@ describe('PalpationCampaignCompareComponent', () => {
     expect(text(table.querySelector('caption'))).toContain('Animales por resultado en Enero (filas) y en Abril (columnas)');
     expect(table.querySelectorAll('thead th[scope="col"]').length).toBe(7);
     expect(table.querySelectorAll('tbody th[scope="row"]').length).toBe(5);
-    expect(text(table.querySelector('thead'))).toContain('No palpada en esa campaña');
+    expect(text(table.querySelector('thead'))).toContain('Sin registro en esa campaña');
     expect(text(table.querySelector('thead'))).toContain('Definido por el rancho');
   });
 
@@ -280,7 +288,7 @@ describe('PalpationCampaignCompareComponent', () => {
       expect(q(f, 'transition-cards-total')).not.toBeNull();
     });
 
-    it('lists every category of campaign B in each non-empty card, including "Sin interpretar" and "No palpada en esa campaña", each as "n de N"', () => {
+    it('lists every category of campaign B in each non-empty card, including "Sin interpretar" and "Sin registro en esa campaña", each as "n de N"', () => {
       const f = render(events, [C1, C2, C3]);
       choose(f, 'compare-a', 'c1');
       choose(f, 'compare-b', 'c2');
@@ -290,7 +298,7 @@ describe('PalpationCampaignCompareComponent', () => {
       expect(text(vacia.querySelector('[data-card-cell="VACÍA>VACÍA"]'))).toBe('Vacía 2 de 4');
       expect(text(vacia.querySelector('[data-card-cell="VACÍA>PREÑADA"]'))).toBe('Preñada 1 de 4');
       expect(text(vacia.querySelector('[data-card-cell="VACÍA>SIN_INTERPRETAR"]'))).toBe('Sin interpretar 0 de 4');
-      expect(text(vacia.querySelector('[data-card-cell="VACÍA>NO_PALPADA"]'))).toBe('No palpada en esa campaña 1 de 4');
+      expect(text(vacia.querySelector('[data-card-cell="VACÍA>NO_PALPADA"]'))).toBe('Sin registro en esa campaña 1 de 4');
       expect(text(vacia.querySelector('[data-card-total]'))).toBe('4');
     });
 
@@ -340,6 +348,205 @@ describe('PalpationCampaignCompareComponent', () => {
   it('keeps the corner heading of the desktop table on one line', () => {
       const f = render(events, [C1, C2]);
       expect(q(f, 'transition-table').querySelector('th.palp-corner')).not.toBeNull();
+    });
+  });
+
+  describe('matrix cell drill-down (golden: 7 / 11 / 25 / 31 / 27 / 19 / 32 / 52)', () => {
+    const data = goldenData(GOLDEN_MATRIX_ONLY_B);
+    const GOLDEN_CAMPAIGNS = [GOLDEN_A, GOLDEN_B];
+    const golden = (ready = true) => render(data.events, GOLDEN_CAMPAIGNS, ready ? { status: 'listo', tenantId: 9101 } : undefined, data.herd);
+    const matrix = transitions(data.events, GOLDEN_A, GOLDEN_B).matrix;
+    const button = (f: ComponentFixture<unknown>, from: CompareCategory, to: CompareCategory) =>
+      el(f).querySelector(`[data-cell-button="${from}>${to}"]`) as HTMLButtonElement | null;
+
+    it('makes every non-zero cell of the matrix a native button and leaves the zero cells as plain numbers', () => {
+      const f = golden();
+      let withButton = 0;
+      for (const from of COMPARE_CATEGORIES) {
+        for (const to of COMPARE_CATEGORIES) {
+          const b = button(f, from, to);
+          if (matrix[from][to] > 0) {
+            withButton += 1;
+            expect(b, `${from} > ${to}`).not.toBeNull();
+            expect(b?.tagName).toBe('BUTTON');
+            expect(b?.getAttribute('type')).toBe('button');
+            expect(text(b)).toBe(String(matrix[from][to]));
+          } else {
+            expect(b, `${from} > ${to}`).toBeNull();
+          }
+        }
+      }
+      expect(withButton).toBeGreaterThanOrEqual(9);
+      expect(qa(f, 'matrix-cell-button').length).toBe(withButton);
+    });
+
+    it('gives each button an accessible name that says how many animals and which cell, not only a number', () => {
+      const f = golden();
+      expect(button(f, 'NO_PALPADA', 'PREÑADA')?.getAttribute('aria-label')).toBe('32 animales: Sin registro en Campaña A y Preñada en Campaña B. Ver la lista');
+      expect(button(f, 'NO_PALPADA', 'VACÍA')?.getAttribute('aria-label')).toBe('52 animales: Sin registro en Campaña A y Vacía en Campaña B. Ver la lista');
+      expect(button(f, 'VACÍA', 'VACÍA')?.getAttribute('aria-controls')).toBe('palp-cell-panel');
+    });
+
+    it.each([
+      ['PREÑADA', 'PREÑADA', 7],
+      ['PREÑADA', 'VACÍA', 11],
+      ['VACÍA', 'PREÑADA', 25],
+      ['VACÍA', 'VACÍA', 31],
+      ['PREÑADA', 'NO_PALPADA', 27],
+      ['VACÍA', 'NO_PALPADA', 19],
+      ['NO_PALPADA', 'PREÑADA', 32],
+      ['NO_PALPADA', 'VACÍA', 52],
+    ] as [CompareCategory, CompareCategory, number][])('opens the list of %s > %s with its %i animals, the same the cell counts', (from, to, expected) => {
+      const f = golden();
+      button(f, from, to)?.click();
+      f.detectChanges();
+      expect(q(f, 'cell-section')).not.toBeNull();
+      expect(text(q(f, 'cell-count'))).toContain(String(expected));
+      expect(text(el(f).querySelector(`[data-cell="${from}>${to}"]`))).toContain(String(expected));
+      expect(el(f).querySelector('[data-testid="cell-mismatch"]')).toBeNull();
+    });
+
+    it('marks the open cell as pressed and the others as not pressed, and names the list after the cell', () => {
+      const f = golden();
+      button(f, 'NO_PALPADA', 'VACÍA')?.click();
+      f.detectChanges();
+      expect(button(f, 'NO_PALPADA', 'VACÍA')?.getAttribute('aria-pressed')).toBe('true');
+      expect(button(f, 'NO_PALPADA', 'PREÑADA')?.getAttribute('aria-pressed')).toBe('false');
+      expect(text(q(f, 'cell-title'))).toBe('Animales: Sin registro en Campaña A y Vacía en Campaña B');
+    });
+
+    it('shows the list between the matrix and the follow-up groups, and the follow-up groups are still there', () => {
+      const f = golden();
+      button(f, 'NO_PALPADA', 'PREÑADA')?.click();
+      f.detectChanges();
+      const html = el(f).innerHTML;
+      expect(html.indexOf('data-testid="transition-table"')).toBeLessThan(html.indexOf('data-testid="cell-section"'));
+      expect(html.indexOf('data-testid="cell-section"')).toBeLessThan(html.indexOf('data-testid="pairs-section"'));
+      expect(text(q(f, 'persistent-count'))).toContain('31');
+      expect(text(q(f, 'pending-count'))).toContain('19');
+    });
+
+    it('works with the keyboard: the buttons are focusable and a click (what Enter and Space do on a button) opens the list and moves the focus to its title', async () => {
+      const f = golden();
+      const b = button(f, 'NO_PALPADA', 'PREÑADA') as HTMLButtonElement;
+      expect(b.tabIndex).toBeGreaterThanOrEqual(0);
+      b.focus();
+      expect(document.activeElement).toBe(b);
+      b.click();
+      f.detectChanges();
+      await f.whenStable();
+      expect(document.activeElement).toBe(q(f, 'cell-title'));
+    });
+
+    it('gives the focus back to the button that opened the list when it is closed', async () => {
+      const f = golden();
+      const b = button(f, 'VACÍA', 'VACÍA') as HTMLButtonElement;
+      b.focus();
+      b.click();
+      f.detectChanges();
+      await f.whenStable();
+      q<HTMLButtonElement>(f, 'cell-close').click();
+      f.detectChanges();
+      expect(el(f).querySelector('[data-testid="cell-section"]')).toBeNull();
+      expect(document.activeElement).toBe(b);
+      expect(b.getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('switches from one cell to another without closing, and keeps the open cell when B changes', () => {
+      const f = golden();
+      button(f, 'VACÍA', 'VACÍA')?.click();
+      f.detectChanges();
+      expect(text(q(f, 'cell-count'))).toContain('31');
+      button(f, 'PREÑADA', 'PREÑADA')?.click();
+      f.detectChanges();
+      expect(text(q(f, 'cell-count'))).toContain('7');
+      expect(qa(f, 'cell-section').length).toBe(1);
+    });
+
+    it('offers the same buttons in the phone cards, with the same names and the same list', () => {
+      const f = golden();
+      const cardButton = el(f).querySelector('[data-card-button="NO_PALPADA>VACÍA"]') as HTMLButtonElement;
+      expect(cardButton.getAttribute('aria-label')).toContain('52 animales');
+      expect(text(cardButton)).toBe('52');
+      expect(qa(f, 'matrix-card-button').length).toBe(qa(f, 'matrix-cell-button').length);
+      cardButton.click();
+      f.detectChanges();
+      expect(text(q(f, 'cell-count'))).toContain('52');
+      expect(cardButton.getAttribute('aria-pressed')).toBe('true');
+    });
+
+    it('keeps the "n de N" text next to each button (the number is not the only thing in the cell)', () => {
+      const f = golden();
+      expect(text(el(f).querySelector('[data-cell="NO_PALPADA>VACÍA"]'))).toMatch(/^52 de \d+$/);
+      expect(text(el(f).querySelector('[data-cell="VACÍA>VACÍA"]'))).toBe('31 de 75');
+    });
+
+    it('uses the new name of the fifth row and column, "Sin registro en esa campaña"', () => {
+      const f = golden();
+      expect(text(q(f, 'transition-table').querySelector('thead'))).toContain('Sin registro en esa campaña');
+      expect(text(el(f))).not.toContain('No palpada en esa campaña');
+    });
+
+    describe('selection (the model the page binds to the address bar)', () => {
+      const select = (f: ComponentFixture<PalpationCampaignCompareComponent>, value: { aId: string | null; bId: string | null; cell: string | null }) => {
+        f.componentInstance.selection.set(value);
+        f.detectChanges();
+      };
+
+      it('opens the cell that the selection names, as a deep link does', () => {
+        const f = golden();
+        select(f, { aId: GOLDEN_A.id, bId: GOLDEN_B.id, cell: cellIdOf({ from: 'NO_PALPADA', to: 'PREÑADA' }) });
+        expect(text(q(f, 'cell-count'))).toContain('32');
+        expect(button(f, 'NO_PALPADA', 'PREÑADA')?.getAttribute('aria-pressed')).toBe('true');
+      });
+
+      it('publishes what the user does: the cell id when a cell is opened and null when it is closed', () => {
+        const f = golden();
+        const seen: (string | null)[] = [];
+        f.componentInstance.selection.set({ aId: null, bId: null, cell: null });
+        button(f, 'VACÍA', 'NO_PALPADA')?.click();
+        f.detectChanges();
+        seen.push(f.componentInstance.selection().cell);
+        q<HTMLButtonElement>(f, 'cell-close').click();
+        f.detectChanges();
+        seen.push(f.componentInstance.selection().cell);
+        expect(seen).toEqual(['vacia.sin-registro', null]);
+      });
+
+      it.each(['', 'x', 'vacia', 'VACIA.vacia', 'vacia.vacia.vacia', 'sin-registro.sin-registro', '__proto__.vacia', 'vacia.otra'])(
+        'ignores the invalid cell id "%s": no list is opened',
+        cell => {
+          const f = golden();
+          select(f, { aId: null, bId: null, cell });
+          expect(el(f).querySelector('[data-testid="cell-section"]')).toBeNull();
+        },
+      );
+
+      it('ignores a campaign id that is not one of the campaigns and falls back to the two most recent', () => {
+        const f = golden();
+        select(f, { aId: 'does-not-exist', bId: 'also-not', cell: 'vacia.vacia' });
+        expect(text(q(f, 'cell-count'))).toContain('31');
+        expect(q<HTMLSelectElement>(f, 'compare-a').selectedOptions[0]?.textContent).toContain('Campaña A');
+      });
+
+      it('shows no list when A and B are the same campaign, even if a cell is selected', () => {
+        const f = golden();
+        select(f, { aId: GOLDEN_A.id, bId: GOLDEN_A.id, cell: 'vacia.vacia' });
+        expect(el(f).querySelector('[data-testid="cell-section"]')).toBeNull();
+        expect(q(f, 'compare-same')).not.toBeNull();
+      });
+    });
+
+    it('passes the status and the company to the export of the list, which is disabled by default', () => {
+      const closed = golden(false);
+      button(closed, 'VACÍA', 'VACÍA')?.click();
+      closed.detectChanges();
+      expect(q<HTMLButtonElement>(closed, 'cell-export').disabled).toBe(true);
+      TestBed.resetTestingModule();
+      const open = golden(true);
+      button(open, 'VACÍA', 'VACÍA')?.click();
+      open.detectChanges();
+      expect(q<HTMLButtonElement>(open, 'cell-export').disabled).toBe(false);
     });
   });
 });

@@ -271,8 +271,27 @@ de un AI Agent, usar `.first()` en lugar de `.item` en `$('Node')`.
   **El CSV solo sale por `exportRowsToCsv` (sin modificarlo: cliente, BOM UTF-8, coma) vía `exportPairCsv` (`utils/palpation-campaign-export.ts`), y falla cerrado:** se rechaza
   (y no se escribe nada) si el reporte está `truncado` o no está `listo`, si no hay empresa válida, si las campañas son inválidas o iguales, o si **cualquier** evento o fila
   del hato trae otro `id_company` (revisado fila por fila). Protege las celdas contra fórmulas (`=`, `+`, `-`, `@`, tab, retorno de carro: se antepone `'`), nunca lleva técnico
-  y el nombre del archivo lleva solo fechas (`palpaciones_vacias_A_<desde>_<hasta>_B_<desde>_<hasta>.csv`), nunca el nombre de la empresa. Cualquier otro CSV del reporte
-  exige una decisión nueva del dueño. Limitación conocida: Excel puede quitar el cero inicial de un SINIIGA (por ejemplo `07…`) si abre el archivo con doble clic; usar «Datos > Desde texto» con la columna como texto.
+  y el nombre del archivo lleva solo fechas (`palpaciones_vacias_A_<desde>_<hasta>_B_<desde>_<hasta>.csv`), nunca el nombre de la empresa. **Cada encabezado por campaña lleva el
+  rango de fechas de su campaña** (`Resultado (2026-08-03)`, `Resultado (2026-11-11 a 2026-11-12)`; la etiqueta que puso el usuario no se escribe en el archivo), para que se entienda
+  sin saber cuál campaña es cuál. **El SINIIGA oficial (10 dígitos) se escribe como SERIE-ARETE, `070000-0001`** (6 dígitos, guion, 4 dígitos, como en la hoja de papel): el guion hace que Excel lo
+  conserve como texto y no pierda el cero inicial (clave de estado `07`). Solo se transforma un valor de exactamente 10 dígitos; cualquier otro identificador (marca, quemado, un `S/N-…`) queda tal cual.
+  Cualquier otro CSV del reporte exige una decisión nueva del dueño. El CSV de la lista de **una celda de la matriz** (punto siguiente) es ese mismo exportador con las mismas
+  guardas, así que entra en la misma excepción (el dueño pidió el detalle por celda el 2026-11-20).
+* **Detalle de una celda de la matriz y enlace profundo (solo frontend, sin base ni gateway):** cada celda **no vacía** de la matriz de transiciones (y de sus tarjetas en móvil) es un
+  `<button>` nativo (su nombre accesible dice cuántos animales y qué celda; `aria-pressed` marca la abierta) que abre la lista de los animales de esa celda con **la misma tabla y tarjetas** que
+  los grupos de seguimiento (`app-palpation-pair-table`). `cellAnimals` (`utils/palpation-campaign-pairs.ts`) usa el mismo `latestPerCampaign` que la matriz, y la lista se **concilia con el
+  conteo de la matriz**: si no coinciden no se muestra (hay una prueba de las 25 celdas). La celda «sin registro / sin registro» nunca tiene animales. **«Sin registro en esa campaña»** (antes
+  «No palpada en esa campaña») significa que no hay ninguna palpación que cuente dentro de las fechas de esa campaña: cubre animales no palpados, animales con solo un NR **y animales cuyas filas no se
+  pudieron emparejar o cargar**, no solo los que se saltaron; la lista lo dice y cuenta los animales sin ficha en el hato (se cuentan por sus eventos, sin SINIIGA/categoría/estado). Los totales de fila y de
+  columna no son botones (no se pidió). Al abrir una celda el foco pasa a su título y al cerrarla vuelve al botón.
+  **Enlace profundo:** `?a=<desde>_<hasta>&b=<desde>_<hasta>&cell=<id>` (por ejemplo `a=2026-08-03_2026-08-03&b=2026-11-11_2026-11-12&cell=sin-registro.prenada`; las celdas se nombran
+  `<categoría en A>.<categoría en B>` con `prenada`, `vacia`, `rancho`, `sin-interpretar`, `sin-registro`). **Solo lleva las dos campañas y la celda: nunca un animal, un resultado ni una empresa.**
+  Al abrir la página se lee de forma **estricta** (`parseDeepLink`): un valor inválido, repetido, faltante o con campañas traslapadas rechaza TODO el enlace, la página cae a la vista normal y quita de la
+  dirección esos tres parámetros (los demás no se tocan). Un enlace válido se aplica una sola vez, cuando llegaron las filas de la empresa activa al inicio, y **se descarta si la empresa cambia antes**: los datos
+  salen siempre de la empresa activa y el enlace no puede escoger otra. Mientras hay una celda abierta la dirección lleva solo esos tres parámetros (sin entrada nueva de historial); sin celda, en otra pestaña o
+  tras cambiar de empresa no lleva ninguno. El botón «Copiar enlace» lo copia (o lo muestra para copiarlo a mano si el navegador no deja usar el portapapeles).
+  **CSV de una celda:** `palpaciones_celda_<id>_A_<desde>_<hasta>_B_<desde>_<hasta>.csv` (por ejemplo `palpaciones_celda_sin-registro.prenada_A_2026-08-03_2026-08-03_B_2026-11-11_2026-11-12.csv`), con las
+  mismas 16 columnas, encabezados con rango de fechas, SINIIGA como SERIE-ARETE, BOM UTF-8, protección contra fórmulas, sin técnico y las mismas guardas fail-closed; la columna «Grupo» nombra la celda con los rangos.
 * **Pruebas:** solo datos sintéticos; nunca datos reales del hato en tests, fixtures ni capturas. El caso dorado (`testing/palpation-golden.fixtures.ts`) reproduce las
   proporciones validadas por el rancho (120 palpadas en A; 31 / 19 / 25 desde Vacía y 27 / 7 / 11 desde Preñada).
 

@@ -269,7 +269,7 @@ describe('campaignEventRows (full list)', () => {
 
 describe('texts of the campaign views', () => {
   it('names the categories and writes a range in Spanish', () => {
-    expect(CATEGORY_LABEL['NO_PALPADA']).toBe('No palpada en esa campaña');
+    expect(CATEGORY_LABEL['NO_PALPADA']).toBe('Sin registro en esa campaña');
     expect(CATEGORY_LABEL['RANCHO']).toBe('Definido por el rancho');
     expect(formatRange({ from: '2026-09-01', to: '2026-09-15' })).toBe('01/09/2026 a 15/09/2026');
   });
