@@ -238,7 +238,7 @@ de un AI Agent, usar `.first()` en lugar de `.item` en `$('Node')`.
 ### 22. Reporte de palpaciones — solo lectura (rama `feat/agro-erp-palpation-report`)
 * **Qué es:** pantalla `/ganaderia/palpaciones` (lazy), `features/livestock/palpations/`. Lee `vw_palpation_events` (clave `health_log_id`) y
   `vw_palpation_herd` (clave `livestock_id`) por `v6/CRUD`, migración 108. **Orden de despliegue: base y modelos → pantalla.**
-  Sin escrituras, sin CSV, sin filtro por lote.
+  Sin escrituras y sin filtro por lote. **Sin CSV, salvo la excepción acotada de «Seguimiento de vacías» (más abajo).**
 * **Fail-closed:** sin empresa activa no hay petición; el rol permitido vive en UNA constante (`PALPATION_ALLOWED_ROLES = ['ADMIN','EDITOR']`,
   usada por el servicio y por el menú); con sesión vencida o en gracia no se pide nada; la respuesta de una empresa o sesión anterior se descarta;
   **una fila de otra empresa invalida TODA la respuesta**; cuerpo vacío o `error:true` en HTTP 200 es error, nunca "0 filas";
@@ -261,7 +261,20 @@ de un AI Agent, usar `.first()` en lugar de `.item` en `$('Node')`.
   rancho». «Sin indicios de preñez» = al menos una Vacía y ninguna Preñada en ninguna campaña; un animal con Vacía en una campaña y término del rancho en
   otra sigue en la lista principal. Texto neutral: «Compara resultados de palpación; no explica causas.»; ningún texto nombra una causa ni habla de
   infertilidad. La lista completa no muestra ni busca el técnico. Las campañas viven en memoria (señales de la página), nunca en `localStorage`.
-* **Pruebas:** solo datos sintéticos; nunca datos reales del hato en tests, fixtures ni capturas.
+* **Seguimiento de vacías entre dos campañas (A y B) y su CSV — única excepción a «sin CSV» (decisión del dueño, 2026-11-19):** para el par A/B elegido en
+  «Comparar campañas», `pairLists` (`utils/palpation-campaign-pairs.ts`) arma dos grupos: (a) **Vacía en A y en B** (persistente) y (b) **Vacía en A y no
+  palpada en B** (seguimiento), con SINIIGA, quemado (fuego), marca, categoría (hace de etapa de vida: las vistas no traen otra), estado actual y, por campaña,
+  fecha, resultado, código tal como se escribió, condición (UNE y ESTATICA son la misma condición, «Estática (UNE)») y la marca «código sin confirmar» de los
+  `UNMAPPED`. Los términos del rancho (RP, NO APTO, MATRIZ OCUPADA) siguen siendo «rancho»: ni Vacía ni Preñada, en ninguna lista; un NR sigue sin ser palpación.
+  Una **nota de cobertura** obligatoria cuenta palpadas en A y en B, en ambas, solo en A, solo en B, por categoría, «rancho» y NR, para que nadie lea las listas como
+  completas. La lista «Sin indicios de preñez» sigue usando todas las campañas y no cambió.
+  **El CSV solo sale por `exportRowsToCsv` (sin modificarlo: cliente, BOM UTF-8, coma) vía `exportPairCsv` (`utils/palpation-campaign-export.ts`), y falla cerrado:** se rechaza
+  (y no se escribe nada) si el reporte está `truncado` o no está `listo`, si no hay empresa válida, si las campañas son inválidas o iguales, o si **cualquier** evento o fila
+  del hato trae otro `id_company` (revisado fila por fila). Protege las celdas contra fórmulas (`=`, `+`, `-`, `@`, tab, retorno de carro: se antepone `'`), nunca lleva técnico
+  y el nombre del archivo lleva solo fechas (`palpaciones_vacias_A_<desde>_<hasta>_B_<desde>_<hasta>.csv`), nunca el nombre de la empresa. Cualquier otro CSV del reporte
+  exige una decisión nueva del dueño. Limitación conocida: Excel puede quitar el cero inicial de un SINIIGA (por ejemplo `07…`) si abre el archivo con doble clic; usar «Datos > Desde texto» con la columna como texto.
+* **Pruebas:** solo datos sintéticos; nunca datos reales del hato en tests, fixtures ni capturas. El caso dorado (`testing/palpation-golden.fixtures.ts`) reproduce las
+  proporciones validadas por el rancho (120 palpadas en A; 31 / 19 / 25 desde Vacía y 27 / 7 / 11 desde Preñada).
 
 ## PWA / service worker (Refs #1087, fase 1a)
 - El service worker es `@angular/service-worker` (`ngsw-config.json`, solo producción). **No hay datos offline
