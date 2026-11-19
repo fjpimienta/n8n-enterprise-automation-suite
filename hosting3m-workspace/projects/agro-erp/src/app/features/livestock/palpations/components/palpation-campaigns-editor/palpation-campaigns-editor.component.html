@@ -1,0 +1,77 @@
+<section class="card mb-3" aria-labelledby="palp-campaigns-title">
+  <div class="card-header">
+    <h3 class="card-title" id="palp-campaigns-title">Campañas a comparar</h3>
+    <div class="card-actions">
+      <button type="button" class="btn btn-sm btn-outline-secondary" data-testid="campaign-suggest" (click)="resuggest.emit()">Volver a proponer</button>
+    </div>
+  </div>
+  <div class="card-body">
+    <p class="text-muted small mb-3" data-testid="campaign-help">
+      Una campaña es un rango de fechas, con los dos extremos incluidos. Define de {{ min }} a {{ max }}.
+    </p>
+
+    @if (suggested() && campaigns().length > 0) {
+      <div class="alert alert-info" role="status" data-testid="campaign-suggested">
+        Propuesta automática: se agruparon las fechas de palpación y más de {{ gap }} días sin palpaciones separan una campaña.
+        Es solo un punto de partida: cambia los rangos como prefieras.
+      </div>
+    }
+    @if (campaigns().length === 0) {
+      <div class="alert alert-warning" role="status" data-testid="campaign-none">
+        No se pudo proponer campañas (hacen falta al menos dos grupos de fechas de palpación). Agrega los rangos a mano.
+      </div>
+    }
+
+    @if (listErrors().length > 0) {
+      <ul class="text-danger small mb-3 ps-3" data-testid="campaign-list-errors" aria-live="polite">
+        @for (message of listErrors(); track message) { <li>{{ message }}</li> }
+      </ul>
+    }
+
+    @for (c of campaigns(); track c.id; let i = $index) {
+      <div class="row g-2 align-items-end mb-3" role="group" [attr.aria-label]="'Campaña ' + (i + 1)" data-testid="campaign-row">
+        <div class="col-12 col-md-4">
+          <label class="form-label" [for]="'palp-camp-label-' + c.id">Nombre</label>
+          <input type="text" class="form-control" [id]="'palp-camp-label-' + c.id" [value]="c.label" [attr.maxlength]="maxLabel + 10"
+            [attr.aria-invalid]="has(c.id, 'label-empty', 'label-long', 'label-duplicate')" data-testid="campaign-label"
+            (change)="edit(c.id, 'label', $event)">
+        </div>
+        <div class="col-6 col-md-3">
+          <label class="form-label" [for]="'palp-camp-from-' + c.id">Desde</label>
+          <input type="date" class="form-control" [id]="'palp-camp-from-' + c.id" [value]="c.from"
+            [attr.aria-invalid]="has(c.id, 'from-invalid', 'range-order', 'overlap')" data-testid="campaign-from"
+            (change)="edit(c.id, 'from', $event)">
+        </div>
+        <div class="col-6 col-md-3">
+          <label class="form-label" [for]="'palp-camp-to-' + c.id">Hasta</label>
+          <input type="date" class="form-control" [id]="'palp-camp-to-' + c.id" [value]="c.to"
+            [attr.aria-invalid]="has(c.id, 'to-invalid', 'range-order', 'overlap')" data-testid="campaign-to"
+            (change)="edit(c.id, 'to', $event)">
+        </div>
+        <div class="col-12 col-md-2">
+          <button type="button" class="btn btn-outline-danger w-100" data-testid="campaign-remove" [disabled]="!canRemove()"
+            [attr.aria-label]="'Quitar la campaña ' + (c.label || i + 1)" (click)="remove(c.id)">Quitar</button>
+        </div>
+        @if (errorsOf(c.id); as messages) {
+          @if (messages.length > 0) {
+            <div class="col-12">
+              <ul class="text-danger small mb-0 ps-3" data-testid="campaign-errors" aria-live="polite">
+                @for (message of messages; track message) { <li>{{ message }}</li> }
+              </ul>
+            </div>
+          }
+        }
+      </div>
+    }
+
+    <div class="d-flex flex-wrap align-items-center gap-2">
+      <button type="button" class="btn btn-primary" data-testid="campaign-add" [disabled]="!canAdd()" (click)="add()">Agregar campaña</button>
+      @if (!canAdd()) {
+        <span class="text-muted small" data-testid="campaign-max">Ya hay {{ max }} campañas, el máximo.</span>
+      }
+      @if (!canRemove()) {
+        <span class="text-muted small" data-testid="campaign-min">Se necesitan al menos {{ min }} campañas.</span>
+      }
+    </div>
+  </div>
+</section>
