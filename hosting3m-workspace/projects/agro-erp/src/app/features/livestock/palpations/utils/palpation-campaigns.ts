@@ -102,6 +102,13 @@ export function validateCampaigns(campaigns: readonly Campaign[]): CampaignError
   return errors;
 }
 
+/** The campaigns ordered by their start date (then end date, then id), without changing the list given. Valid campaigns only. */
+export function sortCampaigns(campaigns: readonly Campaign[]): Campaign[] {
+  return [...campaigns].sort(
+    (a, b) => compareCalendarDates(a.from, b.from) || compareCalendarDates(a.to, b.to) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+  );
+}
+
 /** Latest counted event of each animal inside the campaign (inclusive). Same tie-break as the report: day, creation time, event key. */
 export function latestPerCampaign(events: readonly PalpationEventRow[], campaign: Campaign): Map<string, PalpationEventRow> {
   return latestPerAnimal(events, { from: campaign.from, to: campaign.to });

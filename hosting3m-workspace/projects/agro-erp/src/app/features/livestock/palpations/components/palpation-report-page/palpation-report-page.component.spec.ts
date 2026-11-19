@@ -220,4 +220,148 @@ describe('PalpationReportPageComponent', () => {
       expect(document.activeElement).toBe(button);
     });
   });
+
+  describe('campaign comparison tabs', () => {
+    const tabButton = (f: ComponentFixture<unknown>, id: string) => el(f).querySelector<HTMLButtonElement>(`[data-tab="${id}"]`)!;
+    const open = (f: ComponentFixture<unknown>, id: string) => {
+      tabButton(f, id).click();
+      f.detectChanges();
+    };
+
+    it('starts on "Resumen", unchanged, with three tabs that follow the ARIA tabs pattern', () => {
+      const { f } = setup();
+      const tabs = [...el(f).querySelectorAll('[role="tab"]')];
+      expect(tabs.map(t => t.textContent?.trim())).toEqual(['Resumen', 'Comparar campañas', 'Todas las palpaciones']);
+      expect(el(f).querySelector('[role="tablist"]')?.getAttribute('aria-label')).toBeTruthy();
+      expect(tabButton(f, 'resumen').getAttribute('aria-selected')).toBe('true');
+      expect(tabButton(f, 'comparar').getAttribute('aria-selected')).toBe('false');
+      expect(tabButton(f, 'comparar').getAttribute('tabindex')).toBe('-1');
+      expect(el(f).querySelector('[role="tabpanel"]')?.getAttribute('aria-labelledby')).toBe('palp-tab-resumen');
+      expect(el(f).querySelector('app-palpation-kpi-cards')).not.toBeNull();
+      expect(el(f).querySelector('app-palpation-campaign-compare')).toBeNull();
+    });
+
+    for (const status of ['sin-tenant', 'sin-permiso', 'cargando', 'error'] as const) {
+      it(`shows no tabs and no comparison while the report is "${status}"`, () => {
+        const { f } = setup(s => s.status.set(status));
+        expect(el(f).querySelector('[role="tablist"]')).toBeNull();
+        expect(el(f).querySelector('app-palpation-campaigns-editor')).toBeNull();
+        expect(el(f).querySelector('app-palpation-campaign-compare')).toBeNull();
+        expect(el(f).querySelector('app-palpation-event-list')).toBeNull();
+      });
+    }
+
+    it('proposes the campaigns from the dates when the screen opens, and says they are only a proposal', () => {
+      const { f } = setup();
+      open(f, 'comparar');
+      const rows = [...el(f).querySelectorAll('[data-testid="campaign-row"]')];
+      // 2023-07-20, 2026-09-20 and 2026-11-10 are more than 7 days apart: three campaigns, the 2023 load included
+      expect(rows.length).toBe(3);
+      expect((rows[0]?.querySelector('[data-testid="campaign-from"]') as HTMLInputElement).value).toBe('2023-07-20');
+      expect((rows[2]?.querySelector('[data-testid="campaign-to"]') as HTMLInputElement).value).toBe('2026-11-10');
+      expect(text(f)).toContain('Propuesta automática');
+    });
+
+    it('shows the comparison with the neutral note, and the transition table of the two latest campaigns', () => {
+      const { f } = setup();
+      open(f, 'comparar');
+      expect(el(f).querySelector('app-palpation-campaign-compare')).not.toBeNull();
+      expect(el(f).querySelector('[data-testid="compare-note"]')?.textContent).toContain('no explica causas');
+      expect(el(f).querySelector('[data-testid="transition-table"]')).not.toBeNull();
+      expect(el(f).querySelector('[role="tabpanel"]')?.getAttribute('aria-labelledby')).toBe('palp-tab-comparar');
+    });
+
+    it('shows the full list of palpations with the campaign column and no technician', () => {
+      const { f } = setup();
+      open(f, 'todas');
+      expect(el(f).querySelector('app-palpation-event-list')).not.toBeNull();
+      expect(el(f).querySelectorAll('[data-testid="event-row"]').length).toBe(3);
+      expect(text(f)).not.toContain('Técnico');
+    });
+
+    it('moves between the tabs with the arrow keys, Home and End', () => {
+      const { f } = setup();
+      const key = (k: string) => {
+        document.activeElement?.dispatchEvent(new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+        f.detectChanges();
+      };
+      tabButton(f, 'resumen').focus();
+      key('ArrowRight');
+      expect(tabButton(f, 'comparar').getAttribute('aria-selected')).toBe('true');
+      expect(document.activeElement).toBe(tabButton(f, 'comparar'));
+      key('End');
+      expect(tabButton(f, 'todas').getAttribute('aria-selected')).toBe('true');
+      key('ArrowRight');
+      expect(tabButton(f, 'resumen').getAttribute('aria-selected')).toBe('true');
+      key('ArrowLeft');
+      expect(tabButton(f, 'todas').getAttribute('aria-selected')).toBe('true');
+      key('Home');
+      expect(tabButton(f, 'resumen').getAttribute('aria-selected')).toBe('true');
+    });
+
+    it('rejects an overlapping range with a message and hides the comparison and the list until it is fixed', () => {
+      const { f } = setup();
+      open(f, 'comparar');
+      const to = el(f).querySelectorAll<HTMLInputElement>('[data-testid="campaign-to"]')[0]!;
+      to.value = '2026-11-10'; // the first campaign now reaches the last one
+      to.dispatchEvent(new Event('change', { bubbles: true }));
+      f.detectChanges();
+      expect(text(f)).toContain('se traslapa');
+      expect(el(f).querySelector('app-palpation-campaign-compare')).toBeNull();
+      expect(el(f).querySelector('[data-testid="campaigns-invalid"]')?.textContent).toContain('la comparación');
+      open(f, 'todas');
+      expect(el(f).querySelector('[data-testid="campaigns-invalid"]')?.textContent).toContain('la lista de palpaciones');
+    });
+
+    it('keeps the campaigns the user edited when switching tabs, and goes back to a proposal only when asked', () => {
+      const { f } = setup();
+      open(f, 'comparar');
+      const label = el(f).querySelectorAll<HTMLInputElement>('[data-testid="campaign-label"]')[0]!;
+      label.value = 'Carga histórica';
+      label.dispatchEvent(new Event('change', { bubbles: true }));
+      f.detectChanges();
+      expect(text(f)).not.toContain('Propuesta automática');
+      open(f, 'resumen');
+      open(f, 'todas');
+      expect(el(f).querySelectorAll<HTMLInputElement>('[data-testid="campaign-label"]')[0]?.value).toBe('Carga histórica');
+      (el(f).querySelector('[data-testid="campaign-suggest"]') as HTMLButtonElement).click();
+      f.detectChanges();
+      expect(el(f).querySelectorAll<HTMLInputElement>('[data-testid="campaign-label"]')[0]?.value).toBe('Campaña 1');
+      expect(text(f)).toContain('Propuesta automática');
+    });
+
+    it('does not make a request of its own: the report loads once, and the comparison reads the same rows', () => {
+      const { f, fake } = setup();
+      open(f, 'comparar');
+      open(f, 'todas');
+      expect(fake.load).toHaveBeenCalledTimes(1);
+      expect(fake.loadHistory).not.toHaveBeenCalled();
+    });
+
+    it('forgets the campaigns when the company changes (the service clears its rows first)', () => {
+      const { f, fake } = setup();
+      open(f, 'comparar');
+      expect(el(f).querySelectorAll('[data-testid="campaign-row"]').length).toBe(3);
+      fake.events.set([]);
+      fake.herd.set([]);
+      fake.tenantId.set(9102);
+      f.detectChanges();
+      fake.status.set('cargando');
+      f.detectChanges();
+      expect(el(f).querySelector('app-palpation-campaigns-editor')).toBeNull();
+      fake.events.set([events[0] as PalpationEventRow]);
+      fake.status.set('listo');
+      f.detectChanges();
+      open(f, 'comparar');
+      // a single date gives no proposal: the other company starts with nothing instead of inheriting the old ranges
+      expect(el(f).querySelectorAll('[data-testid="campaign-row"]').length).toBe(0);
+      expect(text(f)).toContain('No se pudo proponer');
+    });
+
+    it('shows a warning above the tabs when the report is truncated, and it stays there on the new tabs', () => {
+      const { f } = setup(s => s.status.set('truncado'));
+      open(f, 'comparar');
+      expect(text(f)).toContain('incompleto');
+    });
+  });
 });

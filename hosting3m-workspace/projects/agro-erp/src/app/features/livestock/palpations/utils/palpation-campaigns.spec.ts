@@ -8,6 +8,7 @@ import {
   animalCampaignCells,
   cellOf,
   latestPerCampaign,
+  sortCampaigns,
   suggestCampaigns,
   validateCampaigns,
 } from './palpation-campaigns';
@@ -123,6 +124,15 @@ describe('validateCampaigns', () => {
 
   it('does not call a campaign with a bad date an overlap', () => {
     expect(codes([camp('a', '2026-09-01', '2026-09-10'), camp('b', 'x', '2026-09-05')])).toEqual(['b:from-invalid']);
+  });
+});
+
+describe('sortCampaigns', () => {
+  it('orders by start date, then end date, then id, without touching the list it receives', () => {
+    const list = [camp('c', '2026-11-01', '2026-11-10'), camp('a', '2026-09-01', '2026-09-20'), camp('b', '2026-09-01', '2026-09-05'), camp('d', '2026-09-01', '2026-09-05')];
+    const copy = [...list];
+    expect(sortCampaigns(list).map(c => c.id)).toEqual(['b', 'd', 'a', 'c']);
+    expect(list).toEqual(copy);
   });
 });
 
