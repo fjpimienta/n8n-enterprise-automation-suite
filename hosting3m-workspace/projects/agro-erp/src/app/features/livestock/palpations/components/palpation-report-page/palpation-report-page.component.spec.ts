@@ -1,5 +1,6 @@
 import { Component, computed, input, signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ActivatedRoute, Params, Router, convertToParamMap } from '@angular/router';
 import { NgApexchartsModule } from 'ng-apexcharts';
 import { describe, expect, it, vi } from 'vitest';
 import { PalpationEventRow, PalpationHerdRow, ReportErrorReason, ReportStatus } from '../../models/palpation.types';
@@ -51,21 +52,45 @@ const herd = [
   herdRow({ livestock_id: 'A3', rfid_siniiga: '9999000003', category: 'VACA', current_status: 'ACTIVO', last_is_historical: true, last_event_date: '2023-07-20' }),
 ];
 
-function setup(configure: (s: FakeService) => void = () => undefined): { f: ComponentFixture<PalpationReportPageComponent>; fake: FakeService } {
+/**
+ * A stand-in for the address bar: the query parameters of the page and a `navigate` that applies the change the way the router does
+ * (`merge`: a value of null removes the parameter), so the page can be tested reading and writing the address without a real router.
+ */
+function makeAddress(query: string) {
+  const state: Record<string, string[]> = {};
+  for (const [k, v] of new URLSearchParams(query)) (state[k] ??= []).push(v);
+  const navigate = vi.fn((_commands: unknown[], extras: { queryParams: Params }) => {
+    for (const [k, v] of Object.entries(extras.queryParams)) {
+      if (v === null || v === undefined) delete state[k];
+      else state[k] = [String(v)];
+    }
+    return Promise.resolve(true);
+  });
+  const route = { snapshot: { get queryParamMap() { return convertToParamMap(state); } } };
+  return { navigate, route, state };
+}
+
+function setup(
+  configure: (s: FakeService) => void = () => undefined,
+  query = '',
+): { f: ComponentFixture<PalpationReportPageComponent>; fake: FakeService; address: ReturnType<typeof makeAddress> } {
   const fake = new FakeService();
   fake.events.set(events);
   fake.herd.set(herd);
   configure(fake);
+  const address = makeAddress(query);
   TestBed.configureTestingModule({
     providers: [
       { provide: PalpationReportService, useValue: fake },
       { provide: PALPATION_TODAY, useValue: () => TODAY },
+      { provide: Router, useValue: { navigate: address.navigate } },
+      { provide: ActivatedRoute, useValue: address.route },
     ],
   });
   TestBed.overrideComponent(PalpationChartsComponent, { remove: { imports: [NgApexchartsModule] }, add: { imports: [ApexChartDouble] } });
   const f = TestBed.createComponent(PalpationReportPageComponent);
   f.detectChanges();
-  return { f, fake };
+  return { f, fake, address };
 }
 const el = (f: ComponentFixture<unknown>) => f.nativeElement as HTMLElement;
 const text = (f: ComponentFixture<unknown>) => el(f).textContent?.replace(/\s+/g, ' ').trim() ?? '';
@@ -377,6 +402,169 @@ describe('PalpationReportPageComponent', () => {
       const { f } = setup(s => s.status.set('truncado'));
       open(f, 'comparar');
       expect(text(f)).toContain('incompleto');
+    });
+  });
+
+  describe('deep link to a matrix cell', () => {
+    const A = '2026-09-20_2026-09-20';
+    const B = '2026-11-10_2026-11-10';
+    const VALID = `a=${A}&b=${B}&cell=sin-registro.vacia`;
+    const tabButton = (f: ComponentFixture<unknown>, id: string) => el(f).querySelector<HTMLButtonElement>(`[data-tab="${id}"]`)!;
+    const cellButton = (f: ComponentFixture<unknown>, from: string, to: string) => el(f).querySelector<HTMLButtonElement>(`[data-cell-button="${from}>${to}"]`)!;
+    const campaignRows = (f: ComponentFixture<unknown>) =>
+      [...el(f).querySelectorAll('[data-testid="campaign-row"]')].map(r => [
+        (r.querySelector('[data-testid="campaign-from"]') as HTMLInputElement).value,
+        (r.querySelector('[data-testid="campaign-to"]') as HTMLInputElement).value,
+      ]);
+
+    it('opens the comparison with the two campaigns of the link and the cell it names, once the data has arrived', () => {
+      const { f } = setup(() => undefined, VALID);
+      expect(tabButton(f, 'comparar').getAttribute('aria-selected')).toBe('true');
+      expect(campaignRows(f)).toEqual([['2026-09-20', '2026-09-20'], ['2026-11-10', '2026-11-10']]);
+      expect(el(f).querySelector('[data-testid="cell-title"]')?.textContent).toContain('Animales: Sin registro en Campaña A y Vacía en Campaña B');
+      expect(el(f).querySelector('[data-testid="cell-count"]')?.textContent).toContain('1');
+      expect(cellButton(f, 'NO_PALPADA', 'VACÍA').getAttribute('aria-pressed')).toBe('true');
+    });
+
+    it('opens the comparison without a cell when the link only names the two campaigns', () => {
+      const { f } = setup(() => undefined, `a=${A}&b=${B}`);
+      expect(tabButton(f, 'comparar').getAttribute('aria-selected')).toBe('true');
+      expect(campaignRows(f).length).toBe(2);
+      expect(el(f).querySelector('[data-testid="cell-section"]')).toBeNull();
+    });
+
+    it('does not rewrite the address when it already says what the page shows', () => {
+      const { address } = setup(() => undefined, VALID);
+      expect(address.navigate).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['an impossible date', `a=2026-13-01_2026-13-02&b=${B}&cell=vacia.vacia`],
+      ['a missing campaign', `a=${A}&cell=vacia.vacia`],
+      ['a repeated parameter', `a=${A}&a=${A}&b=${B}`],
+      ['overlapping campaigns', `a=${A}&b=${A}&cell=vacia.vacia`],
+      ['an unknown cell', `a=${A}&b=${B}&cell=nada.nada`],
+      ['the impossible cell', `a=${A}&b=${B}&cell=sin-registro.sin-registro`],
+      ['markup', `a=${encodeURIComponent('<b>')}&b=${B}`],
+    ])('falls back to the normal view when the link has %s, and removes the bad parameters from the address', (_name, query) => {
+      const { f, address } = setup(() => undefined, query);
+      expect(tabButton(f, 'resumen').getAttribute('aria-selected')).toBe('true');
+      expect(el(f).querySelector('[data-testid="cell-section"]')).toBeNull();
+      tabButton(f, 'comparar').click();
+      f.detectChanges();
+      // the campaigns are the automatic proposal, not what the bad link said
+      expect(el(f).textContent).toContain('Propuesta automática');
+      expect(el(f).querySelectorAll('[data-testid="campaign-row"]').length).toBe(3);
+      // the address is cleaned (only our three parameters), so reloading does not repeat the failure
+      expect(address.state['a']).toBeUndefined();
+      expect(address.state['b']).toBeUndefined();
+      expect(address.state['cell']).toBeUndefined();
+      const calls = address.navigate.mock.calls as [unknown[], { queryParams: Params }][];
+      for (const [, extras] of calls) expect(Object.values(extras.queryParams).every(v => v === null)).toBe(true);
+    });
+
+    it('leaves the other parameters of the address alone when it cleans a bad link', () => {
+      const { address } = setup(() => undefined, `a=oops&utm_source=mail`);
+      expect(address.state['utm_source']).toEqual(['mail']);
+      expect(address.state['a']).toBeUndefined();
+    });
+
+    it('keeps a valid link in the address while the data is still loading', () => {
+      const { address } = setup(s => { s.events.set([]); s.herd.set([]); s.status.set('cargando'); }, VALID);
+      expect(address.navigate).not.toHaveBeenCalled();
+      expect(address.state['cell']).toEqual(['sin-registro.vacia']);
+    });
+
+    it('ignores every other parameter, in particular any company or animal', () => {
+      const { f, fake } = setup(() => undefined, `${VALID}&id_company=5&tenant_id=7&livestock_id=abc&token=xyz`);
+      expect(el(f).querySelector('[data-testid="cell-count"]')?.textContent).toContain('1');
+      expect(fake.tenantId()).toBe(9101); // the data is the active company's, as always
+      expect(fake.load).toHaveBeenCalledTimes(1);
+      expect(el(f).textContent).not.toContain('abc');
+    });
+
+    it('waits for the data: with nothing loaded yet the normal view shows, and the link is applied when the rows arrive', () => {
+      const { f, fake } = setup(s => { s.events.set([]); s.herd.set([]); s.status.set('cargando'); }, VALID);
+      expect(el(f).querySelector('[data-tab]')).toBeNull();
+      fake.events.set(events);
+      fake.herd.set(herd);
+      fake.status.set('listo');
+      f.detectChanges();
+      expect(tabButton(f, 'comparar').getAttribute('aria-selected')).toBe('true');
+      expect(el(f).querySelector('[data-testid="cell-count"]')?.textContent).toContain('1');
+    });
+
+    it('drops the link when the company changes before the data arrives: it is never applied to another company', () => {
+      const { f, fake, address } = setup(s => { s.events.set([]); s.herd.set([]); s.status.set('cargando'); }, VALID);
+      fake.tenantId.set(9102);
+      f.detectChanges();
+      fake.events.set(events);
+      fake.herd.set(herd);
+      fake.status.set('listo');
+      f.detectChanges();
+      expect(tabButton(f, 'resumen').getAttribute('aria-selected')).toBe('true');
+      expect(el(f).querySelector('[data-testid="cell-section"]')).toBeNull();
+      expect(address.state['cell']).toBeUndefined(); // the address was cleaned
+    });
+
+    it('writes only the two date ranges and the cell id to the address when a cell is opened, replacing the entry, and nothing else', () => {
+      const { f, address } = setup();
+      tabButton(f, 'comparar').click();
+      f.detectChanges();
+      expect(address.navigate).not.toHaveBeenCalled(); // no cell yet: nothing to write
+      cellButton(f, 'NO_PALPADA', 'VACÍA')?.click();
+      f.detectChanges();
+      const rest = el(f).querySelectorAll('[data-cell-button]');
+      expect(rest.length).toBeGreaterThan(0);
+      const [commands, extras] = address.navigate.mock.calls.at(-1) as [unknown[], { queryParams: Params; queryParamsHandling: string; replaceUrl: boolean }];
+      expect(commands).toEqual([]);
+      expect(extras.queryParamsHandling).toBe('merge');
+      expect(extras.replaceUrl).toBe(true);
+      expect(Object.keys(extras.queryParams).sort()).toEqual(['a', 'b', 'cell']);
+      for (const v of Object.values(extras.queryParams)) expect(String(v)).toMatch(/^[0-9a-z._-]+$/);
+      expect(JSON.stringify(extras.queryParams)).not.toMatch(/A1|A2|A3|9999|9101|company|tenant/i);
+    });
+
+    it('follows the cell: a new cell rewrites the address, and closing it clears the three parameters', () => {
+      const { f, address } = setup();
+      tabButton(f, 'comparar').click();
+      f.detectChanges();
+      el(f).querySelector<HTMLButtonElement>('[data-cell-button]')!.click();
+      f.detectChanges();
+      expect(address.state['cell']?.length).toBe(1);
+      el(f).querySelector<HTMLButtonElement>('[data-testid="cell-close"]')!.click();
+      f.detectChanges();
+      expect(address.state['a']).toBeUndefined();
+      expect(address.state['b']).toBeUndefined();
+      expect(address.state['cell']).toBeUndefined();
+    });
+
+    it('clears the parameters when the user leaves the comparison tab, and writes them again when the cell is shown again', () => {
+      const { f, address } = setup(() => undefined, VALID);
+      expect(address.state['cell']).toEqual(['sin-registro.vacia']);
+      tabButton(f, 'resumen').click();
+      f.detectChanges();
+      expect(address.state['cell']).toBeUndefined();
+      tabButton(f, 'comparar').click();
+      f.detectChanges();
+      expect(address.state['cell']).toEqual(['sin-registro.vacia']);
+    });
+
+    it('closes the cell and clears the address when the company changes (the data of the other company starts clean)', () => {
+      const { f, fake, address } = setup(() => undefined, VALID);
+      expect(el(f).querySelector('[data-testid="cell-section"]')).not.toBeNull();
+      fake.events.set([]);
+      fake.herd.set([]);
+      fake.tenantId.set(9102);
+      f.detectChanges();
+      expect(el(f).querySelector('[data-testid="cell-section"]')).toBeNull();
+      expect(address.state['cell']).toBeUndefined();
+    });
+
+    it('keeps the company isolation as today: the page makes the same single load and the link adds no request', () => {
+      const { fake } = setup(() => undefined, VALID);
+      expect(fake.load).toHaveBeenCalledTimes(1);
+      expect(fake.loadHistory).not.toHaveBeenCalled();
     });
   });
 });

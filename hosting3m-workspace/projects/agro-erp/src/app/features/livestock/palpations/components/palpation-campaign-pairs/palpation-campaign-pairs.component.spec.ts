@@ -95,10 +95,10 @@ describe('PalpationCampaignPairsComponent', () => {
     }
   });
 
-  it('shows a pending animal with campaign B as "No palpada en esa campaña", without date or code', () => {
+  it('shows a pending animal with campaign B as "Sin registro en esa campaña", without date or code', () => {
     const { f } = render();
     const row = qa(f, 'pending-row')[0] as HTMLElement;
-    expect(text(row.querySelector('[data-col="b"]'))).toBe('No palpada en esa campaña');
+    expect(text(row.querySelector('[data-col="b"]'))).toBe('Sin registro en esa campaña');
     expect(text(row.querySelector('[data-col="a"]'))).toContain('03/08/2026');
   });
 

@@ -78,6 +78,13 @@ deben estar desplegados **antes** que esta pantalla.
   resultado, código y condición (con la marca «código sin confirmar»): **Vacía en A y en B (persistente)** y **Vacía en A y no palpada en B (seguimiento)**. Una nota de
   cobertura dice cuántos animales quedaron fuera (solo en A, solo en B, «definido por el rancho», NR) para que nadie lea la lista como completa. El botón «Exportar CSV»
   (UTF-8 con BOM, coma) solo funciona con el reporte completo y listo y con una empresa válida, y rechaza cualquier fila de otra empresa; el archivo lleva solo fechas en el nombre y no incluye al técnico.
+  Cada columna por campaña lleva en su encabezado el rango de fechas de esa campaña (por ejemplo `Resultado (2026-11-11 a 2026-11-12)`), y el SINIIGA sale como SERIE-ARETE (`070000-0001`),
+  con el guion que evita que Excel pierda el cero inicial.
+- **Detalle de una celda de la matriz:** cada celda no vacía de la matriz de transiciones (y de sus tarjetas en móvil) es un botón que abre la lista de los animales de esa celda, con la misma tabla
+  y tarjetas que los grupos de seguimiento. La lista se concilia con el conteo de la matriz. La fila y columna **«Sin registro en esa campaña»** (antes «No palpada…») incluye a los animales sin ninguna
+  palpación que cuente en las fechas de la campaña, a los que solo tienen un NR y a los que sus filas no se pudieron emparejar o cargar, no solo a los que se saltaron; la lista lo explica. Un botón copia
+  un **enlace** que abre esa celda (`?a=…&b=…&cell=…`: solo las dos campañas y la celda, ningún dato de animales; al abrirlo se valida de forma estricta y, si algo es inválido, se muestra la vista normal) y otro exporta el
+  CSV de la celda con las mismas guardas (nombre con la celda y los rangos de fechas).
 
 Los datos de prueba son siempre sintéticos (`features/livestock/palpations/testing/palpation.fixtures.ts`).
 

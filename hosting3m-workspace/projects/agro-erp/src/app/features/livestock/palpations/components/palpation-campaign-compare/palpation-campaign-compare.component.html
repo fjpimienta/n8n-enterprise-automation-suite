@@ -60,7 +60,15 @@
                       @if (t.rowTotals[row] === 0) {
                         <span class="text-muted">—</span>
                       } @else {
-                        <strong>{{ cell(t, row, col) }}</strong>&ngsp;<span class="text-muted small">de {{ t.rowTotals[row] }}</span>
+                        <span class="text-nowrap">
+                        @if (cell(t, row, col) > 0) {
+                          <button type="button" class="btn btn-link p-0 palp-cell-btn" data-testid="matrix-cell-button" [attr.data-cell-button]="row + '>' + col"
+                            [attr.aria-label]="cellAria(t, row, col)" [attr.aria-pressed]="isSelected(row, col)" aria-controls="palp-cell-panel"
+                            (click)="openCell(row, col, $event)">{{ cell(t, row, col) }}</button>&ngsp;
+                        } @else {
+                          <strong>0</strong>&ngsp;
+                        }<span class="text-muted small">de {{ t.rowTotals[row] }}</span>
+                        </span>
                       }
                     </td>
                   }
@@ -94,7 +102,13 @@
                     @for (col of categories; track col) {
                       <li class="d-flex justify-content-between gap-2 py-1 border-top" [attr.data-card-cell]="row + '>' + col">
                         <span><app-palp-swatch [color]="categoryColor[col]" />{{ categoryLabel[col] }}</span>&ngsp;
-                        <span class="text-nowrap"><strong>{{ cell(t, row, col) }}</strong>&ngsp;<span class="text-muted small">de {{ t.rowTotals[row] }}</span></span>
+                        <span class="text-nowrap">@if (cell(t, row, col) > 0) {
+                            <button type="button" class="btn btn-link p-0 palp-cell-btn" data-testid="matrix-card-button" [attr.data-card-button]="row + '>' + col"
+                              [attr.aria-label]="cellAria(t, row, col)" [attr.aria-pressed]="isSelected(row, col)" aria-controls="palp-cell-panel"
+                              (click)="openCell(row, col, $event)">{{ cell(t, row, col) }}</button>&ngsp;
+                          } @else {
+                            <strong>0</strong>&ngsp;
+                          }<span class="text-muted small">de {{ t.rowTotals[row] }}</span></span>
                       </li>
                     }
                   </ul>
@@ -127,6 +141,15 @@
     }
   </div>
 </section>
+
+@if (selectedCell(); as openCellValue) {
+  @if (table(); as detailTable) {
+    @if (selectedCount() !== null) {
+      <app-palpation-matrix-cell [events]="events()" [herd]="herd()" [a]="detailTable.from" [b]="detailTable.to" [cell]="openCellValue"
+        [matrixCount]="selectedCount() ?? 0" [reportStatus]="reportStatus()" [tenantId]="tenantId()" (closed)="closeCell()" />
+    }
+  }
+}
 
 @if (table(); as pairTable) {
   @if (pairTable.identityHolds && pairTable.universe > 0) {

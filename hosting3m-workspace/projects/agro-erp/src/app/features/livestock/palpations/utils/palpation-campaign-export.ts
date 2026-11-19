@@ -2,8 +2,9 @@ import { InjectionToken } from '@angular/core';
 import { CsvColumn, exportRowsToCsv } from '@shared/utils/csv-export.util';
 import { PalpationEventRow, PalpationHerdRow, ReportStatus } from '../models/palpation.types';
 import { CATEGORY_LABEL, GROUP_LABEL } from './palpation-campaign-view';
-import { PairRow, pairLists } from './palpation-campaign-pairs';
+import { PairRow, cellAnimals, pairLists } from './palpation-campaign-pairs';
 import { Campaign, validateCampaigns } from './palpation-campaigns';
+import { MatrixCell, cellIdOf, cellLabel } from './palpation-matrix-cells';
 import { SUBTYPE_LABEL } from './palpation-view';
 
 /**
@@ -32,6 +33,11 @@ export interface ExportInput {
   readonly herd: readonly PalpationHerdRow[];
   readonly a: Campaign;
   readonly b: Campaign;
+  /**
+   * The cell of the transition matrix to export. Without it the file holds the two follow-up groups (persistent and pending); with it, the animals
+   * of that one cell. The same guards apply to both.
+   */
+  readonly cell?: MatrixCell | null;
 }
 
 export type ExportPlan =
@@ -56,26 +62,59 @@ export function guardCell(value: string | null | undefined): string {
   return FORMULA_START.test(text.trimStart()) || FORMULA_START.test(text) ? `'${text}` : text;
 }
 
+const SINIIGA_OFFICIAL = /^\d{10}$/;
+
+/**
+ * Writes an official 10-digit SINIIGA tag in the paper-form format SERIE-ARETE (6 digits, a hyphen, 4 digits), for example `0700000001` becomes
+ * `070000-0001`. The hyphen makes a spreadsheet keep the value as text, so a leading zero (state code 07) is not lost. Only a value of exactly 10
+ * digits is changed; anything else (a placeholder, a different length, a brand and fuego) is returned untouched, and `null` becomes an empty cell.
+ */
+export function siniigaSerieArete(value: string | null | undefined): string {
+  const text = value ?? '';
+  return SINIIGA_OFFICIAL.test(text) ? `${text.slice(0, 6)}-${text.slice(6)}` : text;
+}
+
 /** The file name: dates only, never the name of the company. The campaigns must have valid dates (checked before). */
 export function exportFilename(a: Campaign, b: Campaign): string {
   return `palpaciones_vacias_A_${a.from}_${a.to}_B_${b.from}_${b.to}.csv`;
 }
 
-/** Columns of the file: group, SINIIGA, fuego, brand, category, current status, and for each campaign date, result, code, condition and flag. */
-export function exportColumns(a: Campaign, b: Campaign): ReadonlyArray<CsvColumn<PairRow>> {
+/**
+ * The file name of the list behind one matrix cell: the cell identifier and the date range of each campaign, nothing else (never the company or a
+ * label). For example `palpaciones_celda_sin-registro.prenada_A_2026-08-03_2026-08-03_B_2026-11-11_2026-11-12.csv`.
+ */
+export function exportCellFilename(a: Campaign, b: Campaign, cell: MatrixCell): string {
+  return `palpaciones_celda_${cellIdOf(cell)}_A_${a.from}_${a.to}_B_${b.from}_${b.to}.csv`;
+}
+
+/**
+ * The date range of a campaign as it is written in the headers: `2026-08-03` for a single day and `2026-11-11 a 2026-11-12` for a range, so the
+ * file can be read without knowing which campaign is which. Both ends are validated calendar dates (the plan checks the campaigns first).
+ */
+export function campaignRangeLabel(c: Pick<Campaign, 'from' | 'to'>): string {
+  return c.from === c.to ? c.from : `${c.from} a ${c.to}`;
+}
+
+/**
+ * Columns of the file: group, SINIIGA, fuego, brand, category, current status, and for each campaign date, result, code, condition and flag. Every
+ * per-campaign header carries the date range of its campaign, for example `Resultado (2026-08-03)` or `Resultado (2026-11-11 a 2026-11-12)`. The
+ * user-given label is not used: it is free text, and the dates already tell the two campaigns apart (campaigns cannot overlap).
+ */
+export function exportColumns(a: Campaign, b: Campaign, cell: MatrixCell | null = null): ReadonlyArray<CsvColumn<PairRow>> {
   const perCampaign = (campaign: Campaign, pick: (r: PairRow) => PairRow['a']): ReadonlyArray<CsvColumn<PairRow>> => {
-    const name = campaign.label.trim();
+    const range = campaignRangeLabel(campaign);
     return [
-      { header: guardCell(`${name} · Fecha`), value: r => guardCell(pick(r).date) },
-      { header: guardCell(`${name} · Resultado`), value: r => guardCell(CATEGORY_LABEL[pick(r).category]) },
-      { header: guardCell(`${name} · Código`), value: r => guardCell(pick(r).rawCode) },
-      { header: guardCell(`${name} · Condición`), value: r => guardCell(pick(r).condition === null ? '' : SUBTYPE_LABEL[pick(r).condition as keyof typeof SUBTYPE_LABEL]) },
-      { header: guardCell(`${name} · Código sin confirmar`), value: r => (pick(r).unconfirmed ? 'Sí' : '') },
+      { header: guardCell(`Fecha (${range})`), value: r => guardCell(pick(r).date) },
+      { header: guardCell(`Resultado (${range})`), value: r => guardCell(CATEGORY_LABEL[pick(r).category]) },
+      { header: guardCell(`Código (${range})`), value: r => guardCell(pick(r).rawCode) },
+      { header: guardCell(`Condición (${range})`), value: r => guardCell(pick(r).condition === null ? '' : SUBTYPE_LABEL[pick(r).condition as keyof typeof SUBTYPE_LABEL]) },
+      { header: guardCell(`Código sin confirmar (${range})`), value: r => (pick(r).unconfirmed ? 'Sí' : '') },
     ];
   };
   return [
-    { header: 'Grupo', value: r => guardCell(GROUP_LABEL[r.group]) },
-    { header: 'SINIIGA', value: r => guardCell(r.siniiga) },
+    // for a matrix cell the "Grupo" column names the cell with the date range of each campaign, so each line says what it is
+    { header: 'Grupo', value: r => guardCell(r.group === 'CELL' && cell !== null ? cellLabel(cell, `(${campaignRangeLabel(a)})`, `(${campaignRangeLabel(b)})`) : GROUP_LABEL[r.group]) },
+    { header: 'SINIIGA', value: r => guardCell(siniigaSerieArete(r.siniiga)) },
     { header: 'Quemado', value: r => guardCell(r.fuego) },
     { header: 'Marca', value: r => guardCell(r.brand) },
     { header: 'Categoría', value: r => guardCell(r.category) },
@@ -110,6 +149,12 @@ export function planPairCsv(input: ExportInput): ExportPlan {
   for (const e of events) if (e.id_company !== tenantId) return { ok: false, reason: 'foreign-company' };
   for (const h of herd) if (h.id_company !== tenantId) return { ok: false, reason: 'foreign-company' };
 
+  const cell = input.cell ?? null;
+  if (cell !== null) {
+    const rows = cellAnimals(events, herd, a, b, cell.from, cell.to);
+    if (rows.length === 0) return { ok: false, reason: 'empty' };
+    return { ok: true, filename: exportCellFilename(a, b, cell), columns: exportColumns(a, b, cell), rows };
+  }
   const { persistent, pending } = pairLists(events, herd, a, b);
   const rows = [...persistent, ...pending];
   if (rows.length === 0) return { ok: false, reason: 'empty' };

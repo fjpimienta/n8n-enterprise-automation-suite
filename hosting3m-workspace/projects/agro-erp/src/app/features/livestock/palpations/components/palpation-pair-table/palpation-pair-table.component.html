@@ -1,0 +1,68 @@
+<!-- What an animal was in one campaign: date, result, code as typed, condition and the unconfirmed-code flag. -->
+<ng-template #cellTpl let-cell>
+  @if (cell.category === 'NO_PALPADA') {
+    <span class="text-muted" data-testid="pair-cell-empty">Sin registro en esa campaña</span>
+  } @else {
+    <div data-testid="pair-cell-date">{{ formatDate(cell.date) }}</div>
+    <div><app-palp-swatch [color]="colorOf(cell.category)" />{{ labelOf(cell.category) }}</div>
+    @if (cell.rawCode) {
+      <div class="small text-muted" data-testid="pair-cell-code">Código: {{ cell.rawCode }}@if (conditionText(cell); as condition) { · Condición: {{ condition }}}</div>
+    }
+    @if (cell.unconfirmed) {
+      <app-palp-flag>{{ unconfirmedBadge }}</app-palp-flag>
+    }
+  }
+</ng-template>
+
+<div class="card card-sm">
+  <app-table-toolbar [pagedTable]="table" [searchPlaceholder]="searchPlaceholder" />
+  @if (table.totalItems() === 0) {
+    <div class="card-body text-center text-muted" role="status">No hay animales que coincidan con la búsqueda.</div>
+  } @else {
+    <div class="table-responsive d-none d-md-block">
+      <table class="table table-vcenter card-table" [attr.data-testid]="testid() + '-table'">
+        <caption class="visually-hidden">{{ caption() }}</caption>
+        <thead>
+          <tr>
+            <th scope="col">SINIIGA</th>
+            <th scope="col">Quemado</th>
+            <th scope="col">Marca</th>
+            <th scope="col">Categoría</th>
+            <th scope="col">Estado actual</th>
+            <th scope="col">{{ a().label }}</th>
+            <th scope="col">{{ b().label }}</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of table.paginatedRows(); track row.livestockId) {
+            <tr [attr.data-testid]="testid() + '-row'">
+              <td data-col="siniiga">{{ row.siniiga ?? '—' }}</td>
+              <td data-col="fuego">{{ row.fuego ?? '—' }}</td>
+              <td data-col="brand">{{ row.brand ?? '—' }}</td>
+              <td data-col="category">{{ row.category ?? '—' }}</td>
+              <td data-col="status">{{ row.currentStatus ?? '—' }}</td>
+              <td data-col="a"><ng-container *ngTemplateOutlet="cellTpl; context: { $implicit: row.a }" /></td>
+              <td data-col="b"><ng-container *ngTemplateOutlet="cellTpl; context: { $implicit: row.b }" /></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Phone: a table with seven columns does not fit, so each animal is a card with the same data. -->
+    <ul class="list-group list-group-flush d-md-none" [attr.data-testid]="testid() + '-cards'">
+      @for (row of table.paginatedRows(); track row.livestockId) {
+        <li class="list-group-item" [attr.data-testid]="testid() + '-card'">
+          <div class="fw-bold">{{ identifier(row) }}</div>
+          <div class="small">SINIIGA: {{ row.siniiga ?? '—' }} · Quemado: {{ row.fuego ?? '—' }} · Marca: {{ row.brand ?? '—' }}</div>
+          <div class="text-muted small mb-2">{{ row.category ?? '—' }} · {{ row.currentStatus ?? '—' }}</div>
+          <div class="small fw-bold">{{ a().label }}</div>
+          <div class="mb-2"><ng-container *ngTemplateOutlet="cellTpl; context: { $implicit: row.a }" /></div>
+          <div class="small fw-bold">{{ b().label }}</div>
+          <div><ng-container *ngTemplateOutlet="cellTpl; context: { $implicit: row.b }" /></div>
+        </li>
+      }
+    </ul>
+  }
+  <app-table-footer [pagedTable]="table" />
+</div>

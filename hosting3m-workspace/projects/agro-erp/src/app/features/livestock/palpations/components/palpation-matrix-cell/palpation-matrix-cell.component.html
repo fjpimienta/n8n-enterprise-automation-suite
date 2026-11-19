@@ -1,0 +1,57 @@
+<section class="card mb-3" id="palp-cell-panel" aria-labelledby="palp-cell-title" data-testid="cell-section">
+  <div class="card-header flex-wrap gap-2">
+    <h3 class="card-title palp-title" id="palp-cell-title" #heading tabindex="-1" data-testid="cell-title" style="flex: 1 1 16rem">Animales: {{ title() }}</h3>
+    <div class="card-actions d-flex flex-wrap gap-2">
+      <button type="button" class="btn btn-sm btn-outline-primary palp-action" data-testid="cell-copy-link" (click)="copyLink()">Copiar enlace</button>
+      <button type="button" class="btn btn-sm btn-outline-primary palp-action" data-testid="cell-export" [disabled]="readinessText() !== null || mismatch()" (click)="export()">Exportar CSV</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary palp-action" data-testid="cell-close" (click)="closed.emit()">Cerrar</button>
+    </div>
+  </div>
+  <div class="card-body">
+    @if (readinessText(); as why) {
+      <p class="small mb-2 palp-error" data-testid="cell-export-why" role="status">{{ why }}</p>
+    }
+    @if (message(); as m) {
+      <p class="small mb-2" [class.palp-error]="m.kind === 'blocked'" [attr.role]="m.kind === 'blocked' ? 'alert' : 'status'" data-testid="cell-message">{{ m.text }}</p>
+    }
+    @if (manualLink(); as manual) {
+      <div class="mb-2">
+        <label class="form-label small" for="palp-cell-link">Enlace a esta celda</label>
+        <input id="palp-cell-link" class="form-control form-control-sm" type="text" readonly [value]="manual" data-testid="cell-link-input">
+      </div>
+    }
+
+    <section class="palp-coverage mb-3" aria-labelledby="palp-cell-coverage-title" data-testid="cell-coverage">
+      <h4 class="h5" id="palp-cell-coverage-title">Qué incluye esta lista</h4>
+      <ul class="small mb-0">
+        <li data-testid="cell-note-scope">Muestra solo los animales de esta celda de la matriz; no es el hato completo.</li>
+        <li data-testid="cell-note-sin-registro">
+          «Sin registro» incluye a los animales cuyas filas no se pudieron emparejar o cargar, no solo a los que se saltaron en esa campaña:
+          quiere decir que no hay ninguna palpación que cuente dentro de las fechas de esa campaña (un NR no cuenta).
+        </li>
+        @if (unmatched() > 0) {
+          <li data-testid="cell-note-unmatched">
+            <strong>{{ unmatched() }}</strong> {{ unmatched() === 1 ? 'animal tiene' : 'animales tienen' }} palpaciones en estas campañas pero ninguna ficha en el hato: se cuentan,
+            pero no tienen SINIIGA, categoría ni estado.
+          </li>
+        }
+        @if (truncated()) {
+          <li class="palp-error" data-testid="cell-note-truncated">El reporte está incompleto (se alcanzó el tope de filas): esta lista es parcial.</li>
+        }
+      </ul>
+    </section>
+
+    @if (mismatch()) {
+      <div class="alert alert-danger mb-0" role="alert" data-testid="cell-mismatch">
+        La matriz cuenta {{ matrixCount() }} y la lista tiene {{ rows().length }}: las cifras no cuadran, así que no se muestra la lista para no dar un dato incorrecto.
+      </div>
+    } @else {
+      <p class="mb-2" data-testid="cell-count">Animales en esta celda: <strong>{{ rows().length }}</strong>&ngsp;<span class="text-muted">(los mismos que cuenta la matriz)</span></p>
+      @if (rows().length === 0) {
+        <div class="text-muted" role="status" data-testid="cell-empty">Ningún animal en esta celda.</div>
+      } @else {
+        <app-palpation-pair-table [rows]="rows()" [a]="a()" [b]="b()" testid="cell" [caption]="'Animales: ' + title() + ', uno por fila, con lo que fue en cada campaña'" />
+      }
+    }
+  </div>
+</section>

@@ -1,19 +1,11 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, inject, input, signal } from '@angular/core';
-import { TableFooterComponent } from '@shared/components/table-footer/table-footer.component';
-import { TableToolbarComponent } from '@shared/components/table-toolbar/table-toolbar.component';
-import { PagedTable } from '@shared/utils/paged-table.util';
 import { PalpationEventRow, PalpationHerdRow, ReportStatus } from '../../models/palpation.types';
 import { PALPATION_CSV_WRITER, exportPairCsv, exportReadiness } from '../../utils/palpation-campaign-export';
-import { PairCell, PairGroup, PairRow, pairLists } from '../../utils/palpation-campaign-pairs';
-import { CATEGORY_COLOR, CATEGORY_LABEL, GROUP_LABEL, exportBlockText } from '../../utils/palpation-campaign-view';
-import { CompareCategory } from '../../utils/palpation-campaign-compare';
+import { PairGroup, pairLists } from '../../utils/palpation-campaign-pairs';
+import { GROUP_LABEL, exportBlockText } from '../../utils/palpation-campaign-view';
 import { Campaign } from '../../utils/palpation-campaigns';
-import { SUBTYPE_LABEL, UNCONFIRMED_BADGE, formatDate } from '../../utils/palpation-view';
-import { PalpationFlagComponent } from '../palpation-flag/palpation-flag.component';
-import { PalpationSwatchComponent } from '../palpation-swatch/palpation-swatch.component';
-
-export const PAIRS_SEARCH_PLACEHOLDER = 'Buscar animal, estado o código';
+import { PalpationPairTableComponent } from '../palpation-pair-table/palpation-pair-table.component';
 
 /**
  * Follow-up of the cows that were Vacía in campaign A: the ones still Vacía in B (persistent) and the ones not palpated in B (pending), a coverage
@@ -23,15 +15,11 @@ export const PAIRS_SEARCH_PLACEHOLDER = 'Buscar animal, estado o código';
 @Component({
   selector: 'app-palpation-campaign-pairs',
   standalone: true,
-  imports: [NgTemplateOutlet, PalpationSwatchComponent, PalpationFlagComponent, TableToolbarComponent, TableFooterComponent],
+  imports: [NgTemplateOutlet, PalpationPairTableComponent],
   templateUrl: './palpation-campaign-pairs.component.html',
   // Own colours for the text that carries a refusal, the export button and the coverage panel: the stock ones are under 4.5:1 on the dark theme.
   styles: [
     `
-      :host ::ng-deep app-table-toolbar .input-icon {
-        width: 100%;
-        max-width: 320px;
-      }
       .palp-error {
         color: #b42323;
       }
@@ -75,24 +63,10 @@ export class PalpationCampaignPairsComponent {
 
   private readonly writer = inject(PALPATION_CSV_WRITER);
 
-  protected readonly unconfirmedBadge = UNCONFIRMED_BADGE;
-  protected readonly searchPlaceholder = PAIRS_SEARCH_PLACEHOLDER;
-  protected readonly formatDate = formatDate;
-
   private readonly lists = computed(() => pairLists(this.events(), this.herd(), this.a(), this.b()));
   protected readonly persistent = computed(() => this.lists().persistent);
   protected readonly pending = computed(() => this.lists().pending);
   protected readonly coverage = computed(() => this.lists().coverage);
-
-  private readonly searchFields = (r: PairRow) => [r.siniiga, r.fuego, r.brand, r.category, r.currentStatus, r.a.rawCode, r.b.rawCode];
-  protected readonly persistentTable = new PagedTable<PairRow>(() => this.persistent(), () => this.persistent(), {
-    defaultPageSize: 10,
-    search: { fields: this.searchFields },
-  });
-  protected readonly pendingTable = new PagedTable<PairRow>(() => this.pending(), () => this.pending(), {
-    defaultPageSize: 10,
-    search: { fields: this.searchFields },
-  });
 
   /** Why the export is refused right now (company or report), or null. The button is disabled with this text next to it. */
   protected readonly readinessText = computed(() => {
@@ -112,21 +86,5 @@ export class PalpationCampaignPairsComponent {
 
   protected titleOf(group: PairGroup): string {
     return GROUP_LABEL[group];
-  }
-
-  protected labelOf(category: CompareCategory): string {
-    return CATEGORY_LABEL[category];
-  }
-
-  protected colorOf(category: CompareCategory): string {
-    return CATEGORY_COLOR[category];
-  }
-
-  protected conditionText(cell: PairCell): string | null {
-    return cell.condition === null ? null : SUBTYPE_LABEL[cell.condition];
-  }
-
-  protected identifier(row: PairRow): string {
-    return row.siniiga ?? (row.brand && row.fuego ? `${row.brand} ${row.fuego}` : 'Sin identificador');
   }
 }
