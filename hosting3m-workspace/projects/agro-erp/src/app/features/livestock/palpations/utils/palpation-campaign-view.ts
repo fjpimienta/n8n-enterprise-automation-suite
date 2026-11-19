@@ -1,5 +1,7 @@
 import { Campaign, CampaignError } from './palpation-campaigns';
 import { CompareCategory, NeverPregnantRow } from './palpation-campaign-compare';
+import type { ExportBlockReason } from './palpation-campaign-export';
+import type { PairGroup } from './palpation-campaign-pairs';
 import { FAMILY_COLOR, NO_RESULT_COLOR, UNINTERPRETED_COLOR } from './palpation-colors';
 import { formatDate } from './palpation-view';
 
@@ -56,4 +58,23 @@ export function neverPregnantLabel(row: Pick<NeverPregnantRow, 'appearsIn' | 'em
 /** Wording of the "sin interpretar" group: results that are not clinical, so they are never called vacía. */
 export function uninterpretedLabel(row: Pick<NeverPregnantRow, 'appearsIn'>): string {
   return row.appearsIn === 1 ? 'Sin interpretar en la única campaña' : `Sin interpretar en ${row.appearsIn} campañas`;
+}
+
+/** Names of the two follow-up groups of a pair of campaigns, in the table titles and in the CSV. */
+export const GROUP_LABEL: Readonly<Record<PairGroup, string>> = {
+  PERSISTENT: 'Vacía en A y en B (persistente)',
+  PENDING: 'Vacía en A y no palpada en B (seguimiento)',
+};
+
+/** Why the export was refused, in Spanish. Nothing is written when it is refused. */
+export function exportBlockText(reason: ExportBlockReason): string {
+  switch (reason) {
+    case 'no-tenant': return 'No hay una empresa activa válida: no se exporta nada.';
+    case 'truncated': return 'El reporte está incompleto (se alcanzó el tope de filas): no se exporta para que una lista parcial no parezca completa.';
+    case 'not-ready': return 'El reporte todavía no está listo: espera a que termine de cargar.';
+    case 'invalid-campaigns': return 'Las campañas elegidas no son válidas: corrígelas antes de exportar.';
+    case 'same-campaign': return 'Elige dos campañas distintas para exportar.';
+    case 'foreign-company': return 'Hay datos de otra empresa en la respuesta: no se exporta nada.';
+    case 'empty': return 'No hay animales en estos dos grupos: no hay nada que exportar.';
+  }
 }
