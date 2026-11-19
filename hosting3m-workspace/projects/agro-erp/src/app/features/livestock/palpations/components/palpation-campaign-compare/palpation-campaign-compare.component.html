@@ -38,7 +38,7 @@
           Animales comparados: <strong>{{ t.universe }}</strong>&ngsp;<span class="text-muted">(con al menos una palpación en {{ t.from.label }} o en {{ t.to.label }})</span>
         </p>
         <div class="table-responsive">
-          <table class="table table-sm table-bordered" data-testid="transition-table">
+          <table class="table table-sm table-bordered palp-transition" data-testid="transition-table">
             <caption class="visually-hidden">
               Animales por resultado en {{ t.from.label }} (filas) y en {{ t.to.label }} (columnas). Cada celda dice cuántos animales hay y el total de su fila.
             </caption>
@@ -130,6 +130,9 @@
                     @for (line of lines(row); track line.label) {
                       <li><app-palp-swatch [color]="line.color" />{{ line.label }}: {{ line.text }}</li>
                     }
+                    @if (missing(row); as gone) {
+                      <li class="text-muted" data-testid="never-missing">{{ gone }}</li>
+                    }
                   </ul>
                 </td>
                 <td data-testid="never-flag">
@@ -182,6 +185,9 @@
                 <ul class="list-unstyled small mb-0">
                   @for (line of lines(row); track line.label) {
                     <li><app-palp-swatch [color]="line.color" />{{ line.label }}: {{ line.text }}</li>
+                  }
+                  @if (missing(row); as gone) {
+                    <li class="text-muted">{{ gone }}</li>
                   }
                 </ul>
               </td>

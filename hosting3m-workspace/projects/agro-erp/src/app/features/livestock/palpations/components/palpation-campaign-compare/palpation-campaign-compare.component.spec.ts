@@ -124,12 +124,17 @@ describe('PalpationCampaignCompareComponent', () => {
     expect(flags.filter(x => x === 'No').length).toBe(2);
   });
 
-  it('shows what each animal was in each campaign, one line per campaign, in words', () => {
+  it('shows what each animal was in the campaigns where it was palpated, and names the others in one line, in words', () => {
     const f = render(events, [C1, C2, C3]);
     const a1 = qa(f, 'never-row').find(r => text(r).includes('9999000101'));
     expect(text(a1)).toContain('Enero: Vacía');
-    expect(text(a1)).toContain('Abril: No palpada en esa campaña');
-    expect(text(a1)).toContain('Agosto: No palpada en esa campaña');
+    expect(text(a1)).not.toContain('Abril: ');
+    expect(text(a1?.querySelector('[data-testid="never-missing"]'))).toBe('No palpada en: Abril, Agosto');
+    const a0 = qa(f, 'never-row').find(r => text(r).includes('9999000100'));
+    expect(text(a0)).toContain('Enero: Vacía');
+    expect(text(a0)).toContain('Abril: Vacía');
+    expect(text(a0)).toContain('Agosto: Vacía');
+    expect(a0?.querySelector('[data-testid="never-missing"]')).toBeNull();
   });
 
   it('keeps ranch terms apart, in their own group, and does not count them as vacías', () => {

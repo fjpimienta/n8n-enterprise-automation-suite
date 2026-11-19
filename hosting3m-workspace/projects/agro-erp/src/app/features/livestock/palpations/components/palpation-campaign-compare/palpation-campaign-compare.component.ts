@@ -40,6 +40,14 @@ interface CellLine {
   standalone: true,
   imports: [PalpationSwatchComponent, TableToolbarComponent, TableFooterComponent],
   templateUrl: './palpation-campaign-compare.component.html',
+  // Tabler keeps table headings on one line; with 7 columns the transition table would overflow, so its headings may wrap.
+  styles: [
+    `
+      .palp-transition th {
+        white-space: normal;
+      }
+    `,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PalpationCampaignCompareComponent {
@@ -100,13 +108,22 @@ export class PalpationCampaignCompareComponent {
     this.chosenB.set((event.target as HTMLSelectElement).value);
   }
 
-  /** What the animal was in each campaign, one line per campaign, with the colour of its category. */
+  /** What the animal was in each campaign where it was palpated: one line each, with the colour of its category. */
   protected lines(row: NeverPregnantRow): CellLine[] {
-    return this.campaigns().map((c, i) => {
+    const lines: CellLine[] = [];
+    this.campaigns().forEach((c, i) => {
       const cell = row.cells[i] ?? null;
+      if (cell === null) return;
       const category: CompareCategory = categoryOfCell(cell);
-      return { label: c.label, text: CATEGORY_LABEL[category], color: CATEGORY_COLOR[category] };
+      lines.push({ label: c.label, text: CATEGORY_LABEL[category], color: CATEGORY_COLOR[category] });
     });
+    return lines;
+  }
+
+  /** The campaigns where the animal was not palpated, in one text (a long list of "No palpada" lines would hide the ones that matter). */
+  protected missing(row: NeverPregnantRow): string | null {
+    const names = this.campaigns().filter((_, i) => (row.cells[i] ?? null) === null).map(c => c.label);
+    return names.length === 0 ? null : `No palpada en: ${names.join(', ')}`;
   }
 
   /** The codes as typed of the events flagged as unconfirmed. Never interpreted. */

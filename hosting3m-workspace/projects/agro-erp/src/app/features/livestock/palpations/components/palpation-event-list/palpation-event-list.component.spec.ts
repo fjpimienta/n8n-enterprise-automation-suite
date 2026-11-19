@@ -159,11 +159,12 @@ describe('PalpationEventListComponent', () => {
     expect(EVENT_SEARCH_PLACEHOLDER.length).toBeLessThanOrEqual(34);
   });
 
-  it('pages a long list (25 per page) and shows the range and the total', () => {
+  it('pages a long list (10 per page, as the selector shows) and shows the range and the total', () => {
     const many = Array.from({ length: 30 }, (_, i) => ev(`m${i}`, `A${i}`, '2026-09-05'));
     const f = render(many);
-    expect(qa(f, 'event-row').length).toBe(25);
-    expect(text(el(f))).toContain('Mostrando 1 a 25 de 30');
+    expect(qa(f, 'event-row').length).toBe(10);
+    expect(text(el(f))).toContain('Mostrando 1 a 10 de 30');
+    expect((el(f).querySelector('app-table-footer select') as HTMLSelectElement).value).toBe('10');
   });
 
   it('renders stacked cards for a phone with the campaign, the date and the same result', () => {

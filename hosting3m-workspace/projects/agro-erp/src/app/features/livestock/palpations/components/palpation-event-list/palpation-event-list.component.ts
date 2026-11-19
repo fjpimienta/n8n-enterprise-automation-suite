@@ -84,7 +84,8 @@ export class PalpationEventListComponent {
 
   /** The page of the table resets to 1 whenever the rows are recomputed (filter, sort or new data). */
   protected readonly table = new PagedTable<CampaignEventRow>(() => this.visible(), () => this.visible(), {
-    defaultPageSize: 25,
+    // 10, like the other tables: the shared footer shows its first option (10) in the "Mostrar" selector whatever the page size is.
+    defaultPageSize: 10,
     search: { fields: r => [r.identifier, r.category, r.currentStatus, r.campaignLabel, r.unconfirmedCode, r.ranchTerm] },
   });
 
