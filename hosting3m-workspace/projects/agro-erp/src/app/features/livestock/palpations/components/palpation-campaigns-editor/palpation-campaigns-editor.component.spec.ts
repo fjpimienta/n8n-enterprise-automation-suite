@@ -113,6 +113,18 @@ describe('PalpationCampaignsEditorComponent', () => {
     expect(q(f, 'campaign-list-errors').textContent).toContain('al menos 2 campañas');
   });
 
+  it('draws the errors, the remove buttons and the proposal button with their own readable colours, not the stock ones, and keeps the words', () => {
+    const errors: CampaignError[] = [{ id: 'camp-2', code: 'overlap', other: 'Campaña 1' }, { id: null, code: 'too-few', other: null }];
+    const { f } = render([...TWO, camp('camp-3', 'Campaña 3', '2026-12-01', '2026-12-10')], { errors });
+    expect(el(f).querySelector('.text-danger')).toBeNull();
+    expect(qa(f, 'campaign-errors').every(e => e.classList.contains('palp-error'))).toBe(true);
+    expect(q(f, 'campaign-list-errors').classList.contains('palp-error')).toBe(true);
+    expect(qa<HTMLButtonElement>(f, 'campaign-remove').every(b => b.classList.contains('palp-remove'))).toBe(true);
+    expect(q(f, 'campaign-suggest').classList.contains('palp-suggest')).toBe(true);
+    expect(q(f, 'campaign-suggest').textContent?.trim()).toBe('Volver a proponer');
+    expect(qa(f, 'campaign-remove')[0]?.textContent?.trim()).toBe('Quitar');
+  });
+
   it('says the ranges are an automatic proposal, and lets the user ask for another one', () => {
     const { f, resuggested } = render(TWO, { suggested: true });
     expect(q(f, 'campaign-suggested').textContent).toContain('Propuesta automática');

@@ -27,14 +27,14 @@
     <span class="text-muted small">Subtipo: {{ sub }}</span>
   }
   @if (row.unconfirmed) {
-    <span class="badge bg-secondary-lt">{{ unconfirmedBadge }}@if (row.unconfirmedCode) {: {{ row.unconfirmedCode }}}</span>
+    <app-palp-flag>{{ unconfirmedBadge }}@if (row.unconfirmedCode) {: {{ row.unconfirmedCode }}}</app-palp-flag>
   }
   @if (!row.counts) {
     <span class="text-muted small" data-testid="not-counted">No cuenta como palpada.</span>
   }
 </ng-template>
 
-<div class="alert alert-secondary" role="note" data-testid="events-note">{{ note }}</div>
+<app-palp-note data-testid="events-note">{{ note }}</app-palp-note>
 
 <div class="card">
   <div class="card-header">
@@ -77,7 +77,7 @@
                     [attr.data-sort]="col.key" (click)="sort(col.key)">{{ col.label }}<span aria-hidden="true">{{ arrow(col.key) }}</span></button>
                 </th>
               }
-              <th scope="col">Detalle</th>
+              <th scope="col"><span class="palp-detail-head">Detalle</span></th>
             </tr>
           </thead>
           <tbody>

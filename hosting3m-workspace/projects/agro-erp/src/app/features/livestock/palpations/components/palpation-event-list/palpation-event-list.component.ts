@@ -14,6 +14,8 @@ import { COMPARE_NOTE, formatRange } from '../../utils/palpation-campaign-view';
 import { Campaign } from '../../utils/palpation-campaigns';
 import { resultColorOf } from '../../utils/palpation-colors';
 import { HISTORICAL_BADGE, RANCH_BADGE, SUBTYPE_LABEL, UNCONFIRMED_BADGE, formatDate, formatGestation } from '../../utils/palpation-view';
+import { PalpationFlagComponent } from '../palpation-flag/palpation-flag.component';
+import { PalpationNoteComponent } from '../palpation-note/palpation-note.component';
 import { PalpationSwatchComponent } from '../palpation-swatch/palpation-swatch.component';
 
 interface Column {
@@ -33,7 +35,7 @@ export const EVENT_SEARCH_HINT = 'Busca por identificador, categoría, estado de
 @Component({
   selector: 'app-palpation-event-list',
   standalone: true,
-  imports: [NgTemplateOutlet, PalpationSwatchComponent, TableToolbarComponent, TableFooterComponent],
+  imports: [NgTemplateOutlet, PalpationSwatchComponent, PalpationFlagComponent, PalpationNoteComponent, TableToolbarComponent, TableFooterComponent],
   templateUrl: './palpation-event-list.component.html',
   styles: [
     `
@@ -41,6 +43,12 @@ export const EVENT_SEARCH_HINT = 'Busca por identificador, categoría, estado de
       :host ::ng-deep app-table-toolbar .input-icon {
         width: 100%;
         max-width: 320px;
+      }
+      /* The sortable headings are buttons (14px, bold, uppercase); the "Detalle" heading has no button, so it gets the same size and weight. */
+      .palp-detail-head {
+        font-size: 0.875rem;
+        font-weight: 700;
+        text-transform: uppercase;
       }
     `,
   ],

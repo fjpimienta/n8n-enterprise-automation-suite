@@ -22,6 +22,8 @@ import {
 } from '../../utils/palpation-campaign-view';
 import { Campaign } from '../../utils/palpation-campaigns';
 import { UNCONFIRMED_BADGE } from '../../utils/palpation-view';
+import { PalpationFlagComponent } from '../palpation-flag/palpation-flag.component';
+import { PalpationNoteComponent } from '../palpation-note/palpation-note.component';
 import { PalpationSwatchComponent } from '../palpation-swatch/palpation-swatch.component';
 
 interface CellLine {
@@ -38,7 +40,7 @@ interface CellLine {
 @Component({
   selector: 'app-palpation-campaign-compare',
   standalone: true,
-  imports: [PalpationSwatchComponent, TableToolbarComponent, TableFooterComponent],
+  imports: [PalpationSwatchComponent, PalpationFlagComponent, PalpationNoteComponent, TableToolbarComponent, TableFooterComponent],
   templateUrl: './palpation-campaign-compare.component.html',
   // Tabler keeps table headings on one line; with 7 columns the transition table would overflow, so its headings may wrap.
   styles: [

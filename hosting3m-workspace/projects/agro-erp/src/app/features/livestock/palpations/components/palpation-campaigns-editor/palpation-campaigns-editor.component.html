@@ -2,7 +2,7 @@
   <div class="card-header">
     <h3 class="card-title" id="palp-campaigns-title">Campañas a comparar</h3>
     <div class="card-actions">
-      <button type="button" class="btn btn-sm btn-outline-secondary" data-testid="campaign-suggest" (click)="resuggest.emit()">Volver a proponer</button>
+      <button type="button" class="btn btn-sm btn-outline-secondary palp-suggest" data-testid="campaign-suggest" (click)="resuggest.emit()">Volver a proponer</button>
     </div>
   </div>
   <div class="card-body">
@@ -23,7 +23,7 @@
     }
 
     @if (listErrors().length > 0) {
-      <ul class="text-danger small mb-3 ps-3" data-testid="campaign-list-errors" aria-live="polite">
+      <ul class="palp-error small mb-3 ps-3" data-testid="campaign-list-errors" aria-live="polite">
         @for (message of listErrors(); track message) { <li>{{ message }}</li> }
       </ul>
     }
@@ -49,13 +49,13 @@
             (change)="edit(c.id, 'to', $event)">
         </div>
         <div class="col-12 col-md-2">
-          <button type="button" class="btn btn-outline-danger w-100" data-testid="campaign-remove" [disabled]="!canRemove()"
+          <button type="button" class="btn btn-outline-danger palp-remove w-100" data-testid="campaign-remove" [disabled]="!canRemove()"
             [attr.aria-label]="'Quitar la campaña ' + (c.label || i + 1)" (click)="remove(c.id)">Quitar</button>
         </div>
         @if (errorsOf(c.id); as messages) {
           @if (messages.length > 0) {
             <div class="col-12">
-              <ul class="text-danger small mb-0 ps-3" data-testid="campaign-errors" aria-live="polite">
+              <ul class="palp-error small mb-0 ps-3" data-testid="campaign-errors" aria-live="polite">
                 @for (message of messages; track message) { <li>{{ message }}</li> }
               </ul>
             </div>

@@ -1,4 +1,4 @@
-<div class="alert alert-secondary" role="note" data-testid="compare-note">{{ note }}</div>
+<app-palp-note data-testid="compare-note">{{ note }}</app-palp-note>
 
 <section class="card mb-3" aria-labelledby="palp-compare-title">
   <div class="card-header">
@@ -175,7 +175,7 @@
                 </td>
                 <td data-testid="never-flag">
                   @if (row.withUnconfirmed) {
-                    <span class="badge bg-secondary-lt">Sí: {{ codes(row).join(', ') }}</span>
+                    <app-palp-flag>Sí: {{ codes(row).join(', ') }}</app-palp-flag>
                   } @else {
                     <span class="text-muted">No</span>
                   }
@@ -203,7 +203,7 @@
             <div class="small" data-testid="never-card-flag">
               Con código sin confirmar:
               @if (row.withUnconfirmed) {
-                <span class="badge bg-secondary-lt">Sí: {{ codes(row).join(', ') }}</span>
+                <app-palp-flag>Sí: {{ codes(row).join(', ') }}</app-palp-flag>
               } @else {
                 <span class="text-muted">No</span>
               }

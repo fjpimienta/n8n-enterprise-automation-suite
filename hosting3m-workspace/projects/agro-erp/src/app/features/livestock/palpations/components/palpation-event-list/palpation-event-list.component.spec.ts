@@ -64,6 +64,13 @@ describe('PalpationEventListComponent', () => {
     expect(text(el(f))).not.toContain('Técnico demo');
   });
 
+  it('gives the "Detalle" heading the same look as the sortable headings, with the word unchanged', () => {
+    const f = render(events);
+    const heading = q(f, 'events-table').querySelector('th .palp-detail-head');
+    expect(text(heading)).toBe('Detalle');
+    expect(q(f, 'events-table').querySelector('th:last-child button')).toBeNull(); // not sortable, so not a button
+  });
+
   it('lists an NR and says it does not count as a palpation', () => {
     const f = render(events);
     const nr = qa(f, 'event-row').find(r => text(r).includes('Término del rancho: NR'));
@@ -78,8 +85,9 @@ describe('PalpationEventListComponent', () => {
     const u = rows.find(r => text(r).includes('código sin confirmar'));
     expect(text(u)).toContain('código sin confirmar: DF15');
     expect(text(u)).toContain('Vacía');
-    const badge = [...(u as HTMLElement).querySelectorAll('.badge')].find(b => text(b).includes('código sin confirmar'));
-    expect(badge?.classList.contains('bg-secondary-lt')).toBe(true);
+    const flag = (u as HTMLElement).querySelector('app-palp-flag');
+    expect(text(flag)).toBe('código sin confirmar: DF15'); // the meaning is in the words, on a label with its own readable colours
+    expect((u as HTMLElement).querySelector('.badge.bg-secondary-lt:not(:has(.palp-swatch))')).toBeNull();
     expect(text(rows.find(r => text(r).includes('histórico (carga 2023)')))).toContain('Vacía');
     const pregnant = rows.find(r => text(r).includes('04/11') === false && text(r).includes('10/09/2026'));
     expect(text(pregnant)).toContain('4,0 meses (120 días)');

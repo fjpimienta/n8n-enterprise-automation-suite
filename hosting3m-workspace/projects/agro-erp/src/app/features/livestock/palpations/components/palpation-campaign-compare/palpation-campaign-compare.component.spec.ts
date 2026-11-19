@@ -268,7 +268,20 @@ describe('PalpationCampaignCompareComponent', () => {
       for (const h of el(f).querySelectorAll('[data-testid="transition-cards"] h4')) expect(text(h).length).toBeLessThanOrEqual(32);
     });
 
-    it('keeps the corner heading of the desktop table on one line', () => {
+    it('writes the neutral note and the unconfirmed-code flag with pieces that set their own readable colours', () => {
+    const f = render(events, [C1, C2, C3]);
+    const note = q(f, 'compare-note');
+    expect(note.tagName.toLowerCase()).toBe('app-palp-note');
+    expect(note.getAttribute('role')).toBe('note');
+    expect(text(note)).toBe('Compara resultados de palpación; no explica causas.');
+    expect(el(f).querySelector('.alert-secondary')).toBeNull();
+    const flags = [...el(f).querySelectorAll('app-palp-flag')].map(text);
+    expect(flags.length).toBe(2); // the table row and the phone card of the one flagged animal
+    expect(flags.every(x => x === 'Sí: DF15')).toBe(true);
+    expect(el(f).querySelector('.badge.bg-secondary-lt')).toBeNull();
+  });
+
+  it('keeps the corner heading of the desktop table on one line', () => {
       const f = render(events, [C1, C2]);
       expect(q(f, 'transition-table').querySelector('th.palp-corner')).not.toBeNull();
     });
