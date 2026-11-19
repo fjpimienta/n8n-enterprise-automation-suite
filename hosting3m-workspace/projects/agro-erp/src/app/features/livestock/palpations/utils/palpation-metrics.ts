@@ -242,6 +242,12 @@ export function porPalpar(herd: readonly PalpationHerdRow[], campaign: string | 
 
 const RFID_OFFICIAL = /^\d{10}$/;
 
+/** The 10-digit official SINIIGA tag of an animal, or null. A placeholder such as `S/N-00001` is not a SINIIGA. */
+export function officialSiniiga(row: PalpationHerdRow): string | null {
+  const rfid = (row.rfid_siniiga ?? '').trim();
+  return RFID_OFFICIAL.test(rfid) ? rfid : null;
+}
+
 /**
  * Identifier shown to the user: the official 10-digit SINIIGA tag; otherwise brand + brand number (not unique, shown as a complement);
  * otherwise a neutral label with a short internal key. The internal key is always livestock_id.
