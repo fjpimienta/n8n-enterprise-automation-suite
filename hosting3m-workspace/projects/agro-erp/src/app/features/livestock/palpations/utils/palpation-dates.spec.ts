@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addCalendarDays, calendarDateOf, compareCalendarDates, isCalendarDate } from './palpation-dates';
+import { addCalendarDays, calendarDateOf, compareCalendarDates, daysBetween, isCalendarDate } from './palpation-dates';
 
 describe('palpation-dates', () => {
   it('reads the calendar day of a gateway date (local midnight in UTC-6)', () => {
@@ -48,5 +48,20 @@ describe('palpation-dates', () => {
     expect(compareCalendarDates('2026-09-10', '2026-09-11')).toBeLessThan(0);
     expect(compareCalendarDates('2026-09-11', '2026-09-11')).toBe(0);
     expect(compareCalendarDates('2026-10-01', '2026-09-30')).toBeGreaterThan(0);
+  });
+
+  it('counts whole calendar days between two dates, across month, year and leap-day boundaries', () => {
+    expect(daysBetween('2026-11-01', '2026-11-01')).toBe(0);
+    expect(daysBetween('2026-11-01', '2026-11-08')).toBe(7);
+    expect(daysBetween('2026-11-08', '2026-11-01')).toBe(-7);
+    expect(daysBetween('2026-10-28', '2026-11-04')).toBe(7);
+    expect(daysBetween('2025-12-30', '2026-01-02')).toBe(3);
+    expect(daysBetween('2028-02-28', '2028-03-01')).toBe(2); // leap year
+    expect(daysBetween('2023-07-20', '2026-11-18')).toBe(1217);
+  });
+
+  it('rejects text that is not a calendar date in daysBetween', () => {
+    expect(() => daysBetween('2026-11-01T06:00:00.000Z', '2026-11-08')).toThrow();
+    expect(() => daysBetween('2026-11-01', 'x')).toThrow();
   });
 });

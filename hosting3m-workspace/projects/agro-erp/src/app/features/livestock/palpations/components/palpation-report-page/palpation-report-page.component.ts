@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, InjectionToken, computed, effect, inject, signal, untracked } from '@angular/core';
 import { PalpationReportService } from '../../services/palpation-report.service';
+import { campaignEventRows } from '../../utils/palpation-campaign-compare';
+import { Campaign, CampaignError, sortCampaigns, suggestCampaigns, validateCampaigns } from '../../utils/palpation-campaigns';
 import { isCalendarDate, todayLocal } from '../../utils/palpation-dates';
 import { Period, campaignStart, defaultPeriod, periodKpis } from '../../utils/palpation-metrics';
 import {
@@ -14,7 +16,10 @@ import {
   sortRows,
 } from '../../utils/palpation-view';
 import { PalpationAnimalDrawerComponent } from '../palpation-animal-drawer/palpation-animal-drawer.component';
+import { PalpationCampaignCompareComponent } from '../palpation-campaign-compare/palpation-campaign-compare.component';
+import { PalpationCampaignsEditorComponent } from '../palpation-campaigns-editor/palpation-campaigns-editor.component';
 import { PalpationChartsComponent } from '../palpation-charts/palpation-charts.component';
+import { PalpationEventListComponent } from '../palpation-event-list/palpation-event-list.component';
 import { PalpationKpiCardsComponent } from '../palpation-kpi-cards/palpation-kpi-cards.component';
 import { PalpationStateComponent, PalpationStateKind } from '../palpation-state/palpation-state.component';
 import { PalpationTableComponent, RowOpenEvent } from '../palpation-table/palpation-table.component';
@@ -27,6 +32,14 @@ export const PALPATION_TODAY = new InjectionToken<() => string>('PALPATION_TODAY
 
 export type PeriodMode = 'campana' | 'todo' | 'personalizado';
 
+export type PalpationTab = 'resumen' | 'comparar' | 'todas';
+
+const TABS: readonly { readonly id: PalpationTab; readonly label: string }[] = [
+  { id: 'resumen', label: 'Resumen' },
+  { id: 'comparar', label: 'Comparar campañas' },
+  { id: 'todas', label: 'Todas las palpaciones' },
+];
+
 /**
  * Palpation report (read-only). Container: it reads the fail-closed service, decides which state to show, builds the period, the KPIs and
  * the rows with pure functions, and hands them to presentational components. Every figure is computed for display from the rows the
@@ -35,7 +48,16 @@ export type PeriodMode = 'campana' | 'todo' | 'personalizado';
 @Component({
   selector: 'app-palpation-report-page',
   standalone: true,
-  imports: [PalpationStateComponent, PalpationKpiCardsComponent, PalpationChartsComponent, PalpationTableComponent, PalpationAnimalDrawerComponent],
+  imports: [
+    PalpationStateComponent,
+    PalpationKpiCardsComponent,
+    PalpationChartsComponent,
+    PalpationTableComponent,
+    PalpationAnimalDrawerComponent,
+    PalpationCampaignsEditorComponent,
+    PalpationCampaignCompareComponent,
+    PalpationEventListComponent,
+  ],
   templateUrl: './palpation-report-page.component.html',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
@@ -51,6 +73,26 @@ export class PalpationReportPageComponent {
   protected readonly sortKey = signal<SortKey>('lastDate');
   protected readonly sortDir = signal<SortDir>('desc');
   protected readonly selected = signal<RowOpenEvent | null>(null);
+
+  protected readonly tabs = TABS;
+  protected readonly tab = signal<PalpationTab>('resumen');
+
+  /**
+   * The campaigns of the comparison: user-defined date ranges kept in memory only (nothing is stored, per the Zero-Compute rule). They start as an
+   * automatic PROPOSAL when the data arrives, until the user edits them; a company change or a logout clears them with the data.
+   */
+  protected readonly campaigns = signal<readonly Campaign[]>([]);
+  private readonly userEdited = signal(false);
+  private lastTenant: number | null = null;
+
+  protected readonly campaignsAreProposal = computed(() => !this.userEdited() && this.campaigns().length > 0);
+  protected readonly campaignErrors = computed<readonly CampaignError[]>(() => validateCampaigns(this.campaigns()));
+  /** The campaigns, oldest first, or null while they have a validation error (the comparison and the list then explain why they are not shown). */
+  protected readonly validCampaigns = computed<readonly Campaign[] | null>(() => (this.campaignErrors().length === 0 ? sortCampaigns(this.campaigns()) : null));
+  protected readonly campaignEvents = computed(() => {
+    const valid = this.validCampaigns();
+    return valid === null ? [] : campaignEventRows(this.service.events(), this.service.herd(), valid);
+  });
 
   protected readonly resultOptions: readonly { value: RowFilterResult; label: string }[] = [
     { value: 'TODOS', label: 'Todos los resultados' },
@@ -120,6 +162,20 @@ export class PalpationReportPageComponent {
       this.service.role();
       untracked(() => void this.service.load());
     });
+
+    // Proposes the campaigns once per load, never over the user's own edits; a company change or a cleared dataset starts from scratch.
+    effect(() => {
+      const events = this.service.events();
+      const tenant = this.service.tenantId();
+      untracked(() => {
+        if (tenant !== this.lastTenant || events.length === 0) {
+          this.lastTenant = tenant;
+          this.userEdited.set(false);
+          this.campaigns.set([]);
+        }
+        if (events.length > 0 && !this.userEdited()) this.campaigns.set(suggestCampaigns(events));
+      });
+    });
   }
 
   protected setMode(event: Event): void {
@@ -146,6 +202,35 @@ export class PalpationReportPageComponent {
       this.sortKey.set(key);
       this.sortDir.set(key === 'lastDate' ? 'desc' : 'asc');
     }
+  }
+
+  protected onCampaignsChange(list: Campaign[]): void {
+    this.userEdited.set(true);
+    this.campaigns.set(list);
+  }
+
+  /** The user asked for a new automatic proposal: it replaces their ranges only because they asked. */
+  protected resuggest(): void {
+    this.userEdited.set(false);
+    this.campaigns.set(suggestCampaigns(this.service.events()));
+  }
+
+  /** Arrow keys, Home and End move between the tabs (roving tabindex), as in the WAI-ARIA tabs pattern. */
+  protected onTabKey(event: KeyboardEvent): void {
+    const ids = TABS.map(t => t.id);
+    const i = ids.indexOf(this.tab());
+    let next: number;
+    switch (event.key) {
+      case 'ArrowRight': next = (i + 1) % ids.length; break;
+      case 'ArrowLeft': next = (i - 1 + ids.length) % ids.length; break;
+      case 'Home': next = 0; break;
+      case 'End': next = ids.length - 1; break;
+      default: return;
+    }
+    event.preventDefault();
+    const id = ids[next] as PalpationTab;
+    this.tab.set(id);
+    document.getElementById(`palp-tab-${id}`)?.focus();
   }
 
   protected reload(): void {

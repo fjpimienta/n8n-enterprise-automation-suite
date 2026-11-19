@@ -73,6 +73,16 @@ export function addCalendarDays(date: string, days: number): string {
   return `${y}-${mo}-${dd}`;
 }
 
+/** Whole calendar days from `a` to `b` (negative when `b` is earlier). Both must be `YYYY-MM-DD`; no time zone can move the result. */
+export function daysBetween(a: string, b: string): number {
+  const ma = CALENDAR_DATE.exec(a);
+  const mb = CALENDAR_DATE.exec(b);
+  if (!ma || !mb) throw new Error('daysBetween: not a calendar date');
+  const ta = Date.UTC(Number(ma[1]), Number(ma[2]) - 1, Number(ma[3]));
+  const tb = Date.UTC(Number(mb[1]), Number(mb[2]) - 1, Number(mb[3]));
+  return Math.round((tb - ta) / 86_400_000);
+}
+
 /** Compares two calendar dates as strings (valid `YYYY-MM-DD` sorts lexicographically). */
 export function compareCalendarDates(a: string, b: string): number {
   return a < b ? -1 : a > b ? 1 : 0;
