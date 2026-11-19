@@ -1,0 +1,67 @@
+@switch (kind()) {
+  @case ('cargando') {
+    <div class="card" role="status" aria-live="polite" aria-busy="true">
+      <div class="card-body text-center py-5">
+        <div class="spinner-border text-primary mb-3" aria-hidden="true"></div>
+        <p class="m-0">Cargando palpaciones…</p>
+      </div>
+    </div>
+  }
+  @case ('vacio') {
+    <div class="card" role="status">
+      <div class="card-body text-center py-5">
+        <h3 class="mb-2">No hay palpaciones registradas</h3>
+        <p class="text-muted m-0">Cuando se registren palpaciones de esta empresa aparecerán aquí.</p>
+      </div>
+    </div>
+  }
+  @case ('error') {
+    <div class="alert alert-danger" role="alert">
+      <h4 class="alert-title">No se pudieron cargar las palpaciones</h4>
+      <div class="text-secondary mb-2">{{ detail() }} Las cifras no se muestran para no dar un dato incorrecto.</div>
+      <button type="button" class="btn btn-sm btn-outline-danger" (click)="retry.emit()">Reintentar</button>
+    </div>
+  }
+  @case ('sin-permiso') {
+    <div class="card" role="alert">
+      <div class="card-body text-center py-5">
+        <h3 class="mb-2">Sin permiso</h3>
+        <p class="text-muted m-0">Tu rol en esta empresa no permite ver el reporte de palpaciones.</p>
+      </div>
+    </div>
+  }
+  @case ('sin-tenant') {
+    <div class="card" role="status">
+      <div class="card-body text-center py-5">
+        <h3 class="mb-2">Selecciona una empresa</h3>
+        <p class="text-muted m-0">Elige una empresa activa para ver el reporte de palpaciones.</p>
+      </div>
+    </div>
+  }
+  @case ('sin-campana') {
+    <div class="card" role="status">
+      <div class="card-body text-center py-5">
+        <h3 class="mb-2">Aún no hay palpaciones de una campaña reciente</h3>
+        <p class="text-muted">Solo existen palpaciones de la carga histórica o de términos del rancho.</p>
+        <button type="button" class="btn btn-primary" (click)="showAll.emit()">Ver todo el historial</button>
+      </div>
+    </div>
+  }
+  @case ('truncado') {
+    <div class="alert alert-warning" role="alert">
+      <h4 class="alert-title">Reporte incompleto</h4>
+      <div class="text-secondary">
+        Se alcanzó el límite de páginas: se cargaron {{ count() }} filas y puede haber más. Las cifras pueden estar incompletas.
+      </div>
+    </div>
+  }
+  @case ('no-reconocidos') {
+    <div class="alert alert-warning" role="alert">
+      <h4 class="alert-title">Valores no reconocidos</h4>
+      <div class="text-secondary">
+        {{ count() === 1 ? '1 registro tiene' : count() + ' registros tienen' }} un resultado o un término que la aplicación no reconoce.
+        Se muestran como «Sin interpretar» y no cuentan en los porcentajes.
+      </div>
+    </div>
+  }
+}

@@ -1,0 +1,152 @@
+<div class="row row-cards">
+  <!-- 1. Result of the latest event of each animal -->
+  <div class="col-lg-6">
+    <section class="card h-100" aria-labelledby="palp-chart-1-title">
+      <div class="card-header">
+        <h3 class="card-title" id="palp-chart-1-title">Resultado por animal</h3>
+        <div class="card-actions">
+          <button type="button" class="btn btn-sm btn-outline-secondary palp-toggle" data-testid="toggle-distribution"
+            [attr.aria-expanded]="showDistributionTable()" aria-controls="palp-dist-table"
+            (click)="showDistributionTable.set(!showDistributionTable())">
+            {{ showDistributionTable() ? 'Ocultar tabla' : 'Ver tabla' }}
+          </button>
+        </div>
+      </div>
+      <div class="card-body">
+        @if (distribution().length === 0) {
+          <p class="text-muted m-0">Sin datos en el periodo.</p>
+        } @else {
+          <div role="img" [attr.aria-label]="distributionLabel()" data-testid="chart-distribution">
+            <apx-chart [series]="distributionChart().series" [chart]="distributionChart().chart"
+              [plotOptions]="distributionChart().plotOptions" [xaxis]="distributionChart().xaxis"
+              [yaxis]="distributionChart().yaxis" [grid]="distributionChart().grid" [stroke]="distributionChart().stroke"
+              [tooltip]="distributionChart().tooltip" [responsive]="distributionChart().responsive"
+              [dataLabels]="distributionChart().dataLabels" [legend]="distributionChart().legend"
+              [colors]="distributionChart().colors" [theme]="themeMode()"></apx-chart>
+          </div>
+        }
+        @if (showDistributionTable()) {
+          <table class="table table-sm mt-3" id="palp-dist-table" data-testid="table-distribution">
+            <caption class="visually-hidden">Resultado del último evento por animal en el periodo</caption>
+            <thead><tr><th scope="col">Resultado</th><th scope="col" class="text-end">Animales</th></tr></thead>
+            <tbody>
+              @for (item of distribution(); track item.key) {
+                <tr><th scope="row" class="fw-normal"><app-palp-swatch [color]="item.color" />{{ item.label }}</th><td class="text-end">{{ item.count }}</td></tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+    </section>
+  </div>
+
+  <!-- 2. Results over time -->
+  <div class="col-lg-6">
+    <section class="card h-100" aria-labelledby="palp-chart-2-title">
+      <div class="card-header">
+        <h3 class="card-title" id="palp-chart-2-title">Palpaciones por mes</h3>
+        <div class="card-actions">
+          <button type="button" class="btn btn-sm btn-outline-secondary palp-toggle" data-testid="toggle-monthly"
+            [attr.aria-expanded]="showMonthlyTable()" aria-controls="palp-month-table"
+            (click)="showMonthlyTable.set(!showMonthlyTable())">
+            {{ showMonthlyTable() ? 'Ocultar tabla' : 'Ver tabla' }}
+          </button>
+        </div>
+      </div>
+      <div class="card-body">
+        @if (!monthlyHasData()) {
+          <p class="text-muted m-0">Sin datos en el periodo.</p>
+        } @else {
+          <div role="img" [attr.aria-label]="monthlyLabel()" data-testid="chart-monthly">
+            <apx-chart [series]="monthlyChart().series" [chart]="monthlyChart().chart"
+              [plotOptions]="monthlyChart().plotOptions" [xaxis]="monthlyChart().xaxis"
+              [yaxis]="monthlyChart().yaxis" [grid]="monthlyChart().grid" [stroke]="monthlyChart().stroke" [tooltip]="monthlyChart().tooltip"
+              [dataLabels]="monthlyChart().dataLabels" [legend]="monthlyChart().legend"
+              [colors]="monthlyChart().colors" [theme]="themeMode()"></apx-chart>
+          </div>
+        }
+        @if (showMonthlyTable()) {
+          <div class="table-responsive mt-3">
+            <table class="table table-sm" id="palp-month-table" data-testid="table-monthly">
+              <caption class="visually-hidden">Palpaciones por mes y resultado</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Mes</th>
+                  @for (s of monthly().series; track s.name; let i = $index) {
+                    <th scope="col" class="text-end"><app-palp-swatch [color]="monthlyColors[i]" />{{ s.name }}</th>
+                  }
+                </tr>
+              </thead>
+              <tbody>
+                @for (month of monthly().months; track month; let i = $index) {
+                  <tr>
+                    <th scope="row" class="fw-normal">{{ month }}</th>
+                    @for (s of monthly().series; track s.name) { <td class="text-end">{{ s.data[i] }}</td> }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </section>
+  </div>
+
+  <!-- 3. The whole herd -->
+  <div class="col-12">
+    <section class="card" aria-labelledby="palp-chart-3-title">
+      <div class="card-header">
+        <h3 class="card-title" id="palp-chart-3-title">Estado del hato</h3>
+        <div class="card-actions">
+          <button type="button" class="btn btn-sm btn-outline-secondary palp-toggle" data-testid="toggle-herd"
+            [attr.aria-expanded]="showHerdTable()" aria-controls="palp-herd-table"
+            (click)="showHerdTable.set(!showHerdTable())">
+            {{ showHerdTable() ? 'Ocultar tabla' : 'Ver tabla' }}
+          </button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="row align-items-center">
+          <div class="col-md-6">
+            @if (herdTotal() === 0) {
+              <p class="text-muted m-0">No hay animales de palpación aplicable en el hato.</p>
+            } @else {
+              <div role="img" [attr.aria-label]="herdLabel()" data-testid="chart-herd">
+                <apx-chart [series]="herdChart().series" [labels]="herdChart().labels" [chart]="herdChart().chart"
+                  [plotOptions]="herdChart().plotOptions" [stroke]="herdChart().stroke"
+                  [dataLabels]="herdChart().dataLabels" [legend]="herdChart().legend"
+                  [colors]="herdChart().colors" [theme]="themeMode()"></apx-chart>
+              </div>
+            }
+          </div>
+          <div class="col-md-6">
+            <div class="subheader mb-2">Aparte del gráfico</div>
+            <ul class="list-unstyled mb-3" data-testid="herd-legend">
+              <li>Vendidos: <strong>{{ herdData().legend.vendido }}</strong></li>
+              <li>Baja por mortandad: <strong>{{ herdData().legend.bajaMortandad }}</strong></li>
+              <li>No aplica (toros, becerros, novillos y otras categorías sin palpaciones): <strong>{{ herdData().legend.noAplica }}</strong></li>
+              @if (herdData().legend.fueraDelHato > 0) {
+                <li>Fuera del hato: <strong>{{ herdData().legend.fueraDelHato }}</strong></li>
+              }
+            </ul>
+            <div class="alert alert-info mb-0" data-testid="por-palpar">
+              Por palpar en la campaña: <strong>{{ herdData().porPalpar.porPalpar }}</strong>
+              de <strong>{{ herdData().porPalpar.eligible }}</strong> vacas y novillonas activas.
+            </div>
+          </div>
+        </div>
+        @if (showHerdTable()) {
+          <table class="table table-sm mt-3" id="palp-herd-table" data-testid="table-herd">
+            <caption class="visually-hidden">Estado del hato por palpación</caption>
+            <thead><tr><th scope="col">Estado</th><th scope="col" class="text-end">Animales</th></tr></thead>
+            <tbody>
+              @for (bar of herdData().bars; track bar.bucket) {
+                <tr><th scope="row" class="fw-normal"><app-palp-swatch [color]="bar.color" />{{ bar.label }}</th><td class="text-end">{{ bar.count }}</td></tr>
+              }
+            </tbody>
+          </table>
+        }
+      </div>
+    </section>
+  </div>
+</div>

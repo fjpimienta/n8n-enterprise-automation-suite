@@ -29,6 +29,7 @@ export class SidebarComponent {
   private menu = computed(() => menuVisibility(this.tenantService.activeTenant()));
   public isLivestock = computed(() => this.menu().livestockIntelligence);
   public isAgriculture = computed(() => this.menu().palmIntelligence);
+  public showPalpations = computed(() => this.menu().livestockPalpations);
   public canAdministerPalm = computed(() => this.menu().palmAdministration);
   public showPalmExpenses = computed(() => this.menu().palmExpenses);
   public showPalmSales = computed(() => this.menu().palmSales);

@@ -6,6 +6,7 @@
  * - Unknown domains keep the historical behavior for configuration (livestock catalogs shown to ADMIN).
  * - A section title is shown only when at least one of its entries is visible.
  */
+import { PALPATION_ALLOWED_ROLES } from '@features/livestock/palpations/models/palpation.types';
 import { DomainBearing, resolveBusinessDomain } from './business-domain.util';
 
 export interface MenuTenant extends DomainBearing {
@@ -15,6 +16,8 @@ export interface MenuTenant extends DomainBearing {
 export interface MenuVisibility {
   livestockIntelligence: boolean;
   palmIntelligence: boolean;
+  /** "Palpaciones": livestock companies, only for the roles of PALPATION_ALLOWED_ROLES (the gateway models accept no other). */
+  livestockPalpations: boolean;
   palmAdministration: boolean;
   /** "Gastos": capture for ADMIN / OWNER / EDITOR; balance and catalog only ADMIN / OWNER (inside the screen). */
   palmExpenses: boolean;
@@ -36,6 +39,7 @@ export function menuVisibility(tenant: MenuTenant | null | undefined): MenuVisib
   const palm = domain === 'PALM';
 
   const livestockIntelligence = domain === 'LIVESTOCK';
+  const livestockPalpations = livestockIntelligence && PALPATION_ALLOWED_ROLES.includes(role.trim());
   const palmIntelligence = palm;
   const palmAdministration = palm && (role === 'ADMIN' || role === 'OWNER');
   const palmExpenses = palm && (role === 'ADMIN' || role === 'OWNER' || role === 'EDITOR');
@@ -46,6 +50,7 @@ export function menuVisibility(tenant: MenuTenant | null | undefined): MenuVisib
   return {
     livestockIntelligence,
     palmIntelligence,
+    livestockPalpations,
     palmAdministration,
     palmExpenses,
     palmSales,
