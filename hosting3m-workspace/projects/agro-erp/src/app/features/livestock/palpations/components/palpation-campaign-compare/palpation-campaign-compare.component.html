@@ -128,6 +128,13 @@
   </div>
 </section>
 
+@if (table(); as pairTable) {
+  @if (pairTable.identityHolds && pairTable.universe > 0) {
+    <app-palpation-campaign-pairs [events]="events()" [herd]="herd()" [a]="pairTable.from" [b]="pairTable.to"
+      [reportStatus]="reportStatus()" [tenantId]="tenantId()" />
+  }
+}
+
 <section class="card mb-3" aria-labelledby="palp-never-title">
   <div class="card-header">
     <h3 class="card-title" id="palp-never-title">Sin indicios de preñez en ninguna campaña</h3>

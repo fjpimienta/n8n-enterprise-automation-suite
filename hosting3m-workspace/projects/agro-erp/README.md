@@ -74,6 +74,10 @@ deben estar desplegados **antes** que esta pantalla.
   resultado entre dos campañas (Preñada, Vacía, Definido por el rancho, Sin interpretar, No palpada) con "n de N", y la lista «Sin indicios
   de preñez en ninguna campaña». Compara resultados; **no explica causas** ni da diagnósticos. No hay columna de técnico. No hace peticiones
   nuevas ni guarda nada: las campañas viven en memoria y se borran al cambiar de empresa.
+- **Seguimiento de vacías entre dos campañas:** para el par A/B elegido, dos listas con SINIIGA, quemado, marca, categoría, estado actual y, por campaña, fecha,
+  resultado, código y condición (con la marca «código sin confirmar»): **Vacía en A y en B (persistente)** y **Vacía en A y no palpada en B (seguimiento)**. Una nota de
+  cobertura dice cuántos animales quedaron fuera (solo en A, solo en B, «definido por el rancho», NR) para que nadie lea la lista como completa. El botón «Exportar CSV»
+  (UTF-8 con BOM, coma) solo funciona con el reporte completo y listo y con una empresa válida, y rechaza cualquier fila de otra empresa; el archivo lleva solo fechas en el nombre y no incluye al técnico.
 
 Los datos de prueba son siempre sintéticos (`features/livestock/palpations/testing/palpation.fixtures.ts`).
 
