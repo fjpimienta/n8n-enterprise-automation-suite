@@ -252,6 +252,15 @@ de un AI Agent, usar `.first()` en lugar de `.item` en `$('Node')`.
 * **Zero-Compute (Regla 1):** todos los números de la pantalla (porcentajes, conteos, buckets) se calculan **solo para mostrarlos**, a partir de las filas
   que devolvió el gateway, con funciones puras (`utils/palpation-metrics.ts`). **Nada se guarda ni se persiste**, ni en base de datos ni en caché offline
   (los datasets permitidos siguen siendo `livestock` y `catalogs`).
+* **Comparación de campañas (pestañas "Comparar campañas" y "Todas las palpaciones"):** solo frontend, sin base, gateway ni n8n nuevos; usa las
+  mismas filas del servicio (mismo fail-closed y mismo rol). Una campaña es un rango de fechas que **define el usuario** (2 a 6, extremos
+  incluidos, traslapes rechazados); `suggestCampaigns` solo **propone** al abrir (hueco > 7 días separa; incluye la carga histórica 2023, excluye NR;
+  máximo las 6 más recientes). **El estado de un animal en una campaña sale siempre de `animalState`** (única fuente, la misma de las tarjetas): un
+  código sin confirmar con resultado VACÍA cuenta como Vacía y solo lleva la marca «código sin confirmar»; con resultado PREÑADA sigue siendo Preñada
+  (también marcado, nunca reinterpretado). Sin resultado y valores no reconocidos van a «Sin interpretar»; los términos del rancho a «Definido por el
+  rancho». «Sin indicios de preñez» = al menos una Vacía y ninguna Preñada en ninguna campaña; un animal con Vacía en una campaña y término del rancho en
+  otra sigue en la lista principal. Texto neutral: «Compara resultados de palpación; no explica causas.»; ningún texto nombra una causa ni habla de
+  infertilidad. La lista completa no muestra ni busca el técnico. Las campañas viven en memoria (señales de la página), nunca en `localStorage`.
 * **Pruebas:** solo datos sintéticos; nunca datos reales del hato en tests, fixtures ni capturas.
 
 ## PWA / service worker (Refs #1087, fase 1a)

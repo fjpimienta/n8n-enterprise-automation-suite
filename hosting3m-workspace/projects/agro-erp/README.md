@@ -68,6 +68,12 @@ deben estar desplegados **antes** que esta pantalla.
   novillonas activas sin palpación en la campaña; toros, becerros y novillos sin palpaciones = "no aplica".
 - **Estados de la pantalla:** cargando, vacío, error (motivo genérico y reintentar), sin permiso, sin empresa, sin campaña,
   reporte incompleto (tope de 10 páginas de 1500 filas) y aviso de valores no reconocidos.
+- **Pestañas "Comparar campañas" y "Todas las palpaciones":** una campaña es un rango de fechas que define el usuario (de 2 a 6, con los
+  extremos incluidos, sin traslapes). Al abrir la pantalla se **proponen** rangos agrupando las fechas de palpación (más de 7 días sin
+  palpaciones separan una campaña; la carga 2023 cuenta, un NR no); el usuario los edita a su criterio. La comparación muestra el cambio de
+  resultado entre dos campañas (Preñada, Vacía, Definido por el rancho, Sin interpretar, No palpada) con "n de N", y la lista «Sin indicios
+  de preñez en ninguna campaña». Compara resultados; **no explica causas** ni da diagnósticos. No hay columna de técnico. No hace peticiones
+  nuevas ni guarda nada: las campañas viven en memoria y se borran al cambiar de empresa.
 
 Los datos de prueba son siempre sintéticos (`features/livestock/palpations/testing/palpation.fixtures.ts`).
 
