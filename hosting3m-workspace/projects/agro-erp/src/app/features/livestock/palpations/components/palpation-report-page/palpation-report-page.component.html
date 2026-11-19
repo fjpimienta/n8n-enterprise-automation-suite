@@ -90,7 +90,8 @@
 
         @if (validCampaigns(); as valid) {
           @if (tab() === 'comparar') {
-            <app-palpation-campaign-compare [events]="service.events()" [herd]="service.herd()" [campaigns]="valid" />
+            <app-palpation-campaign-compare [events]="service.events()" [herd]="service.herd()" [campaigns]="valid"
+              [reportStatus]="service.status()" [tenantId]="service.tenantId()" />
           } @else {
             <app-palpation-event-list [rows]="campaignEvents()" [campaigns]="valid" />
           }

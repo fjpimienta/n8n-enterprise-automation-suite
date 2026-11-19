@@ -16,11 +16,15 @@ const preg = (id: string, animal: string, day: string, over: Parameters<typeof e
 
 const herd = Array.from({ length: 30 }, (_, i) => herdRow({ livestock_id: `A${i}`, rfid_siniiga: `99990001${String(i).padStart(2, '0')}`, category: 'VACA', current_status: 'ACTIVO' }));
 
-function render(events: ReturnType<typeof eventRow>[], campaigns: readonly Campaign[]) {
+function render(events: ReturnType<typeof eventRow>[], campaigns: readonly Campaign[], ready?: { status: 'listo' | 'truncado'; tenantId: number }) {
   const f: ComponentFixture<PalpationCampaignCompareComponent> = TestBed.createComponent(PalpationCampaignCompareComponent);
   f.componentRef.setInput('events', events);
   f.componentRef.setInput('herd', herd);
   f.componentRef.setInput('campaigns', campaigns);
+  if (ready) {
+    f.componentRef.setInput('reportStatus', ready.status);
+    f.componentRef.setInput('tenantId', ready.tenantId);
+  }
   f.detectChanges();
   return f;
 }
@@ -164,7 +168,7 @@ describe('PalpationCampaignCompareComponent', () => {
   it('searches the list by identifier', () => {
     const many = Array.from({ length: 12 }, (_, i) => ev(`m${i}`, `A${i}`, '2026-01-05'));
     const f = render(many, [C1, C2]);
-    const input = el(f).querySelector('app-table-toolbar input') as HTMLInputElement;
+    const input = el(f).querySelector('[aria-labelledby="palp-never-title"] app-table-toolbar input') as HTMLInputElement;
     input.value = '9999000103';
     input.dispatchEvent(new Event('input', { bubbles: true }));
     f.detectChanges();
@@ -174,6 +178,58 @@ describe('PalpationCampaignCompareComponent', () => {
   it('does not show a technician anywhere', () => {
     const f = render(events.map(e => ({ ...e, technician: 'Técnico demo' })), [C1, C2, C3]);
     expect(text(el(f))).not.toContain('Técnico');
+  });
+
+  describe('follow-up lists of the selected pair', () => {
+    it('shows the persistent and pending lists for the selected pair A and B, between the transitions and the existing list', () => {
+      const f = render(events, [C1, C2, C3]);
+      choose(f, 'compare-a', 'c1');
+      choose(f, 'compare-b', 'c2');
+      const html = el(f).innerHTML;
+      expect(html.indexOf('data-testid="transition-table"')).toBeLessThan(html.indexOf('data-testid="pairs-section"'));
+      expect(html.indexOf('data-testid="pairs-section"')).toBeLessThan(html.indexOf('palp-never-title'));
+      expect(text(q(f, 'pairs-section').querySelector('h3'))).toBe('Seguimiento de vacías: Enero y Abril');
+      expect(qa(f, 'persistent-row').length).toBeGreaterThan(0);
+    });
+
+    it('uses ONLY the selected pair: changing B changes the groups, while the "Sin indicios" list keeps using all the campaigns', () => {
+      const f = render(events, [C1, C2, C3]);
+      const neverBefore = text(q(f, 'never-count'));
+      choose(f, 'compare-a', 'c1');
+      choose(f, 'compare-b', 'c2');
+      const persistentAB = text(q(f, 'persistent-count'));
+      choose(f, 'compare-b', 'c3');
+      expect(text(q(f, 'persistent-count'))).not.toBe(persistentAB);
+      expect(text(q(f, 'never-count'))).toBe(neverBefore);
+      expect(el(f).querySelectorAll('[data-testid="never-row"]').length).toBe(qa(f, 'never-row').length);
+    });
+
+    it('leaves the existing "Sin indicios de preñez" list unchanged', () => {
+      const f = render(events, [C1, C2, C3]);
+      expect(text(q(f, 'never-count'))).toContain('3');
+      expect(qa(f, 'never-row').length).toBe(3);
+      expect(el(f).querySelector('#palp-never-title')?.textContent).toBe('Sin indicios de preñez en ninguna campaña');
+    });
+
+    it('does not show the follow-up lists when A and B are the same campaign', () => {
+      const f = render(events, [C1, C2, C3]);
+      choose(f, 'compare-a', 'c3');
+      expect(el(f).querySelector('[data-testid="pairs-section"]')).toBeNull();
+    });
+
+    it('starts with the export disabled (the parent has to say the report is ready) and enables it with a ready report and a company', () => {
+      const closed = render(events, [C1, C2, C3]);
+      expect(q<HTMLButtonElement>(closed, 'pairs-export').disabled).toBe(true);
+      TestBed.resetTestingModule();
+      const open = render(events, [C1, C2, C3], { status: 'listo', tenantId: 9101 });
+      expect(q<HTMLButtonElement>(open, 'pairs-export').disabled).toBe(false);
+    });
+
+    it('keeps the export disabled for a truncated report', () => {
+      const f = render(events, [C1, C2, C3], { status: 'truncado', tenantId: 9101 });
+      expect(q<HTMLButtonElement>(f, 'pairs-export').disabled).toBe(true);
+      expect(text(q(f, 'pairs-export-why'))).toContain('incompleto');
+    });
   });
 
   describe('phone layout (stacked cards instead of tables that need a sideways scroll)', () => {

@@ -2,7 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, input, signal } from '@an
 import { TableFooterComponent } from '@shared/components/table-footer/table-footer.component';
 import { TableToolbarComponent } from '@shared/components/table-toolbar/table-toolbar.component';
 import { PagedTable } from '@shared/utils/paged-table.util';
-import { PalpationEventRow, PalpationHerdRow } from '../../models/palpation.types';
+import { PalpationEventRow, PalpationHerdRow, ReportStatus } from '../../models/palpation.types';
 import {
   COMPARE_CATEGORIES,
   CompareCategory,
@@ -22,6 +22,7 @@ import {
 } from '../../utils/palpation-campaign-view';
 import { Campaign } from '../../utils/palpation-campaigns';
 import { UNCONFIRMED_BADGE } from '../../utils/palpation-view';
+import { PalpationCampaignPairsComponent } from '../palpation-campaign-pairs/palpation-campaign-pairs.component';
 import { PalpationFlagComponent } from '../palpation-flag/palpation-flag.component';
 import { PalpationNoteComponent } from '../palpation-note/palpation-note.component';
 import { PalpationSwatchComponent } from '../palpation-swatch/palpation-swatch.component';
@@ -40,7 +41,7 @@ interface CellLine {
 @Component({
   selector: 'app-palpation-campaign-compare',
   standalone: true,
-  imports: [PalpationSwatchComponent, PalpationFlagComponent, PalpationNoteComponent, TableToolbarComponent, TableFooterComponent],
+  imports: [PalpationSwatchComponent, PalpationFlagComponent, PalpationNoteComponent, PalpationCampaignPairsComponent, TableToolbarComponent, TableFooterComponent],
   templateUrl: './palpation-campaign-compare.component.html',
   // Tabler keeps table headings on one line; with 7 columns the transition table would overflow, so its headings may wrap.
   styles: [
@@ -61,6 +62,9 @@ export class PalpationCampaignCompareComponent {
   readonly herd = input.required<readonly PalpationHerdRow[]>();
   /** Valid campaigns, at least 2, oldest first. */
   readonly campaigns = input.required<readonly Campaign[]>();
+  /** Status of the report and the active company, for the guarded CSV export. The defaults refuse it: the page has to say the report is ready. */
+  readonly reportStatus = input<ReportStatus>('sin-tenant');
+  readonly tenantId = input<number | null>(null);
 
   protected readonly note = COMPARE_NOTE;
   protected readonly categories = COMPARE_CATEGORIES;

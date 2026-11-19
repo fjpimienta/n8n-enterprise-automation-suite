@@ -86,15 +86,25 @@ export function exportColumns(a: Campaign, b: Campaign): ReadonlyArray<CsvColumn
 }
 
 /**
+ * The cheap part of the guard, usable to enable or disable a button: a valid company first, then the report complete (`truncado` is refused) and
+ * ready. Returns the reason it is refused, or null when the report allows an export. The full plan checks more (campaigns, every row).
+ */
+export function exportReadiness(status: ReportStatus, tenantId: number | null): ExportBlockReason | null {
+  if (typeof tenantId !== 'number' || !Number.isInteger(tenantId) || tenantId <= 0) return 'no-tenant';
+  if (status === 'truncado') return 'truncated';
+  if (status !== 'listo') return 'not-ready';
+  return null;
+}
+
+/**
  * Decides whether the export may happen and builds it, without writing anything. Checked in this order: a valid company, the report complete
  * (`truncado` is refused: a partial list would look like a complete one), the report ready, two valid and different campaigns, every event and herd
  * row belongs to the active company (row by row, nothing is skipped), and there is something to export.
  */
 export function planPairCsv(input: ExportInput): ExportPlan {
   const { status, tenantId, events, herd, a, b } = input;
-  if (typeof tenantId !== 'number' || !Number.isInteger(tenantId) || tenantId <= 0) return { ok: false, reason: 'no-tenant' };
-  if (status === 'truncado') return { ok: false, reason: 'truncated' };
-  if (status !== 'listo') return { ok: false, reason: 'not-ready' };
+  const notReady = exportReadiness(status, tenantId);
+  if (notReady !== null) return { ok: false, reason: notReady };
   if (a.id === b.id) return { ok: false, reason: 'same-campaign' };
   if (validateCampaigns([a, b]).length > 0) return { ok: false, reason: 'invalid-campaigns' };
   for (const e of events) if (e.id_company !== tenantId) return { ok: false, reason: 'foreign-company' };

@@ -9,6 +9,7 @@ import {
   exportColumns,
   exportFilename,
   exportPairCsv,
+  exportReadiness,
   guardCell,
   planPairCsv,
 } from './palpation-campaign-export';
@@ -191,6 +192,16 @@ describe('planPairCsv: fail closed', () => {
       expect(exportBlockText(reason).length).toBeGreaterThan(15);
     }
     expect(exportBlockText('truncated')).toContain('incompleto');
+  });
+});
+
+describe('exportReadiness (the cheap part of the guard)', () => {
+  it('allows an export only for a complete, ready report of a valid company', () => {
+    expect(exportReadiness('listo', TENANT)).toBeNull();
+    expect(exportReadiness('truncado', TENANT)).toBe('truncated');
+    expect(exportReadiness('cargando', TENANT)).toBe('not-ready');
+    expect(exportReadiness('listo', null)).toBe('no-tenant');
+    expect(exportReadiness('truncado', null)).toBe('no-tenant');
   });
 });
 

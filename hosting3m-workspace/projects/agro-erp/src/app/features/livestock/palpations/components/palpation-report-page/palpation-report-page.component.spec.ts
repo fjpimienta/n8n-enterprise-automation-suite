@@ -330,6 +330,21 @@ describe('PalpationReportPageComponent', () => {
       expect(text(f)).toContain('Propuesta automática');
     });
 
+    it('gives the export of the follow-up lists the status and the company of the report: enabled when ready, disabled when truncated', () => {
+      const ready = setup();
+      open(ready.f, 'comparar');
+      const button = () => el(ready.f).querySelector<HTMLButtonElement>('[data-testid="pairs-export"]')!;
+      expect(button().disabled).toBe(false);
+      ready.fake.status.set('truncado');
+      ready.f.detectChanges();
+      expect(button().disabled).toBe(true);
+      expect(text(ready.f)).toContain('incompleto');
+      ready.fake.status.set('listo');
+      ready.fake.tenantId.set(null);
+      ready.f.detectChanges();
+      expect(el(ready.f).querySelector('[data-testid="pairs-export"]')?.hasAttribute('disabled') ?? true).toBe(true);
+    });
+
     it('does not make a request of its own: the report loads once, and the comparison reads the same rows', () => {
       const { f, fake } = setup();
       open(f, 'comparar');

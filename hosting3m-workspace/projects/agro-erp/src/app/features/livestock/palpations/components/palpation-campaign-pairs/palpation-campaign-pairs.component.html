@@ -1,0 +1,126 @@
+<!-- What an animal was in one campaign: date, result, code as typed, condition and the unconfirmed-code flag. -->
+<ng-template #cellTpl let-cell>
+  @if (cell.category === 'NO_PALPADA') {
+    <span class="text-muted" data-testid="pair-cell-empty">No palpada en esa campaña</span>
+  } @else {
+    <div data-testid="pair-cell-date">{{ formatDate(cell.date) }}</div>
+    <div><app-palp-swatch [color]="colorOf(cell.category)" />{{ labelOf(cell.category) }}</div>
+    @if (cell.rawCode) {
+      <div class="small text-muted" data-testid="pair-cell-code">Código: {{ cell.rawCode }}@if (conditionText(cell); as condition) { · Condición: {{ condition }}}</div>
+    }
+    @if (cell.unconfirmed) {
+      <app-palp-flag>{{ unconfirmedBadge }}</app-palp-flag>
+    }
+  }
+</ng-template>
+
+<ng-template #groupTpl let-group="group" let-rows="rows" let-table="table" let-testid="testid">
+  <h4 class="mt-4 mb-1" [attr.data-testid]="testid + '-title'">{{ titleOf(group) }}</h4>
+  <p class="mb-2" [attr.data-testid]="testid + '-count'">Animales en este grupo: <strong>{{ rows.length }}</strong></p>
+  @if (rows.length === 0) {
+    <div class="text-muted" role="status" [attr.data-testid]="testid + '-empty'">Ningún animal en este grupo.</div>
+  } @else {
+    <div class="card card-sm">
+      <app-table-toolbar [pagedTable]="table" [searchPlaceholder]="searchPlaceholder" />
+      @if (table.totalItems() === 0) {
+        <div class="card-body text-center text-muted" role="status">No hay animales que coincidan con la búsqueda.</div>
+      } @else {
+        <div class="table-responsive d-none d-md-block">
+          <table class="table table-vcenter card-table" [attr.data-testid]="testid + '-table'">
+            <caption class="visually-hidden">{{ titleOf(group) }}: un animal por fila, con lo que fue en cada campaña</caption>
+            <thead>
+              <tr>
+                <th scope="col">SINIIGA</th>
+                <th scope="col">Quemado</th>
+                <th scope="col">Marca</th>
+                <th scope="col">Categoría</th>
+                <th scope="col">Estado actual</th>
+                <th scope="col">{{ a().label }}</th>
+                <th scope="col">{{ b().label }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of table.paginatedRows(); track row.livestockId) {
+                <tr [attr.data-testid]="testid + '-row'">
+                  <td data-col="siniiga">{{ row.siniiga ?? '—' }}</td>
+                  <td data-col="fuego">{{ row.fuego ?? '—' }}</td>
+                  <td data-col="brand">{{ row.brand ?? '—' }}</td>
+                  <td data-col="category">{{ row.category ?? '—' }}</td>
+                  <td data-col="status">{{ row.currentStatus ?? '—' }}</td>
+                  <td data-col="a"><ng-container *ngTemplateOutlet="cellTpl; context: { $implicit: row.a }" /></td>
+                  <td data-col="b"><ng-container *ngTemplateOutlet="cellTpl; context: { $implicit: row.b }" /></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Phone: a table with seven columns does not fit, so each animal is a card with the same data. -->
+        <ul class="list-group list-group-flush d-md-none" [attr.data-testid]="testid + '-cards'">
+          @for (row of table.paginatedRows(); track row.livestockId) {
+            <li class="list-group-item" [attr.data-testid]="testid + '-card'">
+              <div class="fw-bold">{{ identifier(row) }}</div>
+              <div class="small">SINIIGA: {{ row.siniiga ?? '—' }} · Quemado: {{ row.fuego ?? '—' }} · Marca: {{ row.brand ?? '—' }}</div>
+              <div class="text-muted small mb-2">{{ row.category ?? '—' }} · {{ row.currentStatus ?? '—' }}</div>
+              <div class="small fw-bold">{{ a().label }}</div>
+              <div class="mb-2"><ng-container *ngTemplateOutlet="cellTpl; context: { $implicit: row.a }" /></div>
+              <div class="small fw-bold">{{ b().label }}</div>
+              <div><ng-container *ngTemplateOutlet="cellTpl; context: { $implicit: row.b }" /></div>
+            </li>
+          }
+        </ul>
+      }
+      <app-table-footer [pagedTable]="table" />
+    </div>
+  }
+</ng-template>
+
+<section class="card mb-3" aria-labelledby="palp-pairs-title" data-testid="pairs-section">
+  <div class="card-header">
+    <h3 class="card-title" id="palp-pairs-title">Seguimiento de vacías: {{ a().label }} y {{ b().label }}</h3>
+    <div class="card-actions">
+      <button type="button" class="btn btn-sm btn-outline-primary palp-export" data-testid="pairs-export"
+        [disabled]="readinessText() !== null" (click)="export()">Exportar CSV</button>
+    </div>
+  </div>
+  <div class="card-body">
+    @if (readinessText(); as why) {
+      <p class="small mb-2 palp-error" data-testid="pairs-export-why" role="status">{{ why }}</p>
+    }
+    @if (message(); as m) {
+      <p class="small mb-2" [class.palp-error]="m.kind === 'blocked'" [attr.role]="m.kind === 'blocked' ? 'alert' : 'status'" data-testid="pairs-export-message">{{ m.text }}</p>
+    }
+
+    <!-- Coverage: these lists are not the herd. They say how many animals fall outside them, so nobody reads them as complete. -->
+    <section class="palp-coverage mb-3" aria-labelledby="palp-coverage-title" data-testid="pairs-coverage">
+      <h4 class="h5" id="palp-coverage-title">Cobertura de esta comparación</h4>
+      <p class="small mb-2">Las listas solo incluyen vacías de {{ a().label }}; no son el hato completo ni una lista completa de seguimiento.</p>
+      <ul class="small mb-0">
+        <li data-testid="cov-palpated-a">
+          Palpadas en {{ a().label }}: <strong>{{ coverage().palpatedA }}</strong>
+          ({{ coverage().categoriesA['PREÑADA'] }} preñadas, {{ coverage().categoriesA['VACÍA'] }} vacías, {{ coverage().categoriesA['RANCHO'] }} definido por el rancho, {{ coverage().categoriesA['SIN_INTERPRETAR'] }} sin interpretar)
+        </li>
+        <li data-testid="cov-palpated-b">
+          Palpadas en {{ b().label }}: <strong>{{ coverage().palpatedB }}</strong>
+          ({{ coverage().categoriesB['PREÑADA'] }} preñadas, {{ coverage().categoriesB['VACÍA'] }} vacías, {{ coverage().categoriesB['RANCHO'] }} definido por el rancho, {{ coverage().categoriesB['SIN_INTERPRETAR'] }} sin interpretar)
+        </li>
+        <li data-testid="cov-both">En ambas campañas: <strong>{{ coverage().both }}</strong></li>
+        <li data-testid="cov-only-a">Solo en {{ a().label }} (sin palpar en {{ b().label }}): <strong>{{ coverage().onlyA }}</strong></li>
+        <li data-testid="cov-only-b">Solo en {{ b().label }} (sin registro en {{ a().label }}): <strong>{{ coverage().onlyB }}</strong></li>
+        <li data-testid="cov-rancho">
+          Definido por el rancho (RP, NO APTO, MATRIZ OCUPADA): <strong>{{ coverage().ranchoEither }}</strong>
+          animales; no son vacías ni preñadas y no están en ninguna lista.
+        </li>
+        <li data-testid="cov-nr">
+          NR (no examinadas, no cuentan como palpadas): <strong>{{ coverage().nrA }}</strong> en {{ a().label }} y <strong>{{ coverage().nrB }}</strong> en {{ b().label }}.
+        </li>
+        <li data-testid="cov-other">
+          Vacías en {{ a().label }} con otro resultado en {{ b().label }} (preñada, rancho o sin interpretar): <strong>{{ coverage().vaciaAOtherInB }}</strong>; no están en ninguna lista.
+        </li>
+      </ul>
+    </section>
+
+    <ng-container *ngTemplateOutlet="groupTpl; context: { group: 'PERSISTENT', rows: persistent(), table: persistentTable, testid: 'persistent' }" />
+    <ng-container *ngTemplateOutlet="groupTpl; context: { group: 'PENDING', rows: pending(), table: pendingTable, testid: 'pending' }" />
+  </div>
+</section>
