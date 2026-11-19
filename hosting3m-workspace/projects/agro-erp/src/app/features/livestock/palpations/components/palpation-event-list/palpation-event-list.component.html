@@ -1,0 +1,120 @@
+<ng-template #resultTpl let-row>
+  @switch (row.state) {
+    @case ('PREÑADA') {
+      <span class="badge bg-green-lt"><app-palp-swatch [color]="resultColor(row)" /><span aria-hidden="true">▲ </span>Preñada</span>
+    }
+    @case ('VACÍA') {
+      <span class="badge bg-red-lt"><app-palp-swatch [color]="resultColor(row)" /><span aria-hidden="true">▼ </span>Vacía</span>
+    }
+    @case ('TERMINO_RANCHO') {
+      <span class="badge bg-purple-lt"><app-palp-swatch [color]="resultColor(row)" />Término del rancho: {{ row.ranchTerm }}</span>
+      <span class="badge bg-secondary-lt">{{ ranchBadge }}</span>
+    }
+    @case ('SIN_RESULTADO') {
+      <span class="badge bg-secondary-lt"><app-palp-swatch [color]="resultColor(row)" />Sin resultado</span>
+    }
+    @default {
+      <span class="badge bg-yellow-lt"><app-palp-swatch [color]="resultColor(row)" />Sin interpretar</span>
+    }
+  }
+  @if (row.historical) {
+    <span class="badge bg-orange-lt">{{ historicalBadge }}</span>
+  }
+</ng-template>
+
+<ng-template #detailTpl let-row>
+  @if (subtypeText(row); as sub) {
+    <span class="text-muted small">Subtipo: {{ sub }}</span>
+  }
+  @if (row.unconfirmed) {
+    <span class="badge bg-secondary-lt">{{ unconfirmedBadge }}@if (row.unconfirmedCode) {: {{ row.unconfirmedCode }}}</span>
+  }
+  @if (!row.counts) {
+    <span class="text-muted small" data-testid="not-counted">No cuenta como palpada.</span>
+  }
+</ng-template>
+
+<div class="alert alert-secondary" role="note" data-testid="events-note">{{ note }}</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">Todas las palpaciones</h3>
+  </div>
+  <div class="card-body border-bottom">
+    <div class="row g-3 align-items-end">
+      <div class="col-12 col-md-5">
+        <label class="form-label" for="palp-events-campaign">Campaña</label>
+        <select id="palp-events-campaign" class="form-select" data-testid="events-campaign" (change)="setCampaign($event)">
+          <option value="TODAS" [selected]="campaignFilter() === 'TODAS'">Todas las campañas</option>
+          @for (c of campaigns(); track c.id) {
+            <option [value]="c.id" [selected]="campaignFilter() === c.id">{{ c.label }} ({{ formatRange(c) }})</option>
+          }
+        </select>
+      </div>
+      <div class="col-12 col-md-7">
+        <p class="mb-0" data-testid="events-count">Palpaciones en la lista: <strong>{{ visible().length }}</strong></p>
+      </div>
+    </div>
+  </div>
+
+  @if (rows().length === 0) {
+    <div class="card-body text-center text-muted" role="status" data-testid="events-empty">Ninguna palpación cae dentro de las campañas definidas.</div>
+  } @else {
+    <app-table-toolbar [pagedTable]="table" [searchPlaceholder]="searchPlaceholder" />
+    <p class="text-muted small pt-2 mb-0" style="padding-left: var(--tblr-card-spacer-x, 1.25rem)" data-testid="search-hint">{{ searchHint }}</p>
+
+    @if (table.totalItems() === 0) {
+      <div class="card-body text-center text-muted" role="status" data-testid="events-no-match">No hay palpaciones que coincidan con la búsqueda o el filtro.</div>
+    } @else {
+      <div class="table-responsive d-none d-md-block">
+        <table class="table table-vcenter card-table" data-testid="events-table">
+          <caption class="visually-hidden">Todas las palpaciones dentro de las campañas, una fila por evento</caption>
+          <thead>
+            <tr>
+              @for (col of columns; track col.key) {
+                <th scope="col" [attr.aria-sort]="ariaSort(col.key)">
+                  <button type="button" class="btn btn-link p-0 text-reset fw-bold text-uppercase small text-decoration-none"
+                    [attr.data-sort]="col.key" (click)="sort(col.key)">{{ col.label }}<span aria-hidden="true">{{ arrow(col.key) }}</span></button>
+                </th>
+              }
+              <th scope="col">Detalle</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of table.paginatedRows(); track row.id) {
+              <tr data-testid="event-row">
+                <td>{{ row.campaignLabel }}</td>
+                <td>{{ formatDate(row.date) }}</td>
+                <th scope="row" class="fw-normal">{{ row.identifier }}<div class="text-muted small">{{ row.category }}</div></th>
+                <td><ng-container *ngTemplateOutlet="resultTpl; context: { $implicit: row }" /></td>
+                <td>{{ row.state === 'PREÑADA' ? formatGestation(row.gestation) : '—' }}</td>
+                <td>{{ row.currentStatus }}</td>
+                <td><ng-container *ngTemplateOutlet="detailTpl; context: { $implicit: row }" /></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <ul class="list-group list-group-flush d-md-none" data-testid="event-cards">
+        @for (row of table.paginatedRows(); track row.id) {
+          <li class="list-group-item" data-testid="event-card">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+              <div>
+                <div class="fw-bold">{{ row.identifier }}</div>
+                <div class="text-muted small">{{ row.category }} · {{ row.currentStatus }}</div>
+              </div>
+              <div class="text-muted small text-nowrap text-end">{{ formatDate(row.date) }}<div>{{ row.campaignLabel }}</div></div>
+            </div>
+            <div class="mt-2"><ng-container *ngTemplateOutlet="resultTpl; context: { $implicit: row }" /></div>
+            @if (row.state === 'PREÑADA') {
+              <div class="small mt-1">Gestación: {{ formatGestation(row.gestation) }}</div>
+            }
+            <div class="mt-1"><ng-container *ngTemplateOutlet="detailTpl; context: { $implicit: row }" /></div>
+          </li>
+        }
+      </ul>
+    }
+    <app-table-footer [pagedTable]="table" />
+  }
+</div>
