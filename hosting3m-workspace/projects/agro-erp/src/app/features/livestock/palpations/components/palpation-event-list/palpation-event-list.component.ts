@@ -44,10 +44,10 @@ export const EVENT_SEARCH_HINT = 'Busca por identificador, categoría, estado de
         width: 100%;
         max-width: 320px;
       }
-      /* The sortable headings are buttons (14px, bold, uppercase); the "Detalle" heading has no button, so it gets the same size and weight. */
+      /* The sortable headings are buttons (14px, weight 600, uppercase); the "Detalle" heading has no button, so it gets the same size and weight. */
       .palp-detail-head {
         font-size: 0.875rem;
-        font-weight: 700;
+        font-weight: 600;
         text-transform: uppercase;
       }
     `,
