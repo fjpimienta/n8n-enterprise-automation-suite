@@ -175,4 +175,102 @@ describe('PalpationCampaignCompareComponent', () => {
     const f = render(events.map(e => ({ ...e, technician: 'Técnico demo' })), [C1, C2, C3]);
     expect(text(el(f))).not.toContain('Técnico');
   });
+
+  describe('phone layout (stacked cards instead of tables that need a sideways scroll)', () => {
+    const cardText = (n: Element | null | undefined) => text(n);
+
+    it('shows the "sin indicios" list as cards on phones and as a table from the md breakpoint, never both at once', () => {
+      const f = render(events, [C1, C2, C3]);
+      expect(q(f, 'never-table').closest('.table-responsive')?.className).toContain('d-none d-md-block');
+      expect(q(f, 'never-cards').className).toContain('d-md-none');
+      expect(qa(f, 'never-card').length).toBe(qa(f, 'never-row').length);
+    });
+
+    it('puts the "con código sin confirmar" flag inside each card, with the code as typed, so no sideways scroll is needed to see it', () => {
+      const f = render(events, [C1, C2, C3]);
+      const cards = qa(f, 'never-card');
+      const flags = cards.map(c => cardText(c.querySelector('[data-testid="never-card-flag"]')));
+      expect(flags.every(x => x.startsWith('Con código sin confirmar:'))).toBe(true);
+      expect(flags.filter(x => x.includes('Sí: DF15')).length).toBe(1);
+      expect(flags.filter(x => x.endsWith('No')).length).toBe(2);
+      const flagged = cards.find(c => cardText(c).includes('9999000104'));
+      expect(cardText(flagged)).toContain('Vacía en 2 campañas');
+      expect(cardText(flagged)).toContain('Sí: DF15');
+    });
+
+    it('a card has the identifier, the wording of the result, one line per palpated campaign and the campaigns without palpation', () => {
+      const f = render(events, [C1, C2, C3]);
+      const a1 = qa(f, 'never-card').find(c => cardText(c).includes('9999000101'));
+      expect(cardText(a1?.querySelector('[data-testid="never-card-label"]'))).toBe('Vacía en la única campaña');
+      expect(cardText(a1)).toContain('Enero: Vacía');
+      expect(cardText(a1)).toContain('No palpada en: Abril, Agosto');
+      expect(cardText(a1)).toContain('VACA · ACTIVO');
+    });
+
+    it('pages the cards together with the table (10 per page)', () => {
+      const many = Array.from({ length: 25 }, (_, i) => ev(`m${i}`, `A${i}`, '2026-01-05'));
+      const f = render(many, [C1, C2]);
+      expect(qa(f, 'never-card').length).toBe(10);
+    });
+
+    it('shows the transition table as cards on phones, one per category of campaign A, plus a card with the totals of campaign B', () => {
+      const f = render(events, [C1, C2, C3]);
+      choose(f, 'compare-a', 'c1');
+      choose(f, 'compare-b', 'c2');
+      expect(q(f, 'transition-table').closest('.table-responsive')?.className).toContain('d-none d-md-block');
+      expect(q(f, 'transition-cards').className).toContain('d-md-none');
+      const cards = [...el(f).querySelectorAll('[data-testid="transition-cards"] [data-card-row]')];
+      expect(cards.map(c => c.getAttribute('data-card-row'))).toEqual(['PREÑADA', 'VACÍA', 'RANCHO', 'SIN_INTERPRETAR', 'NO_PALPADA']);
+      expect(q(f, 'transition-cards-total')).not.toBeNull();
+    });
+
+    it('lists every category of campaign B in each non-empty card, including "Sin interpretar" and "No palpada en esa campaña", each as "n de N"', () => {
+      const f = render(events, [C1, C2, C3]);
+      choose(f, 'compare-a', 'c1');
+      choose(f, 'compare-b', 'c2');
+      const vacia = el(f).querySelector('[data-testid="transition-cards"] [data-card-row="VACÍA"]') as HTMLElement;
+      const lines = [...vacia.querySelectorAll('[data-card-cell]')].map(li => [li.getAttribute('data-card-cell'), text(li)]);
+      expect(lines.map(l => l[0])).toEqual(['VACÍA>PREÑADA', 'VACÍA>VACÍA', 'VACÍA>RANCHO', 'VACÍA>SIN_INTERPRETAR', 'VACÍA>NO_PALPADA']);
+      expect(text(vacia.querySelector('[data-card-cell="VACÍA>VACÍA"]'))).toBe('Vacía 2 de 4');
+      expect(text(vacia.querySelector('[data-card-cell="VACÍA>PREÑADA"]'))).toBe('Preñada 1 de 4');
+      expect(text(vacia.querySelector('[data-card-cell="VACÍA>SIN_INTERPRETAR"]'))).toBe('Sin interpretar 0 de 4');
+      expect(text(vacia.querySelector('[data-card-cell="VACÍA>NO_PALPADA"]'))).toBe('No palpada en esa campaña 1 de 4');
+      expect(text(vacia.querySelector('[data-card-total]'))).toBe('4');
+    });
+
+    it('says so in a card whose category has no animals, instead of listing zeros', () => {
+      const f = render(events, [C1, C2, C3]);
+      choose(f, 'compare-a', 'c1');
+      choose(f, 'compare-b', 'c2');
+      const sinInterpretar = el(f).querySelector('[data-testid="transition-cards"] [data-card-row="SIN_INTERPRETAR"]') as HTMLElement;
+      expect(text(sinInterpretar)).toContain('Ningún animal en esta categoría.');
+      expect(sinInterpretar.querySelectorAll('[data-card-cell]').length).toBe(0);
+    });
+
+    it('exposes every total of the table in the cards: the total of each row, of each column and the universe', () => {
+      const f = render(events, [C1, C2, C3]);
+      choose(f, 'compare-a', 'c1');
+      choose(f, 'compare-b', 'c2');
+      for (const cat of ['PREÑADA', 'VACÍA', 'RANCHO', 'SIN_INTERPRETAR', 'NO_PALPADA']) {
+        const tableRowTotal = text(q(f, 'transition-table').querySelector(`[data-total-row="${cat}"]`));
+        const cardRowTotal = text(el(f).querySelector(`[data-card-row="${cat}"] [data-card-total]`));
+        expect(cardRowTotal).toBe(tableRowTotal);
+        const tableColTotal = text(q(f, 'transition-table').querySelector(`[data-total-col="${cat}"]`));
+        const cardColTotal = text(el(f).querySelector(`[data-card-col-total="${cat}"] strong`));
+        expect(cardColTotal).toBe(tableColTotal);
+      }
+      expect(text(q(f, 'transition-cards-total'))).toContain('Animales comparados: 5');
+      expect(text(q(f, 'transition-cards-total'))).toContain('Total en Abril');
+    });
+
+    it('keeps card titles short (a category and a campaign name, never a header that wraps over several lines)', () => {
+      const f = render(events, [C1, C2, C3]);
+      for (const h of el(f).querySelectorAll('[data-testid="transition-cards"] h4')) expect(text(h).length).toBeLessThanOrEqual(32);
+    });
+
+    it('keeps the corner heading of the desktop table on one line', () => {
+      const f = render(events, [C1, C2]);
+      expect(q(f, 'transition-table').querySelector('th.palp-corner')).not.toBeNull();
+    });
+  });
 });

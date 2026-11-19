@@ -46,6 +46,10 @@ interface CellLine {
       .palp-transition th {
         white-space: normal;
       }
+      /* The corner heading ("En Campaña 5 ↓ En Campaña 6 →") reads as one line on desktop; the table is only shown from the md breakpoint up. */
+      .palp-transition th.palp-corner {
+        white-space: nowrap;
+      }
     `,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
