@@ -1,0 +1,195 @@
+<div class="alert alert-secondary" role="note" data-testid="compare-note">{{ note }}</div>
+
+<section class="card mb-3" aria-labelledby="palp-compare-title">
+  <div class="card-header">
+    <h3 class="card-title" id="palp-compare-title">Cambio de resultado entre dos campañas</h3>
+  </div>
+  <div class="card-body">
+    <div class="row g-3 mb-3">
+      <div class="col-12 col-md-6">
+        <label class="form-label" for="palp-compare-a">Campaña A (antes)</label>
+        <select id="palp-compare-a" class="form-select" data-testid="compare-a" (change)="setA($event)">
+          @for (c of campaigns(); track c.id) {
+            <option [value]="c.id" [selected]="c.id === a()?.id">{{ c.label }} ({{ formatRange(c) }})</option>
+          }
+        </select>
+      </div>
+      <div class="col-12 col-md-6">
+        <label class="form-label" for="palp-compare-b">Campaña B (después)</label>
+        <select id="palp-compare-b" class="form-select" data-testid="compare-b" (change)="setB($event)">
+          @for (c of campaigns(); track c.id) {
+            <option [value]="c.id" [selected]="c.id === b()?.id">{{ c.label }} ({{ formatRange(c) }})</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    @if (sameCampaign()) {
+      <div class="alert alert-warning mb-0" role="status" data-testid="compare-same">Elige dos campañas distintas para ver el cambio de resultado.</div>
+    } @else if (table(); as t) {
+      @if (!t.identityHolds) {
+        <div class="alert alert-danger mb-0" role="alert" data-testid="compare-broken">
+          Las cifras no cuadran, así que no se muestra la tabla para no dar un dato incorrecto.
+        </div>
+      } @else if (t.universe === 0) {
+        <div class="text-muted" role="status" data-testid="compare-empty">Ninguna palpación cae en estas dos campañas.</div>
+      } @else {
+        <p class="mb-2" data-testid="compare-universe">
+          Animales comparados: <strong>{{ t.universe }}</strong>&ngsp;<span class="text-muted">(con al menos una palpación en {{ t.from.label }} o en {{ t.to.label }})</span>
+        </p>
+        <div class="table-responsive">
+          <table class="table table-sm table-bordered" data-testid="transition-table">
+            <caption class="visually-hidden">
+              Animales por resultado en {{ t.from.label }} (filas) y en {{ t.to.label }} (columnas). Cada celda dice cuántos animales hay y el total de su fila.
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">En {{ t.from.label }} ↓ &nbsp; En {{ t.to.label }} →</th>
+                @for (col of categories; track col) {
+                  <th scope="col" class="text-end"><app-palp-swatch [color]="categoryColor[col]" />{{ categoryLabel[col] }}</th>
+                }
+                <th scope="col" class="text-end">Total en {{ t.from.label }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (row of categories; track row) {
+                <tr>
+                  <th scope="row" class="fw-normal"><app-palp-swatch [color]="categoryColor[row]" />{{ categoryLabel[row] }}</th>
+                  @for (col of categories; track col) {
+                    <td class="text-end" [attr.data-cell]="row + '>' + col">
+                      @if (t.rowTotals[row] === 0) {
+                        <span class="text-muted">—</span>
+                      } @else {
+                        <strong>{{ cell(t, row, col) }}</strong>&ngsp;<span class="text-muted small">de {{ t.rowTotals[row] }}</span>
+                      }
+                    </td>
+                  }
+                  <td class="text-end fw-bold" [attr.data-total-row]="row">{{ t.rowTotals[row] }}</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr>
+                <th scope="row">Total en {{ t.to.label }}</th>
+                @for (col of categories; track col) {
+                  <td class="text-end fw-bold" [attr.data-total-col]="col">{{ t.colTotals[col] }}</td>
+                }
+                <td class="text-end fw-bold">{{ t.universe }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        @if (t.unconfirmedFrom > 0 || t.unconfirmedTo > 0) {
+          <p class="text-muted small mb-0" data-testid="compare-unconfirmed">
+            Con {{ unconfirmedBadge }}: {{ t.unconfirmedFrom }} en {{ t.from.label }} y {{ t.unconfirmedTo }} en {{ t.to.label }}.
+            Se cuentan en el resultado que trae su registro; el código se muestra tal como se escribió y no se interpreta.
+          </p>
+        }
+      }
+    }
+  </div>
+</section>
+
+<section class="card mb-3" aria-labelledby="palp-never-title">
+  <div class="card-header">
+    <h3 class="card-title" id="palp-never-title">Sin indicios de preñez en ninguna campaña</h3>
+  </div>
+  <div class="card-body pb-0">
+    <p class="text-muted small mb-2" data-testid="never-help">
+      Animales con al menos un resultado clínico «Vacía» y ninguno «Preñada» en las {{ campaigns().length }} campañas definidas.
+      Los términos del rancho, los códigos sin resultado y los valores sin interpretar se listan aparte y no se cuentan como vacías.
+    </p>
+    <p class="mb-0" data-testid="never-count">Animales en la lista: <strong>{{ mainRows().length }}</strong></p>
+  </div>
+
+  @if (mainRows().length === 0) {
+    <div class="card-body text-muted" role="status" data-testid="never-empty">Ningún animal cumple esta condición en las campañas definidas.</div>
+  } @else {
+    <app-table-toolbar [pagedTable]="mainTable" searchPlaceholder="Buscar animal o estado" />
+    @if (mainTable.totalItems() === 0) {
+      <div class="card-body text-center text-muted" role="status">No hay animales que coincidan con la búsqueda.</div>
+    } @else {
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table" data-testid="never-table">
+          <caption class="visually-hidden">Animales sin indicios de preñez en ninguna campaña</caption>
+          <thead>
+            <tr>
+              <th scope="col">Identificador</th>
+              <th scope="col">Resultado</th>
+              <th scope="col">Por campaña</th>
+              <th scope="col">Con código sin confirmar</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (row of mainTable.paginatedRows(); track row.livestockId) {
+              <tr data-testid="never-row">
+                <th scope="row" class="fw-normal">{{ row.identifier }}<div class="text-muted small">{{ row.category ?? '—' }} · {{ row.currentStatus ?? '—' }}</div></th>
+                <td data-testid="never-label">{{ neverPregnantLabel(row) }}</td>
+                <td>
+                  <ul class="list-unstyled small mb-0">
+                    @for (line of lines(row); track line.label) {
+                      <li><app-palp-swatch [color]="line.color" />{{ line.label }}: {{ line.text }}</li>
+                    }
+                  </ul>
+                </td>
+                <td data-testid="never-flag">
+                  @if (row.withUnconfirmed) {
+                    <span class="badge bg-secondary-lt">Sí: {{ codes(row).join(', ') }}</span>
+                  } @else {
+                    <span class="text-muted">No</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    }
+    <app-table-footer [pagedTable]="mainTable" />
+  }
+</section>
+
+<section class="card mb-3" aria-labelledby="palp-uninterpreted-title" data-testid="uninterpreted-group">
+  <div class="card-header">
+    <h3 class="card-title" id="palp-uninterpreted-title">Sin interpretar</h3>
+  </div>
+  <div class="card-body pb-0">
+    <p class="text-muted small mb-2">
+      Animales sin Preñada ni Vacía en ninguna campaña: solo términos del rancho, sin resultado o valores que la app no reconoce. No se cuentan como vacías.
+    </p>
+    <p class="mb-0" data-testid="uninterpreted-count">Animales en este grupo: <strong>{{ uninterpretedRows().length }}</strong></p>
+  </div>
+  @if (uninterpretedRows().length === 0) {
+    <div class="card-body text-muted" role="status" data-testid="uninterpreted-empty">Ningún animal en este grupo.</div>
+  } @else {
+    <app-table-toolbar [pagedTable]="uninterpretedTable" searchPlaceholder="Buscar animal o estado" />
+    <div class="table-responsive">
+      <table class="table table-vcenter card-table" data-testid="uninterpreted-table">
+        <caption class="visually-hidden">Animales sin interpretar en las campañas</caption>
+        <thead>
+          <tr>
+            <th scope="col">Identificador</th>
+            <th scope="col">Resultado</th>
+            <th scope="col">Por campaña</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (row of uninterpretedTable.paginatedRows(); track row.livestockId) {
+            <tr data-testid="uninterpreted-row">
+              <th scope="row" class="fw-normal">{{ row.identifier }}<div class="text-muted small">{{ row.category ?? '—' }} · {{ row.currentStatus ?? '—' }}</div></th>
+              <td>{{ uninterpretedLabel(row) }}</td>
+              <td>
+                <ul class="list-unstyled small mb-0">
+                  @for (line of lines(row); track line.label) {
+                    <li><app-palp-swatch [color]="line.color" />{{ line.label }}: {{ line.text }}</li>
+                  }
+                </ul>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <app-table-footer [pagedTable]="uninterpretedTable" />
+  }
+</section>
