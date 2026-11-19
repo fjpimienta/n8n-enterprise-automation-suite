@@ -1,0 +1,77 @@
+<div class="page-header d-print-none mb-3">
+  <h1 class="page-title">Palpaciones</h1>
+  <div class="text-muted">Reporte de solo lectura de las palpaciones de la empresa activa.</div>
+</div>
+
+@if (stateKind(); as kind) {
+  <app-palpation-state [kind]="kind" [reason]="service.reason()" (retry)="reload()" (showAll)="mode.set('todo')" />
+} @else {
+  @if (service.status() === 'truncado') {
+    <app-palpation-state kind="truncado" [count]="service.events().length" />
+  }
+  @if (service.unrecognizedCount() > 0) {
+    <app-palpation-state kind="no-reconocidos" [count]="service.unrecognizedCount()" />
+  }
+
+  <section class="card mb-3" aria-label="Filtros del reporte">
+    <div class="card-body">
+      <div class="row g-3">
+        <div class="col-12 col-md-4">
+          <label class="form-label" for="palp-period">Periodo</label>
+          <select id="palp-period" class="form-select" [value]="mode()" (change)="setMode($event)">
+            <option value="campana">Campaña reciente</option>
+            <option value="todo">Todo el historial</option>
+            <option value="personalizado">Personalizado</option>
+          </select>
+        </div>
+        @if (mode() === 'personalizado') {
+          <div class="col-6 col-md-2">
+            <label class="form-label" for="palp-from">Desde</label>
+            <input id="palp-from" type="date" class="form-control" [value]="customFrom()" (change)="setCustom('from', $event)">
+          </div>
+          <div class="col-6 col-md-2">
+            <label class="form-label" for="palp-to">Hasta</label>
+            <input id="palp-to" type="date" class="form-control" [value]="customTo()" (change)="setCustom('to', $event)">
+          </div>
+        }
+        <div class="col-6 col-md-3">
+          <label class="form-label" for="palp-result">Resultado</label>
+          <select id="palp-result" class="form-select" [value]="resultFilter()" (change)="setResult($event)">
+            @for (option of resultOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        </div>
+        <div class="col-6 col-md-3">
+          <label class="form-label" for="palp-status">Estado del animal</label>
+          <select id="palp-status" class="form-select" [value]="statusFilter()" (change)="setStatus($event)">
+            <option value="TODOS">Todos los estados</option>
+            @for (status of statusOptions(); track status) {
+              <option [value]="status" [selected]="status === statusFilter()">{{ status }}</option>
+            }
+          </select>
+        </div>
+      </div>
+      <div class="text-muted small mt-2" data-testid="period-label">Periodo: {{ periodLabel() }}</div>
+    </div>
+  </section>
+
+  @if (kpis(); as k) {
+    <app-palpation-kpi-cards [kpis]="k" [periodLabel]="periodLabel()" />
+  }
+
+  @if (period(); as p) {
+    <div class="mt-3">
+      <app-palpation-charts [events]="service.events()" [herd]="service.herd()" [period]="p" [campaign]="campaign()" />
+    </div>
+  }
+
+  <div class="mt-3">
+    <app-palpation-table [rows]="rows()" [sortKey]="sortKey()" [sortDir]="sortDir()"
+      (sortChange)="onSort($event)" (rowOpen)="selected.set($event)" />
+  </div>
+}
+
+@if (selected(); as sel) {
+  <app-palpation-animal-drawer [animal]="sel.row" [opener]="sel.opener" (closed)="selected.set(null)" />
+}

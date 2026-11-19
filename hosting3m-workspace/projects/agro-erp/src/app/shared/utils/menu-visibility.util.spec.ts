@@ -7,7 +7,7 @@ const cattle = (role: string) => ({ industry: 'Ganadería de Precisión', role }
 describe('menuVisibility', () => {
   it('palm ADMIN: palm entries and shared config, no livestock entries, "Personal"', () => {
     expect(menuVisibility(palm('ADMIN'))).toEqual({
-      livestockIntelligence: false, palmIntelligence: true, palmAdministration: true, palmExpenses: true,
+      livestockIntelligence: false, palmIntelligence: true, livestockPalpations: false, palmAdministration: true, palmExpenses: true,
       palmSales: true, sharedConfig: true, livestockConfig: false, intelligenceSection: true, configSection: true,
       personalLabel: 'Personal',
     });
@@ -29,7 +29,7 @@ describe('menuVisibility', () => {
 
   it('livestock ADMIN: livestock entries and catalogs, nothing of palm, "Personal UPP"', () => {
     expect(menuVisibility(cattle('ADMIN'))).toEqual({
-      livestockIntelligence: true, palmIntelligence: false, palmAdministration: false, palmExpenses: false,
+      livestockIntelligence: true, palmIntelligence: false, livestockPalpations: true, palmAdministration: false, palmExpenses: false,
       palmSales: false, sharedConfig: true, livestockConfig: true, intelligenceSection: true, configSection: true,
       personalLabel: 'Personal UPP',
     });
@@ -46,6 +46,23 @@ describe('menuVisibility', () => {
     expect(v.intelligenceSection).toBe(false);
     expect(v.livestockConfig).toBe(true);
     expect(v.personalLabel).toBe('Personal UPP');
+  });
+
+  it('livestock "Palpaciones": only the roles the gateway models accept (ADMIN, EDITOR); never OWNER, CUSTOMER or an unknown role', () => {
+    expect(menuVisibility(cattle('ADMIN')).livestockPalpations).toBe(true);
+    expect(menuVisibility(cattle('EDITOR')).livestockPalpations).toBe(true);
+    expect(menuVisibility(cattle('editor')).livestockPalpations).toBe(true);
+    expect(menuVisibility(cattle(' ADMIN ')).livestockPalpations).toBe(true);
+    for (const role of ['OWNER', 'CUSTOMER', 'GUEST', '']) {
+      expect(menuVisibility(cattle(role)).livestockPalpations).toBe(false);
+    }
+  });
+
+  it('"Palpaciones" is never shown to a palm company or to an unknown domain', () => {
+    expect(menuVisibility(palm('ADMIN')).livestockPalpations).toBe(false);
+    expect(menuVisibility(palm('EDITOR')).livestockPalpations).toBe(false);
+    expect(menuVisibility({ industry: 'Generic', role: 'ADMIN' }).livestockPalpations).toBe(false);
+    expect(menuVisibility(null).livestockPalpations).toBe(false);
   });
 
   it('palm "Gastos": ADMIN, OWNER and EDITOR capture; CUSTOMER and livestock companies never see it', () => {

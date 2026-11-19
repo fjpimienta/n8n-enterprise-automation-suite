@@ -10,6 +10,10 @@ export const livestockRoutes: Routes = [
         loadComponent: () => import('./inventory/components/cattle-list/cattle-list.component').then(m => m.CattleListComponent)
     },
     {
+        path: 'palpaciones',
+        loadComponent: () => import('./palpations/components/palpation-report-page/palpation-report-page.component').then(m => m.PalpationReportPageComponent)
+    },
+    {
         path: 'pesajes',
         loadComponent: () => import('./weighing/components/adg-alerts/adg-alerts.component').then(m => m.AdgAlertsComponent)
     },

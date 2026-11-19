@@ -55,6 +55,15 @@
                         <span class="nav-link-title">Censo Biológico</span>
                     </a>
                 </li>
+                @if (showPalpations()) {
+                <li class="nav-item">
+                    <a class="nav-link" routerLink="/ganaderia/palpaciones" routerLinkActive="active"
+                        (click)="closeMenu()">
+                        <span class="nav-link-icon text-muted">🩺</span>
+                        <span class="nav-link-title">Palpaciones</span>
+                    </a>
+                </li>
+                }
                 <li class="nav-item">
                     <a class="nav-link" routerLink="/ganaderia/pesajes" routerLinkActive="active" (click)="closeMenu()">
                         <span class="nav-link-icon text-muted">⚖️</span>
