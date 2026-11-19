@@ -45,7 +45,21 @@ const estatica: Over = vacia({ mapping_status: 'EXPLICIT', raw_code: 'ESTATICA',
 const UNMAPPED_CODES = ['DF15', 'YF15', 'DCL1', 'YCL1'] as const;
 const unmapped = (i: number): Over => vacia({ mapping_status: 'UNMAPPED', raw_code: UNMAPPED_CODES[i % UNMAPPED_CODES.length] });
 
-export function goldenData(): { events: PalpationEventRow[]; herd: PalpationHerdRow[] } {
+/** How many animals are palpated only in B (no record in A): Vacía and Preñada. The default is the small set of the original golden case. */
+export interface GoldenOptions {
+  readonly onlyBVacia?: number;
+  readonly onlyBPrenada?: number;
+}
+
+/**
+ * The matrix of the owner's two campaigns also has big "no record in A" cells: 32 animals Preñada in B and 52 Vacía in B. This dataset reproduces
+ * them with the same A and B windows, on top of the original golden proportions.
+ */
+export const GOLDEN_MATRIX_ONLY_B = { onlyBVacia: 52, onlyBPrenada: 32 } as const;
+
+export function goldenData(options: GoldenOptions = {}): { events: PalpationEventRow[]; herd: PalpationHerdRow[] } {
+  const onlyBVacia = options.onlyBVacia ?? 3;
+  const onlyBPrenada = options.onlyBPrenada ?? 2;
   const events: PalpationEventRow[] = [];
   const herd: PalpationHerdRow[] = [];
   let n = 0;
@@ -109,8 +123,8 @@ export function goldenData(): { events: PalpationEventRow[]; herd: PalpationHerd
   }
 
   // Only in B: 3 Vacía, 2 Preñada, one ranch term (RP) and one MATRIZ OCUPADA (neither Vacía nor Preñada)
-  for (let i = 0; i < 3; i++) inB(animal(), i, vacia());
-  for (let i = 0; i < 2; i++) inB(animal(), i, prenada(45));
+  for (let i = 0; i < onlyBVacia; i++) inB(animal(), i, vacia());
+  for (let i = 0; i < onlyBPrenada; i++) inB(animal(), i, prenada(45));
   inB(animal(), 0, { result: 'VACÍA', mapping_status: 'NOT_APPLICABLE', raw_code: 'RP', ranch_term: 'RP', is_clinical_result: false });
   inB(animal(), 1, { result: 'PREÑADA', mapping_status: 'NOT_APPLICABLE', raw_code: 'MATRIZ OCUPADA', ranch_term: 'MATRIZ OCUPADA', is_clinical_result: false });
   // NR only: not examined, not palpated, in no list

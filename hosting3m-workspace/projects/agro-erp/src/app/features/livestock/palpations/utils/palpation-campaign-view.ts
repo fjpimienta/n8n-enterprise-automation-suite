@@ -14,7 +14,16 @@ export const CATEGORY_LABEL: Readonly<Record<CompareCategory, string>> = {
   'VACÍA': 'Vacía',
   RANCHO: 'Definido por el rancho',
   SIN_INTERPRETAR: 'Sin interpretar',
-  NO_PALPADA: 'No palpada en esa campaña',
+  NO_PALPADA: 'Sin registro en esa campaña',
+};
+
+/** Short names of the categories, for the title of a cell list ("Sin registro en A y Preñada en B"). */
+export const CATEGORY_SHORT: Readonly<Record<CompareCategory, string>> = {
+  'PREÑADA': 'Preñada',
+  'VACÍA': 'Vacía',
+  RANCHO: 'Definido por el rancho',
+  SIN_INTERPRETAR: 'Sin interpretar',
+  NO_PALPADA: 'Sin registro',
 };
 
 /** The same family colours as the charts. A colour sample goes next to the name; the name and the number always say the same. */
@@ -64,6 +73,7 @@ export function uninterpretedLabel(row: Pick<NeverPregnantRow, 'appearsIn'>): st
 export const GROUP_LABEL: Readonly<Record<PairGroup, string>> = {
   PERSISTENT: 'Vacía en A y en B (persistente)',
   PENDING: 'Vacía en A y no palpada en B (seguimiento)',
+  CELL: 'Celda de la matriz',
 };
 
 /** Why the export was refused, in Spanish. Nothing is written when it is refused. */

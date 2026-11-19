@@ -1,5 +1,5 @@
 import { PalpationEventRow, PalpationHerdRow, ReproCondition } from '../models/palpation.types';
-import { CompareCategory, categoryOfState } from './palpation-campaign-compare';
+import { CompareCategory, categoryOfCell, categoryOfState } from './palpation-campaign-compare';
 import { Campaign, CampaignCell, cellOf, latestPerCampaign } from './palpation-campaigns';
 import { compareCalendarDates } from './palpation-dates';
 import { identifierOf, officialSiniiga } from './palpation-metrics';
@@ -12,7 +12,8 @@ import { identifierOf, officialSiniiga } from './palpation-metrics';
  * flag. Ranch terms (RP, NO APTO, MATRIZ OCUPADA) are neither Vacía nor Preñada, and an NR is not a palpation: both stay as the report defines them.
  */
 
-export type PairGroup = 'PERSISTENT' | 'PENDING';
+/** `CELL` is a row of the list behind one cell of the transition matrix (see `cellAnimals`). */
+export type PairGroup = 'PERSISTENT' | 'PENDING' | 'CELL';
 
 /** What an animal was in one campaign: the category of its latest counted event, with the data to show and to export. */
 export interface PairCell {
@@ -39,6 +40,11 @@ export interface PairRow {
   readonly currentStatus: string | null;
   readonly a: PairCell;
   readonly b: PairCell;
+  /**
+   * The animal has a row in the herd view. False means its events could not be matched to a herd row (identifier, category and status are then
+   * missing); the animal is still counted, because the counts come from the events.
+   */
+  readonly herdMatched: boolean;
 }
 
 /** Animals that left the lists or never entered them, counted so the lists are not read as the whole herd. */
@@ -95,13 +101,40 @@ function nrAnimals(events: readonly PalpationEventRow[], c: Campaign): Set<strin
   return ids;
 }
 
+type HerdIndex = ReadonlyMap<string, PalpationHerdRow>;
+
+function rowOf(group: PairGroup, id: string, cellA: CampaignCell | null, cellB: CampaignCell | null, byId: HerdIndex): PairRow {
+  const animal = byId.get(id);
+  return {
+    group,
+    livestockId: id,
+    siniiga: animal ? officialSiniiga(animal) : null,
+    fuego: animal?.numero_fuego?.trim() || null,
+    brand: animal?.brand_code?.trim() || null,
+    category: animal?.category ?? null,
+    currentStatus: animal?.current_status ?? null,
+    a: toCell(cellA),
+    b: toCell(cellB),
+    herdMatched: animal !== undefined,
+  };
+}
+
+/** Stable order of a list: by identifier (numeric-aware), then by the internal key. */
+function sortRows(rows: PairRow[], byId: HerdIndex): PairRow[] {
+  const identifier = (r: PairRow): string => {
+    const animal = byId.get(r.livestockId);
+    return animal ? identifierOf(animal) : `Sin identificador · ${r.livestockId.slice(0, 8)}`;
+  };
+  return rows.sort((x, y) => identifier(x).localeCompare(identifier(y), 'es', { numeric: true }) || x.livestockId.localeCompare(y.livestockId));
+}
+
 export function pairLists(
   events: readonly PalpationEventRow[],
   herd: readonly PalpationHerdRow[],
   a: Campaign,
   b: Campaign,
 ): PairLists {
-  const byId = new Map(herd.map(h => [h.livestock_id, h] as const));
+  const byId: HerdIndex = new Map(herd.map(h => [h.livestock_id, h] as const));
   const latestA = latestPerCampaign(events, a);
   const latestB = latestPerCampaign(events, b);
 
@@ -123,20 +156,8 @@ export function pairLists(
     if (cellB !== null) both += 1;
     if (catA !== 'VACÍA') continue;
 
-    const animal = byId.get(id);
-    const row = (group: PairGroup): PairRow => ({
-      group,
-      livestockId: id,
-      siniiga: animal ? officialSiniiga(animal) : null,
-      fuego: animal?.numero_fuego?.trim() || null,
-      brand: animal?.brand_code?.trim() || null,
-      category: animal?.category ?? null,
-      currentStatus: animal?.current_status ?? null,
-      a: toCell(cellA),
-      b: toCell(cellB),
-    });
-    if (cellB === null) pending.push(row('PENDING'));
-    else if (categoryOfState(cellB.state) === 'VACÍA') persistent.push(row('PERSISTENT'));
+    if (cellB === null) pending.push(rowOf('PENDING', id, cellA, null, byId));
+    else if (categoryOfState(cellB.state) === 'VACÍA') persistent.push(rowOf('PERSISTENT', id, cellA, cellB, byId));
     else vaciaAOtherInB += 1;
   }
   for (const [id, eb] of latestB) {
@@ -145,14 +166,8 @@ export function pairLists(
     if (catB === 'RANCHO') rancho.add(id);
   }
 
-  const identifier = (r: PairRow): string => {
-    const animal = byId.get(r.livestockId);
-    return animal ? identifierOf(animal) : `Sin identificador · ${r.livestockId.slice(0, 8)}`;
-  };
-  const order = (x: PairRow, y: PairRow) =>
-    identifier(x).localeCompare(identifier(y), 'es', { numeric: true }) || x.livestockId.localeCompare(y.livestockId);
-  persistent.sort(order);
-  pending.sort(order);
+  sortRows(persistent, byId);
+  sortRows(pending, byId);
 
   const palpatedA = latestA.size;
   const palpatedB = latestB.size;
@@ -173,4 +188,35 @@ export function pairLists(
       vaciaAOtherInB,
     },
   };
+}
+
+/**
+ * The animals behind ONE cell of the transition matrix: those whose category in A is `from` and whose category in B is `to`. It is built from the
+ * same `latestPerCampaign` as `transitions()`, so for every cell the list has exactly as many animals as the matrix counts (a test checks all 25
+ * cells). "Sin registro" (`NO_PALPADA`) means no counted palpation record in that campaign: it covers animals that were not palpated, animals
+ * whose only event is an NR, and animals whose rows could not be matched or loaded; the herd data only completes the identifiers, it never decides
+ * who is in the list. The cell sin registro / sin registro is always empty (an animal in neither campaign is not in the comparison).
+ */
+export function cellAnimals(
+  events: readonly PalpationEventRow[],
+  herd: readonly PalpationHerdRow[],
+  a: Campaign,
+  b: Campaign,
+  from: CompareCategory,
+  to: CompareCategory,
+): PairRow[] {
+  const byId: HerdIndex = new Map(herd.map(h => [h.livestock_id, h] as const));
+  const latestA = latestPerCampaign(events, a);
+  const latestB = latestPerCampaign(events, b);
+  const ids = new Set<string>([...latestA.keys(), ...latestB.keys()]);
+
+  const rows: PairRow[] = [];
+  for (const id of ids) {
+    const ea = latestA.get(id);
+    const eb = latestB.get(id);
+    const cellA = ea === undefined ? null : cellOf(ea);
+    const cellB = eb === undefined ? null : cellOf(eb);
+    if (categoryOfCell(cellA) === from && categoryOfCell(cellB) === to) rows.push(rowOf('CELL', id, cellA, cellB, byId));
+  }
+  return sortRows(rows, byId);
 }

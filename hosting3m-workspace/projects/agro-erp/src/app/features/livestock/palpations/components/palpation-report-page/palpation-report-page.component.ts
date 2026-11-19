@@ -1,8 +1,10 @@
 import { ChangeDetectionStrategy, Component, InjectionToken, computed, effect, inject, signal, untracked } from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
 import { PalpationReportService } from '../../services/palpation-report.service';
 import { campaignEventRows } from '../../utils/palpation-campaign-compare';
 import { Campaign, CampaignError, sortCampaigns, suggestCampaigns, validateCampaigns } from '../../utils/palpation-campaigns';
 import { isCalendarDate, todayLocal } from '../../utils/palpation-dates';
+import { DEEP_LINK_PARAM, DeepLink, cellIdOf, parseCellId, parseDeepLink, rangeParam, resolvePair } from '../../utils/palpation-matrix-cells';
 import { Period, campaignStart, defaultPeriod, periodKpis } from '../../utils/palpation-metrics';
 import {
   RowFilterResult,
@@ -16,7 +18,7 @@ import {
   sortRows,
 } from '../../utils/palpation-view';
 import { PalpationAnimalDrawerComponent } from '../palpation-animal-drawer/palpation-animal-drawer.component';
-import { PalpationCampaignCompareComponent } from '../palpation-campaign-compare/palpation-campaign-compare.component';
+import { MatrixSelection, PalpationCampaignCompareComponent } from '../palpation-campaign-compare/palpation-campaign-compare.component';
 import { PalpationCampaignsEditorComponent } from '../palpation-campaigns-editor/palpation-campaigns-editor.component';
 import { PalpationChartsComponent } from '../palpation-charts/palpation-charts.component';
 import { PalpationEventListComponent } from '../palpation-event-list/palpation-event-list.component';
@@ -84,6 +86,16 @@ export class PalpationReportPageComponent {
   protected readonly campaigns = signal<readonly Campaign[]>([]);
   private readonly userEdited = signal(false);
   private lastTenant: number | null = null;
+
+  /** The choice of A, B and the open matrix cell, bound two-way to the comparison. The address bar follows it while a cell is open. */
+  protected readonly matrixSelection = signal<MatrixSelection>({ aId: null, bId: null, cell: null });
+  private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
+  /**
+   * A deep link read from the address when the page opened (strictly: anything invalid is no link at all). It is applied once, when the data of the
+   * company that was active at the start has arrived, and dropped if the company changes first. It carries only date ranges and a cell id.
+   */
+  private pendingLink: DeepLink | null = parseDeepLink(this.route.snapshot.queryParamMap);
 
   protected readonly campaignsAreProposal = computed(() => !this.userEdited() && this.campaigns().length > 0);
   protected readonly campaignErrors = computed<readonly CampaignError[]>(() => validateCampaigns(this.campaigns()));
@@ -169,12 +181,24 @@ export class PalpationReportPageComponent {
       const tenant = this.service.tenantId();
       untracked(() => {
         if (tenant !== this.lastTenant || events.length === 0) {
+          // a company change drops a pending link: it must never be applied to another company's first load
+          if (this.lastTenant !== null && tenant !== this.lastTenant) this.dropLink();
           this.lastTenant = tenant;
           this.userEdited.set(false);
           this.campaigns.set([]);
+          this.matrixSelection.set({ aId: null, bId: null, cell: null });
         }
-        if (events.length > 0 && !this.userEdited()) this.campaigns.set(suggestCampaigns(events));
+        if (events.length > 0 && this.pendingLink !== null) this.applyLink(this.pendingLink);
+        else if (events.length > 0 && !this.userEdited()) this.campaigns.set(suggestCampaigns(events));
       });
+    });
+
+    // The address bar follows the open cell (only the two date ranges and the cell id); with no cell open, or another tab, it carries nothing of ours.
+    effect(() => {
+      const selection = this.matrixSelection();
+      const valid = this.validCampaigns();
+      const tab = this.tab();
+      untracked(() => this.syncUrl(tab === 'comparar' && valid !== null ? valid : null, selection));
     });
   }
 
@@ -202,6 +226,50 @@ export class PalpationReportPageComponent {
       this.sortKey.set(key);
       this.sortDir.set(key === 'lastDate' ? 'desc' : 'asc');
     }
+  }
+
+  /** Applies a valid deep link: the two ranges become the two campaigns (A and B), the comparison tab opens and the cell, if any, is open. */
+  private applyLink(link: DeepLink): void {
+    this.pendingLink = null;
+    this.campaigns.set([
+      { id: 'link-a', label: 'Campaña A', from: link.a.from, to: link.a.to },
+      { id: 'link-b', label: 'Campaña B', from: link.b.from, to: link.b.to },
+    ]);
+    this.userEdited.set(true);
+    this.tab.set('comparar');
+    this.matrixSelection.set({ aId: 'link-a', bId: 'link-b', cell: link.cell === null ? null : cellIdOf(link.cell) });
+  }
+
+  private dropLink(): void {
+    this.pendingLink = null;
+    this.clearLinkParams();
+  }
+
+  /** Writes (or clears) the three parameters in the address without adding a history entry. Nothing else of the address is touched. */
+  private syncUrl(valid: readonly Campaign[] | null, selection: MatrixSelection): void {
+    // a valid link that is still waiting for the data must stay in the address (a reload before the data arrives would otherwise lose it)
+    if (this.pendingLink !== null) return;
+    const cell = parseCellId(selection.cell);
+    const pair = valid === null || cell === null ? null : resolvePair(valid, selection.aId, selection.bId);
+    if (pair === null || cell === null || pair.a.id === pair.b.id) {
+      this.clearLinkParams();
+      return;
+    }
+    const wanted = { [DEEP_LINK_PARAM.a]: rangeParam(pair.a), [DEEP_LINK_PARAM.b]: rangeParam(pair.b), [DEEP_LINK_PARAM.cell]: cellIdOf(cell) };
+    const current = this.route.snapshot.queryParamMap;
+    if (Object.entries(wanted).every(([k, v]) => current.getAll(k).length === 1 && current.get(k) === v)) return;
+    void this.router.navigate([], { relativeTo: this.route, queryParams: wanted, queryParamsHandling: 'merge', replaceUrl: true });
+  }
+
+  private clearLinkParams(): void {
+    const current = this.route.snapshot.queryParamMap;
+    if (![DEEP_LINK_PARAM.a, DEEP_LINK_PARAM.b, DEEP_LINK_PARAM.cell].some(k => current.has(k))) return;
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { [DEEP_LINK_PARAM.a]: null, [DEEP_LINK_PARAM.b]: null, [DEEP_LINK_PARAM.cell]: null },
+      queryParamsHandling: 'merge',
+      replaceUrl: true,
+    });
   }
 
   protected onCampaignsChange(list: Campaign[]): void {
