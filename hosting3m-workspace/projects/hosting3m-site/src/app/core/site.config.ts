@@ -14,6 +14,7 @@ export const SITE = {
     projects: 'proyectos@hosting3m.com',
   },
   city: 'Mérida, Yucatán, México',
+  ga4Id: 'G-MVJRDZ7TD8',
   githubSuiteUrl: 'https://github.com/fjpimienta/n8n-enterprise-automation-suite',
 } as const;
 

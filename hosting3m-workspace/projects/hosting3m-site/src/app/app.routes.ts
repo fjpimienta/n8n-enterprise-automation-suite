@@ -12,37 +12,46 @@ export const routes: Routes = [
     path: '',
     pathMatch: 'full',
     title: `${SITE_NAME} | Servicios en la nube, VPS y automatización con n8n`,
+    data: {
+      jsonLd: 'home',
+      description:
+        'Hosting3M en Mérida, Yucatán: VPS, n8n administrado, dominios y correo, y una suite de automatización de código abierto. Cotiza por WhatsApp.',
+    },
     loadComponent: () => import('./pages/home').then((m) => m.Home),
   },
   {
     path: 'portfolio',
     title: `Portafolio | ${SITE_NAME}`,
+    data: { description: 'Portafolio de proyectos de Hosting3M.', heading: 'Portafolio', todo: 'TODO_PORTFOLIO' },
     loadComponent: () => import('./pages/placeholder').then((m) => m.Placeholder),
-    data: { heading: 'Portafolio', todo: 'TODO_PORTFOLIO: casos reales por aprobar' },
   },
   {
     path: 'fjpimienta',
     title: `Francisco Pérez Pimienta | ${SITE_NAME}`,
+    data: {
+      description: 'Perfil profesional de Francisco Pérez Pimienta, arquitecto de sistemas en Hosting3M.',
+      heading: 'Francisco Pérez Pimienta',
+      todo: 'TODO_PROFILE',
+    },
     loadComponent: () => import('./pages/placeholder').then((m) => m.Placeholder),
-    data: { heading: 'Francisco Pérez Pimienta', todo: 'TODO_PROFILE: contenido por aprobar' },
   },
   {
     path: 'politica-de-privacidad',
     title: `Política de privacidad | ${SITE_NAME}`,
-    loadComponent: () => import('./pages/placeholder').then((m) => m.Placeholder),
-    data: { heading: 'Política de privacidad', todo: 'Texto legal se migra en la fase 2' },
+    data: { description: 'Cómo Hosting3M recopila, usa y protege tus datos personales.' },
+    loadComponent: () => import('./pages/legal/privacy').then((m) => m.Privacy),
   },
   {
     path: 'condiciones-de-servicio',
     title: `Condiciones de servicio | ${SITE_NAME}`,
-    loadComponent: () => import('./pages/placeholder').then((m) => m.Placeholder),
-    data: { heading: 'Condiciones de servicio', todo: 'Texto legal se migra en la fase 2; TODO_LEGAL_ENTITY' },
+    data: { description: 'Condiciones de servicio de Hosting3M.' },
+    loadComponent: () => import('./pages/legal/terms').then((m) => m.Terms),
   },
   {
     path: 'eliminardatosusuarios',
     title: `Eliminación de datos de usuario | ${SITE_NAME}`,
-    loadComponent: () => import('./pages/placeholder').then((m) => m.Placeholder),
-    data: { heading: 'Eliminación de datos de usuario', todo: 'Texto legal se migra en la fase 2 (URL exigida por Meta)' },
+    data: { description: 'Cómo solicitar la eliminación de tus datos de usuario en Hosting3M.' },
+    loadComponent: () => import('./pages/legal/deletion').then((m) => m.Deletion),
   },
   { path: 'privacy', redirectTo: 'politica-de-privacidad' },
   { path: 'news', redirectTo: '' },
@@ -50,6 +59,7 @@ export const routes: Routes = [
   {
     path: '**',
     title: `Página no encontrada | ${SITE_NAME}`,
+    data: { description: 'La página que buscas no existe.' },
     loadComponent: () => import('./pages/not-found').then((m) => m.NotFound),
   },
 ];

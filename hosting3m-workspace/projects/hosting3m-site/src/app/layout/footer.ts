@@ -1,4 +1,5 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { ConsentService } from '../core/consent';
 import { RouterLink } from '@angular/router';
 import { SITE } from '../core/site.config';
 
@@ -9,5 +10,6 @@ import { SITE } from '../core/site.config';
 })
 export class Footer {
   readonly site = SITE;
+  readonly consent = inject(ConsentService);
   readonly year = new Date().getFullYear();
 }

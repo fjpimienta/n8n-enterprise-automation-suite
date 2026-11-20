@@ -47,3 +47,20 @@
 @utility btn-secondary {
   @apply btn border border-brand-600 bg-white text-brand-700 hover:bg-brand-50;
 }
+
+@utility field {
+  @apply mt-1 block w-full rounded-lg border border-slate-400 bg-white px-3 py-2 text-base text-ink aria-[invalid=true]:border-red-700;
+}
+@utility field-error {
+  @apply mt-1 text-sm font-medium text-red-800;
+}
+
+@utility legal-prose {
+  @apply max-w-3xl text-base leading-relaxed text-ink;
+  & h1 { @apply text-3xl font-bold text-brand-900; }
+  & h2 { @apply mt-8 text-xl font-semibold text-brand-900; }
+  & p { @apply mt-3; }
+  & ul { @apply mt-3 list-disc space-y-1 pl-6; }
+  & a { @apply text-brand-700 underline; }
+  & .updated { @apply mt-2 text-sm text-muted; }
+}

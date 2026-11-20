@@ -408,7 +408,9 @@
             ],
             "styles": [
               "projects/hosting3m-site/src/styles.css"
-            ]
+            ],
+            "server": "projects/hosting3m-site/src/main.server.ts",
+            "outputMode": "static"
           },
           "configurations": {
             "production": {
@@ -429,7 +431,28 @@
             "development": {
               "optimization": false,
               "extractLicenses": false,
-              "sourceMap": true
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "projects/hosting3m-site/src/app/core/runtime-config.ts",
+                  "with": "projects/hosting3m-site/src/app/core/runtime-config.development.ts"
+                }
+              ]
+            },
+            "beta": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "300kB",
+                  "maximumError": "500kB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "4kB",
+                  "maximumError": "8kB"
+                }
+              ],
+              "outputHashing": "all"
             }
           },
           "defaultConfiguration": "production"
@@ -442,6 +465,9 @@
             },
             "development": {
               "buildTarget": "hosting3m-site:build:development"
+            },
+            "beta": {
+              "buildTarget": "hosting3m-site:build:beta"
             }
           },
           "defaultConfiguration": "development"

@@ -13,5 +13,6 @@ import { ActivatedRoute } from '@angular/router';
 export class Placeholder {
   private readonly data = inject(ActivatedRoute).snapshot.data;
   readonly heading: string = this.data['heading'] ?? '';
+  /** Content pending owner approval: a TODO_* token that blocks production builds. */
   readonly todo: string = this.data['todo'] ?? '';
 }
