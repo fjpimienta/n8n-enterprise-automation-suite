@@ -1,10 +1,11 @@
-import { ChangeDetectionStrategy, Component, ElementRef, OnDestroy, PLATFORM_ID, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, OnDestroy, effect, untracked, PLATFORM_ID, afterNextRender, computed, inject, signal, viewChild } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { CONTACT_LIMITS, CONTACT_SERVICES, ContactErrorKind, ContactService, toContactError } from '../core/contact';
 import { SITE } from '../core/site.config';
+import { PlansService } from '../core/plans';
 import { TurnstileService } from '../core/turnstile';
 
 const SUCCESS_FALLBACK = '¡Gracias! Hemos recibido tu mensaje.';
@@ -20,13 +21,15 @@ type Status = 'idle' | 'isSubmitting' | 'success' | 'error';
 export class ContactForm implements OnDestroy {
   private readonly contact = inject(ContactService);
   private readonly turnstile = inject(TurnstileService);
+  private readonly catalog = inject(PlansService);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly query = toSignal(inject(ActivatedRoute).queryParamMap);
   private widget: { reset(): void; remove(): void } | null = null;
   private observer: IntersectionObserver | null = null;
 
   readonly limits = CONTACT_LIMITS;
-  readonly services = CONTACT_SERVICES;
+  /** Static services plus the labels of the public catalog (so a quote button can preselect its plan). */
+  readonly services = computed(() => [...CONTACT_SERVICES, ...this.catalog.serviceLabels().filter((l) => !CONTACT_SERVICES.includes(l))]);
   readonly site = SITE;
   readonly status = signal<Status>('idle');
   readonly errorKind = signal<ContactErrorKind | null>(null);
@@ -52,11 +55,13 @@ export class ContactForm implements OnDestroy {
   readonly messageLength = computed(() => this.form.controls.message.value.length);
 
   constructor() {
-    afterNextRender(() => {
+    // Re-runs when the query string or the catalog changes, so a quote button can preselect the service at any time.
+    effect(() => {
       const preset = this.query()?.get('servicio');
-      if (preset && CONTACT_SERVICES.includes(preset)) this.form.controls.service.setValue(preset);
-      this.observeWidget();
+      const allowed = this.services();
+      if (this.isBrowser && preset && allowed.includes(preset)) untracked(() => this.form.controls.service.setValue(preset));
     });
+    afterNextRender(() => this.observeWidget());
   }
 
   ngOnDestroy(): void {
@@ -89,7 +94,7 @@ export class ContactForm implements OnDestroy {
     }
 
     this.status.set('isSubmitting');
-    this.contact.send(value, this.token()).subscribe({
+    this.contact.send(value, this.token(), this.catalog.serviceLabels()).subscribe({
       next: (mensaje) => {
         this.showSuccess(mensaje || SUCCESS_FALLBACK);
         this.widget?.reset(); // Turnstile tokens are single-use

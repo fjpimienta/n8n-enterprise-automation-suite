@@ -18,6 +18,11 @@ describe('buildContactPayload', () => {
     expect(p['service']).toBe('');
   });
 
+  it('accepts a catalog service label only when it is explicitly allowed', () => {
+    expect(buildContactPayload({ ...base, service: 'Plan X' }, 't')['service']).toBe('');
+    expect(buildContactPayload({ ...base, service: 'Plan X' }, 't', ['Plan X'])['service']).toBe('Plan X');
+  });
+
   it('keeps every offered service within the 60 character limit', () => {
     for (const s of CONTACT_SERVICES) expect(s.length).toBeLessThanOrEqual(CONTACT_LIMITS.service);
   });

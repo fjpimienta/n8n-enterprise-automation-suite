@@ -37,7 +37,7 @@
     <label for="cf-service" class="block font-medium">Servicio de interés</label>
     <select id="cf-service" formControlName="service" class="field">
       <option value="">Selecciona una opción</option>
-      @for (s of services; track s) { <option [value]="s">{{ s }}</option> }
+      @for (s of services(); track s) { <option [value]="s">{{ s }}</option> }
     </select>
   </div>
 
