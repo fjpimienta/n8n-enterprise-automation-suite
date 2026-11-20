@@ -5,7 +5,7 @@
 - **CSP-friendly output:** critical-CSS inlining is off for `production` and `beta` (it adds an inline `onload` handler). The build now emits no inline script, style or event handler; only the two JSON data blocks (`ng-state`, JSON-LD), which CSP does not treat as scripts.
 - **Accessibility pass:** focus moves to `<main>` after each route change (not on anchors), field errors are linked with `aria-describedby`, errors announced with `role="alert"`, skip link, labelled landmarks, AA contrast tokens. Lighthouse accessibility: **100** on home and privacy.
 - **Security headers:** `docs/nginx-security-headers.conf` (CSP rollout Report-Only first, nosniff, Referrer-Policy, Permissions-Policy, X-Frame-Options, optional HSTS, hashed-asset caching), `docs/nginx-beta-only.conf` (noindex). `docs/nginx-legacy-redirects.conf` no longer redefines `location /` (Plesk owns it).
-- **Beta runbook:** `docs/phase-3/beta-runbook.md`: Cloudflare + Plesk subdomain, exact n8n edits for both workflows, Turnstile hostname, Plesk Git deploy, smoke tests, rollback.
+- **Beta runbook:** `docs/phase-3/beta-runbook.md`: Cloudflare + Plesk subdomain, exact n8n edits for both workflows, Turnstile hostname, rsync deploy (backup, dry-run, no `--delete`), smoke tests, test-data cleanup (`UPDATE`, never `DELETE`), rollback.
 - **TODO tokens** for `og:image`, street address and opening hours, as requested.
 
 ## Measurements (Lighthouse 13, mobile profile, local static server, uncompressed)
@@ -27,9 +27,8 @@ node projects/hosting3m-site/scripts/build.mjs --configuration beta
 Then follow `docs/phase-3/beta-runbook.md`.
 
 ## What you must do on the server
-Everything in the beta runbook, sections 2 to 6 (Cloudflare record, Plesk subdomain and certificate, the two n8n workflows, Turnstile hostname, nginx directives, deploy).
+Everything in the beta runbook, sections 2 to 6 (Cloudflare record, Plesk subdomain and certificate, the two n8n workflows, Turnstile hostname, rsync deploy, nginx directives).
 
 ## Open questions
-- The `v6/contact` and `v6/news` workflow JSON is not in the repo. After section 3, please export both and let me add them under `workflows/02-leads-contact/v6` and `workflows/03-rag-news-intelligence/v6` in their own PR.
-- Dist repository for Plesk Git (`<DIST_REPO>`): a separate private repo is proposed; tell me if you prefer a branch of this repo.
+- The `v6/contact` and `v6/news` workflow JSON is not in the repo. The owner will export both (after checking they carry no secrets: the repo is public) for a separate PR under `workflows/02-leads-contact/v6` and `workflows/03-rag-news-intelligence/v6`.
 - Pending content: `TODO.md`.

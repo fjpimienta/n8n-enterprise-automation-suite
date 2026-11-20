@@ -1,6 +1,6 @@
 # Beta runbook: https://beta.hosting3m.com
 
-You run every step; Claude edits no server, no n8n, no Cloudflare. Placeholders: `<VPS_IPV4>`, `<DIST_REPO>`.
+You run every step; Claude edits no server, no n8n, no Cloudflare. Placeholders: `<VPS_IPV4>`, `<SSH_USER>`, `<PLESK_SYS_USER>`, `<DB_CONTAINER>`, `<DB_NAME>`, `<DB_USER>`.
 Nothing here deletes anything on production. The beta stores **real** contact requests (see "Test data").
 
 ## 0. Preconditions
@@ -44,51 +44,67 @@ Single-level name: the free Universal SSL certificate covers `*.hosting3m.com`, 
 Two workflows: **`v6/contact`** (path `v6/contact`) and **`v6/news`** (path `v6/news`).
 Current symptom (verified from a browser on a different origin): the preflight answers
 `Access-Control-Allow-Origin: https://hosting3m.com`, so any other origin is blocked.
-
-> The v6 exports are **not in this repo** (only v4 is: `workflows/02-leads-contact/v4`, `workflows/03-rag-news-intelligence/v4`).
-> The edits below follow the v4 pattern, where CORS lives in **three places**. Open each v6 workflow and look for all three;
-> the node names in v6 may differ from v4 (`Webhook Contact`, `Webhook Noticias`, `Respond to Webhook`).
+The edit is the same in both workflows and only touches their **Webhook node**.
 
 ### 3.0 Backup and fingerprint (per CLAUDE.md workflow runbook, n8n 2.x)
 1. Open the workflow in production > **⋯ > Download**; store the file outside the repo and `chmod 600 <file>`.
 2. After the change, download again and compare both files by node name, `parameters` and `connections`
-   (the snippet in `CLAUDE.md`, "Comparación con `main`"). Only the CORS fields below may differ.
+   (the snippet in `CLAUDE.md`, "Comparación con `main`"). The **only** difference must be in the Webhook node `parameters`
+   (the Allowed Origins value and one removed response-header entry).
 3. Do **not** use `n8n import:workflow` (it deactivates the workflow). Edit in the editor, **Save**, then **Publish**.
 
 ### 3.1 Webhook node > Options > **Allowed Origins (CORS)**
-Current value: `https://hosting3m.com`
-New value (comma separated, no spaces, no wildcard):
+Set it to exactly:
 ```
-https://hosting3m.com,https://beta.hosting3m.com
+https://hosting3m.com, https://beta.hosting3m.com
 ```
+No wildcard. `https://hosting3m.com` stays.
 
-### 3.2 Webhook node > Options > **Response Headers**
-Typical v4 entries: `Access-Control-Allow-Methods`, `Access-Control-Allow-Headers`, `Access-Control-Allow-Credentials`, `Access-Control-Allow-Origin`.
-A static `Access-Control-Allow-Origin` cannot hold two origins. **Delete only that one entry** (`Access-Control-Allow-Origin: https://hosting3m.com`) on this node; keep the other three. n8n answers the preflight from the Allowed Origins list in 3.1.
+### 3.2 Webhook node > Options > **Response Headers**: delete the fixed `Access-Control-Allow-Origin`
+Delete **only** the entry `Access-Control-Allow-Origin: https://hosting3m.com`. It collides with the dynamic header n8n derives
+from the Allowed Origins list (3.1), and a fixed value cannot hold two origins. Keep every other entry
+(`Access-Control-Allow-Methods`, `Access-Control-Allow-Headers`, `Access-Control-Allow-Credentials`, ...) untouched.
 
-### 3.3 Every **Respond to Webhook** node that sets `Access-Control-Allow-Origin` (Options > Response Headers)
-This includes the success response and, in v4 news, one with `*`. Replace the static value with an allow-list expression (a fixed list, never a reflected arbitrary origin). Replace `<Webhook node name>` with the real name of the Webhook node of that workflow:
-```
-={{ ['https://hosting3m.com','https://beta.hosting3m.com'].includes($('<Webhook node name>').first().json.headers.origin) ? $('<Webhook node name>').first().json.headers.origin : 'https://hosting3m.com' }}
-```
-Also add the header `Vary` = `Origin` on those nodes, so Cloudflare never caches one origin's answer for another.
-If a Respond node has `Access-Control-Allow-Origin: *` today, replace it with the same expression (this also tightens news to the two origins).
-The error branches (400, 401, 500) must send the same header, otherwise the browser hides the error from the form and shows a generic failure.
+### 3.3 Respond to Webhook nodes
+`v6/news` has no response headers on its Respond node: nothing to change there.
+For `v6/contact`, no edit is planned either. If you find a fixed `Access-Control-Allow-Origin` on any of its Respond nodes,
+do **not** edit it: tell me the node name and its value first.
 
 ### 3.4 Turnstile hostname check inside the contact workflow
-Open the node that calls `https://challenges.cloudflare.com/turnstile/v0/siteverify`. If it compares the response `hostname` with `hosting3m.com` (an IF/Code node after the HTTP request), add `beta.hosting3m.com` to the accepted values. If it does not check `hostname`, change nothing.
+Open the node that calls `https://challenges.cloudflare.com/turnstile/v0/siteverify`. If it compares the response `hostname`
+with `hosting3m.com` (an IF/Code node after the HTTP request), add `beta.hosting3m.com` to the accepted values.
+If it does not check `hostname`, change nothing.
 
-### 3.5 Verify the CORS change (no data is sent; only a preflight)
+### 3.5 Verify the CORS change
+**Preflight (no data sent)**, for both workflows:
 ```sh
-for o in https://beta.hosting3m.com https://hosting3m.com https://evil.example; do
-  echo "== $o"
-  curl -si -X OPTIONS https://n8n.hosting3m.com/webhook/v6/contact \
-    -H "Origin: $o" -H 'Access-Control-Request-Method: POST' -H 'Access-Control-Request-Headers: content-type' \
-    | grep -i '^access-control-allow-origin'
+for path in v6/contact v6/news; do
+  for o in https://beta.hosting3m.com https://hosting3m.com https://evil.example; do
+    echo "== $path  Origin: $o"
+    curl -si -X OPTIONS "https://n8n.hosting3m.com/webhook/$path" \
+      -H "Origin: $o" -H 'Access-Control-Request-Method: POST' -H 'Access-Control-Request-Headers: content-type' \
+      | grep -i '^access-control-allow-origin'
+  done
 done
 ```
-Expected: the first two echo their own origin; `https://evil.example` returns **no** `Access-Control-Allow-Origin` (or only `https://hosting3m.com`, never `evil.example` or `*`). Repeat with `/webhook/v6/news`.
-The real POST response must carry the header too: this is checked in the browser in section 8 (Network tab > response headers).
+Expected: `beta` and `hosting3m.com` each echo **their own** origin (exactly one `Access-Control-Allow-Origin` line per answer);
+`https://evil.example` gets no `Access-Control-Allow-Origin` line (never `evil.example`, never `*`).
+Two lines or a fixed `https://hosting3m.com` for the beta origin means the entry of 3.2 is still there.
+
+**Real POST**, checking the response headers:
+```sh
+# news: read-only public endpoint, safe to call with an empty body
+curl -si -X POST https://n8n.hosting3m.com/webhook/v6/news \
+  -H 'Origin: https://beta.hosting3m.com' -H 'Content-Type: application/json' -d '{}' \
+  | grep -iE '^(HTTP/|access-control-allow-origin)'
+# contact: an EMPTY body must be rejected before anything is stored or emailed
+curl -si -X POST https://n8n.hosting3m.com/webhook/v6/contact \
+  -H 'Origin: https://beta.hosting3m.com' -H 'Content-Type: application/json' -d '{}' \
+  | grep -iE '^(HTTP/|access-control-allow-origin)'
+```
+Expected: news `200` with `Access-Control-Allow-Origin: https://beta.hosting3m.com`; contact `400` (or `401`) with the same header
+(the browser needs it even on error answers). A `200` from contact with `{}` is **not** expected: stop and tell me, and check
+`contact_requests` for a new row before continuing.
 
 ## 4. (c) Turnstile: add the hostname to the existing widget
 1. Cloudflare dashboard > **Turnstile** > open the widget whose sitekey is `0x4AAAAAACaIUH9TvGOgcFq7`.
@@ -96,20 +112,34 @@ The real POST response must carry the header too: this is checked in the browser
 3. Save. The sitekey and the secret key do not change: **no new secret** and nothing to update in n8n.
 Verification: the widget renders on the beta form (section 8). Error `110200` ("domain not allowed") means the hostname is missing.
 
-## 5. Deploy to beta with Plesk Git (as agreed: Plesk Git only for beta)
-Plesk Git deploys a repository into the docroot, so the beta needs a repository that contains only the built files.
-Use a separate private repository `<DIST_REPO>` (for example `hosting3m-site-beta-dist`); it holds no secrets (the Turnstile sitekey is public).
-```sh
-git clone <DIST_REPO> /tmp/beta-dist && cd /tmp/beta-dist
-rsync -a --exclude .git /ABS/PATH/hosting3m-workspace/dist/hosting3m-site/browser/ ./    # no --delete: see note
-git add -A && git commit -m "beta build $(date +%F-%H%M)" && git push origin main
-```
-Note: with no `--delete`, files removed between builds stay in the dist repo. Hashed filenames change every release, so old
-chunks accumulate harmlessly; clean the dist repo in a separate, deliberate commit when needed.
+## 5. Deploy to beta with rsync (same procedure as production; no Plesk Git, no `--delete`)
+Run from the workstation that built the artifact. The beta docroot is `/var/www/vhosts/hosting3m.com/beta.hosting3m.com`.
 
-Plesk: `beta.hosting3m.com` > **Git** > **Add Repository** > *Remote Git hosting* > `<DIST_REPO>` URL, branch `main`,
-deployment mode **Manual**, deploy into the subdomain document root (keep it empty on first use) > **Deploy now**.
-(Alternative, same procedure as production: `rsync -avn` dry-run into the beta docroot, review, then without `-n`, never with `--delete`.)
+1. **Backup on the VPS** (also when the docroot is still empty, to keep the habit and the file name):
+   ```sh
+   ssh <SSH_USER>@<VPS_IPV4> 'tar -czf /root/backup-beta-$(date +%F-%H%M).tar.gz -C /var/www/vhosts/hosting3m.com beta.hosting3m.com && ls -lh /root/backup-beta-*.tar.gz | tail -1'
+   ```
+2. **Dry-run** (`-n` writes nothing; there is **no** `--delete` anywhere):
+   ```sh
+   rsync -avn --no-owner --no-group \
+     dist/hosting3m-site/browser/ <SSH_USER>@<VPS_IPV4>:/var/www/vhosts/hosting3m.com/beta.hosting3m.com/
+   ```
+   Review the list: only site files (`index.html`, `404.html`, route folders, hashed `chunk-*.js`, `main-*.js`, `styles-*.css`, `sitemap.xml`, `robots.txt`, `favicon.ico`).
+3. **Real run**, only after you confirm the dry-run:
+   ```sh
+   rsync -av --no-owner --no-group \
+     dist/hosting3m-site/browser/ <SSH_USER>@<VPS_IPV4>:/var/www/vhosts/hosting3m.com/beta.hosting3m.com/
+   ```
+4. **Ownership:** compare with `ls -ln` of the docroot. If new files are not owned by the subdomain's system user, fix only those paths:
+   `ssh <SSH_USER>@<VPS_IPV4> 'chown -R <PLESK_SYS_USER>:psacln /var/www/vhosts/hosting3m.com/beta.hosting3m.com'` (no recursive delete, only ownership).
+5. **Verify the copy** against the build checksums of section 1:
+   ```sh
+   scp /tmp/beta-sha.txt <SSH_USER>@<VPS_IPV4>:/tmp/ && ssh <SSH_USER>@<VPS_IPV4> 'cd /var/www/vhosts/hosting3m.com/beta.hosting3m.com && sha256sum -c /tmp/beta-sha.txt | grep -v ": OK$" ; echo "check finished"'
+   ```
+   Expected: no line other than `check finished`.
+
+Note: without `--delete`, hashed files from older builds stay on the server (harmless: `index.html` no longer references them).
+Removing them is a separate, deliberate step with its own backup; it is not part of this runbook.
 
 ## 6. nginx on the beta domain
 Paste in the beta domain's *Additional nginx directives*, in this order:
@@ -118,10 +148,36 @@ Paste in the beta domain's *Additional nginx directives*, in this order:
 3. `docs/nginx-beta-only.conf` (`X-Robots-Tag: noindex`).
 Plesk validates the syntax on save; if it reports a duplicate `location`, remove that block and tell me which one.
 
-## 7. Test data (important)
+## 7. Test data and cleanup (important)
 `v6/contact` stores the request in `contact_requests` (company 1) and emails `contacto@hosting3m.com`: beta submissions are **real records and real emails**.
-Use an obviously fake identity, for example names `PRUEBA BETA`, message `PRUEBA BETA <date> - ignore`, and tell whoever reads `contacto@` to ignore them.
-Cleanup of those rows is yours (database access is outside Claude's scope; take a backup first, per the suite rules).
+Every test message **must start with** `PRUEBA BETA` (for example `PRUEBA BETA 2026-11-21 - ignore`), use an obviously fake identity
+(names `PRUEBA BETA`), and whoever reads `contacto@` must be told to ignore them.
+
+### Cleanup: mark, never delete
+Test rows are **marked**, not deleted. Run it only after the e2e tests are finished. Database access is yours; Claude does not run it.
+1. **Check the column first** (the statement assumes a `status` column that accepts `'test'`):
+   ```sh
+   docker exec -i <DB_CONTAINER> psql -U <DB_USER> -d <DB_NAME> -c '\d contact_requests'
+   ```
+   If `status` has a CHECK constraint or enum that rejects `'test'`, or if the table has an `id_company` column, stop and tell me:
+   the statement below must then be adjusted (tenant scoping is fail-closed; add `AND id_company = 1` when the column exists).
+2. **Backup of the table** (custom format, restricted permissions):
+   ```sh
+   docker exec <DB_CONTAINER> pg_dump -U <DB_USER> -d <DB_NAME> -t contact_requests -Fc > /root/backup-contact_requests-$(date +%F-%H%M).dump
+   chmod 600 /root/backup-contact_requests-*.dump
+   ```
+3. **Dry-run:** see exactly which rows would change.
+   ```sql
+   SELECT * FROM contact_requests WHERE message LIKE 'PRUEBA BETA%';
+   ```
+4. **Update inside a transaction**, check the row count, then commit:
+   ```sql
+   BEGIN;
+   UPDATE contact_requests SET status = 'test' WHERE message LIKE 'PRUEBA BETA%';
+   -- the reported count (UPDATE n) must equal the number of rows from step 3
+   COMMIT;   -- or ROLLBACK; if the count is not the expected one
+   ```
+5. **Rollback** (if a wrong row was marked): restore the table from the dump of step 2 (`pg_restore` into a scratch table first and copy the old `status` values back). There is no `DELETE` in this procedure.
 
 ## 8. Smoke tests on beta
 Headers and redirects:
@@ -146,5 +202,5 @@ Then switch the CSP line from Report-Only to enforcing and repeat steps 1 to 3.
 ## 9. Rollback (beta only; production is untouched)
 - **n8n:** open each workflow, **⋯ > Import from file** the backup of 3.0, **Save**, **Publish**; re-download and compare with the backup.
 - **Turnstile:** remove `beta.hosting3m.com` from Hostname Management.
-- **Site:** Plesk Git > Remove repository, or put back an empty docroot; remove the nginx directives; delete the `beta` DNS record in Cloudflare; remove the subdomain in Plesk. No `rm -rf` is needed anywhere.
+- **Site:** restore the backup of section 5 into a scratch folder and copy it back without deleting (`mkdir /root/restore-beta && tar -xzf /root/backup-beta-<stamp>.tar.gz -C /root/restore-beta && rsync -av /root/restore-beta/beta.hosting3m.com/ /var/www/vhosts/hosting3m.com/beta.hosting3m.com/`); to close the beta entirely, remove the nginx directives; delete the `beta` DNS record in Cloudflare; remove the subdomain in Plesk. No `rm -rf` is needed anywhere.
 - Allowing the beta origin is purely additive: if you only want to close it, remove `https://beta.hosting3m.com` from 3.1 and restore the static header of 3.2/3.3.
