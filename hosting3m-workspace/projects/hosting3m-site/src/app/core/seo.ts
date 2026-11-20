@@ -26,7 +26,10 @@ export function buildJsonLd(): Record<string, unknown> {
           addressLocality: 'Mérida',
           addressRegion: 'Yucatán',
           addressCountry: 'MX',
+          streetAddress: 'TODO_STREET_ADDRESS',
         },
+        openingHours: 'TODO_OPENING_HOURS',
+        image: 'TODO_OG_IMAGE',
         areaServed: { '@type': 'Country', name: 'México' },
         sameAs: [SITE.githubSuiteUrl],
       },
@@ -71,6 +74,7 @@ export class SeoService {
     this.meta.updateTag({ property: 'og:type', content: 'website' });
     this.meta.updateTag({ property: 'og:locale', content: 'es_MX' });
     this.meta.updateTag({ property: 'og:site_name', content: SITE.name });
+    this.meta.updateTag({ property: 'og:image', content: 'TODO_OG_IMAGE' });
     this.meta.updateTag({ name: 'twitter:card', content: 'summary' });
     this.setJsonLd(withJsonLd);
   }

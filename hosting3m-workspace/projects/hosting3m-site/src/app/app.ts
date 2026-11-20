@@ -1,5 +1,7 @@
+import { DOCUMENT } from '@angular/common';
 import { Component, inject } from '@angular/core';
-import { RouterOutlet } from '@angular/router';
+import { NavigationEnd, Router, RouterOutlet } from '@angular/router';
+import { filter, skip } from 'rxjs';
 import { Header } from './layout/header';
 import { Footer } from './layout/footer';
 import { WhatsappButton } from './layout/whatsapp-button';
@@ -14,6 +16,16 @@ import { SeoService } from './core/seo';
 })
 export class App {
   constructor() {
+    const document = inject(DOCUMENT);
+    inject(Router)
+      .events.pipe(
+        filter((e): e is NavigationEnd => e instanceof NavigationEnd),
+        skip(1), // not on the first load
+      )
+      .subscribe((e) => {
+        // Move keyboard/screen-reader focus to the new page content, except for in-page anchors.
+        if (!e.urlAfterRedirects.includes('#')) document.getElementById('main')?.focus({ preventScroll: true });
+      });
     inject(SeoService).init();
     inject(ConsentService).init();
   }
