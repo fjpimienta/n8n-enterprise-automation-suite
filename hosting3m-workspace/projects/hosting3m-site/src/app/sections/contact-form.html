@@ -1,0 +1,86 @@
+<form [formGroup]="form" (ngSubmit)="submit()" novalidate class="space-y-5" aria-describedby="form-status">
+  <div class="grid gap-5 sm:grid-cols-3">
+    <div>
+      <label for="cf-names" class="block font-medium">Nombre(s) <span aria-hidden="true">*</span></label>
+      <input id="cf-names" formControlName="names" type="text" autocomplete="given-name" [maxlength]="limits.names"
+        [attr.aria-invalid]="showError('names')" [attr.aria-describedby]="showError('names') ? 'err-names' : null" aria-required="true" class="field" />
+      @if (showError('names')) { <p class="field-error" id="err-names" role="alert">Escribe tu nombre.</p> }
+    </div>
+    <div>
+      <label for="cf-lastname" class="block font-medium">Apellido paterno <span aria-hidden="true">*</span></label>
+      <input id="cf-lastname" formControlName="lastname" type="text" autocomplete="family-name" [maxlength]="limits.lastname"
+        [attr.aria-invalid]="showError('lastname')" [attr.aria-describedby]="showError('lastname') ? 'err-lastname' : null" aria-required="true" class="field" />
+      @if (showError('lastname')) { <p class="field-error" id="err-lastname" role="alert">Escribe tu apellido paterno.</p> }
+    </div>
+    <div>
+      <label for="cf-middlename" class="block font-medium">Apellido materno</label>
+      <input id="cf-middlename" formControlName="middlename" type="text" [maxlength]="limits.middlename" class="field" />
+    </div>
+  </div>
+
+  <div class="grid gap-5 sm:grid-cols-2">
+    <div>
+      <label for="cf-email" class="block font-medium">Correo electrónico <span aria-hidden="true">*</span></label>
+      <input id="cf-email" formControlName="email" type="email" autocomplete="email" [maxlength]="limits.email"
+        [attr.aria-invalid]="showError('email')" [attr.aria-describedby]="showError('email') ? 'err-email' : null" aria-required="true" class="field" />
+      @if (showError('email')) { <p class="field-error" id="err-email" role="alert">Escribe un correo válido.</p> }
+    </div>
+    <div>
+      <label for="cf-phone" class="block font-medium">Teléfono</label>
+      <input id="cf-phone" formControlName="phone" type="tel" autocomplete="tel" [maxlength]="limits.phone"
+        [attr.aria-invalid]="showError('phone')" [attr.aria-describedby]="showError('phone') ? 'err-phone' : null" class="field" />
+      @if (showError('phone')) { <p class="field-error" id="err-phone" role="alert">Usa solo números, espacios, + y guiones (7 a 30 caracteres).</p> }
+    </div>
+  </div>
+
+  <div>
+    <label for="cf-service" class="block font-medium">Servicio de interés</label>
+    <select id="cf-service" formControlName="service" class="field">
+      <option value="">Selecciona una opción</option>
+      @for (s of services; track s) { <option [value]="s">{{ s }}</option> }
+    </select>
+  </div>
+
+  <div>
+    <label for="cf-message" class="block font-medium">Mensaje <span aria-hidden="true">*</span></label>
+    <textarea id="cf-message" formControlName="message" rows="5" [maxlength]="limits.message"
+      [attr.aria-invalid]="showError('message')" [attr.aria-describedby]="showError('message') ? 'err-message' : null" aria-required="true" class="field"></textarea>
+    <p class="text-sm text-muted">{{ messageLength() }} / {{ limits.message }}</p>
+    @if (showError('message')) { <p class="field-error" id="err-message" role="alert">Cuéntanos qué necesitas.</p> }
+  </div>
+
+  <!-- Honeypot: not focusable, hidden from assistive tech; real visitors never fill it. -->
+  <div class="absolute -left-[9999px] h-0 w-0 overflow-hidden" aria-hidden="true">
+    <label for="cf-empresa">Empresa</label>
+    <input id="cf-empresa" formControlName="empresa" type="text" tabindex="-1" autocomplete="off" />
+  </div>
+
+  <div>
+    <label class="flex items-start gap-3">
+      <input type="checkbox" formControlName="privacy" class="mt-1 size-5" aria-required="true" [attr.aria-invalid]="showError('privacy')" [attr.aria-describedby]="showError('privacy') ? 'err-privacy' : null" />
+      <span>He leído y acepto la <a href="/politica-de-privacidad" class="underline" target="_blank" rel="noopener">política de privacidad</a>.</span>
+    </label>
+    @if (showError('privacy')) { <p class="field-error" id="err-privacy" role="alert">Debes aceptar la política de privacidad.</p> }
+  </div>
+
+  <div #widgetHost class="min-h-[65px]"></div>
+
+  <button type="submit" class="btn-primary w-full sm:w-auto" [disabled]="status() === 'isSubmitting'">
+    {{ status() === 'isSubmitting' ? 'Enviando…' : 'Enviar mensaje' }}
+  </button>
+
+  <div #statusEl id="form-status" aria-live="polite" role="status" tabindex="-1" class="outline-none">
+    @if (status() === 'success') {
+      <p class="rounded-lg bg-green-50 p-4 text-green-900">{{ resultMessage() }}</p>
+    }
+    @if (status() === 'error') {
+      <p class="rounded-lg bg-red-50 p-4 text-red-900">
+        @switch (errorKind()) {
+          @case ('validation') { Revisa los datos del formulario e inténtalo de nuevo. }
+          @case ('turnstile') { No pudimos verificar que eres una persona. Espera la verificación e inténtalo de nuevo. }
+          @default { No pudimos enviar tu mensaje. Inténtalo de nuevo o escríbenos a {{ site.emails.general }}. }
+        }
+      </p>
+    }
+  </div>
+</form>

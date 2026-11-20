@@ -1,0 +1,128 @@
+<section class="bg-brand-50 py-16 sm:py-24" aria-labelledby="hero-title">
+  <div class="container-page">
+    <h1 id="hero-title" class="max-w-3xl text-4xl font-bold tracking-tight text-brand-900 sm:text-5xl">
+      Soluciones en la nube para tu negocio
+    </h1>
+    <p class="mt-4 max-w-2xl text-lg text-muted">TODO_HERO_PROMISE</p>
+    <div class="mt-8 flex flex-wrap gap-3">
+      <a class="btn-primary" [href]="quoteHref" target="_blank" rel="noopener noreferrer">Cotiza por WhatsApp</a>
+      <a class="btn-secondary" routerLink="/" fragment="paquetes">Ver paquetes</a>
+    </div>
+  </div>
+</section>
+
+<section id="servicios" class="container-page py-16" aria-labelledby="servicios-title">
+  <h2 id="servicios-title" class="text-3xl font-bold text-brand-900">Servicios</h2>
+  <ul class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    @for (s of services; track s.title) {
+      <li class="rounded-xl border border-slate-200 p-6">
+        <h3 class="text-lg font-semibold">{{ s.title }}</h3>
+        <p class="mt-2 text-muted">{{ s.text }}</p>
+      </li>
+    }
+  </ul>
+</section>
+
+<section id="paquetes" class="bg-slate-50 py-16" aria-labelledby="paquetes-title">
+  <div class="container-page">
+    <h2 id="paquetes-title" class="text-3xl font-bold text-brand-900">Paquetes</h2>
+    <ul class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      @for (plan of plans; track plan.id) {
+        <li class="flex flex-col rounded-xl border border-slate-200 bg-white p-6">
+          <h3 class="text-lg font-semibold">{{ plan.name }}</h3>
+          <p class="mt-2 text-muted">{{ plan.summary }}</p>
+          <p class="mt-4 text-2xl font-bold text-brand-700">{{ formatPrice(plan) ?? plan.price }}</p>
+          <p class="text-sm text-muted">{{ plan.billing }}</p>
+          <ul class="mt-4 list-disc space-y-1 pl-5">
+            @for (f of plan.features; track f) { <li>{{ f }}</li> }
+          </ul>
+          <a class="btn-secondary mt-auto" routerLink="/" [queryParams]="{ servicio: plan.service }" fragment="contacto">Cotizar {{ plan.name }}</a>
+        </li>
+      }
+    </ul>
+  </div>
+</section>
+
+<section id="diferenciales" class="container-page py-16" aria-labelledby="dif-title">
+  <h2 id="dif-title" class="text-3xl font-bold text-brand-900">Por qué Hosting3M</h2>
+  <ul class="mt-8 grid gap-6 sm:grid-cols-2">
+    @for (d of differentiators; track d.title) {
+      <li class="rounded-xl bg-brand-50 p-6">
+        <h3 class="text-lg font-semibold text-brand-900">{{ d.title }}</h3>
+        <p class="mt-2 text-muted">{{ d.text }}</p>
+      </li>
+    }
+  </ul>
+</section>
+
+<section id="proceso" class="bg-brand-900 py-16 text-white" aria-labelledby="proceso-title">
+  <div class="container-page">
+    <h2 id="proceso-title" class="text-3xl font-bold">Cómo trabajamos</h2>
+    <ol class="mt-8 grid gap-6 md:grid-cols-3">
+      @for (step of process; track step.title; let i = $index) {
+        <li class="rounded-xl bg-white/10 p-6">
+          <span class="text-sm font-semibold text-brand-100">Paso {{ i + 1 }}</span>
+          <h3 class="mt-1 text-lg font-semibold">{{ step.title }}</h3>
+          <p class="mt-2 text-brand-100">{{ step.text }}</p>
+        </li>
+      }
+    </ol>
+  </div>
+</section>
+
+@if (clients.length > 0) {
+  <section id="confianza" class="container-page py-16" aria-labelledby="confianza-title">
+    <h2 id="confianza-title" class="text-3xl font-bold text-brand-900">Empresas que confían en nosotros</h2>
+    <ul class="mt-8 flex flex-wrap gap-6">
+      @for (c of clients; track c.name) { <li class="font-semibold">{{ c.name }}</li> }
+    </ul>
+  </section>
+}
+
+<section id="suite" class="container-page py-16" aria-labelledby="suite-title">
+  <h2 id="suite-title" class="text-3xl font-bold text-brand-900">Suite de automatización de código abierto</h2>
+  <p class="mt-4 max-w-3xl text-lg text-muted">
+    Publicamos en GitHub, con licencia MIT, la suite que usamos para automatizar procesos con n8n. Puedes revisarla,
+    usarla en tu propia infraestructura o pedirnos que la implementemos y la operemos por ti.
+  </p>
+  <ul class="mt-6 list-disc space-y-1 pl-6">
+    @for (m of suiteModules; track m) { <li>{{ m }}</li> }
+  </ul>
+  <a class="btn-secondary mt-8" [href]="site.githubSuiteUrl" target="_blank" rel="noopener noreferrer">Ver la suite en GitHub</a>
+</section>
+
+<section id="preguntas" class="bg-slate-50 py-16" aria-labelledby="faq-title">
+  <div class="container-page max-w-3xl">
+    <h2 id="faq-title" class="text-3xl font-bold text-brand-900">Preguntas frecuentes</h2>
+    <div class="mt-8 space-y-3">
+      @for (item of faq; track item.q) {
+        <details class="rounded-lg border border-slate-200 bg-white p-4">
+          <summary class="cursor-pointer font-semibold">{{ item.q }}</summary>
+          <p class="mt-3 text-muted">{{ item.a }}</p>
+        </details>
+      }
+    </div>
+  </div>
+</section>
+
+<section id="noticias" class="container-page py-16" aria-labelledby="noticias-title">
+  <h2 id="noticias-title" class="text-3xl font-bold text-brand-900">Noticias</h2>
+  <div class="mt-8"><app-news-section /></div>
+</section>
+
+<section id="contacto" class="bg-brand-50 py-16" aria-labelledby="contacto-title">
+  <div class="container-page grid gap-10 lg:grid-cols-3">
+    <div>
+      <h2 id="contacto-title" class="text-3xl font-bold text-brand-900">Contacto</h2>
+      <p class="mt-4 text-muted">Cuéntanos qué necesitas y te respondemos pronto.</p>
+      <address class="mt-6 space-y-2 not-italic">
+        <p>{{ site.city }}</p>
+        <p><a class="underline" [href]="'tel:' + site.phoneTel">{{ site.phoneDisplay }}</a></p>
+        <p><a class="underline" [href]="'mailto:' + site.emails.general">{{ site.emails.general }}</a></p>
+        <p><a class="underline" [href]="'mailto:' + site.emails.projects">{{ site.emails.projects }}</a></p>
+      </address>
+      <a class="btn-primary mt-6" [href]="quoteHref" target="_blank" rel="noopener noreferrer">Escríbenos por WhatsApp</a>
+    </div>
+    <div class="lg:col-span-2"><app-contact-form /></div>
+  </div>
+</section>

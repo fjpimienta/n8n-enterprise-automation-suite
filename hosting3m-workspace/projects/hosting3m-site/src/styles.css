@@ -1,0 +1,66 @@
+@import "tailwindcss" source(none);
+@source "./";
+
+/*
+ * Design tokens (Tailwind v4, CSS-first).
+ * TODO_BRAND: provisional palette until the owner approves logo and brand colors.
+ * White text on brand-600/700/900 and on whatsapp passes WCAG AA (>= 4.5:1).
+ */
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --color-brand-50: #eef6fb;
+  --color-brand-100: #d6e9f5;
+  --color-brand-500: #1f7aad;
+  --color-brand-600: #17628b;
+  --color-brand-700: #124d6e;
+  --color-brand-900: #0a2b3d;
+  --color-ink: #0f172a;
+  --color-muted: #475569;
+  --color-whatsapp: #0f7a40;
+  --color-whatsapp-dark: #0b6333;
+
+  --container-page: 72rem;
+}
+
+@layer base {
+  html { scroll-behavior: smooth; scroll-padding-top: 5rem; }
+  body { @apply bg-white font-sans text-ink antialiased; }
+  :focus-visible { outline: 3px solid var(--color-brand-500); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, ::before, ::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+}
+
+/* Tailwind v4: shared component classes are custom utilities so they can be composed with @apply and variants. */
+@utility container-page {
+  @apply mx-auto w-full max-w-page px-4 sm:px-6 lg:px-8;
+}
+@utility btn {
+  @apply inline-flex min-h-11 items-center justify-center rounded-lg px-5 py-2.5 text-base font-semibold transition-colors;
+}
+@utility btn-primary {
+  @apply btn bg-whatsapp text-white hover:bg-whatsapp-dark;
+}
+@utility btn-secondary {
+  @apply btn border border-brand-600 bg-white text-brand-700 hover:bg-brand-50;
+}
+
+@utility field {
+  @apply mt-1 block w-full rounded-lg border border-slate-400 bg-white px-3 py-2 text-base text-ink aria-[invalid=true]:border-red-700;
+}
+@utility field-error {
+  @apply mt-1 text-sm font-medium text-red-800;
+}
+
+@utility legal-prose {
+  @apply max-w-3xl text-base leading-relaxed text-ink;
+  & h1 { @apply text-3xl font-bold text-brand-900; }
+  & h2 { @apply mt-8 text-xl font-semibold text-brand-900; }
+  & p { @apply mt-3; }
+  & ul { @apply mt-3 list-disc space-y-1 pl-6; }
+  & a { @apply text-brand-700 underline; }
+  & .updated { @apply mt-2 text-sm text-muted; }
+}

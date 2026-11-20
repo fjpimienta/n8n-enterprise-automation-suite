@@ -1,0 +1,27 @@
+<footer class="mt-16 bg-brand-900 text-brand-100">
+  <div class="container-page grid gap-8 py-12 md:grid-cols-3">
+    <section aria-labelledby="footer-contact">
+      <h2 id="footer-contact" class="mb-3 text-lg font-semibold text-white">{{ site.name }}</h2>
+      <address class="space-y-1 not-italic">
+        <p>{{ site.city }}</p>
+        <p><a class="underline" [href]="'tel:' + site.phoneTel">{{ site.phoneDisplay }}</a></p>
+        <p><a class="underline" [href]="'mailto:' + site.emails.general">{{ site.emails.general }}</a></p>
+        <p><a class="underline" [href]="'mailto:' + site.emails.projects">{{ site.emails.projects }}</a></p>
+      </address>
+    </section>
+    <nav aria-labelledby="footer-legal">
+      <h2 id="footer-legal" class="mb-3 text-lg font-semibold text-white">Legal</h2>
+      <ul class="space-y-1">
+        <li><a routerLink="/politica-de-privacidad" class="underline">Política de privacidad</a></li>
+        <li><a routerLink="/condiciones-de-servicio" class="underline">Condiciones de servicio</a></li>
+        <li><a routerLink="/eliminardatosusuarios" class="underline">Eliminación de datos de usuario</a></li>
+        <li><button type="button" class="underline" (click)="consent.reopen()">Preferencias de cookies</button></li>
+      </ul>
+    </nav>
+    <section aria-labelledby="footer-open">
+      <h2 id="footer-open" class="mb-3 text-lg font-semibold text-white">Código abierto</h2>
+      <p><a class="underline" [href]="site.githubSuiteUrl" target="_blank" rel="noopener noreferrer">n8n Enterprise Automation Suite (MIT)</a></p>
+    </section>
+  </div>
+  <p class="border-t border-white/20 py-4 text-center text-sm">© {{ year }} {{ site.name }}. Todos los derechos reservados.</p>
+</footer>

@@ -1,0 +1,23 @@
+#!/usr/bin/env node
+// Official build for hosting3m-site: ng build + 404.html + TODO guard.
+// Usage (from hosting3m-workspace/): node projects/hosting3m-site/scripts/build.mjs [--configuration production|beta|development]
+// production -> a pending TODO_ token FAILS the build. beta/development -> warning only.
+import { spawnSync } from 'node:child_process';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { report } from './check-todo.mjs';
+
+const here = dirname(fileURLToPath(import.meta.url));
+const workspace = resolve(here, '../../..');
+const idx = process.argv.indexOf('--configuration');
+const configuration = idx > -1 ? process.argv[idx + 1] : 'production';
+if (!['production', 'beta', 'development'].includes(configuration)) {
+  console.error(`Unknown configuration "${configuration}". Use production, beta or development.`);
+  process.exit(2);
+}
+
+const run = (cmd, args) => spawnSync(cmd, args, { cwd: workspace, stdio: 'inherit' });
+if (run('npx', ['ng', 'build', 'hosting3m-site', '--configuration', configuration]).status !== 0) process.exit(1);
+const out = join(workspace, 'dist/hosting3m-site/browser');
+if (run('node', [join(here, 'postbuild.mjs'), out]).status !== 0) process.exit(1);
+process.exit(report(out, configuration === 'production' ? 'fail' : 'warn'));
