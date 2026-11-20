@@ -28,6 +28,11 @@ export class PlansSection {
   readonly site = SITE;
   readonly cards = QUOTE_CARDS;
   readonly groups = computed(() => groupByFamily(this.catalog.plans()));
+  /** Per domain group: show the renewal column only when at least one row has a renewal price. */
+  hasRenewal(plans: readonly CatalogPlan[]): boolean {
+    return plans.some((p) => p.renewalPrice !== null);
+  }
+
   readonly isEmpty = computed(() => this.catalog.plans().length === 0);
   readonly genericQuoteHref = whatsappLink('Hola, quiero una cotización.');
   /** Plans (by key) for which the "Administrado por Hosting3M" price is selected. */

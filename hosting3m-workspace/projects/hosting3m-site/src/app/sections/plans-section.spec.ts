@@ -22,7 +22,7 @@ function render(plans: unknown[]) {
 describe('PlansSection', () => {
   it('renders price, suffix, badge, features and the checked date', () => {
     const { el } = render([api()]);
-    expect(el.querySelector('[data-testid="price"]')?.textContent).toContain('1,000.00');
+    expect(el.querySelector('[data-testid="price"]')?.textContent).toContain('$1,000');
     expect(el.querySelector('[data-testid="suffix"]')?.textContent?.trim()).toBe('MXN / año + IVA');
     expect(el.textContent).toContain('Popular');
     expect(el.querySelectorAll('li li, ul ul li').length).toBeGreaterThanOrEqual(2);
@@ -37,7 +37,7 @@ describe('PlansSection', () => {
     expect(buttons[1].textContent).toContain('Administrado por Hosting3M');
     buttons[1].click();
     fixture.detectChanges();
-    expect(el.querySelector('[data-testid="price"]')?.textContent).toContain('2,500.00');
+    expect(el.querySelector('[data-testid="price"]')?.textContent).toContain('$2,500');
     expect(buttons[1].getAttribute('aria-pressed')).toBe('true');
   });
 
@@ -53,7 +53,26 @@ describe('PlansSection', () => {
     const { el } = render([api({ plan_key: 'v', family: 'vps', managed_amount: null }), api({ plan_key: 'd', family: 'domain', name: '.com', managed_amount: null, renewal_amount: 300 })]);
     expect(el.querySelector('[data-testid="setup"]')?.textContent).toContain('Instalación inicial: cotiza');
     expect(el.querySelector('table')).not.toBeNull();
-    expect(el.querySelector('table')?.textContent).toContain('300.00');
+    expect(el.querySelector('table')?.textContent).toContain('$300');
+  });
+
+  it('hides the renewal column when no domain has a renewal price', () => {
+    const { el } = render([api({ plan_key: 'd1', family: 'domain', name: '.com', managed_amount: null }), api({ plan_key: 'd2', family: 'domain', name: '.mx', managed_amount: null })]);
+    expect(el.querySelector('table')).not.toBeNull();
+    expect(el.querySelector('table')?.textContent).not.toContain('Renovación');
+    expect(el.querySelectorAll('thead th')).toHaveLength(3);
+    expect(el.querySelectorAll('tbody tr:first-child > *')).toHaveLength(3);
+  });
+
+  it('shows the renewal column with a dash only for rows without a value', () => {
+    const { el } = render([
+      api({ plan_key: 'd1', family: 'domain', name: '.com', managed_amount: null, renewal_amount: 24.29 }),
+      api({ plan_key: 'd2', family: 'domain', name: '.mx', managed_amount: null }),
+    ]);
+    const rows = el.querySelectorAll('tbody tr');
+    expect(el.querySelector('thead')?.textContent).toContain('Renovación');
+    expect(rows[0].textContent).toContain('$24.29');
+    expect(rows[1].textContent).toContain('—');
   });
 
   it('shows a neutral quote section without prices when the catalog is empty', () => {

@@ -130,7 +130,9 @@ export function parsePlans(raw: unknown): CatalogPlan[] {
 // ---- presentation helpers (pure, unit-tested) ----
 
 export function formatMoney(value: number, currency = 'MXN'): string {
-  return new Intl.NumberFormat('es-MX', { style: 'currency', currency }).format(value);
+  // Whole pesos without decimals ($2,880); two decimals only when there are cents ($24.29).
+  const digits = Number.isInteger(value) ? 0 : 2;
+  return new Intl.NumberFormat('es-MX', { style: 'currency', currency, minimumFractionDigits: digits, maximumFractionDigits: digits }).format(value);
 }
 
 /** Price shown for the chosen mode; falls back to the self-managed price when there is no managed one. */

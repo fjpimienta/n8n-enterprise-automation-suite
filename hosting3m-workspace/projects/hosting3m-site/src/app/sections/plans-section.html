@@ -25,7 +25,7 @@
                 <tr class="border-b border-slate-300 text-sm text-muted">
                   <th scope="col" class="py-2 pr-4 font-medium">Dominio</th>
                   <th scope="col" class="py-2 pr-4 font-medium">Precio</th>
-                  <th scope="col" class="py-2 pr-4 font-medium">Renovación</th>
+                  @if (hasRenewal(group.plans)) { <th scope="col" class="py-2 pr-4 font-medium">Renovación</th> }
                   <th scope="col" class="py-2"><span class="sr-only">Cotizar</span></th>
                 </tr>
               </thead>
@@ -34,10 +34,10 @@
                   <tr class="border-b border-slate-200 align-top">
                     <th scope="row" class="py-3 pr-4 font-semibold">{{ plan.name }}@if (plan.badge) { <span class="ml-2 rounded bg-brand-100 px-2 py-0.5 text-xs">{{ plan.badge }}</span> }</th>
                     @if (needsQuote(plan)) {
-                      <td class="py-3 pr-4 text-muted" colspan="2">Precio por cotización</td>
+                      <td class="py-3 pr-4 text-muted" [attr.colspan]="hasRenewal(group.plans) ? 2 : 1">Precio por cotización</td>
                     } @else {
                       <td class="py-3 pr-4">{{ formatMoney(amount(plan)!, plan.currency) }} <span class="text-sm text-muted">{{ priceSuffix(plan) }}</span></td>
-                      <td class="py-3 pr-4">{{ plan.renewalPrice !== null ? formatMoney(plan.renewalPrice, plan.currency) : '—' }}</td>
+                      @if (hasRenewal(group.plans)) { <td class="py-3 pr-4">{{ plan.renewalPrice !== null ? formatMoney(plan.renewalPrice, plan.currency) : '—' }}</td> }
                     }
                     <td class="py-3">
                       @if (needsQuote(plan)) {

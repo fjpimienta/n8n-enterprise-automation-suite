@@ -46,8 +46,11 @@ describe('parsePlans (type guard)', () => {
 });
 
 describe('price presentation', () => {
-  it('formats MXN with es-MX', () => {
-    expect(formatMoney(1234.5)).toContain('1,234.50');
+  it('formats whole pesos without decimals and keeps two decimals only for cents', () => {
+    expect(formatMoney(2880)).toBe('$2,880');
+    expect(formatMoney(24.29)).toBe('$24.29');
+    expect(formatMoney(1234.5)).toBe('$1,234.50');
+    expect(formatMoney(0)).toBe('$0');
   });
 
   it('says "MXN / año + IVA" for yearly without tax and "IVA incluido" when included', () => {
@@ -72,7 +75,7 @@ describe('price presentation', () => {
   it('shows no setup line when null, except "cotiza" for VPS', () => {
     expect(setupLine(one({ family: 'hosting', setup_fee: null }))).toBeNull();
     expect(setupLine(one({ family: 'vps', setup_fee: null }))).toBe('Instalación inicial: cotiza');
-    expect(setupLine(one({ setup_fee: 500 }))).toContain('500.00');
+    expect(setupLine(one({ setup_fee: 500 }))).toBe('Instalación inicial: $500');
   });
 
   it('groups by family in catalog order', () => {
