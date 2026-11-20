@@ -1,0 +1,23 @@
+<header class="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
+  <div class="container-page flex h-16 items-center justify-between">
+    <a routerLink="/" class="text-xl font-bold text-brand-700" (click)="close()">{{ site.name }}</a>
+
+    <button type="button" class="btn-secondary md:hidden" aria-controls="main-nav"
+      [attr.aria-expanded]="menuOpen()" (click)="toggle()">
+      {{ menuOpen() ? 'Cerrar' : 'Menú' }}
+    </button>
+
+    <nav id="main-nav" aria-label="Principal"
+      class="absolute inset-x-0 top-16 border-b border-slate-200 bg-white p-4 md:static md:block md:border-0 md:bg-transparent md:p-0"
+      [class.hidden]="!menuOpen()">
+      <ul class="flex flex-col gap-1 md:flex-row md:items-center md:gap-6">
+        @for (link of links; track link.fragment) {
+          <li>
+            <a routerLink="/" [fragment]="link.fragment" (click)="close()"
+              class="block rounded px-2 py-2 font-medium text-slate-700 hover:text-brand-700">{{ link.label }}</a>
+          </li>
+        }
+      </ul>
+    </nav>
+  </div>
+</header>

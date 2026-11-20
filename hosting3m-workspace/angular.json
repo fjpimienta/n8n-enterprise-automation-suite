@@ -379,6 +379,80 @@
           }
         }
       }
+    },
+    "hosting3m-site": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "css"
+        }
+      },
+      "root": "projects/hosting3m-site",
+      "sourceRoot": "projects/hosting3m-site/src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "outputPath": "dist/hosting3m-site",
+            "index": "projects/hosting3m-site/src/index.html",
+            "browser": "projects/hosting3m-site/src/main.ts",
+            "tsConfig": "projects/hosting3m-site/tsconfig.app.json",
+            "inlineStyleLanguage": "css",
+            "assets": [
+              {
+                "glob": "**/*",
+                "input": "projects/hosting3m-site/public",
+                "output": "/"
+              }
+            ],
+            "styles": [
+              "projects/hosting3m-site/src/styles.css"
+            ]
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "300kB",
+                  "maximumError": "500kB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "4kB",
+                  "maximumError": "8kB"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular/build:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "hosting3m-site:build:production"
+            },
+            "development": {
+              "buildTarget": "hosting3m-site:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "test": {
+          "builder": "@angular/build:unit-test",
+          "options": {
+            "tsConfig": "projects/hosting3m-site/tsconfig.spec.json"
+          }
+        }
+      }
     }
   }
 }
