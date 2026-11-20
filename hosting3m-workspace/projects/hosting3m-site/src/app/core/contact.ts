@@ -74,16 +74,18 @@ export function toContactError(err: unknown): ContactError {
 export class ContactService {
   private readonly http = inject(HttpClient);
 
-  send(value: ContactFormValue, turnstileToken: string): Observable<void> {
-    if (RUNTIME.mockApi) return of(undefined).pipe(delay(600));
+  /** Resolves with the server confirmation text (may be empty). */
+  send(value: ContactFormValue, turnstileToken: string): Observable<string> {
+    if (RUNTIME.mockApi) return of('').pipe(delay(600));
 
     return this.http
-      .post<{ success?: boolean }>(`${RUNTIME.apiBase}/v6/contact`, buildContactPayload(value, turnstileToken))
+      .post<{ success?: boolean; mensaje?: unknown }>(`${RUNTIME.apiBase}/v6/contact`, buildContactPayload(value, turnstileToken))
       .pipe(
         timeout(15000),
         // A failed n8n execution can answer HTTP 200 with an empty body: only an explicit success counts.
         map((res) => {
           if (res?.success !== true) throw new ContactError('network');
+          return typeof res.mensaje === 'string' ? res.mensaje.trim().slice(0, 300) : '';
         }),
         catchError((e) => throwError(() => toContactError(e))),
       );

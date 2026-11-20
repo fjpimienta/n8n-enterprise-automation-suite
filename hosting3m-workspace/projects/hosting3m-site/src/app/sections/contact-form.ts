@@ -7,6 +7,8 @@ import { CONTACT_LIMITS, CONTACT_SERVICES, ContactErrorKind, ContactService, toC
 import { SITE } from '../core/site.config';
 import { TurnstileService } from '../core/turnstile';
 
+const SUCCESS_FALLBACK = '¡Gracias! Hemos recibido tu mensaje.';
+
 type Status = 'idle' | 'isSubmitting' | 'success' | 'error';
 
 @Component({
@@ -28,9 +30,11 @@ export class ContactForm implements OnDestroy {
   readonly site = SITE;
   readonly status = signal<Status>('idle');
   readonly errorKind = signal<ContactErrorKind | null>(null);
+  readonly resultMessage = signal(SUCCESS_FALLBACK);
   readonly token = signal('');
   readonly submittedOnce = signal(false);
   readonly widgetHost = viewChild<ElementRef<HTMLElement>>('widgetHost');
+  readonly statusEl = viewChild<ElementRef<HTMLElement>>('statusEl');
 
   readonly form = new FormGroup({
     names: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(CONTACT_LIMITS.names)] }),
@@ -66,7 +70,7 @@ export class ContactForm implements OnDestroy {
   }
 
   async submit(): Promise<void> {
-    if (this.status() === 'isSubmitting' || this.status() === 'success') return; // double-submit guard
+    if (this.status() === 'isSubmitting') return; // double-submit guard
     this.submittedOnce.set(true);
     this.errorKind.set(null);
     this.form.markAllAsTouched();
@@ -75,7 +79,7 @@ export class ContactForm implements OnDestroy {
     const value = this.form.getRawValue();
     if (value.empresa !== '') {
       // A bot filled the honeypot: pretend success and send nothing.
-      this.status.set('success');
+      this.showSuccess(SUCCESS_FALLBACK);
       return;
     }
     if (!this.token()) {
@@ -86,15 +90,36 @@ export class ContactForm implements OnDestroy {
 
     this.status.set('isSubmitting');
     this.contact.send(value, this.token()).subscribe({
-      next: () => {
-        this.status.set('success');
-        this.form.reset();
+      next: (mensaje) => {
+        this.showSuccess(mensaje || SUCCESS_FALLBACK);
+        this.widget?.reset(); // Turnstile tokens are single-use
       },
       error: (err) => {
         this.status.set('error');
         this.errorKind.set(toContactError(err).kind);
-        this.widget?.reset(); // Turnstile tokens are single-use
+        this.widget?.reset();
+        this.focusStatus();
       },
+    });
+  }
+
+  private showSuccess(message: string): void {
+    this.resultMessage.set(message);
+    this.status.set('success');
+    // Clean slate: no touched/dirty controls and no forced validation display.
+    this.form.reset();
+    this.form.markAsPristine();
+    this.form.markAsUntouched();
+    this.submittedOnce.set(false);
+    this.focusStatus();
+  }
+
+  private focusStatus(): void {
+    if (!this.isBrowser) return;
+    setTimeout(() => {
+      const el = this.statusEl()?.nativeElement;
+      el?.focus();
+      el?.scrollIntoView?.({ block: 'center' });
     });
   }
 

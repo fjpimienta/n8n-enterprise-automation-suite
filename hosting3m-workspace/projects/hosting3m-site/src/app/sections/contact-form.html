@@ -69,9 +69,9 @@
     {{ status() === 'isSubmitting' ? 'Enviando…' : 'Enviar mensaje' }}
   </button>
 
-  <div id="form-status" aria-live="polite" role="status">
+  <div #statusEl id="form-status" aria-live="polite" role="status" tabindex="-1" class="outline-none">
     @if (status() === 'success') {
-      <p class="rounded-lg bg-green-50 p-4 text-green-900">Gracias, recibimos tu mensaje. Te responderemos pronto.</p>
+      <p class="rounded-lg bg-green-50 p-4 text-green-900">{{ resultMessage() }}</p>
     }
     @if (status() === 'error') {
       <p class="rounded-lg bg-red-50 p-4 text-red-900">
