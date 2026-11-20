@@ -1,0 +1,20 @@
+[
+  {
+    "title": "Suite de automatización n8n, de código abierto",
+    "summary": "Módulos para n8n y aplicaciones Angular que puedes desplegar en tu propia infraestructura, con licencia MIT.",
+    "source": "Hosting3M",
+    "url": "https://github.com/fjpimienta/n8n-enterprise-automation-suite"
+  },
+  {
+    "title": "Flujos de trabajo listos para WhatsApp, CRM y noticias con IA",
+    "summary": "La suite incluye flujos n8n para atención por WhatsApp, un puente CRM y un módulo de noticias con búsqueda semántica (RAG).",
+    "source": "Hosting3M",
+    "url": "https://github.com/fjpimienta/n8n-enterprise-automation-suite"
+  },
+  {
+    "title": "Servidores MCP y acceso multiempresa",
+    "summary": "Servidores MCP para conectar agentes de IA y un gateway de autenticación pensado para varias empresas.",
+    "source": "Hosting3M",
+    "url": "https://github.com/fjpimienta/n8n-enterprise-automation-suite"
+  }
+]

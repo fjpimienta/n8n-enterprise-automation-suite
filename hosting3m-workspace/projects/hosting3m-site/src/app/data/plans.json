@@ -1,0 +1,42 @@
+{
+  "_comment": "Static catalog (no API). Every TODO_* value is pending owner approval; do not invent prices or specs.",
+  "currency": "MXN",
+  "plans": [
+    {
+      "id": "vps",
+      "name": "VPS",
+      "summary": "TODO_COPY",
+      "price": "TODO_PRICE",
+      "billing": "TODO_BILLING",
+      "features": ["TODO_FEATURES"],
+      "service": "Renta de Servidores VPS"
+    },
+    {
+      "id": "n8n-managed",
+      "name": "n8n administrado",
+      "summary": "TODO_COPY",
+      "price": "TODO_PRICE",
+      "billing": "TODO_BILLING",
+      "features": ["TODO_FEATURES"],
+      "service": "Automatización de Procesos con Agentes IA"
+    },
+    {
+      "id": "domains-email",
+      "name": "Dominios y correo",
+      "summary": "TODO_COPY",
+      "price": "TODO_PRICE",
+      "billing": "TODO_BILLING",
+      "features": ["TODO_FEATURES"],
+      "service": "Registro de Dominios"
+    },
+    {
+      "id": "launch-pack",
+      "name": "Paquete de lanzamiento",
+      "summary": "TODO_COPY",
+      "price": "TODO_PRICE",
+      "billing": "TODO_BILLING",
+      "features": ["TODO_FEATURES"],
+      "service": "Creación de Páginas Web"
+    }
+  ]
+}
