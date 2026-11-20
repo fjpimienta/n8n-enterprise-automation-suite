@@ -1,0 +1,397 @@
+{
+  "name": "v6/contact",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "v6/contact",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "https://hosting3m.com,https://beta.hosting3m.com",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, Authorization, x-jwt-claim-role"
+              },
+              {
+                "name": "Access-Control-Allow-Credentials",
+                "value": "true"
+              }
+            ]
+          }
+        }
+      },
+      "id": "829d81ca-60f1-4f3b-adcb-99ec1f38642a",
+      "name": "Webhook Contact",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -1664,
+        128
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "secret",
+              "value": "={{$env[\"CLOUDFREE_SECRET_KEY\"]}}"
+            },
+            {
+              "name": "response",
+              "value": "={{ $json.body[\"cf-turnstile-response\"] }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        -1408,
+        128
+      ],
+      "id": "68632228-4a2d-45a1-a342-9867ba25cd7d",
+      "name": "Validate CloudFlare"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "87dd385c-ba88-42b0-9c76-c4a227838a06",
+              "leftValue": "={{ $json.success }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -1152,
+        128
+      ],
+      "id": "3b398f5d-3dab-4d9c-b9b9-e99cb868765b",
+      "name": "Success CloudFlare"
+    },
+    {
+      "parameters": {
+        "jsCode": "const src = $('Webhook Contact').first().json;\nconst b = src.body || {};\nconst h = src.headers || {};\nconst clean = (v, max) => String(v ?? '').replace(/[\\u0000-\\u001f\\u007f]/g, ' ').trim().slice(0, max);\nconst esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/'/g,'&#39;');\nconst f = {\n  names: clean(b.names,100), middlename: clean(b.middlename,100), lastname: clean(b.lastname,100),\n  phone: clean(b.phone,30), email: clean(b.email,150).toLowerCase(),\n  message: clean(b.message,2000), service: clean(b.service,60),\n  client_ip: clean(h['cf-connecting-ip'] || h['x-forwarded-for'] || '', 45)\n};\nconst emailOk = /^[^\\s@<>\"']+@[^\\s@<>\"']+\\.[^\\s@<>\"']+$/.test(f.email);\nconst honeypot = clean(b.empresa, 50) !== '';\nconst valid = Boolean(!honeypot && emailOk && f.names && f.lastname && f.message);\nconst out = { valid, ...f };\nfor (const k of ['names','middlename','lastname','phone','email','message','service']) out[k+'_h'] = esc(f[k]);\nreturn [{ json: out }];"
+      },
+      "id": "611affac-eb7d-472b-ba05-e81eaaacca94",
+      "name": "Sanitize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -896,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b5adc18d-b4ed-471d-8ee3-4c26305b1578",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "99050e04-3677-413f-8fa8-81e9297566d0",
+      "name": "Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -624,
+        32
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO contact_requests (id_company, names, middlename, lastname, phone, email, message, service, client_ip) VALUES (1, $1, $2, $3, $4, $5, $6, $7, $8) RETURNING id;",
+        "options": {
+          "queryReplacement": "={{ [$json.names, $json.middlename, $json.lastname, $json.phone, $json.email, $json.message, $json.service, $json.client_ip] }}"
+        }
+      },
+      "id": "003c6609-667a-4a48-8984-867353c5c517",
+      "name": "Insert Contact",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -368,
+        -80
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "contacto@hosting3m.com",
+        "toEmail": "={{ $('Sanitize').item.json.email }}",
+        "subject": "Recibimos tu mensaje | Hosting3M",
+        "emailFormat": "both",
+        "text": "=Hola {{ $('Sanitize').item.json.names }},\n\nGracias por escribirnos. Recibimos tu mensaje y te responderemos en breve.\n\nSi es urgente, escríbenos por WhatsApp al +52 999 390 2625.\nSi tú no enviaste este mensaje, puedes ignorar este correo.\n\nHosting3M\nMérida, Yucatán, México\nhttps://hosting3m.com",
+        "html": "=<!DOCTYPE html>\n<html lang=\"es\">\n<head><meta charset=\"utf-8\"><title>Recibimos tu mensaje</title></head>\n<body style=\"font-family:Arial,Helvetica,sans-serif;color:#1f2937;line-height:1.5;\">\n<p>Hola {{ $('Sanitize').item.json.names_h }},</p>\n<p>Gracias por escribirnos. Recibimos tu mensaje y te responderemos en breve.</p>\n<p>Si es urgente, escríbenos por WhatsApp al <a href=\"https://wa.me/5219993902625\">+52 999 390 2625</a>.</p>\n<p>Si tú no enviaste este mensaje, puedes ignorar este correo.</p>\n<p>Hosting3M<br>Mérida, Yucatán, México<br><a href=\"https://hosting3m.com\">hosting3m.com</a></p>\n</body>\n</html>",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -112,
+        -80
+      ],
+      "id": "bc1c9c2d-cd00-49fa-84e5-55fb1398fc61",
+      "name": "SendMail",
+      "credentials": {
+        "smtp": {
+          "id": "REPLACE_ME",
+          "name": "contacto@hosting3m.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "n8n@hosting3m.com",
+        "toEmail": "=contacto@hosting3m.com",
+        "subject": "Contacto Sitio Web.",
+        "emailFormat": "=html",
+        "html": "=Nuevo contacto del sitio web (solicitud #{{ $('Insert Contact').item.json.id }}):<br>\nNombre: {{ $('Sanitize').item.json.names_h }} {{ $('Sanitize').item.json.middlename_h }} {{ $('Sanitize').item.json.lastname_h }}<br>\nCorreo: {{ $('Sanitize').item.json.email_h }}<br>\nTelefono: {{ $('Sanitize').item.json.phone_h }}<br>\nServicio: {{ $('Sanitize').item.json.service_h }}<br>\nMensaje: {{ $('Sanitize').item.json.message_h }}",
+        "options": {
+          "appendAttribution": false,
+          "ccEmail": "REPLACE_ME@example.com"
+        }
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        160,
+        -80
+      ],
+      "id": "135b3ef8-034c-4b38-ac56-7b10bcb62d3f",
+      "name": "SendMailContact",
+      "credentials": {
+        "smtp": {
+          "id": "REPLACE_ME",
+          "name": "n8n@hosting3m.com"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\n  \"success\": true,\n  \"mensaje\": \"El mensaje se ha enviado de forma satisfactoria.\"\n}\n",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        416,
+        -80
+      ],
+      "id": "1b60348c-5492-4a86-a79b-05e0668c73c5",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"mensaje\": \"Datos invalidos\"}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "34c6c1d7-cb41-4498-848f-54af9995007a",
+      "name": "Respond Invalid",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -368,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={\"mensaje\": \"Acceso denegado\"}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        -896,
+        240
+      ],
+      "id": "ec8e9a13-6fb8-4541-a2ca-5062fdc2f007",
+      "name": "Respond Denegate"
+    }
+  ],
+  "connections": {
+    "Webhook Contact": {
+      "main": [
+        [
+          {
+            "node": "Validate CloudFlare",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate CloudFlare": {
+      "main": [
+        [
+          {
+            "node": "Success CloudFlare",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Success CloudFlare": {
+      "main": [
+        [
+          {
+            "node": "Sanitize",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Denegate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sanitize": {
+      "main": [
+        [
+          {
+            "node": "Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid?": {
+      "main": [
+        [
+          {
+            "node": "Insert Contact",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Invalid",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Contact": {
+      "main": [
+        [
+          {
+            "node": "SendMail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SendMail": {
+      "main": [
+        [
+          {
+            "node": "SendMailContact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SendMailContact": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "9SrVXdATmlrZemJT",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "e7d1f450-2041-404d-9ae7-d2cd2e044d13",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "id": "7nknJRy769u2OvqB",
+  "tags": []
+}

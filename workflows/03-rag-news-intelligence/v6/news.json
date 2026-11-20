@@ -1,0 +1,142 @@
+{
+  "name": "v6/news",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "v6/news",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "https://hosting3m.com,https://beta.hosting3m.com",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, Authorization, x-jwt-claim-role"
+              },
+              {
+                "name": "Access-Control-Allow-Credentials",
+                "value": "true"
+              }
+            ]
+          }
+        }
+      },
+      "id": "a6b2cad5-6f6b-49ef-b2a4-1dbab406e917",
+      "name": "Webhook Noticias",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        1024,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT title, url, source, image, published_at FROM news_articles WHERE is_active = true ORDER BY published_at DESC LIMIT 6;",
+        "options": {}
+      },
+      "id": "7089d1ab-37e7-483d-9aaa-2eadf81f6d2d",
+      "name": "Select News",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        1296,
+        272
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "REPLACE_ME",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json).filter(r => r && r.title);\nreturn [{ json: { data: rows } }];"
+      },
+      "id": "2fbf3cf6-50be-4199-b09e-1d38dbd742d4",
+      "name": "Build Array",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1552,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.data }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "050b50d6-24e3-4c63-b2cc-170fb24f0301",
+      "name": "Respond News",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        1808,
+        272
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Noticias": {
+      "main": [
+        [
+          {
+            "node": "Select News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select News": {
+      "main": [
+        [
+          {
+            "node": "Build Array",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Array": {
+      "main": [
+        [
+          {
+            "node": "Respond News",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "9SrVXdATmlrZemJT",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "82a81faf-727b-4721-a086-8a4963fcc951",
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "id": "YlXEjHst6hfZRPrw",
+  "tags": []
+}
