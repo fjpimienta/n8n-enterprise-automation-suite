@@ -155,12 +155,11 @@ Every test message **must start with** `PRUEBA BETA` (for example `PRUEBA BETA 2
 
 ### Cleanup: mark, never delete
 Test rows are **marked**, not deleted. Run it only after the e2e tests are finished. Database access is yours; Claude does not run it.
-1. **Check the column first** (the statement assumes a `status` column that accepts `'test'`):
+1. **Confirm the schema** (already verified by the owner: `status` is `varchar(20) NOT NULL DEFAULT 'new'` with no CHECK, so `'test'` is accepted; `id_company` is `integer`, default 1). Re-check only if the table changed:
    ```sh
    docker exec -i <DB_CONTAINER> psql -U <DB_USER> -d <DB_NAME> -c '\d contact_requests'
    ```
-   If `status` has a CHECK constraint or enum that rejects `'test'`, or if the table has an `id_company` column, stop and tell me:
-   the statement below must then be adjusted (tenant scoping is fail-closed; add `AND id_company = 1` when the column exists).
+   Every statement below is scoped to `id_company = 1` (this site's tenant, fixed on the server), fail-closed.
 2. **Backup of the table** (custom format, restricted permissions):
    ```sh
    docker exec <DB_CONTAINER> pg_dump -U <DB_USER> -d <DB_NAME> -t contact_requests -Fc > /root/backup-contact_requests-$(date +%F-%H%M).dump
@@ -168,12 +167,12 @@ Test rows are **marked**, not deleted. Run it only after the e2e tests are finis
    ```
 3. **Dry-run:** see exactly which rows would change.
    ```sql
-   SELECT * FROM contact_requests WHERE message LIKE 'PRUEBA BETA%';
+   SELECT * FROM contact_requests WHERE message LIKE 'PRUEBA BETA%' AND id_company = 1;
    ```
 4. **Update inside a transaction**, check the row count, then commit:
    ```sql
    BEGIN;
-   UPDATE contact_requests SET status = 'test' WHERE message LIKE 'PRUEBA BETA%';
+   UPDATE contact_requests SET status = 'test' WHERE message LIKE 'PRUEBA BETA%' AND id_company = 1;
    -- the reported count (UPDATE n) must equal the number of rows from step 3
    COMMIT;   -- or ROLLBACK; if the count is not the expected one
    ```
