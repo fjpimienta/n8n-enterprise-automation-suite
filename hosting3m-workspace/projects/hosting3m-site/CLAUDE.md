@@ -23,4 +23,4 @@ Replaces the Sitejet export at https://hosting3m.com. Public, static, client-sid
 - `ng serve` uses `runtime-config.development.ts`: the API is simulated (CORS only allows production and beta origins).
 
 ## Docs
-- `docs/phase-1-report.md`, `docs/phase-2/report.md`, `docs/phase-2/TODO.md` (pending content). `docs/nginx-legacy-redirects.conf`: nginx snippet (manual paste).
+- `docs/phase-1-report.md`, `docs/phase-2/report.md`, `docs/phase-2/TODO.md` and `docs/phase-3/TODO.md` (pending content); `docs/phase-3/beta-runbook.md` (beta deploy); `docs/nginx-*.conf` (manual paste in Plesk).
