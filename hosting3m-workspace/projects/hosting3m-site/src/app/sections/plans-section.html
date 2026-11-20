@@ -58,9 +58,13 @@
                 @if (plan.summary) { <p class="mt-2 text-muted">{{ plan.summary }}</p> }
 
                 @if (plan.managedPrice !== null && plan.billing !== 'quote') {
-                  <div class="mt-4 flex flex-wrap gap-2" role="group" [attr.aria-label]="'Modalidad de ' + plan.name">
-                    <button type="button" class="btn-secondary" [attr.aria-pressed]="!isManaged(plan)" (click)="setManaged(plan, false)">Autoadministrado</button>
-                    <button type="button" class="btn-secondary" [attr.aria-pressed]="isManaged(plan)" (click)="setManaged(plan, true)">Administrado por Hosting3M</button>
+                  <div class="mt-4 inline-flex w-fit overflow-hidden rounded-lg border-2 border-brand-700" role="group" [attr.aria-label]="'Modalidad de ' + plan.name">
+                    <button type="button" class="px-3 py-2 text-sm font-semibold" [class]="!isManaged(plan) ? 'bg-brand-700 text-white' : 'bg-white text-brand-900 hover:bg-brand-50'" [attr.aria-pressed]="!isManaged(plan)" (click)="setManaged(plan, false)">
+                      @if (!isManaged(plan)) { <span aria-hidden="true">✓ </span> }{{ modeSelf }}
+                    </button>
+                    <button type="button" class="border-l-2 border-brand-700 px-3 py-2 text-sm font-semibold" [class]="isManaged(plan) ? 'bg-brand-700 text-white' : 'bg-white text-brand-900 hover:bg-brand-50'" [attr.aria-pressed]="isManaged(plan)" (click)="setManaged(plan, true)">
+                      @if (isManaged(plan)) { <span aria-hidden="true">✓ </span> }{{ modeManaged }}
+                    </button>
                   </div>
                 }
 
@@ -69,6 +73,9 @@
                 } @else {
                   <p class="mt-4 text-2xl font-bold text-brand-700" data-testid="price">{{ formatMoney(amount(plan)!, plan.currency) }}</p>
                   <p class="text-sm text-muted" data-testid="suffix">{{ priceSuffix(plan) }}</p>
+                  @if (plan.managedPrice !== null) {
+                    <p class="text-sm font-medium text-brand-900" data-testid="mode-note">{{ isManaged(plan) ? 'Incluye administración y soporte de Hosting3M' : 'Precio autoadministrado' }}</p>
+                  }
                   @if (plan.promoPrice !== null) {
                     <p class="mt-2 text-sm">Promoción: {{ formatMoney(plan.promoPrice, plan.currency) }}@if (plan.promoMonths !== null) { por {{ plan.promoMonths }} meses }</p>
                   }
@@ -88,7 +95,7 @@
                   <p class="mt-4 text-xs text-muted">Precios vigentes al {{ formatDate(plan.priceCheckedAt) }}@if (plan.validUntil) { · válidos hasta {{ formatDate(plan.validUntil) }} }</p>
                 }
                 @if (!needsQuote(plan)) {
-                  <a class="btn-secondary mt-4" routerLink="/" [queryParams]="{ servicio: plan.serviceLabel }" fragment="contacto">Cotizar {{ plan.name }}</a>
+                  <a class="btn-secondary mt-4" routerLink="/" fragment="contacto" data-testid="quote-plan" (click)="requestQuote(plan)">Cotizar {{ plan.name }}</a>
                 }
               </li>
             }

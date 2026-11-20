@@ -1,12 +1,16 @@
 import { ChangeDetectionStrategy, Component, afterNextRender, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { ContactPrefill } from '../core/contact-prefill';
 import {
   CatalogPlan,
   PlansService,
   QUOTE_CARDS,
   formatDate,
   formatMoney,
+  MODE_MANAGED,
+  MODE_SELF,
   groupByFamily,
+  interestMessage,
   isQuote,
   priceSuffix,
   quoteHref,
@@ -24,6 +28,10 @@ import { SITE, whatsappLink } from '../core/site.config';
 export class PlansSection {
   private readonly catalog = inject(PlansService);
   private readonly router = inject(Router);
+  private readonly prefill = inject(ContactPrefill);
+
+  readonly modeSelf = MODE_SELF;
+  readonly modeManaged = MODE_MANAGED;
 
   readonly site = SITE;
   readonly cards = QUOTE_CARDS;
@@ -68,5 +76,10 @@ export class PlansSection {
   /** The WhatsApp link opens in a new tab; this also preselects the service in the contact form. */
   preselect(service: string): void {
     if (service) void this.router.navigate(['/'], { queryParams: { servicio: service }, fragment: 'contacto' });
+  }
+
+  /** "Cotizar <plan>": the routerLink goes to #contacto; this tells the form what to preselect and prefill. */
+  requestQuote(plan: CatalogPlan): void {
+    this.prefill.apply(plan.serviceLabel, interestMessage(plan, this.isManaged(plan)));
   }
 }

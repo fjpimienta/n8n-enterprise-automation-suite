@@ -43,7 +43,7 @@
 
   <div>
     <label for="cf-message" class="block font-medium">Mensaje <span aria-hidden="true">*</span></label>
-    <textarea id="cf-message" formControlName="message" rows="5" [maxlength]="limits.message"
+    <textarea #messageField id="cf-message" formControlName="message" rows="5" [maxlength]="limits.message"
       [attr.aria-invalid]="showError('message')" [attr.aria-describedby]="showError('message') ? 'err-message' : null" aria-required="true" class="field"></textarea>
     <p class="text-sm text-muted">{{ messageLength() }} / {{ limits.message }}</p>
     @if (showError('message')) { <p class="field-error" id="err-message" role="alert">Cuéntanos qué necesitas.</p> }

@@ -166,6 +166,15 @@ export function quoteMessage(plan: CatalogPlan): string {
   return `Hola, quiero cotizar ${plan.name}${plan.serviceLabel ? ` (${plan.serviceLabel})` : ''}.`;
 }
 
+export const MODE_SELF = 'Autoadministrado';
+export const MODE_MANAGED = 'Administrado por Hosting3M';
+
+/** Message prefilled in the contact form when asking for a priced plan. The mode is named only if the plan offers both. */
+export function interestMessage(plan: CatalogPlan, managed: boolean): string {
+  const mode = plan.managedPrice !== null && plan.billing !== 'quote' ? ` (${managed ? MODE_MANAGED : MODE_SELF})` : '';
+  return `Quiero cotizar: ${plan.name}${mode}`;
+}
+
 export function quoteHref(plan: CatalogPlan): string {
   return whatsappLink(quoteMessage(plan));
 }

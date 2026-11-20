@@ -5,6 +5,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { ActivatedRoute } from '@angular/router';
 import { CONTACT_LIMITS, CONTACT_SERVICES, ContactErrorKind, ContactService, toContactError } from '../core/contact';
 import { SITE } from '../core/site.config';
+import { ContactPrefill } from '../core/contact-prefill';
 import { PlansService } from '../core/plans';
 import { TurnstileService } from '../core/turnstile';
 
@@ -22,6 +23,7 @@ export class ContactForm implements OnDestroy {
   private readonly contact = inject(ContactService);
   private readonly turnstile = inject(TurnstileService);
   private readonly catalog = inject(PlansService);
+  private readonly prefill = inject(ContactPrefill);
   private readonly isBrowser = isPlatformBrowser(inject(PLATFORM_ID));
   private readonly query = toSignal(inject(ActivatedRoute).queryParamMap);
   private widget: { reset(): void; remove(): void } | null = null;
@@ -29,7 +31,11 @@ export class ContactForm implements OnDestroy {
 
   readonly limits = CONTACT_LIMITS;
   /** Static services plus the labels of the public catalog (so a quote button can preselect its plan). */
-  readonly services = computed(() => [...CONTACT_SERVICES, ...this.catalog.serviceLabels().filter((l) => !CONTACT_SERVICES.includes(l))]);
+  private readonly extraServices = computed(() => {
+    const extra = [...this.catalog.serviceLabels(), this.prefill.request()?.service ?? ''];
+    return [...new Set(extra)].filter((l) => l && !CONTACT_SERVICES.includes(l));
+  });
+  readonly services = computed(() => [...CONTACT_SERVICES, ...this.extraServices()]);
   readonly site = SITE;
   readonly status = signal<Status>('idle');
   readonly errorKind = signal<ContactErrorKind | null>(null);
@@ -38,6 +44,7 @@ export class ContactForm implements OnDestroy {
   readonly submittedOnce = signal(false);
   readonly widgetHost = viewChild<ElementRef<HTMLElement>>('widgetHost');
   readonly statusEl = viewChild<ElementRef<HTMLElement>>('statusEl');
+  readonly messageField = viewChild<ElementRef<HTMLTextAreaElement>>('messageField');
 
   readonly form = new FormGroup({
     names: new FormControl('', { nonNullable: true, validators: [Validators.required, Validators.maxLength(CONTACT_LIMITS.names)] }),
@@ -60,6 +67,17 @@ export class ContactForm implements OnDestroy {
       const preset = this.query()?.get('servicio');
       const allowed = this.services();
       if (this.isBrowser && preset && allowed.includes(preset)) untracked(() => this.form.controls.service.setValue(preset));
+    });
+    // "Cotizar <plan>": select the service, prefill the message only if it is empty, then focus it.
+    effect(() => {
+      const req = this.prefill.request();
+      if (!req || !this.isBrowser) return;
+      untracked(() => {
+        const { service, message } = this.form.controls;
+        if (req.service) service.setValue(req.service);
+        if (req.message && message.value.trim() === '') message.setValue(req.message); // never overwrite what the visitor typed
+        setTimeout(() => this.messageField()?.nativeElement.focus());
+      });
     });
     afterNextRender(() => this.observeWidget());
   }
@@ -94,7 +112,7 @@ export class ContactForm implements OnDestroy {
     }
 
     this.status.set('isSubmitting');
-    this.contact.send(value, this.token(), this.catalog.serviceLabels()).subscribe({
+    this.contact.send(value, this.token(), this.extraServices()).subscribe({
       next: (mensaje) => {
         this.showSuccess(mensaje || SUCCESS_FALLBACK);
         this.widget?.reset(); // Turnstile tokens are single-use

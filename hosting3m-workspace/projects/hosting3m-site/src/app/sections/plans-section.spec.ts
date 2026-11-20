@@ -30,6 +30,22 @@ describe('PlansSection', () => {
     expect(el.querySelector('[data-testid="setup"]')).toBeNull(); // hosting with null setup_fee
   });
 
+  it('is a segmented control: exactly one button pressed, the active one marked, with a helper line', () => {
+    const { fixture, el } = render([api()]);
+    const buttons = el.querySelectorAll<HTMLButtonElement>('[role="group"] button');
+    const pressed = () => Array.from(buttons).filter((b) => b.getAttribute('aria-pressed') === 'true');
+    expect(pressed()).toEqual([buttons[0]]);
+    expect(buttons[0].textContent).toContain('✓');
+    expect(buttons[1].textContent).not.toContain('✓');
+    expect(buttons[0].className).toContain('bg-brand-700');
+    expect(el.querySelector('[data-testid="mode-note"]')?.textContent).toBe('Precio autoadministrado');
+    buttons[1].click();
+    fixture.detectChanges();
+    expect(pressed()).toEqual([buttons[1]]);
+    expect(buttons[1].textContent).toContain('✓');
+    expect(el.querySelector('[data-testid="mode-note"]')?.textContent).toBe('Incluye administración y soporte de Hosting3M');
+  });
+
   it('toggles between self-managed and managed prices', () => {
     const { fixture, el } = render([api()]);
     const buttons = el.querySelectorAll<HTMLButtonElement>('[role="group"] button');
