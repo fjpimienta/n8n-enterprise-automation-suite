@@ -37,7 +37,7 @@ describe('PlansSection', () => {
     expect(pressed()).toEqual([buttons[0]]);
     expect(buttons[0].textContent).toContain('✓');
     expect(buttons[1].textContent).not.toContain('✓');
-    expect(buttons[0].className).toContain('bg-brand-700');
+    expect(buttons[0].className).toContain('bg-orange');
     expect(el.querySelector('[data-testid="mode-note"]')?.textContent).toBe('Precio autoadministrado');
     buttons[1].click();
     fixture.detectChanges();

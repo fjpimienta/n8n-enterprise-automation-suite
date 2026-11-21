@@ -1,28 +1,30 @@
-<section id="paquetes" class="bg-slate-50 py-16" aria-labelledby="paquetes-title">
+<section id="paquetes" class="section-dark" aria-labelledby="paquetes-title">
   <div class="container-page">
-    <h2 id="paquetes-title" class="text-3xl font-bold text-brand-900">Paquetes</h2>
+    <p class="eyebrow mb-2 text-mint md:mb-3">{{ copy.eyebrow }}</p>
+    <h2 id="paquetes-title" class="h-display mb-2 text-[2rem] leading-tight md:mb-3 md:text-[2.75rem] md:leading-[1.1]">{{ copy.title }}</h2>
+    <p class="mb-8 max-w-[42.5rem] text-base text-mist-2 md:mb-10 md:text-[1.1875rem]">{{ copy.intro }}</p>
 
     @if (isEmpty()) {
-      <p class="mt-4 max-w-2xl text-muted">Armamos tu paquete a la medida. Cuéntanos qué necesitas y te cotizamos por WhatsApp.</p>
-      <ul class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+      <p class="max-w-2xl text-mist-2">{{ copy.emptyIntro }}</p>
+      <ul class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5">
         @for (card of cards; track card.id) {
-          <li class="flex flex-col rounded-xl border border-slate-200 bg-white p-6">
-            <h3 class="text-lg font-semibold">{{ card.name }}</h3>
-            <p class="mt-2 text-muted">{{ card.summary }}</p>
-            <a class="btn-secondary mt-auto" [href]="genericQuoteHref" target="_blank" rel="noopener" (click)="preselect(card.service)">Cotiza por WhatsApp</a>
+          <li class="flex flex-col rounded-card border border-night-line bg-night-2 p-6 md:p-8">
+            <h3 class="h-display text-2xl">{{ card.name }}</h3>
+            <p class="mb-6 mt-2 text-mist-2">{{ card.summary }}</p>
+            <a class="btn-outline-dark mt-auto" [href]="genericQuoteHref" target="_blank" rel="noopener" (click)="preselect(card.service)">Cotiza por WhatsApp</a>
           </li>
         }
       </ul>
     } @else {
       @for (group of groups(); track group.family) {
-        <h3 class="mt-10 text-2xl font-semibold text-brand-900">{{ group.title }}</h3>
+        <h3 class="h-display mb-1 mt-10 text-2xl first:mt-0 md:text-[1.75rem]">{{ group.title }}</h3>
 
         @if (group.family === 'domain') {
-          <div class="mt-4 overflow-x-auto">
-            <table class="w-full min-w-[32rem] border-collapse text-left">
+          <div class="relative mt-4 overflow-x-auto">
+            <table class="w-full min-w-[32rem] border-collapse text-left text-mist">
               <caption class="sr-only">Precios de dominios</caption>
               <thead>
-                <tr class="border-b border-slate-300 text-sm text-muted">
+                <tr class="border-b border-night-edge text-sm text-mist-3">
                   <th scope="col" class="py-2 pr-4 font-medium">Dominio</th>
                   <th scope="col" class="py-2 pr-4 font-medium">Precio</th>
                   @if (hasRenewal(group.plans)) { <th scope="col" class="py-2 pr-4 font-medium">Renovación</th> }
@@ -31,17 +33,17 @@
               </thead>
               <tbody>
                 @for (plan of group.plans; track plan.key) {
-                  <tr class="border-b border-slate-200 align-top">
-                    <th scope="row" class="py-3 pr-4 font-semibold">{{ plan.name }}@if (plan.badge) { <span class="ml-2 rounded bg-brand-100 px-2 py-0.5 text-xs">{{ plan.badge }}</span> }</th>
+                  <tr class="border-b border-night-line align-top">
+                    <th scope="row" class="py-3 pr-4 font-semibold">{{ plan.name }}@if (plan.badge) { <span class="ml-2 rounded-full bg-orange px-2.5 py-0.5 text-xs font-bold text-cta-ink">{{ plan.badge }}</span> }</th>
                     @if (needsQuote(plan)) {
-                      <td class="py-3 pr-4 text-muted" [attr.colspan]="hasRenewal(group.plans) ? 2 : 1">Precio por cotización</td>
+                      <td class="py-3 pr-4 text-mist-2" [attr.colspan]="hasRenewal(group.plans) ? 2 : 1">Precio por cotización</td>
                     } @else {
-                      <td class="py-3 pr-4">{{ formatMoney(amount(plan)!, plan.currency) }} <span class="text-sm text-muted">{{ priceSuffix(plan) }}</span></td>
+                      <td class="py-3 pr-4">{{ formatMoney(amount(plan)!, plan.currency) }} <span class="text-sm text-mist-2">{{ priceSuffix(plan) }}</span></td>
                       @if (hasRenewal(group.plans)) { <td class="py-3 pr-4">{{ plan.renewalPrice !== null ? formatMoney(plan.renewalPrice, plan.currency) : '—' }}</td> }
                     }
                     <td class="py-3">
                       @if (needsQuote(plan)) {
-                        <a class="btn-secondary" [href]="quoteHref(plan)" target="_blank" rel="noopener" (click)="preselect(plan.serviceLabel)">Cotiza por WhatsApp</a>
+                        <a class="btn-outline-dark" [href]="quoteHref(plan)" target="_blank" rel="noopener" (click)="preselect(plan.serviceLabel)">Cotiza por WhatsApp</a>
                       }
                     </td>
                   </tr>
@@ -50,52 +52,52 @@
             </table>
           </div>
         } @else {
-          <ul class="mt-4 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <ul class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
             @for (plan of group.plans; track plan.key) {
-              <li class="flex flex-col rounded-xl border bg-white p-6" [class.border-brand-700]="plan.featured" [class.border-slate-200]="!plan.featured" data-testid="plan-card">
-                @if (plan.badge) { <p class="mb-2 w-fit rounded bg-brand-100 px-2 py-0.5 text-xs font-semibold">{{ plan.badge }}</p> }
-                <h4 class="text-lg font-semibold">{{ plan.name }}</h4>
-                @if (plan.summary) { <p class="mt-2 text-muted">{{ plan.summary }}</p> }
+              <li class="flex flex-col rounded-card bg-night-2 p-6 md:p-8" [class]="plan.featured ? 'border-2 border-orange' : 'border border-night-line'" data-testid="plan-card">
+                @if (plan.badge) { <p class="mb-3 w-fit rounded-full bg-orange px-3 py-1 text-[13px] font-bold text-cta-ink">{{ plan.badge }}</p> }
+                <h4 class="h-display text-[1.75rem]">{{ plan.name }}</h4>
+                @if (plan.summary) { <p class="mt-2 font-mono text-[13px] text-mist-3">{{ plan.summary }}</p> }
 
                 @if (plan.managedPrice !== null && plan.billing !== 'quote') {
-                  <div class="mt-4 inline-flex w-fit overflow-hidden rounded-lg border-2 border-brand-700" role="group" [attr.aria-label]="'Modalidad de ' + plan.name">
-                    <button type="button" class="px-3 py-2 text-sm font-semibold" [class]="!isManaged(plan) ? 'bg-brand-700 text-white' : 'bg-white text-brand-900 hover:bg-brand-50'" [attr.aria-pressed]="!isManaged(plan)" (click)="setManaged(plan, false)">
+                  <div class="mt-4 flex w-full overflow-hidden rounded-xl border-2 border-orange" role="group" [attr.aria-label]="'Modalidad de ' + plan.name">
+                    <button type="button" class="flex-1 px-3 py-2 text-sm font-semibold" [class]="!isManaged(plan) ? 'bg-orange text-cta-ink' : 'bg-transparent text-mist hover:bg-night'" [attr.aria-pressed]="!isManaged(plan)" (click)="setManaged(plan, false)">
                       @if (!isManaged(plan)) { <span aria-hidden="true">✓ </span> }{{ modeSelf }}
                     </button>
-                    <button type="button" class="border-l-2 border-brand-700 px-3 py-2 text-sm font-semibold" [class]="isManaged(plan) ? 'bg-brand-700 text-white' : 'bg-white text-brand-900 hover:bg-brand-50'" [attr.aria-pressed]="isManaged(plan)" (click)="setManaged(plan, true)">
+                    <button type="button" class="flex-1 border-l-2 border-orange px-3 py-2 text-sm font-semibold" [class]="isManaged(plan) ? 'bg-orange text-cta-ink' : 'bg-transparent text-mist hover:bg-night'" [attr.aria-pressed]="isManaged(plan)" (click)="setManaged(plan, true)">
                       @if (isManaged(plan)) { <span aria-hidden="true">✓ </span> }{{ modeManaged }}
                     </button>
                   </div>
                 }
 
                 @if (needsQuote(plan)) {
-                  <a class="btn-primary mt-4 w-fit" [href]="quoteHref(plan)" target="_blank" rel="noopener" (click)="preselect(plan.serviceLabel)">Cotiza por WhatsApp</a>
+                  <a class="btn-primary mt-5 w-fit" [href]="quoteHref(plan)" target="_blank" rel="noopener" (click)="preselect(plan.serviceLabel)">Cotiza por WhatsApp</a>
                 } @else {
-                  <p class="mt-4 text-2xl font-bold text-brand-700" data-testid="price">{{ formatMoney(amount(plan)!, plan.currency) }}</p>
-                  <p class="text-sm text-muted" data-testid="suffix">{{ priceSuffix(plan) }}</p>
+                  <p class="h-display mt-5 text-[2.875rem] leading-none text-mist" data-testid="price">{{ formatMoney(amount(plan)!, plan.currency) }}</p>
+                  <p class="mt-1.5 text-[15px] text-mist-2" data-testid="suffix">{{ priceSuffix(plan) }}</p>
                   @if (plan.managedPrice !== null) {
-                    <p class="text-sm font-medium text-brand-900" data-testid="mode-note">{{ isManaged(plan) ? 'Incluye administración y soporte de Hosting3M' : 'Precio autoadministrado' }}</p>
+                    <p class="mt-1 text-[15px] font-medium text-orange-2" data-testid="mode-note">{{ isManaged(plan) ? 'Incluye administración y soporte de Hosting3M' : 'Precio autoadministrado' }}</p>
                   }
                   @if (plan.promoPrice !== null) {
-                    <p class="mt-2 text-sm">Promoción: {{ formatMoney(plan.promoPrice, plan.currency) }}@if (plan.promoMonths !== null) { por {{ plan.promoMonths }} meses }</p>
+                    <p class="mt-2 text-sm text-mist-2">Promoción: {{ formatMoney(plan.promoPrice, plan.currency) }}@if (plan.promoMonths !== null) { por {{ plan.promoMonths }} meses }</p>
                   }
-                  @if (plan.renewalPrice !== null) { <p class="text-sm">Renovación: {{ formatMoney(plan.renewalPrice, plan.currency) }}</p> }
-                  @if (plan.termMonths !== null) { <p class="text-sm">Plazo: {{ plan.termMonths }} meses</p> }
+                  @if (plan.renewalPrice !== null) { <p class="text-sm text-mist-2">Renovación: {{ formatMoney(plan.renewalPrice, plan.currency) }}</p> }
+                  @if (plan.termMonths !== null) { <p class="text-sm text-mist-2">Plazo: {{ plan.termMonths }} meses</p> }
                 }
 
-                @if (setupLine(plan); as setup) { <p class="mt-2 text-sm" data-testid="setup">{{ setup }}</p> }
+                @if (setupLine(plan); as setup) { <p class="mt-2 text-sm text-mist-2" data-testid="setup">{{ setup }}</p> }
 
                 @if (plan.features.length > 0) {
-                  <ul class="mt-4 list-disc space-y-1 pl-5">
+                  <ul class="mt-4 list-disc space-y-1 pl-5 text-mist-2">
                     @for (f of plan.features; track f) { <li>{{ f }}</li> }
                   </ul>
                 }
 
                 @if (!needsQuote(plan) && plan.priceCheckedAt) {
-                  <p class="mt-4 text-xs text-muted">Precios vigentes al {{ formatDate(plan.priceCheckedAt) }}@if (plan.validUntil) { · válidos hasta {{ formatDate(plan.validUntil) }} }</p>
+                  <p class="mt-4 text-xs text-mist-3">Precios vigentes al {{ formatDate(plan.priceCheckedAt) }}@if (plan.validUntil) { · válidos hasta {{ formatDate(plan.validUntil) }} }</p>
                 }
                 @if (!needsQuote(plan)) {
-                  <a class="btn-secondary mt-4" routerLink="/" fragment="contacto" data-testid="quote-plan" (click)="requestQuote(plan)">Cotizar {{ plan.name }}</a>
+                  <a class="mt-5 w-full text-center" [class]="plan.featured ? 'btn-primary' : 'btn-outline-dark'" routerLink="/" fragment="contacto" data-testid="quote-plan" (click)="requestQuote(plan)">Cotizar {{ plan.name }}</a>
                 }
               </li>
             }

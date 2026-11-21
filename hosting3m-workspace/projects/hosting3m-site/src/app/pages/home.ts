@@ -1,25 +1,21 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { ContactForm } from '../sections/contact-form';
+import { ContactSection } from '../sections/contact-section';
+import { Hero } from '../sections/hero';
 import { PlansSection } from '../sections/plans-section';
-import { NewsSection } from '../sections/news-section';
-import { DIFFERENTIATORS, PROCESS, SERVICES, SUITE_MODULES, TRUSTED_CLIENTS } from '../data/content';
-import faq from '../data/faq.json';
-import { SITE, whatsappLink } from '../core/site.config';
+import { ServicePicker } from '../sections/service-picker';
+import { ServicesBento } from '../sections/services-bento';
+import { StepsFaq } from '../sections/steps-faq';
+import { SystemsDemo } from '../sections/systems-demo';
 
+/**
+ * Home page, section by section (backgrounds alternate dark/light):
+ * 1 hero (dark) · 2 Elige (light) · 3 servicios (dark) · 4 sistemas (light) · 5 Compara (dark) ·
+ * 6 Así de simple + FAQ + noticias (light) · 7 Cotiza (dark) · 8 footer (light, in the app shell).
+ */
 @Component({
   selector: 'app-home',
-  imports: [RouterLink, ContactForm, NewsSection, PlansSection],
+  imports: [Hero, ServicePicker, ServicesBento, SystemsDemo, PlansSection, StepsFaq, ContactSection],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home.html',
 })
-export class Home {
-  readonly site = SITE;
-  readonly quoteHref = whatsappLink('Hola, quiero una cotización.');
-  readonly services = SERVICES;
-  readonly differentiators = DIFFERENTIATORS;
-  readonly process = PROCESS;
-  readonly suiteModules = SUITE_MODULES;
-  readonly clients = TRUSTED_CLIENTS;
-  readonly faq = faq;
-}
+export class Home {}

@@ -1,4 +1,5 @@
 import { Component } from '@angular/core';
+import { BUSINESS } from '../../core/business';
 import { SITE } from '../../core/site.config';
 
 @Component({
@@ -22,7 +23,7 @@ import { SITE } from '../../core/site.config';
         <li>WhatsApp y Facebook son plataformas externas con sus propias políticas y condiciones, que recomendamos revisar.</li>
       </ul>
       <h2>4. Propiedad intelectual</h2>
-      <p>Todos los contenidos, marcas, logotipos y materiales relacionados con nuestros servicios son propiedad de Francisco Jesus Perez Pimienta, salvo que se indique lo contrario. No está permitido su uso sin autorización expresa.</p>
+      <p>Todos los contenidos, marcas, logotipos y materiales relacionados con nuestros servicios son propiedad de {{ business.legalName }}, salvo que se indique lo contrario. No está permitido su uso sin autorización expresa.</p>
       <h2>5. Responsabilidad</h2>
       <ul>
         <li>Hosting3M no será responsable por daños directos o indirectos derivados del mal uso de los servicios.</li>
@@ -37,4 +38,5 @@ import { SITE } from '../../core/site.config';
 })
 export class Terms {
   readonly site = SITE;
+  readonly business = BUSINESS;
 }

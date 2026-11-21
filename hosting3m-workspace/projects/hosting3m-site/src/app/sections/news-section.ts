@@ -9,7 +9,7 @@ import { NewsService } from '../core/news';
   template: `
     <ul class="grid gap-6 md:grid-cols-3">
       @for (item of news.items(); track item.url + item.title) {
-        <li class="flex flex-col overflow-hidden rounded-xl border border-slate-200 bg-white">
+        <li class="flex flex-col overflow-hidden rounded-xl border border-cream-line bg-white">
           @if (item.image) {
             <img [src]="item.image" alt="" width="640" height="360" loading="lazy" decoding="async"
               referrerpolicy="no-referrer" class="aspect-video w-full object-cover" />

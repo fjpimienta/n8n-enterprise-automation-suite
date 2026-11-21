@@ -1,0 +1,18 @@
+<section id="contacto" class="section-dark" aria-labelledby="contacto-title">
+  <div class="container-page flex flex-col items-start gap-10 lg:flex-row lg:gap-14">
+    <div class="min-w-0 lg:flex-[1_1_400px]">
+      <p class="eyebrow mb-3 text-mint">{{ copy.eyebrow }}</p>
+      <h2 id="contacto-title" class="h-display mb-4 text-[2rem] leading-tight md:text-[2.75rem] md:leading-[1.1]">{{ copy.title }}</h2>
+      <p class="mb-7 text-base leading-relaxed text-mist-2 md:text-[1.1875rem]">{{ copy.intro }}</p>
+      <a class="btn-primary !px-8 !py-4 md:text-[1.0625rem]" [href]="quoteHref" target="_blank" rel="noopener noreferrer">{{ copy.whatsapp }}</a>
+      <address class="mt-7 not-italic">
+        <p class="mb-1 text-base text-mist"><a class="hover:underline" [href]="'tel:' + site.phoneTel">{{ site.phoneDisplay }}</a></p>
+        <p class="mb-1 text-base text-mist-2"><a class="hover:underline" [href]="'mailto:' + site.emails.general">{{ site.emails.general }}</a></p>
+        <p class="text-[15px] text-mist-3">{{ business.hoursText }}</p>
+      </address>
+    </div>
+    <div class="on-light w-full min-w-0 rounded-panel bg-cream p-6 text-cta-ink md:p-9 lg:flex-[1_1_440px]">
+      <app-contact-form />
+    </div>
+  </div>
+</section>

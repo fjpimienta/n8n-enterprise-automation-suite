@@ -1,0 +1,43 @@
+<section id="como" class="section-light" aria-labelledby="como-title">
+  <div class="container-page">
+    <h2 id="como-title" class="h-display mb-8 text-[2rem] leading-tight md:mb-10 md:text-[2.5rem]">{{ steps.title }}</h2>
+    <ol class="mb-14 grid gap-7 sm:grid-cols-2 lg:mb-20 lg:grid-cols-4">
+      @for (step of steps.steps; track step.title; let i = $index) {
+        <li class="border-t-[3px] border-orange pt-5">
+          <p class="mb-2 font-mono text-sm text-teal">0{{ i + 1 }}</p>
+          <h3 class="mb-2 text-xl font-bold">{{ step.title }}</h3>
+          <p class="text-base leading-relaxed text-body">{{ step.text }}</p>
+        </li>
+      }
+    </ol>
+
+    <div class="flex flex-col gap-12 lg:flex-row lg:gap-16">
+      <div class="min-w-0 lg:flex-[1_1_380px]">
+        <h2 class="h-display mb-7 text-[2rem] leading-tight md:mb-8 md:text-[2.5rem]">{{ why.title }}</h2>
+        @for (item of why.items; track item.title) {
+          <div class="mb-6">
+            <h3 class="mb-1.5 text-xl font-bold">{{ item.title }}</h3>
+            <p class="text-base leading-relaxed text-body">{{ item.text }}</p>
+          </div>
+        }
+      </div>
+
+      <div id="preguntas" class="min-w-0 lg:flex-[1_1_480px]">
+        <h2 class="h-display mb-7 text-[2rem] leading-tight md:mb-8 md:text-[2.5rem]">{{ faqTitle }}</h2>
+        <div class="border-b border-cream-line">
+          @for (item of faq; track item.q; let first = $first) {
+            <details class="border-t border-cream-line py-[18px]" [open]="first">
+              <summary class="cursor-pointer text-lg font-bold">{{ item.q }}</summary>
+              <p class="mt-3 text-base leading-relaxed text-body">{{ item.a }}</p>
+            </details>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div id="noticias" class="mt-14 lg:mt-20">
+      <h2 class="h-display mb-7 text-[2rem] leading-tight md:text-[2.5rem]">{{ newsTitle }}</h2>
+      <app-news-section />
+    </div>
+  </div>
+</section>

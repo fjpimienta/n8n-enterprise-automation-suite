@@ -18,6 +18,7 @@ import {
   shownAmount,
 } from '../core/plans';
 import { SITE, whatsappLink } from '../core/site.config';
+import { PACKAGES_SECTION } from '../data/home-copy';
 
 @Component({
   selector: 'app-plans-section',
@@ -34,6 +35,7 @@ export class PlansSection {
   readonly modeManaged = MODE_MANAGED;
 
   readonly site = SITE;
+  readonly copy = PACKAGES_SECTION;
   readonly cards = QUOTE_CARDS;
   readonly groups = computed(() => groupByFamily(this.catalog.plans()));
   /** Per domain group: show the renewal column only when at least one row has a renewal price. */

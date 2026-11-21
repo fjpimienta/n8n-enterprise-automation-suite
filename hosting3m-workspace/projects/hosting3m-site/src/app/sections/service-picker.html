@@ -1,0 +1,31 @@
+<section id="elige" class="section-light" aria-labelledby="elige-title">
+  <div class="container-page">
+    <p class="eyebrow mb-2 text-teal md:mb-3">{{ copy.eyebrow }}</p>
+    <h2 id="elige-title" class="h-display mb-2 text-[2rem] leading-tight md:mb-3 md:text-[2.75rem] md:leading-[1.1]">{{ copy.title }}</h2>
+    <p class="mb-6 max-w-[38rem] text-base text-body md:mb-9 md:text-[1.1875rem]">{{ copy.intro }}</p>
+
+    <div role="group" aria-label="¿Qué necesitas hoy?" class="mb-4 grid grid-cols-2 gap-2.5 md:mb-6 md:grid-cols-4 md:gap-4">
+      @for (option of copy.options; track option.id) {
+        <button type="button" [attr.aria-pressed]="selectedId() === option.id" (click)="pick(option.id)"
+          class="flex flex-col items-start gap-1 rounded-2xl p-4 text-left text-cta-ink transition-colors md:gap-2 md:rounded-[1.25rem] md:p-6"
+          [class]="selectedId() === option.id ? 'border-2 border-teal bg-teal-tint' : 'border border-cream-line bg-white hover:border-teal'">
+          <span class="hidden text-teal md:block"><app-icon [name]="option.icon" [size]="30" /></span>
+          <span class="text-base font-bold md:text-[1.1875rem]">{{ option.label }}</span>
+          <span class="text-[13px] text-soft md:text-[15px]">{{ option.hint }}</span>
+        </button>
+      }
+    </div>
+
+    <div class="flex flex-col justify-between gap-5 rounded-[1.375rem] bg-teal-deep p-6 text-white md:flex-row md:items-center md:gap-8 md:rounded-panel md:p-10" aria-live="polite" data-testid="recommendation">
+      <div class="min-w-0 md:max-w-[35rem]">
+        <p class="mb-1.5 font-mono text-xs text-mint-2 md:mb-2 md:text-[13px]">{{ copy.recommendLabel }}</p>
+        <h3 class="h-display mb-2 text-[1.625rem] md:mb-2.5 md:text-[2rem]" data-testid="rec-title">{{ title() }}</h3>
+        <p class="text-[0.9375rem] leading-relaxed text-mist md:text-[1.0625rem]">{{ selected().text }}</p>
+      </div>
+      <div class="md:flex-none">
+        <p class="mb-3.5 text-lg font-bold md:mb-4 md:text-[1.375rem]" data-testid="rec-price">{{ price() }}</p>
+        <a routerLink="/" fragment="contacto" class="btn-primary w-full !py-3.5 md:w-auto md:!px-7 md:!py-4 md:text-[1.0625rem]" data-testid="rec-cta" (click)="requestQuote()">{{ selected().cta }}</a>
+      </div>
+    </div>
+  </div>
+</section>
