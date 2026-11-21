@@ -8,10 +8,7 @@ Tokens present in the build today, and what resolves each one:
 | `TODO_PRICE` (x4) | `src/app/data/plans.json` | Approved price per package (number, MXN, with/without IVA stated) |
 | `TODO_BILLING` (x4) | `plans.json` | Billing period per package (mensual, anual, único) |
 | `TODO_FEATURES` (x4) | `plans.json` | Package contents (specs, what is included) |
-| `TODO_COPY` (x4) | `plans.json` | One-line summary per package |
 | `TODO_CFDI_CLAIM_TITLE`, `TODO_CFDI_CLAIM_TEXT` | `data/content.ts` | Card hidden until the invoicing service exists (flag in `content.ts`); needs the exact, verifiable claim in `data/cfdi-claim.ts` before switching it on |
-| `TODO_PORTFOLIO` | route `/portfolio` | Approved real cases (without "Pista de Hielo") |
-| `TODO_PROFILE` | route `/fjpimienta` | Short professional profile, without personal email or phone |
 
 ## Not tokens, but still need your approval before production
 - **Fallback news** (`data/news-fallback.json`): 3 own cards about the GitHub suite. Drafted by Claude from `CLAUDE.md`; review wording.
