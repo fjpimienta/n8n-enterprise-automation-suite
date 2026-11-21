@@ -72,6 +72,31 @@ describe('ConsentService', () => {
     expect(gaScripts()).toHaveLength(1);
   });
 
+  it('regression: clean storage and cookies => banner visible, no GA request, no _ga cookie, key not written', () => {
+    const setItem = vi.spyOn(Storage.prototype, 'setItem');
+    const consent = setup();
+    expect(localStorage.getItem(KEY)).toBeNull();
+    consent.init();
+    expect(consent.bannerOpen()).toBe(true);
+    expect(consent.choice()).toBeNull();
+    expect(gaScripts()).toHaveLength(0);
+    expect(document.cookie).not.toMatch(/(^|;\s*)_ga/);
+    expect(setItem).not.toHaveBeenCalled();
+    expect(localStorage.getItem(KEY)).toBeNull();
+    // Every consent call before a click is a denial.
+    expect(consentCalls().every((c) => c[1] === 'default')).toBe(true);
+  });
+
+  it('regression: reopening the banner, navigating or a second init never grants consent by itself', () => {
+    const consent = setup();
+    consent.init();
+    consent.reopen();
+    consent.init();
+    expect(consent.choice()).toBeNull();
+    expect(gaScripts()).toHaveLength(0);
+    expect(consentCalls().some((c) => (c[2] as Record<string, string>)['analytics_storage'] === 'granted')).toBe(false);
+  });
+
   it('keeps the choice in memory when localStorage throws', () => {
     vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('blocked');
