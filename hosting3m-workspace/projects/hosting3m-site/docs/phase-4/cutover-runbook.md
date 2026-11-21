@@ -122,7 +122,7 @@ this runbook. Plesk's own backup (Tools & Settings > Backup Manager) is an extra
 Cloudflare > hosting3m.com > Caching > Configuration > **Purge Cache** > *Purge Everything* (the site is small; do it once per release).
 Why: unhashed files (`favicon.ico`, `index.html`, `sitemap.xml`, `robots.txt`, `apple-touch-icon.png`, images) can be served stale; the
 beta served an old `favicon.ico` after the logo change. Targeted alternative: purge by URL for `/`, `/favicon.ico`, `/favicon-32.png`,
-`/favicon-48.png`, `/apple-touch-icon.png`, `/sitemap.xml`, `/robots.txt` and the six page URLs.
+`/favicon-48.png`, `/apple-touch-icon.png`, `/sitemap.xml`, `/robots.txt` and the seven page URLs.
 API form (optional; keep the token in an environment variable, never in a file or a chat):
 ```sh
 curl -s -X POST "https://api.cloudflare.com/client/v4/zones/$CF_ZONE_ID/purge_cache" \
@@ -174,10 +174,11 @@ Note: the old `sitemap.xml` lists relative `<loc>` values (one is empty), so Goo
 | `/` | `/` | same URL | n/a |
 | `/portfolio` | `/portfolio` | same URL, new content | n/a |
 | `/fjpimienta` | `/fjpimienta` | same URL, new content | n/a |
-| `/politica-de-privacidad` | `/politica-de-privacidad` | same URL | n/a |
-| `/condiciones-de-servicio` | `/condiciones-de-servicio` | same URL | n/a |
+| `/politica-de-privacidad` | `/aviso-de-privacidad` | **301** (page renamed) | `nginx-legacy-redirects.conf` |
+| `/condiciones-de-servicio` | `/terminos-y-condiciones` | **301** (page renamed) | `nginx-legacy-redirects.conf` |
+| none (new page) | `/politica-de-cookies` | new URL, no redirect needed | n/a |
 | `/eliminardatosusuarios` | `/eliminardatosusuarios` | same URL | n/a |
-| `/privacy` | `/politica-de-privacidad` | **301** | `nginx-legacy-redirects.conf` |
+| `/privacy` | `/aviso-de-privacidad` | **301** (straight to the final URL, no double hop) | `nginx-legacy-redirects.conf` |
 | `/news` | `/` | **301** (the home has a news section, `#noticias`; Google ignores fragments, so the target is `/`) | `nginx-legacy-redirects.conf` |
 | `/noticias-elemento` | `/` | **301** | `nginx-legacy-redirects.conf` |
 | `/noticias-elemento/blog-post-1` ... `blog-post-6` | `/` | **301** (the six posts were empty builder placeholders: "Blog Post N") | `nginx-legacy-redirects.conf` |
@@ -192,18 +193,18 @@ news page later, change the targets then; a 301 to `/` is the safe default today
 Paste `docs/nginx-legacy-redirects.conf` and `docs/nginx-security-headers.conf` into the production domain's *Additional nginx directives*
 (Plesk validates the syntax on save; **Proxy mode must be OFF**; do not define `location /`). Do **not** paste `nginx-beta-only.conf`.
 ```sh
-for p in privacy news noticias-elemento noticias-elemento/blog-post-1 noticias-elemento/blog-post-6; do
+for p in privacy politica-de-privacidad condiciones-de-servicio news noticias-elemento noticias-elemento/blog-post-1 noticias-elemento/blog-post-6; do
   printf '%s -> ' "/$p"; curl -s -o /dev/null -w '%{http_code} %{redirect_url}\n' "https://hosting3m.com/$p"; done
 curl -s -o /dev/null -w '/noticias/1406506303.xml -> %{http_code}\n' https://hosting3m.com/noticias/1406506303.xml     # 410
 curl -s -o /dev/null -w '/no-existe -> %{http_code}\n' https://hosting3m.com/no-existe                                 # 404
-for p in "" portfolio fjpimienta politica-de-privacidad condiciones-de-servicio eliminardatosusuarios; do
+for p in "" portfolio fjpimienta aviso-de-privacidad politica-de-cookies terminos-y-condiciones eliminardatosusuarios; do
   printf '%s -> ' "/$p"; curl -s -o /dev/null -w '%{http_code}\n' "https://hosting3m.com/$p"; done                       # all 200
 curl -s -o /dev/null -w '/webcard/ -> %{http_code}\n' https://hosting3m.com/webcard/                                    # same as before the cutover (403 was the old answer)
 ```
 
 ### 4.4 Sitemap, robots, canonical **[laptop]**
 ```sh
-curl -s https://hosting3m.com/sitemap.xml | grep -o '<loc>[^<]*</loc>'                                   # six URLs
+curl -s https://hosting3m.com/sitemap.xml | grep -o '<loc>[^<]*</loc>'                                   # seven URLs
 curl -s https://hosting3m.com/sitemap.xml | grep -o '<loc>[^<]*</loc>' | grep -vc '^<loc>https://hosting3m.com/'   # must print 0: no beta., www. or relative URL
 curl -s https://hosting3m.com/robots.txt                                           # Allow: / and Sitemap: https://hosting3m.com/sitemap.xml
 for p in "" portfolio fjpimienta; do curl -s "https://hosting3m.com/$p" | grep -o '<link rel="canonical"[^>]*>'; done   # https://hosting3m.com/...
@@ -213,7 +214,7 @@ If any new route is added later, add it to `public/sitemap.xml` before the relea
 
 ### 4.5 Google Search Console **[laptop]** (browser)
 1. Add the property **hosting3m.com** (Domain property, verified with a DNS TXT record in Cloudflare) or the URL-prefix property `https://hosting3m.com/`.
-2. Sitemaps > add `https://hosting3m.com/sitemap.xml` > Submit. Status must become *Success* with 6 discovered URLs.
+2. Sitemaps > add `https://hosting3m.com/sitemap.xml` > Submit. Status must become *Success* with 7 discovered URLs.
 3. URL Inspection > `https://hosting3m.com/` > *Test live URL* > *Request indexing* (repeat for `/portfolio` and `/fjpimienta`).
 4. After 48 h: Pages report: look for *Not found (404)*, *Page with redirect* and *Excluded by noindex*. The last one must be empty.
 5. Rich results: test `https://hosting3m.com/` in the Rich Results Test (LocalBusiness; address and hours are present).
@@ -221,19 +222,20 @@ If any new route is added later, add it to `public/sitemap.xml` before the relea
 
 ---
 
-## 5. Legal texts (privacy, cookies, terms, data deletion)
+## 5. Legal texts (privacy notice, cookies policy, terms, data deletion)
 
-Pages: `src/app/pages/legal/privacy.ts` (privacy), `terms.ts` (terms), `deletion.ts` (data deletion). **There is no separate cookies page.**
-What exists today is the Sitejet text migrated verbatim (dates 30/08/2025 and 29/08/2025), **not** lawyer-reviewed.
+Routes: `/aviso-de-privacidad` (privacy notice), `/politica-de-cookies` (cookies policy), `/terminos-y-condiciones` (terms of service, page title "Condiciones de servicio").
+Content lives in `src/app/data/legal/{privacy,cookies,terms}.ts` and is rendered by one `LegalPage` component; `src/app/pages/legal/deletion.ts` (`/eliminardatosusuarios`) is unchanged.
+The old URLs `/politica-de-privacidad`, `/condiciones-de-servicio` and `/privacy` answer **301** through `docs/nginx-legacy-redirects.conf` (paste it in Plesk, section 4.3);
+the router keeps client-side redirects as a safety net.
+The text is the approved draft of 21 de noviembre de 2026 ("Borrador legal Hosting3M"), **not yet lawyer-approved**: the draft itself says nothing must go to production without a lawyer's approval.
 
 Checklist (owner + lawyer):
-- [ ] Replace the text of the three pages with the lawyer-reviewed version, with the real publication date in "Última actualización".
-- [ ] **Cookies / analytics:** at the time of writing `privacy.ts` does **not** mention cookies or Google Analytics, yet the cookie banner links
-  to it. The reviewed text must describe: GA4 (measurement id in `core/site.config.ts`) loaded only after "Aceptar", Consent Mode v2 with all signals
-  denied by default, only `analytics_storage` granted, how to change the choice ("Preferencias de cookies" in the footer), Cloudflare Turnstile on the form,
-  and the retention period. Either put it inside the privacy page or add a cookies page (then add the route, the sitemap entry and a footer link).
-- [ ] The legal entity (`Francisco Jesus Perez Pimienta`), address and hours come from `src/app/core/business.ts`; make the reviewed text consistent with them.
-- [ ] Data deletion page: the contact channel and response time stated there must be the ones you can honour.
+- [ ] The lawyer approves the three texts (or replaces them in `data/legal/*.ts`); `LEGAL_LAST_UPDATED` in `src/app/core/business.ts` carries the publication date and must match the approved version.
+- [ ] **Cookies / analytics:** the cookies policy and the privacy notice describe GA4 (loaded only after "Aceptar", Consent Mode v2 denied by default, only `analytics_storage` granted),
+  the cookie table (`_ga`, `_ga_MVJRDZ7TD8`, Cloudflare/Turnstile, `h3m_cookie_consent_v1`) and "Preferencias de cookies" in the footer. Confirm they still match what the site really does (see section 7, item 2).
+- [ ] The legal entity, address, email and phone come from `src/app/core/business.ts`; make the approved text consistent with them.
+- [ ] Data deletion page (`/eliminardatosusuarios`): not part of the draft; the contact channel and response time stated there must be the ones you can honour and agree with the ARCO section of the privacy notice.
 
 **Build guard (already added):** `scripts/check-legal-markers.mjs` (+ `check-legal-markers.test.mjs`, run in CI). Same style as `check-todo`:
 a **production** build fails while the output contains `[VERIFICAR]`, `[DECIDIR]`, `[REVISAR]` or `[FECHA DE PUBLICACIÓN]` (case-insensitive,
@@ -279,7 +281,7 @@ No price is written in templates or data files.
 
 Use a private window with cleared site data. Keep Console and Network visible.
 
-1. **Pages:** `/`, `/portfolio`, `/fjpimienta`, `/politica-de-privacidad`, `/condiciones-de-servicio`, `/eliminardatosusuarios` open directly (no 404); `/no-existe` shows the site's 404 page with status 404.
+1. **Pages:** `/`, `/portfolio`, `/fjpimienta`, `/aviso-de-privacidad`, `/politica-de-cookies`, `/terminos-y-condiciones`, `/eliminardatosusuarios` open directly (no 404); the old `/politica-de-privacidad` and `/condiciones-de-servicio` answer 301 to the new URLs; `/no-existe` shows the site's 404 page with status 404.
 2. **Cookie banner and Consent Mode:**
    - Fresh profile: the banner appears; Network has **no** `googletagmanager.com` / `google-analytics.com` request and `document.cookie` has no `_ga*`.
    - **Rechazar:** still no `gtag/js`; reload: banner stays closed.
