@@ -1,6 +1,7 @@
-import { Component, signal } from '@angular/core';
+import { Component, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { SITE } from '../core/site.config';
+import { HEADER_CTA, NAV_LINKS } from '../data/nav';
+import { SITE, whatsappLink } from '../core/site.config';
 
 @Component({
   selector: 'app-header',
@@ -9,14 +10,11 @@ import { SITE } from '../core/site.config';
 })
 export class Header {
   readonly site = SITE;
+  readonly links = NAV_LINKS;
+  readonly cta = HEADER_CTA;
+  readonly quoteHref = whatsappLink('Hola, quiero una cotización.');
   readonly menuOpen = signal(false);
-  readonly links = [
-    { label: 'Servicios', fragment: 'servicios' },
-    { label: 'Paquetes', fragment: 'paquetes' },
-    { label: 'Suite open source', fragment: 'suite' },
-    { label: 'Noticias', fragment: 'noticias' },
-    { label: 'Contacto', fragment: 'contacto' },
-  ];
+  private readonly toggleButton = viewChild<ElementRef<HTMLButtonElement>>('toggleButton');
 
   toggle(): void {
     this.menuOpen.update((open) => !open);
@@ -24,5 +22,12 @@ export class Header {
 
   close(): void {
     this.menuOpen.set(false);
+  }
+
+  /** Escape closes the mobile menu and gives the focus back to the button that opened it. */
+  onEscape(): void {
+    if (!this.menuOpen()) return;
+    this.close();
+    this.toggleButton()?.nativeElement.focus();
   }
 }

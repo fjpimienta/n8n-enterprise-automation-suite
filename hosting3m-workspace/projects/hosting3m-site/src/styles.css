@@ -79,6 +79,10 @@
 @utility container-page {
   @apply mx-auto w-full max-w-page px-5 md:px-10 lg:px-20;
 }
+/* Focus ring for light surfaces (the default mint ring is too faint there). */
+@utility on-light {
+  & :focus-visible { outline-color: var(--color-teal); }
+}
 /* Page sections alternate between these two surfaces; never two equal blocks in a row. */
 @utility section-dark {
   @apply bg-night py-14 text-mist md:py-20 lg:py-26;
