@@ -20,7 +20,7 @@
         <h3 class="h-display mb-1 mt-10 text-2xl first:mt-0 md:text-[1.75rem]">{{ group.title }}</h3>
 
         @if (group.family === 'domain') {
-          <div class="mt-4 overflow-x-auto">
+          <div class="relative mt-4 overflow-x-auto">
             <table class="w-full min-w-[32rem] border-collapse text-left text-mist">
               <caption class="sr-only">Precios de dominios</caption>
               <thead>
@@ -60,11 +60,11 @@
                 @if (plan.summary) { <p class="mt-2 font-mono text-[13px] text-mist-3">{{ plan.summary }}</p> }
 
                 @if (plan.managedPrice !== null && plan.billing !== 'quote') {
-                  <div class="mt-4 inline-flex w-fit overflow-hidden rounded-xl border-2 border-orange" role="group" [attr.aria-label]="'Modalidad de ' + plan.name">
-                    <button type="button" class="px-3 py-2 text-sm font-semibold" [class]="!isManaged(plan) ? 'bg-orange text-cta-ink' : 'bg-transparent text-mist hover:bg-night'" [attr.aria-pressed]="!isManaged(plan)" (click)="setManaged(plan, false)">
+                  <div class="mt-4 flex w-full overflow-hidden rounded-xl border-2 border-orange" role="group" [attr.aria-label]="'Modalidad de ' + plan.name">
+                    <button type="button" class="flex-1 px-3 py-2 text-sm font-semibold" [class]="!isManaged(plan) ? 'bg-orange text-cta-ink' : 'bg-transparent text-mist hover:bg-night'" [attr.aria-pressed]="!isManaged(plan)" (click)="setManaged(plan, false)">
                       @if (!isManaged(plan)) { <span aria-hidden="true">✓ </span> }{{ modeSelf }}
                     </button>
-                    <button type="button" class="border-l-2 border-orange px-3 py-2 text-sm font-semibold" [class]="isManaged(plan) ? 'bg-orange text-cta-ink' : 'bg-transparent text-mist hover:bg-night'" [attr.aria-pressed]="isManaged(plan)" (click)="setManaged(plan, true)">
+                    <button type="button" class="flex-1 border-l-2 border-orange px-3 py-2 text-sm font-semibold" [class]="isManaged(plan) ? 'bg-orange text-cta-ink' : 'bg-transparent text-mist hover:bg-night'" [attr.aria-pressed]="isManaged(plan)" (click)="setManaged(plan, true)">
                       @if (isManaged(plan)) { <span aria-hidden="true">✓ </span> }{{ modeManaged }}
                     </button>
                   </div>
