@@ -3,12 +3,13 @@ import { Injectable, inject } from '@angular/core';
 import { Meta, Title } from '@angular/platform-browser';
 import { ActivatedRouteSnapshot, NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs';
+import { BUSINESS } from './business';
 import { SITE } from './site.config';
 import { CONTACT_SERVICES } from './contact';
 
 const JSON_LD_ID = 'jsonld-site';
 
-/** schema.org graph for the home page. Only verified facts: no ratings, hours, prices or street address. */
+/** schema.org graph for the home page. Only verified facts (see core/business.ts): no ratings or prices. */
 export function buildJsonLd(): Record<string, unknown> {
   const businessId = `${SITE.url}/#business`;
   return {
@@ -23,13 +24,12 @@ export function buildJsonLd(): Record<string, unknown> {
         email: SITE.emails.general,
         address: {
           '@type': 'PostalAddress',
-          addressLocality: 'Mérida',
-          addressRegion: 'Yucatán',
-          addressCountry: 'MX',
-          streetAddress: 'Calle 12D #895, Fracc. Solana',
+          streetAddress: BUSINESS.address.street,
+          addressLocality: BUSINESS.address.locality,
+          addressRegion: BUSINESS.address.region,
+          addressCountry: BUSINESS.address.country,
         },
-        // Machine-readable; central Mexico time. Human text: lunes a viernes 9:00 a 17:00 y sábados 9:00 a 14:00.
-        openingHours: ['Mo-Fr 09:00-17:00', 'Sa 09:00-14:00'],
+        openingHours: [...BUSINESS.openingHours],
         image: 'TODO_OG_IMAGE',
         areaServed: { '@type': 'Country', name: 'México' },
         sameAs: [SITE.githubSuiteUrl],
