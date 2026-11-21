@@ -75,9 +75,11 @@ export class PlansSection {
     return isQuote(plan, this.isManaged(plan));
   }
 
-  /** The WhatsApp link opens in a new tab; this also preselects the service in the contact form. */
+  /** The WhatsApp link opens in a new tab; this also preselects the service in the contact form (via ContactPrefill). */
   preselect(service: string): void {
-    if (service) void this.router.navigate(['/'], { queryParams: { servicio: service }, fragment: 'contacto' });
+    if (!service) return;
+    this.prefill.apply(service, '');
+    void this.router.navigate(['/'], { fragment: 'contacto' });
   }
 
   /** "Cotizar <plan>": the routerLink goes to #contacto; this tells the form what to preselect and prefill. */

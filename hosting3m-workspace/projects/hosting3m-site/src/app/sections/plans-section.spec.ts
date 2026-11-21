@@ -97,4 +97,15 @@ describe('PlansSection', () => {
     expect(el.querySelector('[data-testid="price"]')).toBeNull();
     expect(el.textContent).not.toMatch(/\$\s?\d/);
   });
+
+  it('empty catalog: the four fallback cards carry the approved one-line summaries and no TODO_ text', () => {
+    const { el } = render([]);
+    const cards = Array.from(el.querySelectorAll('li')).map((li) => li.textContent ?? '');
+    expect(cards).toHaveLength(4);
+    expect(cards[0]).toContain('Servidores virtuales con acceso root, autoadministrados o administrados por Hosting3M.');
+    expect(cards[1]).toContain('Hosting para tu sitio web, autoadministrado o administrado por Hosting3M.');
+    expect(cards[2]).toContain('Registro y administración de dominios .com, .mx, .com.mx, .org, .net y .ai.');
+    expect(cards[3]).toContain('n8n instalado y operado por Hosting3M, listo para tus flujos de automatización.');
+    expect(el.textContent).not.toContain('TODO_');
+  });
 });
