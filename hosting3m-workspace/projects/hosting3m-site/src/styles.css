@@ -2,32 +2,73 @@
 @source "./";
 
 /*
- * Design tokens (Tailwind v4, CSS-first).
- * TODO_BRAND: provisional palette until the owner approves logo and brand colors.
- * White text on brand-600/700/900 and on whatsapp passes WCAG AA (>= 4.5:1).
+ * DESIGN TOKENS: the single place to change the palette, fonts and radii (Tailwind v4, CSS-first).
+ * Direction D. A palette change is a one-file edit: every component uses these names, never raw hex values.
+ * AA contrast checked: mist/mist-2 on night, cta-ink on orange, cream-ink on cream, white on teal and brand-600/700/900.
  */
 @theme {
-  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  /* Fonts (self-hosted, latin subset, see @font-face below). */
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-  --color-brand-50: #eef6fb;
-  --color-brand-100: #d6e9f5;
-  --color-brand-500: #1f7aad;
-  --color-brand-600: #17628b;
-  --color-brand-700: #124d6e;
-  --color-brand-900: #0a2b3d;
-  --color-ink: #0f172a;
-  --color-muted: #475569;
+  /* Dark surfaces. */
+  --color-night: #0b1a1d;
+  --color-night-2: #112a2f;
+  --color-night-line: #1d3b41;
+  --color-night-edge: #3a6168;
+  --color-teal-deep: #123a41;
+  /* Text on dark. */
+  --color-mist: #e6f1f2;
+  --color-mist-2: #b4cbce;
+  --color-mist-3: #8fb0b4;
+  --color-mint: #5fd4c8;
+  --color-mint-2: #8fe0d6;
+  /* Accent / call to action. */
+  --color-orange: #f58220;
+  --color-orange-2: #f6a45c;
+  --color-cta-ink: #1f2a2e;
+  --color-teal: #1d6b78;
+  --color-teal-tint: #e4f2f3;
+  /* Light surfaces and their text. */
+  --color-cream: #fbf7f2;
+  --color-cream-2: #f1ebe2;
+  --color-cream-line: #ddd2c2;
+  --color-cream-edge: #cdbfab;
+  --color-body: #3d4d52;
+  --color-soft: #566569;
+
+  /* Legacy names used by the legal pages and the cookie banner, mapped onto the palette above. */
+  --color-brand-50: #e4f2f3;
+  --color-brand-100: #cfe6e9;
+  --color-brand-500: #2a8a99;
+  --color-brand-600: #1d6b78;
+  --color-brand-700: #175862;
+  --color-brand-900: #123a41;
+  --color-ink: #1f2a2e;
+  --color-muted: #566569;
   --color-whatsapp: #0f7a40;
   --color-whatsapp-dark: #0b6333;
 
-  --container-page: 72rem;
+  --radius-btn: 0.875rem;
+  --radius-tile: 1.5rem;
+  --radius-card: 1.75rem;
+  --radius-panel: 1.75rem;
+
+  /* 1120 px of content plus 80 px of side padding on desktop. */
+  --container-page: 80rem;
 }
 
+/* Self-hosted fonts (OFL, see public/fonts/README.txt). font-display: swap; Fraunces and DM Sans are preloaded in index.html. */
+@font-face { font-family: "Fraunces"; font-style: normal; font-weight: 100 900; font-display: swap; src: url("/fonts/fraunces-latin-wght-normal.woff2") format("woff2"); }
+@font-face { font-family: "DM Sans"; font-style: normal; font-weight: 100 1000; font-display: swap; src: url("/fonts/dm-sans-latin-wght-normal.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/jetbrains-mono-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 500; font-display: swap; src: url("/fonts/jetbrains-mono-latin-500-normal.woff2") format("woff2"); }
+
 @layer base {
-  html { scroll-behavior: smooth; scroll-padding-top: 5rem; }
-  body { @apply bg-white font-sans text-ink antialiased; }
-  :focus-visible { outline: 3px solid var(--color-brand-500); outline-offset: 2px; }
+  html { scroll-behavior: smooth; scroll-padding-top: 4.5rem; }
+  body { @apply bg-cream font-sans text-ink antialiased; }
+  :focus-visible { outline: 3px solid var(--color-mint); outline-offset: 2px; }
   @media (prefers-reduced-motion: reduce) {
     html { scroll-behavior: auto; }
     *, ::before, ::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
@@ -36,20 +77,48 @@
 
 /* Tailwind v4: shared component classes are custom utilities so they can be composed with @apply and variants. */
 @utility container-page {
-  @apply mx-auto w-full max-w-page px-4 sm:px-6 lg:px-8;
+  @apply mx-auto w-full max-w-page px-5 md:px-10 lg:px-20;
+}
+/* Page sections alternate between these two surfaces; never two equal blocks in a row. */
+@utility section-dark {
+  @apply bg-night py-14 text-mist md:py-20 lg:py-26;
+}
+@utility section-light {
+  @apply bg-cream py-14 text-cta-ink md:py-20 lg:py-26;
+  /* The mint focus ring is too faint on light surfaces: use teal. */
+  & :focus-visible { outline-color: var(--color-teal); }
+}
+@utility section-light-2 {
+  @apply bg-cream-2 py-14 text-cta-ink md:py-20 lg:py-26;
+  & :focus-visible { outline-color: var(--color-teal); }
+}
+@utility eyebrow {
+  @apply font-mono text-xs tracking-wide md:text-[13px];
+}
+@utility h-display {
+  @apply font-display font-semibold tracking-tight;
 }
 @utility btn {
-  @apply inline-flex min-h-11 items-center justify-center rounded-lg px-5 py-2.5 text-base font-semibold transition-colors;
+  @apply inline-flex min-h-11 items-center justify-center rounded-btn px-5 py-2.5 text-base font-bold transition-colors;
 }
+/* Main call to action: orange with dark text. */
 @utility btn-primary {
-  @apply btn bg-whatsapp text-white hover:bg-whatsapp-dark;
+  @apply btn bg-orange text-cta-ink hover:bg-orange-2;
 }
+/* Outline on light surfaces. */
 @utility btn-secondary {
-  @apply btn border border-brand-600 bg-white text-brand-700 hover:bg-brand-50;
+  @apply btn border border-teal bg-transparent text-cta-ink hover:bg-teal-tint;
+}
+/* Outline on dark surfaces. */
+@utility btn-outline-dark {
+  @apply btn border border-night-edge bg-transparent text-mist hover:bg-night-2;
+}
+@utility btn-teal {
+  @apply btn bg-teal text-white hover:bg-brand-700;
 }
 
 @utility field {
-  @apply mt-1 block w-full rounded-lg border border-slate-400 bg-white px-3 py-2 text-base text-ink aria-[invalid=true]:border-red-700;
+  @apply mt-1.5 block w-full rounded-xl border border-cream-edge bg-white px-3.5 py-3 text-base text-ink aria-[invalid=true]:border-red-700;
 }
 @utility field-error {
   @apply mt-1 text-sm font-medium text-red-800;

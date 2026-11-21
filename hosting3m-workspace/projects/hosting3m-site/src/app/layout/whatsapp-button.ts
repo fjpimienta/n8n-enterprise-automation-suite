@@ -4,7 +4,7 @@ import { whatsappLink } from '../core/site.config';
 @Component({
   selector: 'app-whatsapp-button',
   template: `
-    <a class="btn-primary fixed bottom-4 right-4 z-40 shadow-lg" [href]="href" target="_blank" rel="noopener noreferrer"
+    <a class="btn bg-whatsapp text-white hover:bg-whatsapp-dark fixed bottom-4 right-4 z-40 shadow-lg" [href]="href" target="_blank" rel="noopener noreferrer"
       aria-label="Escríbenos por WhatsApp (se abre en una pestaña nueva)">WhatsApp</a>
   `,
 })
