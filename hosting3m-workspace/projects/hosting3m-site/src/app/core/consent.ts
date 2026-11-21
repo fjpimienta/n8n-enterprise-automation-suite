@@ -5,7 +5,7 @@ import { Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs';
 import { SITE } from './site.config';
 
-const STORAGE_KEY = 'h3m_cookie_consent_v1';
+export const STORAGE_KEY = 'h3m_cookie_consent_v1';
 
 type Choice = 'granted' | 'denied';
 type GtagWindow = Window & { dataLayer?: unknown[]; gtag?: (...args: unknown[]) => void; [key: string]: unknown };
