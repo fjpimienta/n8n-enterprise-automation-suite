@@ -45,7 +45,7 @@ export class ContactError extends Error {
 }
 
 /** Body of POST /v6/contact. Note: no tenant id is ever sent; the server fixes the tenant. */
-export function buildContactPayload(value: ContactFormValue, turnstileToken: string): Record<string, string> {
+export function buildContactPayload(value: ContactFormValue, turnstileToken: string, extraServices: readonly string[] = []): Record<string, string> {
   const clean = (text: string, max: number) => text.trim().slice(0, max);
   return {
     names: clean(value.names, CONTACT_LIMITS.names),
@@ -54,7 +54,7 @@ export function buildContactPayload(value: ContactFormValue, turnstileToken: str
     phone: clean(value.phone, CONTACT_LIMITS.phone),
     email: clean(value.email, CONTACT_LIMITS.email),
     message: clean(value.message, CONTACT_LIMITS.message),
-    service: CONTACT_SERVICES.includes(value.service) ? value.service : '',
+    service: CONTACT_SERVICES.includes(value.service) || extraServices.includes(value.service) ? value.service.slice(0, CONTACT_LIMITS.service) : '',
     'cf-turnstile-response': turnstileToken,
     empresa: '',
   };
@@ -75,11 +75,11 @@ export class ContactService {
   private readonly http = inject(HttpClient);
 
   /** Resolves with the server confirmation text (may be empty). */
-  send(value: ContactFormValue, turnstileToken: string): Observable<string> {
+  send(value: ContactFormValue, turnstileToken: string, extraServices: readonly string[] = []): Observable<string> {
     if (RUNTIME.mockApi) return of('').pipe(delay(600));
 
     return this.http
-      .post<{ success?: boolean; mensaje?: unknown }>(`${RUNTIME.apiBase}/v6/contact`, buildContactPayload(value, turnstileToken))
+      .post<{ success?: boolean; mensaje?: unknown }>(`${RUNTIME.apiBase}/v6/contact`, buildContactPayload(value, turnstileToken, extraServices))
       .pipe(
         timeout(15000),
         // A failed n8n execution can answer HTTP 200 with an empty body: only an explicit success counts.

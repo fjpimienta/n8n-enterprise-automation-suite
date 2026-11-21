@@ -23,25 +23,7 @@
   </ul>
 </section>
 
-<section id="paquetes" class="bg-slate-50 py-16" aria-labelledby="paquetes-title">
-  <div class="container-page">
-    <h2 id="paquetes-title" class="text-3xl font-bold text-brand-900">Paquetes</h2>
-    <ul class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-      @for (plan of plans; track plan.id) {
-        <li class="flex flex-col rounded-xl border border-slate-200 bg-white p-6">
-          <h3 class="text-lg font-semibold">{{ plan.name }}</h3>
-          <p class="mt-2 text-muted">{{ plan.summary }}</p>
-          <p class="mt-4 text-2xl font-bold text-brand-700">{{ formatPrice(plan) ?? plan.price }}</p>
-          <p class="text-sm text-muted">{{ plan.billing }}</p>
-          <ul class="mt-4 list-disc space-y-1 pl-5">
-            @for (f of plan.features; track f) { <li>{{ f }}</li> }
-          </ul>
-          <a class="btn-secondary mt-auto" routerLink="/" [queryParams]="{ servicio: plan.service }" fragment="contacto">Cotizar {{ plan.name }}</a>
-        </li>
-      }
-    </ul>
-  </div>
-</section>
+<app-plans-section />
 
 <section id="diferenciales" class="container-page py-16" aria-labelledby="dif-title">
   <h2 id="dif-title" class="text-3xl font-bold text-brand-900">Por qué Hosting3M</h2>

@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { report } from './check-todo.mjs';
+import { fetchPlansSnapshot } from './fetch-plans.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const workspace = resolve(here, '../../..');
@@ -15,6 +16,9 @@ if (!['production', 'beta', 'development'].includes(configuration)) {
   console.error(`Unknown configuration "${configuration}". Use production, beta or development.`);
   process.exit(2);
 }
+
+// Catalog snapshot for the prerender. Never fails the build (falls back to the committed snapshot).
+if (configuration !== 'development') console.log(await fetchPlansSnapshot());
 
 const run = (cmd, args) => spawnSync(cmd, args, { cwd: workspace, stdio: 'inherit' });
 if (run('npx', ['ng', 'build', 'hosting3m-site', '--configuration', configuration]).status !== 0) process.exit(1);
