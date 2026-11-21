@@ -15,16 +15,16 @@ const plan = {
   price_amount: 1000, managed_amount: 2500, currency: 'MXN', tax_included: false, service_label: 'Hosting administrado', sort_order: 1,
 };
 
-async function setup() {
+async function setup(plans: object[] = [plan]) {
   TestBed.configureTestingModule({ providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()] });
-  TestBed.inject(PlansService).plans.set(parsePlans([plan]));
+  TestBed.inject(PlansService).plans.set(parsePlans(plans));
   const fixture = TestBed.createComponent(Host);
   fixture.detectChanges();
   const el = fixture.nativeElement as HTMLElement;
   const select = () => el.querySelector<HTMLSelectElement>('#cf-service')!;
   const message = () => el.querySelector<HTMLTextAreaElement>('#cf-message')!;
-  const quote = async () => {
-    el.querySelector<HTMLAnchorElement>('[data-testid="quote-plan"]')!.click();
+  const quote = async (index = 0) => {
+    el.querySelectorAll<HTMLAnchorElement>('[data-testid="quote-plan"]')[index].click();
     fixture.detectChanges();
     await fixture.whenStable();
     await new Promise((r) => setTimeout(r)); // focus is applied after a tick
@@ -60,5 +60,42 @@ describe('"Cotizar <plan>" flow', () => {
     fixture.detectChanges();
     await quote();
     expect(message().value).toBe('Mi propio mensaje');
+  });
+
+  it('refreshes the prefill for a second plan while the text is still the auto-generated one', async () => {
+    const plan2 = { ...plan, plan_key: 'k2', name: 'Hosting B', service_label: 'Otro servicio', sort_order: 2 };
+    const { select, message, quote } = await setup([plan, plan2]);
+    await quote(0);
+    expect(message().value).toBe('Quiero cotizar: Hosting A (Autoadministrado)');
+    await quote(1);
+    expect(message().value).toBe('Quiero cotizar: Hosting B (Autoadministrado)');
+    expect(select().value).toBe('Otro servicio');
+  });
+
+  it('keeps text the visitor edited, even for a later plan', async () => {
+    const plan2 = { ...plan, plan_key: 'k2', name: 'Hosting B', service_label: 'Otro servicio', sort_order: 2 };
+    const { fixture, message, quote } = await setup([plan, plan2]);
+    await quote(0);
+    message().value = message().value + ' y necesito factura';
+    message().dispatchEvent(new Event('input'));
+    fixture.detectChanges();
+    await quote(1);
+    expect(message().value).toBe('Quiero cotizar: Hosting A (Autoadministrado) y necesito factura');
+  });
+
+  it('reflects the toggle at the moment of each click', async () => {
+    const plan2 = { ...plan, plan_key: 'k2', name: 'Hosting B', service_label: 'Otro servicio', sort_order: 2 };
+    const { fixture, el, message, quote } = await setup([plan, plan2]);
+    const groups = el.querySelectorAll('[role="group"]');
+    await quote(0);
+    expect(message().value).toContain('(Autoadministrado)');
+    groups[0].querySelectorAll('button')[1].click(); // plan A -> managed
+    fixture.detectChanges();
+    await quote(0);
+    expect(message().value).toBe('Quiero cotizar: Hosting A (Administrado por Hosting3M)');
+    groups[1].querySelectorAll('button')[1].click(); // plan B -> managed
+    fixture.detectChanges();
+    await quote(1);
+    expect(message().value).toBe('Quiero cotizar: Hosting B (Administrado por Hosting3M)');
   });
 });

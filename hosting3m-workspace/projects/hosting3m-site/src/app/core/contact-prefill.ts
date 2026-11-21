@@ -13,6 +13,19 @@ export interface PrefillRequest {
 @Injectable({ providedIn: 'root' })
 export class ContactPrefill {
   readonly request = signal<PrefillRequest | null>(null);
+  /** Last text this service wrote into the message field; only that text may be replaced later. */
+  private lastWritten = '';
+
+  /**
+   * Returns the text to put in the message field, or null to leave it alone.
+   * Replaces an empty field or our own previous text; never text the visitor wrote or edited.
+   */
+  messageFor(current: string, wanted: string): string | null {
+    if (!wanted) return null;
+    if (current.trim() !== '' && current !== this.lastWritten) return null;
+    this.lastWritten = wanted;
+    return wanted;
+  }
 
   apply(service: string, message: string): void {
     this.request.set({ service: service.trim().slice(0, 60), message, seq: (this.request()?.seq ?? 0) + 1 });

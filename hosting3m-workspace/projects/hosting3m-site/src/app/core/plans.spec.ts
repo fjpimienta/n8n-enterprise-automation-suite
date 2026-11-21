@@ -13,6 +13,7 @@ import {
   shownAmount,
 } from './plans';
 import { RUNTIME } from './runtime-config';
+import snapshot from '../data/plans-snapshot.json';
 
 const api = (over: Record<string, unknown> = {}) => ({
   plan_key: 'vps-1', family: 'vps', name: 'VPS 1', summary: 's', features: ['a'], badge: null, billing_period: 'monthly',
@@ -95,10 +96,10 @@ describe('PlansService', () => {
     return { svc: TestBed.inject(PlansService), http: TestBed.inject(HttpTestingController) };
   }
 
-  it('starts from the (empty) snapshot, and the empty catalog exposes no labels', () => {
+  it('starts from the build-time snapshot, whatever it contains (the build refreshes it)', () => {
     const { svc } = setup();
-    expect(svc.plans()).toEqual([]);
-    expect(svc.serviceLabels()).toEqual([]);
+    expect(svc.plans()).toEqual(parsePlans(snapshot));
+    expect(svc.serviceLabels()).toEqual([...new Set(parsePlans(snapshot).map((p) => p.serviceLabel).filter(Boolean))]);
   });
 
   it('replaces the catalog with a valid answer, once', () => {

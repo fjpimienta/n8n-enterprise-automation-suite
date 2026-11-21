@@ -75,7 +75,8 @@ export class ContactForm implements OnDestroy {
       untracked(() => {
         const { service, message } = this.form.controls;
         if (req.service) service.setValue(req.service);
-        if (req.message && message.value.trim() === '') message.setValue(req.message); // never overwrite what the visitor typed
+        const next = this.prefill.messageFor(message.value, req.message); // null when the visitor wrote or edited the text
+        if (next !== null) message.setValue(next);
         setTimeout(() => this.messageField()?.nativeElement.focus());
       });
     });
