@@ -14,7 +14,7 @@ export const HERO = {
   promise: 'Servidores, dominios y automatización con IA, instalados y administrados por una sola persona de confianza en Mérida.', // MARKETING-REVIEW
   ctaPrimary: 'Cotiza por WhatsApp',
   ctaSecondary: 'Elige tu servicio', // MARKETING-REVIEW
-  imageAlt: 'Ilustración de una nube conectada con un servidor, un chip de inteligencia artificial y un sitio web',
+  imageAlt: 'Persona trabajando con una laptop bajo una nube con íconos de servidores, inteligencia artificial y sitios web',
   flowCaption: 'flujo.n8n · ejemplo de automatización',
   flowSteps: ['Formulario web', 'Agente IA', 'CRM'],
   facts: [

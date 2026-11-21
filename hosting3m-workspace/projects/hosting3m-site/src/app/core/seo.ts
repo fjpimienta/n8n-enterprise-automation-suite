@@ -9,6 +9,14 @@ import { CONTACT_SERVICES } from './contact';
 
 const JSON_LD_ID = 'jsonld-site';
 
+/** Social preview (1200x630 JPG: crawlers do not all support WebP/AVIF). */
+export const OG_IMAGE = {
+  url: `${SITE.url}/images/og-image.jpg`,
+  width: 1200,
+  height: 630,
+  alt: 'Logotipo de Hosting3M junto a una persona trabajando con una laptop bajo una nube con íconos de servidores, inteligencia artificial y sitios web',
+} as const;
+
 /** schema.org graph for the home page. Only verified facts (see core/business.ts): no ratings or prices. */
 export function buildJsonLd(): Record<string, unknown> {
   const businessId = `${SITE.url}/#business`;
@@ -30,7 +38,7 @@ export function buildJsonLd(): Record<string, unknown> {
           addressCountry: BUSINESS.address.country,
         },
         openingHours: [...BUSINESS.openingHours],
-        image: 'TODO_OG_IMAGE',
+        image: OG_IMAGE.url,
         areaServed: { '@type': 'Country', name: 'México' },
         sameAs: [SITE.githubSuiteUrl],
       },
@@ -75,8 +83,13 @@ export class SeoService {
     this.meta.updateTag({ property: 'og:type', content: 'website' });
     this.meta.updateTag({ property: 'og:locale', content: 'es_MX' });
     this.meta.updateTag({ property: 'og:site_name', content: SITE.name });
-    this.meta.updateTag({ property: 'og:image', content: 'TODO_OG_IMAGE' });
-    this.meta.updateTag({ name: 'twitter:card', content: 'summary' });
+    this.meta.updateTag({ property: 'og:image', content: OG_IMAGE.url });
+    this.meta.updateTag({ property: 'og:image:width', content: String(OG_IMAGE.width) });
+    this.meta.updateTag({ property: 'og:image:height', content: String(OG_IMAGE.height) });
+    this.meta.updateTag({ property: 'og:image:alt', content: OG_IMAGE.alt });
+    this.meta.updateTag({ name: 'twitter:card', content: 'summary_large_image' });
+    this.meta.updateTag({ name: 'twitter:image', content: OG_IMAGE.url });
+    this.meta.updateTag({ name: 'twitter:image:alt', content: OG_IMAGE.alt });
     this.setJsonLd(withJsonLd);
   }
 

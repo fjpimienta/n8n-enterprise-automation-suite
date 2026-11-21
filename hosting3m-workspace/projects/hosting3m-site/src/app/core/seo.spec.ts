@@ -1,4 +1,4 @@
-import { buildJsonLd } from './seo';
+import { OG_IMAGE, buildJsonLd } from './seo';
 
 describe('buildJsonLd', () => {
   const graph = (buildJsonLd()['@graph'] as Record<string, unknown>[]);
@@ -19,5 +19,16 @@ describe('buildJsonLd', () => {
 
   it('publishes only business contact data, never the personal email', () => {
     expect(JSON.stringify(graph)).not.toContain('gmail.com');
+  });
+});
+
+describe('social image', () => {
+  it('is an absolute 1200x630 JPG with Spanish alt text, shared by og:image and the JSON-LD image', () => {
+    expect(OG_IMAGE.url).toBe('https://hosting3m.com/images/og-image.jpg');
+    expect([OG_IMAGE.width, OG_IMAGE.height]).toEqual([1200, 630]);
+    expect(OG_IMAGE.alt.length).toBeGreaterThan(20);
+    const graph = buildJsonLd()['@graph'] as Record<string, unknown>[];
+    expect(graph.find((n) => n['@type'] === 'LocalBusiness')!['image']).toBe(OG_IMAGE.url);
+    expect(JSON.stringify(buildJsonLd())).not.toContain('TODO_');
   });
 });

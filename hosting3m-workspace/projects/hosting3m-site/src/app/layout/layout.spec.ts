@@ -43,6 +43,14 @@ describe('Header', () => {
     el.remove();
   });
 
+  it('shows the real logo with dimensions and descriptive Spanish alt text', () => {
+    const { el } = render();
+    const img = el.querySelector('a img')!;
+    expect(img.getAttribute('src')).toBe('/images/logo-112.webp');
+    expect([img.getAttribute('width'), img.getAttribute('height')]).toEqual(['56', '56']);
+    expect(img.getAttribute('alt')).toContain('Logotipo de Hosting3M');
+  });
+
   it('links to the page sections of the redesign', () => {
     const { nav } = render();
     expect(Array.from(nav.querySelectorAll('a')).map((a) => a.textContent?.trim())).toEqual(['Servicios', 'Paquetes', 'Sistemas', 'Noticias', 'Contacto']);
@@ -59,6 +67,9 @@ describe('Footer', () => {
     expect(text).toContain(BUSINESS.legalName);
     expect(text).toContain(BUSINESS.address.street);
     expect(text).toContain(BUSINESS.hoursText);
+    const logo = (fixture.nativeElement as HTMLElement).querySelector('img')!;
+    expect(logo.getAttribute('alt')).toBe('Logotipo de Hosting3M');
+    expect(logo.getAttribute('width')).toBe('56');
     const button = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('button')).find((b) => b.textContent?.includes('Preferencias de cookies'))!;
     button.click();
     expect(consent.bannerOpen()).toBe(true);
