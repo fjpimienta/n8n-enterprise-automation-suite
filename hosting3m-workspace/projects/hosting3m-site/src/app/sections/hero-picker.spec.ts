@@ -25,7 +25,9 @@ describe('Hero', () => {
     const el = fixture.nativeElement as HTMLElement;
     expect(el.querySelector('h1')?.textContent).toContain('Soluciones en la nube para tu negocio');
     const img = el.querySelector('img')!;
-    expect(img.getAttribute('src')).toBe('/images/hero.webp');
+    expect(img.getAttribute('src')).toBe('/images/hero-880.webp');
+    expect(img.getAttribute('srcset')).toContain('/images/hero-440.webp 440w');
+    expect(img.getAttribute('sizes')).toContain('100vw');
     expect(img.getAttribute('width')).toBe('880');
     expect(img.getAttribute('height')).toBe('920');
     expect(img.getAttribute('fetchpriority')).toBe('high');

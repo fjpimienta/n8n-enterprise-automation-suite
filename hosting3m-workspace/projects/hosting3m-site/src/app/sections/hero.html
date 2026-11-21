@@ -13,7 +13,7 @@
 
       <div class="relative min-w-0 lg:flex-[1_1_440px] lg:pb-9">
         <!-- LCP image: priority adds fetchpriority="high", eager loading and a preload link in the prerendered head. -->
-        <img ngSrc="/images/hero.webp" width="880" height="920" priority [alt]="copy.imageAlt"
+        <img ngSrc="hero" ngSrcset="440w, 880w" sizes="(min-width: 1024px) 440px, (min-width: 768px) calc(100vw - 80px), calc(100vw - 40px)" width="880" height="920" priority [alt]="copy.imageAlt"
           class="block h-60 w-full rounded-[1.25rem] border border-night-line object-cover md:h-96 md:rounded-[1.75rem] lg:h-[460px]" />
         <div class="mt-5 rounded-2xl border border-night-edge bg-night-2 p-3 md:p-4 lg:absolute lg:-left-7 lg:bottom-0 lg:right-11 lg:mt-0 lg:px-[18px]">
           <p class="mb-2 font-mono text-[11px] text-mist-3 md:text-xs">{{ copy.flowCaption }}</p>
