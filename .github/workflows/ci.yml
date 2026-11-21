@@ -163,3 +163,4 @@ jobs:
       - run: node projects/hosting3m-site/scripts/build.mjs --configuration beta
       - run: npm test -- hosting3m-site --watch=false
       - run: node --test projects/hosting3m-site/scripts/check-todo.test.mjs
+      - run: node --test projects/hosting3m-site/scripts/check-legal-markers.test.mjs
