@@ -1,0 +1,36 @@
+<section class="bg-night pb-12 text-mist md:pb-20 lg:pb-24" aria-labelledby="hero-title">
+  <div class="container-page">
+    <div class="flex flex-col gap-10 pt-8 md:pt-12 lg:flex-row lg:items-center lg:gap-14 lg:pt-14">
+      <div class="min-w-0 lg:flex-[1_1_500px]">
+        <p class="eyebrow mb-4 inline-block rounded-full border border-night-edge px-3 py-1.5 text-mint md:mb-5 md:px-3.5">{{ copy.eyebrow }}</p>
+        <h1 id="hero-title" class="h-display mb-4 text-[2.375rem] leading-[1.08] md:mb-6 md:text-6xl lg:text-[3.875rem] lg:leading-[1.04]">{{ copy.title }}</h1>
+        <p class="mb-6 max-w-[34rem] text-[1.0625rem] leading-relaxed text-mist-2 md:mb-9 md:text-xl">{{ copy.promise }}</p>
+        <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap md:gap-3.5">
+          <a class="btn-primary !px-8 !py-4 text-base md:text-[1.0625rem]" [href]="quoteHref" target="_blank" rel="noopener noreferrer">{{ copy.ctaPrimary }}</a>
+          <a class="btn-outline-dark !px-7 !py-4 text-base md:text-[1.0625rem]" routerLink="/" fragment="elige">{{ copy.ctaSecondary }}</a>
+        </div>
+      </div>
+
+      <div class="relative min-w-0 lg:flex-[1_1_440px] lg:pb-9">
+        <img src="/images/hero.webp" width="880" height="920" fetchpriority="high" decoding="async" [alt]="copy.imageAlt"
+          class="block h-60 w-full rounded-[1.25rem] border border-night-line object-cover md:h-96 md:rounded-[1.75rem] lg:h-[460px]" />
+        <div class="mt-5 rounded-2xl border border-night-edge bg-night-2 p-3 md:p-4 lg:absolute lg:-left-7 lg:bottom-0 lg:right-11 lg:mt-0 lg:px-[18px]">
+          <p class="mb-2 font-mono text-[11px] text-mist-3 md:text-xs">{{ copy.flowCaption }}</p>
+          <ol class="flex items-center" aria-label="Pasos del flujo de ejemplo">
+            @for (step of copy.flowSteps; track step; let i = $index) {
+              @if (i > 0) { <li class="h-0.5 w-3 bg-orange md:w-5" aria-hidden="true"></li> }
+              <li class="flex-1 rounded-lg border bg-night px-1 py-2 text-center text-xs font-bold md:rounded-[0.625rem] md:px-2 md:py-2.5 md:text-sm"
+                [class.border-orange]="i === 1" [class.text-orange-2]="i === 1" [class.border-night-edge]="i !== 1">{{ step }}</li>
+            }
+          </ol>
+        </div>
+      </div>
+    </div>
+
+    <ul class="mt-8 grid grid-cols-2 gap-3.5 border-t border-night-line pt-5 text-[13px] text-mist-2 md:mt-14 md:gap-4 md:pt-7 md:text-[15px] lg:grid-cols-4">
+      @for (fact of copy.facts; track fact.title) {
+        <li><strong class="mb-0.5 block text-sm text-mist md:text-[15px]">{{ fact.title }}</strong>{{ fact.text }}</li>
+      }
+    </ul>
+  </div>
+</section>
