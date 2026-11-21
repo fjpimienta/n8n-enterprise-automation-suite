@@ -6,6 +6,7 @@ Sanitized exports of the two public webhooks used by the `hosting3m-site` Angula
 |------|----------|---------|
 | [`02-leads-contact/v6/contact.json`](02-leads-contact/v6/contact.json) | `v6/contact` | `POST /webhook/v6/contact` |
 | [`03-rag-news-intelligence/v6/news.json`](03-rag-news-intelligence/v6/news.json) | `v6/news` | `POST /webhook/v6/news` |
+| [`02-leads-contact/v6/plans.json`](02-leads-contact/v6/plans.json) | `v6/plans` | `POST /webhook/v6/plans` |
 
 Base URL: `https://n8n.hosting3m.com/webhook`. Both endpoints are public (no JWT). The browser never calls
 `genera-token` or `/crud/...`.
@@ -53,6 +54,23 @@ n8n answers HTTP 200 with an empty body, so clients must treat only `success ===
 Request body: `{}`. Response: HTTP 200 with a JSON array of at most 6 items
 `{title, url, source, image, published_at}` from `news_articles` where `is_active = true`, newest first. The array is
 `[]` when there are no rows. Clients must validate and escape every value.
+
+## `POST /webhook/v6/plans`
+
+Public service catalog for the site's "Paquetes" section. No authentication, request body `{}`. The tenant is fixed in
+the workflow (`id_company = 1`); no tenant id is accepted from the client.
+
+- Returns only rows of `service_plans` with `is_active = true` and a `valid_until` that is null or not in the past
+  (`valid_until >= CURRENT_DATE`), ordered by `sort_order`, then `id`.
+- 200: JSON array of `{plan_key, family, name, summary, features, badge, billing_period, price_amount, managed_amount,
+  promo_amount, promo_months, renewal_amount, setup_fee, term_months, currency, tax_included, service_label,
+  price_checked_at, valid_until, is_featured, sort_order}`. Amounts are numbers (or `null`), dates are text. The array is
+  `[]` when no plan is active. Clients must validate every value.
+- 503: `{"mensaje":"Catalogo no disponible"}` when the database query fails (the `Select Plans` node uses its error output).
+- CORS: allowed origins `https://hosting3m.com,https://beta.hosting3m.com` (same rule as below).
+
+This export keeps only the credential reference (id and name); `meta.instanceId`, `versionId`, `pinData` and every
+`webhookId` were removed.
 
 ## CORS rule
 
