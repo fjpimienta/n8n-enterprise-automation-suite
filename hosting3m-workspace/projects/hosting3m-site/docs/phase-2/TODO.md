@@ -9,9 +9,7 @@ Tokens present in the build today, and what resolves each one:
 | `TODO_BILLING` (x4) | `plans.json` | Billing period per package (mensual, anual, único) |
 | `TODO_FEATURES` (x4) | `plans.json` | Package contents (specs, what is included) |
 | `TODO_COPY` (x4) | `plans.json` | One-line summary per package |
-| `TODO_HERO_PROMISE` | `pages/home.html` | Hero subtitle: the single promise of the site |
 | `TODO_CFDI_CLAIM_TITLE`, `TODO_CFDI_CLAIM_TEXT` | `data/content.ts` | Exact, verifiable CFDI claim (or delete the card) |
-| `TODO_FAQ_QUESTION_1`, `TODO_FAQ_ANSWER_1` | `data/faq.json` | Real FAQ entries (replace the placeholder, add more) |
 | `TODO_PORTFOLIO` | route `/portfolio` | Approved real cases (without "Pista de Hielo") |
 | `TODO_PROFILE` | route `/fjpimienta` | Short professional profile, without personal email or phone |
 
