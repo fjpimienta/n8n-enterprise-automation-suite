@@ -162,3 +162,4 @@ jobs:
       # hosting3m-site: production-like build, TODO guard in warning mode (the strict guard runs on real production builds)
       - run: node projects/hosting3m-site/scripts/build.mjs --configuration beta
       - run: npm test -- hosting3m-site --watch=false
+      - run: node --test projects/hosting3m-site/scripts/check-todo.test.mjs
