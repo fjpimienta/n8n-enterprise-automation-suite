@@ -22,18 +22,16 @@ export const routes: Routes = [
   {
     path: 'portfolio',
     title: `Portafolio | ${SITE_NAME}`,
-    data: { description: 'Portafolio de proyectos de Hosting3M.', heading: 'Portafolio', todo: 'TODO_PORTFOLIO' },
-    loadComponent: () => import('./pages/placeholder').then((m) => m.Placeholder),
+    // MARKETING-REVIEW: page description
+    data: { description: 'Sistemas propios de Hosting3M: ERP hotelero y Agro ERP con asistente de IA.' },
+    loadComponent: () => import('./pages/portfolio').then((m) => m.Portfolio),
   },
   {
     path: 'fjpimienta',
-    title: `Francisco Pérez Pimienta | ${SITE_NAME}`,
-    data: {
-      description: 'Perfil profesional de Francisco Pérez Pimienta, arquitecto de sistemas en Hosting3M.',
-      heading: 'Francisco Pérez Pimienta',
-      todo: 'TODO_PROFILE',
-    },
-    loadComponent: () => import('./pages/placeholder').then((m) => m.Placeholder),
+    title: `Francisco Jesús Pérez Pimienta | ${SITE_NAME}`,
+    // MARKETING-REVIEW: page description
+    data: { description: 'Francisco Jesús Pérez Pimienta, ingeniero en Sistemas Computacionales y fundador de Hosting3M en Mérida, Yucatán.' },
+    loadComponent: () => import('./pages/profile').then((m) => m.Profile),
   },
   {
     path: 'politica-de-privacidad',

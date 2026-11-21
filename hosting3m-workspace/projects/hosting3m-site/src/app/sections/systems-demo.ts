@@ -1,12 +1,13 @@
 import { ChangeDetectionStrategy, Component, ElementRef, inject, signal, viewChildren } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { ContactPrefill } from '../core/contact-prefill';
-import { AGRO_CHAT, DEMO_CTAS, DEMO_TABS, DemoTab, HOTEL_MOCK, SYSTEMS_SECTION, WHATSAPP_CHAT } from '../data/systems-demo';
+import { DEMO_CTAS, DEMO_TABS, DemoTab, SYSTEMS_SECTION } from '../data/systems-demo';
+import { DemoMock } from './demo-mock';
 
 /** "Míralo en acción": static, illustrative mock screens. No ERP API is ever called from here. */
 @Component({
   selector: 'app-systems-demo',
-  imports: [RouterLink],
+  imports: [RouterLink, DemoMock],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './systems-demo.html',
 })
@@ -16,9 +17,6 @@ export class SystemsDemo {
 
   readonly section = SYSTEMS_SECTION;
   readonly tabs = DEMO_TABS;
-  readonly hotel = HOTEL_MOCK;
-  readonly agro = AGRO_CHAT;
-  readonly whatsapp = WHATSAPP_CHAT;
   readonly ctas = DEMO_CTAS;
   readonly active = signal<DemoTab>('hotel');
 

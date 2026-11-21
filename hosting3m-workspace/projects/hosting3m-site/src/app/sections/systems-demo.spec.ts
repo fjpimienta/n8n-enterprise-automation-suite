@@ -19,7 +19,7 @@ describe('SystemsDemo (Míralo en acción)', () => {
       fixture, el,
       tabs: () => Array.from(el.querySelectorAll<HTMLButtonElement>('[role="tab"]')),
       panels: () => Array.from(el.querySelectorAll<HTMLElement>('[role="tabpanel"]')),
-      mocks: () => Array.from(el.querySelectorAll<HTMLElement>('figure')),
+      mocks: () => Array.from(el.querySelectorAll<HTMLElement>('app-demo-mock')),
     };
   }
 
