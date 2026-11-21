@@ -22,7 +22,7 @@ import { SITE } from '../../core/site.config';
         <li>WhatsApp y Facebook son plataformas externas con sus propias políticas y condiciones, que recomendamos revisar.</li>
       </ul>
       <h2>4. Propiedad intelectual</h2>
-      <p>Todos los contenidos, marcas, logotipos y materiales relacionados con nuestros servicios son propiedad de TODO_LEGAL_ENTITY, salvo que se indique lo contrario. No está permitido su uso sin autorización expresa.</p>
+      <p>Todos los contenidos, marcas, logotipos y materiales relacionados con nuestros servicios son propiedad de Francisco Jesus Perez Pimienta, salvo que se indique lo contrario. No está permitido su uso sin autorización expresa.</p>
       <h2>5. Responsabilidad</h2>
       <ul>
         <li>Hosting3M no será responsable por daños directos o indirectos derivados del mal uso de los servicios.</li>

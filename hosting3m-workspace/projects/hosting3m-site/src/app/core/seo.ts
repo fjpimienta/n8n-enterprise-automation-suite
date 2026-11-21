@@ -26,9 +26,10 @@ export function buildJsonLd(): Record<string, unknown> {
           addressLocality: 'Mérida',
           addressRegion: 'Yucatán',
           addressCountry: 'MX',
-          streetAddress: 'TODO_STREET_ADDRESS',
+          streetAddress: 'Calle 12D #895, Fracc. Solana',
         },
-        openingHours: 'TODO_OPENING_HOURS',
+        // Machine-readable; central Mexico time. Human text: lunes a viernes 9:00 a 17:00 y sábados 9:00 a 14:00.
+        openingHours: ['Mo-Fr 09:00-17:00', 'Sa 09:00-14:00'],
         image: 'TODO_OG_IMAGE',
         areaServed: { '@type': 'Country', name: 'México' },
         sameAs: [SITE.githubSuiteUrl],
