@@ -58,9 +58,9 @@
   <div>
     <label class="flex items-start gap-3">
       <input type="checkbox" formControlName="privacy" class="mt-1 size-5" aria-required="true" [attr.aria-invalid]="showError('privacy')" [attr.aria-describedby]="showError('privacy') ? 'err-privacy' : null" />
-      <span>He leído y acepto la <a href="/politica-de-privacidad" class="underline" target="_blank" rel="noopener">política de privacidad</a>.</span>
+      <span>He leído y acepto la <a href="/aviso-de-privacidad" class="underline" target="_blank" rel="noopener">aviso de privacidad</a>.</span>
     </label>
-    @if (showError('privacy')) { <p class="field-error" id="err-privacy" role="alert">Debes aceptar la política de privacidad.</p> }
+    @if (showError('privacy')) { <p class="field-error" id="err-privacy" role="alert">Debes aceptar el aviso de privacidad.</p> }
   </div>
 
   <div #widgetHost class="min-h-[65px]"></div>

@@ -67,6 +67,11 @@ describe('Footer', () => {
     expect(text).toContain(BUSINESS.legalName);
     expect(text).toContain(BUSINESS.address.street);
     expect(text).toContain(BUSINESS.hoursText);
+    const hrefs = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('footer a')).map((a) => a.getAttribute('href'));
+    expect(hrefs).toEqual(expect.arrayContaining(['/aviso-de-privacidad', '/politica-de-cookies', '/terminos-y-condiciones']));
+    const labels = Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('footer a')).map((a) => a.textContent?.trim());
+    expect(labels).toContain('Condiciones de servicio');
+    expect(labels).not.toContain('Términos y condiciones');
     const logo = (fixture.nativeElement as HTMLElement).querySelector('img')!;
     expect(logo.getAttribute('alt')).toBe('Logotipo de Hosting3M');
     expect(logo.getAttribute('width')).toBe('56');

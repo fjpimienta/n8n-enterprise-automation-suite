@@ -164,6 +164,23 @@
   @apply mt-1 text-sm font-medium text-red-800;
 }
 
+/* Legal tables: a real table from 768 px up; on mobile every row becomes a stacked card (labels come from data-label).
+   The ARIA roles in the markup keep the table semantics when the display type changes. */
+@utility stack-table {
+  @apply mt-4 w-full border-collapse text-left text-[0.9375rem];
+  & caption { @apply sr-only; }
+  & th, & td { @apply border-b border-cream-line px-3 py-2.5 align-top; }
+  & thead th { @apply bg-cream-2 font-bold; }
+  & tbody th { @apply font-semibold; }
+  @media (max-width: 47.99rem) {
+    & thead { @apply sr-only; }
+    & tbody tr { @apply mb-4 block rounded-xl border border-cream-line bg-white; }
+    & tbody th { @apply block border-b border-cream-line bg-cream-2 text-base; }
+    & tbody td { @apply block border-0 py-1.5; }
+    & tbody td::before { content: attr(data-label); @apply block text-xs font-bold uppercase tracking-wide text-soft; }
+  }
+}
+
 @utility legal-prose {
   @apply max-w-3xl text-base leading-relaxed text-ink;
   & h1 { @apply text-3xl font-bold text-brand-900; }

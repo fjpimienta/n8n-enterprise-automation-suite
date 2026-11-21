@@ -34,16 +34,25 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/profile').then((m) => m.Profile),
   },
   {
-    path: 'politica-de-privacidad',
-    title: `Política de privacidad | ${SITE_NAME}`,
-    data: { description: 'Cómo Hosting3M recopila, usa y protege tus datos personales.' },
-    loadComponent: () => import('./pages/legal/privacy').then((m) => m.Privacy),
+    path: 'aviso-de-privacidad',
+    title: `Aviso de privacidad | ${SITE_NAME}`,
+    // MARKETING-REVIEW: page description
+    data: { legal: 'privacy', description: 'Aviso de privacidad de Hosting3M: qué datos recabamos, para qué, con quién los compartimos y cómo ejercer tus derechos ARCO.' },
+    loadComponent: () => import('./pages/legal/legal-page').then((m) => m.LegalPage),
   },
   {
-    path: 'condiciones-de-servicio',
+    path: 'politica-de-cookies',
+    title: `Política de cookies | ${SITE_NAME}`,
+    // MARKETING-REVIEW: page description
+    data: { legal: 'cookies', description: 'Política de cookies de Hosting3M: qué cookies usa el sitio, para qué y cómo aceptarlas o rechazarlas.' },
+    loadComponent: () => import('./pages/legal/legal-page').then((m) => m.LegalPage),
+  },
+  {
+    path: 'terminos-y-condiciones',
     title: `Condiciones de servicio | ${SITE_NAME}`,
-    data: { description: 'Condiciones de servicio de Hosting3M.' },
-    loadComponent: () => import('./pages/legal/terms').then((m) => m.Terms),
+    // MARKETING-REVIEW: page description
+    data: { legal: 'terms', description: 'Condiciones de servicio de Hosting3M: precios, cobro, renovación, soporte, disponibilidad y responsabilidad.' },
+    loadComponent: () => import('./pages/legal/legal-page').then((m) => m.LegalPage),
   },
   {
     path: 'eliminardatosusuarios',
@@ -51,7 +60,10 @@ export const routes: Routes = [
     data: { description: 'Cómo solicitar la eliminación de tus datos de usuario en Hosting3M.' },
     loadComponent: () => import('./pages/legal/deletion').then((m) => m.Deletion),
   },
-  { path: 'privacy', redirectTo: 'politica-de-privacidad' },
+  // Renamed legal pages and the old Sitejet URL: nginx answers 301 first (docs/nginx-legacy-redirects.conf); these are the client-side safety net.
+  { path: 'politica-de-privacidad', redirectTo: 'aviso-de-privacidad', pathMatch: 'full' },
+  { path: 'condiciones-de-servicio', redirectTo: 'terminos-y-condiciones', pathMatch: 'full' },
+  { path: 'privacy', redirectTo: 'aviso-de-privacidad' },
   { path: 'news', redirectTo: '' },
   { path: 'noticias-elemento/:post', redirectTo: '' },
   {

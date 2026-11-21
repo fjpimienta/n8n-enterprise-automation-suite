@@ -126,7 +126,7 @@ describe('cookie banner and footer link', () => {
     const buttons = Array.from(el.querySelectorAll<HTMLButtonElement>('section[aria-label="Preferencias de cookies"] button'));
     expect(buttons.map((b) => b.textContent?.trim())).toEqual(['Rechazar', 'Aceptar']);
     expect(buttons[0].className).toBe(buttons[1].className);
-    expect(el.querySelector('section[aria-label="Preferencias de cookies"] a[href="/politica-de-privacidad"]')).not.toBeNull();
+    expect(el.querySelector('section[aria-label="Preferencias de cookies"] a[href="/politica-de-cookies"]')).not.toBeNull();
 
     buttons[0].click();
     fixture.detectChanges();

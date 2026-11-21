@@ -1,0 +1,57 @@
+<article class="container-page legal-prose py-12">
+  <h1>{{ title }}</h1>
+  @for (section of sections; track section.id) {
+    <section [attr.aria-labelledby]="section.heading ? section.id : null">
+      @if (section.heading) { <h2 [id]="section.id">{{ section.heading }}</h2> }
+      @for (block of section.blocks; track $index) {
+        @switch (block.type) {
+          @case ('p') {
+            <p><ng-container [ngTemplateOutlet]="inline" [ngTemplateOutletContext]="{ $implicit: block.text }" /></p>
+          }
+          @case ('ul') {
+            <ul>
+              @for (item of block.items; track $index) {
+                <li><ng-container [ngTemplateOutlet]="inline" [ngTemplateOutletContext]="{ $implicit: item }" /></li>
+              }
+            </ul>
+          }
+          @case ('table') {
+            <table class="stack-table" role="table" data-testid="legal-table">
+              <caption>{{ block.caption }}</caption>
+              <thead role="rowgroup">
+                <tr role="row">
+                  @for (column of block.columns; track column) { <th scope="col" role="columnheader">{{ column }}</th> }
+                </tr>
+              </thead>
+              <tbody role="rowgroup">
+                @for (row of block.rows; track $index) {
+                  <tr role="row">
+                    @for (cell of row; track $index; let c = $index) {
+                      @if (c === 0) {
+                        <th scope="row" role="rowheader"><ng-container [ngTemplateOutlet]="inline" [ngTemplateOutletContext]="{ $implicit: cell }" /></th>
+                      } @else {
+                        <td role="cell" [attr.data-label]="block.columns?.[c]"><ng-container [ngTemplateOutlet]="inline" [ngTemplateOutletContext]="{ $implicit: cell }" /></td>
+                      }
+                    }
+                  </tr>
+                }
+              </tbody>
+            </table>
+          }
+        }
+      }
+    </section>
+  }
+</article>
+
+<ng-template #inline let-segments>
+  @for (seg of segments; track $index) {
+    @switch (seg.kind) {
+      @case ('bold') { <strong>{{ seg.text }}</strong> }
+      @case ('italic') { <em>{{ seg.text }}</em> }
+      @case ('code') { <code>{{ seg.text }}</code> }
+      @case ('link') { <a [routerLink]="seg.href">{{ seg.text }}</a> }
+      @default { {{ seg.text }} }
+    }
+  }
+</ng-template>

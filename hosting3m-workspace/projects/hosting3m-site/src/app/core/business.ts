@@ -3,7 +3,10 @@
  * terms page and the schema.org JSON-LD all read from here: edit these values only in this file.
  */
 export const BUSINESS = {
-  legalName: 'Francisco Jesus Perez Pimienta',
+  legalName: 'Francisco Jesús Pérez Pimienta',
+  /** Contact data of the controller (privacy notice, terms, footer). */
+  email: 'contacto@hosting3m.com',
+  phone: '999 390 2625',
   address: {
     street: 'Calle 12D #895, Fracc. Solana',
     locality: 'Mérida',
@@ -18,3 +21,6 @@ export const BUSINESS = {
 } as const;
 
 export const BUSINESS_ADDRESS_LINE = `${BUSINESS.address.street}, ${BUSINESS.address.locality}, ${BUSINESS.address.region}`;
+
+/** Date shown in the privacy notice and the terms of service. Change it here only. */
+export const LEGAL_LAST_UPDATED = '21 de noviembre de 2026';

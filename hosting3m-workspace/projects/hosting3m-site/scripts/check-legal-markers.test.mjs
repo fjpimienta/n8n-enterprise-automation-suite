@@ -35,3 +35,21 @@ test('markers in JavaScript chunks are found too', () => {
   assert.deepEqual([...scan(dir).keys()], ['[DECIDIR]']);
   assert.equal(report(dir, 'fail'), 1);
 });
+
+test('fixture of the three legal pages: a marker in any of them fails production, clean pages pass', () => {
+  const page = (body) => `<article><h1>Aviso</h1><p>${body}</p></article>`;
+  const clean = outDir({
+    'aviso-de-privacidad/index.html': page('Última actualización: 21 de noviembre de 2026.'),
+    'politica-de-cookies/index.html': page('Tabla de cookies'),
+    'terminos-y-condiciones/index.html': page('Última actualización: 21 de noviembre de 2026.'),
+  });
+  assert.equal(report(clean, 'fail'), 0);
+  for (const marker of ['[VERIFICAR]', '[REVISAR]', '[FECHA DE PUBLICACIÓN]']) {
+    const dirty = outDir({
+      'aviso-de-privacidad/index.html': page('Texto legal.'),
+      'politica-de-cookies/index.html': page('Tabla de cookies'),
+      'terminos-y-condiciones/index.html': page(`Responsable: ${marker}`),
+    });
+    assert.equal(report(dirty, 'fail'), 1, marker);
+  }
+});

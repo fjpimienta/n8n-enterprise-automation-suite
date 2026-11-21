@@ -2,15 +2,17 @@
  * Public, non-secret business constants. Never add tokens, keys or tenant ids here.
  * The only credential-like value allowed in this app is the public Turnstile sitekey (added in phase 2).
  */
+import { BUSINESS } from './business';
+
 export const SITE = {
   name: 'Hosting3M',
   url: 'https://hosting3m.com',
   locale: 'es-MX',
-  phoneDisplay: '+52 999 390 2625',
+  phoneDisplay: `+52 ${BUSINESS.phone}`,
   phoneTel: '+529993902625',
   whatsappNumber: '5219993902625',
   emails: {
-    general: 'contacto@hosting3m.com',
+    general: BUSINESS.email,
     projects: 'proyectos@hosting3m.com',
   },
   city: 'Mérida, Yucatán, México',
