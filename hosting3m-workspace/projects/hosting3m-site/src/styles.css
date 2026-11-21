@@ -38,6 +38,29 @@
   --color-body: #3d4d52;
   --color-soft: #566569;
 
+  /* Illustrative mock screens (systems demo). Colors of the fictitious UIs, kept here so no raw hex lives in templates. */
+  --color-mock-hotel: #0f1729;
+  --color-mock-hotel-card: #1a2238;
+  --color-mock-hotel-edge: #3a4a68;
+  --color-mock-text: #e6ebf5;
+  --color-mock-blue: #4da3ff;
+  --color-mock-green: #2fb344;
+  --color-mock-amber: #f59f00;
+  --color-mock-red: #e5484d;
+  --color-mock-money-in: #12261f;
+  --color-mock-money-out: #2a1a22;
+  --color-mock-money-net: #10203a;
+  --color-mock-agro-head: #0b57a8;
+  --color-mock-agro-out: #2169c9;
+  --color-mock-agro-bg: #f7f8fa;
+  --color-mock-agro-edge: #dfe3e8;
+  --color-mock-chat-bg: #0b141a;
+  --color-mock-chat-head: #1f2c34;
+  --color-mock-chat-out: #005c4b;
+  --color-mock-chat-in: #202c33;
+  --color-mock-chat-text: #e9edef;
+  --color-mock-chat-sub: #8696a0;
+
   /* Legacy names used by the legal pages and the cookie banner, mapped onto the palette above. */
   --color-brand-50: #e4f2f3;
   --color-brand-100: #cfe6e9;
@@ -101,6 +124,19 @@
 }
 @utility h-display {
   @apply font-display font-semibold tracking-tight;
+}
+/* Chat mocks: messages appear one by one (CSS only). Reduced motion shows everything at once. */
+@keyframes msg-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@utility chat-msg {
+  animation: msg-in 0.45s ease-out both;
+  &:nth-child(1) { animation-delay: 0.2s; }
+  &:nth-child(2) { animation-delay: 1.4s; }
+  &:nth-child(3) { animation-delay: 2.6s; }
+  &:nth-child(4) { animation-delay: 3.8s; }
+  @media (prefers-reduced-motion: reduce) { animation: none; }
 }
 @utility btn {
   @apply inline-flex min-h-11 items-center justify-center rounded-btn px-5 py-2.5 text-base font-bold transition-colors;
