@@ -49,7 +49,7 @@ export const routes: Routes = [
   },
   {
     path: 'terminos-y-condiciones',
-    title: `Términos y condiciones | ${SITE_NAME}`,
+    title: `Condiciones de servicio | ${SITE_NAME}`,
     // MARKETING-REVIEW: page description
     data: { legal: 'terms', description: 'Condiciones de servicio de Hosting3M: precios, cobro, renovación, soporte, disponibilidad y responsabilidad.' },
     loadComponent: () => import('./pages/legal/legal-page').then((m) => m.LegalPage),
