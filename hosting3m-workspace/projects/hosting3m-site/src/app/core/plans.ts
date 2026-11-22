@@ -186,9 +186,11 @@ export interface PlanGroup {
 }
 
 export function groupByFamily(plans: readonly CatalogPlan[]): PlanGroup[] {
-  return FAMILIES.map((family) => ({ family, title: FAMILY_TITLES[family], plans: plans.filter((p) => p.family === family) })).filter(
-    (g) => g.plans.length > 0,
-  );
+  const first = (g: PlanGroup) => Math.min(...g.plans.map((p) => p.sortOrder));
+  return FAMILIES.map((family) => ({ family, title: FAMILY_TITLES[family], plans: plans.filter((p) => p.family === family) }))
+    .filter((g) => g.plans.length > 0)
+    // Follow the catalog's own sort_order (vps, hosting, domain, automation, web, email); ties keep the FAMILIES order.
+    .sort((a, b) => first(a) - first(b));
 }
 
 @Injectable({ providedIn: 'root' })
