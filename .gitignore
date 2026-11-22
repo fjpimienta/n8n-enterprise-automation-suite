@@ -11,6 +11,7 @@ pgvector/
 ollama-models/
 infrastructure/logs/*.log
 **/data/
+!hosting3m-workspace/projects/hosting3m-site/src/app/data/
 
 # --- Docker Local Overrides ---
 docker-compose.override.yml

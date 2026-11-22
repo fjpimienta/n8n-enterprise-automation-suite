@@ -1,0 +1,37 @@
+<header class="sticky top-0 z-40 border-b border-night-line bg-night text-mist" (keydown.escape)="onEscape()">
+  <div class="container-page flex h-16 items-center justify-between gap-3 md:h-[4.5rem]">
+    <a routerLink="/" class="inline-flex items-center rounded-full" (click)="close()">
+      <img src="/images/logo-112.webp" width="56" height="56" alt="Logotipo de Hosting3M, ir al inicio" decoding="async" class="size-11 md:size-14" />
+    </a>
+
+    <nav id="main-nav" aria-label="Principal"
+      class="absolute inset-x-0 top-full border-b border-night-line bg-night px-5 pb-5 pt-2 md:static md:block md:border-0 md:bg-transparent md:p-0"
+      [class.hidden]="!menuOpen()">
+      <ul class="flex flex-col md:flex-row md:items-center md:gap-6 lg:gap-8">
+        @for (link of links; track link.fragment) {
+          <li>
+            <a routerLink="/" [fragment]="link.fragment" (click)="close()"
+              class="block min-h-11 rounded py-3 text-base font-medium text-mist hover:text-mint md:py-2 md:text-[15px]">{{ link.label }}</a>
+          </li>
+        }
+      </ul>
+    </nav>
+
+    <div class="flex items-center gap-2">
+      <a [href]="quoteHref" target="_blank" rel="noopener noreferrer"
+        class="btn-primary !min-h-10 !px-4 !py-2 text-sm md:!px-5 md:text-[15px]">
+        <span class="md:hidden">{{ cta.mobile }}</span>
+        <span class="hidden md:inline">{{ cta.desktop }}</span>
+      </a>
+      <button #toggleButton type="button"
+        class="inline-flex size-11 items-center justify-center rounded-btn border border-night-edge text-mist hover:bg-night-2 md:hidden"
+        aria-controls="main-nav" [attr.aria-expanded]="menuOpen()" [attr.aria-label]="menuOpen() ? 'Cerrar menú' : 'Abrir menú'" (click)="toggle()">
+        @if (menuOpen()) {
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        } @else {
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+        }
+      </button>
+    </div>
+  </div>
+</header>

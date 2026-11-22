@@ -1,0 +1,26 @@
+<section id="servicios" class="section-dark" aria-labelledby="servicios-title">
+  <div class="container-page">
+    <h2 id="servicios-title" class="h-display mb-2 text-[2rem] leading-tight md:mb-3 md:text-[2.75rem] md:leading-[1.1]">{{ copy.title }}</h2>
+    <p class="mb-6 max-w-[38rem] text-base text-mist-2 md:mb-10 md:text-[1.1875rem]">{{ copy.intro }}</p>
+
+    <ul class="grid gap-3 md:grid-cols-2 md:gap-4 lg:grid-cols-4">
+      @for (card of copy.cards; track card.title) {
+        <li class="rounded-tile border border-night-line bg-night-2 p-[22px] text-mint md:p-7" [class]="card.wide ? 'lg:col-span-2 md:!p-8' : ''">
+          <app-icon [name]="card.icon" [size]="card.wide ? 32 : 28" />
+          <h3 class="mb-2 mt-4 text-xl font-bold text-mist md:mt-[18px]" [class]="card.wide ? 'lg:text-2xl' : ''">{{ card.title }}</h3>
+          <p class="text-[0.9375rem] leading-relaxed text-mist-2 md:text-base" [class]="card.hint ? 'mb-4' : ''">{{ card.text }}</p>
+          @if (card.hint) { <p class="font-mono text-[13px] text-mist-3">{{ card.hint }}</p> }
+        </li>
+      }
+      <li class="rounded-tile border border-night-line bg-night-2 p-[22px] md:col-span-2 md:p-8 lg:col-span-4" data-testid="suite-card">
+        <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div class="min-w-0 md:max-w-[42rem]">
+            <h3 class="text-xl font-bold text-mist md:text-2xl">{{ copy.suite.title }}</h3>
+            <p class="mt-2 text-[0.9375rem] leading-relaxed text-mist-2 md:text-base">{{ copy.suite.text }}</p>
+          </div>
+          <a class="btn-outline-dark flex-none" [href]="githubUrl" target="_blank" rel="noopener noreferrer">{{ copy.suite.cta }}</a>
+        </div>
+      </li>
+    </ul>
+  </div>
+</section>

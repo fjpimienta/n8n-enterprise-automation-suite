@@ -1,0 +1,192 @@
+@import "tailwindcss" source(none);
+@source "./";
+
+/*
+ * DESIGN TOKENS: the single place to change the palette, fonts and radii (Tailwind v4, CSS-first).
+ * Direction D. A palette change is a one-file edit: every component uses these names, never raw hex values.
+ * AA contrast checked: mist/mist-2 on night, cta-ink on orange, cream-ink on cream, white on teal and brand-600/700/900.
+ */
+@theme {
+  /* Fonts (self-hosted, latin subset, see @font-face below). */
+  --font-sans: "DM Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* Dark surfaces. */
+  --color-night: #0b1a1d;
+  --color-night-2: #112a2f;
+  --color-night-line: #1d3b41;
+  --color-night-edge: #3a6168;
+  --color-teal-deep: #123a41;
+  /* Text on dark. */
+  --color-mist: #e6f1f2;
+  --color-mist-2: #b4cbce;
+  --color-mist-3: #8fb0b4;
+  --color-mint: #5fd4c8;
+  --color-mint-2: #8fe0d6;
+  /* Accent / call to action. */
+  --color-orange: #f58220;
+  --color-orange-2: #f6a45c;
+  --color-cta-ink: #1f2a2e;
+  --color-teal: #1d6b78;
+  --color-teal-tint: #e4f2f3;
+  /* Light surfaces and their text. */
+  --color-cream: #fbf7f2;
+  --color-cream-2: #f1ebe2;
+  --color-cream-line: #ddd2c2;
+  --color-cream-edge: #cdbfab;
+  --color-body: #3d4d52;
+  --color-soft: #566569;
+
+  /* Illustrative mock screens (systems demo). Colors of the fictitious UIs, kept here so no raw hex lives in templates. */
+  --color-mock-hotel: #0f1729;
+  --color-mock-hotel-card: #1a2238;
+  --color-mock-hotel-edge: #3a4a68;
+  --color-mock-text: #e6ebf5;
+  --color-mock-blue: #4da3ff;
+  --color-mock-green: #2fb344;
+  --color-mock-amber: #f59f00;
+  --color-mock-red: #ff8589;
+  --color-mock-money-in: #12261f;
+  --color-mock-money-out: #2a1a22;
+  --color-mock-money-net: #10203a;
+  --color-mock-agro-head: #0b57a8;
+  --color-mock-agro-out: #2169c9;
+  --color-mock-agro-bg: #f7f8fa;
+  --color-mock-agro-edge: #dfe3e8;
+  --color-mock-chat-bg: #0b141a;
+  --color-mock-chat-head: #1f2c34;
+  --color-mock-chat-out: #005c4b;
+  --color-mock-chat-in: #202c33;
+  --color-mock-chat-text: #e9edef;
+  --color-mock-chat-sub: #8696a0;
+
+  /* Legacy names used by the legal pages and the cookie banner, mapped onto the palette above. */
+  --color-brand-50: #e4f2f3;
+  --color-brand-100: #cfe6e9;
+  --color-brand-500: #2a8a99;
+  --color-brand-600: #1d6b78;
+  --color-brand-700: #175862;
+  --color-brand-900: #123a41;
+  --color-ink: #1f2a2e;
+  --color-muted: #566569;
+  --color-whatsapp: #0f7a40;
+  --color-whatsapp-dark: #0b6333;
+
+  --radius-btn: 0.875rem;
+  --radius-tile: 1.5rem;
+  --radius-card: 1.75rem;
+  --radius-panel: 1.75rem;
+
+  /* 1120 px of content plus 80 px of side padding on desktop. */
+  --container-page: 80rem;
+}
+
+/* Self-hosted fonts (OFL, see public/fonts/README.txt). font-display: swap; Fraunces and DM Sans are preloaded in index.html. */
+@font-face { font-family: "Fraunces"; font-style: normal; font-weight: 100 900; font-display: swap; src: url("/fonts/fraunces-latin-wght-normal.woff2") format("woff2"); }
+@font-face { font-family: "DM Sans"; font-style: normal; font-weight: 100 1000; font-display: swap; src: url("/fonts/dm-sans-latin-wght-normal.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/jetbrains-mono-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "JetBrains Mono"; font-style: normal; font-weight: 500; font-display: swap; src: url("/fonts/jetbrains-mono-latin-500-normal.woff2") format("woff2"); }
+
+@layer base {
+  html { scroll-behavior: smooth; scroll-padding-top: 4.5rem; }
+  body { @apply bg-cream font-sans text-ink antialiased; }
+  :focus-visible { outline: 3px solid var(--color-mint); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, ::before, ::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+}
+
+/* Tailwind v4: shared component classes are custom utilities so they can be composed with @apply and variants. */
+@utility container-page {
+  @apply mx-auto w-full max-w-page px-5 md:px-10 lg:px-20;
+}
+/* Focus ring for light surfaces (the default mint ring is too faint there). */
+@utility on-light {
+  & :focus-visible { outline-color: var(--color-teal); }
+}
+/* Page sections alternate between these two surfaces; never two equal blocks in a row. */
+@utility section-dark {
+  @apply bg-night py-14 text-mist md:py-20 lg:py-26;
+}
+@utility section-light {
+  @apply bg-cream py-14 text-cta-ink md:py-20 lg:py-26;
+  /* The mint focus ring is too faint on light surfaces: use teal. */
+  & :focus-visible { outline-color: var(--color-teal); }
+}
+@utility section-light-2 {
+  @apply bg-cream-2 py-14 text-cta-ink md:py-20 lg:py-26;
+  & :focus-visible { outline-color: var(--color-teal); }
+}
+@utility eyebrow {
+  @apply font-mono text-xs tracking-wide md:text-[13px];
+}
+@utility h-display {
+  @apply font-display font-semibold tracking-tight;
+}
+/* Chat mocks: messages appear one by one (CSS only). Reduced motion shows everything at once. */
+@keyframes msg-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+@utility chat-msg {
+  animation: msg-in 0.45s ease-out both;
+  &:nth-child(1) { animation-delay: 0.2s; }
+  &:nth-child(2) { animation-delay: 1.4s; }
+  &:nth-child(3) { animation-delay: 2.6s; }
+  &:nth-child(4) { animation-delay: 3.8s; }
+  @media (prefers-reduced-motion: reduce) { animation: none; }
+}
+@utility btn {
+  @apply inline-flex min-h-11 items-center justify-center rounded-btn px-5 py-2.5 text-base font-bold transition-colors;
+}
+/* Main call to action: orange with dark text. */
+@utility btn-primary {
+  @apply btn bg-orange text-cta-ink hover:bg-orange-2;
+}
+/* Outline on light surfaces. */
+@utility btn-secondary {
+  @apply btn border border-teal bg-transparent text-cta-ink hover:bg-teal-tint;
+}
+/* Outline on dark surfaces. */
+@utility btn-outline-dark {
+  @apply btn border border-night-edge bg-transparent text-mist hover:bg-night-2;
+}
+@utility btn-teal {
+  @apply btn bg-teal text-white hover:bg-brand-700;
+}
+
+@utility field {
+  @apply mt-1.5 block w-full rounded-xl border border-cream-edge bg-white px-3.5 py-3 text-base text-ink aria-[invalid=true]:border-red-700;
+}
+@utility field-error {
+  @apply mt-1 text-sm font-medium text-red-800;
+}
+
+/* Legal tables: a real table from 768 px up; on mobile every row becomes a stacked card (labels come from data-label).
+   The ARIA roles in the markup keep the table semantics when the display type changes. */
+@utility stack-table {
+  @apply mt-4 w-full border-collapse text-left text-[0.9375rem];
+  & caption { @apply sr-only; }
+  & th, & td { @apply border-b border-cream-line px-3 py-2.5 align-top; }
+  & thead th { @apply bg-cream-2 font-bold; }
+  & tbody th { @apply font-semibold; }
+  @media (max-width: 47.99rem) {
+    & thead { @apply sr-only; }
+    & tbody tr { @apply mb-4 block rounded-xl border border-cream-line bg-white; }
+    & tbody th { @apply block border-b border-cream-line bg-cream-2 text-base; }
+    & tbody td { @apply block border-0 py-1.5; }
+    & tbody td::before { content: attr(data-label); @apply block text-xs font-bold uppercase tracking-wide text-soft; }
+  }
+}
+
+@utility legal-prose {
+  @apply max-w-3xl text-base leading-relaxed text-ink;
+  & h1 { @apply text-3xl font-bold text-brand-900; }
+  & h2 { @apply mt-8 text-xl font-semibold text-brand-900; }
+  & p { @apply mt-3; }
+  & ul { @apply mt-3 list-disc space-y-1 pl-6; }
+  & a { @apply text-brand-700 underline; }
+  & .updated { @apply mt-2 text-sm text-muted; }
+}

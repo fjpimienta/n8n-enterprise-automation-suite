@@ -1,0 +1,9 @@
+{
+  "_comment": "Static quote cards shown ONLY while the public catalog (POST /v6/plans) is empty. Prices, billing and features come from the API; never put them here. MARKETING-REVIEW: the four summaries below are approved copy; edit text only.",
+  "plans": [
+    { "id": "vps", "name": "VPS", "summary": "Servidores virtuales con acceso root, autoadministrados o administrados por Hosting3M.", "service": "Renta de Servidores VPS" },
+    { "id": "hosting", "name": "Hosting", "summary": "Hosting para tu sitio web, autoadministrado o administrado por Hosting3M.", "service": "Hosting para sitios web" },
+    { "id": "domains", "name": "Dominios", "summary": "Registro y administración de dominios .com, .mx, .com.mx, .org, .net y .ai.", "service": "Registro de Dominios" },
+    { "id": "n8n-managed", "name": "n8n administrado", "summary": "n8n instalado y operado por Hosting3M, listo para tus flujos de automatización.", "service": "Automatización de Procesos con Agentes IA" }
+  ]
+}

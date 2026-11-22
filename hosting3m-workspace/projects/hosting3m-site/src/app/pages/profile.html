@@ -1,0 +1,43 @@
+<section class="section-light" aria-labelledby="perfil-title">
+  <div class="container-page">
+    <div class="flex flex-col gap-8 md:flex-row md:items-start md:gap-12">
+      <img [ngSrc]="profile.photo.src" [width]="profile.photo.width" [height]="profile.photo.height" priority [alt]="profile.photo.alt"
+        class="size-44 flex-none rounded-card border border-cream-line object-cover md:size-60" />
+      <div class="min-w-0">
+        <h1 id="perfil-title" class="h-display text-[2rem] leading-tight md:text-5xl">{{ profile.name }}</h1>
+        <p class="mt-3 text-lg font-bold text-teal">{{ profile.title }}</p>
+        <p class="eyebrow mt-1 text-soft">{{ profile.location }}</p>
+        <p class="mt-6 max-w-3xl text-base leading-relaxed text-body md:text-lg">{{ profile.summary }}</p>
+      </div>
+    </div>
+
+    <div class="mt-12 grid gap-10 md:grid-cols-2">
+      <section aria-labelledby="areas-title">
+        <h2 id="areas-title" class="h-display mb-4 text-2xl md:text-3xl">{{ profile.areasTitle }}</h2>
+        <ul class="list-disc space-y-1.5 pl-5 text-base leading-relaxed text-cta-ink md:text-[1.0625rem]">
+          @for (area of profile.areas; track area) { <li>{{ area }}</li> }
+        </ul>
+      </section>
+      <section aria-labelledby="formacion-title">
+        <h2 id="formacion-title" class="h-display mb-4 text-2xl md:text-3xl">{{ profile.educationTitle }}</h2>
+        <ul class="space-y-3 text-base leading-relaxed md:text-[1.0625rem]">
+          @for (item of profile.education; track item.degree) {
+            <li><strong class="block">{{ item.degree }}</strong><span class="text-body">{{ item.school }}</span></li>
+          }
+        </ul>
+      </section>
+    </div>
+
+    <section class="mt-12" aria-labelledby="contacto-perfil-title">
+      <h2 id="contacto-perfil-title" class="h-display mb-4 text-2xl md:text-3xl">{{ profile.contactTitle }}</h2>
+      <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <a class="btn-primary" [href]="whatsappHref" target="_blank" rel="noopener noreferrer">Escribir por WhatsApp</a>
+        <a class="btn-secondary" [href]="profile.linkedin.url" target="_blank" rel="noopener noreferrer me">{{ profile.linkedin.label }}</a>
+      </div>
+      <p class="mt-4 text-base text-body">
+        <a class="text-teal underline" [href]="'tel:' + site.phoneTel">{{ site.phoneDisplay }}</a> ·
+        <a class="text-teal underline" [href]="'mailto:' + site.emails.general">{{ site.emails.general }}</a>
+      </p>
+    </section>
+  </div>
+</section>

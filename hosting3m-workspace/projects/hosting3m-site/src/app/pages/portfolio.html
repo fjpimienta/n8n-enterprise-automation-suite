@@ -1,0 +1,25 @@
+<section class="section-light" aria-labelledby="portafolio-title">
+  <div class="container-page">
+    <h1 id="portafolio-title" class="h-display mb-3 text-[2rem] leading-tight md:text-5xl">{{ copy.title }}</h1>
+    <p class="max-w-3xl text-base leading-relaxed text-body md:text-[1.1875rem]">{{ copy.intro }}</p>
+  </div>
+</section>
+
+@for (item of copy.items; track item.id; let odd = $odd) {
+  <article [attr.aria-labelledby]="'pf-' + item.id" [class]="odd ? 'section-light' : 'section-light-2'" [attr.data-testid]="'pf-' + item.id">
+    <div class="container-page flex flex-col items-start gap-8 lg:flex-row lg:gap-12">
+      <div class="w-full min-w-0 lg:w-[25rem] lg:flex-none">
+        <p class="mb-2.5 font-mono text-xs text-soft">{{ copy.illustrative }}</p>
+        <div class="flex flex-col gap-5">
+          @for (kind of item.mocks; track kind) { <app-demo-mock [kind]="kind" /> }
+        </div>
+      </div>
+      <div class="min-w-0 lg:flex-1">
+        <h2 [id]="'pf-' + item.id" class="h-display mb-2.5 text-[1.625rem] md:text-[2rem]">{{ item.title }}</h2>
+        <p class="mb-3 font-mono text-[13px] text-teal">{{ item.since }}</p>
+        <p class="mb-6 max-w-[38rem] text-base leading-relaxed text-body md:text-lg">{{ item.text }}</p>
+        <a routerLink="/" fragment="contacto" class="btn-primary" [attr.data-testid]="'demo-' + item.id" (click)="requestDemo(item.id)">{{ copy.cta }}</a>
+      </div>
+    </div>
+  </article>
+}

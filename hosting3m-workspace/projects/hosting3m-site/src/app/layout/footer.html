@@ -1,0 +1,31 @@
+<footer class="on-light border-t border-cream-line bg-cream py-8 text-soft">
+  <div class="container-page grid gap-8 text-sm md:grid-cols-2 lg:grid-cols-3">
+    <section aria-labelledby="footer-contact">
+      <h2 id="footer-contact" class="mb-3">
+        <img src="/images/logo-112.webp" width="56" height="56" alt="Logotipo de Hosting3M" loading="lazy" decoding="async" class="size-14" />
+      </h2>
+      <address class="space-y-1 not-italic">
+        <p>{{ business.legalName }}</p>
+        <p>{{ addressLine }}</p>
+        <p><a class="text-teal underline" [href]="'tel:' + site.phoneTel">{{ site.phoneDisplay }}</a></p>
+        <p><a class="text-teal underline" [href]="'mailto:' + site.emails.general">{{ site.emails.general }}</a></p>
+      </address>
+      <p class="mt-3">{{ business.hoursText }}</p>
+    </section>
+    <nav aria-labelledby="footer-legal">
+      <h2 id="footer-legal" class="mb-2 font-display text-lg font-semibold text-cta-ink">Legal</h2>
+      <ul class="space-y-1">
+        <li><a routerLink="/aviso-de-privacidad" class="text-teal underline">Aviso de privacidad</a></li>
+        <li><a routerLink="/politica-de-cookies" class="text-teal underline">Política de cookies</a></li>
+        <li><a routerLink="/terminos-y-condiciones" class="text-teal underline">Condiciones de servicio</a></li>
+        <li><a routerLink="/eliminardatosusuarios" class="text-teal underline">Eliminación de datos de usuario</a></li>
+        <li><button type="button" class="text-teal underline" (click)="consent.reopen()">Preferencias de cookies</button></li>
+      </ul>
+    </nav>
+    <section aria-labelledby="footer-open" class="md:col-span-2 lg:col-span-1">
+      <h2 id="footer-open" class="mb-2 font-display text-lg font-semibold text-cta-ink">Código abierto</h2>
+      <p><a class="text-teal underline" [href]="site.githubSuiteUrl" target="_blank" rel="noopener noreferrer">n8n Enterprise Automation Suite (MIT)</a></p>
+    </section>
+  </div>
+  <p class="container-page mt-8 border-t border-cream-line pt-4 text-center text-sm">© {{ year }} {{ site.name }}. Todos los derechos reservados.</p>
+</footer>

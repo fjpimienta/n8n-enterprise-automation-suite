@@ -1,0 +1,44 @@
+<section id="sistemas" class="section-light-2" aria-labelledby="sistemas-title">
+  <div class="container-page">
+    <p class="eyebrow mb-2 text-teal md:mb-3">{{ section.eyebrow }}</p>
+    <h2 id="sistemas-title" class="h-display mb-2 text-[2rem] leading-tight md:mb-3 md:text-[2.75rem] md:leading-[1.1]">{{ section.title }}</h2>
+    <p class="mb-6 max-w-[47.5rem] text-base leading-relaxed text-body md:mb-8 md:text-[1.1875rem]">{{ section.intro }}</p>
+
+    <div role="tablist" [attr.aria-label]="section.tablistLabel" class="mb-6 grid grid-cols-3 gap-2 md:mb-7 md:gap-3.5">
+      @for (t of tabs; track t.id; let i = $index) {
+        <button #tabButton type="button" role="tab" [id]="'tab-' + t.id" [attr.aria-controls]="'panel-' + t.id"
+          [attr.aria-selected]="active() === t.id" [attr.tabindex]="active() === t.id ? 0 : -1"
+          (click)="select(t.id)" (keydown)="onKeydown($event, i)"
+          class="rounded-xl px-1.5 py-3 text-center text-sm font-bold text-cta-ink md:rounded-2xl md:px-5 md:py-4 md:text-base"
+          [class]="active() === t.id ? 'border-2 border-teal bg-teal-tint' : 'border border-cream-line bg-white hover:border-teal'">{{ t.tab }}</button>
+      }
+    </div>
+
+    <div class="flex flex-col items-start gap-8 lg:flex-row lg:gap-12">
+      <div class="w-full min-w-0 lg:w-[25rem] lg:flex-none">
+        <p class="mb-2.5 font-mono text-xs text-soft">{{ section.illustrative }}</p>
+
+        <app-demo-mock kind="hotel" [hidden]="active() !== 'hotel'" />
+        <app-demo-mock kind="agro" [hidden]="active() !== 'agro'" />
+        <app-demo-mock kind="whatsapp" [hidden]="active() !== 'whatsapp'" />
+      </div>
+
+      <div class="min-w-0 lg:flex-1">
+        @for (t of tabs; track t.id) {
+          <div role="tabpanel" [id]="'panel-' + t.id" [attr.aria-labelledby]="'tab-' + t.id" [hidden]="active() !== t.id" tabindex="0">
+            <h3 class="h-display mb-2.5 text-[1.625rem] md:text-[2rem]">{{ t.title }}</h3>
+            <p class="mb-1.5 font-mono text-[13px] text-teal">{{ t.since }}</p>
+            <p class="mb-5 text-base leading-relaxed text-body md:text-lg">{{ t.lead }}</p>
+            <ul class="mb-6 list-disc space-y-1 pl-5 text-base leading-relaxed text-cta-ink md:text-[1.0625rem]">
+              @for (b of t.bullets; track b) { <li>{{ b }}</li> }
+            </ul>
+          </div>
+        }
+        <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <a routerLink="/" fragment="contacto" class="btn-primary" data-testid="demo-hotel" (click)="requestDemo('hotel')">{{ ctas.hotel.label }}</a>
+          <a routerLink="/" fragment="contacto" class="btn-secondary" data-testid="demo-agro" (click)="requestDemo('agro')">{{ ctas.agro.label }}</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

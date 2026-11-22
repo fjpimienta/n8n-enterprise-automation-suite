@@ -41,7 +41,7 @@ The agent never handles the invoice JSON: it only sees a `draft_id` and a short 
 
 ## Response states (`status`)
 
-`draft_created` · preview (`rfc_new`, `rfc_new_notice`, `company_rfcs`) · `recorded` (`amount`, `category`, `cfdi_folio`, `sat_status`, `expense_date`, `rfc_registered`) · `preview_required` · `rfc_not_registered` · `disabled` (after a rollback) · errors `P0095` (append-only), `P0096` (cross-company).
+`draft_created` · preview (`rfc_new`, `rfc_new_notice`, `company_rfcs`) · `recorded` (`amount`, `category`, `cfdi_folio`, `sat_status`, `expense_date`, `rfc_registered`) · `preview_required` · `rfc_not_registered` · `not_an_expense` (`code`: `ROLE_SALE`, `ROLE_AMBIGUOUS`, `ROLE_UNAVAILABLE`) · `rfc_generic` · `disabled` (after a rollback) · errors `P0095` (append-only), `P0096` (cross-company).
 
 ## cfdi-service
 
@@ -51,6 +51,71 @@ Internal HTTP sidecar (port 4100, not published; reachable from n8n as `http://c
 Amounts: comprobante-level fields (`SubTotal`, `Total`, `Descuento`, tax totals and lines) have at most 2 decimals and `Total = SubTotal − Descuento + traslados − retenciones` must match to the cent (`ROUNDING_TOLERANCE_CENTS = 0`; do not change silently). **Concept-level `Importe` may carry up to 6 decimals** (SAT Anexo 20) and is rounded half-up to cents for display only; it is not used to reconcile totals.
 **Sale profile** (palm sales, migration 104): `POST /parse` with `"profile":"sale"` adds `tipoComprobante`, `formaPago`, `metodoPago` and, per concept, `claveUnidad`, `cantidad`, `valorUnitario` (exact decimal strings); the default response used by the expense flow is unchanged. See `microservices/cfdi-service/SALE_PROFILE_RUNBOOK.md`.
 Error codes: `NOT_XML`, `TOO_LARGE`, `DOCTYPE_FORBIDDEN`, `INVALID_CHARS`, `TOO_MANY_CONCEPTS`, `UNSUPPORTED_VERSION`, `UNSUPPORTED_TYPE`, `UNSUPPORTED_CURRENCY`, `NOT_STAMPED`, `INVALID_STRUCTURE`, `INVALID_RFC`, `INVALID_AMOUNT`, `AMOUNTS_MISMATCH`.
+
+## Role classifier (migration 109)
+
+`sp_cfdi_classify(tenant, user e-mail, issuer RFC, receptor RFC)` tells whether a voucher is a **sale** or an **expense** of a company by the role of its RFCs; it is the only entry point for n8n. It first checks that the user is an active member of the active company (otherwise `UNKNOWN` / `FORBIDDEN`), then compares both RFCs (after `upper(btrim())`) with the company's own set: active rows of `company_tax_ids` plus active rows of `company_issuer_rfcs`, scoped strictly by company.
+
+| Issuer own | Receptor own | Answer |
+|---|---|---|
+| yes | no | `SALE` |
+| no | yes | `EXPENSE` |
+| yes | yes | `AMBIGUOUS` (`SELF_INVOICE` when both RFCs are equal, else `BOTH_ROLES`) |
+| no | no | `UNKNOWN` (`NEITHER`) |
+| invalid company or RFC | | `UNKNOWN` (`INVALID_INPUT`) |
+
+The answer is `{role, reason, emisor_inactive_match, receptor_inactive_match, own_set_empty, company_domain}`: codes and booleans only, never an RFC. Deactivated RFCs are not part of the set (the `*_inactive_match` flags only report that a deactivated one matched). The test flag of a company does not change the result. The function reads nothing it should not and writes nothing; no workflow uses it yet. See `database/migrations/109_RUNBOOK.md`.
+
+## Expense gate (migration 110)
+
+`sp_expense_invoice_register` only books vouchers **received** by the company. Before looking at the receiver RFC it asks the classifier above (with the company of the verified session, never a client value), in preview and in confirm:
+
+| Classifier | Result |
+|---|---|
+| `EXPENSE`, or `UNKNOWN` / `NEITHER` | the flow described above, unchanged (the second case is the unregistered-receiver flow) |
+| `SALE` | `not_an_expense` / `ROLE_SALE`: the company appears as issuer; nothing is written and no RFC is registered |
+| `AMBIGUOUS` | `not_an_expense` / `ROLE_AMBIGUOUS`: the company appears as issuer and receiver; nothing is written |
+| any other answer or an error | `not_an_expense` / `ROLE_UNAVAILABLE`: fail closed |
+
+The message is fixed text (no RFC, UUID, name or amount) and the draft is not marked as consumed, so the agent explains the message and does not retry. The generic SAT RFCs `XAXX010101000` and `XEXX010101000` cannot be registered as a company RFC (`rfc_generic`), by an ADMIN or by the automatic registration; rows that already exist keep working. Both functions are guarded against drift on deployment. See `database/migrations/110_RUNBOOK.md`.
+
+## Palm companies (migration 111)
+
+Palm companies cannot use the livestock procedures above (they are refused for a palm company). A palm company registers an expense backed by a voucher **received** by the company with its own procedures: `sp_agri_expense_invoice_draft_create` (workflow only), `sp_agri_expense_invoice_preview` and `sp_agri_expense_invoice_confirm` (the two agent tools; the model only handles the draft id). The data lives in `agri_expense_invoices` (append-only link to the `agri_expenses` row, written by `sp_agri_record_expense`).
+
+| Aspect | Palm |
+|---|---|
+| Who | ADMIN and OWNER of a palm company (the preview shows amounts); EDITOR keeps manual capture |
+| Role gate | only the 109 role `EXPENSE` goes on; `SALE` / `AMBIGUOUS` / unknown receiver / classifier unavailable → fixed refusal, nothing written. RFCs are platform-managed (`company_issuer_rfcs`); nothing registers an RFC |
+| SAT | `VIGENTE`; a company with `company_flags.is_test` also accepts `NO_ENCONTRADO` / `ERROR` (stored `SKIPPED_TEST`); `CANCELADO` never |
+| Voucher | type `I`, `MXN`, totals exact to the cent; multi-concept allowed; no sale rules |
+| Scope | plantation / lot are not in the voucher: default is a general company expense; by code or name like the palm chat (ambiguity never guessed); a single active plantation is only proposed |
+| Category | from the product key (fuel → `COMBUSTIBLE`; the exact SAT key family is `TODO(verify)`); otherwise the preview lists the company categories and asks |
+| Quantity / unit | only for a voucher with exactly one concept with a mapped unit (litres `L`, kilograms `KG`, piece `PZA`, service `SERVICIO`); otherwise both empty |
+| Warnings | cash payment form, a uso CFDI different from the company's usual, a date older than 365 days: informational lines in the preview |
+| Gates | preview before confirm (15 minutes, same category, description, date, plantation and lot); duplicates per company and UUID |
+| Void | voiding the expense (`sp_agri_void_expense`) voids the link and frees the UUID |
+
+Response statuses: `draft_created` · `preview` (`summary`, `warnings`, optional `plantation_proposal` / `scope_question`) · `need_info` (`issues[]` with options) · `recorded` · `duplicate` · `preview_required` · `not_an_expense` (`ROLE_SALE`, `ROLE_AMBIGUOUS`, `ROLE_UNAVAILABLE`) · `rfc_not_registered` (`ROLE_UNKNOWN`) · `sat_not_valid` · `invalid` · `forbidden` · `not_palm` · `disabled` (after a rollback). The parser must be called with the `sale` profile so the voucher carries the payment form and the unit keys. See `database/migrations/111_RUNBOOK.md`.
+
+## Web chat: XML router
+
+When an XML is attached in the dashboard chat, the workflow `v6/ai/chat cattle` first reads the two RFCs of the voucher (default parse profile) and asks `sp_cfdi_classify` (migration 109) what the voucher is for the **active company**, instead of deciding by the company domain alone. The tenant and the e-mail come from the verified session, the RFCs from the parsed voucher; never from the message or the model.
+
+| Classifier answer | Route |
+|---|---|
+| `SALE`, palm company | the palm sale sub-workflow (ADMIN only, as before) |
+| `SALE`, other company type | fixed text: it looks like a sale and this chat does not register sales for this company type; nothing registered |
+| `EXPENSE`, livestock or unknown domain | the expense chain described above (draft, preview, confirm) |
+| `EXPENSE`, palm company | the palm expense chain (migration 111): parse with the `sale` profile, SAT status, store the original, `sp_agri_expense_invoice_draft_create`, then the palm agent previews and registers with its two tools (ADMIN/OWNER only). Runbook: `workflows/09-MCP-Agent-Cattle/v6/PALM_EXPENSE_XML_RUNBOOK.md` |
+| `AMBIGUOUS` | fixed text: purchase or sale cannot be decided; nothing registered |
+| `UNKNOWN` (`NEITHER`), livestock or unknown domain | the expense chain (the ask flow of 093; the SQL gate of 110 still protects it) |
+| `UNKNOWN` (`NEITHER`), palm company | fixed text: the RFCs match no RFC configured for the company; nothing registered |
+| error, `FORBIDDEN`, `INVALID_INPUT`, `DISABLED`, empty answer | fixed text, stop (fail closed) |
+
+No attachment, a PDF or an image, and an XML that cannot be read or parsed keep today's path. The fixed texts are written by a Code node (no model) and never echo an RFC, a UUID, a name or an amount. Roles are not decided by the router: the palm sale stays ADMIN only and the livestock chain keeps its own rules. Runbook and production tests: `workflows/09-MCP-Agent-Cattle/v6/XML_ROUTER_RUNBOOK.md`.
+
+**Palm expense from XML (PR 6).** For `EXPENSE` + palm the chat runs nine new nodes (`... Palma`) and hands the agent a `[FACTURA draft_id=... ...]` notice built by a Code node from the draft the database returned; the notice is data, never instructions. `AI Agent Palma` has two new direct tools, `preview_palm_expense_invoice` and `register_palm_expense_invoice`, that call `sp_agri_expense_invoice_preview` / `sp_agri_expense_invoice_confirm`; the tenant and the e-mail come from the verified session by expression, and the model only supplies `draft_id`, `category`, `description`, `expense_date`, `plantation` and `lot`. The chain goes through the existing `Catálogo Palma` node because the palm prompt reads it. WhatsApp has no router and is not changed.
 
 ## Operation
 

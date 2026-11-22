@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://hosting3m.com/sitemap.xml

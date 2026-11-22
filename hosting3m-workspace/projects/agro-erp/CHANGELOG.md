@@ -5,6 +5,29 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### Palm chat: invoice prompt asks one question at a time
+
+* n8n prompt wording only (`AI Agent Palma`, paragraph "FACTURA XML"): after a voucher preview the agent asks only the scope question, previews again with the answer, and asks "¿Confirmas?" once; a bare "Sí" confirms only that question; register receives exactly the last preview's arguments; on `preview_required` it previews again instead of asking twice. No SQL change. Runbook: `workflows/09-MCP-Agent-Cattle/v6/PALM_INVOICE_PROMPT_RUNBOOK.md`.
+
+### Palm: expenses backed by a received CFDI voucher (migration 111)
+
+* Database only (migration 111): a palm company can register an expense backed by a CFDI voucher received by the company (for example fuel), like livestock does with 091 / 092 / 093. New `sp_agri_expense_invoice_draft_create`, `_preview`, `_confirm` and the shared `_register`, a new append-only link table `agri_expense_invoices` and a unique `(id, id_company)` on `agri_expenses`. ADMIN and OWNER only (EDITOR keeps manual capture); the company always comes from the verified session.
+* Only a voucher whose receiver is one of the company's RFCs is accepted (109 role `EXPENSE`); a sale, an ambiguous voucher, an unknown receiver or an unavailable classifier is refused with a fixed message and nothing written. Palm RFCs stay platform-managed: nothing registers an RFC. SAT must be `VIGENTE`; a test company (`company_flags.is_test`) also accepts `NO_ENCONTRADO` / `ERROR` as `SKIPPED_TEST`; `CANCELADO` never.
+* The expense is written by `sp_agri_record_expense` in the same transaction (amount = voucher total, `is_invoiced`, folio, supplier, quantity and unit only for a single mapped concept). Plantation and lot default to a general company expense and are resolved by code or name like the palm chat; a single plantation is only proposed. Category comes from the product keys (fuel only for now) or the preview asks. Cash payment, an unusual uso CFDI and a date older than 365 days are warnings in the preview, never blocks. The preview hash covers category, description, date, plantation and lot; duplicates are refused per company and voucher UUID.
+* Voiding the expense with `sp_agri_void_expense` voids its link in the same transaction (a trigger on `agri_expenses`), which frees the UUID so a mistaken registration can be redone. Rollback replaces the four procedures with a fail-closed stub and drops nothing. Runbook: `database/migrations/111_RUNBOOK.md`. Not applied to production.
+
+### Expense invoices: only vouchers received by the company are registered (migration 110)
+
+* Database only (migration 110): `sp_expense_invoice_register` now classifies the voucher with the 109 classifier before it looks at the receiver RFC, in preview and in confirm, using the company of the verified session. A voucher the company itself issued is refused with `not_an_expense` (`ROLE_SALE`; `ROLE_AMBIGUOUS` when the company appears as issuer and receiver) and a fixed message; nothing is written, no RFC is registered and the draft stays unconsumed. If the classifier cannot answer, registration refuses (`ROLE_UNAVAILABLE`, fail closed). Expenses and the "receiver not registered yet" flow of 093 behave exactly as before. The check lives in SQL, so it applies whatever the caller.
+* The generic SAT RFCs (`XAXX010101000`, `XEXX010101000`) can no longer be registered as a company RFC, neither with `sp_company_tax_id_set` nor by the automatic registration of 093 (`rfc_generic`). Existing rows are untouched.
+* Both replaced functions carry a drift guard: the migration aborts unless the live text is the repository text (md5), so production is never overwritten blindly. Rollback restores the exact 091 / 093 bodies and drops nothing. Roll back 110 before 109 (a rolled-back 109 under 110 makes registration refuse everything). Runbook: `database/migrations/110_RUNBOOK.md`. Not applied to production.
+
+### Vouchers: classify a CFDI as sale or expense by RFC role (migration 109)
+
+* Database only (migration 109): `sp_cfdi_classify` (the only entry point for n8n; checks the active membership of the user in the company first, fail-closed), plus the internal `fn_classify_cfdi_role_detail` and `fn_classify_cfdi_role`. A voucher is a sale when only the issuer RFC belongs to the company, an expense when only the receptor RFC does, ambiguous when both do, unknown when neither does or the input is invalid. The company's own RFC set is its active tax ids plus its active issuer RFCs.
+* Read-only and side-effect free; the answer carries codes and booleans, never an RFC. The internal functions are not executable by `PUBLIC` and are not registered in the gateway. Nothing existing changes and nothing calls the new functions yet (the expense gate and the n8n router are later pull requests).
+* Rollback replaces the functions with a fail-closed stub (`UNKNOWN` / `DISABLED`) and drops nothing. Runbook: `database/migrations/109_RUNBOOK.md`. Not applied to production.
+
 ### 🌴 Palm dashboard: income vs. expense block
 
 * New block "Ingresos vs. gastos" on the palm dashboard, **ADMIN of the active company only** (other roles see the dashboard exactly as before and make no sales request). It uses the same period (month, quarter, year) and scope

@@ -30,6 +30,8 @@ jobs:
       - run: git fetch origin +refs/heads/develop:refs/remotes/origin/develop
       - run: node workflows/09-MCP-Agent-Cattle/v6/repro-phase5/check_repro_consistency.js
       - run: node workflows/09-MCP-Agent-Cattle/v6/tests/test_palm_sale_route.mjs
+      - run: node workflows/09-MCP-Agent-Cattle/v6/tests/test_xml_router.mjs
+      - run: node workflows/09-MCP-Agent-Cattle/v6/tests/test_palm_expense_xml.mjs
       - run: node workflows/06-dynamic-crud-engine/v6/tests/test_agri_sale_sp.mjs
 
   shell-checks:
@@ -159,3 +161,8 @@ jobs:
       - run: npx ng build agro-erp
       - run: npm test -- agro-erp --watch=false
       - run: npx ng build hotel-website --configuration production
+      # hosting3m-site: production-like build, TODO guard in warning mode (the strict guard runs on real production builds)
+      - run: node projects/hosting3m-site/scripts/build.mjs --configuration beta
+      - run: npm test -- hosting3m-site --watch=false
+      - run: node --test projects/hosting3m-site/scripts/check-todo.test.mjs
+      - run: node --test projects/hosting3m-site/scripts/check-legal-markers.test.mjs

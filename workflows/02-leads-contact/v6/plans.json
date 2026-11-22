@@ -1,0 +1,166 @@
+{
+  "name": "v6/plans",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "v6/plans",
+        "responseMode": "responseNode",
+        "options": {
+          "allowedOrigins": "https://hosting3m.com,https://beta.hosting3m.com",
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "GET, POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type, Authorization, x-jwt-claim-role"
+              },
+              {
+                "name": "Access-Control-Allow-Credentials",
+                "value": "true"
+              }
+            ]
+          }
+        }
+      },
+      "id": "c3903db7-120a-46e3-ac02-28291632bd9a",
+      "name": "Webhook Plans",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        -528,
+        48
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT plan_key, family, name, summary, features, badge, billing_period, price_amount, managed_amount, promo_amount, promo_months, renewal_amount, setup_fee, term_months, currency, tax_included, service_label, price_checked_at::text AS price_checked_at, valid_until::text AS valid_until, is_featured, sort_order FROM service_plans WHERE id_company = 1 AND is_active = true AND (valid_until IS NULL OR valid_until >= CURRENT_DATE) ORDER BY sort_order, id;",
+        "options": {}
+      },
+      "id": "49985a27-4de7-4e5f-8395-750efd955d8e",
+      "name": "Select Plans",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.5,
+      "position": [
+        -256,
+        48
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const num = (v) => (v === null || v === undefined ? null : Number(v));\nconst rows = $input.all()\n  .map(i => i.json)\n  .filter(r => r && r.plan_key)\n  .map(r => ({\n    plan_key: r.plan_key,\n    family: r.family,\n    name: r.name,\n    summary: r.summary,\n    features: Array.isArray(r.features) ? r.features : [],\n    badge: r.badge,\n    billing_period: r.billing_period,\n    price_amount: num(r.price_amount),\n    managed_amount: num(r.managed_amount),\n    promo_amount: num(r.promo_amount),\n    promo_months: r.promo_months,\n    renewal_amount: num(r.renewal_amount),\n    setup_fee: num(r.setup_fee),\n    term_months: r.term_months,\n    currency: String(r.currency || 'MXN').trim(),\n    tax_included: r.tax_included === true,\n    service_label: r.service_label,\n    price_checked_at: r.price_checked_at,\n    valid_until: r.valid_until,\n    is_featured: r.is_featured === true,\n    sort_order: r.sort_order\n  }));\nreturn [{ json: { data: rows } }];"
+      },
+      "id": "4090f671-945e-4053-8a77-3d5d41006466",
+      "name": "Build Array",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json.data }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "43a80a19-348b-4c33-97b3-9bb3bf90e25e",
+      "name": "Respond Plans",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        272,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{ \"mensaje\": \"Catalogo no disponible\" }",
+        "options": {
+          "responseCode": 503
+        }
+      },
+      "id": "37ff2cd2-74d2-4d9b-93ab-d9d81236421a",
+      "name": "Respond Unavailable",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        208
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook Plans": {
+      "main": [
+        [
+          {
+            "node": "Select Plans",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select Plans": {
+      "main": [
+        [
+          {
+            "node": "Build Array",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Unavailable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Array": {
+      "main": [
+        [
+          {
+            "node": "Respond Plans",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "9SrVXdATmlrZemJT",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "nodeGroups": [],
+  "id": "pa2s1lhdIjiHbGOw",
+  "tags": []
+}

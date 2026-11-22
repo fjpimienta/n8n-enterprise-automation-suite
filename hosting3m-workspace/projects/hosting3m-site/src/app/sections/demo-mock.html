@@ -1,0 +1,59 @@
+@switch (kind()) {
+  @case ('hotel') {
+    <figure role="img" [attr.aria-label]="labels.hotel" class="m-0">
+          <div class="rounded-[1.75rem] border border-night-line bg-mock-hotel p-5 text-mock-text">
+            <p class="mb-3.5 text-lg font-bold">{{ hotel.name }}</p>
+            <div class="mb-4 flex flex-wrap gap-2 text-[13px] font-bold">
+              @for (chip of hotel.chips; track chip.label) {
+                <span class="rounded-full px-3 py-1.5" [class]="chip.active ? 'bg-mock-green text-cta-ink' : 'border border-mock-hotel-edge'">{{ chip.label }}</span>
+              }
+            </div>
+            @for (room of hotel.rooms; track room.number) {
+              <div class="mb-2.5 flex items-center justify-between rounded-2xl bg-mock-hotel-card px-4 py-3.5">
+                <span><strong class="text-xl text-mock-blue">{{ room.number }}</strong>&nbsp; {{ room.type }}</span>
+                <span class="text-[13px]" [class]="room.tone === 'ok' ? 'font-bold text-mock-green' : room.tone === 'warn' ? 'font-bold text-mock-amber' : 'text-mist-3'">{{ room.status }}</span>
+              </div>
+            }
+            <div class="my-4 grid grid-cols-2 gap-2.5 text-sm font-bold">
+              @for (action of hotel.actions; track action.label) {
+                <span class="rounded-xl border p-3 text-center" [class]="action.tone === 'blue' ? 'border-mock-blue text-mock-blue' : 'border-mock-green text-mock-green'">{{ action.label }}</span>
+              }
+            </div>
+            <div class="grid grid-cols-3 gap-2 text-xs">
+              @for (m of hotel.money; track m.label) {
+                <div class="rounded-xl p-2.5" [class]="m.tone === 'in' ? 'bg-mock-money-in' : m.tone === 'out' ? 'bg-mock-money-out' : 'bg-mock-money-net'">
+                  <span [class]="m.tone === 'in' ? 'text-mock-green' : m.tone === 'out' ? 'text-mock-red' : 'text-mock-blue'">{{ m.label }}</span><br />
+                  <strong class="text-base text-mock-text">{{ m.value }}</strong>
+                </div>
+              }
+            </div>
+          </div>
+        </figure>
+  }
+  @case ('agro') {
+    <figure role="img" [attr.aria-label]="labels.agro" class="m-0">
+          <div class="overflow-hidden rounded-[1.75rem] border border-night-line bg-mock-agro-bg text-cta-ink">
+            <div class="flex justify-between bg-mock-agro-head px-5 py-4 font-bold text-white"><span>{{ agro.title }}</span><span class="text-[13px] font-medium">{{ agro.status }}</span></div>
+            <div class="flex flex-col gap-3 p-[18px] text-[15px] leading-normal">
+              @for (line of agro.lines; track line.text) {
+                <div class="chat-msg max-w-[85%] rounded-2xl px-3.5 py-2.5"
+                  [class]="line.from === 'user' ? 'self-end bg-mock-agro-out text-white' : 'self-start border border-mock-agro-edge bg-white'">{{ line.text }}</div>
+              }
+            </div>
+          </div>
+        </figure>
+  }
+  @case ('whatsapp') {
+    <figure role="img" [attr.aria-label]="labels.whatsapp" class="m-0">
+          <div class="overflow-hidden rounded-[1.75rem] border border-night-line bg-mock-chat-bg text-mock-chat-text">
+            <div class="bg-mock-chat-head px-5 py-4 font-bold">{{ whatsapp.title }}<span class="block text-xs font-normal text-mock-chat-sub">{{ whatsapp.subtitle }}</span></div>
+            <div class="flex flex-col gap-3 p-[18px] text-[15px] leading-normal">
+              @for (line of whatsapp.lines; track line.text) {
+                <div class="chat-msg max-w-[85%] whitespace-pre-line rounded-[0.875rem] px-3.5 py-2.5"
+                  [class]="line.from === 'user' ? 'self-end bg-mock-chat-out' : 'self-start bg-mock-chat-in'">{{ line.text }}</div>
+              }
+            </div>
+          </div>
+        </figure>
+  }
+}
