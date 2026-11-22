@@ -5,6 +5,12 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### Vouchers: classify a CFDI as sale or expense by RFC role (migration 109)
+
+* Database only (migration 109): `sp_cfdi_classify` (the only entry point for n8n; checks the active membership of the user in the company first, fail-closed), plus the internal `fn_classify_cfdi_role_detail` and `fn_classify_cfdi_role`. A voucher is a sale when only the issuer RFC belongs to the company, an expense when only the receptor RFC does, ambiguous when both do, unknown when neither does or the input is invalid. The company's own RFC set is its active tax ids plus its active issuer RFCs.
+* Read-only and side-effect free; the answer carries codes and booleans, never an RFC. The internal functions are not executable by `PUBLIC` and are not registered in the gateway. Nothing existing changes and nothing calls the new functions yet (the expense gate and the n8n router are later pull requests).
+* Rollback replaces the functions with a fail-closed stub (`UNKNOWN` / `DISABLED`) and drops nothing. Runbook: `database/migrations/109_RUNBOOK.md`. Not applied to production.
+
 ### 🌴 Palm dashboard: income vs. expense block
 
 * New block "Ingresos vs. gastos" on the palm dashboard, **ADMIN of the active company only** (other roles see the dashboard exactly as before and make no sales request). It uses the same period (month, quarter, year) and scope
