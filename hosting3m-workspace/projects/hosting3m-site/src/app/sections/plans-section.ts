@@ -87,6 +87,17 @@ export class PlansSection {
     this.preselect(plan.serviceLabel, interestMessage(plan, false));
   }
 
+  /** One "Precios vigentes al" date per family group: the most recent price_checked_at of its plans. */
+  groupDate(plans: readonly CatalogPlan[]): Date | null {
+    const dates = plans.map((p) => p.priceCheckedAt).filter((d): d is Date => d !== null);
+    return dates.length ? new Date(Math.max(...dates.map((d) => d.getTime()))) : null;
+  }
+
+  /** Groups of exactly four plans: 2x2 up to 1279 px and four columns from 1280 px (no orphan card); 1 column on phones. */
+  gridClass(count: number): string {
+    return count === 4 ? 'sm:grid-cols-2 xl:grid-cols-4' : 'sm:grid-cols-2 lg:grid-cols-3';
+  }
+
   familyNote(family: string): string | null {
     return this.copy.familyNotes[family] ?? null;
   }
