@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, afterNextRender, computed, inject, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { ContactPrefill } from '../core/contact-prefill';
 import {
@@ -10,6 +11,7 @@ import {
   MODE_MANAGED,
   MODE_SELF,
   groupByFamily,
+  splitQuotePlans,
   interestMessage,
   isQuote,
   priceSuffix,
@@ -22,7 +24,7 @@ import { PACKAGES_SECTION } from '../data/home-copy';
 
 @Component({
   selector: 'app-plans-section',
-  imports: [RouterLink],
+  imports: [RouterLink, NgTemplateOutlet],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './plans-section.html',
 })
@@ -37,12 +39,11 @@ export class PlansSection {
   readonly site = SITE;
   readonly copy = PACKAGES_SECTION;
   readonly cards = QUOTE_CARDS;
-  readonly groups = computed(() => groupByFamily(this.catalog.plans()));
-  /** Per domain group: show the renewal column only when at least one row has a renewal price. */
-  hasRenewal(plans: readonly CatalogPlan[]): boolean {
-    return plans.some((p) => p.renewalPrice !== null);
-  }
-
+  private readonly split = computed(() => splitQuotePlans(this.catalog.plans()));
+  /** Priced plans, grouped by family (catalog order). */
+  readonly groups = computed(() => groupByFamily(this.split().priced));
+  /** Plans sold by quote (billing_period = quote), from any family, in catalog sort_order: one "Servicios a la medida" section. */
+  readonly customPlans = computed(() => this.split().quote);
   readonly isEmpty = computed(() => this.catalog.plans().length === 0);
   readonly genericQuoteHref = whatsappLink('Hola, quiero una cotización.');
   /** Plans (by key) for which the "Administrado por Hosting3M" price is selected. */
