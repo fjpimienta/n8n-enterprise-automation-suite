@@ -1034,6 +1034,334 @@
       ],
       "id": "44393b97-0a92-59a7-ac9f-602cb742ef66",
       "name": "Palma: respuesta de venta"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "7a16340d-a175-551c-945d-a793a425962e",
+              "leftValue": "={{ (() => { const f = ($('Webhook').first().json.body || $('Webhook').first().json || {}).file; if (!f || typeof f !== 'object' || Array.isArray(f)) return false; const n = String(f.name || '').toLowerCase(); const t = String(f.type || '').toLowerCase(); return n.endsWith('.xml') && ['text/xml', 'application/xml', 'application/octet-stream'].includes(t); })() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        7280,
+        1330
+      ],
+      "id": "8155e21a-33c4-54c0-91f2-b1dc84538a0d",
+      "name": "XML adjunto?"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Router only: same checks as \"Preparar Archivo Factura\" (base64 text only, size limit). A file that does not pass goes on to \"Dominio\" unchanged.\nconst wh = $('Webhook').first().json;\nconst body = (wh && wh.body) ? wh.body : (wh || {});\nconst f = body.file || null;\nif (!f || typeof f.base64 !== 'string') return [{ json: { file_ok: false } }];\nconst type = String(f.type || '').toLowerCase();\nif (!['text/xml', 'application/xml', 'application/octet-stream'].includes(type)) return [{ json: { file_ok: false } }];\nconst b64 = f.base64.replace(/\\s+/g, '');\nif (b64.length === 0 || b64.length > 7200000 || !/^[A-Za-z0-9+\\/]+={0,2}$/.test(b64)) return [{ json: { file_ok: false } }];\nreturn [{ json: { file_ok: true, xmlBase64: b64 } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        7504,
+        1330
+      ],
+      "id": "fe362321-1337-554a-ae61-24900307385d",
+      "name": "Preparar XML del router"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c03b842e-aa94-507f-999b-fd2351df02ce",
+              "leftValue": "={{ $json.file_ok === true }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        7728,
+        1330
+      ],
+      "id": "62fce3af-e6da-5f26-a7be-b4b388235d22",
+      "name": "XML del router OK"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://cfdi-service:4100/parse",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ xmlBase64: $json.xmlBase64 }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        7952,
+        1330
+      ],
+      "id": "5aba391d-1335-53f2-83e4-66edd5817580",
+      "name": "CFDI Parse del router",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "62YFK7Qu4Vc32Qe8",
+          "name": "CFDI Service Token"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "eafb10ef-c657-57dd-a334-3f5c211e00b2",
+              "leftValue": "={{ !!$json.uuid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        8176,
+        1330
+      ],
+      "id": "5258fb0b-1204-55b3-95cd-e431aeefe527",
+      "name": "Parse del router OK"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Only the two RFCs go on to the classifier. Nothing is logged or echoed.\nconst p = ($input.first() || {}).json || {};\nconst rfc = (v) => String(v === undefined || v === null ? '' : v).trim().toUpperCase().slice(0, 13);\nreturn [{ json: { emisor_rfc: rfc(p.emisor && p.emisor.rfc), receptor_rfc: rfc(p.receptor && p.receptor.rfc) } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        8400,
+        1330
+      ],
+      "id": "939f4b6a-b1fe-52c5-a4b5-d797fbdd2091",
+      "name": "RFC del comprobante"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT public.sp_cfdi_classify($1::text, $2::text, $3::text, $4::text) AS result;",
+        "options": {
+          "queryReplacement": "={{ [ String($('Resolver Empresa Chat').first().json.id_company), $('Validar Token').first().json.data.user.user, String($json.emisor_rfc ?? ''), String($json.receptor_rfc ?? '') ] }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        8624,
+        1330
+      ],
+      "id": "08f05c32-29b1-540c-b763-089d8a770a80",
+      "name": "Clasificar comprobante",
+      "alwaysOutputData": true,
+      "credentials": {
+        "postgres": {
+          "id": "BQrod4uGVzM1nvLw",
+          "name": "Postgres account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "4be3defb-1957-5eca-9ec7-e6a50b04daa0",
+                    "leftValue": "={{ String(($json.result || {}).role ?? '') }}",
+                    "rightValue": "SALE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  },
+                  {
+                    "id": "a5ee08bf-35e1-5231-a8d3-476adae51e10",
+                    "leftValue": "={{ String(($json.result || {}).company_domain ?? '') }}",
+                    "rightValue": "PALM",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "SALE_PALM"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "0aba9d38-20b2-540a-a685-bd4155182a0c",
+                    "leftValue": "={{ String(($json.result || {}).role ?? '') }}",
+                    "rightValue": "EXPENSE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  },
+                  {
+                    "id": "8af8aa4d-a5e3-5e63-bab6-7c9b62119b2c",
+                    "leftValue": "={{ String(($json.result || {}).company_domain ?? '') }}",
+                    "rightValue": "PALM",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "EXPENSE_NO_PALM"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "5512cc5c-4f00-5f42-b7e8-5c9328d00466",
+                    "leftValue": "={{ String(($json.result || {}).role ?? '') }}",
+                    "rightValue": "UNKNOWN",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  },
+                  {
+                    "id": "7e7ac80d-df76-5345-bb55-e68bd9d700a5",
+                    "leftValue": "={{ String(($json.result || {}).reason ?? '') }}",
+                    "rightValue": "NEITHER",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  },
+                  {
+                    "id": "77d48bf4-c156-5c6e-852b-7d4efb427edb",
+                    "leftValue": "={{ String(($json.result || {}).company_domain ?? '') }}",
+                    "rightValue": "PALM",
+                    "operator": {
+                      "type": "string",
+                      "operation": "notEquals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "UNKNOWN_NO_PALM"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "TEXTO"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        8848,
+        1330
+      ],
+      "id": "7deabb70-bbff-5293-b963-81cbf25c9005",
+      "name": "Ruta del comprobante"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Fixed texts, no model. Never echoes an RFC, a UUID, a name or an amount. Anything not recognised is answered as \"cannot classify\" (fail closed).\nconst r = ((($input.first() || {}).json || {}).result);\nconst o = r && typeof r === 'object' ? r : {};\nconst role = String(o.role || '');\nconst reason = String(o.reason || '');\nconst dom = String(o.company_domain || '');\nconst T = {\n  saleOther: '⚠️ Esta factura parece una venta de tu empresa (tu empresa aparece como emisora). Este chat no registra ventas para este tipo de empresa. No registré nada.',\n  expensePalm: 'ℹ️ Por ahora no puedo registrar gastos desde un XML en empresas de palma. Regístralo manualmente en Gastos, marcándolo como \"facturado\" y con el folio de la factura. No registré nada.',\n  ambiguous: '⚠️ No puedo decidir si es una compra o una venta, porque tu empresa aparece como emisora y como receptora de la factura. No registré nada.',\n  unknownPalm: '⚠️ Los RFC de la factura no coinciden con ningún RFC configurado para esta empresa. No registré nada; pide a un administrador de la plataforma que lo revise.',\n  unavailable: '⚠️ No pude clasificar la factura como compra o venta. No registré nada; intenta de nuevo en unos minutos o avisa al administrador.',\n};\nlet output = T.unavailable;\nif (role === 'SALE' && dom !== 'PALM') output = T.saleOther;\nelse if (role === 'EXPENSE' && dom === 'PALM') output = T.expensePalm;\nelse if (role === 'AMBIGUOUS') output = T.ambiguous;\nelse if (role === 'UNKNOWN' && reason === 'NEITHER' && dom === 'PALM') output = T.unknownPalm;\nreturn [{ json: { output } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        9072,
+        1200
+      ],
+      "id": "6d4b5ea3-2af7-53cb-8044-334f95968b44",
+      "name": "Texto fijo del comprobante"
     }
   ],
   "pinData": {},
@@ -1130,7 +1458,7 @@
       "main": [
         [
           {
-            "node": "Dominio",
+            "node": "XML adjunto?",
             "type": "main",
             "index": 0
           }
@@ -1473,6 +1801,147 @@
       ]
     },
     "Palma: respuesta de venta": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "XML adjunto?": {
+      "main": [
+        [
+          {
+            "node": "Preparar XML del router",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Dominio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar XML del router": {
+      "main": [
+        [
+          {
+            "node": "XML del router OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "XML del router OK": {
+      "main": [
+        [
+          {
+            "node": "CFDI Parse del router",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Dominio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CFDI Parse del router": {
+      "main": [
+        [
+          {
+            "node": "Parse del router OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse del router OK": {
+      "main": [
+        [
+          {
+            "node": "RFC del comprobante",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Dominio",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RFC del comprobante": {
+      "main": [
+        [
+          {
+            "node": "Clasificar comprobante",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clasificar comprobante": {
+      "main": [
+        [
+          {
+            "node": "Ruta del comprobante",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ruta del comprobante": {
+      "main": [
+        [
+          {
+            "node": "Venta Palma XML",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Trae Factura",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Trae Factura",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Texto fijo del comprobante",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Texto fijo del comprobante": {
       "main": [
         [
           {

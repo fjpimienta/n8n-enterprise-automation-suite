@@ -98,6 +98,23 @@ Palm companies cannot use the livestock procedures above (they are refused for a
 
 Response statuses: `draft_created` · `preview` (`summary`, `warnings`, optional `plantation_proposal` / `scope_question`) · `need_info` (`issues[]` with options) · `recorded` · `duplicate` · `preview_required` · `not_an_expense` (`ROLE_SALE`, `ROLE_AMBIGUOUS`, `ROLE_UNAVAILABLE`) · `rfc_not_registered` (`ROLE_UNKNOWN`) · `sat_not_valid` · `invalid` · `forbidden` · `not_palm` · `disabled` (after a rollback). The parser must be called with the `sale` profile so the voucher carries the payment form and the unit keys. See `database/migrations/111_RUNBOOK.md`.
 
+## Web chat: XML router
+
+When an XML is attached in the dashboard chat, the workflow `v6/ai/chat cattle` first reads the two RFCs of the voucher (default parse profile) and asks `sp_cfdi_classify` (migration 109) what the voucher is for the **active company**, instead of deciding by the company domain alone. The tenant and the e-mail come from the verified session, the RFCs from the parsed voucher; never from the message or the model.
+
+| Classifier answer | Route |
+|---|---|
+| `SALE`, palm company | the palm sale sub-workflow (ADMIN only, as before) |
+| `SALE`, other company type | fixed text: it looks like a sale and this chat does not register sales for this company type; nothing registered |
+| `EXPENSE`, livestock or unknown domain | the expense chain described above (draft, preview, confirm) |
+| `EXPENSE`, palm company | fixed text: not available yet; register it manually in Gastos as "facturado" with the folio |
+| `AMBIGUOUS` | fixed text: purchase or sale cannot be decided; nothing registered |
+| `UNKNOWN` (`NEITHER`), livestock or unknown domain | the expense chain (the ask flow of 093; the SQL gate of 110 still protects it) |
+| `UNKNOWN` (`NEITHER`), palm company | fixed text: the RFCs match no RFC configured for the company; nothing registered |
+| error, `FORBIDDEN`, `INVALID_INPUT`, `DISABLED`, empty answer | fixed text, stop (fail closed) |
+
+No attachment, a PDF or an image, and an XML that cannot be read or parsed keep today's path. The fixed texts are written by a Code node (no model) and never echo an RFC, a UUID, a name or an amount. Roles are not decided by the router: the palm sale stays ADMIN only and the livestock chain keeps its own rules. Runbook and production tests: `workflows/09-MCP-Agent-Cattle/v6/XML_ROUTER_RUNBOOK.md`.
+
 ## Operation
 
 - **Verify what a QA wrote** (read-only, on the VPS): `bash verify_invoice_qa.sh <company>` → last drafts, invoices, linked expenses, expenses of the last 2 days without an invoice (must be only manual entries), stored originals.
