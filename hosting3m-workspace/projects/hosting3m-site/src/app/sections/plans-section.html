@@ -19,6 +19,7 @@
       @for (group of groups(); track group.family) {
         <h3 class="h-display mb-1 mt-10 text-2xl first:mt-0 md:text-[1.75rem]">{{ group.title }}</h3>
         @if (familyNote(group.family); as note) { <p class="max-w-2xl text-mist-2" data-testid="family-note">{{ note }}</p> }
+        @if (groupDate(group.plans); as checked) { <p class="mt-1 text-xs text-mist-3" data-testid="group-date">Precios vigentes al {{ formatDate(checked) }}</p> }
 
         @if (group.family === 'domain') {
           <div class="relative mt-4 overflow-x-auto">
@@ -53,19 +54,20 @@
             </table>
           </div>
         } @else {
-          <ul class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
+          <ul class="mt-4 grid gap-4 lg:gap-5" [class]="gridClass(group.plans.length)" data-testid="plan-grid">
             @for (plan of group.plans; track plan.key) {
-              <li class="flex flex-col rounded-card bg-night-2 p-6 md:p-8" [class]="plan.featured ? 'border-2 border-orange' : 'border border-night-line'" data-testid="plan-card">
+              <li class="@container flex flex-col rounded-card bg-night-2 p-6 md:p-8" [class]="plan.featured ? 'border-2 border-orange' : 'border border-night-line'" data-testid="plan-card">
                 @if (plan.badge) { <p class="mb-3 w-fit rounded-full bg-orange px-3 py-1 text-[13px] font-bold text-cta-ink">{{ plan.badge }}</p> }
                 <h4 class="h-display text-[1.75rem]">{{ plan.name }}</h4>
-                @if (plan.summary) { <p class="mt-2 font-mono text-[13px] text-mist-3">{{ plan.summary }}</p> }
+                @if (plan.summary) { <p class="mt-2 text-[15px] leading-relaxed text-mist-2" data-testid="summary">{{ plan.summary }}</p> }
 
                 @if (plan.managedPrice !== null && plan.billing !== 'quote') {
-                  <div class="mt-4 flex w-full overflow-hidden rounded-xl border-2 border-orange" role="group" [attr.aria-label]="'Modalidad de ' + plan.name">
+                  <!-- Stacked in narrow cards (4-column groups), side by side from 20 rem of card width (container query). -->
+                  <div class="mt-4 flex w-full flex-col overflow-hidden rounded-xl border-2 border-orange @xs:flex-row" role="group" [attr.aria-label]="'Modalidad de ' + plan.name">
                     <button type="button" class="flex-1 px-3 py-2 text-sm font-semibold" [class]="!isManaged(plan) ? 'bg-orange text-cta-ink' : 'bg-transparent text-mist hover:bg-night'" [attr.aria-pressed]="!isManaged(plan)" (click)="setManaged(plan, false)">
                       @if (!isManaged(plan)) { <span aria-hidden="true">✓ </span> }{{ modeSelf }}
                     </button>
-                    <button type="button" class="flex-1 border-l-2 border-orange px-3 py-2 text-sm font-semibold" [class]="isManaged(plan) ? 'bg-orange text-cta-ink' : 'bg-transparent text-mist hover:bg-night'" [attr.aria-pressed]="isManaged(plan)" (click)="setManaged(plan, true)">
+                    <button type="button" class="flex-1 border-t-2 border-orange px-3 py-2 text-sm font-semibold @xs:border-l-2 @xs:border-t-0" [class]="isManaged(plan) ? 'bg-orange text-cta-ink' : 'bg-transparent text-mist hover:bg-night'" [attr.aria-pressed]="isManaged(plan)" (click)="setManaged(plan, true)">
                       @if (isManaged(plan)) { <span aria-hidden="true">✓ </span> }{{ modeManaged }}
                     </button>
                   </div>
@@ -73,7 +75,6 @@
 
                 @if (needsQuote(plan)) {
                   <p class="mt-4 text-sm text-mist-2" data-testid="quote-note">{{ copy.quoteNote }}</p>
-                  <a class="btn-primary mt-4 w-fit" [href]="quoteHref(plan)" target="_blank" rel="noopener" (click)="preselectQuote(plan)">Cotiza por WhatsApp</a>
                 } @else {
                   <p class="h-display mt-5 text-[2.875rem] leading-none text-mist" data-testid="price">{{ formatMoney(amount(plan)!, plan.currency) }}</p>
                   <p class="mt-1.5 text-[15px] text-mist-2" data-testid="suffix">{{ priceSuffix(plan) }}</p>
@@ -95,10 +96,9 @@
                   </ul>
                 }
 
-                @if (!needsQuote(plan) && plan.priceCheckedAt) {
-                  <p class="mt-4 text-xs text-mist-3">Precios vigentes al {{ formatDate(plan.priceCheckedAt) }}@if (plan.validUntil) { · válidos hasta {{ formatDate(plan.validUntil) }} }</p>
-                }
-                @if (!needsQuote(plan)) {
+                @if (needsQuote(plan)) {
+                  <a class="btn-primary mt-5 w-fit" [href]="quoteHref(plan)" target="_blank" rel="noopener" data-testid="quote-cta" (click)="preselectQuote(plan)">Cotiza por WhatsApp</a>
+                } @else {
                   <a class="mt-5 w-full text-center" [class]="plan.featured ? 'btn-primary' : 'btn-outline-dark'" routerLink="/" fragment="contacto" data-testid="quote-plan" (click)="requestQuote(plan)">Cotizar {{ plan.name }}</a>
                 }
               </li>
