@@ -31,6 +31,7 @@ jobs:
       - run: node workflows/09-MCP-Agent-Cattle/v6/repro-phase5/check_repro_consistency.js
       - run: node workflows/09-MCP-Agent-Cattle/v6/tests/test_palm_sale_route.mjs
       - run: node workflows/09-MCP-Agent-Cattle/v6/tests/test_xml_router.mjs
+      - run: node workflows/09-MCP-Agent-Cattle/v6/tests/test_palm_expense_xml.mjs
       - run: node workflows/06-dynamic-crud-engine/v6/tests/test_agri_sale_sp.mjs
 
   shell-checks:

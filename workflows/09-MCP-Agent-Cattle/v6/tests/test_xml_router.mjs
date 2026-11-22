@@ -24,7 +24,7 @@ const targets = (from) => (chat.connections[from]?.main ?? []).map((g) => g.map(
 
 const XML = 'XML adjunto?'; const PREP = 'Preparar XML del router'; const PREP_OK = 'XML del router OK'; const PARSE = 'CFDI Parse del router';
 const PARSE_OK = 'Parse del router OK'; const RFCS = 'RFC del comprobante'; const CLS = 'Clasificar comprobante'; const ROUTE = 'Ruta del comprobante';
-const TEXT = 'Texto fijo del comprobante';
+const TEXT = 'Texto fijo del comprobante'; const PALM_EXP = 'Preparar Archivo Factura Palma';   // PR 6: EXPENSE + PALM goes to the palm expense chain
 const NEW = [XML, PREP, PREP_OK, PARSE, PARSE_OK, RFCS, CLS, ROUTE, TEXT];
 
 // --- stubs: the real expressions / code of the export run against these ---------------------------------------------------
@@ -61,7 +61,7 @@ console.log('structure');
   ok(JSON.stringify(targets(PREP_OK)) === JSON.stringify([[PARSE], ['Dominio']]) && JSON.stringify(targets(PARSE_OK)) === JSON.stringify([[RFCS], ['Dominio']]),
     'an XML that cannot be prepared or parsed -> "Dominio" (today\'s messages)');
   ok(JSON.stringify(targets(PREP)) === `[["${PREP_OK}"]]` && JSON.stringify(targets(PARSE)) === `[["${PARSE_OK}"]]` && JSON.stringify(targets(RFCS)) === `[["${CLS}"]]` && JSON.stringify(targets(CLS)) === `[["${ROUTE}"]]`, 'prepare -> parse -> RFCs -> classifier -> route');
-  ok(JSON.stringify(targets(ROUTE)) === JSON.stringify([['Venta Palma XML'], ['Trae Factura'], ['Trae Factura'], [TEXT]]), 'route outputs: palm sale / livestock chain / livestock chain / fixed text');
+  ok(JSON.stringify(targets(ROUTE)) === JSON.stringify([['Venta Palma XML'], ['Trae Factura'], ['Trae Factura'], [PALM_EXP], [TEXT]]), 'route outputs: palm sale / livestock chain / livestock chain / palm expense chain (PR 6) / fixed text');
   ok(JSON.stringify(targets(TEXT)) === '[["Respond to Webhook"]]', 'the fixed text is answered through the existing "Respond to Webhook"');
   // nothing reaches a registration path except through the route
   const into = (target) => conns.filter(([, b]) => b === target).map(([a]) => a).sort();
@@ -127,7 +127,7 @@ const route = (result) => {
   }
   return R.parameters.rules.values.length;   // fallback output
 };
-const OUT = ['Venta Palma XML', 'Trae Factura', 'Trae Factura', TEXT];
+const OUT = ['Venta Palma XML', 'Trae Factura', 'Trae Factura', PALM_EXP, TEXT];
 const textOf = (result) => runCode(node(TEXT).parameters.jsCode, {}, { result })[0].json.output;
 {
   ok(R.parameters.options.fallbackOutput === 'extra', 'the Switch has a fallback output (anything not listed)');
@@ -142,6 +142,7 @@ const textOf = (result) => runCode(node(TEXT).parameters.jsCode, {}, { result })
     let want;
     if (role === 'SALE' && d === 'PALM') want = 'Venta Palma XML';
     else if (role === 'EXPENSE' && d !== 'PALM') want = 'Trae Factura';
+    else if (role === 'EXPENSE' && d === 'PALM') want = PALM_EXP;
     else if (role === 'UNKNOWN' && reason === 'NEITHER' && d !== 'PALM') want = 'Trae Factura';
     else want = TEXT;
     if (out !== want) wrong.push(`${role}/${reason}/${d} -> ${out}, expected ${want}`);
@@ -152,7 +153,6 @@ const textOf = (result) => runCode(node(TEXT).parameters.jsCode, {}, { result })
   // the texts
   const cases = [
     [{ role: 'SALE', reason: 'ISSUER_OWN', company_domain: 'LIVESTOCK' }, /venta/i, /no registra ventas/],
-    [{ role: 'EXPENSE', reason: 'RECEPTOR_OWN', company_domain: 'PALM' }, /Gastos/, /facturado/],
     [{ role: 'AMBIGUOUS', reason: 'BOTH_ROLES', company_domain: 'LIVESTOCK' }, /emisora y como receptora/, /No registré nada/],
     [{ role: 'AMBIGUOUS', reason: 'SELF_INVOICE', company_domain: 'PALM' }, /emisora y como receptora/, /No registré nada/],
     [{ role: 'UNKNOWN', reason: 'NEITHER', company_domain: 'PALM' }, /no coinciden con ningún RFC configurado/, /No registré nada/],
@@ -164,7 +164,8 @@ const textOf = (result) => runCode(node(TEXT).parameters.jsCode, {}, { result })
   const bad = cases.filter(([r, a, b]) => !(a.test(textOf(r)) && b.test(textOf(r)))).map(([r]) => JSON.stringify(r));
   ok(bad.length === 0, 'each case has its fixed Spanish text and says that nothing was registered', bad.join('; '));
   const all = new Set(cases.map(([r]) => textOf(r)));
-  ok(all.size === 5, 'five distinct texts');
+  ok(all.size === 4, 'four distinct texts (the palm-expense text was removed in PR 6: that route no longer reaches the fixed text)');
+  ok(textOf({ role: 'EXPENSE', reason: 'RECEPTOR_OWN', company_domain: 'PALM' }) === textOf(undefined), 'an EXPENSE + PALM answer that ever reached the fixed text would only say "cannot classify" (fail closed)');
   ok([...all].every((t) => typeof t === 'string' && !RFC_RE.test(t) && !UUID_RE.test(t) && !/\d/.test(t) && !/<|>|`/.test(t)), 'no text carries an RFC, a UUID, a digit (amount) or markup');
   const echo = textOf({ role: 'SALE', reason: 'ISSUER_OWN', company_domain: 'LIVESTOCK', emisor_rfc: 'ABC010101AA1', nombre: 'ACME SA', uuid: 'AAAAAAAA-0000-4000-8000-000000000001' });
   ok(!/ABC010101AA1|ACME|AAAAAAAA/.test(echo), 'a classifier answer with extra fields is never echoed');
