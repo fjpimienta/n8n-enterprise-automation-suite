@@ -41,7 +41,7 @@ The agent never handles the invoice JSON: it only sees a `draft_id` and a short 
 
 ## Response states (`status`)
 
-`draft_created` · preview (`rfc_new`, `rfc_new_notice`, `company_rfcs`) · `recorded` (`amount`, `category`, `cfdi_folio`, `sat_status`, `expense_date`, `rfc_registered`) · `preview_required` · `rfc_not_registered` · `disabled` (after a rollback) · errors `P0095` (append-only), `P0096` (cross-company).
+`draft_created` · preview (`rfc_new`, `rfc_new_notice`, `company_rfcs`) · `recorded` (`amount`, `category`, `cfdi_folio`, `sat_status`, `expense_date`, `rfc_registered`) · `preview_required` · `rfc_not_registered` · `not_an_expense` (`code`: `ROLE_SALE`, `ROLE_AMBIGUOUS`, `ROLE_UNAVAILABLE`) · `rfc_generic` · `disabled` (after a rollback) · errors `P0095` (append-only), `P0096` (cross-company).
 
 ## cfdi-service
 
@@ -65,6 +65,19 @@ Error codes: `NOT_XML`, `TOO_LARGE`, `DOCTYPE_FORBIDDEN`, `INVALID_CHARS`, `TOO_
 | invalid company or RFC | | `UNKNOWN` (`INVALID_INPUT`) |
 
 The answer is `{role, reason, emisor_inactive_match, receptor_inactive_match, own_set_empty, company_domain}`: codes and booleans only, never an RFC. Deactivated RFCs are not part of the set (the `*_inactive_match` flags only report that a deactivated one matched). The test flag of a company does not change the result. The function reads nothing it should not and writes nothing; no workflow uses it yet. See `database/migrations/109_RUNBOOK.md`.
+
+## Expense gate (migration 110)
+
+`sp_expense_invoice_register` only books vouchers **received** by the company. Before looking at the receiver RFC it asks the classifier above (with the company of the verified session, never a client value), in preview and in confirm:
+
+| Classifier | Result |
+|---|---|
+| `EXPENSE`, or `UNKNOWN` / `NEITHER` | the flow described above, unchanged (the second case is the unregistered-receiver flow) |
+| `SALE` | `not_an_expense` / `ROLE_SALE`: the company appears as issuer; nothing is written and no RFC is registered |
+| `AMBIGUOUS` | `not_an_expense` / `ROLE_AMBIGUOUS`: the company appears as issuer and receiver; nothing is written |
+| any other answer or an error | `not_an_expense` / `ROLE_UNAVAILABLE`: fail closed |
+
+The message is fixed text (no RFC, UUID, name or amount) and the draft is not marked as consumed, so the agent explains the message and does not retry. The generic SAT RFCs `XAXX010101000` and `XEXX010101000` cannot be registered as a company RFC (`rfc_generic`), by an ADMIN or by the automatic registration; rows that already exist keep working. Both functions are guarded against drift on deployment. See `database/migrations/110_RUNBOOK.md`.
 
 ## Operation
 

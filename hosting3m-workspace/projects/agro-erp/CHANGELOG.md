@@ -5,6 +5,12 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### Expense invoices: only vouchers received by the company are registered (migration 110)
+
+* Database only (migration 110): `sp_expense_invoice_register` now classifies the voucher with the 109 classifier before it looks at the receiver RFC, in preview and in confirm, using the company of the verified session. A voucher the company itself issued is refused with `not_an_expense` (`ROLE_SALE`; `ROLE_AMBIGUOUS` when the company appears as issuer and receiver) and a fixed message; nothing is written, no RFC is registered and the draft stays unconsumed. If the classifier cannot answer, registration refuses (`ROLE_UNAVAILABLE`, fail closed). Expenses and the "receiver not registered yet" flow of 093 behave exactly as before. The check lives in SQL, so it holds even if n8n or the model is bypassed.
+* The generic SAT RFCs (`XAXX010101000`, `XEXX010101000`) can no longer be registered as a company RFC, neither with `sp_company_tax_id_set` nor by the automatic registration of 093 (`rfc_generic`). Existing rows are untouched.
+* Both replaced functions carry a drift guard: the migration aborts unless the live text is the repository text (md5), so production is never overwritten blindly. Rollback restores the exact 091 / 093 bodies and drops nothing. Roll back 110 before 109 (a rolled-back 109 under 110 makes registration refuse everything). Runbook: `database/migrations/110_RUNBOOK.md`. Not applied to production.
+
 ### Vouchers: classify a CFDI as sale or expense by RFC role (migration 109)
 
 * Database only (migration 109): `sp_cfdi_classify` (the only entry point for n8n; checks the active membership of the user in the company first, fail-closed), plus the internal `fn_classify_cfdi_role_detail` and `fn_classify_cfdi_role`. A voucher is a sale when only the issuer RFC belongs to the company, an expense when only the receptor RFC does, ambiguous when both do, unknown when neither does or the input is invalid. The company's own RFC set is its active tax ids plus its active issuer RFCs.
