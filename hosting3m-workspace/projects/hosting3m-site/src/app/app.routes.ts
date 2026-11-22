@@ -55,11 +55,14 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/legal/legal-page').then((m) => m.LegalPage),
   },
   {
+    // The path /eliminardatosusuarios is referenced by Meta: do not rename it or add a redirect.
     path: 'eliminardatosusuarios',
     title: `Eliminación de datos de usuario | ${SITE_NAME}`,
-    data: { description: 'Cómo solicitar la eliminación de tus datos de usuario en Hosting3M.' },
-    loadComponent: () => import('./pages/legal/deletion').then((m) => m.Deletion),
+    // MARKETING-REVIEW: page description
+    data: { legal: 'deletion', description: 'Cómo solicitar la cancelación y supresión de tus datos personales en Hosting3M: pasos, plazos, costo y conservación.' },
+    loadComponent: () => import('./pages/legal/legal-page').then((m) => m.LegalPage),
   },
+
   // Renamed legal pages and the old Sitejet URL: nginx answers 301 first (docs/nginx-legacy-redirects.conf); these are the client-side safety net.
   { path: 'politica-de-privacidad', redirectTo: 'aviso-de-privacidad', pathMatch: 'full' },
   { path: 'condiciones-de-servicio', redirectTo: 'terminos-y-condiciones', pathMatch: 'full' },

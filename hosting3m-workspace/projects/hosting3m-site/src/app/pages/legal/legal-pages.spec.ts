@@ -7,7 +7,7 @@ import { routes } from '../../app.routes';
 import { LEGAL_DOCS } from '../../data/legal';
 import { LegalPage } from './legal-page';
 
-async function render(legal: 'privacy' | 'cookies' | 'terms') {
+async function render(legal: 'privacy' | 'cookies' | 'terms' | 'deletion') {
   TestBed.configureTestingModule({ providers: [provideRouter([{ path: 'x', component: LegalPage, data: { legal } }])] });
   const harness = await RouterTestingHarness.create();
   await harness.navigateByUrl('/x', LegalPage);
@@ -101,6 +101,39 @@ describe('LegalPage', () => {
   });
 });
 
+describe('data deletion page (/eliminardatosusuarios)', () => {
+  it('has one h1, the privacy-notice wording and the owner data from business.ts', async () => {
+    const el = await render('deletion');
+    expect(el.querySelectorAll('h1')).toHaveLength(1);
+    expect(el.querySelector('h1')?.textContent).toBe('Eliminación de datos de usuario');
+    expect(el.querySelectorAll('h2')).toHaveLength(6);
+    expect(el.querySelector('h3')).toBeNull(); // no broken hierarchy
+    const text = el.textContent ?? '';
+    expect(text).toContain(BUSINESS.email);
+    expect(text).toContain(BUSINESS.phone);
+    expect(text).toContain('"Solicitud de eliminación de datos de usuario"');
+    expect(text).toContain('un máximo de 20 días');
+    expect(text).toContain('los 15 días siguientes');
+    expect(text).toContain('una sola vez');
+    expect(text).toContain('es gratuito');
+    expect(text).toContain('costos de reproducción o envío');
+    expect(text).toContain('Primero los bloqueamos y después los suprimimos');
+    expect(text).toContain('24 meses contados desde tu último contacto');
+    expect(text).toContain('obligaciones fiscales y legales aplicables');
+    expect(text).toContain(`${BUSINESS.legalName}, con domicilio en ${BUSINESS_ADDRESS_LINE}`);
+    expect(text).toContain('Secretaría Anticorrupción y Buen Gobierno');
+    expect(text).toContain(`Última actualización: ${LEGAL_LAST_UPDATED}.`);
+  });
+
+  it('links to the privacy notice and never mentions Facebook, 30 days, automatic deletion or a marker', async () => {
+    const el = await render('deletion');
+    expect(Array.from(el.querySelectorAll('a')).map((a) => a.getAttribute('href'))).toEqual(['/aviso-de-privacidad']);
+    const text = el.textContent ?? '';
+    expect(text).not.toMatch(/facebook|30 días|automátic|\{\w+\}|\[VERIFICAR|TODO_/i);
+    expect(JSON.stringify(LEGAL_DOCS.deletion)).not.toMatch(/facebook|30 días|automátic/i);
+  });
+});
+
 describe('legal routes', () => {
   const find = (path: string) => routes.find((r) => r.path === path);
 
@@ -115,6 +148,11 @@ describe('legal routes', () => {
     expect(find('politica-de-privacidad')?.redirectTo).toBe('aviso-de-privacidad');
     expect(find('condiciones-de-servicio')?.redirectTo).toBe('terminos-y-condiciones');
     expect(find('privacy')?.redirectTo).toBe('aviso-de-privacidad');
-    expect(find('eliminardatosusuarios')?.loadComponent).toBeDefined();
+    // Meta depends on this exact path: it stays a real page (no rename, no redirect).
+    const deletion = find('eliminardatosusuarios')!;
+    expect(deletion.loadComponent).toBeDefined();
+    expect(deletion.redirectTo).toBeUndefined();
+    expect((deletion.data as { legal: string; description: string }).legal).toBe('deletion');
+    expect(String(deletion.title)).toContain('Eliminación de datos de usuario');
   });
 });
