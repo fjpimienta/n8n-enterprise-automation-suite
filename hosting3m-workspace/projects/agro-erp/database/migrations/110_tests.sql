@@ -84,7 +84,7 @@ CREATE FUNCTION pg_temp.preview(p_email text, p_draft text) RETURNS jsonb LANGUA
     SELECT public.sp_expense_invoice_preview(pg_temp.c('l'), p_email, p_draft, 'COMBUSTIBLE', 'Diesel', '2026-10-30') $$;
 CREATE FUNCTION pg_temp.confirm(p_email text, p_draft text) RETURNS jsonb LANGUAGE sql AS $$
     SELECT public.sp_expense_invoice_confirm(pg_temp.c('l'), p_email, p_draft, 'COMBUSTIBLE', 'Diesel', '2026-10-30') $$;
--- Direct call of register (what a bypassed n8n / model could do), confirmed or not.
+-- Direct call of register, unconfirmed or confirmed.
 CREATE FUNCTION pg_temp.reg(p_email text, p_emisor text, p_receptor text, p_confirmed text) RETURNS jsonb LANGUAGE sql AS $$
     SELECT public.sp_expense_invoice_register(pg_temp.c('l'), p_email, pg_temp.inv(pg_temp.uid(), p_emisor, p_receptor)::text, 'COMBUSTIBLE', 'Diesel', '2026-10-30',
         pg_temp.path(), 'VIGENTE', p_confirmed) $$;
@@ -192,15 +192,15 @@ BEGIN
     PERFORM pg_temp.ok('S3 nothing written by the sale preview (invoices, expenses, RFCs, consumed drafts)', pg_temp.snap() = s0);
     PERFORM pg_temp.ok('S4 the receiver RFC of a sale was NOT auto-registered', NOT EXISTS (SELECT 1 FROM public.company_tax_ids WHERE rfc = 'TEX010101EX1'));
     PERFORM pg_temp.ok('S5 the draft is not previewed / consumed', (SELECT previewed_at IS NULL AND consumed_at IS NULL FROM public.expense_invoice_drafts WHERE id = d::uuid));
-    -- confirm path through the wrapper: no preview mark exists, the wrapper stops it first and nothing is written
+    -- confirm path through the wrapper: no preview mark is set, the wrapper stops it first and nothing is written
     r := pg_temp.confirm('admin.l@example.invalid', d);
     PERFORM pg_temp.ok('S6 sale confirm without a preview mark is refused, nothing written', r ->> 'status' = 'preview_required' AND pg_temp.snap() = s0);
-    -- a forged preview mark (what a bypassed preview could leave): the gate in register still refuses the confirm
+    -- preview mark set by hand: the gate in register still refuses the confirm
     UPDATE public.expense_invoice_drafts SET previewed_at = now(), previewed_hash = public.fn_expense_invoice_params_hash('COMBUSTIBLE', 'Diesel', '2026-10-30') WHERE id = d::uuid;
     r := pg_temp.confirm('admin.l@example.invalid', d);
-    PERFORM pg_temp.ok('S7 sale confirm with a forged preview mark -> ROLE_SALE', r ->> 'status' = 'not_an_expense' AND r ->> 'code' = 'ROLE_SALE');
+    PERFORM pg_temp.ok('S7 sale confirm with the preview mark set -> ROLE_SALE', r ->> 'status' = 'not_an_expense' AND r ->> 'code' = 'ROLE_SALE');
     PERFORM pg_temp.ok('S8 nothing written and the draft is NOT consumed', pg_temp.snap() = s0 AND (SELECT consumed_at IS NULL FROM public.expense_invoice_drafts WHERE id = d::uuid));
-    -- register called directly (n8n / model bypassed), preview and confirm
+    -- register called directly, unconfirmed and confirmed
     r := pg_temp.reg('admin.l@example.invalid', 'TLA010101LA1', 'TEX010101EX1', 'false');
     PERFORM pg_temp.ok('S9 direct register, unconfirmed -> ROLE_SALE', r ->> 'code' = 'ROLE_SALE');
     r := pg_temp.reg('admin.l@example.invalid', 'TLA010101LA1', 'TEX010101EX1', 'true');
@@ -211,7 +211,7 @@ BEGIN
     -- the same rules for an EDITOR (the gate precedes the EDITOR rejection of 093)
     r := pg_temp.reg('editor.l@example.invalid', 'TLA010101LA1', 'TEX010101EX1', 'false');
     PERFORM pg_temp.ok('S13 EDITOR sees the same refusal for a sale', r ->> 'code' = 'ROLE_SALE');
-    -- lower case does not bypass it
+    -- lower case is normalised
     r := public.sp_expense_invoice_register(pg_temp.c('l'), 'admin.l@example.invalid', pg_temp.inv(pg_temp.uid(), 'tla010101la1', 'TEX010101EX1')::text, 'COMBUSTIBLE', NULL, '2026-10-30', pg_temp.path(), 'VIGENTE', 'true');
     PERFORM pg_temp.ok('S14 lower-case issuer RFC is still a sale', r ->> 'code' = 'ROLE_SALE' AND pg_temp.snap() = s0);
 END $$;

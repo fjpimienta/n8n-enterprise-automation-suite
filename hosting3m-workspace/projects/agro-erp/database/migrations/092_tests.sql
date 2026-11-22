@@ -34,13 +34,13 @@ BEGIN
     base := jsonb_build_object('uuid', 'AAAAAAAA-0000-4000-8000-000000000001', 'serie', 'T', 'folio', '1',
         'fechaEmision', '2026-10-30T08:49:01', 'fechaTimbrado', '2026-10-30T08:49:13',
         'emisor', jsonb_build_object('rfc', 'OES010209154', 'nombre', 'EMISOR DE PRUEBA'),
-        'receptor', jsonb_build_object('rfc', 'XAXX010101000', 'nombre', 'RECEPTOR DE PRUEBA'),
+        'receptor', jsonb_build_object('rfc', 'TXA010101AA1', 'nombre', 'RECEPTOR DE PRUEBA'),
         'moneda', 'MXN', 'subtotalCents', 345842, 'descuentoCents', 0, 'totalCents', 400013,
         'traslados', jsonb_build_array(jsonb_build_object('impuesto', '002', 'tipoFactor', 'Tasa', 'tasaOCuota', '0.160000', 'baseCents', 338569, 'importeCents', 54171)),
         'retenciones', '[]'::jsonb, 'sourceSha256', sha,
         'conceptos', jsonb_build_array(jsonb_build_object('claveProdServ', '15101505', 'descripcion', 'Diesel', 'importeCents', 345842)));
-    PERFORM public.sp_company_tax_id_set(t, a, 'XAXX010101000', 'test');
-    UPDATE public.company_tax_ids SET qa_skip_sat = false WHERE id_company = t::int AND rfc = 'XAXX010101000';
+    PERFORM public.sp_company_tax_id_set(t, a, 'TXA010101AA1', 'test');
+    UPDATE public.company_tax_ids SET qa_skip_sat = false WHERE id_company = t::int AND rfc = 'TXA010101AA1';
 
     -- T1 draft creation and its validation
     r := public.sp_expense_invoice_draft_create(t, a, 'CHAT_WEB', base::text, p, 'VIGENTE');
@@ -89,13 +89,13 @@ BEGIN
     d3 := r ->> 'draft_id';
     r := public.sp_expense_invoice_preview(t, a, d3, 'COMBUSTIBLE');
     IF r ->> 'status' <> 'sat_not_valid' THEN RAISE EXCEPTION 'FAIL T4a NO_ENCONTRADO accepted on a normal company: %', r; END IF;
-    UPDATE public.company_tax_ids SET qa_skip_sat = true WHERE id_company = t::int AND rfc = 'XAXX010101000';
+    UPDATE public.company_tax_ids SET qa_skip_sat = true WHERE id_company = t::int AND rfc = 'TXA010101AA1';
     r := public.sp_expense_invoice_preview(t, a, d3, 'COMBUSTIBLE');
     IF r ->> 'status' <> 'preview' OR r ->> 'sat_status' <> 'SKIPPED_TEST' THEN RAISE EXCEPTION 'FAIL T4b QA RFC not skipped: %', r; END IF;
     r := public.sp_expense_invoice_draft_create(t, a, 'CHAT_WEB', base::text, p, 'CANCELADO');
     r := public.sp_expense_invoice_preview(t, a, r ->> 'draft_id', 'COMBUSTIBLE');
     IF r ->> 'status' <> 'sat_not_valid' THEN RAISE EXCEPTION 'FAIL T4c CANCELADO skipped: %', r; END IF;
-    UPDATE public.company_tax_ids SET qa_skip_sat = false WHERE id_company = t::int AND rfc = 'XAXX010101000';
+    UPDATE public.company_tax_ids SET qa_skip_sat = false WHERE id_company = t::int AND rfc = 'TXA010101AA1';
     RAISE NOTICE 'OK T4 SAT rules through drafts';
 
     -- T5 happy path: preview then confirm records the invoice and consumes the draft

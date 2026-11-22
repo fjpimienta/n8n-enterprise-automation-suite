@@ -16,6 +16,8 @@
 
 Nothing else changes: no table, trigger, view, data or `crud_models` row; `sp_expense_invoice_preview` / `_confirm` / `_draft_create` are untouched. Attributes are exactly those of the functions they replace (plain plpgsql, `VOLATILE`, not `SECURITY DEFINER`, no `search_path`, no `REVOKE`; the workflow role is a superuser). The migration does not touch privileges.
 
+A generic-RFC row that already exists (for example the one inserted by `091_seed_qa_company3.sql` for test company 3) stays valid and is not touched by 110.
+
 Behaviour:
 
 | Classifier answer (109) | Result of `sp_expense_invoice_register` (preview and confirm) |
@@ -77,6 +79,7 @@ psql -X -v ON_ERROR_STOP=1 -v apply=true -f 110_rollback.sql
 psql -X -v ON_ERROR_STOP=1 -v expect=rolled_back -f 110_state_check.sql # STATE OK: rolled_back
 ```
 
+`110_tests.sql` starts from the repository 091 / 093 text, so run it before applying 110 (or after `110_rollback.sql`); `091_tests.sql`, `092_tests.sql`, `093_tests.sql` and `109_tests.sql` also pass with 110 applied.
 The tests print a few expected errors (the drift guard and the 109-stub precondition aborting inside a savepoint); only a line starting with `FAIL [` or a non-zero exit code is a failure.
 `110_tests.sql` and `110_mutation_check.sh` run from this directory (they include the 109 and 110 files). If the database is in a container, copy the `109_*` and `110_*` files into one directory of the container and set `PSQL="docker exec -i -w <dir> <container> psql -U <user> -d <throwaway database>"` for the mutation script.
 
