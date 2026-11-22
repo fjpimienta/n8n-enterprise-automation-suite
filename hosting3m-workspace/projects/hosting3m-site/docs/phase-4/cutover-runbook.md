@@ -304,6 +304,14 @@ Use a private window with cleared site data. Keep Console and Network visible.
 8. **Headers:** `curl -sI https://hosting3m.com/ | grep -iE 'content-security|x-robots|nosniff|referrer|permissions|x-frame'` (no `x-robots-tag`, see section 8.1).
 9. **Fonts and images:** Network shows `fonts/*.woff2` from `hosting3m.com` (no `fonts.googleapis.com`), `images/hero-440.webp` on mobile, `logo-112.webp`, favicon from the new logo.
 
+- [ ] **External service: Meta for Developers [laptop].** In the Meta app settings, update the **privacy policy URL** to `https://hosting3m.com/aviso-de-privacidad` and the **terms URL** to
+  `https://hosting3m.com/terminos-y-condiciones`; leave the **data-deletion URL unchanged** (`https://hosting3m.com/eliminardatosusuarios`, Meta depends on that exact path). The URLs registered
+  today (`/politica-de-privacidad/` and `/condiciones-de-servicio/`) answer **301** to the new ones after the cutover, so nothing breaks if the update is late. Then verify on production:
+  ```sh
+  for u in aviso-de-privacidad terminos-y-condiciones eliminardatosusuarios; do
+    printf '%s -> ' "/$u"; curl -s -o /dev/null -w '%{http_code}\n' "https://hosting3m.com/$u"; done      # all three: 200
+  ```
+
 ---
 
 ## 8. Indexing headers and CSP
