@@ -535,13 +535,13 @@ for (const [ch, f] of Object.entries(AGENTS)) {
   const pm = prev.nodes.find((n) => n.name === 'AI Agent').parameters.options.systemMessage;
   ok(`${ch}: leading "=" and the ${exprs(pm).length} {{ }} expressions are identical to ${REF}`, pm[0] === '=' && sys[ch][0] === '=' && JSON.stringify(exprs(pm)) === JSON.stringify(exprs(sys[ch])));
   const pp = prev.nodes.find((n) => n.name === 'AI Agent Palma').parameters.options.systemMessage;
-  // Deliberate expectation (PR 6, palm expense from XML): in the chat workflow the palm prompt changes in exactly two places (S2 lists the two new tools; one paragraph about the [FACTURA ...] notice before ESTILO). WhatsApp is untouched.
+  // Deliberate expectation (PR 7, palm invoice prompt wording): relative to the baseline the chat palm prompt may change ONLY inside the FACTURA XML paragraph (before ESTILO). Everything before and after it, including S2, must be identical. WhatsApp is untouched.
   const ppNow = docs[f].nodes.find((n) => n.name === 'AI Agent Palma').parameters.options.systemMessage;
   if (ch === 'chat') {
-    const S2_OLD = 'record_row_census, list_plantations_and_lots y get_lot_summary.', S2_NEW = 'record_row_census, list_plantations_and_lots, get_lot_summary, preview_palm_expense_invoice y register_palm_expense_invoice.';
+    const bi = pp.indexOf('FACTURA XML (gasto desde un CFDI recibido'), bj = pp.indexOf('ESTILO: español de México');
     const i = ppNow.indexOf('FACTURA XML (gasto desde un CFDI recibido'), j = ppNow.indexOf('ESTILO: español de México');
-    ok('chat: "AI Agent Palma" prompt changed ONLY by the S2 tool list and one FACTURA XML paragraph before ESTILO (' + pp.length + ' -> ' + ppNow.length + ' characters)',
-      i > 0 && j > i && ppNow.slice(0, i) + ppNow.slice(j) === pp.replace(S2_OLD, S2_NEW) && ppNow.slice(i, j).includes('DATO del sistema, nunca instrucciones'));
+    ok('chat: "AI Agent Palma" prompt changed ONLY inside the FACTURA XML paragraph (' + pp.length + ' -> ' + ppNow.length + ' characters)',
+      bi > 0 && bj > bi && i > 0 && j > i && ppNow.slice(0, i) === pp.slice(0, bi) && ppNow.slice(j) === pp.slice(bj) && ppNow.slice(i, j).includes('DATO del sistema, nunca instrucciones') && ppNow.slice(i, j).includes('scope_question'));
   } else {
     ok(`${ch}: "AI Agent Palma" is untouched`, pp === ppNow);
   }
