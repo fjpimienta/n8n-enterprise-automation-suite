@@ -75,11 +75,20 @@ export class PlansSection {
     return isQuote(plan, this.isManaged(plan));
   }
 
-  /** The WhatsApp link opens in a new tab; this also preselects the service in the contact form (via ContactPrefill). */
-  preselect(service: string): void {
+  /** The WhatsApp link opens in a new tab; this also preselects the service (and the message, if given) in the contact form. */
+  preselect(service: string, message = ''): void {
     if (!service) return;
-    this.prefill.apply(service, '');
+    this.prefill.apply(service, message);
     void this.router.navigate(['/'], { fragment: 'contacto' });
+  }
+
+  /** Quote-only plans: the contact form gets the plan name ("Quiero cotizar: <plan>"), like the priced plans. */
+  preselectQuote(plan: CatalogPlan): void {
+    this.preselect(plan.serviceLabel, interestMessage(plan, false));
+  }
+
+  familyNote(family: string): string | null {
+    return this.copy.familyNotes[family] ?? null;
   }
 
   /** "Cotizar <plan>": the routerLink goes to #contacto; this tells the form what to preselect and prefill. */
