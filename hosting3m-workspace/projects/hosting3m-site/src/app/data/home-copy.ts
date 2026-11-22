@@ -132,6 +132,15 @@ export const PACKAGES_SECTION = {
   title: 'Paquetes con precio claro', // MARKETING-REVIEW
   intro: 'Precios en pesos mexicanos. Autoadministrado, o administrado por Hosting3M con instalación, configuración y soporte.', // MARKETING-REVIEW
   emptyIntro: 'Armamos tu paquete a la medida. Cuéntanos qué necesitas y te cotizamos por WhatsApp.',
+  // MARKETING-REVIEW: restates the terms of service ("Los servicios con precio "cotiza" se acuerdan por escrito antes de contratar").
+  quoteNote: 'Precio por cotización: se acuerda por escrito antes de contratar.',
+  // MARKETING-REVIEW: restates the terms of service ("servicios propios de automatización con IA, creación de páginas web y correo profesional").
+  // Only own-service families appear here. No features, prices, delivery times or limits: those need owner input.
+  familyNotes: {
+    automation: 'Automatización de procesos con agentes de IA: servicio propio de Hosting3M.',
+    web: 'Creación de páginas web: servicio propio de Hosting3M.',
+    email: 'Correo profesional: servicio propio de Hosting3M.',
+  } as Readonly<Record<string, string>>,
 } as const;
 
 // ---- 7 · "03 Cotiza" contact (dark) ----
