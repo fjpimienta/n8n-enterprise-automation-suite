@@ -52,6 +52,20 @@ Amounts: comprobante-level fields (`SubTotal`, `Total`, `Descuento`, tax totals 
 **Sale profile** (palm sales, migration 104): `POST /parse` with `"profile":"sale"` adds `tipoComprobante`, `formaPago`, `metodoPago` and, per concept, `claveUnidad`, `cantidad`, `valorUnitario` (exact decimal strings); the default response used by the expense flow is unchanged. See `microservices/cfdi-service/SALE_PROFILE_RUNBOOK.md`.
 Error codes: `NOT_XML`, `TOO_LARGE`, `DOCTYPE_FORBIDDEN`, `INVALID_CHARS`, `TOO_MANY_CONCEPTS`, `UNSUPPORTED_VERSION`, `UNSUPPORTED_TYPE`, `UNSUPPORTED_CURRENCY`, `NOT_STAMPED`, `INVALID_STRUCTURE`, `INVALID_RFC`, `INVALID_AMOUNT`, `AMOUNTS_MISMATCH`.
 
+## Role classifier (migration 109)
+
+`sp_cfdi_classify(tenant, user e-mail, issuer RFC, receptor RFC)` tells whether a voucher is a **sale** or an **expense** of a company by the role of its RFCs; it is the only entry point for n8n. It first checks that the user is an active member of the active company (otherwise `UNKNOWN` / `FORBIDDEN`), then compares both RFCs (after `upper(btrim())`) with the company's own set: active rows of `company_tax_ids` plus active rows of `company_issuer_rfcs`, scoped strictly by company.
+
+| Issuer own | Receptor own | Answer |
+|---|---|---|
+| yes | no | `SALE` |
+| no | yes | `EXPENSE` |
+| yes | yes | `AMBIGUOUS` (`SELF_INVOICE` when both RFCs are equal, else `BOTH_ROLES`) |
+| no | no | `UNKNOWN` (`NEITHER`) |
+| invalid company or RFC | | `UNKNOWN` (`INVALID_INPUT`) |
+
+The answer is `{role, reason, emisor_inactive_match, receptor_inactive_match, own_set_empty, company_domain}`: codes and booleans only, never an RFC. Deactivated RFCs are not part of the set (the `*_inactive_match` flags only report that a deactivated one matched). The test flag of a company does not change the result. The function reads nothing it should not and writes nothing; no workflow uses it yet. See `database/migrations/109_RUNBOOK.md`.
+
 ## Operation
 
 - **Verify what a QA wrote** (read-only, on the VPS): `bash verify_invoice_qa.sh <company>` → last drafts, invoices, linked expenses, expenses of the last 2 days without an invoice (must be only manual entries), stored originals.
