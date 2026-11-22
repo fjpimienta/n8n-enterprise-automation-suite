@@ -79,6 +79,25 @@ The answer is `{role, reason, emisor_inactive_match, receptor_inactive_match, ow
 
 The message is fixed text (no RFC, UUID, name or amount) and the draft is not marked as consumed, so the agent explains the message and does not retry. The generic SAT RFCs `XAXX010101000` and `XEXX010101000` cannot be registered as a company RFC (`rfc_generic`), by an ADMIN or by the automatic registration; rows that already exist keep working. Both functions are guarded against drift on deployment. See `database/migrations/110_RUNBOOK.md`.
 
+## Palm companies (migration 111)
+
+Palm companies cannot use the livestock procedures above (they are refused for a palm company). A palm company registers an expense backed by a voucher **received** by the company with its own procedures: `sp_agri_expense_invoice_draft_create` (workflow only), `sp_agri_expense_invoice_preview` and `sp_agri_expense_invoice_confirm` (the two agent tools; the model only handles the draft id). The data lives in `agri_expense_invoices` (append-only link to the `agri_expenses` row, written by `sp_agri_record_expense`).
+
+| Aspect | Palm |
+|---|---|
+| Who | ADMIN and OWNER of a palm company (the preview shows amounts); EDITOR keeps manual capture |
+| Role gate | only the 109 role `EXPENSE` goes on; `SALE` / `AMBIGUOUS` / unknown receiver / classifier unavailable → fixed refusal, nothing written. RFCs are platform-managed (`company_issuer_rfcs`); nothing registers an RFC |
+| SAT | `VIGENTE`; a company with `company_flags.is_test` also accepts `NO_ENCONTRADO` / `ERROR` (stored `SKIPPED_TEST`); `CANCELADO` never |
+| Voucher | type `I`, `MXN`, totals exact to the cent; multi-concept allowed; no sale rules |
+| Scope | plantation / lot are not in the voucher: default is a general company expense; by code or name like the palm chat (ambiguity never guessed); a single active plantation is only proposed |
+| Category | from the product key (fuel → `COMBUSTIBLE`; the exact SAT key family is `TODO(verify)`); otherwise the preview lists the company categories and asks |
+| Quantity / unit | only for a voucher with exactly one concept with a mapped unit (litres `L`, kilograms `KG`, piece `PZA`, service `SERVICIO`); otherwise both empty |
+| Warnings | cash payment form, a uso CFDI different from the company's usual, a date older than 365 days: informational lines in the preview |
+| Gates | preview before confirm (15 minutes, same category, description, date, plantation and lot); duplicates per company and UUID |
+| Void | voiding the expense (`sp_agri_void_expense`) voids the link and frees the UUID |
+
+Response statuses: `draft_created` · `preview` (`summary`, `warnings`, optional `plantation_proposal` / `scope_question`) · `need_info` (`issues[]` with options) · `recorded` · `duplicate` · `preview_required` · `not_an_expense` (`ROLE_SALE`, `ROLE_AMBIGUOUS`, `ROLE_UNAVAILABLE`) · `rfc_not_registered` (`ROLE_UNKNOWN`) · `sat_not_valid` · `invalid` · `forbidden` · `not_palm` · `disabled` (after a rollback). The parser must be called with the `sale` profile so the voucher carries the payment form and the unit keys. See `database/migrations/111_RUNBOOK.md`.
+
 ## Operation
 
 - **Verify what a QA wrote** (read-only, on the VPS): `bash verify_invoice_qa.sh <company>` → last drafts, invoices, linked expenses, expenses of the last 2 days without an invoice (must be only manual entries), stored originals.
