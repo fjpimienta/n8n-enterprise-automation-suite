@@ -28,7 +28,7 @@ export interface LegalSection {
 }
 
 export interface LegalDoc {
-  readonly slug: 'privacy' | 'cookies' | 'terms';
+  readonly slug: 'privacy' | 'cookies' | 'terms' | 'deletion';
   /** h1 of the page. */
   readonly title: string;
   readonly sections: readonly LegalSection[];
