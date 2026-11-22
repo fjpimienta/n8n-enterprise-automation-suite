@@ -535,13 +535,24 @@ for (const [ch, f] of Object.entries(AGENTS)) {
   const pm = prev.nodes.find((n) => n.name === 'AI Agent').parameters.options.systemMessage;
   ok(`${ch}: leading "=" and the ${exprs(pm).length} {{ }} expressions are identical to ${REF}`, pm[0] === '=' && sys[ch][0] === '=' && JSON.stringify(exprs(pm)) === JSON.stringify(exprs(sys[ch])));
   const pp = prev.nodes.find((n) => n.name === 'AI Agent Palma').parameters.options.systemMessage;
-  ok(`${ch}: "AI Agent Palma" is untouched`, pp === docs[f].nodes.find((n) => n.name === 'AI Agent Palma').parameters.options.systemMessage);
+  // Deliberate expectation (PR 6, palm expense from XML): in the chat workflow the palm prompt changes in exactly two places (S2 lists the two new tools; one paragraph about the [FACTURA ...] notice before ESTILO). WhatsApp is untouched.
+  const ppNow = docs[f].nodes.find((n) => n.name === 'AI Agent Palma').parameters.options.systemMessage;
+  if (ch === 'chat') {
+    const S2_OLD = 'record_row_census, list_plantations_and_lots y get_lot_summary.', S2_NEW = 'record_row_census, list_plantations_and_lots, get_lot_summary, preview_palm_expense_invoice y register_palm_expense_invoice.';
+    const i = ppNow.indexOf('FACTURA XML (gasto desde un CFDI recibido'), j = ppNow.indexOf('ESTILO: español de México');
+    ok('chat: "AI Agent Palma" prompt changed ONLY by the S2 tool list and one FACTURA XML paragraph before ESTILO (' + pp.length + ' -> ' + ppNow.length + ' characters)',
+      i > 0 && j > i && ppNow.slice(0, i) + ppNow.slice(j) === pp.replace(S2_OLD, S2_NEW) && ppNow.slice(i, j).includes('DATO del sistema, nunca instrucciones'));
+  } else {
+    ok(`${ch}: "AI Agent Palma" is untouched`, pp === ppNow);
+  }
   const pt = prev.nodes.find((n) => n.name === 'AI Agent').parameters.text;
   ok(`${ch}: the "text" input expression of "AI Agent" is untouched`, pt === docs[f].nodes.find((n) => n.name === 'AI Agent').parameters.text);
   const agentNow = docs[f].nodes.find((n) => n.name === 'AI Agent'), agentPrev = prev.nodes.find((n) => n.name === 'AI Agent');
   const strip = (n) => { const c = JSON.parse(JSON.stringify(n)); delete c.parameters.options.systemMessage; return JSON.stringify(c); };
   ok(`${ch}: in the node "AI Agent" ONLY options.systemMessage changed (model, tools wiring, memory and every other parameter identical to ${REF})`, strip(agentNow) === strip(agentPrev));
-  const others = prev.nodes.filter((n) => n.name !== 'AI Agent');
+  // PR 6 (chat only): "AI Agent Palma" (text input + prompt, checked above), "Ruta del comprobante" (new EXPENSE_PALM rule, checked in the router block) and "Texto fijo del comprobante" (dead palm-expense text removed) changed on purpose.
+  const PR6 = ch === 'chat' ? ['AI Agent Palma', 'Ruta del comprobante', 'Texto fijo del comprobante'] : [];
+  const others = prev.nodes.filter((n) => n.name !== 'AI Agent' && !PR6.includes(n.name));
   // The only allowed differences outside "AI Agent": the audio language of the WhatsApp "Transcribe" node (options.language = 'es') and the queryReplacement array of "Guardar Pregunta Pendiente".
   const sameNode = (n) => { const now = docs[f].nodes.find((x) => x.name === n.name); if (JSON.stringify(n) === JSON.stringify(now)) return true; if (n.name === 'Guardar Pregunta Pendiente' && now && now.parameters && now.parameters.options && String(now.parameters.options.queryReplacement).startsWith('={{ [')) { const c = JSON.parse(JSON.stringify(now)); c.parameters.options.queryReplacement = n.parameters.options.queryReplacement; return JSON.stringify(c) === JSON.stringify(n); } if (n.name !== 'Transcribe' || !now || !now.parameters || !now.parameters.options || now.parameters.options.language !== 'es') return false; const c = JSON.parse(JSON.stringify(now)); delete c.parameters.options.language; return JSON.stringify(c) === JSON.stringify(n); };
   ok(`${ch}: no other node of the workflow changed (${others.length} nodes)`, others.every(sameNode));
@@ -563,8 +574,8 @@ for (const [ch, f] of Object.entries(AGENTS)) {
     && cls.parameters.options.queryReplacement.includes("$('Resolver Empresa Chat').first().json.id_company") && cls.parameters.options.queryReplacement.includes("$('Validar Token').first().json.data.user.user")
     && !/chatInput|fromAI|AI Agent/.test(JSON.stringify(cls.parameters)));
   const rt = tg('Ruta del comprobante');
-  ok('chat: the route sends only SALE+PALM to the palm sale and EXPENSE / UNKNOWN(NEITHER) of non-palm companies to the existing invoice chain; the fallback is a fixed text',
-    JSON.stringify(rt) === JSON.stringify([['Venta Palma XML'], ['Trae Factura'], ['Trae Factura'], ['Texto fijo del comprobante']]) && byName('Ruta del comprobante').parameters.options.fallbackOutput === 'extra'
+  ok('chat: the route sends SALE+PALM to the palm sale, EXPENSE + PALM to the palm expense chain (PR 6, deliberate), EXPENSE / UNKNOWN(NEITHER) of non-palm companies to the existing invoice chain; the fallback is a fixed text',
+    JSON.stringify(rt) === JSON.stringify([['Venta Palma XML'], ['Trae Factura'], ['Trae Factura'], ['Preparar Archivo Factura Palma'], ['Texto fijo del comprobante']]) && byName('Ruta del comprobante').parameters.options.fallbackOutput === 'extra'
     && JSON.stringify(tg('Texto fijo del comprobante')) === '[["Respond to Webhook"]]');
   const wa = docs[AGENTS.whatsapp];
   ok('whatsapp: the XML router is NOT in the WhatsApp workflow', !wa.nodes.some((n) => ROUTER.includes(n.name)));
