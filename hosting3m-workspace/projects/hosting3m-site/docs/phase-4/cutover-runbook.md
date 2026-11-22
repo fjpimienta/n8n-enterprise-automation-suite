@@ -24,7 +24,7 @@ Related files: `docs/phase-3/beta-runbook.md` (beta deploy, CORS, Turnstile, tes
 | # | Gate | How to check | Status |
 |---|------|--------------|--------|
 | 1 | Beta smoke tests of `beta-runbook.md` section 8 passed on the same commit that will be released | see section 7 | ☐ |
-| 2 | The CSP on beta showed **zero violations** in Report-Only (section 8) | section 8 | ☐ |
+| 2 | The CSP on beta, sent as **enforcing**, showed **zero console CSP errors** in the manual test plan (section 8.2) | section 8 | ☐ |
 | 3 | Legal pages carry the lawyer-reviewed text, no editorial markers (section 5) | `build.mjs --configuration production` passes | ☐ |
 | 4 | No `TODO_` token in the build (TODO guard) | same build | ☐ |
 | 5 | Catalog snapshot refreshed against the production API and committed (section 6) | `git log -1 -- .../plans-snapshot.json` | ☐ |
@@ -151,6 +151,26 @@ curl -sI http://hosting3m.com/        | grep -iE '^HTTP|^location'       # 301 -
 curl -sI https://www.hosting3m.com/   | grep -iE '^HTTP|^location'       # decide: 301 -> https://hosting3m.com/ (or the host you chose)
 curl -sI https://hosting3m.com/       | grep -iE '^HTTP|^server|^cf-cache-status'
 ```
+
+### 3.6 Cache headers (nginx) and Cloudflare **[servidor]** then **[laptop]**
+The directives live in `docs/nginx-security-headers.conf` (section "Cache headers"). Summary of the policy:
+
+| Files | Cache-Control | Why |
+|-------|---------------|-----|
+| `chunk-*.js`, `main-*.js`, `styles-*.css` (content-hashed) | `public, max-age=31536000, immutable` | The name changes whenever the content changes: safe to cache for a year. **Only these** may be immutable. |
+| `/fonts/*.woff2`, `/images/{hero,logo,profile}-*.webp` | `public, max-age=2592000` (fonts) / `604800` (images) | Stable names (the build does **not** hash them), so never `immutable`; a bounded lifetime limits staleness. |
+| `index.html` and every prerendered page, `sitemap.xml`, `robots.txt`, `favicon*`, `apple-touch-icon.png`, `images/og-image.jpg` | `no-cache` / `max-age=0, must-revalidate` | Must pick up a release; revalidation answers 304 when unchanged. |
+
+Cloudflare caches static files by extension and keeps its own copy independently of these headers: after every deploy purge by URL (or everything), section 3.1,
+otherwise unhashed files (fonts, images, favicon, og-image) can be served stale from the edge even though nginx already revalidates.
+Verify on beta first, then on production **[laptop]**:
+```sh
+for u in /main-XXXX.js /fonts/dm-sans-latin-wght-normal.woff2 /images/hero-880.webp /images/og-image.jpg /favicon.ico /sitemap.xml / /portfolio /aviso-de-privacidad; do
+  printf '%s -> ' "$u"; curl -sI "https://beta.hosting3m.com$u" | grep -iE '^HTTP|^cache-control' | tr '\r\n' '  '; echo; done
+curl -sI https://beta.hosting3m.com/ | grep -ciE 'content-security|nosniff'   # >= 2: the page block did not drop the security headers
+curl -sI https://beta.hosting3m.com/no-existe | head -1                        # still 404
+```
+(Use a real hashed file name from the page source instead of `main-XXXX.js`.) Plesk may ship its own static-file `location`; if a header does not match, check which block answered before editing.
 
 ---
 
@@ -328,14 +348,28 @@ curl -sI https://hosting3m.com/robots.txt | grep -i '^x-robots-tag' || echo "OK"
 Run this **before** and **after** the cutover and again after any nginx change. If production shows the header, remove the line from the production directives (or check
 Cloudflare Transform Rules for a response-header rule), then repeat. A `noindex` header on production silently removes the site from Google.
 
-### 8.2 CSP: enforce only after beta shows zero violations
-Rollout order: beta Report-Only (already pasted) > zero violations > production **Report-Only** or enforcing > monitor.
-1. **[laptop]** On beta, with DevTools Console filtered by "Content Security Policy" and "Report-Only", visit every page: `/`, `/portfolio`, `/fjpimienta`, the three legal pages, `/no-existe`.
-2. On `/` run the flows that load third parties: Turnstile (scroll to the form), **Aceptar** (GA4), submit the form, switch the three tabs of *Míralo en acción*, toggle a plan's mode.
-3. **Zero** `Refused to ...` / `[Report Only] Refused to ...` lines on every page. Any line means: fix the policy (`docs/nginx-security-headers.conf`, one origin at a time, only what is strictly necessary) and repeat.
-4. Quick automated pass **[laptop]**: `curl -s https://beta.hosting3m.com/ | grep -ciE '<style|style="| on[a-z]+="'` must print 0 (the build emits no inline style or handler; `type="application/json"` data blocks are fine).
-5. Only then use the enforcing line (the commented `Content-Security-Policy` in `nginx-security-headers.conf`) on production; never keep Report-Only and enforcing at the same time.
-6. After enabling: repeat section 7 items 2-3 (they are the ones that load Google and Cloudflare scripts). Rollback = put the Report-Only line back (Plesk directives are the only thing to change).
+### 8.2 CSP enforcement test plan: manual testing is the gate
+**Report-Only cannot measure anything here:** the policy has no `report-uri` / `report-to`, so a violation is shown only in the console of whoever has DevTools open and is
+reported nowhere. A clean Report-Only period therefore proves nothing; the gate is the manual test below, run with the policy **enforcing**.
+Policy origins and reasons: `docs/nginx-security-headers.conf` (header comment). It includes `https://www.google.com` in `connect-src`: Analytics posts to `https://www.google.com/g/collect`
+after **Aceptar** (found on beta, 2026-11-22), and enforcing the previous policy would have broken it silently.
+
+1. **[servidor]** On **beta only**, replace the `Content-Security-Policy-Report-Only` line by the `Content-Security-Policy` line (never both). Keep the previous directives to restore them.
+2. **[laptop]** Private window, DevTools Console open (filter "Content Security Policy" / "Refused"), Network open. Start from empty site data.
+3. Exercise every flow, then repeat the whole list once on a phone-width window:
+   - [ ] Home `/`: reload, scroll the whole page (hero image, logo, fonts load).
+   - [ ] Packages: toggle a plan's managed/self-managed mode, **Cotizar** on a plan, a domain tile, a quote-only card ("Cotiza por WhatsApp").
+   - [ ] *Míralo en acción*: the three tabs (including the demo-request buttons).
+   - [ ] Contact form: Turnstile renders (no `110200`, no blocked frame), empty submit, valid submit (`PRUEBA BETA`): `POST /webhook/v6/contact` succeeds and the message shows.
+   - [ ] Cookie banner: **Rechazar** (no Google requests), then clear data > **Aceptar** (`gtag/js` and `g/collect` to `www.google.com` / `google-analytics.com` succeed), **Preferencias de cookies** > revoke, reopen, accept again.
+   - [ ] Legal pages: `/aviso-de-privacidad`, `/politica-de-cookies`, `/terminos-y-condiciones`, `/eliminardatosusuarios`, plus the old URLs (they redirect).
+   - [ ] News (`/news` or the news section): list renders and third-party images load.
+   - [ ] WhatsApp: header, hero, contact section and floating button open `wa.me` in a new tab; also `/fjpimienta` (LinkedIn, GitHub links) and `/portfolio`.
+   - [ ] `/no-existe` (404 page).
+4. **Pass criterion: ZERO console CSP errors** (`Refused to load/connect/frame/apply ...`) on every item. Any line means: add only the single origin and directive that line names, repeat from item 1, and update the header comment in `nginx-security-headers.conf`.
+5. Automated side check **[laptop]**: `curl -s https://beta.hosting3m.com/ | grep -ciE '<style|style="| on[a-z]+="'` must print 0.
+6. Only with step 4 satisfied, paste the **enforcing** line in the production directives (never Report-Only + enforcing together). Then repeat items 2-3 on production, since that is where Turnstile and Google run with the real hostname.
+7. **Rollback:** put the `Content-Security-Policy-Report-Only` line back (and remove the enforcing one) in the Plesk directives, reload nginx, purge Cloudflare (3.1). Nothing else changes.
 Note: HSTS is **not** part of this cutover (see 3.2).
 
 ---
@@ -380,3 +414,8 @@ re-measure LCP on real traffic.
 - Cloudflare zone settings (SSL mode, rules, Turnstile hostnames): read them in the dashboard.
 - The lawyer-reviewed legal text (not in the repo) and the real-network PageSpeed numbers.
 - Which URLs Google has indexed (Search Console > Pages).
+
+## 12. Backlog (minor, not a cutover blocker)
+- **GA cookie residue after revoking.** After **Rechazar** through **Preferencias de cookies**, Analytics may rewrite `_ga_<id>` until the next page load, because the gtag
+  already running can still set it. Optional polish: after the consent update, delete `_ga` and `_ga_*` again on the next tick (`setTimeout(..., 0)`), in `core/consent.ts`. No data is sent
+  (`analytics_storage` is denied); the residue is only a first-party cookie. Not done yet: this change is docs only.
