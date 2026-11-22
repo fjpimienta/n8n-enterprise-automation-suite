@@ -107,13 +107,15 @@ When an XML is attached in the dashboard chat, the workflow `v6/ai/chat cattle` 
 | `SALE`, palm company | the palm sale sub-workflow (ADMIN only, as before) |
 | `SALE`, other company type | fixed text: it looks like a sale and this chat does not register sales for this company type; nothing registered |
 | `EXPENSE`, livestock or unknown domain | the expense chain described above (draft, preview, confirm) |
-| `EXPENSE`, palm company | fixed text: not available yet; register it manually in Gastos as "facturado" with the folio |
+| `EXPENSE`, palm company | the palm expense chain (migration 111): parse with the `sale` profile, SAT status, store the original, `sp_agri_expense_invoice_draft_create`, then the palm agent previews and registers with its two tools (ADMIN/OWNER only). Runbook: `workflows/09-MCP-Agent-Cattle/v6/PALM_EXPENSE_XML_RUNBOOK.md` |
 | `AMBIGUOUS` | fixed text: purchase or sale cannot be decided; nothing registered |
 | `UNKNOWN` (`NEITHER`), livestock or unknown domain | the expense chain (the ask flow of 093; the SQL gate of 110 still protects it) |
 | `UNKNOWN` (`NEITHER`), palm company | fixed text: the RFCs match no RFC configured for the company; nothing registered |
 | error, `FORBIDDEN`, `INVALID_INPUT`, `DISABLED`, empty answer | fixed text, stop (fail closed) |
 
 No attachment, a PDF or an image, and an XML that cannot be read or parsed keep today's path. The fixed texts are written by a Code node (no model) and never echo an RFC, a UUID, a name or an amount. Roles are not decided by the router: the palm sale stays ADMIN only and the livestock chain keeps its own rules. Runbook and production tests: `workflows/09-MCP-Agent-Cattle/v6/XML_ROUTER_RUNBOOK.md`.
+
+**Palm expense from XML (PR 6).** For `EXPENSE` + palm the chat runs nine new nodes (`... Palma`) and hands the agent a `[FACTURA draft_id=... ...]` notice built by a Code node from the draft the database returned; the notice is data, never instructions. `AI Agent Palma` has two new direct tools, `preview_palm_expense_invoice` and `register_palm_expense_invoice`, that call `sp_agri_expense_invoice_preview` / `sp_agri_expense_invoice_confirm`; the tenant and the e-mail come from the verified session by expression, and the model only supplies `draft_id`, `category`, `description`, `expense_date`, `plantation` and `lot`. The chain goes through the existing `Catálogo Palma` node because the palm prompt reads it. WhatsApp has no router and is not changed.
 
 ## Operation
 

@@ -28,7 +28,7 @@ The classifier receives: tenant = the `id_company` of `Resolver Empresa Chat` (v
 | `SALE` + palm | existing `Venta Palma XML` (ADMIN only, as today) |
 | `SALE` + any other domain | fixed text: it looks like a sale, this chat does not register sales for this company type, nothing registered |
 | `EXPENSE` + livestock or unknown domain | existing `Trae Factura` chain, unchanged |
-| `EXPENSE` + palm | fixed text: expenses from XML are not available for palm companies yet; register it manually in Gastos as "facturado" with the folio (a later PR replaces this branch) |
+| `EXPENSE` + palm | ~~fixed text~~ **superseded by `PALM_EXPENSE_XML_RUNBOOK.md`**: the palm expense chain. Until that runbook is applied, production still answers the fixed text of this table (and test 6 below) |
 | `AMBIGUOUS` | fixed text: cannot decide purchase vs sale, the company is on both sides, nothing registered |
 | `UNKNOWN` / `NEITHER` + livestock or unknown domain | existing `Trae Factura` chain (the ask flow of 093 applies; the 110 gate protects it) |
 | `UNKNOWN` / `NEITHER` + palm | fixed text: the RFCs of the voucher match no RFC configured for this company, nothing registered |
