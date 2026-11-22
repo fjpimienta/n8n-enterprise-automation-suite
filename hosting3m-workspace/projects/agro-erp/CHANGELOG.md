@@ -5,6 +5,10 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### Palm chat: invoice prompt asks one question at a time
+
+* n8n prompt wording only (`AI Agent Palma`, paragraph "FACTURA XML"): after a voucher preview the agent asks only the scope question, previews again with the answer, and asks "¿Confirmas?" once; a bare "Sí" confirms only that question; register receives exactly the last preview's arguments; on `preview_required` it previews again instead of asking twice. No SQL change. Runbook: `workflows/09-MCP-Agent-Cattle/v6/PALM_INVOICE_PROMPT_RUNBOOK.md`.
+
 ### Palm: expenses backed by a received CFDI voucher (migration 111)
 
 * Database only (migration 111): a palm company can register an expense backed by a CFDI voucher received by the company (for example fuel), like livestock does with 091 / 092 / 093. New `sp_agri_expense_invoice_draft_create`, `_preview`, `_confirm` and the shared `_register`, a new append-only link table `agri_expense_invoices` and a unique `(id, id_company)` on `agri_expenses`. ADMIN and OWNER only (EDITOR keeps manual capture); the company always comes from the verified session.
