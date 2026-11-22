@@ -27,7 +27,7 @@ function setup(plans: unknown[]) {
 }
 
 describe('quote-only plans: web (Paquete de lanzamiento) and email (Correo profesional)', () => {
-  it('render as cards with the name, the own-service note, the quote note and no price, summary or features', () => {
+  it('render as cards with the name, the own-service label and no price, summary or features (the quote line lives in the section)', () => {
     const { el } = setup([WEB, EMAIL]);
     const cards = Array.from(el.querySelectorAll('[data-testid="plan-card"]'));
     expect(cards).toHaveLength(2);
@@ -36,11 +36,12 @@ describe('quote-only plans: web (Paquete de lanzamiento) and email (Correo profe
     for (const card of cards) {
       expect(card.querySelector('ul')).toBeNull(); // empty features: no empty list
       expect(card.querySelector('p.font-mono')).toBeNull(); // null summary: no blank line
-      expect(card.querySelector('[data-testid="quote-note"]')?.textContent).toContain('se acuerda por escrito antes de contratar');
+      expect(card.querySelector('[data-testid="quote-note"]')).toBeNull(); // the section line replaces the per-card note
       expect(card.querySelector('a')?.textContent).toContain('Cotiza por WhatsApp');
     }
-    const notes = Array.from(el.querySelectorAll('[data-testid="family-note"]')).map((n) => n.textContent);
-    expect(notes).toEqual(['Creación de páginas web: servicio propio de Hosting3M.', 'Correo profesional: servicio propio de Hosting3M.']);
+    const labels = Array.from(el.querySelectorAll('[data-testid="family-label"]')).map((n) => n.textContent);
+    expect(labels).toEqual(['Creación de páginas web: servicio propio de Hosting3M.', 'Correo profesional: servicio propio de Hosting3M.']);
+    expect(el.querySelector('[data-testid="quote-section-line"]')?.textContent).toContain('se acuerda por escrito antes de contratar');
     expect(el.textContent).not.toMatch(/\$\s?\d|TODO_|24\/7|uptime|GB|entrega en/i);
   });
 

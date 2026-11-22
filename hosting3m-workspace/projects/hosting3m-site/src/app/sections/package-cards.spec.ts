@@ -31,7 +31,7 @@ describe('package cards polish', () => {
       expect(list.textContent).toContain('Uno');
       expect(before(list, cta)).toBe(true);
     }
-    expect(before(quoted.querySelector('[data-testid="quote-note"]')!, quoted.querySelector('ul')!)).toBe(true);
+    expect(quoted.querySelector('[data-testid="quote-note"]')).toBeNull();
   });
 
   it('every summary uses the body font (no monospace) with the same classes on quote and priced cards', () => {

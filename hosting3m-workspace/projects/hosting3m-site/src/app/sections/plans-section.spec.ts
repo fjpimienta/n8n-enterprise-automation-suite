@@ -65,30 +65,11 @@ describe('PlansSection', () => {
     expect(el.querySelector('[data-testid="price"]')).toBeNull();
   });
 
-  it('shows the VPS setup line and a compact table for domains', () => {
+  it('shows the VPS setup line and compact tiles for domains', () => {
     const { el } = render([api({ plan_key: 'v', family: 'vps', managed_amount: null }), api({ plan_key: 'd', family: 'domain', name: '.com', managed_amount: null, renewal_amount: 300 })]);
     expect(el.querySelector('[data-testid="setup"]')?.textContent).toContain('Instalación inicial: cotiza');
-    expect(el.querySelector('table')).not.toBeNull();
-    expect(el.querySelector('table')?.textContent).toContain('$300');
-  });
-
-  it('hides the renewal column when no domain has a renewal price', () => {
-    const { el } = render([api({ plan_key: 'd1', family: 'domain', name: '.com', managed_amount: null }), api({ plan_key: 'd2', family: 'domain', name: '.mx', managed_amount: null })]);
-    expect(el.querySelector('table')).not.toBeNull();
-    expect(el.querySelector('table')?.textContent).not.toContain('Renovación');
-    expect(el.querySelectorAll('thead th')).toHaveLength(3);
-    expect(el.querySelectorAll('tbody tr:first-child > *')).toHaveLength(3);
-  });
-
-  it('shows the renewal column with a dash only for rows without a value', () => {
-    const { el } = render([
-      api({ plan_key: 'd1', family: 'domain', name: '.com', managed_amount: null, renewal_amount: 24.29 }),
-      api({ plan_key: 'd2', family: 'domain', name: '.mx', managed_amount: null }),
-    ]);
-    const rows = el.querySelectorAll('tbody tr');
-    expect(el.querySelector('thead')?.textContent).toContain('Renovación');
-    expect(rows[0].textContent).toContain('$24.29');
-    expect(rows[1].textContent).toContain('—');
+    expect(el.querySelector('table')).toBeNull();
+    expect(el.querySelector('[data-testid="domain-tile"]')?.textContent).toContain('Renovación: $300');
   });
 
   it('shows a neutral quote section without prices when the catalog is empty', () => {

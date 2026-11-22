@@ -185,6 +185,11 @@ export interface PlanGroup {
   readonly plans: readonly CatalogPlan[];
 }
 
+/** Splits the catalog into priced plans and plans sold by quote (billing_period = quote); each keeps the catalog order. */
+export function splitQuotePlans(plans: readonly CatalogPlan[]): { priced: CatalogPlan[]; quote: CatalogPlan[] } {
+  return { priced: plans.filter((p) => p.billing !== 'quote'), quote: plans.filter((p) => p.billing === 'quote') };
+}
+
 export function groupByFamily(plans: readonly CatalogPlan[]): PlanGroup[] {
   const first = (g: PlanGroup) => Math.min(...g.plans.map((p) => p.sortOrder));
   return FAMILIES.map((family) => ({ family, title: FAMILY_TITLES[family], plans: plans.filter((p) => p.family === family) }))
