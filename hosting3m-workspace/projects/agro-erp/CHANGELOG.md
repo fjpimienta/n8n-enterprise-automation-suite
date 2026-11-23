@@ -5,6 +5,12 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 ## [Unreleased]
 
+### Palm sales: several concepts per voucher and tonnes (migration 112)
+
+* Database only (migration 112; n8n and frontend follow in separate pull requests). A palm sale voucher may now carry 1 to 10 concepts (for example one per weighing ticket) and the unit may be kilograms (`KGM`) or tonnes (`TNE`); all concepts of a voucher share one product key and one unit. One voucher is still one sale: quantity is the sum of the kilograms (tonnes are converted with exact arithmetic), the amount is the voucher total, and the price per kilogram shown is the subtotal divided by the kilograms. Voiding stays per voucher.
+* The concept detail (ticket, unit, quantity, price, amount) is kept with the sale in two additive columns, `concept_count` and `ticket_detail`; sales registered before 112 are not modified and the sale views build their detail from the existing columns. The ticket number is optional; the same ticket twice inside one voucher is refused, and a ticket already used in another active sale of the company is a warning.
+* Amount rules: each concept is checked against its own kilograms and price (one cent of rounding), and the sum of the concept amounts must match the voucher subtotal within `n - 1` cents for `n` concepts (exact for one concept, as before). `sp_agri_register_sale` keeps its signature; the migration aborts if the live procedure differs from the repository text. Rollback restores the 104 procedure and deletes nothing. See `database/migrations/112_RUNBOOK.md`; `105_state_check.sql` now accepts the two appended view columns.
+
 ### Palm chat: invoice prompt asks one question at a time
 
 * n8n prompt wording only (`AI Agent Palma`, paragraph "FACTURA XML"): after a voucher preview the agent asks only the scope question, previews again with the answer, and asks "¿Confirmas?" once; a bare "Sí" confirms only that question; register receives exactly the last preview's arguments; on `preview_required` it previews again instead of asking twice. No SQL change. Runbook: `workflows/09-MCP-Agent-Cattle/v6/PALM_INVOICE_PROMPT_RUNBOOK.md`.

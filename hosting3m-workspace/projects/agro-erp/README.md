@@ -198,6 +198,7 @@ adicionales. Los huecos se conservan explícitamente.
 | `105` | Modelos de solo lectura de ventas de palma (`agri_sales`, `agri_sale_summary`) y vista `vw_agri_sale_ui_list` |
 | `106` | `id_company` en `allowed_fields` de `hotel_rooms` y `hotel_maintenance_tickets` (solo datos) |
 | `107` | Modelos `call_sp` de ventas de palma: `agri_sale_void` y `agri_sale_balance` (`sp_agri_void_sale`, `sp_agri_sales_balance`) |
+| `112` | Ventas de palma: varios conceptos por comprobante (hasta 10) y unidad `TNE` además de `KGM`; columnas `concept_count` y `ticket_detail`; `sp_agri_register_sale` con la misma firma (solo base de datos; n8n y frontend en PR aparte) |
 
 > Las migraciones `094`–`107` son el estado de `[Unreleased]` del [CHANGELOG.md](./CHANGELOG.md). Las descripciones de `094`, `095` y `097` se comprobaron contra el contenido de sus archivos SQL.
 

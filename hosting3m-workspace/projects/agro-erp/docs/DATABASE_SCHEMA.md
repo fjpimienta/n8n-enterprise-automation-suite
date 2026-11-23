@@ -1106,6 +1106,12 @@ its absence fails at runtime, not at deploy time (see CLAUDE.md, Contrato Meta-C
   Four restricted models (`agri_sale_invoices`, `agri_sale_audit`, `company_flags`, `company_issuer_rfcs`): no operation and no role.
 * Rollback: `105_rollback.sql` disables the two read models; the view and the four restricted models stay.
 
+### Palm sales: several concepts per voucher and tonnes (migration 112)
+*Database only. See `database/migrations/112_RUNBOOK.md`.*
+* `agri_sale_invoices.concept_count` (`smallint NOT NULL DEFAULT 1`, 1..10) and `ticket_detail` (`jsonb NULL`): one element per concept in voucher order (`n`, `ticket` or null, `unit` KGM/TNE, `qty`, `kg`, `unit_price` per voucher unit, `amount_cents`). Rows registered before 112 keep `1` and `NULL`; `vw_agri_sale_list` and `vw_agri_sale_ui_list` append `concept_count` and a `ticket_detail` that is built from the row columns when the stored one is NULL.
+* `sp_agri_register_sale` (same signature): 1..10 concepts, one product key, one unit (KGM or TNE; tonnes x 1000 with `numeric`), `quantity` = sum of kilograms, `unit_price` = `round(subtotal / kilograms, 6)` (the voucher price for one KGM concept), per-concept amount within one cent, sum of concept amounts within `n - 1` cents of the subtotal, optional ticket per concept, duplicate tickets inside a voucher refused. New reasons: `PRODUCT_KEY_MIXED`, `UNIT_MIXED`, `AMOUNTS_MISMATCH_SUBTOTAL`, `TICKET_DUPLICATE`.
+* Trigger `trg_agri_sale_invoices_detail_guard` (BEFORE INSERT, `P0110`): the detail must match the row. Rollback: `112_rollback.sql` restores the 104 procedure; columns, trigger and view columns stay.
+
 ### Hotel models: `allowed_fields` aligned with the tenant column (migration 106)
 *Data only, no visible behavior change; see `database/migrations/106_RUNBOOK.md`.*
 * `crud_models` rows `hotel_rooms` and `hotel_maintenance_tickets`: `"id_company"` is added to `allowed_fields` (both tables have an `id_company` column), as tenant-scoped models list it. Nothing else in the two rows changes.
