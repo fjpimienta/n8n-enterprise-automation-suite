@@ -27,9 +27,10 @@ BEGIN
     IF to_regprocedure('public.sp_agri_register_sale(integer,text,jsonb,text,text,text)') IS NULL THEN
         RAISE EXCEPTION 'ABORT 112 rollback: sp_agri_register_sale not found - 104 was never applied here.';
     END IF;
-    IF pg_get_functiondef('public.sp_agri_register_sale(integer,text,jsonb,text,text,text)'::regprocedure) NOT LIKE '%TNE%'
-       AND md5(pg_get_functiondef('public.sp_agri_register_sale(integer,text,jsonb,text,text,text)'::regprocedure)) <> '425229fb6036884d5c5dcd7527d7c674' THEN
-        RAISE EXCEPTION 'ABORT 112 rollback: the live procedure is neither the 112 text nor the 104 text. Nothing was changed.';
+    IF md5(pg_get_functiondef('public.sp_agri_register_sale(integer,text,jsonb,text,text,text)'::regprocedure))
+           NOT IN ('425229fb6036884d5c5dcd7527d7c674', '83a5d0a7bad97dcfe1372aa4db961d49') THEN
+        RAISE EXCEPTION 'ABORT 112 rollback: the live procedure is neither the 112 text nor the 104 text (md5 %). Nothing was changed.',
+            md5(pg_get_functiondef('public.sp_agri_register_sale(integer,text,jsonb,text,text,text)'::regprocedure));
     END IF;
 END $$;
 
