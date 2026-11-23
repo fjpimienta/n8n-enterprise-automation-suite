@@ -30,7 +30,7 @@ export const routes: Routes = [
     path: 'fjpimienta',
     title: `Francisco Jesús Pérez Pimienta | ${SITE_NAME}`,
     // MARKETING-REVIEW: page description
-    data: { description: 'Francisco Jesús Pérez Pimienta, ingeniero en Sistemas Computacionales y fundador de Hosting3M en Mérida, Yucatán.' },
+    data: { jsonLd: 'person', description: 'Francisco Jesús Pérez Pimienta, ingeniero en Sistemas Computacionales y fundador de Hosting3M en Mérida, Yucatán.' },
     loadComponent: () => import('./pages/profile').then((m) => m.Profile),
   },
   {
