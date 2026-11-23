@@ -41,6 +41,16 @@ SELECT md5(pg_get_functiondef('public.sp_agri_register_sale(integer,text,jsonb,t
        (SELECT count(*) FROM public.agri_sale_invoices) AS sale_rows_info,
        (SELECT count(*) FROM public.agri_sale_invoices s WHERE (to_jsonb(s) ->> 'concept_count')::integer > 1) AS multi_concept_rows_info;
 
+\echo === PRIVILEGES AND ATTRIBUTES (information: save it in "before" and compare it with "applied"; the rows of the procedures must not change, the detail guard row appears with 112)
+SELECT p.oid::regprocedure AS routine, pg_get_userbyid(p.proowner) AS owner, coalesce(p.proacl::text, '-') AS acl, p.prosecdef AS security_definer,
+       coalesce(p.proconfig::text, '-') AS config, p.provolatile AS volatility,
+       has_function_privilege('public', p.oid, 'EXECUTE') AS public_can_execute,
+       CASE WHEN to_regrole('n8n_user') IS NULL THEN NULL ELSE has_function_privilege('n8n_user', p.oid, 'EXECUTE') END AS n8n_user_can_execute
+  FROM pg_proc p
+ WHERE p.pronamespace = 'public'::regnamespace
+   AND p.proname IN ('sp_agri_register_sale', 'sp_agri_void_sale', 'sp_agri_sales_balance', 'fn_trg_agri_sale_invoices_guard', 'fn_trg_agri_sale_invoices_detail_guard')
+ ORDER BY 1::text;
+
 \echo === ASSERTIONS
 DO $$
 DECLARE
@@ -77,12 +87,21 @@ BEGIN
         IF v_sp <> c_sp104 THEN RAISE EXCEPTION 'FAIL: sp_agri_register_sale is not the repository 104 text (md5 %)', v_sp; END IF;
         IF v_list <> c_list OR v_ui <> c_ui THEN RAISE EXCEPTION 'FAIL: the sale views are not the 104 / 105 ones (list: %, ui: %)', v_list, v_ui; END IF;
     ELSE
+        IF (SELECT count(DISTINCT (p.proowner, coalesce(p.proacl::text, '-'), p.prosecdef, coalesce(p.proconfig::text, '-'), p.prolang, p.provolatile))
+              FROM pg_proc p WHERE p.oid IN ('public.sp_agri_register_sale(integer,text,jsonb,text,text,text)'::regprocedure, 'public.sp_agri_void_sale(integer,text,uuid,text)'::regprocedure)) <> 1 THEN
+            RAISE EXCEPTION 'FAIL: sp_agri_register_sale does not have the owner / ACL / attributes of sp_agri_void_sale';
+        END IF;
         -- applied and rolled_back keep every addition except the procedure text
         IF v_cols <> 2 OR v_cons <> 2 OR v_trg <> 1 THEN
             RAISE EXCEPTION 'FAIL: 112 additions missing (columns %, constraints %, trigger %)', v_cols, v_cons, v_trg;
         END IF;
         IF v_list <> c_list || ',concept_count,ticket_detail' OR v_ui <> c_ui || ',concept_count,ticket_detail' THEN
             RAISE EXCEPTION 'FAIL: unexpected view columns (list: %, ui: %)', v_list, v_ui;
+        END IF;
+        -- same owner, ACL and attributes as the 104 routines they sit next to (no explicit GRANT / REVOKE on trigger functions, as in 104 - 111)
+        IF (SELECT count(DISTINCT (p.proowner, coalesce(p.proacl::text, '-'), p.prosecdef, coalesce(p.proconfig::text, '-'), p.prolang, p.provolatile))
+              FROM pg_proc p WHERE p.oid IN ('public.fn_trg_agri_sale_invoices_guard()'::regprocedure, 'public.fn_trg_agri_sale_invoices_detail_guard()'::regprocedure)) <> 1 THEN
+            RAISE EXCEPTION 'FAIL: the detail guard does not have the owner / ACL / attributes of fn_trg_agri_sale_invoices_guard';
         END IF;
         IF e = 'applied' THEN
             IF v_sp <> c_sp112 THEN RAISE EXCEPTION 'FAIL: sp_agri_register_sale is not the 112 text (md5 %)', v_sp; END IF;
