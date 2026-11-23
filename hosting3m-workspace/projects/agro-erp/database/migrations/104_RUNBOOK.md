@@ -36,7 +36,7 @@ reuse `P0080`, `P0084`, `P0092`, `P0093`.
 * **Concept amount.** For the single concept: `importeCents` must be present, equal to the subtotal, and within one cent of
   `round(cantidad × valorUnitario × 100)` (issuer rounding); otherwise `INVALID_VOUCHER` with reason `CONCEPT_AMOUNT` or
   `AMOUNTS_MISMATCH_CONCEPT`. The totals reconciliation stays exact to the cent.
-* **Accepted vouchers.** Type `I`, `MXN`, `MetodoPago = PUE`, exactly one concept, unit `KGM`, buyer different from the issuer, date not
+* **Accepted vouchers** (extended by migration 112: 1 to 10 concepts and unit `KGM` or `TNE`; see `112_RUNBOOK.md`; the text below describes 104 as applied). Type `I`, `MXN`, `MetodoPago = PUE`, exactly one concept, unit `KGM`, buyer different from the issuer, date not
   in the future and not older than 365 days (constant `c_max_age_days` at the top of `sp_agri_register_sale`; change it there if the
   owner decides otherwise), SAT status `VIGENTE`. A test company may proceed when the SAT has no answer (stored as `SKIPPED_TEST`);
   `CANCELADO` is never accepted.
