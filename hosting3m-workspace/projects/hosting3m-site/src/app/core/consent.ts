@@ -111,6 +111,8 @@ export class ConsentService {
     w[`ga-disable-${SITE.ga4Id}`] = true;
     w.gtag?.('consent', 'update', { analytics_storage: 'denied' });
     this.clearAnalyticsCookies();
+    // Analytics may rewrite _ga_<id> after the update (it flushes queued hits on the next tick): clean once more.
+    setTimeout(() => this.clearAnalyticsCookies(), 0);
   }
 
   /** Withdrawing consent also removes the first-party GA cookies set earlier (_ga, _ga_<id>, _gid, _gat*). */

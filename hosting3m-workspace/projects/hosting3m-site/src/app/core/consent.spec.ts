@@ -141,3 +141,50 @@ describe('cookie banner and footer link', () => {
     expect(document.activeElement).toBe(banner);
   });
 });
+
+describe('revoking consent removes the GA cookies', () => {
+  const expire = (name: string) => (document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/`);
+  const clean = () => ['_ga', '_ga_MVJRDZ7TD8', '_ga_OTHER', 'keepme'].forEach(expire);
+  beforeEach(() => { vi.useFakeTimers(); clean(); });
+  afterEach(() => { vi.useRealTimers(); clean(); });
+
+  it('deletes _ga and _ga_* but not other cookies or localStorage keys', () => {
+    localStorage.setItem('other_key', '1');
+    const consent = setup();
+    consent.init();
+    consent.accept();
+    document.cookie = '_ga=GA1.1.1; path=/';
+    document.cookie = '_ga_MVJRDZ7TD8=GS2.1.x; path=/';
+    document.cookie = 'keepme=1; path=/';
+    consent.reject();
+    expect(document.cookie).not.toMatch(/(^|;\s*)_ga/);
+    expect(document.cookie).toContain('keepme=1');
+    expect(localStorage.getItem('other_key')).toBe('1');
+    expect(localStorage.getItem(KEY)).toBe('denied');
+  });
+
+  it('removes a cookie that Analytics rewrites right after the update (second pass on the next tick)', () => {
+    const consent = setup();
+    consent.init();
+    consent.accept();
+    document.cookie = '_ga_MVJRDZ7TD8=GS2.1.x; path=/';
+    consent.reject();
+    document.cookie = '_ga_MVJRDZ7TD8=late; path=/'; // late rewrite
+    document.cookie = '_ga=late; path=/';
+    expect(document.cookie).toMatch(/_ga_MVJRDZ7TD8=late/);
+    vi.runAllTimers();
+    expect(document.cookie).not.toMatch(/(^|;\s*)_ga/);
+  });
+
+  it('runs nothing before a choice: init and accept leave existing cookies alone', () => {
+    document.cookie = '_ga=GA1.1.1; path=/';
+    const consent = setup();
+    consent.init();
+    vi.runAllTimers();
+    expect(document.cookie).toContain('_ga=GA1.1.1');
+    consent.accept();
+    vi.runAllTimers();
+    expect(document.cookie).toContain('_ga=GA1.1.1');
+    expect(consent.choice()).toBe('granted');
+  });
+});

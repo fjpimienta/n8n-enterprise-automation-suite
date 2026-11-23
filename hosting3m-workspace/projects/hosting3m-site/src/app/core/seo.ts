@@ -6,6 +6,7 @@ import { filter } from 'rxjs';
 import { BUSINESS } from './business';
 import { SITE } from './site.config';
 import { CONTACT_SERVICES } from './contact';
+import { PROFILE } from '../data/profile';
 
 const JSON_LD_ID = 'jsonld-site';
 
@@ -52,6 +53,25 @@ export function buildJsonLd(): Record<string, unknown> {
   };
 }
 
+/**
+ * schema.org Person for /fjpimienta. Built only from what that page shows (data/profile.ts): name, title as written, location,
+ * photo and the LinkedIn link. No certifications, employers, clients or personal contact data.
+ */
+export function buildPersonJsonLd(): Record<string, unknown> {
+  const [locality, region] = PROFILE.location.split(',').map((part) => part.trim());
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    '@id': `${SITE.url}/fjpimienta#person`,
+    name: PROFILE.name,
+    url: `${SITE.url}/fjpimienta`,
+    jobTitle: PROFILE.title,
+    image: `${SITE.url}${PROFILE.photo.src}`,
+    address: { '@type': 'PostalAddress', addressLocality: locality, addressRegion: region },
+    sameAs: [PROFILE.linkedin.url],
+  };
+}
+
 @Injectable({ providedIn: 'root' })
 export class SeoService {
   private readonly router = inject(Router);
@@ -62,7 +82,7 @@ export class SeoService {
   init(): void {
     this.router.events.pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd)).subscribe((e) => {
       const data = this.deepest(this.router.routerState.snapshot.root).data;
-      this.apply(e.urlAfterRedirects, data['description'] as string | undefined, data['jsonLd'] === 'home');
+      this.apply(e.urlAfterRedirects, data['description'] as string | undefined, data['jsonLd'] as string | undefined);
     });
   }
 
@@ -70,7 +90,7 @@ export class SeoService {
     return route.firstChild ? this.deepest(route.firstChild) : route;
   }
 
-  private apply(url: string, description: string | undefined, withJsonLd: boolean): void {
+  private apply(url: string, description: string | undefined, jsonLd: string | undefined): void {
     const path = url.split(/[?#]/)[0];
     const canonical = `${SITE.url}${path === '/' ? '/' : path.replace(/\/$/, '')}`;
     const title = this.title.getTitle();
@@ -90,7 +110,7 @@ export class SeoService {
     this.meta.updateTag({ name: 'twitter:card', content: 'summary_large_image' });
     this.meta.updateTag({ name: 'twitter:image', content: OG_IMAGE.url });
     this.meta.updateTag({ name: 'twitter:image:alt', content: OG_IMAGE.alt });
-    this.setJsonLd(withJsonLd);
+    this.setJsonLd(jsonLd);
   }
 
   private setLink(rel: string, href: string): void {
@@ -103,14 +123,15 @@ export class SeoService {
     link.setAttribute('href', href);
   }
 
-  private setJsonLd(enabled: boolean): void {
+  private setJsonLd(kind: string | undefined): void {
     this.document.getElementById(JSON_LD_ID)?.remove();
-    if (!enabled) return;
+    const payload = kind === 'home' ? buildJsonLd() : kind === 'person' ? buildPersonJsonLd() : null;
+    if (!payload) return;
     const script = this.document.createElement('script');
     script.id = JSON_LD_ID;
     script.type = 'application/ld+json';
     // Static, trusted data; "<" is escaped so the payload can never close the script element.
-    script.textContent = JSON.stringify(buildJsonLd()).replace(/</g, '\\u003c');
+    script.textContent = JSON.stringify(payload).replace(/</g, '\\u003c');
     this.document.head.appendChild(script);
   }
 }
