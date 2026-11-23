@@ -50,8 +50,9 @@ The answer `summary` keeps its keys (`folio`, `sale_date`, `buyer_name`, `total_
 | `112_agri_sale_multi_concept.sql` | the change (dry run by default; preconditions; drift guard; post-checks) |
 | `112_rollback.sql` | restores the exact 104 procedure (md5 checked); drops nothing |
 | `112_state_check.sql` | `-v expect=before\|applied\|rolled_back`, read-only, fingerprints |
-| `112_tests.sql` | one rolled-back transaction (throwaway database only), 123 assertions, includes the rollback and the re-apply |
-| `112_static_check.sh` | no `DROP` / `TRUNCATE` / `DELETE` statement, signature intact, no `crud_models` change, stub word absent, drift guard present |
+| `112_tests.sql` | one rolled-back transaction (throwaway database only), 128 assertions, includes the rollback and the re-apply; `-v mutation=M1..M18 / G1..G6` breaks one rule |
+| `112_mutation_check.sh` | control run plus 24 mutations of the procedure and of the detail guard, each must make the tests fail |
+| `112_static_check.sh` | no `DROP` / `TRUNCATE` / `DELETE` word anywhere in the code of the migration, rollback and state check (also inside `EXECUTE` strings and `ALTER TABLE ... DROP COLUMN`), signature intact, no `crud_models` change, stub word absent, md5 constants present; `--self-test` checks the scanner |
 | `105_state_check.sql` | updated in this pull request: it now accepts the view with the two appended columns |
 
 ## Part 1 — database
@@ -61,27 +62,29 @@ The answer `summary` keeps its keys (`folio`, `sale_date`, `buyer_name`, `total_
 Requires 080, 081, 104 and 105 applied (the tests include 104 and 105 when they are missing).
 
 ```sh
+bash 112_static_check.sh --self-test                                          # SELF-TEST OK
 bash 112_static_check.sh                                                      # all OK
 psql -X -v ON_ERROR_STOP=1 -v expect=before -f 112_state_check.sql            # STATE OK: before
 psql -X -v ON_ERROR_STOP=1 -f 112_agri_sale_multi_concept.sql                 # dry run: "112: OK" then ROLLBACK
-psql -X -v ON_ERROR_STOP=1 -f 112_tests.sql                                   # "112 TESTS: 123 assertions passed"
+psql -X -v ON_ERROR_STOP=1 -f 112_tests.sql                                   # "112 TESTS: 128 assertions passed (mutation=none)"
 psql -X -v ON_ERROR_STOP=1 -v apply=true -f 112_agri_sale_multi_concept.sql
 psql -X -v ON_ERROR_STOP=1 -v expect=applied -f 112_state_check.sql           # STATE OK: applied
 psql -X -v ON_ERROR_STOP=1 -v expect=applied -f 105_state_check.sql           # STATE OK: applied (accepts the appended columns)
 psql -X -v ON_ERROR_STOP=1 -v apply=true -f 112_rollback.sql
 psql -X -v ON_ERROR_STOP=1 -v expect=rolled_back -f 112_state_check.sql       # STATE OK: rolled_back
 psql -X -v ON_ERROR_STOP=1 -v apply=true -f 112_agri_sale_multi_concept.sql   # re-apply (idempotent)
+bash 112_mutation_check.sh                                                    # M0 PASS, every mutation KILLED (set PSQL=... when the database is in a container)
 ```
 
 The FINGERPRINTS block of `112_state_check.sql` must be identical in "before", "applied" and "rolled_back". The local `hosting3m_db` is not a clean base: use a database restored from a dump (see `workflows/09-MCP-Agent-Cattle/v6/repro-phase5/rehearsal/README.md`).
 
 ### 1.2 Production (only after 1.1 passes)
 
-1. **Before:** `psql -X -v ON_ERROR_STOP=1 -v expect=before -f 112_state_check.sql` → `STATE OK: before`. Also `104_state_check.sql -v expect=applied` and `105_state_check.sql -v expect=applied`. Save the output.
+1. **Before:** `psql -X -v ON_ERROR_STOP=1 -v expect=before -f 112_state_check.sql` → `STATE OK: before`. Also `104_state_check.sql -v expect=applied` and `105_state_check.sql -v expect=applied`. Save the output. Besides the fingerprints, the block `PRIVILEGES AND ATTRIBUTES` of `112_state_check.sql` prints, for `sp_agri_register_sale` and its neighbours, the owner, the ACL, `prosecdef` (SECURITY DEFINER), `proconfig`, the volatility and `has_function_privilege` for PUBLIC and for the role that n8n uses (`n8n_user` in this suite); keep it as the reference of step 8.
 2. **Drift check (read-only):** the migration replaces the procedure only if its live text is the repository 104 text. Compare, on the production database,
-   `SELECT md5(pg_get_functiondef('public.sp_agri_register_sale(integer,text,jsonb,text,text,text)'::regprocedure));` → must print `425229fb6036884d5c5dcd7527d7c674` (same PostgreSQL major version as the local run). If it differs, **stop**: the migration aborts by itself with `ABORT 112 (drift)` and nothing is changed; incorporate the live text into the repository first.
+   `SELECT md5(pg_get_functiondef('public.sp_agri_register_sale(integer,text,jsonb,text,text,text)'::regprocedure));` → must print `425229fb6036884d5c5dcd7527d7c674` (same PostgreSQL major version as the local run). Run also `SELECT version();` on both sides: the major version of production must be the one of the local run (the local rehearsal ran on PostgreSQL 15.4), because the text returned by `pg_get_functiondef` (hence the md5 constants) can differ between major versions; the migration and its post-check abort with the expected-text message otherwise. If it differs, **stop**: the migration aborts by itself with `ABORT 112 (drift)` and nothing is changed; incorporate the live text into the repository first.
 3. **Backup:** the migration alters one table and replaces one procedure; take the standard `pg_dump -Fc` first, kept outside the repository with restricted permissions.
-4. **Dry run:** `psql -X -v ON_ERROR_STOP=1 -f 112_agri_sale_multi_concept.sql` → `112: OK` and `DRY RUN ... rolled back`.
+4. **Dry run:** `psql -X -v ON_ERROR_STOP=1 -f 112_agri_sale_multi_concept.sql` → `112: OK` and `DRY RUN ... rolled back`. The post-check of the migration asserts, inside the same transaction, that the replaced procedure has exactly the 112 md5, so a wrong text is found here and never reaches a COMMIT.
 5. **Apply:** `psql -X -v ON_ERROR_STOP=1 -v apply=true -f 112_agri_sale_multi_concept.sql` → `*** 112 COMMITTED ***`. The two columns are added with constant defaults (no table rewrite on PostgreSQL 11 or later); the two CHECK constraints scan the table once.
 6. **After:** `112_state_check.sql -v expect=applied` → `STATE OK: applied`; the FINGERPRINTS block must equal the one of step 1. Also `105_state_check.sql -v expect=applied` and `104_state_check.sql -v expect=applied`. Save the output.
 7. **Behaviour check on TEST company 10 only** (never any other company), inside `BEGIN ... ROLLBACK`, with synthetic vouchers. The issuer RFC of the company is read into a psql variable and never printed; replace `<admin e-mail>` with an ADMIN of company 10.
@@ -92,26 +95,38 @@ The FINGERPRINTS block of `112_state_check.sql` must be identical in "before", "
    \set mail '<admin e-mail>'
    SELECT rfc AS own_rfc FROM company_issuer_rfcs WHERE id_company = :co AND is_active ORDER BY rfc LIMIT 1 \gset
    SELECT repeat('b', 64) AS sha, :co || '/2026/11/' || repeat('b', 64) || '.xml' AS path, upper(gen_random_uuid()::text) AS u1, upper(gen_random_uuid()::text) AS u2,
-          to_char(fn_agri_today_cdmx() - 1, 'YYYY-MM-DD') || 'T08:49:01' AS issued \gset
-   -- two kilogram concepts (100 kg at 10.00 each): must answer OK with 200 kg and 2 concepts. The tonne case (9.1 t at 4011.00 per tonne = 36500.10) is covered by 112_tests.sql.
-   SELECT 'two KGM concepts' AS probe, r ->> 'status' AS status, r -> 'summary' ->> 'quantity_kg' AS kg, r -> 'summary' ->> 'concept_count' AS concepts
-     FROM (SELECT sp_agri_register_sale(:co, :'mail',
-             jsonb_build_object('tipoComprobante', 'I', 'uuid', :'u1', 'folio', 'T1', 'fechaEmision', :'issued', 'fechaTimbrado', :'issued',
-               'emisor', jsonb_build_object('rfc', :'own_rfc', 'nombre', 'PRUEBA'), 'receptor', jsonb_build_object('rfc', 'XEXX010101000', 'nombre', 'PRUEBA'),
-               'moneda', 'MXN', 'formaPago', '03', 'metodoPago', 'PUE', 'subtotalCents', 200000, 'descuentoCents', 0, 'totalCents', 200000,
-               'traslados', '[]'::jsonb, 'retenciones', '[]'::jsonb, 'sourceSha256', :'sha',
-               'conceptos', jsonb_build_array(
-                 jsonb_build_object('claveProdServ', '50307008', 'claveUnidad', 'KGM', 'cantidad', '100', 'valorUnitario', '10.00', 'descripcion', 'Prueba (ticket 1)', 'importeCents', 100000),
-                 jsonb_build_object('claveProdServ', '50307008', 'claveUnidad', 'KGM', 'cantidad', '100', 'valorUnitario', '10.00', 'descripcion', 'Prueba (ticket 2)', 'importeCents', 100000))),
+          upper(gen_random_uuid()::text) AS u3, to_char(fn_agri_today_cdmx() - 1, 'YYYY-MM-DD') || 'T08:49:01' AS issued \gset
+   -- synthetic voucher without taxes; the buyer RFC is a generic public one
+   CREATE FUNCTION pg_temp.v(p_uuid text, p_emisor text, p_issued text, p_sha text, p_sub bigint, p_concepts jsonb) RETURNS jsonb LANGUAGE sql AS $f$
+       SELECT jsonb_build_object('tipoComprobante', 'I', 'uuid', p_uuid, 'folio', 'T1', 'fechaEmision', p_issued, 'fechaTimbrado', p_issued,
+              'emisor', jsonb_build_object('rfc', p_emisor, 'nombre', 'PRUEBA'), 'receptor', jsonb_build_object('rfc', 'XEXX010101000', 'nombre', 'PRUEBA'),
+              'moneda', 'MXN', 'formaPago', '03', 'metodoPago', 'PUE', 'subtotalCents', p_sub, 'descuentoCents', 0, 'totalCents', p_sub,
+              'traslados', '[]'::jsonb, 'retenciones', '[]'::jsonb, 'sourceSha256', p_sha, 'conceptos', p_concepts) $f$;
+   -- 1) two kilogram concepts (100 kg at 10.00 each): expect OK / 200 / 2 / no warning
+   SELECT 'two KGM concepts' AS probe, r ->> 'status' AS status, r ->> 'code' AS code, r -> 'summary' ->> 'quantity_kg' AS kg, r -> 'summary' ->> 'concept_count' AS concepts, r -> 'warnings' AS warnings
+     FROM (SELECT sp_agri_register_sale(:co, :'mail', pg_temp.v(:'u1', :'own_rfc', :'issued', :'sha', 200000, jsonb_build_array(
+             jsonb_build_object('claveProdServ', '50307008', 'claveUnidad', 'KGM', 'cantidad', '100', 'valorUnitario', '10.00', 'descripcion', 'Prueba (ticket 1)', 'importeCents', 100000),
+             jsonb_build_object('claveProdServ', '50307008', 'claveUnidad', 'KGM', 'cantidad', '100', 'valorUnitario', '10.00', 'descripcion', 'Prueba (ticket 2)', 'importeCents', 100000))),
+             'VIGENTE', :'path', :'sha') AS r) q
+   UNION ALL
+   -- 2) one tonne concept without ticket, 9.1 t at 4011.00 per tonne = 36500.10: expect OK / 9100 / 1 / ticket_missing_or_unrecognized
+   SELECT 'single TNE concept, no ticket', r ->> 'status', r ->> 'code', r -> 'summary' ->> 'quantity_kg', r -> 'summary' ->> 'concept_count', r -> 'warnings'
+     FROM (SELECT sp_agri_register_sale(:co, :'mail', pg_temp.v(:'u2', :'own_rfc', :'issued', :'sha', 3650010, jsonb_build_array(
+             jsonb_build_object('claveProdServ', '50307008', 'claveUnidad', 'TNE', 'cantidad', '9.1', 'valorUnitario', '4011.00', 'descripcion', 'Prueba sin ticket', 'importeCents', 3650010))),
+             'VIGENTE', :'path', :'sha') AS r) q
+   UNION ALL
+   -- 3) a unit that is not accepted: expect INVALID_VOUCHER / INVALID_VOUCHER_UNIT, nothing written
+   SELECT 'unsupported unit', r ->> 'status', r ->> 'code', NULL, NULL, NULL
+     FROM (SELECT sp_agri_register_sale(:co, :'mail', pg_temp.v(:'u3', :'own_rfc', :'issued', :'sha', 100000, jsonb_build_array(
+             jsonb_build_object('claveProdServ', '50307008', 'claveUnidad', 'H87', 'cantidad', '100', 'valorUnitario', '10.00', 'descripcion', 'Prueba (ticket 3)', 'importeCents', 100000))),
              'VIGENTE', :'path', :'sha') AS r) q;
-   -- expect OK / 200 / 2
-   SELECT (SELECT count(*) FROM agri_sale_invoices WHERE uuid IN (:'u1', :'u2')) AS rows_inside_the_transaction;   -- expect 1
+   SELECT (SELECT count(*) FROM agri_sale_invoices WHERE uuid IN (:'u1', :'u2', :'u3')) AS rows_inside_the_transaction;   -- expect 2 (the third was refused)
    ROLLBACK;
-   SELECT (SELECT count(*) FROM agri_sale_invoices WHERE uuid IN (:'u1', :'u2')) AS rows_after_rollback;           -- expect 0
+   SELECT (SELECT count(*) FROM agri_sale_invoices WHERE uuid IN (:'u1', :'u2', :'u3')) AS rows_after_rollback;           -- expect 0
    ```
 
    If company 10 has no active issuer RFC the first `\gset` leaves the variable undefined and the call answers `ISSUER_RFC_NOT_CONFIGURED`: that is a platform decision, not a failure of the migration. Use `psql` with a role that may call the procedure, as in the earlier runbooks.
-8. **Privileges unchanged:** compare `has_function_privilege` and `prosecdef` of `sp_agri_register_sale` with the values saved in step 1 (the local run shows the same values: plpgsql, VOLATILE, not SECURITY DEFINER).
+8. **Privileges unchanged:** run `112_state_check.sql -v expect=applied` again and compare its `PRIVILEGES AND ATTRIBUTES` block with the one saved in step 1: the rows of `sp_agri_register_sale`, `sp_agri_void_sale`, `sp_agri_sales_balance` and `fn_trg_agri_sale_invoices_guard` (owner, ACL, `security_definer`, `config`, `public_can_execute`, `n8n_user_can_execute`) must be identical; the only new row is `fn_trg_agri_sale_invoices_detail_guard`, with the same owner, ACL and attributes as the 104 guard. Any difference: stop and review before going on.
 
 ### 1.3 Rollback
 
