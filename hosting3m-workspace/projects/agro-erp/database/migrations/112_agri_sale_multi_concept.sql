@@ -100,6 +100,8 @@ COMMENT ON COLUMN public.agri_sale_invoices.ticket_detail IS
   '112: informational detail per concept, in voucher order: n, ticket (or null), unit (KGM or TNE), qty (as in the voucher), kg, unit_price (per voucher unit), amount_cents. NULL for rows registered before 112 (the views build it from the row columns).';
 
 -- 2) Insert guard for the detail (defence in depth; the procedure already validated everything) ------------------
+-- An element without kg or without amount_cents counts as invalid (it is not ignored in the sums). Privileges follow the other trigger functions of
+-- 104 (no explicit GRANT or REVOKE; a function that returns trigger cannot be called as a procedure); 112_tests.sql compares owner, ACL and attributes.
 
 CREATE OR REPLACE FUNCTION public.fn_trg_agri_sale_invoices_detail_guard()
 RETURNS trigger LANGUAGE plpgsql AS $$
@@ -122,7 +124,8 @@ BEGIN
         SELECT coalesce(sum((d ->> 'kg')::numeric), 0), coalesce(sum((d ->> 'amount_cents')::bigint), 0),
                count(*) FILTER (WHERE nullif(d ->> 'ticket', '') IS NOT NULL),
                count(DISTINCT upper(nullif(d ->> 'ticket', ''))),
-               count(*) FILTER (WHERE jsonb_typeof(d) <> 'object' OR coalesce(d ->> 'unit', '') NOT IN ('KGM', 'TNE') OR (d ->> 'kg')::numeric <= 0
+               count(*) FILTER (WHERE jsonb_typeof(d) <> 'object' OR (d ->> 'kg') IS NULL OR (d ->> 'amount_cents') IS NULL
+                                 OR coalesce(d ->> 'unit', '') NOT IN ('KGM', 'TNE') OR (d ->> 'kg')::numeric <= 0
                                  OR (d ->> 'amount_cents')::bigint < 0)
           INTO v_kg, v_cents, v_tix, v_dist, v_bad
           FROM jsonb_array_elements(NEW.ticket_detail) d;
@@ -542,6 +545,11 @@ BEGIN
     END IF;
     IF (SELECT count(*) FROM pg_proc WHERE pronamespace = 'public'::regnamespace AND proname = 'sp_agri_register_sale') <> 1 THEN
         RAISE EXCEPTION '112: sp_agri_register_sale must have exactly one signature';
+    END IF;
+    -- The live text must be exactly the one the runbook, the state check and the rollback know (so the dry run validates it before any COMMIT).
+    IF md5(pg_get_functiondef('public.sp_agri_register_sale(integer,text,jsonb,text,text,text)'::regprocedure)) <> '83a5d0a7bad97dcfe1372aa4db961d49' THEN
+        RAISE EXCEPTION '112: sp_agri_register_sale does not have the expected text (md5 %; PostgreSQL %)',
+            md5(pg_get_functiondef('public.sp_agri_register_sale(integer,text,jsonb,text,text,text)'::regprocedure)), split_part(version(), ' ', 2);
     END IF;
     -- The 104 state check recognises the rollback stub by this word: the live procedure must not contain it.
     IF pg_get_functiondef('public.sp_agri_register_sale(integer,text,jsonb,text,text,text)'::regprocedure) LIKE '%disabled%' THEN
