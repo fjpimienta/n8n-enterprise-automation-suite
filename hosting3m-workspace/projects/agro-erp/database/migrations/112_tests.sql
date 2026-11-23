@@ -1,5 +1,7 @@
 -- 112_tests.sql: LOCAL / throwaway database only (name must contain "test" or "rehearsal"). Everything is rolled back.
 -- psql -X -v ON_ERROR_STOP=1 -f 112_tests.sql
+-- Optional: -v mutation=M1..M18 or G1..G6 breaks one rule of the procedure or of the detail guard inside the transaction; the run must then FAIL
+-- (see 112_mutation_check.sh). The rollback / re-apply section (T12) is skipped under a mutation.
 -- Works before or after 112 is applied: it includes 104 and 105 when they are missing and 112 when it is not applied (all inside the rolled-back
 -- transaction). Uses ONLY synthetic data (fake UUIDs, fake RFCs, fake e-mails, new companies, invented amounts).
 \set ON_ERROR_STOP on
@@ -8,6 +10,10 @@ SELECT current_database() ~ '(test|rehearsal)' AS scratch_ok \gset
 \else
 \echo 'ABORT: run this only against a throwaway database (name must contain test or rehearsal).'
 \quit
+\endif
+\if :{?mutation}
+\else
+\set mutation none
 \endif
 BEGIN;
 \set embedded true
@@ -23,6 +29,52 @@ SELECT pg_get_functiondef('public.sp_agri_register_sale(integer,text,jsonb,text,
 \else
 \ir 112_agri_sale_multi_concept.sql
 \endif
+
+-- Mutations (inside the transaction; the real files are never changed) -----------------------------------------------------
+SELECT set_config('t112.mutation', :'mutation', true) AS mutation_in_use;
+DO $$
+DECLARE
+    v_m   text := current_setting('t112.mutation');
+    r     record;
+    v_old text;
+    v_new text;
+    v_fn  regprocedure;
+BEGIN
+    IF v_m = 'none' THEN RETURN; END IF;
+    SELECT * INTO r FROM (VALUES
+        ('M1',  'sp',  'CASE WHEN v_units[1] = ''TNE'' THEN 1000 ELSE 1 END', 'CASE WHEN v_units[1] = ''TNE'' THEN 100 ELSE 1 END'),
+        ('M2',  'sp',  '- v_imps[v_i]::bigint) > 1 THEN', '- v_imps[v_i]::bigint) > 2 THEN'),
+        ('M3',  'sp',  'abs(v_sum_imp - v_sub) > v_nconc - 1', 'abs(v_sum_imp - v_sub) > v_nconc'),
+        ('M4',  'sp',  'abs(v_sum_imp - v_sub) > v_nconc - 1', 'abs(v_sum_imp - v_sub) > v_nconc - 2'),
+        ('M5',  'sp',  'u IS NULL OR u NOT IN (''KGM'', ''TNE'')', 'u IS NULL OR u NOT IN (''KGM'', ''TNE'', ''H87'')'),
+        ('M6',  'sp',  '(SELECT count(DISTINCT u) FROM unnest(v_units) u) > 1', '(SELECT count(DISTINCT u) FROM unnest(v_units) u) > 99'),
+        ('M7',  'sp',  '(SELECT count(DISTINCT p) FROM unnest(v_prods) p) > 1', '(SELECT count(DISTINCT p) FROM unnest(v_prods) p) > 99'),
+        ('M8',  'sp',  'IF (SELECT count(DISTINCT t) FROM unnest(v_tickets_up) t) <> coalesce(array_length(v_tickets_up, 1), 0) THEN', 'IF false THEN'),
+        ('M9',  'sp',  'c_max_concepts constant integer := 10', 'c_max_concepts constant integer := 11'),
+        ('M10', 'sp',  'round(v_sub::numeric / 100 / v_sum_kg, 6)', 'round(v_total::numeric / 100 / v_sum_kg, 6)'),
+        ('M11', 'sp',  'IF v_qtys[v_i]::numeric <= 0 OR v_prices[v_i]::numeric <= 0 THEN', 'IF false THEN'),
+        ('M12', 'sp',  'IF v_sum_kg >= c_max_kg THEN', 'IF false THEN'),
+        ('M13', 'sp',  'v_sum_kg := v_sum_kg + v_qtys[v_i]::numeric * v_factor', 'v_sum_kg := v_qtys[v_i]::numeric * v_factor'),
+        ('M14', 'sp',  'upper(d ->> ''ticket'') = ANY (v_tickets_up)', 'false'),
+        ('M15', 'sp',  '''unit'', v_units[v_i]', '''unit'', ''KGM'''),
+        ('M16', 'sp',  'ORDER BY n LIMIT 1', 'ORDER BY n DESC LIMIT 1'),
+        ('M17', 'sp',  'v_ticket_warn := true;', 'NULL;'),
+        ('M18', 'sp',  'IF v_nconc IS NULL OR v_nconc < 1', 'IF v_nconc IS NULL OR v_nconc < 0'),
+        ('G1',  'trg', 'OR v_kg <> NEW.quantity', ''),
+        ('G2',  'trg', 'abs(v_cents - NEW.subtotal_cents) > NEW.concept_count - 1', 'false'),
+        ('G3',  'trg', 'OR v_tix <> v_dist', ''),
+        ('G4',  'trg', 'OR v_bad > 0', ''),
+        ('G5',  'trg', 'IF NEW.concept_count <> 1 THEN', 'IF false THEN'),
+        ('G6',  'trg', 'OR (d ->> ''kg'') IS NULL OR (d ->> ''amount_cents'') IS NULL', '')
+    ) AS m(id, target, a, b) WHERE m.id = v_m;
+    IF NOT FOUND THEN RAISE EXCEPTION 'unknown mutation %', v_m; END IF;
+    v_fn := CASE r.target WHEN 'sp' THEN 'public.sp_agri_register_sale(integer,text,jsonb,text,text,text)'::regprocedure
+                          ELSE 'public.fn_trg_agri_sale_invoices_detail_guard()'::regprocedure END;
+    v_old := pg_get_functiondef(v_fn);
+    v_new := replace(v_old, r.a, r.b);
+    IF v_new = v_old THEN RAISE EXCEPTION 'mutation % did not change the function', v_m; END IF;
+    EXECUTE v_new;
+END $$;
 
 -- Helpers (session-local) -----------------------------------------------------------------------------
 CREATE TEMP TABLE tcount (n integer NOT NULL) ON COMMIT DROP;
@@ -462,6 +514,15 @@ BEGIN
         payment_form, payment_method, product_key, unit_code, quantity, unit_price, ticket_warning, concept_count, source_sha256, original_path, sat_status, registered_by_email)
         VALUES (%s, 'AB000000-0000-4000-8000-000000000007', 'AAA010101AAA', 'CCC040404CCC', 'X', now()::timestamp, now()::timestamp, 1000000, 1000000, '{"traslados":[],"retenciones":[]}'::jsonb,
         '03', 'PUE', '50307008', 'KGM', 100, 100, true, 11, %L, 'a/b.xml', 'VIGENTE', 'a@example.invalid')$f$, ca, repeat('a', 64)), ARRAY['P0110', '23514']);   -- more than ten concepts
+    -- an element without kg, or without amount_cents, is invalid (it is not ignored in the sums)
+    PERFORM pg_temp.expect_err(format($f$INSERT INTO public.agri_sale_invoices (id_company, uuid, emisor_rfc, receptor_rfc, buyer_name, issued_at, stamped_at, subtotal_cents, total_cents, taxes,
+        payment_form, payment_method, product_key, unit_code, quantity, unit_price, ticket_warning, concept_count, ticket_detail, source_sha256, original_path, sat_status, registered_by_email)
+        VALUES (%s, 'AB000000-0000-4000-8000-000000000008', 'AAA010101AAA', 'CCC040404CCC', 'X', now()::timestamp, now()::timestamp, 1000000, 1000000, '{"traslados":[],"retenciones":[]}'::jsonb,
+        '03', 'PUE', '50307008', 'KGM', 100, 100, true, 2, '[{"n":1,"ticket":null,"unit":"KGM","qty":"100","kg":"100","unit_price":"100","amount_cents":1000000},{"n":2,"ticket":null,"unit":"KGM","amount_cents":0}]'::jsonb, %L, 'a/b.xml', 'VIGENTE', 'a@example.invalid')$f$, ca, repeat('a', 64)), ARRAY['P0110']);   -- second element without kg
+    PERFORM pg_temp.expect_err(format($f$INSERT INTO public.agri_sale_invoices (id_company, uuid, emisor_rfc, receptor_rfc, buyer_name, issued_at, stamped_at, subtotal_cents, total_cents, taxes,
+        payment_form, payment_method, product_key, unit_code, quantity, unit_price, ticket_warning, concept_count, ticket_detail, source_sha256, original_path, sat_status, registered_by_email)
+        VALUES (%s, 'AB000000-0000-4000-8000-000000000009', 'AAA010101AAA', 'CCC040404CCC', 'X', now()::timestamp, now()::timestamp, 1000000, 1000000, '{"traslados":[],"retenciones":[]}'::jsonb,
+        '03', 'PUE', '50307008', 'KGM', 150, 100, true, 2, '[{"n":1,"ticket":null,"unit":"KGM","qty":"100","kg":"100","unit_price":"100","amount_cents":1000000},{"n":2,"ticket":null,"unit":"KGM","qty":"50","kg":"50","unit_price":"100"}]'::jsonb, %L, 'a/b.xml', 'VIGENTE', 'a@example.invalid')$f$, ca, repeat('a', 64)), ARRAY['P0110']);   -- second element without amount_cents
     -- append-only: the two columns of a registered sale never change and the sale is never deleted
     PERFORM pg_temp.expect_err(format('UPDATE public.agri_sale_invoices SET concept_count = 2 WHERE id_company = %s AND uuid = %L', ca, 'A1000000-0000-4000-8000-000000000001'), ARRAY['P0110']);
     PERFORM pg_temp.expect_err(format('UPDATE public.agri_sale_invoices SET ticket_detail = ''[]''::jsonb WHERE id_company = %s AND uuid = %L', ca, 'A1000000-0000-4000-8000-000000000001'), ARRAY['P0110', '23514']);
@@ -477,11 +538,22 @@ BEGIN
     PERFORM pg_temp.chk((SELECT provolatile = 'v' AND NOT prosecdef AND prolang = (SELECT oid FROM pg_language WHERE lanname = 'plpgsql') FROM pg_proc WHERE oid = 'public.sp_agri_register_sale(integer,text,jsonb,text,text,text)'::regprocedure), 'T11c plpgsql VOLATILE, not SECURITY DEFINER');
     SELECT string_agg(column_name, ',' ORDER BY ordinal_position) INTO v_cols FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'vw_agri_sale_ui_list';
     PERFORM pg_temp.chk(v_cols = 'id,id_company,folio,sale_date,buyer_name,quantity,unit_code,unit_price,total_amount,payment_method,ticket_ref,ticket_warning,plantation_id,plantation_code,plantation_name,lot_id,lot_code,lot_name,status,void_reason,voided_at,is_test,created_at,concept_count,ticket_detail', 'T11d the 105 columns come first, the new ones are appended');
+    -- owner, ACL and attributes follow the 104 routines they sit next to (the other trigger functions of 104 - 111 carry no explicit GRANT or REVOKE)
+    PERFORM pg_temp.chk((SELECT count(DISTINCT (p.proowner, coalesce(p.proacl::text, '-'), p.prosecdef, coalesce(p.proconfig::text, '-'), p.prolang, p.provolatile))
+        FROM pg_proc p WHERE p.oid IN ('public.fn_trg_agri_sale_invoices_guard()'::regprocedure, 'public.fn_trg_agri_sale_invoices_detail_guard()'::regprocedure)) = 1,
+        'T11g the detail guard has the owner, ACL and attributes of the 104 guard');
+    PERFORM pg_temp.chk((SELECT count(DISTINCT (p.proowner, coalesce(p.proacl::text, '-'), p.prosecdef, coalesce(p.proconfig::text, '-'), p.prolang, p.provolatile))
+        FROM pg_proc p WHERE p.oid IN ('public.sp_agri_register_sale(integer,text,jsonb,text,text,text)'::regprocedure, 'public.sp_agri_void_sale(integer,text,uuid,text)'::regprocedure)) = 1,
+        'T11h the registration procedure has the owner, ACL and attributes of the void procedure');
+    PERFORM pg_temp.chk(NOT (SELECT prosecdef FROM pg_proc WHERE oid = 'public.fn_trg_agri_sale_invoices_detail_guard()'::regprocedure)
+        AND (SELECT proconfig IS NULL FROM pg_proc WHERE oid = 'public.fn_trg_agri_sale_invoices_detail_guard()'::regprocedure), 'T11i the detail guard is not SECURITY DEFINER and sets no search_path');
     PERFORM pg_temp.chk((SELECT count(*) FROM public.crud_models WHERE model_name IN ('agri_sale_invoices', 'agri_sale_audit') AND cardinality(allowed_ops) <> 0) = 0, 'T11e nothing was exposed in crud_models');
     PERFORM pg_temp.chk(NOT EXISTS (SELECT 1 FROM public.agri_sale_audit WHERE code ~ '[0-9A-F]{8}-[0-9A-F]{4}-'), 'T11f the audit trail carries no voucher uuid');
 END $$;
 
--- T12. Rollback and re-apply inside the transaction ----------------------------------------------------------------------------------------------
+-- T12. Rollback and re-apply inside the transaction (skipped under a mutation: the live text is then not a known one) ------------------------------
+SELECT :'mutation' = 'none' AS no_mutation \gset
+\if :no_mutation
 \ir 112_rollback.sql
 DO $$
 DECLARE ca integer := pg_temp.co('a'); a text := 'admin.a@example.invalid'; r jsonb;
@@ -504,6 +576,7 @@ BEGIN
     PERFORM pg_temp.chk(pg_temp.reason(ca, a, pg_temp.vch('AC000000-0000-4000-8000-000000000004', 'AAA010101AAA', jsonb_build_array(
             pg_temp.cn('KGM', '100', '100.00', 1000000, 'x (ticket 5)'), pg_temp.cn('KGM', '100', '100.00', 1000000, 'x (ticket 6)')), 2000000)) = 'OK', 'T12h two concepts register again');
 END $$;
+\endif
 
-SELECT '112 TESTS: ' || n || ' assertions passed' AS result FROM tcount;
+SELECT '112 TESTS: ' || n || ' assertions passed (mutation=' || :'mutation' || ')' AS result FROM tcount;
 ROLLBACK;
