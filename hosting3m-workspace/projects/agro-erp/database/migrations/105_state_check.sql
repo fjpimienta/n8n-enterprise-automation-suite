@@ -3,6 +3,8 @@
 --
 -- * 105 touches six crud_models rows (agri_sales, agri_sale_summary and the four restricted models) and adds one view.
 --   The fingerprint of EVERY OTHER crud_models row, the migration 104 objects and the older sale views must be identical in every state.
+-- * After migration 112 the fingerprints m104_table_columns, m104_functions, m104_views, m104_guard_triggers and ui_list_view_definition differ from those taken
+--   before 112 (two columns, a replaced procedure, two appended view columns and one more trigger): compare them only within the same side of 112.
 -- * Save the output of "before", "applied" and "rolled_back" in the runbook record and diff the FINGERPRINT blocks: nothing but the six rows
 --   and the view may differ. The view definition md5 (VIEW block) must be identical in "applied" and "rolled_back" (the rollback leaves it in place).
 \set ON_ERROR_STOP on
@@ -87,7 +89,9 @@ BEGIN
         IF NOT v_view THEN RAISE EXCEPTION 'FAIL: vw_agri_sale_ui_list is missing'; END IF;
         SELECT string_agg(column_name, ',' ORDER BY ordinal_position) INTO v_cols
           FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'vw_agri_sale_ui_list';
-        IF v_cols <> 'id,id_company,folio,sale_date,buyer_name,quantity,unit_code,unit_price,total_amount,payment_method,ticket_ref,ticket_warning,plantation_id,plantation_code,plantation_name,lot_id,lot_code,lot_name,status,void_reason,voided_at,is_test,created_at' THEN
+        -- 112 appends two columns at the end (concept_count, ticket_detail); both lists are valid and the first 23 columns must always be these.
+        IF v_cols NOT IN ('id,id_company,folio,sale_date,buyer_name,quantity,unit_code,unit_price,total_amount,payment_method,ticket_ref,ticket_warning,plantation_id,plantation_code,plantation_name,lot_id,lot_code,lot_name,status,void_reason,voided_at,is_test,created_at',
+                          'id,id_company,folio,sale_date,buyer_name,quantity,unit_code,unit_price,total_amount,payment_method,ticket_ref,ticket_warning,plantation_id,plantation_code,plantation_name,lot_id,lot_code,lot_name,status,void_reason,voided_at,is_test,created_at,concept_count,ticket_detail') THEN
             RAISE EXCEPTION 'FAIL: unexpected columns in vw_agri_sale_ui_list: %', v_cols;
         END IF;
         IF v_expect = 'applied' THEN
