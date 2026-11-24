@@ -5,6 +5,7 @@ import { CHAT_CONFIG_TOKEN } from '../tokens/chat.token';
 import { ChatConfig } from '../interfaces/chat-config';
 import { TenantService } from 'core-auth'; // 🚀 IMPORTANTE: Importamos el servicio de sesión multi-tenant
 import { checkAttachment, readAsBase64, resolveAttachmentsConfig } from '../utils/attachment.util';
+import { chatErrorMessage } from '../utils/chat-error-message.util';
 
 export interface ChatMessage {
   text: string;
@@ -56,7 +57,7 @@ export class AiService {
       map(response => response?.output || '⚠️ Sin respuesta del servidor.'),
       catchError(err => {
         console.error('Error AI:', err);
-        return of('⚠️ Lo siento, tuve un problema de conexión con la base de datos.');
+        return of(chatErrorMessage(err));
       }),
       finalize(() => this.isLoading.set(false))
     ).subscribe((responseText) => {
@@ -109,10 +110,10 @@ export class AiService {
       }));
       this.updateChat(response?.output || '⚠️ Sin respuesta del servidor.', 'bot');
       return true;
-    } catch {
+    } catch (err) {
       // Deliberately no logging of the error: it must never carry request content.
       this.messages.update(msgs => msgs.filter(m => m !== userMessage));
-      this.updateChat('⚠️ Lo siento, no pude enviar el archivo. Tu mensaje y el archivo siguen listos para reintentar.', 'bot');
+      this.updateChat(chatErrorMessage(err), 'bot');
       return false;
     } finally {
       this.isLoading.set(false);
