@@ -5,6 +5,7 @@ services:
       dockerfile: Dockerfile.n8n
     container_name: n8n-enterprise-core
     restart: always
+    stop_grace_period: 50s
     ports:
       - "127.0.0.1:${port}:${port}"
     dns:
@@ -36,7 +37,9 @@ services:
       - OFFLOAD_MANUAL_EXECUTIONS_TO_WORKERS=false
       - N8N_RUNNERS_SERVER_ENABLED=false
       #- NODE_OPTIONS=--no-experimental-vm-modules
-      - NODE_OPTIONS=--no-experimental-vm-modules --max-old-space-size=896
+      - NODE_OPTIONS=--no-experimental-vm-modules --max-old-space-size=960
+      - N8N_CONCURRENCY_PRODUCTION_LIMIT=20
+      - N8N_GRACEFUL_SHUTDOWN_TIMEOUT=40
       - N8N_SKIP_TASK_RUNNER=true
       - NODE_ENV=production
       - WEBHOOK_URL=https://${SUBDOMAIN}.${DOMAIN_NAME}/
@@ -77,7 +80,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1280m
+          memory: 1536m
         reservations:
           memory: 512m
     logging:
