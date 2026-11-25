@@ -112,3 +112,8 @@ infrastructure/n8n_data/executions/
 .env
 .env.*
 !.env.example
+
+# Local backups of compose/env files must not be committed
+*.bak
+*.bak-*
+dockercompose.yml.*
