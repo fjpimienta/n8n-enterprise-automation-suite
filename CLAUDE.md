@@ -156,15 +156,19 @@ No repitas aquí la lista de los 16 módulos — vive y se mantiene actualizada 
 - **Despliegue del frontend: dos modelos.**
   1. **Sitios con Git del panel (`hotel-website`/sanjose, `agro-erp`/agroerp, `dashboard`/admin.sanjose):** el panel (Plesk Git)
      descarga `main` y una acción post-despliegue —que vive solo en la interfaz del panel, no en el repo— compila en el VPS
-     (`npm install` y build) y publica el resultado. Según el dueño (2026-11-27) el panel está en modo automático, así que cualquier
-     merge a `main` los dispara a todos. Resumen por sitio y deuda en la sección 7 de
-     [`docs/deploy/README.md`](hosting3m-workspace/projects/hosting3m-site/docs/deploy/README.md). Nota: esta sección decía antes que `main`
-     se despliega manualmente con **Deploy now**; confirma el modo real en el panel antes de apoyarte en cualquiera de las dos versiones.
+     (`npm install` y build) y publica el resultado. El panel está en **modo automático** (reportado por el dueño, 2026-11-27): cualquier
+     merge a `main` los despliega a todos. Resumen por sitio y deuda en la sección 7 de
+     [`docs/deploy/README.md`](hosting3m-workspace/projects/hosting3m-site/docs/deploy/README.md). Esta sección decía antes que se despliegan
+     manualmente con **Deploy now**; ya no es así.
   2. **`hosting3m-site`:** GitHub Actions construye y publica **solo el artefacto** en `deploy/beta` (desde `develop`) o `deploy/prod`
-     (desde `main`); el panel lo descarga en modo manual y una línea de la acción post-despliegue llama a un script del servidor,
+     (desde `main`); el panel lo descarga en modo manual, sin acciones post-despliegue, y el dueño ejecuta a mano un script del servidor,
      propiedad de root, que verifica SHA-256, respalda y copia sin `--delete`. Beta antes que producción. Procedimiento completo, rollback y
      qué no hacer: [`hosting3m-workspace/projects/hosting3m-site/docs/deploy/README.md`](hosting3m-workspace/projects/hosting3m-site/docs/deploy/README.md)
      (no se copia aquí).
+
+  **Releases del sitio mientras haya trabajo de agro-erp sin liberar en `develop`:** un release solo del sitio usa una rama cortada desde
+  `main` más cherry-picks (PR como #1168), no un merge de `develop`. El check "Agent workflow consistency" queda en rojo, como se espera,
+  hasta que se libere agro-erp; documéntalo en el PR.
 
   El backend (compose, n8n y base de datos) se despliega manualmente en el VPS con su runbook.
   `deploy.sh <service> [<service>...]` actualiza con `git pull --ff-only origin main`, crea una
@@ -189,7 +193,7 @@ No repitas aquí la lista de los 16 módulos — vive y se mantiene actualizada 
   comentario del PR lo repite en su primera línea):
 
   > ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (base de datos y n8n, verificadas con sus huellas).
-  > `main` se despliega manualmente por Plesk con git: si el frontend se despliega antes, la pantalla nueva falla en producción.
+  > `main` se despliega automáticamente desde el panel de hosting (modo automático): si el frontend se despliega antes, la pantalla nueva falla en producción.
 
   Motivo: el frontend llegó a `main` antes que la base **dos veces** (v1.18.0 el 2026-10-17 y v1.19.0 el
   2026-10-20). La parte del frontend es siempre la última del runbook y empieza con "solo si 1 y 2 están OK".
