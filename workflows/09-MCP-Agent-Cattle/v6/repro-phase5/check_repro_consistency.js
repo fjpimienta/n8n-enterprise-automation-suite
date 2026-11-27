@@ -558,14 +558,28 @@ for (const [ch, f] of Object.entries(AGENTS)) {
   const pt = prev.nodes.find((n) => n.name === 'AI Agent').parameters.text;
   ok(`${ch}: the "text" input expression of "AI Agent" is untouched`, pt === docs[f].nodes.find((n) => n.name === 'AI Agent').parameters.text);
   const agentNow = docs[f].nodes.find((n) => n.name === 'AI Agent'), agentPrev = prev.nodes.find((n) => n.name === 'AI Agent');
-  const strip = (n) => { const c = JSON.parse(JSON.stringify(n)); delete c.parameters.options.systemMessage; return JSON.stringify(c); };
+  // chat only: production's error handling (onError = continueErrorOutput on the agent) is part of the repository since the chat error-handling PR
+  const strip = (n) => { const c = JSON.parse(JSON.stringify(n)); delete c.parameters.options.systemMessage; if (ch === 'chat' && c.onError === 'continueErrorOutput') delete c.onError; return JSON.stringify(c); };
   ok(`${ch}: in the node "AI Agent" ONLY options.systemMessage changed (model, tools wiring, memory and every other parameter identical to ${REF})`, strip(agentNow) === strip(agentPrev));
   // PR 6 (chat only): "AI Agent Palma" (text input + prompt, checked above), "Ruta del comprobante" (new EXPENSE_PALM rule, checked in the router block) and "Texto fijo del comprobante" (dead palm-expense text removed) changed on purpose.
-  const PR6 = ch === 'chat' ? ['AI Agent Palma', 'Ruta del comprobante', 'Texto fijo del comprobante'] : [];
+  // chat error handling (production's manual change brought into the repo): maxRetries = 1 on the two chat models (checked below)
+  const PR6 = ch === 'chat' ? ['AI Agent Palma', 'Ruta del comprobante', 'Texto fijo del comprobante', 'OpenAI Chat Model', 'OpenAI Chat Model Palma'] : [];
   const others = prev.nodes.filter((n) => n.name !== 'AI Agent' && !PR6.includes(n.name));
   // The only allowed differences outside "AI Agent": the audio language of the WhatsApp "Transcribe" node (options.language = 'es') and the queryReplacement array of "Guardar Pregunta Pendiente".
   const sameNode = (n) => { const now = docs[f].nodes.find((x) => x.name === n.name); if (JSON.stringify(n) === JSON.stringify(now)) return true; /* migration 116 (WhatsApp only): 'Resolver Tenant' gets the shared-phone rule; it must stay the same kind of node in the same place and carry the rule */ if (ch === 'whatsapp' && n.name === 'Resolver Tenant') return !!now && now.type === n.type && JSON.stringify(now.position) === JSON.stringify(n.position) && String((now.parameters || {}).jsCode || '').includes('shared_phone'); if (n.name === 'Guardar Pregunta Pendiente' && now && now.parameters && now.parameters.options && String(now.parameters.options.queryReplacement).startsWith('={{ [')) { const c = JSON.parse(JSON.stringify(now)); c.parameters.options.queryReplacement = n.parameters.options.queryReplacement; return JSON.stringify(c) === JSON.stringify(n); } if (n.name !== 'Transcribe' || !now || !now.parameters || !now.parameters.options || now.parameters.options.language !== 'es') return false; const c = JSON.parse(JSON.stringify(now)); delete c.parameters.options.language; return JSON.stringify(c) === JSON.stringify(n); };
   ok(`${ch}: no other node of the workflow changed (${others.length} nodes)`, others.every(sameNode));
+}
+{
+  // chat error handling (brought from production): the three error nodes exist and are wired; both agents have an error output; the models retry once; the palm sale id stays the repo placeholder
+  {
+    const wf = docs[AGENTS.chat], by = (n) => wf.nodes.find((x) => x.name === n);
+    const tgt = (from, i) => (((wf.connections[from] || {}).main || [])[i] || []).map((x) => x.node);
+    ok('chat: both agents send their error output to "Classify Chat Error" (onError = continueErrorOutput), then "Respond Chat Error", then "Fail After Reply"',
+      ['AI Agent', 'AI Agent Palma'].every((a) => by(a).onError === 'continueErrorOutput' && JSON.stringify(tgt(a, 0)) === '["Respond to Webhook"]' && JSON.stringify(tgt(a, 1)) === '["Classify Chat Error"]')
+      && JSON.stringify(tgt('Classify Chat Error', 0)) === '["Respond Chat Error"]' && JSON.stringify(tgt('Respond Chat Error', 0)) === '["Fail After Reply"]' && by('Fail After Reply').type.endsWith('stopAndError'));
+    ok('chat: both OpenAI chat models have options.maxRetries = 1', ['OpenAI Chat Model', 'OpenAI Chat Model Palma'].every((m) => by(m).parameters.options && by(m).parameters.options.maxRetries === 1));
+    ok('chat: "Venta Palma XML" keeps the repo placeholder id (the production id is set by hand after importing, never committed)', by('Venta Palma XML').parameters.workflowId.value === 'PalmSaleXml0001a');
+  }
 }
 {
   // XML router of the web chat (deliberate expectation, added with the router): nine new nodes between "Empresa Valida" and "Dominio"; the WhatsApp workflow has none.

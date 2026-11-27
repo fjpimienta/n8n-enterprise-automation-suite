@@ -44,7 +44,29 @@ Step 3 of that procedure (compare production with `main`) is the stop gate. Fing
 |---|---|---|---|---|
 | `v6_MCP_Server_Cattle.json` | `387e7f85e9f087db` | `872d4f3c352044e4` | `get_livestock_info`, `list_pending_requests`, `review_pending_request`, `move_livestock`; `update_livestock_tag` removed | `update_livestock_tag` |
 | `v6_Notificacion_Autorizaciones.json` | `204266516f301f8d` | `4849b0d6b4092d3c` | `Buscar Pendientes Sin Notificar`, `Preparar Contenido de Correo` | none |
-| `v6_ai_chat_cattle.json` | `cdc83e7f1eb11264` | `2929c2ff87b6ffc5` | `AI Agent`; added: `assign_livestock_identifier`, `request_tag_change`, `cancel_tag_change` | the three new tools |
+| `v6_ai_chat_cattle.json` | `664bead7c53f1e05` (**production export of 2026-11-26**; `main` alone is `cdc83e7f1eb11264`, see the next section) | `3cbd57ecdd0d94e3` raw, `36f1d693709bb268` normalized | `AI Agent` (prompt); added: `assign_livestock_identifier`, `request_tag_change`, `cancel_tag_change`. Compared with the production export, nothing else changes once the palm sub-workflow id is normalized | the three new tools |
+
+### Chat workflow: production already differs from `main` (checked 2026-11-26)
+The production chat export (`664bead7c53f1e05`) differs from `main` (`cdc83e7f1eb11264`) by manual changes that this PR brings into the repository, so that the import does not remove them:
+- three nodes that exist only in production: `Classify Chat Error`, `Fail After Reply`, `Respond Chat Error`, and the second output (error output) of `AI Agent` and `AI Agent Palma` that feeds them (`onError: continueErrorOutput` on both agents);
+- `maxRetries: 1` in the options of `OpenAI Chat Model` and `OpenAI Chat Model Palma`;
+- the workflow setting `saveDataSuccessExecution: "all"` (saved successful executions are the only record of what the agent wrote; do not drop it on import);
+- the id of the palm sale sub-workflow in `Venta Palma XML` (see below).
+A different canvas layout and the order of the tags also differ; neither is part of the fingerprint.
+
+**The palm sub-workflow id is not copied into the repository.** The file keeps the placeholder `PalmSaleXml0001a` (the id of `v6_palm_sale_from_xml.json` in the repo); production has its own id. So a raw comparison of the production export against the candidate always reports `Venta Palma XML` as different; that is the ONLY accepted difference. To compare the rest, normalize both exports first (the three values below) and compare the normalized fingerprints; the production export must give `e9139639cb41544a` and the candidate `36f1d693709bb268`:
+```sh
+python3 -I - /path/to/export.json <<'EOF'
+import json, hashlib, sys
+d = json.load(open(sys.argv[1], encoding='utf-8'))
+nodes = {n['name']: json.loads(json.dumps(n.get('parameters', {}))) for n in d['nodes']}
+w = nodes['Venta Palma XML']['workflowId']
+w['value'] = 'PalmSaleXml0001a'; w.pop('cachedResultUrl', None); w.pop('cachedResultName', None)
+print(hashlib.sha256(json.dumps({'nodes': nodes, 'connections': d.get('connections', {})}, sort_keys=True, ensure_ascii=False, separators=(',', ':')).encode()).hexdigest()[:16])
+EOF
+```
+
+**After importing the chat workflow (a required post-import step):** open the node `Venta Palma XML` and set its sub-workflow to the production palm sale workflow (select `v6/palm sale from xml` from the list), Save and Publish, then confirm with a re-export that its `workflowId.value` is the production id and nothing else changed (compare the normalized fingerprint above). Until this is done, a palm XML sale in the chat fails. Also confirm that the workflow settings still show `saveDataSuccessExecution = all` and that both agents show an error output.
 
 Fingerprint = first 16 hex of SHA-256 over `{node name: parameters}` + `connections` (sorted keys, compact separators, UTF-8). Reproduce with:
 ```sh
