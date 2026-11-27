@@ -4,8 +4,8 @@
 **Nombre:** Hosting3M Automation Suite — n8n Enterprise Automation Suite
 **Arquitecto:** Francisco Jesus Pérez Pimienta (Senior Systems Architect | PMP)
 **Naturaleza:** Suite de módulos self-hosted — workflows n8n (auth gateway, CRM, RAG news,
-WhatsApp, MCP servers) + workspace Angular 21 con cuatro aplicaciones registradas (tres
-activas y `pista-hielo`, legacy/fuera de producción) y tres librerías compartidas.
+WhatsApp, MCP servers) + workspace Angular 21 con cinco aplicaciones registradas (cuatro
+activas, incluido el sitio público `hosting3m-site`, y `pista-hielo`, legacy/fuera de producción) y tres librerías compartidas.
 
 **Este archivo es la raíz.** Cada proyecto del monorepo tiene su propio `CLAUDE.md` con
 detalle específico de su dominio — Claude Code los carga automáticamente por herencia
@@ -67,12 +67,14 @@ técnica y entrega de valor incremental. Estilo: profesional, pragmático, direc
 
 ## 🗺️ Mapa de Módulos
 
-No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada en
+No repitas aquí la lista de los 16 módulos — vive y se mantiene actualizada en
 `README.md`. Para detalle técnico de cada uno, entra a su directorio; Claude Code carga el
 `CLAUDE.md` de ese proyecto automáticamente:
 
 - `projects/dashboard/` — AdminHotel Intranet (Tabler UI, MetaCRUD Silent Error Shield)
 - `projects/hotel-website/` — SPA pública (Tailwind eco/tierra, LCP <1.2s)
+- `projects/hosting3m-site/` — sitio público de marketing de Hosting3M (Angular 21 estático; despliegue
+  por rama de artefacto construida en CI, ver Despliegue)
 - `projects/pista-hielo/` — ⚠️ **legacy, fuera de uso** (el proyecto no se llevó a cabo; nada en
   producción depende de él, confirmado por el dueño 2026-10-17). Sus modelos `ph_*` siguen
   registrados y sus datos siguen en la base — ver deuda abajo.
@@ -151,9 +153,20 @@ No repitas aquí la lista de los 15 módulos — vive y se mantiene actualizada 
 
 ## 🚀 Despliegue (aplica a toda la suite)
 
-- **Despliegue de producción:** `main` se despliega manualmente: el dueño entra a Plesk, abre la sección Git del dominio
-  y usa **Deploy now**; después fuerza la recarga del navegador para ver la release. El backend (compose, n8n y base de datos) se despliega
-  manualmente en el VPS con su runbook.
+- **Despliegue del frontend: dos modelos.**
+  1. **Sitios con Git del panel (`hotel-website`/sanjose, `agro-erp`/agroerp, `dashboard`/admin.sanjose):** el panel (Plesk Git)
+     descarga `main` y una acción post-despliegue —que vive solo en la interfaz del panel, no en el repo— compila en el VPS
+     (`npm install` y build) y publica el resultado. Según el dueño (2026-11-27) el panel está en modo automático, así que cualquier
+     merge a `main` los dispara a todos. Resumen por sitio y deuda en la sección 7 de
+     [`docs/deploy/README.md`](hosting3m-workspace/projects/hosting3m-site/docs/deploy/README.md). Nota: esta sección decía antes que `main`
+     se despliega manualmente con **Deploy now**; confirma el modo real en el panel antes de apoyarte en cualquiera de las dos versiones.
+  2. **`hosting3m-site`:** GitHub Actions construye y publica **solo el artefacto** en `deploy/beta` (desde `develop`) o `deploy/prod`
+     (desde `main`); el panel lo descarga en modo manual y una línea de la acción post-despliegue llama a un script del servidor,
+     propiedad de root, que verifica SHA-256, respalda y copia sin `--delete`. Beta antes que producción. Procedimiento completo, rollback y
+     qué no hacer: [`hosting3m-workspace/projects/hosting3m-site/docs/deploy/README.md`](hosting3m-workspace/projects/hosting3m-site/docs/deploy/README.md)
+     (no se copia aquí).
+
+  El backend (compose, n8n y base de datos) se despliega manualmente en el VPS con su runbook.
   `deploy.sh <service> [<service>...]` actualiza con `git pull --ff-only origin main`, crea una
   etiqueta de rollback antes de compilar y recrea solo los servicios solicitados; `upload-file`
   usa su propio compose. No ejecutarlo sin comparar antes el compose del VPS con el del repositorio.
