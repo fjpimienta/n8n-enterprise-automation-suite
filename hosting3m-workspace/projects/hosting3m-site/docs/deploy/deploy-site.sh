@@ -18,8 +18,10 @@ set -euo pipefail
 # Keep the placeholders until the server paths are confirmed: the script refuses to run with them.
 SRC_BETA="/CHANGE/ME/beta-artifact"
 SRC_PROD="/CHANGE/ME/prod-artifact"
-# Backups of the docroot. Must be outside both docroots; created with mode 700. Old backups are never removed here.
-BACKUP_ROOT="${HOME:-/nonexistent}/deploy-backups/hosting3m-site"
+# Backups of the docroot. Set an ABSOLUTE path at install (it does not depend on HOME); it must be outside both docroots
+# and is created with mode 700. --apply refuses while it still holds the placeholder or is not absolute.
+# Old backups are never removed here.
+BACKUP_ROOT="/CHANGE/ME/backups"
 # ------------------------------------------------------------------------------------------------------
 
 # Allowlisted docroots. Any other destination is refused.
@@ -74,6 +76,15 @@ esac
 [[ -d "$src" ]] || die "artifact directory does not exist: $src"
 [[ ! -L "${src%/}" ]] || die "artifact directory is a symbolic link: $src"
 src="$(realpath -e "$src")"
+# The artifact directory must be a separate staging area: never inside a docroot, never equal to one, never a parent of one.
+case "$src/" in
+  "$DOCROOT_BETA"* | "$DOCROOT_PROD"*) die "artifact directory is inside or equal to a docroot: $src" ;;
+esac
+for protected in "$DOCROOT_BETA" "$DOCROOT_PROD"; do
+  case "$protected" in
+    "$src/"*) die "artifact directory contains a docroot: $src" ;;
+  esac
+done
 for required in SHA256SUMS BUILD_INFO index.html; do
   [[ -f "$src/$required" ]] || die "missing $required in the pulled artifact: $src"
 done
@@ -118,6 +129,8 @@ if ((apply == 0)); then
 fi
 
 # ---- Apply ------------------------------------------------------------------------------------------
+[[ "$BACKUP_ROOT" != /CHANGE/ME/* ]] || die "BACKUP_ROOT still holds the install placeholder: set an absolute path first"
+[[ "$BACKUP_ROOT" == /* ]] || die "BACKUP_ROOT must be an absolute path: $BACKUP_ROOT"
 case "$(realpath -m "$BACKUP_ROOT")/" in
   "$DOCROOT_BETA"* | "$DOCROOT_PROD"*) die "BACKUP_ROOT must be outside both docroots: $BACKUP_ROOT" ;;
 esac

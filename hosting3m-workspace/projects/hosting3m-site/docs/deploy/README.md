@@ -42,7 +42,7 @@ flowchart LR
 - **Plans catalog in CI:** CI does **not** fetch the live catalog (`PLANS_SKIP_FETCH=1`); it builds from the committed `plans-snapshot.json` and fails if the build would change it.
   Refreshing the snapshot stays a reviewed commit (cutover runbook section 6). Reason: the artifact is reproducible from a commit, a catalog outage cannot change a release,
   and prices are never published unreviewed. The consequence is that the snapshot must be refreshed and merged **before** the release that should carry new prices.
-- **The panel** (Plesk Git, remote repository, **manual** mode) pulls the artifact branch into a staging directory outside the docroot. Its post-deploy action is one
+- **The panel** (Plesk Git, remote repository, **manual** mode) pulls the artifact branch into a staging directory outside both docroots. Its post-deploy action is one
   line that calls a root-owned script installed on the server; it never runs code from the repo. The script runs as the subscription user.
 - **The script** (`deploy-site.sh beta|prod [--apply]`) verifies the pulled artifact against `SHA256SUMS` before touching anything, refuses any docroot other than the two
   allowlisted ones, is a dry run unless `--apply` is given, takes a tar backup first, copies with `rsync -a` **without `--delete`** (excluding `/webcard` and `/g`, and
@@ -55,27 +55,32 @@ flowchart LR
 Hard rules: do the beta site first; copy before changing; never `--delete`; never touch `/webcard` or `/g`.
 
 ### 2.1 Install the script root-owned **[servidor]**
-1. Copy `docs/deploy/deploy-site.sh` from the commit you trust to a temporary file and edit only the two `SRC_*` variables and, if needed, `BACKUP_ROOT` at the top:
+1. Copy `docs/deploy/deploy-site.sh` from the commit you trust to a temporary file and edit only the two `SRC_*` variables and `BACKUP_ROOT` at the top:
    `SRC_BETA` = the panel checkout directory for `deploy/beta` (section 2.2), `SRC_PROD` = the one for `deploy/prod`. Leave the two `readonly DOCROOT_*` lines as they are
    (`/var/www/vhosts/hosting3m.com/beta.hosting3m.com/` and `/var/www/vhosts/hosting3m.com/httpdocs/`; confirm both in Plesk > Hosting Settings > Document root).
    `BACKUP_ROOT` defaults to a directory in the subscription user's home, outside both docroots.
-2. Install it owned by root, not writable by the subscription user, outside any docroot and outside the user's home:
+2. Set `BACKUP_ROOT` to an **absolute path** (a folder the subscription user can write, outside both docroots, for example `/var/www/vhosts/hosting3m.com/deploy-backups/hosting3m-site`);
+   it deliberately does not default to `$HOME`. `--apply` refuses while it still holds the `/CHANGE/ME/` placeholder or is not absolute; a dry run does not need it.
+3. Install it owned by root, not writable by the subscription user, outside any docroot and outside the user's home:
    ```sh
    sudo install -o root -g root -m 0755 ./deploy-site.edited.sh <SERVER_BIN>/hosting3m-deploy-site
    ls -l <SERVER_BIN>/hosting3m-deploy-site        # owner root, mode -rwxr-xr-x
    sha256sum <SERVER_BIN>/hosting3m-deploy-site    # write the hash down next to the repo commit it came from
    ```
-3. Check that the subscription user cannot change it (expect "Permission denied"): `sudo -u <SUBSCRIPTION_USER> sh -c 'echo x >> <SERVER_BIN>/hosting3m-deploy-site'`.
-4. Tools the script needs: `bash`, `rsync`, `tar`, `sha256sum`, `flock`, `realpath` (GNU coreutils and util-linux).
-5. Updating the script later is the same procedure (a reviewed commit, edit the two variables, install, record the hash). The repo copy is a template, never the live file.
+4. Check that the subscription user cannot change it (expect "Permission denied"): `sudo -u <SUBSCRIPTION_USER> sh -c 'echo x >> <SERVER_BIN>/hosting3m-deploy-site'`.
+5. Tools the script needs: `bash`, `rsync`, `tar`, `sha256sum`, `flock`, `realpath` (GNU coreutils and util-linux).
+6. Updating the script later is the same procedure (a reviewed commit, edit the three variables, install, record the hash). The repo copy is a template, never the live file.
 
 ### 2.2 Configure the panel's Git repository, one per site **[laptop]** (Plesk)
 Plesk > Websites & Domains > the domain (production) or the beta subdomain > **Git** > add a **remote repository**:
 - Repository URL: the public HTTPS URL of this repository (no key is needed; do not store credentials).
 - Branch: `deploy/prod` for `hosting3m.com`, `deploy/beta` for `beta.hosting3m.com`.
 - **Deployment mode: Manual** (do not use automatic).
-- **Deployment path: a staging directory outside the docroot** (this is the `<ARTIFACT_DIR_*>` that goes into `SRC_BETA` / `SRC_PROD`), **never the docroot itself**: if the panel
-  deployed straight into the docroot it would bypass every check in the script.
+- **Deployment path: a staging directory outside BOTH docroots** (this is the `<ARTIFACT_DIR_*>` that goes into `SRC_BETA` / `SRC_PROD`). The beta docroot is the **whole** beta folder
+  (`/var/www/vhosts/hosting3m.com/beta.hosting3m.com/`), so a staging folder inside it, or under `httpdocs`, would be published or would be read as part of the site. Use a folder
+  under the subscription's git-work area (for example `/var/www/vhosts/hosting3m.com/git-work/hosting3m-site-beta` and `.../hosting3m-site-prod`; confirm the real location in the panel),
+  never under `httpdocs` or the beta folder. If the panel deployed straight into a docroot it would bypass every check in the script, and the script refuses a staging directory that is
+  inside, equal to, or a parent of either docroot.
 - **Additional deploy actions** (post-deploy): exactly one line (the only content of the action):
   - beta: `<SERVER_BIN>/hosting3m-deploy-site beta --apply`
   - production: `<SERVER_BIN>/hosting3m-deploy-site prod`   (dry run only; the real copy is done in section 3 step 5 over SSH with `--apply`)
@@ -142,7 +147,9 @@ Every rollback restores from a backup; none deletes anything.
    tar -tzf <BACKUP_ROOT>/prod-<STAMP>.tar.gz | head                                  # read it first
    tar -C /var/www/vhosts/hosting3m.com/httpdocs -xzf <BACKUP_ROOT>/prod-<STAMP>.tar.gz
    ```
-   (beta: `beta-<STAMP>.tar.gz` and the beta docroot). Extracting writes the old versions over the new ones; files that did not exist before the release (new hashed chunks) stay in place and are
+   (beta: `beta-<STAMP>.tar.gz` and the beta docroot). **Then check `BUILD_INFO` and `SHA256SUMS` in the docroot:** if the backup came from before this flow existed (the first
+   release) it holds neither, so the extract leaves the files of the rolled-back release in place and `/BUILD_INFO` would keep reporting the wrong commit. In that case delete just
+   those two files by hand (`rm <DOCROOT>/BUILD_INFO <DOCROOT>/SHA256SUMS`, nothing else); if the backup does contain them, the extract has already restored them. Extracting writes the old versions over the new ones; files that did not exist before the release (new hashed chunks) stay in place and are
    harmless because the restored `index.html` does not reference them. Removing them is a separate, deliberate step with its own backup.
 2. Purge the CDN for the unhashed URLs of section 4 and repeat the first smoke checks.
 3. If the problem is in the release itself, fix forward in `develop`, or revert the PR and let CI publish the previous content to the artifact branch (a new orphan commit; the artifact branch has no history to go back to).

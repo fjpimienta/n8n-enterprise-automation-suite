@@ -240,6 +240,62 @@ run "$script" beta --apply
 assert_exit "backup directory inside the docroot" 1 "$status"
 assert_same_content "backup-in-docroot leaves index.html alone" "${docroot}index.html" "<html>old</html>"
 
+# ---- Artifact directory must be a separate staging area ---------------------------------------------
+make_env src-under-beta-docroot
+mkdir -p "${docroot}staging"
+cp -R "$env_root/src-beta/." "${docroot}staging/"
+sed -i -e "s#^SRC_BETA=.*#SRC_BETA=\"${docroot}staging\"#" "$script"
+run "$script" beta --apply
+assert_exit "artifact directory under the beta docroot" 1 "$status"
+assert_contains "src under beta docroot is reported" "$err" "inside or equal to a docroot"
+assert_no_file "src under beta docroot makes no backup" "$backups"
+assert_same_content "src under beta docroot leaves index.html alone" "${docroot}index.html" "<html>old</html>"
+
+make_env src-under-prod-docroot
+mkdir -p "$env_root/httpdocs/staging"
+cp -R "$env_root/src-beta/." "$env_root/httpdocs/staging/"
+sed -i -e "s#^SRC_BETA=.*#SRC_BETA=\"$env_root/httpdocs/staging\"#" "$script"
+run "$script" beta
+assert_exit "artifact directory under the prod docroot" 1 "$status"
+assert_contains "src under prod docroot is reported" "$err" "inside or equal to a docroot"
+
+make_env src-equals-docroot
+sed -i -e "s#^SRC_BETA=.*#SRC_BETA=\"${docroot%/}\"#" "$script"
+run "$script" beta
+assert_exit "artifact directory equal to a docroot" 1 "$status"
+assert_contains "src equal to docroot is reported" "$err" "inside or equal to a docroot"
+
+make_env src-equals-prod-docroot
+sed -i -e "s#^SRC_PROD=.*#SRC_PROD=\"$env_root/httpdocs\"#" "$script"
+run "$script" prod
+assert_exit "artifact directory equal to the prod docroot" 1 "$status"
+assert_contains "src equal to prod docroot is reported" "$err" "inside or equal to a docroot"
+
+make_env src-contains-docroot
+sed -i -e "s#^SRC_BETA=.*#SRC_BETA=\"$env_root\"#" "$script"
+run "$script" beta
+assert_exit "artifact directory that contains a docroot" 1 "$status"
+assert_contains "src containing a docroot is reported" "$err" "contains a docroot"
+
+# ---- BACKUP_ROOT is set at install, absolute ---------------------------------------------------------
+assert_contains "template ships the BACKUP_ROOT placeholder" "$original_script" 'BACKUP_ROOT="/CHANGE/ME/backups"'
+make_env backup-placeholder
+sed -i -e "s#^BACKUP_ROOT=.*#BACKUP_ROOT=\"/CHANGE/ME/backups\"#" "$script"
+run "$script" beta --apply
+assert_exit "BACKUP_ROOT placeholder" 1 "$status"
+assert_contains "BACKUP_ROOT placeholder is reported" "$err" "install placeholder"
+assert_same_content "BACKUP_ROOT placeholder leaves index.html alone" "${docroot}index.html" "<html>old</html>"
+run "$script" beta
+assert_exit "dry run does not need BACKUP_ROOT" 0 "$status"
+
+make_env backup-relative
+sed -i -e "s#^BACKUP_ROOT=.*#BACKUP_ROOT=\"relative/backups\"#" "$script"
+HOME="$env_root/home" run "$script" beta --apply
+assert_exit "relative BACKUP_ROOT" 1 "$status"
+assert_contains "relative BACKUP_ROOT is reported" "$err" "absolute path"
+assert_no_file "relative BACKUP_ROOT writes nothing under HOME" "$env_root/home/relative"
+assert_same_content "relative BACKUP_ROOT leaves index.html alone" "${docroot}index.html" "<html>old</html>"
+
 make_env wrong-docroot
 sed -i -e "s#^readonly DOCROOT_BETA=.*#readonly DOCROOT_BETA=\"$env_root/nope/\"#" "$script"
 run "$script" beta
