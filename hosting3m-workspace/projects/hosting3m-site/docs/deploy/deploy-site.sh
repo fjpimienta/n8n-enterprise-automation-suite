@@ -13,6 +13,10 @@
 # Runs as the subscription user (the one that owns the docroot), not as root.
 set -euo pipefail
 
+# All paths below are absolute. Leave the caller's working directory (a panel action may start the script from a
+# directory this user cannot read, which makes find fail with "Failed to restore initial working directory").
+cd /
+
 # ---- Per-server settings: edit when installing ------------------------------------------------------
 # Directory where the panel keeps the pulled artifact branch (a git working tree of deploy/beta or deploy/prod).
 # Keep the placeholders until the server paths are confirmed: the script refuses to run with them.
@@ -72,6 +76,7 @@ esac
 [[ "$(realpath -e "$docroot")/" == "$docroot" ]] || die "docroot does not resolve to itself: $docroot"
 
 # ---- Source checks ----------------------------------------------------------------------------------
+[[ "$src" == /* ]] || die "artifact directory must be an absolute path: $src"
 [[ "$src" != /CHANGE/ME/* ]] || die "SRC_BETA/SRC_PROD still hold the install placeholders: edit them first"
 [[ -d "$src" ]] || die "artifact directory does not exist: $src"
 [[ ! -L "${src%/}" ]] || die "artifact directory is a symbolic link: $src"
