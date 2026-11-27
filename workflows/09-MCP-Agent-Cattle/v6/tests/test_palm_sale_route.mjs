@@ -113,7 +113,7 @@ const IF = 'Palma: XML adjunto'; const EXEC = 'Venta Palma XML'; const FB = 'Pal
   ok(JSON.stringify(targets(chat, 'Dominio')) === JSON.stringify([[IF], ['Trae Factura']]), 'Dominio: PALM -> XML check, OTHER -> Trae Factura (unchanged)');
   ok(JSON.stringify(targets(chat, IF)) === JSON.stringify([[EXEC], ['Catálogo Palma']]), 'XML attached -> sale route; anything else -> Catálogo Palma (today)');
   ok(JSON.stringify(targets(chat, EXEC)) === JSON.stringify([[FB]]) && JSON.stringify(targets(chat, FB)) === JSON.stringify([['Respond to Webhook']]), 'sale route ends in the existing Respond to Webhook');
-  ok(JSON.stringify(targets(chat, 'Catálogo Palma')) === '[["AI Agent Palma"]]' && JSON.stringify(targets(chat, 'AI Agent Palma')) === '[["Respond to Webhook"]]', 'the palm agent path is untouched');
+  ok(JSON.stringify(targets(chat, 'Catálogo Palma')) === '[["AI Agent Palma"]]' && JSON.stringify(targets(chat, 'AI Agent Palma')) === '[["Respond to Webhook"],["Classify Chat Error"]]' && node(chat, 'AI Agent Palma').onError === 'continueErrorOutput', 'the palm agent path is untouched, except production\'s error handling: its error output goes to "Classify Chat Error" and nothing else');
   const ex = node(chat, EXEC);
   ok(ex.onError === 'continueRegularOutput', 'Execute Workflow continues on error (the webhook always answers)');
   ok(ex.parameters.workflowId.cachedResultName === sub.name, 'Execute Workflow points to the sub-workflow by name');
