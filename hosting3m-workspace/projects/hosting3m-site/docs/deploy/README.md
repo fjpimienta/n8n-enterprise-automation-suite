@@ -193,3 +193,23 @@ Backlog (documented, **not changed here**):
 - Any merge to `main` triggers all three actions, even when the change touches only one of the projects.
 - `admin.pistahielo` still auto-deploys although `pista-hielo` is legacy and out of production (root `CLAUDE.md`): decide whether to disconnect it.
 - The actions are not versioned: record them in a runbook (with placeholders instead of environment values) or move them to server-side scripts like this one.
+
+---
+
+## 8. Production setup as deployed
+
+Everything in this section about the server and the hosting panel is **reported by owner, not verifiable in repo**.
+
+- **Two hosting-panel git repositories for this site**, both in manual mode and with no post-deploy actions: one tracks `deploy/beta` (beta host), the other tracks `deploy/prod` (production host).
+  Each deploys into a staging directory outside any docroot. The server script then copies from the staging directory to the docroot: dry run by default, `--apply` to execute, a verified
+  backup first, checksum verification after, and the rollback command printed at the end. Because the panel actions are empty, the owner runs the script by hand after each pull.
+- **The other suite sites work differently:** they track `main` in automatic mode and build on the server, so merging to `main` triggers their deploys. This site does not: a merge to `main`
+  only makes CI publish `deploy/prod`; nothing reaches the production docroot until the owner pulls it and runs the script (section 7 lists those sites).
+- **Panel CLI notes:**
+  - The `create` command ignores the active-branch option. Set the branch with `update`, then fetch and deploy.
+  - The UI "Deploy now" button can hang; the CLI deploy is reliable.
+  - Never paste or commit the panel's webhook URL: it triggers a deploy and must be treated as a credential.
+- **First deploy:** the panel pulled the force-updated orphan branches without problems in all three deployments (two on beta, one on production).
+- **Rollback:** proven on beta; **not exercised on production**.
+- **CDN:** the CDN rewrites HTML in transit (email obfuscation), so the hash of a page fetched from the public host differs from the hash of the file in the docroot. Compare hashes
+  against the origin (the manifest or the file in the docroot), not against the public response. Disabling that CDN option is optional.
