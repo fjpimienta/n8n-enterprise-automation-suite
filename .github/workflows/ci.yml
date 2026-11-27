@@ -39,8 +39,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - run: shellcheck deploy.sh tests/deploy/test_deploy.sh
+      - run: >-
+          shellcheck deploy.sh tests/deploy/test_deploy.sh
+          hosting3m-workspace/projects/hosting3m-site/docs/deploy/deploy-site.sh
+          hosting3m-workspace/projects/hosting3m-site/scripts/package-artifact.sh
+          tests/deploy/test_deploy_site.sh
       - run: bash tests/deploy/test_deploy.sh
+      - run: bash tests/deploy/test_deploy_site.sh
 
   v5-crud-tests:
     name: v5 CRUD tests
