@@ -56,8 +56,12 @@ No los uses como única fuente de verdad.
 
 ### Despliegue de producción
 
-- Tras mergear a `main`, el despliegue de los frontends en Plesk se inicia manualmente con
-  "Deploy now". El backend (compose, n8n y base de datos) se despliega manualmente en el VPS
+- El panel de hosting de los sitios de la suite (`hotel-website`, `agro-erp`, `dashboard`) está en **modo automático**: tras mergear
+  a `main` se despliegan solos (la acción post-despliegue compila en el servidor). `hosting3m-site` no funciona así: su `main` solo
+  publica la rama `deploy/prod` por CI y el dueño la despliega a mano (ver
+  `hosting3m-workspace/projects/hosting3m-site/docs/deploy/README.md`). Mientras haya trabajo de agro-erp sin liberar en `develop`, un release
+  solo del sitio usa una rama cortada desde `main` más cherry-picks (PR como #1168), y el check "Agent workflow consistency" queda en rojo
+  como se espera hasta que se libere agro-erp; documéntalo en el PR. El backend (compose, n8n y base de datos) se despliega manualmente en el VPS
   con su runbook.
 - `deploy.sh` despliega solo los servicios indicados: ejecuta `./deploy.sh [--yes] <service>...`.
   Confirma antes del despliegue, etiqueta las imágenes actuales para rollback e imprime los
@@ -69,7 +73,7 @@ No los uses como única fuente de verdad.
 - Todo runbook que toque base de datos o n8n debe comenzar con este aviso:
 
   > ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (base de datos y n8n,
-  verificadas con sus huellas). `main` se despliega manualmente por Plesk con git:
+  verificadas con sus huellas). `main` se despliega automáticamente desde el panel de hosting (modo automático):
   si el frontend se despliega antes, la pantalla nueva puede fallar en producción.
 
 - Para cada operación destructiva o irreversible contra datos/servicios, exige backup o

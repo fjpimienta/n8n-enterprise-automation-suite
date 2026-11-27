@@ -20,7 +20,7 @@ Work ran from 2026-11-20 (first commit `8d2cba6`) to 2026-11-23 (last site commi
 
 | PR | Date | Purpose | Main paths |
 |---|---|---|---|
-| #1131 | 11-20 | App skeleton, design tokens, routes, plans fallback, sections, contact form, news, SEO, TODO build guard, hydration, CSP-safe output; beta runbook and header docs | `src/app/**`, `scripts/check-todo.mjs`, `docs/phase-3/beta-runbook.md`, `docs/nginx-security-headers.conf`, `docs/nginx-beta-only.conf` |
+| #1131 | 11-20 | App skeleton, design variables, routes, plans fallback, sections, contact form, news, SEO, TODO build guard, hydration, CSP-safe output; beta runbook and header docs | `src/app/**`, `scripts/check-todo.mjs`, `docs/phase-3/beta-runbook.md`, `docs/nginx-security-headers.conf`, `docs/nginx-beta-only.conf` |
 | #1132 | 11-20 | Catalog loaded from `POST /webhook/v6/plans` (build-time snapshot plus one refresh after hydration); form/price UI fixes | `scripts/fetch-plans.mjs`, `src/app/core/plans.ts`, `src/app/data/plans-snapshot.json` |
 | #1133 | 11-21 | Export of the `v6/plans` workflow | `workflows/02-leads-contact/v6/plans.json` |
 | #1134 | 11-21 | Legal entity, address and opening hours | `src/app/core/business.ts` (later the single source for contacts) |
@@ -139,3 +139,54 @@ Read them from the live system before changing anything:
 - Project `CLAUDE.md`: says "three public endpoints"; `runtime-config.ts` and the headers file comments say "two". Its Commands section does not mention the legacy-flag change of #1158.
 - Cutover runbook: gate checkboxes and the Meta/console checklist items are unchecked; section 5 says the legal text is "not yet lawyer-approved"; build step still uses `npm ci --legacy-peer-deps` (changed by #1158); section 12 says the analytics cookie residue fix is "not done yet" (done in #1157); section references skip 3.5.
 - `docs/nginx-security-headers.conf`: the file still labels the policy Report-Only (enforcing line commented out), while production serves the enforcing policy (verified 2026-11-27 by the owner).
+
+## 9. Update 2026-11-27: git-based deploy, first releases and follow-ups
+
+Added at the end of the same day. It supersedes the statements in 2.5 that call the artifact-branch flow "designed but not applied / proposed" and that say production still ran the `7f9b0ca` build.
+Same status vocabulary as above. Facts about the server and the hosting panel are **reported by owner, not verifiable in repo**; repo facts were checked against `git log` and `origin/develop`.
+`git fetch` and `git push` were not used in the session that wrote the draft.
+
+### 9.1 What is in the repo (all merged)
+
+| Item | Status | Evidence |
+|---|---|---|
+| CI workflow that builds the site and publishes only the built output (plus a checksum list and a build-info file) as an orphan commit to `deploy/beta` (from `develop`) and `deploy/prod` (from `main`); push-only trigger, read-only build job, write permission only on the publish job, third-party actions pinned to commit SHAs | **merged to develop** (#1166) | `.github/workflows/hosting3m-site-artifact.yml` |
+| `scripts/package-artifact.sh` (artifact layout, build info, checksum list) | **merged to develop** (#1166) | file in repo |
+| Catalog policy in CI: no live fetch, build from the committed snapshot, fail if the build rewrites it | **merged to develop** (#1166) | workflow step |
+| `docs/deploy/deploy-site.sh`, server-side script template (verifies the pulled artifact before touching anything, dry run by default, tar backup, copy without `--delete` excluding `/webcard` and `/g`, post-copy check, prints the rollback command, never removes backups), with checks that refuse an artifact directory inside, equal to or above a docroot and require an absolute backup directory | **merged to develop** (#1166) | `tests/deploy/test_deploy_site.sh` |
+| Stubbed script tests and ShellCheck in the CI "Shell checks" job | **merged to develop** (#1166) | `.github/workflows/ci.yml` |
+| Deploy runbook `docs/deploy/README.md`; cutover runbook updated (pointer to the new flow, rsync steps kept as fallback, stale items fixed, status block, gate boxes left unticked) | **merged to develop** (#1166) | files in repo |
+| Project `CLAUDE.md` and `README.md` (endpoint count fixed to three, deploy flow, content rules, legal guards, snapshot rules); root `README.md` (8 Angular projects: 5 applications, 3 libraries), `CHANGELOG.md` entry and `CLAUDE.md` deploy section | **merged to develop** (#1166) | files in repo |
+| Plans snapshot refreshed with the project's own script from the public catalog: 17 plans, none added or removed; two plans gained summaries and the email plan gained its feature list; no price, date or order changed | **merged to develop** (#1167) | `plans-snapshot.json` |
+| Site-only release to `main` (merge commit `0c10958`), cut from `main` with cherry-picks because unreviewed agro-erp work was sitting in `develop` | **merged to main** (#1168) | PR and merge commit as reported by the owner; not re-checked in this session |
+| A security review/fix was carried out and is tracked privately | n/a | no details here |
+
+Local checks run before the merges (site unit tests, guard tests, production build with the plans fetch skipped, script test, ShellCheck, actionlint) passed. Their CI results after merge are **not verified** here.
+
+### 9.2 Operation (server, hosting panel, CI runs)
+
+All of this is **reported by owner, not verifiable in repo**:
+
+- The artifact workflow ran from `develop` and from `main`. `deploy/beta` and `deploy/prod` exist as single-commit orphan branches updated by force from CI.
+- Beta was deployed twice with the new flow. Production was deployed on 2026-11-27 from the artifact built from `main` commit `0c10958` (production configuration). Before copying, the script made a verified backup; after copying, it verified the checksums.
+- The owner checked the live site: the structured data added in #1157 is live. This supersedes the earlier inference that production still ran the `7f9b0ca` build.
+- The rollback command was proven on beta; it was **not exercised on production**.
+- Hosting panel: two git repositories for this site, both in manual mode and without post-deploy actions, one tracking `deploy/beta` on the beta host and one tracking `deploy/prod` on the production host. An earlier unused mirror repository was removed. The panel pulled the force-updated orphan branches in all three deployments (two on beta, one on production).
+- The other suite sites track `main` in automatic mode and build on the server, so a merge to `main` triggers their deploys. The deploy actions live only in the panel UI; the runbook summarizes steps only. Which project maps to two of those three sites is **inferred** from their names.
+- The file with the build metadata is reachable through the CDN and shows `config=production` on the production host.
+- The CDN rewrites HTML in transit (email obfuscation); this is the only difference between the origin and the public responses. Disabling it is optional (proposed).
+- Release mechanics: while unreleased agro-erp work sits in `develop`, site releases use a branch cut from `main` plus cherry-picks (#1168). The "Agent workflow consistency" check was red on that PR as expected, and this was documented in the PR; it is not a regression of the site work.
+
+### 9.3 Still open (follow-up PRs, status in brackets)
+
+- Post-release watch window of cutover runbook section 9 (**pending**).
+- Marketing review of the 50 review markers (**pending**, see section 3).
+- An unrelated endpoint question raised during the release (**pending**; not part of this work, details not recorded here).
+- Optional: disable the CDN email obfuscation, or account for it when comparing hashes of pages fetched through the CDN (**proposed**).
+- Mark the cutover runbook's rsync steps as fully superseded now that the flow ran on production (**proposed**; they were kept as fallback and the rollback was not exercised on production).
+- **Done** (merged on the docs branch, pending merge to develop; `4b4d3ab`): the root `CONTRIBUTING.md` and the root `CLAUDE.md` (deploy section and the database/n8n runbook box) now state that the panel is in automatic mode for the suite sites, and describe site-only releases cut from `main` with cherry-picks and the expected red "Agent workflow consistency" check.
+- **Done** (merged on the docs branch, pending merge to develop; `b05a8d3`): the comments in `core/runtime-config.ts` and `docs/nginx-security-headers.conf` now say three endpoints. That file still labels the policy Report-Only although the enforcing policy is served (**pending, proposed**).
+- **Done** (merged on the docs branch, pending merge to develop; `b9c0819`): the two `ci.yml` jobs that used the legacy peer-deps flag now run plain `npm ci` (verified locally on the committed lockfile). The `find` working-directory fix in the deploy script (`39e62d8`) is preventive: the noise was not reproduced locally.
+- Backlog of the panel-git sites, not changed: the hotel action removes the document-root contents without a backup; builds run on the server with `npm install`; any merge to `main` triggers all three actions; one legacy site still auto-deploys; the actions are not versioned (**proposed**).
+- Repository rules that could block force-pushes to `deploy/*`: the flow works, so none blocks CI today (**inferred** from the successful runs).
+- Not verified: CI results of the #1166 checks after merge; the exact content of the two artifact branches in this session.
