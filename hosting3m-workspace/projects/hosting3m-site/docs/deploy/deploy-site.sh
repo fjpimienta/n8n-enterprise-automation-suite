@@ -3,10 +3,10 @@
 # See README.md in this folder for the one-time setup. Never run code from the pulled branch: this script only
 # reads the branch as data (SHA256SUMS, BUILD_INFO and the built files).
 #
-# Copies a built hosting3m-site artifact (branch deploy/beta or deploy/prod, pulled by the hosting panel) into the
+# Copies a built hosting3m-site artifact (branch deploy/prod, pulled by the hosting panel) into the
 # docroot of the matching site. It never deletes anything from the docroot and never touches /webcard or /g.
 #
-# Usage: deploy-site.sh beta|prod [--apply]
+# Usage: deploy-site.sh prod [--apply]
 #   Without --apply it only verifies the artifact and prints what would change (dry run).
 #   With --apply it backs up the docroot first, copies, and verifies the result.
 #
@@ -18,9 +18,8 @@ set -euo pipefail
 cd /
 
 # ---- Per-server settings: edit when installing ------------------------------------------------------
-# Directory where the panel keeps the pulled artifact branch (a git working tree of deploy/beta or deploy/prod).
+# Directory where the panel keeps the pulled artifact branch (a git working tree of deploy/prod).
 # Keep the placeholders until the server paths are confirmed: the script refuses to run with them.
-SRC_BETA="/CHANGE/ME/beta-artifact"
 SRC_PROD="/CHANGE/ME/prod-artifact"
 # Backups of the docroot. Set an ABSOLUTE path at install (it does not depend on HOME); it must be outside both docroots
 # and is created with mode 700. --apply refuses while it still holds the placeholder or is not absolute.
@@ -29,11 +28,10 @@ BACKUP_ROOT="/CHANGE/ME/backups"
 # ------------------------------------------------------------------------------------------------------
 
 # Allowlisted docroots. Any other destination is refused.
-readonly DOCROOT_BETA="/var/www/vhosts/hosting3m.com/beta.hosting3m.com/"
 readonly DOCROOT_PROD="/var/www/vhosts/hosting3m.com/httpdocs/"
 
 usage() {
-  echo "Usage: ${0##*/} beta|prod [--apply]" >&2
+  echo "Usage: ${0##*/} prod [--apply]" >&2
   exit 2
 }
 
@@ -46,7 +44,7 @@ target=""
 apply=0
 for arg in "$@"; do
   case "$arg" in
-    beta | prod)
+    prod)
       [[ -z "$target" ]] || usage
       target="$arg"
       ;;
@@ -56,40 +54,29 @@ for arg in "$@"; do
 done
 [[ -n "$target" ]] || usage
 
-case "$target" in
-  beta)
-    docroot="$DOCROOT_BETA"
-    src="$SRC_BETA"
-    expected_config="beta"
-    ;;
-  prod)
-    docroot="$DOCROOT_PROD"
-    src="$SRC_PROD"
-    expected_config="production"
-    ;;
-esac
+docroot="$DOCROOT_PROD"
+src="$SRC_PROD"
+expected_config="production"
 
 # ---- Destination checks -----------------------------------------------------------------------------
-[[ "$docroot" == "$DOCROOT_BETA" || "$docroot" == "$DOCROOT_PROD" ]] || die "docroot is not allowlisted: $docroot"
+[[ "$docroot" == "$DOCROOT_PROD" ]] || die "docroot is not allowlisted: $docroot"
 [[ -d "$docroot" ]] || die "docroot does not exist: $docroot"
 [[ ! -L "${docroot%/}" ]] || die "docroot is a symbolic link: $docroot"
 [[ "$(realpath -e "$docroot")/" == "$docroot" ]] || die "docroot does not resolve to itself: $docroot"
 
 # ---- Source checks ----------------------------------------------------------------------------------
 [[ "$src" == /* ]] || die "artifact directory must be an absolute path: $src"
-[[ "$src" != /CHANGE/ME/* ]] || die "SRC_BETA/SRC_PROD still hold the install placeholders: edit them first"
+[[ "$src" != /CHANGE/ME/* ]] || die "SRC_PROD still holds the install placeholder: edit them first"
 [[ -d "$src" ]] || die "artifact directory does not exist: $src"
 [[ ! -L "${src%/}" ]] || die "artifact directory is a symbolic link: $src"
 src="$(realpath -e "$src")"
 # The artifact directory must be a separate staging area: never inside a docroot, never equal to one, never a parent of one.
 case "$src/" in
-  "$DOCROOT_BETA"* | "$DOCROOT_PROD"*) die "artifact directory is inside or equal to a docroot: $src" ;;
+  "$DOCROOT_PROD"*) die "artifact directory is inside or equal to a docroot: $src" ;;
 esac
-for protected in "$DOCROOT_BETA" "$DOCROOT_PROD"; do
-  case "$protected" in
-    "$src/"*) die "artifact directory contains a docroot: $src" ;;
-  esac
-done
+case "$DOCROOT_PROD" in
+  "$src/"*) die "artifact directory contains a docroot: $src" ;;
+esac
 for required in SHA256SUMS BUILD_INFO index.html; do
   [[ -f "$src/$required" ]] || die "missing $required in the pulled artifact: $src"
 done
@@ -137,7 +124,7 @@ fi
 [[ "$BACKUP_ROOT" != /CHANGE/ME/* ]] || die "BACKUP_ROOT still holds the install placeholder: set an absolute path first"
 [[ "$BACKUP_ROOT" == /* ]] || die "BACKUP_ROOT must be an absolute path: $BACKUP_ROOT"
 case "$(realpath -m "$BACKUP_ROOT")/" in
-  "$DOCROOT_BETA"* | "$DOCROOT_PROD"*) die "BACKUP_ROOT must be outside both docroots: $BACKUP_ROOT" ;;
+  "$DOCROOT_PROD"*) die "BACKUP_ROOT must be outside the docroot: $BACKUP_ROOT" ;;
 esac
 mkdir -p "$BACKUP_ROOT"
 chmod 700 "$BACKUP_ROOT"

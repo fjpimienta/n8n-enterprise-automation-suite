@@ -2,7 +2,7 @@
 
 Angular 21 (standalone, Signals), Tailwind CSS v4 (CSS-first tokens in `src/styles.css`; no `tailwind.config.js`).
 Replaces the Sitejet export at https://hosting3m.com. Public, static, client-side only.
-Beta: https://beta.hosting3m.com (private by `noindex`, a server header).
+There is no beta environment (removed 2026-11-27, reported by owner); `docs/deploy/README.md` section 9 says what recreating one takes.
 
 ## Hard rules
 - The browser only calls three public endpoints on the n8n host: `POST {apiBase}/v6/contact` (`core/contact.ts`), `POST .../v6/news` (`core/news.ts`) and
@@ -47,19 +47,19 @@ Beta: https://beta.hosting3m.com (private by `noindex`, a server header).
 - `npm test -- hosting3m-site --watch=false` (the plain-Node guard tests: `node --test projects/hosting3m-site/scripts/check-todo.test.mjs` and `.../check-legal-markers.test.mjs`)
 - Official build (off the VPS): `PLANS_SKIP_FETCH=1 node projects/hosting3m-site/scripts/build.mjs --configuration production|beta|development`
   (output: `dist/hosting3m-site/browser/`). `production` FAILS on any `TODO_*` token or legal marker; `beta`/`development` warn.
-- `ng serve` uses `runtime-config.development.ts`: the API is simulated (CORS only allows production and beta origins).
+- `ng serve` uses `runtime-config.development.ts`: the API is simulated (CORS only allows the production origin and, historically, the beta one).
 - Deploy-script tests (from the repo root): `bash tests/deploy/test_deploy_site.sh`; ShellCheck covers `docs/deploy/deploy-site.sh`, `scripts/package-artifact.sh` and the test.
 
 ## Deploy flow (git-based; details in `docs/deploy/README.md`)
-- GitHub Actions (`.github/workflows/hosting3m-site-artifact.yml`) runs on push to `develop` and `main` only: tests, both guards, build, then force-pushes **only the built output**
-  (plus `SHA256SUMS` and `BUILD_INFO`) as an orphan commit to `deploy/beta` (from `develop`, beta configuration) or `deploy/prod` (from `main`, production configuration).
+- GitHub Actions (`.github/workflows/hosting3m-site-artifact.yml`) runs on push to `main` only: tests, both guards, production build, then force-pushes **only the built output**
+  (plus `SHA256SUMS` and `BUILD_INFO`) as an orphan commit to `deploy/prod`.
 - Never commit to `deploy/*` by hand and never put source or secrets on those branches.
 - The hosting panel pulls the artifact branch in **manual** mode into a staging directory; its one-line post-deploy action calls the root-owned `deploy-site.sh` (template in `docs/deploy/`,
   installed by hand, never run from the repo). It verifies the checksums, backs up the docroot, copies with `rsync` **without `--delete`** (excluding `/webcard` and `/g`) and prints the rollback.
-- Beta first, then production. The manual `rsync` of the cutover runbook is the fallback until the new flow is proven.
+- Production only: the owner pulls `deploy/prod` in the panel, runs the script as a dry run, then with `--apply`. The build and the site tests run in CI; the dry run shows what would change. The manual `rsync` of the cutover runbook is the fallback.
 - The panel's Git for `hotel-website`, `agro-erp` and the dashboard works differently (automatic pull of `main`, build on the VPS); see section 7 of `docs/deploy/README.md`.
 
 ## Docs
 - `docs/changes/2026-11-27_hosting3m-site-rebuild-and-launch.md` (change record), `docs/deploy/README.md` (git-based deploy runbook) and `docs/deploy/deploy-site.sh` (server script template).
-- `docs/phase-1-report.md`, `docs/phase-2/report.md`, `docs/phase-2/TODO.md` and `docs/phase-3/TODO.md` (pending content); `docs/phase-3/beta-runbook.md` (beta deploy);
+- `docs/phase-1-report.md`, `docs/phase-2/report.md`, `docs/phase-2/TODO.md` and `docs/phase-3/TODO.md` (pending content); `docs/phase-3/beta-runbook.md` (historical beta deploy);
   `docs/phase-4/cutover-runbook.md` (production cutover); `docs/nginx-*.conf` (manual paste in Plesk).

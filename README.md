@@ -175,7 +175,7 @@ es infraestructura compartida, no un proyecto con README independiente — de ah
 documentación viva aquí, junto a la librería que lo protege.
 
 ### 🌐 16. Hosting3M Site (`hosting3m-site`)
-Sitio público de marketing de Hosting3M (Angular 21, Tailwind v4, prerenderizado, sin lógica de servidor). Consume tres webhooks públicos de n8n (`v6/contact`, `v6/news`, `v6/plans`) y no envía identificadores de empresa desde el navegador. Se construye en GitHub Actions y se publica como artefacto (ramas `deploy/beta` y `deploy/prod`) que el panel de hosting descarga en modo manual; el script de servidor verifica sumas SHA-256, respalda y copia sin borrar. Ver el [registro de cambios](hosting3m-workspace/projects/hosting3m-site/docs/changes/2026-11-27_hosting3m-site-rebuild-and-launch.md) y el [runbook de despliegue](hosting3m-workspace/projects/hosting3m-site/docs/deploy/README.md).
+Sitio público de marketing de Hosting3M (Angular 21, Tailwind v4, prerenderizado, sin lógica de servidor). Consume tres webhooks públicos de n8n (`v6/contact`, `v6/news`, `v6/plans`) y no envía identificadores de empresa desde el navegador. Se construye en GitHub Actions y se publica como artefacto (rama `deploy/prod`, solo producción) que el panel de hosting descarga en modo manual; el script de servidor verifica sumas SHA-256, respalda y copia sin borrar. Ver el [registro de cambios](hosting3m-workspace/projects/hosting3m-site/docs/changes/2026-11-27_hosting3m-site-rebuild-and-launch.md) y el [runbook de despliegue](hosting3m-workspace/projects/hosting3m-site/docs/deploy/README.md).
 
 ---
 
