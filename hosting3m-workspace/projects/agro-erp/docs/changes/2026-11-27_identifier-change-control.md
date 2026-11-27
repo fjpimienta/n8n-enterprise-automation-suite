@@ -4,6 +4,8 @@ Change record. Documentation only: this file changes no code, migration, workflo
 
 **How to read the status labels.** *Verified* = checked by the author of this record in the repository (git history and files on `develop`) or by running the repository tests locally. *Owner-reported* = stated by the project owner, **not verified by this session**. *Inferred* = deduced from the files, not observed. *Done* = merged and/or applied where stated. *Designed, not applied* = exists as a file or plan only. *Proposed* / *pending* = not started.
 
+**Status update (2026-11-27, deployed; all of this is reported by owner, not verifiable in repo).** Migrations 114, 115 and 116 are applied in production (reported by owner, not verifiable in repo). Verified read-only on a restored copy of production taken the same day (2026-11-27, reported by owner): all objects present, and a dry run of each migration ends OK and rolls back (idempotent). The four workflows (MCP server, notification, chat, WhatsApp) are imported in production and match the `develop` files by fingerprint (the chat matches after normalizing the palm sub-workflow id); the WhatsApp workflow was imported last, on 2026-11-27 (reported by owner). Behavior checks with the test company: reported by owner as done; the results are not recorded in the repo. The frontend part (2c) and the guard of 2d are not part of this change. The hosting panel deploys `main` in automatic mode for the suite sites; there is no agro-erp application code in this change, so the automatic rebuilds do not change those apps. `115_rollback.sql` still refuses to run once `CAMBIO_ARETE` rows exist. Statements below that describe the work as not applied or not imported are the state when this record was written and are superseded by this paragraph.
+
 ## 1. Goal and context
 
 Control how the three animal identifiers (`electronic_rfid` chip, `rfid_siniiga` ear tag, `numero_fuego` fire number) are assigned and changed: assignment only when empty, any change as an authorized request, a history that cannot be edited, and no direct approval by the AI agent. A data-integrity issue in the identifier flow was reported; the review and fix are tracked privately.
@@ -56,7 +58,7 @@ Error codes introduced: `P0130`, `P0131`, `P0132`, `P0135`, `P0136`. Expected bu
 | `v6/MCP Server Cattle` | Tool `update_livestock_tag` **removed** (55 → 54 tool nodes, verified); `get_livestock_info` resolves through `fn_resolve_identifier`; `list_pending_requests` shows the tag-change fields; descriptions of `review_pending_request` and `move_livestock` updated | file on `develop` (verified); imported in PRODUCTION (owner-reported) |
 | `v6/ai/chat cattle` | Three **new direct tool nodes**: `assign_livestock_identifier`, `request_tag_change`, `cancel_tag_change` (fixed query, `queryReplacement` as an array); new prompt level for tools whose first call is the preview; error-handling nodes `Classify Chat Error`, `Respond Chat Error`, `Fail After Reply`, error output on both agents, `maxRetries = 1` on both chat models | file on `develop` (verified); imported in PRODUCTION (owner-reported) |
 | `V6/Notificación de Autorizaciones Pendientes` | Label and fields for the new request type; baja and venta e-mails unchanged | file on `develop` (verified); imported in PRODUCTION (owner-reported) |
-| `v6/WhatsApp Agent Catlte` | Same three direct tools and prompt changes; `Resolver Tenant` rule for a phone shared by several users of the selected company | file on `develop` (verified); **not imported in production (owner-reported)** |
+| `v6/WhatsApp Agent Catlte` | Same three direct tools and prompt changes; `Resolver Tenant` rule for a phone shared by several users of the selected company | file on `develop` (verified); imported in PRODUCTION last, on 2026-11-27 (owner-reported) |
 
 The three new tools are direct nodes of each agent workflow, not MCP server tools. The other MCP tools are unchanged except as listed above (verified from the diff of PR #1162).
 
@@ -108,7 +110,7 @@ Run only on the rehearsal and DEV copies, company `id_company = 3` (the project 
 | Leading zeros | tool row and harness (kept as text) | Leading zeros in an ear tag |
 | Cross-company attempts | database tests (isolation, preview of another company's animal, approvals), tool rows (another company's chip, other e-mails), WhatsApp rows with a phone in two companies | Production-level cross-company attempts |
 | Very long and full-width digit strings | tool rows (refused, no crash) | — |
-| WhatsApp conversations (dictated digits, shared phone with the model) | — | **Not run**: rows 55, 56, 58 and conversations C10, C12 are for the owner |
+| WhatsApp conversations (dictated digits, shared phone with the model) | — | Owner-reported as done with the test company on 2026-11-27; results not recorded in the repo (rows 55, 56, 58 and conversations C10, C12) |
 
 ## 5. Rollback
 
@@ -135,11 +137,11 @@ Neutral list; owner-reported items are labelled.
 - A phone with several companies and no selection receives "no property found" instead of the "several properties" message (behaviour identical to `develop` before this work; follow-up PR).
 - Follow-up: return a clean 403 before company resolution in the chat workflow.
 - Execution saving: the instance default saves every execution; one workflow-level override remains in the production chat workflow (owner-reported; which override is not verified).
-- WhatsApp workflow rollout pending; its resolver rows and conversations are not run.
+- WhatsApp workflow rollout: done on 2026-11-27 (owner-reported); its resolver rows and conversations are reported as run, results not in the repo.
 - OWNER approval, BUFALO ear-tag rule, chips containing spaces, bulk assignment (section 3).
 - A CHANGELOG entry for migrations 114–116 does not exist (verified by search); a neutral entry is pending.
 - A separate docs PR will align `docs/ARCHITECTURE.md`, `docs/DATABASE_SCHEMA.md` and rule 15 of the agro-erp `CLAUDE.md` with the ten mismatches listed in section 8.
-- This record itself is untracked until the owner decides to commit it.
+- This record is tracked on `develop`.
 
 ## 7. Objects in the live system that are not in the repository
 
