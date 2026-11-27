@@ -22,8 +22,13 @@ const PHASE_FILES = [1, 2, 3, 4].map((p) => `repro-phase${p}/repro_phase${p}_too
 const LEGACY_KEPT_AS_NODE = ['register_birth_event', 'log_palpation_event_batch', 'register_livestock_purchase_obsolete'];   // rollback path of 087 (backlog items 24 and 25); the legacy purchase tool kept as a node by migration 099
 // migration 099: intake tools wired straight into the two agent workflows (postgresTool, not MCP nodes); both are NIVEL 3 with a server preview + preview_hash
 const AGENT_DIRECT_TOOLS = ['register_livestock_regularization', 'register_livestock_purchase'];
+// migration 115/116: identifier tools wired straight into the two agent workflows (postgresTool, not MCP nodes; tenant and e-mail come from the verified session, never from the model).
+// assign_livestock_identifier / request_tag_change are NIVEL 3-VP (the call without preview_token IS the preview, made at once); cancel_tag_change is a normal NIVEL 3 tool.
+// update_livestock_tag was removed from the MCP server: a tag change is now a request that an ADMIN approves in the panel.
+const TAG_VP_TOOLS = ['assign_livestock_identifier', 'request_tag_change'];
+const TAG_DIRECT_TOOLS = [...TAG_VP_TOOLS, 'cancel_tag_change'];
 // names that look like tools in the prompt but are parameters
-const PARAM_NAMES_NOT_TOOLS = ['preview_hash', 'preview_required'];
+const PARAM_NAMES_NOT_TOOLS = ['preview_hash', 'preview_required', 'preview_token', 'identifier_unavailable'];   // preview_token is a parameter; identifier_unavailable is a status of the tag tools
 const FORBIDDEN_TOOL = ['get_table_metadata'];                                       // A4 says it is NOT allowed
 const CFDI_TOOLS = ['preview_expense_invoice', 'register_expense_invoice'];
 const NOT_EXPOSED = ['sp_repro_condition_code_set', 'sp_repro_empadre_set_config', 'sp_repro_births_set_config'];
@@ -38,7 +43,7 @@ const EXPECTED = {
   1: ['get_livestock_info', 'find_livestock_by_criteria', 'find_calf_by_dam', 'count_livestock', 'list_pending_requests', 'list_lots', 'preview_livestock_sale_order', ...NEW_READS],
   2: ['log_cattle_weight', 'log_health_event', 'log_vaccination_event', 'log_supplement_event', 'log_palpation_event', 'log_breeding_event', 'log_deworming_event',
       'log_weaning_event', 'register_ranch_expense', 'move_livestock', ...NEW_ROUTINE],
-  3: ['log_mortality_event', 'request_livestock_sale_order', 'request_livestock_sale', 'review_pending_request', 'cancel_pending_request', 'update_livestock_tag',
+  3: ['log_mortality_event', 'request_livestock_sale_order', 'request_livestock_sale', 'review_pending_request', 'cancel_pending_request', 'cancel_tag_change',
       'log_castration_event', 'void_event', ...NEW_CONFIRM, ...AGENT_DIRECT_TOOLS],
 };
 const REQUIRED_G_WORDS = ['not_examined', 'needs_explicit_result', 'NEEDS_EXPLICIT_RESULT', 'DIAGNOSIS_UNRECOGNIZED', 'DIAGNOSIS_CONFLICT', 'vet_flag', 'POSTPARTUM', 'UNFIT',
@@ -75,7 +80,7 @@ const mcp = docs[MCP_FILE];
 const toolNodes = mcp.nodes.filter((n) => n.type.endsWith('postgresTool'));
 const toolNames = toolNodes.map((n) => n.name);
 ok('MCP server: node names are unique', new Set(mcp.nodes.map((n) => n.name)).size === mcp.nodes.length);
-ok('MCP server: 55 tool nodes (29 existing + 24 reproduction + 2 CFDI)', toolNames.length === 55, 'found ' + toolNames.length);
+ok('MCP server: 54 tool nodes (28 existing after removing update_livestock_tag + 24 reproduction + 2 CFDI)', toolNames.length === 54, 'found ' + toolNames.length);
 const trigger = mcp.nodes.find((n) => n.type.endsWith('mcpTrigger'));
 ok('MCP server: every tool node is connected to the MCP trigger',
   toolNames.every((t) => { const c = mcp.connections[t]; return c && c.ai_tool && c.ai_tool[0] && c.ai_tool[0].some((x) => x.node === trigger.name); }));
@@ -149,7 +154,7 @@ const dict = {};
 for (const ch of Object.keys(AGENTS)) {
   const named = new Set([...sys[ch].matchAll(TOOL_RE)].map((m) => m[1]));
   // parameter names look like tools sometimes (e.g. 'log_...'): keep only what is an MCP tool or clearly a tool verb used as a tool
-  const unknown = [...named].filter((t) => !toolNames.includes(t) && !AGENT_DIRECT_TOOLS.includes(t) && !PARAM_NAMES_NOT_TOOLS.includes(t));
+  const unknown = [...named].filter((t) => !toolNames.includes(t) && !AGENT_DIRECT_TOOLS.includes(t) && !TAG_DIRECT_TOOLS.includes(t) && !PARAM_NAMES_NOT_TOOLS.includes(t));
   ok(`${ch}: every tool named in the prompt exists in the MCP server (and none is a legacy tool)`,
     unknown.length === 0 && LEGACY_KEPT_AS_NODE.every((l) => !sys[ch].includes(l)), 'unknown: [' + unknown.join(', ') + ']');
   dict[ch] = [...new Set([...parts[ch].E.matchAll(TOOL_RE)].map((m) => m[1]))].filter((t) => toolNames.includes(t)).sort();
@@ -175,9 +180,14 @@ for (const ch of Object.keys(AGENTS)) {
   const all = [...lvl[1], ...lvl[2], ...lvl[3]];
   ok(`${ch}: the migration 099 intake tools are direct postgresTool nodes of this workflow, named in dictionary E and in NIVEL 3 only`,
     AGENT_DIRECT_TOOLS.every((t) => docs[AGENTS[ch]].nodes.some((n) => n.name === t && n.type.endsWith('postgresTool')) && parts[ch].E.includes("'" + t + "'") && lvl[3].includes(t) && !lvl[1].includes(t) && !lvl[2].includes(t)));
+  ok(`${ch}: the identifier tools are direct postgresTool nodes of this workflow, named in dictionary E; assign / request are NIVEL 3-VP (own level line), cancel is NIVEL 3, none is in NIVEL 1 or 2; update_livestock_tag is gone`,
+    TAG_DIRECT_TOOLS.every((t) => docs[AGENTS[ch]].nodes.some((n) => n.name === t && n.type.endsWith('postgresTool')) && parts[ch].E.includes("'" + t + "'") && !lvl[1].includes(t) && !lvl[2].includes(t))
+    && lvl[3].includes('cancel_tag_change') && TAG_VP_TOOLS.every((t) => !lvl[3].includes(t))
+    && (parts[ch].C.match(/- NIVEL 3-VP —[^\n]*/) || [''])[0].includes('assign_livestock_identifier, request_tag_change')
+    && !sys[ch].includes('update_livestock_tag') && !toolNames.includes('update_livestock_tag'));
   ok(`${ch}: no tool is in two levels`, new Set(all).size === all.length);
   const reproductionDict = dict[ch].filter((t) => !CFDI_TOOLS.includes(t));
-  ok(`${ch}: every reproduction dictionary tool has a level`, setEq(all.filter((t) => !AGENT_DIRECT_TOOLS.includes(t)).sort(), reproductionDict), fmt(diff(all.filter((t) => !AGENT_DIRECT_TOOLS.includes(t)).sort(), reproductionDict)));
+  ok(`${ch}: every reproduction dictionary tool has a level`, setEq(all.filter((t) => !AGENT_DIRECT_TOOLS.includes(t) && !TAG_DIRECT_TOOLS.includes(t)).sort(), reproductionDict), fmt(diff(all.filter((t) => !AGENT_DIRECT_TOOLS.includes(t) && !TAG_DIRECT_TOOLS.includes(t)).sort(), reproductionDict)));
 }
 
 // each new tool's description agrees with its level
@@ -548,14 +558,28 @@ for (const [ch, f] of Object.entries(AGENTS)) {
   const pt = prev.nodes.find((n) => n.name === 'AI Agent').parameters.text;
   ok(`${ch}: the "text" input expression of "AI Agent" is untouched`, pt === docs[f].nodes.find((n) => n.name === 'AI Agent').parameters.text);
   const agentNow = docs[f].nodes.find((n) => n.name === 'AI Agent'), agentPrev = prev.nodes.find((n) => n.name === 'AI Agent');
-  const strip = (n) => { const c = JSON.parse(JSON.stringify(n)); delete c.parameters.options.systemMessage; return JSON.stringify(c); };
+  // chat only: production's error handling (onError = continueErrorOutput on the agent) is part of the repository since the chat error-handling PR
+  const strip = (n) => { const c = JSON.parse(JSON.stringify(n)); delete c.parameters.options.systemMessage; if (ch === 'chat' && c.onError === 'continueErrorOutput') delete c.onError; return JSON.stringify(c); };
   ok(`${ch}: in the node "AI Agent" ONLY options.systemMessage changed (model, tools wiring, memory and every other parameter identical to ${REF})`, strip(agentNow) === strip(agentPrev));
   // PR 6 (chat only): "AI Agent Palma" (text input + prompt, checked above), "Ruta del comprobante" (new EXPENSE_PALM rule, checked in the router block) and "Texto fijo del comprobante" (dead palm-expense text removed) changed on purpose.
-  const PR6 = ch === 'chat' ? ['AI Agent Palma', 'Ruta del comprobante', 'Texto fijo del comprobante'] : [];
+  // chat error handling (production's manual change brought into the repo): maxRetries = 1 on the two chat models (checked below)
+  const PR6 = ch === 'chat' ? ['AI Agent Palma', 'Ruta del comprobante', 'Texto fijo del comprobante', 'OpenAI Chat Model', 'OpenAI Chat Model Palma'] : [];
   const others = prev.nodes.filter((n) => n.name !== 'AI Agent' && !PR6.includes(n.name));
   // The only allowed differences outside "AI Agent": the audio language of the WhatsApp "Transcribe" node (options.language = 'es') and the queryReplacement array of "Guardar Pregunta Pendiente".
-  const sameNode = (n) => { const now = docs[f].nodes.find((x) => x.name === n.name); if (JSON.stringify(n) === JSON.stringify(now)) return true; if (n.name === 'Guardar Pregunta Pendiente' && now && now.parameters && now.parameters.options && String(now.parameters.options.queryReplacement).startsWith('={{ [')) { const c = JSON.parse(JSON.stringify(now)); c.parameters.options.queryReplacement = n.parameters.options.queryReplacement; return JSON.stringify(c) === JSON.stringify(n); } if (n.name !== 'Transcribe' || !now || !now.parameters || !now.parameters.options || now.parameters.options.language !== 'es') return false; const c = JSON.parse(JSON.stringify(now)); delete c.parameters.options.language; return JSON.stringify(c) === JSON.stringify(n); };
+  const sameNode = (n) => { const now = docs[f].nodes.find((x) => x.name === n.name); if (JSON.stringify(n) === JSON.stringify(now)) return true; /* migration 116 (WhatsApp only): 'Resolver Tenant' gets the shared-phone rule; it must stay the same kind of node in the same place and carry the rule */ if (ch === 'whatsapp' && n.name === 'Resolver Tenant') return !!now && now.type === n.type && JSON.stringify(now.position) === JSON.stringify(n.position) && String((now.parameters || {}).jsCode || '').includes('shared_phone'); if (n.name === 'Guardar Pregunta Pendiente' && now && now.parameters && now.parameters.options && String(now.parameters.options.queryReplacement).startsWith('={{ [')) { const c = JSON.parse(JSON.stringify(now)); c.parameters.options.queryReplacement = n.parameters.options.queryReplacement; return JSON.stringify(c) === JSON.stringify(n); } if (n.name !== 'Transcribe' || !now || !now.parameters || !now.parameters.options || now.parameters.options.language !== 'es') return false; const c = JSON.parse(JSON.stringify(now)); delete c.parameters.options.language; return JSON.stringify(c) === JSON.stringify(n); };
   ok(`${ch}: no other node of the workflow changed (${others.length} nodes)`, others.every(sameNode));
+}
+{
+  // chat error handling (brought from production): the three error nodes exist and are wired; both agents have an error output; the models retry once; the palm sale id stays the repo placeholder
+  {
+    const wf = docs[AGENTS.chat], by = (n) => wf.nodes.find((x) => x.name === n);
+    const tgt = (from, i) => (((wf.connections[from] || {}).main || [])[i] || []).map((x) => x.node);
+    ok('chat: both agents send their error output to "Classify Chat Error" (onError = continueErrorOutput), then "Respond Chat Error", then "Fail After Reply"',
+      ['AI Agent', 'AI Agent Palma'].every((a) => by(a).onError === 'continueErrorOutput' && JSON.stringify(tgt(a, 0)) === '["Respond to Webhook"]' && JSON.stringify(tgt(a, 1)) === '["Classify Chat Error"]')
+      && JSON.stringify(tgt('Classify Chat Error', 0)) === '["Respond Chat Error"]' && JSON.stringify(tgt('Respond Chat Error', 0)) === '["Fail After Reply"]' && by('Fail After Reply').type.endsWith('stopAndError'));
+    ok('chat: both OpenAI chat models have options.maxRetries = 1', ['OpenAI Chat Model', 'OpenAI Chat Model Palma'].every((m) => by(m).parameters.options && by(m).parameters.options.maxRetries === 1));
+    ok('chat: "Venta Palma XML" keeps the repo placeholder id (the production id is set by hand after importing, never committed)', by('Venta Palma XML').parameters.workflowId.value === 'PalmSaleXml0001a');
+  }
 }
 {
   // XML router of the web chat (deliberate expectation, added with the router): nine new nodes between "Empresa Valida" and "Dominio"; the WhatsApp workflow has none.
@@ -600,7 +624,8 @@ for (const ch of Object.keys(AGENTS)) {
   ok('whatsapp: "Guardar Pregunta Pendiente" passes queryReplacement as an array expression ("={{ [") and not as comma-separated text', typeof qr === 'string' && qr.startsWith('={{ [') && /\]\s*\}\}$/.test(qr));
 }
 for (const ch of Object.keys(AGENTS)) {
-  ok(`${ch}: prompt size ${sys[ch].length} characters (limit 64 000; it was ~32 000 before phase 5; the growth to ~62 000 comes from migration 099, any further growth needs a review)`, sys[ch].length < 64000);
+  // limit 72 000 (was 64 000): the prompts grew from ~62 000 to ~71 800 characters with the identifier safety rules (migrations 115/116: D5, NIVEL 3-VP, worked examples), reviewed by the owner and validated in conversation tests; any further growth needs a review
+  ok(`${ch}: prompt size ${sys[ch].length} characters (limit 72 000; it was ~32 000 before phase 5, ~62 000 after migration 099 and ~71 800 after the identifier rules of 115/116)`, sys[ch].length < 72000);
 }
 
 console.log(`\n${passes} passed, ${fails} failed, ${skips} skipped`);

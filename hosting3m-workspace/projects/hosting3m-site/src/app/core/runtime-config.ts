@@ -4,7 +4,7 @@
  * Note: the repo-wide .gitignore ignores `src/environments/environment*.ts`, hence this name.
  */
 export const RUNTIME: { apiBase: string; turnstileSiteKey: string; mockApi: boolean } = {
-  /** n8n webhook base. The site calls exactly two endpoints under it: /v6/contact and /v6/news. */
+  /** n8n webhook base. The site calls exactly three endpoints under it: /v6/contact, /v6/news and /v6/plans. */
   apiBase: 'https://n8n.hosting3m.com/webhook',
   /** Public Cloudflare Turnstile sitekey (not a secret). */
   turnstileSiteKey: '0x4AAAAAACaIUH9TvGOgcFq7',

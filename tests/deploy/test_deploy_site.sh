@@ -301,6 +301,14 @@ sed -i -e "s#^readonly DOCROOT_BETA=.*#readonly DOCROOT_BETA=\"$env_root/nope/\"
 run "$script" beta
 assert_exit "missing docroot" 1 "$status"
 
+# ---- Started from a working directory that no longer exists (regression guard; the noise itself was not reproducible locally)
+make_env gone-cwd
+mkdir "$env_root/gone"
+(cd "$env_root/gone" && rmdir "$env_root/gone" && "$script" beta > "$out" 2> "$err")
+status=$?
+assert_exit "dry run from a removed working directory" 0 "$status"
+assert_not_contains "no working-directory noise" "$err" "initial working directory"
+
 # ---- Failure handling during apply ------------------------------------------------------------------
 make_env empty-backup
 FAKE_TAR_EMPTY=1 run "$script" beta --apply
