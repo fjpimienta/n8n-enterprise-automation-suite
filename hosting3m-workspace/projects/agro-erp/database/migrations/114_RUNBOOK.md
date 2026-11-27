@@ -1,7 +1,7 @@
-> ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (base de datos y n8n, verificadas con sus huellas).
-> `main` se despliega manualmente por Plesk con git: si el frontend se despliega antes, la pantalla nueva falla en producción.
+> ✅ **DESPLEGADO EN PRODUCCIÓN (2026-11-27; reportado por el dueño, no verificable en el repo).** Las partes 1 (base de datos) y 2 (n8n) están completas, así que el aviso de orden de merge que abría este archivo ya no aplica.
+> `main` se despliega desde el panel de hosting en modo **automático** para los sitios de la suite (no manual). Este cambio no trae código de aplicación de agro-erp, por lo que las reconstrucciones automáticas no cambian esas apps.
 
-> **Status: tests pass on a throwaway LOCAL database. NOT applied to production.**
+> **Status (2026-11-27): deployed.** Migrations 114, 115 and 116 are applied in production (reported by owner, not verifiable in repo). Verified read-only on a restored copy of production taken the same day (2026-11-27, reported by owner): all objects present, and a dry run of each migration ends OK and rolls back (idempotent). Tests also pass on a throwaway LOCAL database.
 > Part 1 (database) is the only part of this change. Part 2 (n8n): **none** — no workflow changes in this step. Frontend: **none** — nothing in the
 > frontend depends on this step (no component reads or writes `cattle_identifier_history`). Step 2 (tag-change authorization) is a separate change and
 > is not required for, nor included in, this one.

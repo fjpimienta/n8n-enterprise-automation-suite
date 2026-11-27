@@ -1,7 +1,7 @@
-> ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (base de datos y n8n, verificadas con sus huellas).
-> `main` se despliega manualmente por Plesk con git: si el frontend se despliega antes, la pantalla nueva falla en producción.
+> ✅ **DESPLEGADO EN PRODUCCIÓN (2026-11-27; reportado por el dueño, no verificable en el repo).** Las partes 1 (base de datos) y 2 (n8n) están completas, así que el aviso de orden de merge que abría este archivo ya no aplica.
+> `main` se despliega desde el panel de hosting en modo **automático** para los sitios de la suite (no manual). Este cambio no trae código de aplicación de agro-erp, por lo que las reconstrucciones automáticas no cambian esas apps.
 
-> **Status: written for review. Checked only with a Node harness. The WhatsApp rows of `116_n8n_tests.md` (54 to 61) and conversations C10 and C12 have NOT been run.**
+> **Status (2026-11-27): deployed.** The WhatsApp workflow was imported in production last, on 2026-11-27, and matches the `develop` file by fingerprint (reported by owner, not verifiable in repo). The WhatsApp rows of `116_n8n_tests.md` (54 to 61) and conversations C10 and C12: reported by owner as done with the test company; the results are not recorded in the repo. Migrations 114, 115 and 116 are applied in production (reported by owner, not verifiable in repo). The frontend part (2c) and the guard of 2d are not part of this change. Before the import it was checked only with a Node harness.
 > Part 1 (database) is the same as for the rest of this PR: `114`, `115` and `116_tag_change_chat_guard` applied and verified. This runbook covers the WhatsApp workflow, which is step 4 of Part 2 in `116_RUNBOOK.md` and is imported LAST, after the MCP server, notification and chat have run in production. It ships in the same PR as those because `check_repro_consistency.js` (CI) requires the chat and WhatsApp prompts to stay in sync; merging to `develop` deploys nothing.
 
 # Runbook — WhatsApp agent: identifier tools and shared-phone rule

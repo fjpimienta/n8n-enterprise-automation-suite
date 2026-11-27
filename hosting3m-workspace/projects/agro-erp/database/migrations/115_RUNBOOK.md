@@ -1,7 +1,7 @@
-> ⛔ **NO MERGEAR A `main` HASTA COMPLETAR LAS PARTES 1 Y 2** (base de datos y n8n, verificadas con sus huellas).
-> `main` se despliega manualmente por Plesk con git: si el frontend se despliega antes, la pantalla nueva falla en producción.
+> ✅ **DESPLEGADO EN PRODUCCIÓN (2026-11-27; reportado por el dueño, no verificable en el repo).** Las partes 1 (base de datos) y 2 (n8n) están completas, así que el aviso de orden de merge que abría este archivo ya no aplica.
+> `main` se despliega desde el panel de hosting en modo **automático** para los sitios de la suite (no manual). Este cambio no trae código de aplicación de agro-erp, por lo que las reconstrucciones automáticas no cambian esas apps.
 
-> **Status: written for review. Tested only by the files in this folder, on a throwaway database. NOT applied anywhere.**
+> **Status (2026-11-27): deployed.** Migrations 114, 115 and 116 are applied in production (reported by owner, not verifiable in repo). Verified read-only on a restored copy of production taken the same day (2026-11-27, reported by owner): all objects present, and a dry run of each migration ends OK and rolls back (idempotent). Local tests: the files in this folder, on a throwaway database.
 > This runbook covers **PR 2a (database only)**. Part 2 (n8n: the new tools, the notification label, the `Resolver Tenant` fix) is PR 2b; the frontend is PR 2c;
 > the guard on the identifier columns is PR 2d; bulk assignment is PR 2f. **Nothing in 2a creates a request by itself**: no workflow calls the new functions
 > until 2b is imported, so applying 2a first is safe and invisible to users, with one exception (see "Visible effects").
