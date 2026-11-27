@@ -1,0 +1,157 @@
+name: hosting3m-site artifact
+
+# Builds hosting3m-site and publishes ONLY the built output to an artifact branch:
+#   push to develop -> deploy/beta (beta configuration, noindex stays on the server)
+#   push to main    -> deploy/prod (production configuration, including the legal-markers guard)
+# The artifact branch is an orphan, single-commit branch that CI force-pushes. It never carries source,
+# and nothing else may write to it. The hosting panel pulls it by hand; see
+# hosting3m-workspace/projects/hosting3m-site/docs/deploy/README.md.
+# No pull_request or fork trigger on purpose: only pushes to develop and main reach the write token.
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - hosting3m-workspace/projects/hosting3m-site/**
+      - hosting3m-workspace/package.json
+      - hosting3m-workspace/package-lock.json
+      - hosting3m-workspace/angular.json
+      - hosting3m-workspace/tsconfig.json
+      - hosting3m-workspace/vitest.config.ts
+      - .github/workflows/hosting3m-site-artifact.yml
+
+permissions: {}
+
+concurrency:
+  # Runs of one branch are queued in order and never interrupted while publishing.
+  group: hosting3m-site-artifact-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Test and build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      # Reproducible build: use the committed plans snapshot. Refreshing it is a reviewed commit, not a CI side effect.
+      PLANS_SKIP_FETCH: '1'
+      SITE: projects/hosting3m-site
+    defaults:
+      run:
+        working-directory: hosting3m-workspace
+    steps:
+      - name: Select the configuration for this branch
+        id: target
+        working-directory: .
+        env:
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          case "$REF_NAME" in
+            develop) { echo "configuration=beta"; echo "branch=deploy/beta"; } >> "$GITHUB_OUTPUT" ;;
+            main) { echo "configuration=production"; echo "branch=deploy/prod"; } >> "$GITHUB_OUTPUT" ;;
+            *) echo "Unexpected branch '$REF_NAME'." >&2; exit 1 ;;
+          esac
+
+      # actions/checkout v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+
+      # actions/setup-node v7.1.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: hosting3m-workspace/package-lock.json
+
+      - run: npm ci
+
+      - name: Unit tests
+        run: npm test -- hosting3m-site --watch=false
+
+      - name: Guard tests
+        run: |
+          node --test "$SITE/scripts/check-todo.test.mjs"
+          node --test "$SITE/scripts/check-legal-markers.test.mjs"
+
+      # build.mjs runs both guards (TODO_ tokens, legal review markers): they FAIL the production build and only warn on beta.
+      - name: Build
+        env:
+          CONFIGURATION: ${{ steps.target.outputs.configuration }}
+        run: node "$SITE/scripts/build.mjs" --configuration "$CONFIGURATION"
+
+      - name: The committed plans snapshot is unchanged
+        working-directory: .
+        run: git diff --exit-code -- hosting3m-workspace/projects/hosting3m-site/src/app/data/plans-snapshot.json
+
+      - name: Package the artifact (BUILD_INFO and SHA256SUMS)
+        working-directory: .
+        env:
+          CONFIGURATION: ${{ steps.target.outputs.configuration }}
+          SOURCE_COMMIT: ${{ github.sha }}
+          SOURCE_REF: ${{ github.ref_name }}
+        run: |
+          bash hosting3m-workspace/projects/hosting3m-site/scripts/package-artifact.sh \
+            hosting3m-workspace/dist/hosting3m-site/browser "$RUNNER_TEMP/site-artifact" \
+            "$CONFIGURATION" "$SOURCE_COMMIT" "$SOURCE_REF" \
+            hosting3m-workspace/projects/hosting3m-site/src/app/data/plans-snapshot.json
+          cat "$RUNNER_TEMP/site-artifact/BUILD_INFO"
+
+      # actions/upload-artifact v7.0.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: site-artifact
+          path: ${{ runner.temp }}/site-artifact
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 7
+
+    outputs:
+      branch: ${{ steps.target.outputs.branch }}
+
+  publish:
+    name: Publish to the artifact branch
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      # actions/download-artifact v8.0.2
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        with:
+          name: site-artifact
+          path: ${{ runner.temp }}/site-artifact
+
+      - name: Verify the artifact before publishing
+        working-directory: ${{ runner.temp }}/site-artifact
+        run: |
+          sha256sum -c --quiet SHA256SUMS
+          test -s index.html
+          test -s BUILD_INFO
+          if find . -path ./.git -prune -o -type l -print | grep -q .; then echo "Symbolic link in the artifact." >&2; exit 1; fi
+
+      - name: Force-push the orphan commit
+        working-directory: ${{ runner.temp }}/site-artifact
+        env:
+          TARGET_BRANCH: ${{ needs.build.outputs.branch }}
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_COMMIT: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          case "$TARGET_BRANCH" in
+            deploy/beta | deploy/prod) ;;
+            *) echo "Refusing to push to '$TARGET_BRANCH'." >&2; exit 1 ;;
+          esac
+          auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          echo "::add-mask::$auth"
+          git init -q -b artifact
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -q -m "artifact for ${SOURCE_COMMIT}"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${auth}" \
+            push --force "https://github.com/${REPOSITORY}.git" "HEAD:refs/heads/${TARGET_BRANCH}"
+          echo "Published ${SOURCE_COMMIT} to ${TARGET_BRANCH}."
