@@ -160,9 +160,9 @@ No repitas aquí la lista de los 16 módulos — vive y se mantiene actualizada 
      merge a `main` los despliega a todos. Resumen por sitio y deuda en la sección 7 de
      [`docs/deploy/README.md`](hosting3m-workspace/projects/hosting3m-site/docs/deploy/README.md). Esta sección decía antes que se despliegan
      manualmente con **Deploy now**; ya no es así.
-  2. **`hosting3m-site`:** GitHub Actions construye y publica **solo el artefacto** en `deploy/beta` (desde `develop`) o `deploy/prod`
+  2. **`hosting3m-site`:** GitHub Actions construye y publica **solo el artefacto** en `deploy/prod`
      (desde `main`); el panel lo descarga en modo manual, sin acciones post-despliegue, y el dueño ejecuta a mano un script del servidor,
-     propiedad de root, que verifica SHA-256, respalda y copia sin `--delete`. Beta antes que producción. Procedimiento completo, rollback y
+     propiedad de root, que verifica SHA-256, respalda y copia sin `--delete`. Solo producción (el entorno beta se eliminó el 2026-11-27): el dueño descarga la rama en el panel, ejecuta el script en simulacro y luego con `--apply`. Procedimiento completo, rollback y
      qué no hacer: [`hosting3m-workspace/projects/hosting3m-site/docs/deploy/README.md`](hosting3m-workspace/projects/hosting3m-site/docs/deploy/README.md)
      (no se copia aquí).
 

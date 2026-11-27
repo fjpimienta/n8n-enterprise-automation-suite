@@ -8,7 +8,7 @@ run anything against the VPS, Plesk or Cloudflare. **You run every command.** Ea
 
 Placeholders: `<SSH_USER>`, `<VPS_IPV4>`, `<PLESK_SYS_USER>`. Production docroot: `/var/www/vhosts/hosting3m.com/httpdocs`
 (confirm it in Plesk > Websites & Domains > hosting3m.com > Hosting Settings > Document root before the first command).
-Beta docroot (already in use): `/var/www/vhosts/hosting3m.com/beta.hosting3m.com`.
+The beta environment (subdomain, docroot and panel repository) was deleted on 2026-11-27 (reported by owner): every beta step in this runbook is **historical**; releases now go from CI to production only (see `docs/deploy/README.md`).
 
 **Hard rules for this runbook:** copy before changing, dry-run (`rsync -n`) before every real run, never `--delete` and never
 `rm -rf` on the first deploy, never touch `/webcard` or `/g` (Sitejet asset folders), never paste a token in a chat or a file.
@@ -21,10 +21,10 @@ Every rollback below restores from a backup; none deletes anything.
 > `7f9b0ca` build until the next release (inferred).
 >
 > **Release flow superseded (once proven):** the manual build and `rsync` in sections 1 and 2 are replaced by the CI-built artifact branches and the server script of
-> [`docs/deploy/README.md`](../deploy/README.md). Until that flow has run on beta **and** on production, the rsync steps below remain the fallback; do not delete them yet.
+> [`docs/deploy/README.md`](../deploy/README.md). The flow has been used for production releases (reported by owner); the rsync steps below remain the manual fallback; do not delete them yet.
 > Everything outside sections 1 and 2 (Cloudflare, headers, SEO, legal, catalog, smoke tests, monitoring) still applies to every release.
 
-Related files: `docs/deploy/README.md` (git-based deploy), `docs/phase-3/beta-runbook.md` (beta deploy, CORS, Turnstile, test-data cleanup), `docs/nginx-legacy-redirects.conf`,
+Related files: `docs/deploy/README.md` (git-based deploy), `docs/phase-3/beta-runbook.md` (historical beta deploy, CORS, Turnstile, test-data cleanup), `docs/nginx-legacy-redirects.conf`,
 `docs/nginx-security-headers.conf`, `docs/nginx-beta-only.conf`.
 
 ---
@@ -35,8 +35,8 @@ The Status column is not ticked in the repo: see the status block at the top (go
 
 | # | Gate | How to check | Status |
 |---|------|--------------|--------|
-| 1 | Beta smoke tests of `beta-runbook.md` section 8 passed on the same commit that will be released | see section 7 | ☐ |
-| 2 | The CSP on beta, sent as **enforcing**, showed **zero console CSP errors** in the manual test plan (section 8.2) | section 8 | ☐ |
+| 1 | The build and the site tests of the release commit pass in CI, and the dry run of `deploy-site.sh prod` shows only the expected changes (there is no beta environment since 2026-11-27) | `docs/deploy/README.md` section 3 | ☐ |
+| 2 | The CSP enforcing header is served on production with **zero console CSP errors** in the manual test plan (section 8.2; it was tested on beta before beta was removed) | section 8 | ☐ |
 | 3 | Legal pages carry the lawyer-reviewed text, no editorial markers (section 5) | `build.mjs --configuration production` passes | ☐ |
 | 4 | No `TODO_` token in the build (TODO guard) | same build | ☐ |
 | 5 | Catalog snapshot refreshed against the production API and committed (section 6) | `git log -1 -- .../plans-snapshot.json` | ☐ |
@@ -57,7 +57,7 @@ curl -si -X OPTIONS https://n8n.hosting3m.com/webhook/v6/contact \
 
 Build from a clean checkout of the release commit (not from a working tree with local edits):
 ```sh
-git fetch origin && git switch --detach <release-commit>      # the exact commit validated on beta (or its tag)
+git fetch origin && git switch --detach <release-commit>      # the exact commit to release (or its tag)
 cd hosting3m-workspace && npm ci            # plain npm ci: the legacy flag was removed in #1158
 node projects/hosting3m-site/scripts/build.mjs --configuration production
 ```
@@ -182,7 +182,7 @@ The directives live in `docs/nginx-security-headers.conf` (section "Cache header
 
 Cloudflare caches static files by extension and keeps its own copy independently of these headers: after every deploy purge by URL (or everything), section 3.1,
 otherwise unhashed files (fonts, images, favicon, og-image) can be served stale from the edge even though nginx already revalidates.
-Verify on beta first, then on production **[laptop]**:
+Verify on production **[laptop]** (the commands below used the beta host while it existed; replace it with the production host):
 ```sh
 for u in /main-XXXX.js /fonts/dm-sans-latin-wght-normal.woff2 /images/hero-880.webp /images/og-image.jpg /favicon.ico /sitemap.xml / /portfolio /aviso-de-privacidad; do
   printf '%s -> ' "$u"; curl -sI "https://beta.hosting3m.com$u" | grep -iE '^HTTP|^cache-control' | tr '\r\n' '  '; echo; done
@@ -356,7 +356,7 @@ Use a private window with cleared site data. Keep Console and Network visible.
 
 ## 8. Indexing headers and CSP
 
-### 8.1 `X-Robots-Tag`: noindex on beta, **absent** on production **[laptop]**
+### 8.1 `X-Robots-Tag`: **absent** on production **[laptop]** (beta no longer exists; its checks below are historical)
 Beta keeps `X-Robots-Tag: noindex, nofollow, noarchive` (from `nginx-beta-only.conf`); the production vhost must not send it (never paste that file there).
 ```sh
 echo "== beta (must show the header)"
