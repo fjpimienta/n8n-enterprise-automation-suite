@@ -8,6 +8,7 @@ Beta: https://beta.hosting3m.com (private by `noindex`, a server header).
 - The browser only calls three public endpoints on the n8n host: `POST {apiBase}/v6/contact` (`core/contact.ts`), `POST .../v6/news` (`core/news.ts`) and
   `POST .../v6/plans` with body `{}` (`core/plans.ts`). `apiBase` is `RUNTIME.apiBase` in `core/runtime-config.ts`.
   Never request JWTs, never call `genera-token`, never call `/crud/...`, never query a database.
+  (Two comments still say "two endpoints": `core/runtime-config.ts` and the header of `docs/nginx-security-headers.conf`. The code is the source of truth: three.)
 - Tenant context is fixed on the server (`id_company = 1`). Never send or trust a tenant id from the browser.
 - No secrets in the repo or the build. Only the public Turnstile sitekey is allowed.
 - Never render remote strings with `innerHTML`; use Angular bindings and validate `http/https` URLs.
