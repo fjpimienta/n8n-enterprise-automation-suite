@@ -171,8 +171,9 @@ All of this is **reported by owner, not verifiable in repo**:
 - Beta was deployed twice with the new flow. Production was deployed on 2026-11-27 from the artifact built from `main` commit `0c10958` (production configuration). Before copying, the script made a verified backup; after copying, it verified the checksums.
 - The owner checked the live site: the structured data added in #1157 is live. This supersedes the earlier inference that production still ran the `7f9b0ca` build.
 - The rollback command was proven on beta; it was **not exercised on production**.
-- Hosting panel: two git repositories for this site, both in manual mode and without post-deploy actions, one tracking `deploy/beta` on the beta host and one tracking `deploy/prod` on the production host. An earlier unused mirror repository was removed. Pulling the force-updated orphan branches evidently works, since beta and production were deployed from them (**inferred**).
+- Hosting panel: two git repositories for this site, both in manual mode and without post-deploy actions, one tracking `deploy/beta` on the beta host and one tracking `deploy/prod` on the production host. An earlier unused mirror repository was removed. The panel pulled the force-updated orphan branches in all three deployments (two on beta, one on production).
 - The other suite sites track `main` in automatic mode and build on the server, so a merge to `main` triggers their deploys. The deploy actions live only in the panel UI; the runbook summarizes steps only. Which project maps to two of those three sites is **inferred** from their names.
+- The file with the build metadata is reachable through the CDN and shows `config=production` on the production host.
 - The CDN rewrites HTML in transit (email obfuscation); this is the only difference between the origin and the public responses. Disabling it is optional (proposed).
 - Release mechanics: while unreleased agro-erp work sits in `develop`, site releases use a branch cut from `main` plus cherry-picks (#1168). The "Agent workflow consistency" check was red on that PR as expected, and this was documented in the PR; it is not a regression of the site work.
 
@@ -188,4 +189,4 @@ All of this is **reported by owner, not verifiable in repo**:
 - Existing jobs in `ci.yml` still install with the legacy peer-deps flag that #1158 made unnecessary (**pending, proposed**).
 - Backlog of the panel-git sites, not changed: the hotel action removes the document-root contents without a backup; builds run on the server with `npm install`; any merge to `main` triggers all three actions; one legacy site still auto-deploys; the actions are not versioned (**proposed**).
 - Repository rules that could block force-pushes to `deploy/*`: the flow works, so none blocks CI today (**inferred** from the successful runs).
-- Not verified: CI results of the #1166 checks after merge; the exact content of the two artifact branches in this session; whether the live `BUILD_INFO` file is reachable through the CDN.
+- Not verified: CI results of the #1166 checks after merge; the exact content of the two artifact branches in this session.
