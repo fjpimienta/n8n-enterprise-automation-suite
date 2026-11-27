@@ -50,7 +50,7 @@ Step 3 of that procedure (compare production with `main`) is the stop gate. Fing
 The production chat export (`664bead7c53f1e05`) differs from `main` (`cdc83e7f1eb11264`) by manual changes that this PR brings into the repository, so that the import does not remove them:
 - three nodes that exist only in production: `Classify Chat Error`, `Fail After Reply`, `Respond Chat Error`, and the second output (error output) of `AI Agent` and `AI Agent Palma` that feeds them (`onError: continueErrorOutput` on both agents);
 - `maxRetries: 1` in the options of `OpenAI Chat Model` and `OpenAI Chat Model Palma`;
-- the workflow setting `saveDataSuccessExecution: "all"` (saved successful executions are the only record of what the agent wrote; do not drop it on import);
+- the workflow setting `saveDataSuccessExecution: "all"`, which is **deliberately not brought into the repository**: the production instance already saves everything (`EXECUTIONS_DATA_SAVE_ON_SUCCESS=all`, `EXECUTIONS_DATA_SAVE_ON_ERROR=all`, pruned after 336 hours), so the chat inherits the same behaviour from the instance variables without a workflow-level override. Importing the file removes that override from the production workflow; executions are still saved;
 - the id of the palm sale sub-workflow in `Venta Palma XML` (see below).
 A different canvas layout and the order of the tags also differ; neither is part of the fingerprint.
 
@@ -66,7 +66,7 @@ print(hashlib.sha256(json.dumps({'nodes': nodes, 'connections': d.get('connectio
 EOF
 ```
 
-**After importing the chat workflow (a required post-import step):** open the node `Venta Palma XML` and set its sub-workflow to the production palm sale workflow (select `v6/palm sale from xml` from the list), Save and Publish, then confirm with a re-export that its `workflowId.value` is the production id and nothing else changed (compare the normalized fingerprint above). Until this is done, a palm XML sale in the chat fails. Also confirm that the workflow settings still show `saveDataSuccessExecution = all` and that both agents show an error output.
+**After importing the chat workflow (a required post-import step):** open the node `Venta Palma XML` and set its sub-workflow to the production palm sale workflow (select `v6/palm sale from xml` from the list), Save and Publish, then confirm with a re-export that its `workflowId.value` is the production id and nothing else changed (compare the normalized fingerprint above). Until this is done, a palm XML sale in the chat fails. Also confirm that the chat has no workflow-level success-saving override (`Settings` → "Save successful production executions" is "Default") and that executions are still saved (open the Executions list and check that a new test execution appears), and that both agents show an error output.
 
 Fingerprint = first 16 hex of SHA-256 over `{node name: parameters}` + `connections` (sorted keys, compact separators, UTF-8). Reproduce with:
 ```sh

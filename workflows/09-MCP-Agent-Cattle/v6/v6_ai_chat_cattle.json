@@ -2639,8 +2639,7 @@
     "availableInMCP": false,
     "errorWorkflow": "9SrVXdATmlrZemJT",
     "timeSavedMode": "fixed",
-    "timeSavedPerExecution": 3,
-    "saveDataSuccessExecution": "all"
+    "timeSavedPerExecution": 3
   },
   "versionId": "b57b6244-b39a-4609-b11d-ea3f6f1b450d",
   "meta": {
