@@ -19,6 +19,29 @@ cuando actualizan las reglas compartidas de contribución o despliegue.
 
 ---
 
+## [2026-11-27]
+
+### 🌐 hosting3m-site (public marketing site)
+
+* Added the `hosting3m-site` Angular 21 application, the public Hosting3M site that replaces the Sitejet export. First commit `8d2cba6` (2026-11-20); last site commit
+  before this entry `df5852c` (2026-11-23). Work is merged to `develop` and reached `main` through the release merges #1154 (`7f9b0ca`, 2026-11-22) and #1159 (`16454b0`, 2026-11-23).
+* The site calls three public n8n webhooks (`v6/contact`, `v6/news`, `v6/plans`); the exports of the `v6/plans` and `v6/contact` workflows are under `workflows/02-leads-contact/v6/`.
+* Production builds fail on pending `TODO_` tokens and on legal review markers (`check-todo`, `check-legal-markers`, both with tests and run in CI).
+* The production go-live on 2026-11-23 was reported by the owner and is not verifiable in the repository.
+* Added the change record
+  [`hosting3m-workspace/projects/hosting3m-site/docs/changes/2026-11-27_hosting3m-site-rebuild-and-launch.md`](hosting3m-workspace/projects/hosting3m-site/docs/changes/2026-11-27_hosting3m-site-rebuild-and-launch.md).
+
+### 🔧 Git-based deploy for hosting3m-site
+
+* Added the `hosting3m-site artifact` GitHub Actions workflow: on push to `develop` or `main` it runs the tests and both guards, builds, and force-pushes only the built output
+  (plus `SHA256SUMS` and `BUILD_INFO`) as an orphan commit to `deploy/beta` or `deploy/prod`. Third-party actions are pinned to commit SHAs.
+* Added `docs/deploy/deploy-site.sh`, a server-side script template (checksum verification, tar backup, `rsync` without `--delete`, rollback command), with stubbed tests and
+  ShellCheck in the CI "Shell checks" job.
+* Added the deploy runbook `hosting3m-workspace/projects/hosting3m-site/docs/deploy/README.md` and updated the cutover runbook, the project `CLAUDE.md` and `README.md`.
+* Registered `hosting3m-site` in the root `README.md` (8 Angular projects: 5 applications and 3 libraries) and described both frontend deploy models in the root `CLAUDE.md`.
+
+---
+
 ## [2026-11-04]
 
 ### 🔧 Agro ERP CI

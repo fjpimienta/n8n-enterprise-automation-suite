@@ -14,12 +14,24 @@ Beta docroot (already in use): `/var/www/vhosts/hosting3m.com/beta.hosting3m.com
 `rm -rf` on the first deploy, never touch `/webcard` or `/g` (Sitejet asset folders), never paste a token in a chat or a file.
 Every rollback below restores from a backup; none deletes anything.
 
-Related files: `docs/phase-3/beta-runbook.md` (beta deploy, CORS, Turnstile, test-data cleanup), `docs/nginx-legacy-redirects.conf`,
+> **Status: executed 2026-11-23 by the owner (reported; not verifiable in the repo).** The production go-live followed this runbook, built from `main` at `7f9b0ca`
+> (PR #1154). The gate boxes in section 0 and the other checklists below were **not ticked in the repo** and stay unticked: tick them only from evidence you have.
+> Repo facts since then: `main` moved to `16454b0` (PR #1159), which adds #1157 (analytics cookie cleanup after revoking consent; Person structured data on the
+> profile page) and #1158 (`npm ci` without legacy flags). On 2026-11-27 the owner found the #1157 structured-data fields **not** live, so production still runs the
+> `7f9b0ca` build until the next release (inferred).
+>
+> **Release flow superseded (once proven):** the manual build and `rsync` in sections 1 and 2 are replaced by the CI-built artifact branches and the server script of
+> [`docs/deploy/README.md`](../deploy/README.md). Until that flow has run on beta **and** on production, the rsync steps below remain the fallback; do not delete them yet.
+> Everything outside sections 1 and 2 (Cloudflare, headers, SEO, legal, catalog, smoke tests, monitoring) still applies to every release.
+
+Related files: `docs/deploy/README.md` (git-based deploy), `docs/phase-3/beta-runbook.md` (beta deploy, CORS, Turnstile, test-data cleanup), `docs/nginx-legacy-redirects.conf`,
 `docs/nginx-security-headers.conf`, `docs/nginx-beta-only.conf`.
 
 ---
 
 ## 0. Go / no-go gate (all must be true before touching the server)
+
+The Status column is not ticked in the repo: see the status block at the top (go-live executed 2026-11-23, reported by the owner). Reuse the table as the checklist of each later release.
 
 | # | Gate | How to check | Status |
 |---|------|--------------|--------|
@@ -40,10 +52,13 @@ curl -si -X OPTIONS https://n8n.hosting3m.com/webhook/v6/contact \
 
 ## 1. Build the release artifact **[laptop]**
 
+> Superseded by CI once the flow of [`docs/deploy/README.md`](../deploy/README.md) is proven: CI builds from the committed plans snapshot and publishes `deploy/prod`.
+> Keep this section as the manual fallback.
+
 Build from a clean checkout of the release commit (not from a working tree with local edits):
 ```sh
 git fetch origin && git switch --detach <release-commit>      # the exact commit validated on beta (or its tag)
-cd hosting3m-workspace && npm ci --legacy-peer-deps
+cd hosting3m-workspace && npm ci            # plain npm ci: the legacy flag was removed in #1158
 node projects/hosting3m-site/scripts/build.mjs --configuration production
 ```
 The production build **fails by design** while a `TODO_` token or a legal marker remains. It also prints
@@ -58,6 +73,9 @@ du -sh .
 ```
 
 ## 2. Backup of the current production docroot and rollback
+
+> Superseded (once proven) by `deploy-site.sh` (backup, copy without `--delete`, checksum check and printed rollback; see [`docs/deploy/README.md`](../deploy/README.md)).
+> The rsync steps below stay as the manual fallback and as the reference for the rollback.
 
 ### 2.1 Backup (copy, never delete) **[servidor]**
 ```sh
@@ -153,6 +171,7 @@ curl -sI https://hosting3m.com/       | grep -iE '^HTTP|^server|^cf-cache-status
 ```
 
 ### 3.6 Cache headers (nginx) and Cloudflare **[servidor]** then **[laptop]**
+(There is no section 3.5: the numbering is kept so existing references, for example in the change record, stay valid.)
 The directives live in `docs/nginx-security-headers.conf` (section "Cache headers"). Summary of the policy:
 
 | Files | Cache-Control | Why |
@@ -248,9 +267,10 @@ Routes: `/aviso-de-privacidad` (privacy notice), `/politica-de-cookies` (cookies
 Content lives in `src/app/data/legal/{privacy,cookies,terms}.ts` and is rendered by one `LegalPage` component; `src/app/pages/legal/deletion.ts` (`/eliminardatosusuarios`) is unchanged.
 The old URLs `/politica-de-privacidad`, `/condiciones-de-servicio` and `/privacy` answer **301** through `docs/nginx-legacy-redirects.conf` (paste it in Plesk, section 4.3);
 the router keeps client-side redirects as a safety net.
-The text is the approved draft of 21 de noviembre de 2026 ("Borrador legal Hosting3M"), **not yet lawyer-approved**: the draft itself says nothing must go to production without a lawyer's approval.
+The text is the draft of 21 de noviembre de 2026 ("Borrador legal Hosting3M"). **Lawyer approval: reported by the owner as approved as-is; not verifiable in the repo.** The draft itself said
+nothing must go to production without a lawyer's approval; the production build guard below enforces that no editorial marker is left, but it cannot prove the approval.
 
-Checklist (owner + lawyer):
+Checklist (owner + lawyer; boxes are not ticked in the repo, see the status block at the top):
 - [ ] The lawyer approves the three texts (or replaces them in `data/legal/*.ts`); `LEGAL_LAST_UPDATED` in `src/app/core/business.ts` carries the publication date and must match the approved version.
 - [ ] **Cookies / analytics:** the cookies policy and the privacy notice describe GA4 (loaded only after "Aceptar", Consent Mode v2 denied by default, only `analytics_storage` granted),
   the cookie table (`_ga`, `_ga_MVJRDZ7TD8`, Cloudflare/Turnstile, `h3m_cookie_consent_v1`) and "Preferencias de cookies" in the footer. Confirm they still match what the site really does (see section 7, item 2).
@@ -416,6 +436,6 @@ re-measure LCP on real traffic.
 - Which URLs Google has indexed (Search Console > Pages).
 
 ## 12. Backlog (minor, not a cutover blocker)
-- **GA cookie residue after revoking.** After **Rechazar** through **Preferencias de cookies**, Analytics may rewrite `_ga_<id>` until the next page load, because the gtag
-  already running can still set it. Optional polish: after the consent update, delete `_ga` and `_ga_*` again on the next tick (`setTimeout(..., 0)`), in `core/consent.ts`. No data is sent
-  (`analytics_storage` is denied); the residue is only a first-party cookie. Not done yet: this change is docs only.
+- **GA cookie residue after revoking.** After **Rechazar** through **Preferencias de cookies**, Analytics could rewrite `_ga_<id>` until the next page load, because the gtag
+  already running can still set it. **Done in #1157** (`cbdfbd0`): `core/consent.ts` deletes `_ga` and `_ga_*` again on the next tick, with a regression test. It is on `main`
+  since `16454b0`; whether production already runs it depends on the next release (see the status block at the top). No data was ever sent in between (`analytics_storage` is denied).

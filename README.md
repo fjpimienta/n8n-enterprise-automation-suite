@@ -30,7 +30,7 @@ El ecosistema opera en un entorno de alta densidad, maximizando los recursos del
 | **Media Server** | Node.js / Express | Servicio privado de almacenamiento persistente. |
 | **Capa de Datos** | PostgreSQL + pgvector | Almacenamiento Relacional + Vectorial (RAG). |
 | **Auth Gateway** | Node.js / JWT | Gestión de Sesiones Multi-Tenant e Identidad (RBAC). Mismo secreto compartido que protege el Media Server. |
-| **Frontends** | Angular 21 (Signals) | Tres SPAs activas y una aplicación histórica fuera de producción dentro del workspace Angular. |
+| **Frontends** | Angular 21 (Signals) | Cuatro aplicaciones activas (tres SPAs más el sitio público estático `hosting3m-site`) y una aplicación histórica fuera de producción dentro del workspace Angular. |
 
 ---
 
@@ -38,11 +38,11 @@ El ecosistema opera en un entorno de alta densidad, maximizando los recursos del
 
 El changelog raíz registra los cambios de suite por fecha desde 2026-08-14; no existe una
 versión SemVer global vigente. Cada módulo conserva su versión independiente. La última
-entrada registrada en el changelog raíz es 2026-11-01.
+entrada registrada en el changelog raíz es 2026-11-27.
 
 ### Proyectos Angular del workspace
 
-El workspace contiene **7 proyectos Angular**: cuatro aplicaciones y tres librerías
+El workspace contiene **8 proyectos Angular**: cinco aplicaciones y tres librerías
 compartidas. PistaHielo está registrado históricamente en el workspace, pero está fuera de
 producción y no forma parte del ciclo activo.
 
@@ -51,6 +51,7 @@ producción y no forma parte del ciclo activo.
 | SPA principal | `agro-erp` | Activo — v1.20.0 | ERP agropecuario y agrícola; ver [README del producto](hosting3m-workspace/projects/agro-erp/README.md). |
 | SPA principal | `dashboard` | Activo — v0.11.0 | Operación administrativa del hotel; ver [README](hosting3m-workspace/projects/dashboard/README.md). |
 | SPA pública | `hotel-website` | Activo, reserva online temporalmente deshabilitada | Sitio público del hotel; ver [README](hosting3m-workspace/projects/hotel-website/README.md). |
+| Sitio público estático | `hosting3m-site` | Activo | Sitio público de Hosting3M (reemplaza al export de Sitejet); despliegue por rama de artefacto construida en CI; ver [README](hosting3m-workspace/projects/hosting3m-site/README.md). |
 | SPA histórica | `pista-hielo` | **Legacy / fuera de producción** | Aplicación histórica; ver [README](hosting3m-workspace/projects/pista-hielo/README.md). |
 | Librería compartida | `core-auth` | Activa | Autenticación, guards e identidad/contexto de empresa. |
 | Librería compartida | `ui-chat` | Activa | Widget conversacional Angular conectado a webhooks configurados por la aplicación host. |
@@ -173,6 +174,9 @@ mecanismo paralelo. El Media Server no tiene número de módulo propio en la tab
 es infraestructura compartida, no un proyecto con README independiente — de ahí que su
 documentación viva aquí, junto a la librería que lo protege.
 
+### 🌐 16. Hosting3M Site (`hosting3m-site`)
+Sitio público de marketing de Hosting3M (Angular 21, Tailwind v4, prerenderizado, sin lógica de servidor). Consume tres webhooks públicos de n8n (`v6/contact`, `v6/news`, `v6/plans`) y no envía identificadores de empresa desde el navegador. Se construye en GitHub Actions y se publica como artefacto (ramas `deploy/beta` y `deploy/prod`) que el panel de hosting descarga en modo manual; el script de servidor verifica sumas SHA-256, respalda y copia sin borrar. Ver el [registro de cambios](hosting3m-workspace/projects/hosting3m-site/docs/changes/2026-11-27_hosting3m-site-rebuild-and-launch.md) y el [runbook de despliegue](hosting3m-workspace/projects/hosting3m-site/docs/deploy/README.md).
+
 ---
 
 ## 📚 Documentación Técnica por Módulo
@@ -194,6 +198,7 @@ documentación viva aquí, junto a la librería que lo protege.
 | `13`|**Agro ERP Suite**|ERP multi-dominio (Ganadería, Agricultura, Registro Normativo y Movimientos REEMO).|`Angular 21` `SQL Views` `PL/pgSQL`|[📖 Docs](hosting3m-workspace/projects/agro-erp/README.md)|
 | `14`|**MCP Field Agent**|Agente IA agropecuario con Zero-Hallucination.|`n8n` `MCP` `OpenAI`|[📖 Docs](workflows/09-MCP-Agent-Cattle/v6/README.md)|
 | `15`|**Core Auth Lib**|Núcleo Auth y Context Switcher Defensivo. Protege también el Media Server (`apiUrl_upload`).|`Angular 21` `RxJS`|[📖 Docs](hosting3m-workspace/projects/core-auth/README.md)|
+| `16`|**Hosting3M Site**|Sitio público de marketing (reemplaza al export de Sitejet); despliegue por artefacto construido en CI.|`Angular 21` `Tailwind v4`|[📖 Docs](hosting3m-workspace/projects/hosting3m-site/README.md)|
 
 > ✅ Nota (corregida 2026-08-15): la numeración de esta tabla (`14` MCP Field Agent, `15`
 > Core Auth Lib) antes no coincidía con la lista de prosa de módulos arriba (Core Auth
