@@ -1,17 +1,15 @@
 name: hosting3m-site artifact
 
 # Builds hosting3m-site and publishes ONLY the built output to an artifact branch:
-#   push to develop -> deploy/beta (beta configuration, noindex stays on the server)
-#   push to main    -> deploy/prod (production configuration, including the legal-markers guard)
+#   push to main -> deploy/prod (production configuration, including the legal-markers guard)
 # The artifact branch is an orphan, single-commit branch that CI force-pushes. It never carries source,
 # and nothing else may write to it. The hosting panel pulls it by hand; see
 # hosting3m-workspace/projects/hosting3m-site/docs/deploy/README.md.
-# No pull_request or fork trigger on purpose: only pushes to develop and main reach the write token.
+# No pull_request or fork trigger on purpose: only pushes to main reach the write token.
 
 on:
   push:
     branches:
-      - develop
       - main
     paths:
       - hosting3m-workspace/projects/hosting3m-site/**
@@ -50,7 +48,6 @@ jobs:
           REF_NAME: ${{ github.ref_name }}
         run: |
           case "$REF_NAME" in
-            develop) { echo "configuration=beta"; echo "branch=deploy/beta"; } >> "$GITHUB_OUTPUT" ;;
             main) { echo "configuration=production"; echo "branch=deploy/prod"; } >> "$GITHUB_OUTPUT" ;;
             *) echo "Unexpected branch '$REF_NAME'." >&2; exit 1 ;;
           esac
@@ -77,7 +74,7 @@ jobs:
           node --test "$SITE/scripts/check-todo.test.mjs"
           node --test "$SITE/scripts/check-legal-markers.test.mjs"
 
-      # build.mjs runs both guards (TODO_ tokens, legal review markers): they FAIL the production build and only warn on beta.
+      # build.mjs runs both guards (TODO_ tokens, legal review markers): they FAIL the production build.
       - name: Build
         env:
           CONFIGURATION: ${{ steps.target.outputs.configuration }}
@@ -142,7 +139,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
         run: |
           case "$TARGET_BRANCH" in
-            deploy/beta | deploy/prod) ;;
+            deploy/prod) ;;
             *) echo "Refusing to push to '$TARGET_BRANCH'." >&2; exit 1 ;;
           esac
           auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
