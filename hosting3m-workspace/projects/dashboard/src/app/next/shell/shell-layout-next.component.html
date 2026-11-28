@@ -1,0 +1,41 @@
+<div class="h-shell">
+  @if (isSidebarOpen()) { <div class="h-backdrop" (click)="closeDrawer()" aria-hidden="true"></div> }
+
+  <aside class="h-sidebar" [class.is-open]="isSidebarOpen()" aria-label="Barra lateral">
+    <app-next-sidebar [groups]="groups()" [dark]="theme.currentTheme() === 'dark'" (navigated)="closeDrawer()"
+      (toggleTheme)="theme.toggleTheme()" (logout)="logout()" />
+  </aside>
+
+  <div class="h-main">
+    <header class="h-topbar">
+      <button type="button" class="h-btn h-btn--icon h-topbar__menu" aria-label="Abrir menú" (click)="openDrawer()">
+        <app-h-icon name="menu" />
+      </button>
+      <div>
+        <h1 class="h-topbar__title">{{ title() }}</h1>
+        <div class="h-topbar__date">{{ today }}</div>
+      </div>
+      <span class="h-topbar__spacer"></span>
+      <button type="button" class="h-btn h-btn--icon" [attr.aria-label]="theme.currentTheme() === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
+        (click)="theme.toggleTheme()">
+        <app-h-icon [name]="theme.currentTheme() === 'dark' ? 'sun' : 'moon'" />
+      </button>
+    </header>
+
+    <main class="h-content" id="contenido">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+
+  <app-bottom-nav (expense)="requestExpense()" (more)="openDrawer()" />
+  <app-expense-fab (pressed)="requestExpense()" />
+
+  @if (showIosPrompt()) {
+    <div class="h-card" role="dialog" aria-label="Instalar aplicación"
+      style="position: fixed; left: 12px; right: 12px; bottom: 84px; z-index: 1065; max-width: 480px; margin: 0 auto;">
+      <strong>Instalar aplicación</strong>
+      <p style="margin: 4px 0 8px;">En Safari toca <strong>Compartir</strong> y elige <strong>«Agregar a la pantalla de inicio»</strong>.</p>
+      <button type="button" class="h-btn" (click)="dismissIosPrompt()">Entendido</button>
+    </div>
+  }
+</div>
