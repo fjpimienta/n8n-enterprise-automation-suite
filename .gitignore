@@ -33,6 +33,8 @@ sync_dbs.sh
 !hosting3m-workspace/projects/agro-erp/database/migrations/*.sql
 # Read-only discovery scripts are versioned too; their output (database/discovery/out/) holds real tenant data and must never be committed.
 !hosting3m-workspace/projects/agro-erp/database/discovery/*.sql
+# Dashboard database proposals (hand-applied, synthetic data only) are versioned too.
+!hosting3m-workspace/projects/dashboard/database/proposals/*.sql
 
 # --- Node.js / Microservicios (General) ---
 node_modules/
