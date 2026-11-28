@@ -145,7 +145,8 @@ body.theme-hotel .h-sidebar__link {
   border-radius: var(--h-radius-sm); color: #EAF3EE; text-decoration: none; font: 500 var(--h-fs-sm)/1 var(--h-font-body);
 }
 body.theme-hotel .h-sidebar__link:hover { background: rgba(255, 255, 255, .08); }
-body.theme-hotel .h-sidebar__link.is-active { background: var(--h-green); color: #fff; }
+/* The sidebar is dark in both themes, so its active colour is fixed (6.44:1 with white). */
+body.theme-hotel .h-sidebar__link.is-active { background: #1F6B4A; color: #fff; }
 body.theme-hotel .h-sidebar__footer { padding: var(--h-space-3); border-top: 1px solid rgba(255, 255, 255, .12); display: grid; gap: var(--h-space-1); }
 body.theme-hotel .h-sidebar__footer button {
   all: unset; box-sizing: border-box; display: flex; align-items: center; gap: var(--h-space-3); min-height: 44px; padding: 0 var(--h-space-3);
