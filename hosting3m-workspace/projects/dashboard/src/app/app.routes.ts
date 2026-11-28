@@ -1,8 +1,6 @@
 import { Routes } from '@angular/router';
 import { UnauthorizedComponent } from './shared/ui/unauthorized/unauthorized.component';
-import { LoginComponent } from '@features/admin/components/login/login.component';
-import { DashboardComponent } from '@features/dashboard/components/dashboard/dashboard.component';
-import { MainLayoutComponent } from './shared/ui/layout/main-layout/main-layout.component';
+import { LoginPageComponent, HomePageComponent, ShellLayoutComponent } from './ui-variant/ui-variant';
 import { ReservationManagerComponent } from '@features/booking/components/reservation-manager/reservation-manager.component';
 import { MaintenanceMonitorModalComponent } from '@features/dashboard/components/maintenance-monitor-modal/maintenance-monitor-modal.component';
 import { GuestListComponent } from '@features/admin/components/guest-list/guest-list.component';
@@ -14,13 +12,13 @@ import { InventoryManagerComponent } from '@features/admin/components/inventory-
 import { authGuard, roleGuard } from 'core-auth';
 
 export const routes: Routes = [
-  { path: 'login', component: LoginComponent },
+  { path: 'login', component: LoginPageComponent },
   {
     path: 'dashboard',
-    component: MainLayoutComponent,
+    component: ShellLayoutComponent,
     canActivate: [authGuard], // <-- Ahora usa el Guard blindado
     children: [
-      { path: '', component: DashboardComponent },
+      { path: '', component: HomePageComponent },
       { path: 'mantenimiento', component: MaintenanceMonitorModalComponent },
       { path: 'reservas', component: ReservationManagerComponent },
       { path: 'huespedes', component: GuestListComponent },

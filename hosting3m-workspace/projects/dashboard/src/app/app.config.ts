@@ -8,12 +8,13 @@ import { AiService, CHAT_CONFIG_TOKEN } from 'ui-chat';
 
 // 🚀 IMPORTS ESTRICTOS DE LA LIBRERÍA
 import { AUTH_ENV_CONFIG, authInterceptor } from 'core-auth';
+import { uiHttpInterceptors, uiProviders } from './ui-variant/ui-variant';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideZonelessChangeDetection(),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([authInterceptor])),
+    provideHttpClient(withInterceptors([authInterceptor, ...uiHttpInterceptors])),
 
     // 🚀 INYECCIÓN DE CONTEXTO MULTI-TENANT
     {
@@ -25,6 +26,8 @@ export const appConfig: ApplicationConfig = {
         apiUrl_upload: environment.apiUrl_upload
       }
     },
+
+    ...uiProviders,
 
     AiService,
     {

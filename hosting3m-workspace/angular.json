@@ -121,6 +121,39 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "demo": {
+              "optimization": true,
+              "outputHashing": "none",
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "projects/dashboard/src/environments/environment.ts",
+                  "with": "projects/dashboard/src/environments/environment.demo.ts"
+                },
+                {
+                  "replace": "projects/dashboard/src/app/ui-variant/ui-variant.ts",
+                  "with": "projects/dashboard/src/app/ui-variant/ui-variant.next.ts"
+                }
+              ],
+              "assets": [
+                {
+                  "glob": "**/*",
+                  "input": "projects/dashboard/public",
+                  "output": "/"
+                },
+                "projects/dashboard/src/favicon.ico",
+                {
+                  "glob": "**/*",
+                  "input": "projects/dashboard/src/theme-hotel/fonts",
+                  "output": "/assets/fonts"
+                }
+              ],
+              "styles": [
+                "projects/dashboard/src/styles.scss",
+                "projects/dashboard/src/theme-hotel/theme-hotel.scss"
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -133,6 +166,9 @@
             },
             "development": {
               "buildTarget": "dashboard:build:development"
+            },
+            "demo": {
+              "buildTarget": "dashboard:build:demo"
             }
           },
           "defaultConfiguration": "development"
