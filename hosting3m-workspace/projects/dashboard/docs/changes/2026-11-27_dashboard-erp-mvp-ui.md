@@ -135,16 +135,43 @@ Build checks:
   any existing file in `core`, `features` and `shared` (one new file was added under `shared`).
 - `npx ng build dashboard --configuration=demo`: succeeds.
 
-Visual and accessibility checks (headless Chromium, demo): 1440x900 and 390x844, light and dark; no horizontal
-overflow at either width; no interactive element under 44x44 px on the home route; color pairs of the
-tokens computed against 4.5:1 (all pass after one fix to the dark-mode sidebar active color). Not done:
-screen reader pass, manual keyboard focus-order review, real devices, Safari/iOS.
+Visual and accessibility checks (headless Chromium, demo). First round: 1440x900 and 390x844, light and dark; no
+horizontal overflow at either width; no interactive element under 44x44 px on the home route; color pairs of the
+tokens computed against 4.5:1 (all pass after one fix to the dark-mode sidebar active color).
+
+Room card layout fix (second round, after a review at 1920 px in dark mode reported long status chips
+widening cards and the "Falla reportada" badge overlapping the report button). Cause: the card was a
+shrink-to-fit button holding no-wrap chips, so its width followed its content instead of its grid cell.
+Fix: the card fills its cell, chips are bounded and truncate with the full text as a tooltip (and wrap
+below the room number when space is tight), a footer strip reserves the right 44 px for the report button,
+and cards in a row share one height. A scripted geometry probe was run before and after the fix on 30
+configurations (widths 390, 768, 1280, 1440, 1920 x light and dark x normal, `?demo=empty`, `?demo=error`).
+For each room card it checks: card width equals its grid cell, chips stay inside the card, nothing
+overlaps the report button, cards in a row have equal height, no horizontal page scroll, no page error.
+- Before the fix: 10 of 30 configurations failed (every width and both themes, normal data only), for example
+  one card 162 px wide in a 150 px cell, other cards narrower than their cell, date text under the report
+  button, and unequal row heights.
+- After the fix: 0 of 30 failed. The `empty` and `error` scenarios render no cards (probe trivially passes
+  there); they were checked for page errors only, and their empty or "—" states were verified in the earlier round.
+- Screenshots of the normal scenario were inspected by eye at 1920 dark and 390 light; the other widths and
+  themes were covered by the probe only, not looked at.
+- Two component tests were added (chip tooltip with the full text; footer strip always rendered). Truncation
+  itself cannot be asserted in the unit-test environment (no layout engine), so it is covered by the probe only.
+  Unit tests now: 69, of which 64 pass and the same 5 pre-existing specs fail.
+- The production build was rebuilt after the fix: same 17 file names and sizes as the previous verified build.
+- Not re-run in this round: the 44x44 px target check, color-contrast computation and the request log
+  (the change only adjusts card layout and chip overflow; contrast values are unchanged, inferred).
+
+Not done in either round: screen reader pass, manual keyboard focus-order review, real devices, Safari/iOS.
+The floating chat button can cover a card's report button while scrolling (it floats above content by design);
+not changed.
 
 ## 5. Rollback
 
 No rollback file exists. Nothing is applied anywhere, so rollback is discarding the local branch (or reverting
 the branch's commits after merge). The change is additive: removing the `demo` configuration, the `ui-variant`
-seam and the new folders restores the previous state; no data or infrastructure is involved.
+seam and the new folders restores the previous state; no data or infrastructure is involved. The later room card
+layout fix (section 4) is a separate commit in the same range, so reverting the whole range includes it.
 
 ## 6. Known gaps and risks
 
