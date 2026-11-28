@@ -122,6 +122,17 @@
               "extractLicenses": false,
               "sourceMap": true
             },
+            "local": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "fileReplacements": [
+                {
+                  "replace": "projects/dashboard/src/environments/environment.ts",
+                  "with": "projects/dashboard/src/environments/environment.local.ts"
+                }
+              ]
+            },
             "demo": {
               "optimization": true,
               "outputHashing": "none",
@@ -169,9 +180,12 @@
             },
             "demo": {
               "buildTarget": "dashboard:build:demo"
+            },
+            "local": {
+              "buildTarget": "dashboard:build:local"
             }
           },
-          "defaultConfiguration": "development"
+          "defaultConfiguration": "local"
         },
         "test": {
           "builder": "@angular/build:unit-test"
