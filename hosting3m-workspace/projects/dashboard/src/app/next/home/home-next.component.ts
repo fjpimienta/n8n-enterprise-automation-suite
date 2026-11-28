@@ -1,6 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
+import { AuthService } from 'core-auth';
 import { CheckinFormComponent } from '@features/booking/components/checkin-form/checkin-form.component';
 import { CheckoutFormComponent } from '@features/booking/components/checkout-form/checkout-form.component';
 import { RoomDetailModalComponent } from '@features/booking/components/room-detail-modal/room-detail-modal.component';
@@ -13,7 +15,6 @@ import { GuestListComponent } from '@features/admin/components/guest-list/guest-
 import { RoomChecklistModalComponent } from '@features/booking/components/room-checklist-modal/room-checklist-modal.component';
 import { ExpenseFormModalComponent } from '@features/finance/components/expense-form-modal/expense-form-modal.component';
 import { MaintenanceTicketModalComponent } from '@features/dashboard/components/maintenance-ticket-modal/maintenance-ticket-modal.component';
-import { MaintenanceMonitorModalComponent } from '@features/dashboard/components/maintenance-monitor-modal/maintenance-monitor-modal.component';
 import { DashboardComponent } from '@features/dashboard/components/dashboard/dashboard.component';
 import { DateUtilsService } from '@shared/services/data-utils.service';
 import { HIconComponent } from '../../shared/ui/h-icon/h-icon.component';
@@ -25,6 +26,7 @@ import { MaintenancePanelComponent, MaintenanceRoom } from '../ui/maintenance-pa
 import { ShellStateService } from '../shell/shell-state.service';
 import { RACK_FILTERS, RackFilter, filterCounts, filterPredicate, groupRooms, matchesQuery, toRoomViews } from '../logic/room-view';
 import { computeKpis, kpiText, occupancyHint, occupancyText } from '../logic/kpis';
+import { can, DENIED_CLEANING_TEXT } from '../logic/permissions';
 import { arrivalsToday, departuresToday, validReservations } from '../logic/today';
 
 /**
@@ -38,7 +40,7 @@ import { arrivalsToday, departuresToday, validReservations } from '../logic/toda
   imports: [CommonModule, FormsModule, CheckinFormComponent, CheckoutFormComponent, RoomDetailModalComponent,
     UserFormModalComponent, UserListComponent, GuestFormModalComponent, GuestListComponent, SkeletonComponent,
     ReservationManagerComponent, RoomChecklistModalComponent, ExpenseFormModalComponent, MaintenanceTicketModalComponent,
-    MaintenanceMonitorModalComponent, HIconComponent, KpiCardComponent, RoomCardCompactComponent, RoomFilterBarComponent,
+    HIconComponent, KpiCardComponent, RoomCardCompactComponent, RoomFilterBarComponent,
     TodayPanelComponent, MaintenancePanelComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './home-next.component.html'
@@ -46,6 +48,9 @@ import { arrivalsToday, departuresToday, validReservations } from '../logic/toda
 export class HomeNextComponent extends DashboardComponent {
   private readonly shellState = inject(ShellStateService);
   private readonly dates = inject(DateUtilsService);
+  // Own names: the parent keeps its router and auth service private.
+  private readonly nextRouter = inject(Router);
+  private readonly nextAuth = inject(AuthService);
 
   readonly rackFilter = signal<RackFilter>('all');
   readonly rackQuery = signal('');
@@ -115,8 +120,27 @@ export class HomeNextComponent extends DashboardComponent {
     if (room) this.openMaintenanceReport(room);
   }
 
-  onMaintenanceSelect(roomId: number): void {
-    this.maintenanceFilterRoomId = roomId;
-    this.showMaintenanceMonitor = true;
+  /**
+   * Operating rules: faults are resolved only from the `next` maintenance board, where the role is checked and a
+   * room is freed only after its last fault. The classic monitor modal (no role check, frees the room after any
+   * resolution) is not opened from here.
+   */
+  onMaintenanceSelect(_roomId: number): void {
+    void this.nextRouter.navigate(['/dashboard/mantenimiento']);
+  }
+
+  /** Classic "Finalizar mantenimiento" button of the room detail: it would free the room without the rules. Sends the user to the board. */
+  override async handleFinishMaintenance(): Promise<void> {
+    this.hotelService.clearSelection();
+    await this.nextRouter.navigate(['/dashboard/mantenimiento']);
+  }
+
+  /** Classic "Finalizar limpieza" button of the room detail: same write, but only for the roles that may clean. */
+  override async markRoomAsClean(): Promise<void> {
+    if (!can(this.nextAuth.currentUser()?.role, 'finishCleaning')) {
+      alert(DENIED_CLEANING_TEXT);
+      return;
+    }
+    await super.markRoomAsClean();
   }
 }

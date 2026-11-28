@@ -3,6 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { describe, expect, it, vi } from 'vitest';
 import { AdminService } from '@features/admin/services/admin.service';
 import { BookingService } from '@features/booking/services/booking.service';
+import { AuthService } from 'core-auth';
 import { HousekeepingNextComponent } from './housekeeping-next.component';
 
 type Row = Record<string, unknown>;
@@ -13,7 +14,7 @@ const room = (o: Row = {}): Row => ({
 });
 const reservation = { id: 1, room_id: 1, status: 'confirmed', check_in: '2026-11-27', check_out: '2026-11-28' };
 
-function setup(rooms: Row[], opts: { loading?: boolean; reservations?: unknown[]; update?: () => Promise<void> } = {}) {
+function setup(rooms: Row[], opts: { loading?: boolean; reservations?: unknown[]; update?: () => Promise<void>; role?: string | null } = {}) {
   const roomsSig = signal<Row[]>(rooms);
   const loadingSig = signal(opts.loading ?? false);
   const booking = {
@@ -23,7 +24,10 @@ function setup(rooms: Row[], opts: { loading?: boolean; reservations?: unknown[]
   const admin = { reservations: signal<unknown[]>(opts.reservations ?? [reservation]), loadReservations: vi.fn() };
   TestBed.configureTestingModule({
     imports: [HousekeepingNextComponent],
-    providers: [{ provide: BookingService, useValue: booking }, { provide: AdminService, useValue: admin }]
+    providers: [
+      { provide: BookingService, useValue: booking }, { provide: AdminService, useValue: admin },
+      { provide: AuthService, useValue: { currentUser: signal(opts.role === null ? null : { role: opts.role === undefined ? 'EDITOR' : opts.role }) } }
+    ]
   });
   const fixture = TestBed.createComponent(HousekeepingNextComponent);
   fixture.detectChanges();
@@ -151,5 +155,52 @@ describe('HousekeepingNextComponent', () => {
     loadingSig.set(true); fixture.detectChanges();
     expect(el.querySelector('.h-skeleton')).toBeNull();
     expect(el.textContent).toContain('Por limpiar');
+  });
+});
+
+describe('HousekeepingNextComponent: who may mark a room clean (R4) and inspected rooms (R5)', () => {
+  const dirty = () => [room({ id: 31, room_number: '131', cleaning_status: 'dirty' })];
+
+  it('ADMIN and EDITOR see "Finalizar limpieza"; other roles see no action', () => {
+    for (const role of ['ADMIN', 'EDITOR', 'admin']) {
+      expect(setup(dirty(), { role }).buttons().length).toBe(1);
+      TestBed.resetTestingModule();
+    }
+    for (const role of ['CUSTOMER', 'MAINTENANCE', '', null]) {
+      const t = setup(dirty(), { role });
+      expect(t.buttons().length).toBe(0);
+      expect(t.el.textContent).toContain('Por limpiar'); // still listed, read-only
+      TestBed.resetTestingModule();
+    }
+  });
+
+  it('the role is checked again inside finish(): a role without permission never reaches the service', async () => {
+    const { fixture, el, booking } = setup(dirty(), { role: 'CUSTOMER' });
+    await fixture.componentInstance.finish(31);
+    fixture.detectChanges();
+    expect(booking.updateCleaningStatus).not.toHaveBeenCalled();
+    expect(el.querySelector('.h-banner--error')?.textContent).toContain('Tu rol no puede marcar habitaciones como limpias');
+  });
+
+  it('R5: an inspected room is listed as ready ("Lista"), has no action, and is never written', () => {
+    const { el, buttons, booking } = setup([room({ room_number: '307', cleaning_status: 'inspected' })], { role: 'ADMIN' });
+    expect(el.textContent).toContain('Listas');
+    expect(el.textContent).toContain('Lista');
+    expect(el.textContent).not.toMatch(/Inspeccionada|inspected/i);
+    expect(buttons().length).toBe(0);
+    expect(booking.updateCleaningStatus).not.toHaveBeenCalled();
+  });
+});
+
+describe('HousekeepingNextComponent: result visibility', () => {
+  it('scrolls the result banner into view after a write', async () => {
+    const scroll = vi.fn();
+    (Element.prototype as any).scrollIntoView = scroll;
+    try {
+      const t = setup([room({ id: 41, room_number: '141', cleaning_status: 'dirty' })], { role: 'ADMIN' });
+      t.buttons()[0].click();
+      await t.fixture.whenStable(); t.fixture.detectChanges(); await t.fixture.whenStable();
+      expect(scroll).toHaveBeenCalled();
+    } finally { delete (Element.prototype as any).scrollIntoView; }
   });
 });

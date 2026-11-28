@@ -2,7 +2,7 @@ import { HttpInterceptorFn, HttpRequest, HttpResponse } from '@angular/common/ht
 import { delay, of } from 'rxjs';
 import { environment } from '@env/environment';
 import { DEMO_COMPANY_ID, buildDemoBookings, buildDemoRooms, buildDemoTickets } from './demo-data';
-import { applyRoomUpdate, withCleaningOverrides } from './demo-store';
+import { applyRoomUpdate, applyTicketUpdate, withRoomOverrides, withTicketOverrides } from './demo-store';
 
 /**
  * Demo scenarios, selected with `?demo=<name>` on the page URL (QA of loading/empty/error states):
@@ -20,7 +20,7 @@ export function scenarioFromSearch(search: string): DemoScenario {
 const DEMO_NOTICE = 'Modo demostración: sin escritura de datos.';
 
 /** Unsigned, obviously fake JWT. `jwt-decode` only decodes; nothing validates the signature. */
-export function buildDemoToken(role: 'ADMIN' | 'EDITOR', now: Date = new Date()): string {
+export function buildDemoToken(role: 'ADMIN' | 'EDITOR' | 'CUSTOMER', now: Date = new Date()): string {
   const enc = (o: object) => btoa(JSON.stringify(o)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
   const payload = {
     id: 9001, user: 'demo', email: 'demo@example.invalid', name: 'Usuario Demo', role,
@@ -43,18 +43,19 @@ function loginResponse(body: any, now: Date): unknown {
       ] }
     };
   }
-  const role = user === 'editor' ? 'EDITOR' : 'ADMIN';
+  // `viewer` signs in with a role that has no action in the `next` UI (QA of read-only behavior).
+  const role = user === 'editor' ? 'EDITOR' : user === 'viewer' ? 'CUSTOMER' : 'ADMIN';
   return { status: 'success', data: { token: buildDemoToken(role, now), company: { ...COMPANY, role } } };
 }
 
 function crudResponse(table: string, body: any, scenario: DemoScenario, now: Date): unknown {
   const operation = String(body?.operation ?? '');
   if (operation !== 'getall') {
-    // The single in-memory write of the demo: room cleaning status (see demo-store.ts). Everything else is refused.
-    if (table === 'hotel_rooms' && operation === 'update' && scenario === 'normal') {
-      const result = applyRoomUpdate(body);
+    // The in-memory writes of the demo: room cleaning/status and ticket resolution (see demo-store.ts). Everything else is refused.
+    if (operation === 'update' && scenario === 'normal' && (table === 'hotel_rooms' || table === 'hotel_maintenance_tickets')) {
+      const result = table === 'hotel_rooms' ? applyRoomUpdate(body) : applyTicketUpdate(body);
       return result.ok
-        ? { error: false, operation, data: [{ id: result.id, cleaning_status: result.cleaning_status }], message: 'ok' }
+        ? { error: false, operation, data: [{ id: result.id, ...result.fields }], message: 'ok' }
         : { error: true, operation, data: [], message: result.message };
     }
     return { error: true, operation, data: [], message: scenario === 'writeerror' ? 'Demo: simulated write error' : DEMO_NOTICE };
@@ -66,11 +67,14 @@ function crudResponse(table: string, body: any, scenario: DemoScenario, now: Dat
     return { error: false, operation, data: [{}], message: 'ok' };
   }
   let data: unknown[] = [];
-  if (table === 'hotel_rooms') data = withCleaningOverrides(buildDemoRooms());
+  if (table === 'hotel_rooms') data = withRoomOverrides(buildDemoRooms());
   else if (table === 'hotel_bookings') data = buildDemoBookings(now);
   else if (table === 'hotel_maintenance_tickets') {
     const wanted = body?.fields?.status ?? body?.filters?.status;
-    data = buildDemoTickets(now).filter(t => !wanted || t.status === wanted);
+    const roomId = Number(body?.filters?.room_id);
+    data = withTicketOverrides(buildDemoTickets(now))
+      .filter(t => !wanted || t.status === wanted)
+      .filter(t => !Number.isInteger(roomId) || roomId <= 0 || t.room_id === roomId);
   }
   return { error: false, operation, data, message: 'ok' };
 }

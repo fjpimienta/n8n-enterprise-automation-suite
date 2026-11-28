@@ -8,13 +8,23 @@
     <div class="h-kpis">
       <app-kpi-card label="Fallas abiertas" icon="tool" [value]="open()" hint="Con datos completos" [busy]="busy()" />
       <app-kpi-card label="Críticas" icon="alert" [value]="critical()" hint="Atender primero" [busy]="busy()" />
-      <app-kpi-card label="Antiguas" icon="calendar" [value]="oldCount()" [hint]="'Más de ' + oldAfter + ' días abiertas'" [busy]="busy()" />
+      <app-kpi-card label="Antiguas" icon="calendar" [value]="oldCount()" [hint]="oldRule" [busy]="busy()" />
       <app-kpi-card label="Bloqueadas" icon="lock" [value]="blockedRooms()" hint="Habitaciones en mantenimiento" [busy]="busy()" />
       <app-kpi-card label="Con falla pendiente" icon="bed" [value]="pendingRooms()" hint="Aún operan, con falla abierta" [busy]="busy()" />
     </div>
   </section>
 
+  <div #feedbackAnchor style="scroll-margin-top: 72px"></div>
+  <div class="h-hk__live" role="status" aria-live="polite">
+    @if (feedback()?.kind === 'ok') { <p class="h-banner h-banner--ok">{{ feedback()!.text }}</p> }
+  </div>
   <div role="alert">
+    @if (feedback()?.kind === 'error') {
+      <p class="h-banner h-banner--error">{{ feedback()!.text }}</p>
+      @if (roomRetry()) {
+        <button #retryBtn type="button" class="h-btn h-btn--primary h-hk__action" [disabled]="pendingId() !== null" (click)="retryRoom()">Reintentar</button>
+      }
+    }
     @if (loadFailed()) { <p class="h-banner h-banner--error">No se pudieron cargar las fallas. Usa «Actualizar» para intentar de nuevo.</p> }
   </div>
 
@@ -30,6 +40,9 @@
   @if (reviewCount() > 0) {
   <p class="h-banner" role="status">{{ reviewCount() }} {{ reviewCount() === 1 ? 'falla tiene' : 'fallas tienen' }} datos por revisar; no entran en los contadores.</p>
   }
+  @if (!canResolve() && sections().length > 0) {
+  <p class="h-banner" role="status">{{ deniedText }}</p>
+  }
   @if (noOpen()) {
   <div class="h-card h-empty" role="status">No hay fallas abiertas.</div>
   }
@@ -42,7 +55,7 @@
     <ul class="h-mt__list">
       @for (item of section.items; track item.key) {
       <li [class]="'h-mt__row h-mt__row--' + item.group">
-        <app-maintenance-row [item]="item" />
+        <app-maintenance-row [item]="item" [allowed]="canResolve()" [busy]="isBusy(item.ticket.id)" (resolve)="resolve($event)" />
       </li>
       }
     </ul>

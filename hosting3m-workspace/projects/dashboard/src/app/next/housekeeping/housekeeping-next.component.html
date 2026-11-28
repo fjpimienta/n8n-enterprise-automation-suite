@@ -9,11 +9,12 @@
       <app-kpi-card label="Urgentes" icon="alert" [value]="urgent()" hint="Sucias con llegada hoy" [busy]="bookingService.loadingRooms()" />
       <app-kpi-card label="Por limpiar" icon="brush" [value]="toClean()" hint="Libres y sucias" [busy]="bookingService.loadingRooms()" />
       <app-kpi-card label="Salidas por liberar" icon="logout" [value]="departures()" hint="Ocupadas que salen hoy" [busy]="bookingService.loadingRooms()" />
-      <app-kpi-card label="Listas" icon="bed" [value]="ready()" hint="Limpias o inspeccionadas" [busy]="bookingService.loadingRooms()" />
+      <app-kpi-card label="Listas" icon="bed" [value]="ready()" hint="Limpias" [busy]="bookingService.loadingRooms()" />
       <app-kpi-card label="En estancia" icon="users" [value]="stayOvers()" hint="Ocupadas que no salen hoy" [busy]="bookingService.loadingRooms()" />
     </div>
   </section>
 
+  <div #feedbackAnchor style="scroll-margin-top: 72px"></div>
   <div class="h-hk__live" role="status" aria-live="polite">
     @if (feedback()?.kind === 'ok') { <p class="h-banner h-banner--ok">{{ feedback()!.text }}</p> }
   </div>
@@ -45,7 +46,7 @@
     <ul class="h-hk__list">
       @for (item of section.items; track item.room.id) {
       <li class="h-hk__row" [class]="'h-hk__row h-hk__row--' + item.group">
-        <app-housekeeping-row [item]="item" [busy]="isBusy(item.room.id)" (finish)="finish($event)" />
+        <app-housekeeping-row [item]="item" [busy]="isBusy(item.room.id)" [allowed]="canFinishRole()" (finish)="finish($event)" />
       </li>
       }
     </ul>

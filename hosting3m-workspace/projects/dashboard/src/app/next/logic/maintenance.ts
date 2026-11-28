@@ -5,13 +5,17 @@ import { RoomView } from './room-view';
  *
  * Owner decisions (2026-11-28):
  *  - Groups by priority: Crítica, Normal, Baja. Unknown or inconsistent data goes to "Revisar datos" (never hidden).
- *  - Order inside a group: oldest first. A ticket older than `MT_OLD_AFTER_DAYS` whole days is "Antiguo".
+ *  - Order inside a group: oldest first. A ticket is "Antiguo" from `oldAfterDays(priority)` whole days: 1 day for
+ *    CRITICAL, 3 days for any other priority (owner decision, 2026-11-28; the threshold itself counts as old).
  *  - Ages are whole days between America/Mexico_City calendar dates (Timezone Armor: `created_at` arrives as an ISO
  *    instant and is converted to its Mexico City date before comparing; no `toISOString()` date keys).
- *  - Only open tickets (`PENDING`). Resolved tickets are not shown. Cost is not shown.
+ *  - Only open tickets (`PENDING`). Resolved and deleted tickets are not shown. Cost is not shown.
  *  - A room with an open ticket that is not in maintenance is "Con falla pendiente"; one in maintenance is "Bloqueada".
  */
-export const MT_OLD_AFTER_DAYS = 3;
+/** Days after which a ticket is "Antiguo": CRITICAL from 1 day, any other (or unknown) priority from 3 days. */
+export const MT_OLD_AFTER_DAYS_CRITICAL = 1;
+export const MT_OLD_AFTER_DAYS_DEFAULT = 3;
+export const MT_OLD_RULE_TEXT = `Críticas desde ${MT_OLD_AFTER_DAYS_CRITICAL} día; las demás desde ${MT_OLD_AFTER_DAYS_DEFAULT} días`;
 export const MT_TIMEZONE = 'America/Mexico_City';
 
 export type MtPriority = 'CRITICAL' | 'NORMAL' | 'LOW';
@@ -131,8 +135,13 @@ export function ticketAgeDays(createdAt: string, now: Date): number | null {
   return Math.max(0, dayNumber(today) - dayNumber(created));
 }
 
-export function isOldTicket(ageDays: number | null): boolean {
-  return ageDays !== null && ageDays > MT_OLD_AFTER_DAYS;
+export function oldAfterDays(priority: string): number {
+  return priority.trim().toUpperCase() === 'CRITICAL' ? MT_OLD_AFTER_DAYS_CRITICAL : MT_OLD_AFTER_DAYS_DEFAULT;
+}
+
+/** Old when the age reaches the threshold of its priority (age >= threshold). Unknown age is never old. */
+export function isOldTicket(ageDays: number | null, priority: string): boolean {
+  return ageDays !== null && ageDays >= oldAfterDays(priority);
 }
 
 /** Spanish age text: "Hoy", "Ayer", "Hace 4 días"; "—" when unknown. */
@@ -143,9 +152,14 @@ export function ageText(ageDays: number | null): string {
   return `Hace ${ageDays} días`;
 }
 
-/** Only `PENDING` tickets are open; `RESOLVED` is excluded; anything else is flagged for review. */
+/** Only `PENDING` tickets are open; `RESOLVED` and `DELETED` are excluded; anything else is flagged for review. */
 export function isResolved(t: TicketView): boolean {
-  return t.status === 'RESOLVED';
+  return t.status === 'RESOLVED' || t.status === 'DELETED';
+}
+
+/** A ticket the UI may resolve: it has an id and a room and is plainly `PENDING` (no unknown data to guess from). */
+export function isResolvable(t: TicketView): boolean {
+  return t.id !== null && t.roomId !== null && t.status === 'PENDING';
 }
 
 export function reviewReasons(t: TicketView): MtReviewReason[] {
@@ -158,7 +172,7 @@ export function reviewReasons(t: TicketView): MtReviewReason[] {
   return reasons;
 }
 
-export interface MtRoomRef { number: string; status: string }
+export interface MtRoomRef { number: string; status: string; cleaning_status: string }
 /** `blocked`: room status is maintenance. `pending`: open ticket but the room is in another status. `unknown`: room not found. */
 export type MtRoomState = 'blocked' | 'pending' | 'unknown';
 
@@ -168,6 +182,8 @@ export interface MtItem {
   reasons: MtReviewReason[];
   ageDays: number | null;
   old: boolean;
+  /** True when a resolve action may be offered (role permitting). */
+  resolvable: boolean;
   room: MtRoomRef | null;
   roomState: MtRoomState;
   /** Stable key for list tracking (tickets without an id get a position-based key). */
@@ -175,7 +191,7 @@ export interface MtItem {
 }
 
 function roomMap(rooms: readonly RoomView[]): Map<number, MtRoomRef> {
-  return new Map(rooms.map(r => [r.id, { number: r.room_number, status: r.status }]));
+  return new Map(rooms.map(r => [r.id, { number: r.room_number, status: r.status, cleaning_status: r.cleaning_status }]));
 }
 
 /** Oldest first; unknown age last; then id (missing last); then input order (the sort is stable). */
@@ -197,7 +213,7 @@ export function buildMaintenanceItems(tickets: readonly TicketView[], rooms: rea
     const room = ticket.roomId === null ? null : (byRoom.get(ticket.roomId) ?? null);
     const ageDays = ticketAgeDays(ticket.createdAt, now);
     items.push({
-      ticket, group, reasons, ageDays, old: isOldTicket(ageDays), room,
+      ticket, group, reasons, ageDays, old: isOldTicket(ageDays, ticket.priority), resolvable: isResolvable(ticket), room,
       roomState: room === null ? 'unknown' : room.status === 'maintenance' ? 'blocked' : 'pending',
       key: ticket.id !== null ? `t${ticket.id}` : `n${index}`
     });
@@ -220,7 +236,7 @@ export interface MtCounts {
   /** Open tickets with consistent data (critical + normal + low). */
   open: number | null;
   critical: number | null;
-  /** Open tickets older than `MT_OLD_AFTER_DAYS` days (any group; unknown ages are not counted). */
+  /** Open tickets that reached their "Antiguo" threshold (any group; unknown ages are not counted). */
   old: number | null;
   /** Tickets under "Revisar datos". */
   review: number | null;

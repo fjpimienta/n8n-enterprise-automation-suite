@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { RoomView, toRoomViews } from './room-view';
 import {
-  MT_OLD_AFTER_DAYS, ageText, buildMaintenanceItems, buildMaintenanceSections, computeMaintenanceCounts, countText,
-  isOldTicket, issueLabel, mexicoCityDateKey, reviewReasons, ticketAgeDays, toTicketViews
+  MT_OLD_AFTER_DAYS_CRITICAL, MT_OLD_AFTER_DAYS_DEFAULT, MT_OLD_RULE_TEXT, ageText, buildMaintenanceItems, buildMaintenanceSections, computeMaintenanceCounts, countText,
+  isOldTicket, isResolvable, issueLabel, mexicoCityDateKey, oldAfterDays, reviewReasons, ticketAgeDays, toTicketViews
 } from './maintenance';
 
 const NOW = new Date('2026-11-28T18:00:00.000Z'); // 12:00 in Mexico City
@@ -50,14 +50,32 @@ describe('ticket age (America/Mexico_City calendar days)', () => {
     expect(ticketAgeDays('2026-11-28T06:00:00.000Z', justAfterMidnight)).toBe(0);
     expect(ticketAgeDays('2026-11-28T05:59:59.000Z', justAfterMidnight)).toBe(1);
   });
-  it('around the threshold: 3 days is not old, 4 days is', () => {
+  it('around the day boundary at midnight Mexico City', () => {
     const lateNight = new Date('2026-11-28T05:59:59.000Z'); // 23:59 CDMX on the 27th
     expect(ticketAgeDays('2026-11-25T05:59:59.000Z', lateNight)).toBe(3); // 23:59 CDMX on the 24th
     expect(ticketAgeDays('2026-11-24T05:59:59.000Z', lateNight)).toBe(4);
-    expect(MT_OLD_AFTER_DAYS).toBe(3);
-    expect(isOldTicket(3)).toBe(false);
-    expect(isOldTicket(4)).toBe(true);
-    expect(isOldTicket(null)).toBe(false);
+  });
+  it('R8 thresholds: CRITICAL from 1 day, any other priority from 3 days (the threshold itself is old)', () => {
+    expect([MT_OLD_AFTER_DAYS_CRITICAL, MT_OLD_AFTER_DAYS_DEFAULT]).toEqual([1, 3]);
+    expect([0, 1, 2].map(d => isOldTicket(d, 'CRITICAL'))).toEqual([false, true, true]);
+    for (const p of ['NORMAL', 'LOW']) expect([2, 3, 4].map(d => isOldTicket(d, p))).toEqual([false, true, true]);
+    expect(isOldTicket(null, 'CRITICAL')).toBe(false);
+  });
+  it('unknown, empty and lower-case priorities use the default threshold; critical is case-insensitive', () => {
+    expect([oldAfterDays('URGENTE'), oldAfterDays(''), oldAfterDays('normal'), oldAfterDays(' critical ')]).toEqual([3, 3, 3, 1]);
+  });
+  it('threshold-1, threshold and threshold+1 with the real age calculation across midnight Mexico City', () => {
+    const justAfterMidnight = new Date('2026-11-28T06:00:00.000Z'); // 00:00 on the 28th in Mexico City
+    const created = (d: number) => new Date(justAfterMidnight.getTime() - d * 86_400_000 + 3_600_000).toISOString(); // 01:00 CDMX, d days earlier
+    const crit = [0, 1, 2].map(d => isOldTicket(ticketAgeDays(created(d), justAfterMidnight), 'CRITICAL'));
+    expect(crit).toEqual([false, true, true]);
+    const normal = [2, 3, 4].map(d => isOldTicket(ticketAgeDays(created(d), justAfterMidnight), 'NORMAL'));
+    expect(normal).toEqual([false, true, true]);
+    // 23:59 CDMX the day before is 1 day old at 00:00 CDMX, although only one minute passed: calendar days, not hours.
+    expect(isOldTicket(ticketAgeDays('2026-11-28T05:59:00.000Z', justAfterMidnight), 'CRITICAL')).toBe(true);
+  });
+  it('the board text states both thresholds', () => {
+    expect(MT_OLD_RULE_TEXT).toBe('Críticas desde 1 día; las demás desde 3 días');
   });
   it('does not depend on the time of day (a day is a calendar day)', () => {
     expect(ticketAgeDays('2026-11-27T23:59:00.000Z', new Date('2026-11-28T18:00:00.000Z'))).toBe(1);
@@ -89,8 +107,13 @@ describe('classification', () => {
     const r = items([ticket({ priority: 'LOW' }), ticket({ priority: 'CRITICAL' }), ticket({ priority: 'NORMAL' })]);
     expect(r.map(i => i.group)).toEqual(['critical', 'normal', 'low']);
   });
-  it('resolved tickets are not shown', () => {
-    expect(items([ticket({ status: 'RESOLVED' })])).toEqual([]);
+  it('resolved and deleted tickets are not shown', () => {
+    expect(items([ticket({ status: 'RESOLVED' }), ticket({ status: 'DELETED' })])).toEqual([]);
+  });
+  it('only a plain PENDING ticket with an id and a room is resolvable', () => {
+    const r = items([ticket(), ticket({ id: undefined }), ticket({ room_id: null }), ticket({ status: 'CANCELLED' }), ticket({ priority: 'URGENTE' })]);
+    expect(r.map(i => i.resolvable).sort()).toEqual([false, false, false, true, true]);
+    expect(isResolvable(toTicketViews([ticket({ status: 'pending' })])[0])).toBe(true);
   });
   it('unknown priority, unknown status, no id, no content and no room go to review with a reason', () => {
     const r = items([
@@ -147,7 +170,7 @@ describe('counts', () => {
       ticket({ room_id: 2, priority: 'LOW', created_at: stamp(0) }),
       ticket({ room_id: 3, priority: 'WHAT' })
     ], rooms);
-    expect(computeMaintenanceCounts(it, rooms, true)).toEqual({ open: 3, critical: 1, old: 1, review: 1, blockedRooms: 1, pendingRooms: 2 });
+    expect(computeMaintenanceCounts(it, rooms, true)).toEqual({ open: 3, critical: 1, old: 2, review: 1, blockedRooms: 1, pendingRooms: 2 });
   });
   it('only resolved tickets: a known, real zero', () => {
     const it = items([ticket({ status: 'RESOLVED' })], rooms);

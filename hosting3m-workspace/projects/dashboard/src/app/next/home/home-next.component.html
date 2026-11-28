@@ -154,9 +154,3 @@
 <app-maintenance-ticket-modal [room]="maintenanceRoom()" (onClose)="maintenanceRoom.set(null)"
   (onSave)="maintenanceRoom.set(null); refresh()"> </app-maintenance-ticket-modal>
 }
-
-@if (showMaintenanceMonitor) {
-<app-maintenance-monitor-modal [targetRoomId]="maintenanceFilterRoomId"
-  (onClose)="showMaintenanceMonitor = false; maintenanceFilterRoomId = null; refresh()"
-  (onResolved)="handleMonitorResolved()"> </app-maintenance-monitor-modal>
-}
