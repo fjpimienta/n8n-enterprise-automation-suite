@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { describe, expect, it } from 'vitest';
 import { environment } from '@env/environment';
 import { buildDemoBookings, buildDemoRooms, buildDemoTickets, dayOffsetStamp, ticketStamp } from './demo-data';
-import { MT_OLD_AFTER_DAYS, reviewReasons, ticketAgeDays, toTicketViews } from '../next/logic/maintenance';
+import { reviewReasons, ticketAgeDays, toTicketViews } from '../next/logic/maintenance';
 import { buildDemoToken, demoMockInterceptor, scenarioFromSearch } from './demo-mock.interceptor';
 
 async function call(url: string, body: unknown): Promise<any> {
@@ -58,8 +58,9 @@ describe('demoMockInterceptor', () => {
     const now = new Date();
     const views = toTicketViews(buildDemoTickets(now));
     const ages = views.map(v => ticketAgeDays(v.createdAt, now));
-    expect(ages).toContain(MT_OLD_AFTER_DAYS);
-    expect(ages).toContain(MT_OLD_AFTER_DAYS + 1);
+    // CRITICAL at 0 and 1 day; NORMAL at 3 days; LOW at 2 days (R8 thresholds: 1 day critical, 3 days the rest)
+    const at = (priority: string, age: number) => views.some(v => v.priority === priority && ticketAgeDays(v.createdAt, now) === age);
+    expect([at('CRITICAL', 0), at('CRITICAL', 1), at('NORMAL', 3), at('LOW', 2)]).toEqual([true, true, true, true]);
     expect(ages).toContain(0);
     const reasons = views.flatMap(v => reviewReasons(v));
     expect(reasons).toEqual(expect.arrayContaining(['no-id', 'no-content', 'unknown-priority']));

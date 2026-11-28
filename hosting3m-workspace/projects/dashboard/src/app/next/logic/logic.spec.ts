@@ -142,3 +142,25 @@ describe('nav', () => {
     expect(pageTitle('/otro')).toBe('Hotel San José');
   });
 });
+
+describe('R7: inactive rooms', () => {
+  const rows = [
+    { id: 1, room_number: '101', status: 'occupied', cleaning_status: 'clean' },
+    { id: 2, room_number: '102', status: 'available', cleaning_status: 'clean', is_active: true },
+    { id: 3, room_number: '103', status: 'maintenance', cleaning_status: 'clean', is_active: 'true' },
+    { id: 4, room_number: '104', status: 'available', cleaning_status: 'clean', is_active: false },
+    { id: 5, room_number: '105', status: 'occupied', cleaning_status: 'clean', is_active: 'f' },
+    { id: 6, room_number: '106', status: 'available', cleaning_status: 'dirty', is_active: 0 }
+  ];
+  it('drops only rooms that say they are inactive; a missing flag means active', () => {
+    expect(toRoomViews(rows).map(r => r.id)).toEqual([1, 2, 3]);
+  });
+  it('the occupancy denominator is every ACTIVE room, rooms in maintenance included, inactive ones excluded', () => {
+    const k = computeKpis({ rooms: toRoomViews(rows), reservationsKnown: true });
+    expect(k).toMatchObject({ occupiedRooms: 1, totalRooms: 3, occupancyPercent: 33, roomsToClean: 0 });
+    expect(occupancyHint(k)).toBe('1 de 3 habitaciones');
+  });
+  it('a list with only inactive rooms is unknown ("—"), not zero', () => {
+    expect(occupancyText(computeKpis({ rooms: toRoomViews([rows[3]]), reservationsKnown: true }))).toBe('—');
+  });
+});

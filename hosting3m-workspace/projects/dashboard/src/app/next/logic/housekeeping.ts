@@ -33,7 +33,7 @@ export const HK_GROUP_HINT: Record<HkGroup, string> = {
   arrival: 'Límpialas primero',
   dirty: 'Libres y sucias',
   departure: 'Ocupadas: aún no se pueden limpiar',
-  ready: 'Limpias o inspeccionadas',
+  ready: 'Limpias',
   blocked: 'Sin acción desde esta pantalla',
   review: 'Estado inconsistente: confirma con recepción'
 };

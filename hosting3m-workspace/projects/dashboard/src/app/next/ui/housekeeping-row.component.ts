@@ -29,7 +29,7 @@ function typeText(type: string): string {
   return t === '' ? '' : t.charAt(0).toUpperCase() + t.slice(1).toLowerCase();
 }
 
-/** One housekeeping row. Presentational: the page decides what "Finalizar limpieza" does. */
+/** One housekeeping row. Presentational: the page decides what "Finalizar limpieza" does and who may see it. */
 @Component({
   selector: 'app-housekeeping-row',
   standalone: true,
@@ -48,7 +48,7 @@ function typeText(type: string): string {
       }
     </div>
     @if (note()) { <div class="h-hk__note">{{ note() }}</div> }
-    @if (item().canFinish) {
+    @if (allowed() && item().canFinish) {
       <button type="button" class="h-btn h-btn--primary h-hk__action" [disabled]="busy()" [attr.aria-busy]="busy()"
         [attr.aria-label]="'Finalizar limpieza de la habitación ' + item().room.room_number" (click)="finish.emit(item().room.id)">
         <app-h-icon name="brush" [size]="18" /> {{ busy() ? 'Guardando…' : 'Finalizar limpieza' }}
@@ -58,6 +58,8 @@ function typeText(type: string): string {
 export class HousekeepingRowComponent {
   readonly item = input.required<HkItem>();
   readonly busy = input<boolean>(false);
+  /** Role permits marking a room clean (decided by the page). Hidden unless true (fail-closed). */
+  readonly allowed = input<boolean>(false);
   readonly finish = output<number>();
   protected readonly chip = computed(() => CHIP[this.item().group]);
   protected readonly type = computed(() => typeText(this.item().room.type));

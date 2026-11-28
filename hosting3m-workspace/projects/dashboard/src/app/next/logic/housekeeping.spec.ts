@@ -163,3 +163,18 @@ describe('malformed gateway input', () => {
     expect(classifyRoom(room({ cleaning_status: 'undefined' })).needsReview).toBe(true);
   });
 });
+
+describe('R5: "inspected" is shown as clean and never offered', () => {
+  const r = (o: Record<string, unknown>) => toRoomViews([{ id: 1, room_number: '101', type: 'DOBLE', status: 'available', cleaning_status: 'inspected', ...o }])[0];
+  it('a free inspected room is ready, like a clean one, with no finish action', () => {
+    expect(classifyRoom(r({}))).toEqual({ group: 'ready', needsReview: false });
+    expect(classifyRoom(r({ cleaning_status: 'clean' }))).toEqual({ group: 'ready', needsReview: false });
+    expect(canFinishCleaning(r({}))).toBe(false);
+  });
+  it('an occupied inspected room is a stay-over, not a review item', () => {
+    expect(classifyRoom(r({ status: 'occupied' }))).toEqual({ group: 'stayover', needsReview: false });
+  });
+  it('the only value this module writes is "clean"', () => {
+    expect(FINISHED_CLEANING).toBe('clean');
+  });
+});

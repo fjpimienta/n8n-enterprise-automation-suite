@@ -1,6 +1,6 @@
 import { ChipKind } from './es-mx';
 
-/** Validated, typed room shape used by the `next` UI. */
+/** Validated, typed room shape used by the `next` UI. Inactive rooms never reach it (see `toRoomViews`). */
 export interface RoomView {
   id: number;
   room_number: string;
@@ -19,10 +19,17 @@ function str(v: unknown): string {
   return typeof v === 'string' ? v : typeof v === 'number' ? String(v) : '';
 }
 
+/** `is_active` is false only when it says so: missing or unreadable means active. */
+export function isActiveRoom(raw: Record<string, unknown>): boolean {
+  const v = raw['is_active'];
+  return !(v === false || v === 'false' || v === 'f' || v === 0 || v === '0');
+}
+
 /**
  * Adapter from the service's loosely typed rows. Drops rows without an identifier (the gateway
  * returns `data: [{}]` for empty collections) and never throws on malformed input. Numeric ids that
- * arrive as strings are parsed explicitly.
+ * arrive as strings are parsed explicitly. Inactive rooms (`is_active` false) are dropped: the rooms model has no
+ * default filter, so the gateway sends them, and they must not count in the occupancy denominator or any list.
  */
 export function toRoomViews(rows: readonly unknown[] | null | undefined): RoomView[] {
   if (!Array.isArray(rows)) return [];
@@ -30,6 +37,7 @@ export function toRoomViews(rows: readonly unknown[] | null | undefined): RoomVi
   for (const raw of rows) {
     if (!raw || typeof raw !== 'object') continue;
     const r = raw as Record<string, unknown>;
+    if (!isActiveRoom(r)) continue;
     const id = Number(r['id']);
     const number = str(r['room_number']).trim();
     if (!Number.isFinite(id) || id <= 0 || number === '') continue;

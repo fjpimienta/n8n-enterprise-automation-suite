@@ -19,8 +19,8 @@ export interface KpiInput {
 }
 
 /**
- * Occupancy rule, kept in one place: denominator = ALL rooms (rooms in maintenance included).
- * Excluding rooms in maintenance is an open business rule.
+ * Occupancy rule, kept in one place (owner decision, 2026-11-28): denominator = ALL ACTIVE rooms, rooms in
+ * maintenance included. Inactive rooms are already dropped by `toRoomViews`.
  */
 export function occupancyPercent(occupied: number, total: number): number | null {
   return total > 0 ? Math.round((occupied / total) * 100) : null;

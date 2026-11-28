@@ -129,8 +129,11 @@ export function ticketStamp(daysAgo: number, base: Date = new Date()): string {
 /**
  * Synthetic tickets. Every OPEN ticket sits on room 5 (in maintenance) or room 9 (available), so the rooms flagged
  * by the tickets radar stay exactly {5, 9} (Panel KPI and Housekeeping board keep their figures). Ages (days):
- * 0, 1, 2, 3 (threshold, not old), 4, 5, 6 and 9 (old). Includes the unhappy cases: unknown priority, missing id,
- * missing description and type, unknown and missing type.
+ * 0, 1, 2, 3, 4, 5, 6 and 9. Includes the unhappy cases: unknown priority, missing id,
+ * missing description and type, unknown and missing type. "Antiguo" thresholds: CRITICAL from 1 day, others from 3 days
+ * (CRITICAL at 0 and at 1 day, NORMAL at 3 days and LOW at 2 days are all present). Room 5 holds four open faults, so
+ * resolving them one by one shows both the "still blocked" and the "sent to cleaning" outcomes; room 9 keeps a
+ * ticket without id, which cannot be resolved, so it always keeps open faults.
  */
 export function buildDemoTickets(base: Date = new Date()): DemoTicket[] {
   const C = DEMO_COMPANY_ID;
@@ -138,7 +141,7 @@ export function buildDemoTickets(base: Date = new Date()): DemoTicket[] {
   return [
     { id: 1, room_id: 5, status: 'PENDING', priority: 'CRITICAL', issue_type: 'ELECTRICO', description: 'Sin luz en el baño', created_at: at(4), id_company: C },
     { id: 2, room_id: 9, status: 'PENDING', priority: 'NORMAL', issue_type: 'PLOMERIA', description: 'Fuga en el lavabo', created_at: at(3), id_company: C },
-    { id: 3, room_id: 5, status: 'PENDING', priority: 'NORMAL', issue_type: 'AIRE_ACONDICIONADO', description: 'El aire no enfría', created_at: at(1), id_company: C },
+    { id: 3, room_id: 5, status: 'PENDING', priority: 'CRITICAL', issue_type: 'AIRE_ACONDICIONADO', description: 'El aire no enfría', created_at: at(1), id_company: C },
     { id: 4, room_id: 9, status: 'PENDING', priority: 'LOW', issue_type: 'MOBILIARIO', description: 'Cajón del buró atorado', created_at: at(9), id_company: C },
     { id: 5, room_id: 9, status: 'PENDING', priority: 'CRITICAL', issue_type: 'TECNOLOGIA', description: 'Sin internet en la habitación', created_at: at(0), id_company: C },
     { id: 6, room_id: 5, status: 'PENDING', priority: 'URGENTE', issue_type: 'ALBAÑILERIA', description: 'Grieta en la pared', created_at: at(2), id_company: C },
