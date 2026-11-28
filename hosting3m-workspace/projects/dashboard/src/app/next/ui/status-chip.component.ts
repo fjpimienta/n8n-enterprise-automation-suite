@@ -5,7 +5,7 @@ import { CHIP_LABEL, ChipKind } from '../logic/es-mx';
   selector: 'app-status-chip',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<span class="h-chip" [class]="'h-chip h-chip--' + cssKind()">{{ text() }}</span>`
+  template: `<span class="h-chip" [class]="'h-chip h-chip--' + cssKind()" [attr.title]="text()">{{ text() }}</span>`
 })
 export class StatusChipComponent {
   readonly kind = input.required<ChipKind>();

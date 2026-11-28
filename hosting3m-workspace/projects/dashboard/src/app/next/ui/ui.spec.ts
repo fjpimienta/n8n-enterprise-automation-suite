@@ -53,6 +53,22 @@ describe('RoomCardCompactComponent', () => {
     expect(el.querySelector('.h-room__report')?.getAttribute('aria-label')).toContain('007');
   });
 
+  it('exposes the full chip text as a tooltip so a truncated label stays readable', () => {
+    const f = render(RoomCardCompactComponent, { room: room({ hasIncomingToday: true }) });
+    const chip = f.nativeElement.querySelector('.h-chip') as HTMLElement;
+    expect(chip.textContent?.trim()).toBe('Llegada hoy');
+    expect(chip.getAttribute('title')).toBe('Llegada hoy');
+  });
+
+  it('always renders the footer strip (reserved space for the date and the report button)', () => {
+    const withDate = render(RoomCardCompactComponent, { room: room({ status: 'occupied', displayDate: '2026-12-18T00:00:00.000Z' }) });
+    expect(withDate.nativeElement.querySelector('.h-room__foot')?.textContent).toContain('Sale 18 dic');
+    TestBed.resetTestingModule();
+    const without = render(RoomCardCompactComponent, { room: room({ status: 'maintenance' }) });
+    expect(without.nativeElement.querySelector('.h-room__foot')).not.toBeNull();
+    expect(without.nativeElement.querySelector('.h-room__foot')?.textContent?.trim()).toBe('');
+  });
+
   it('hides the report button for rooms already in maintenance', () => {
     const f = render(RoomCardCompactComponent, { room: room({ status: 'maintenance' }) });
     expect(f.nativeElement.querySelector('.h-room__report')).toBeNull();

@@ -119,9 +119,11 @@ body.theme-hotel .h-btn[disabled] { opacity: .6; cursor: not-allowed; }
 
 /* ---------- Status chips ---------- */
 body.theme-hotel .h-chip {
-  display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: var(--h-radius-pill);
-  font: 600 var(--h-fs-xs)/1.3 var(--h-font-body); white-space: nowrap;
+  display: inline-block; box-sizing: border-box; max-width: 100%; padding: 3px 10px; border-radius: var(--h-radius-pill);
+  font: 600 var(--h-fs-xs)/1.3 var(--h-font-body); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; vertical-align: middle;
 }
+/* The chip host must be shrinkable so a long label truncates instead of widening its container. */
+body.theme-hotel app-status-chip { display: inline-block; min-width: 0; max-width: 100%; }
 body.theme-hotel .h-chip--available { background: var(--h-chip-available-bg); color: var(--h-chip-available-fg); }
 body.theme-hotel .h-chip--occupied { background: var(--h-chip-occupied-bg); color: var(--h-chip-occupied-fg); }
 body.theme-hotel .h-chip--cleaning { background: var(--h-chip-cleaning-bg); color: var(--h-chip-cleaning-fg); }
@@ -238,7 +240,8 @@ body.theme-hotel .h-group__head:focus-visible { outline: 3px solid var(--h-focus
 body.theme-hotel .h-group__count { color: var(--h-muted); font: 500 var(--h-fs-sm) var(--h-font-body); }
 body.theme-hotel .h-rooms { display: grid; gap: var(--h-space-3); grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
 body.theme-hotel .h-room {
-  all: unset; box-sizing: border-box; display: grid; gap: var(--h-space-2); padding: var(--h-space-3); cursor: pointer; min-height: 44px;
+  all: unset; box-sizing: border-box; display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; flex: 1 1 auto;
+  width: 100%; min-width: 0; gap: var(--h-space-2); padding: var(--h-space-3); cursor: pointer; min-height: 44px;
   background: var(--h-surface); border: 1px solid var(--h-border); border-left: 4px solid var(--h-border); border-radius: var(--h-radius-md); box-shadow: var(--h-shadow-1);
   position: relative;
 }
@@ -247,10 +250,12 @@ body.theme-hotel .h-room--available { border-left-color: #16A34A; }
 body.theme-hotel .h-room--occupied { border-left-color: #2563EB; }
 body.theme-hotel .h-room--cleaning { border-left-color: #D97706; }
 body.theme-hotel .h-room--maintenance { border-left-color: #DC2626; }
-body.theme-hotel .h-room__top { display: flex; align-items: baseline; justify-content: space-between; gap: var(--h-space-2); }
+body.theme-hotel .h-room__top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--h-space-1) var(--h-space-2); min-width: 0; }
 body.theme-hotel .h-room__number { font: 700 var(--h-fs-lg)/1 var(--h-font-head); }
 body.theme-hotel .h-room__meta { color: var(--h-muted); font-size: var(--h-fs-xs); }
-body.theme-hotel .h-room__flags { display: flex; flex-wrap: wrap; gap: var(--h-space-1); }
+body.theme-hotel .h-room__flags { display: flex; flex-wrap: wrap; gap: var(--h-space-1); min-width: 0; }
+/* Footer strip: date text on the left, the report button (absolute, bottom-right) owns the right 44px. */
+body.theme-hotel .h-room__foot { display: block; min-height: 36px; padding-right: 44px; color: var(--h-muted); font-size: var(--h-fs-xs); align-self: end; overflow-wrap: anywhere; }
 body.theme-hotel .h-room__report {
   all: unset; box-sizing: border-box; position: absolute; right: 4px; bottom: 4px; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
   border-radius: var(--h-radius-sm); cursor: pointer; color: var(--h-muted);
@@ -293,9 +298,8 @@ body.theme-hotel .h-error { color: #B91C1C; font-size: var(--h-fs-sm); }
 body.theme-hotel[data-bs-theme='dark'] .h-error { color: #FCA5A5; }
 body.theme-hotel .h-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-body.theme-hotel .h-room-host { display: block; position: relative; }
+body.theme-hotel .h-room-host { display: flex; position: relative; min-width: 0; }
 body.theme-hotel .h-home > * { min-width: 0; }
 body.theme-hotel .h-home__main { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--h-space-4); align-content: start; }
 body.theme-hotel .h-filters { max-width: 100%; }
-body.theme-hotel .h-room__flags, body.theme-hotel .h-room__date { padding-right: 40px; }
 @media (max-width: 767.98px) { body.theme-hotel .h-kpis > :last-child:nth-child(odd) { grid-column: 1 / -1; } }

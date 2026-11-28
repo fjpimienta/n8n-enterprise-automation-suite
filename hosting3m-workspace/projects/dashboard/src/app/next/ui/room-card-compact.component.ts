@@ -22,7 +22,7 @@ import { RoomView, chipKind } from '../logic/room-view';
         @if (showArrival()) { <app-status-chip kind="reserved" /> }
         @if (room().hasPendingTicket === true && room().status !== 'maintenance') { <app-status-chip kind="maintenance" label="Falla reportada" /> }
       </span>
-      @if (dateLine(); as line) { <span class="h-room__meta h-room__date">{{ line }}</span> }
+      <span class="h-room__foot">{{ dateLine() }}</span>
     </button>
     @if (room().status !== 'maintenance') {
       <button type="button" class="h-room__report" [attr.aria-label]="'Reportar daño en la habitación ' + room().room_number" (click)="report.emit(room().id)">
