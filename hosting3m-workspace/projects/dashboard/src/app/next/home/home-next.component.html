@@ -1,0 +1,162 @@
+<div>
+  <div>
+
+    @if (viewMode() === 'details' || viewMode() === 'checkin' || viewMode() === 'checkout_validation') {
+
+    <div class="h-home">
+      <section class="h-home__wide" aria-label="Indicadores del día">
+        <div class="h-kpis">
+          <app-kpi-card label="Ocupación" icon="bed" [value]="occupancyValue()" [hint]="occupancyNote()" [busy]="bookingService.loadingRooms()" />
+          <app-kpi-card label="Llegadas hoy" icon="login" [value]="arrivalsValue()" hint="Habitaciones con llegada" [busy]="bookingService.loadingRooms()" />
+          <app-kpi-card label="Salidas hoy" icon="logout" [value]="departuresValue()" hint="Habitaciones por liberar" [busy]="bookingService.loadingRooms()" />
+          <app-kpi-card label="Por limpiar" icon="brush" [value]="toCleanValue()" hint="Habitaciones sucias" [busy]="bookingService.loadingRooms()" />
+          <app-kpi-card label="Mantenimiento" icon="tool" [value]="ticketsValue()" hint="Habitaciones con reporte" [busy]="bookingService.loadingRooms()" />
+        </div>
+      </section>
+
+      <div class="h-home__main">
+        <app-room-filter-bar [options]="filterOptions()" [active]="rackFilter()" [query]="rackQuery()"
+          (filterChange)="rackFilter.set($event)" (queryChange)="rackQuery.set($event)" (refresh)="refresh()" />
+
+        @if (bookingService.loadingRooms()) {
+        <div class="h-rooms" aria-busy="true" aria-label="Cargando habitaciones">
+          @for (i of [1,2,3,4,5,6,7,8]; track i) { <div class="h-skeleton"></div> }
+        </div>
+        } @else if (roomViews().length === 0) {
+        <div class="h-card h-empty" role="status">
+          No hay habitaciones para mostrar. Si esperabas verlas, usa «Actualizar».
+        </div>
+        } @else if (rackGroups().length === 0) {
+        <div class="h-card h-empty" role="status">
+          Ninguna habitación coincide con el filtro.
+          <div style="margin-top: 12px;"><button type="button" class="h-btn" (click)="clearRackFilters()">Ver todas</button></div>
+        </div>
+        } @else {
+        @for (group of rackGroups(); track group.key) {
+        <section [attr.aria-label]="group.label">
+          <button type="button" class="h-group__head" [attr.aria-expanded]="!isCollapsed(group.key)" (click)="toggleRackGroup(group.key)">
+            <app-h-icon name="chevron-down" [size]="18" [style.transform]="isCollapsed(group.key) ? 'rotate(-90deg)' : 'none'" />
+            {{ group.label }} <span class="h-group__count">{{ group.rooms.length }}</span>
+          </button>
+          @if (!isCollapsed(group.key)) {
+          <div class="h-rooms">
+            @for (room of group.rooms; track room.id) {
+            <app-room-card-compact [room]="room" (select)="onRackSelect($event)" (report)="onRackReport($event)" />
+            }
+          </div>
+          }
+        </section>
+        }
+        }
+      </div>
+
+      <aside class="h-home__side" aria-label="Hoy">
+        <app-today-panel title="Llegadas de hoy" icon="login" [items]="arrivalItems()" emptyText="Sin llegadas hoy" (select)="onRackSelect($event)" />
+        <app-today-panel title="Salidas de hoy" icon="logout" [items]="departureItems()" emptyText="Sin salidas hoy" (select)="onRackSelect($event)" />
+        <app-maintenance-panel [rooms]="maintenanceRooms()" (select)="onMaintenanceSelect($event)" />
+      </aside>
+    </div>
+    }
+
+    @if (viewMode() === 'checkin') {
+    <app-checkin-form [room]="hotelService.selectedRoom()" [reservation]="activeBooking()"
+      (onClose)="viewMode.set('details')" (saved)="handleCheckinSave($event)">
+    </app-checkin-form>
+    }
+
+    @if (viewMode() === 'checkout_validation') {
+    <app-checkout-form [room]="hotelService.selectedRoom()" [reservation]="activeBooking()"
+      (saved)="onCheckoutSuccess()" (canceled)="onCheckoutCancel()">
+    </app-checkout-form>
+    }
+
+    @if (viewMode() === 'reservation') {
+    <app-reservation-manager (onClose)="viewMode.set('details')" (onSaved)="refresh()">
+    </app-reservation-manager>
+    }
+
+    @if (viewMode() === 'guest_mgmt') {
+    @if (adminService.loadingGuests()) {
+    <div class="card">
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+          <tbody>
+            @for (i of [1,2,3,4,5]; track i) {
+            <tr>
+              <td><app-skeleton appearance="line"></app-skeleton></td>
+              <td><app-skeleton appearance="line" style="width: 50px;"></app-skeleton></td>
+              <td><app-skeleton appearance="line" style="width: 80px;"></app-skeleton></td>
+              <td class="w-1"><app-skeleton appearance="circle"></app-skeleton></td>
+            </tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    } @else {
+    <app-guest-list></app-guest-list>
+    }
+    }
+
+    @if (viewMode() === 'user_mgmt') {
+    @if (adminService.loadingUsers()) {
+    <div class="card">
+      <div class="table-responsive">
+        <table class="table table-vcenter card-table">
+          <tbody>
+            @for (i of [1,2,3,4,5]; track i) {
+            <tr>
+              <td><app-skeleton appearance="line"></app-skeleton></td>
+              <td><app-skeleton appearance="line" style="width: 50px;"></app-skeleton></td>
+              <td><app-skeleton appearance="line" style="width: 80px;"></app-skeleton></td>
+              <td class="w-1"><app-skeleton appearance="circle"></app-skeleton></td>
+            </tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    } @else {
+    <app-user-list> </app-user-list>
+    }
+    }
+  </div>
+</div>
+
+@if (hotelService.selectedRoom() && viewMode() === 'details') {
+<app-room-detail-modal [room]="hotelService.selectedRoom()" [activeBooking]="activeBooking()"
+  (onClose)="hotelService.clearSelection()" (onCheckin)="viewMode.set('checkin')" (onMarkAsClean)="markRoomAsClean()"
+  (onReservations)="viewMode.set('reservation')" (onCheckout)="startCheckoutProcess()" (onPay)="markAsPaid($event)"
+  (onMaintenance)="reportMaintenance()" (onFinishMaintenance)="handleFinishMaintenance()"
+  (onOpenChecklist)="viewMode.set('checklist')" (onCancelRes)="handleCancelReservation($event)"
+  (onQuickExtend)="handleQuickExtend()"
+  (onRegisterExpense)="handleRegisterExpense($event)"> </app-room-detail-modal>
+}
+
+<app-user-form-modal [isOpen]="isUserModalOpen()" [selectedUser]="hotelService.selectedUser()" [(userData)]="tempUser"
+  (onClose)="isUserModalOpen.set(false)" (onSave)="handleSaveUser()">
+</app-user-form-modal>
+
+<app-guest-form-modal [isOpen]="isGuestModalOpen()" [selectedGuest]="hotelService.selectedGuest()"
+  [(guestData)]="tempGuest" (onClose)="isGuestModalOpen.set(false)" (onSave)="handleSaveGuest()">
+</app-guest-form-modal>
+
+@if (viewMode() === 'checklist') {
+<app-room-checklist-modal [room]="hotelService.selectedRoom()" (onClose)="viewMode.set('details')"
+  (onSave)="handleChecklistSave($event)">
+</app-room-checklist-modal>
+}
+
+<app-expense-form-modal [isOpen]="isExpenseModalOpen()" [roomId]="expenseRoomId()"
+  (onClose)="isExpenseModalOpen.set(false); expenseRoomId.set(null)"
+  (onSave)="refreshMain(); expenseRoomId.set(null)">
+</app-expense-form-modal>
+
+@if (maintenanceRoom()) {
+<app-maintenance-ticket-modal [room]="maintenanceRoom()" (onClose)="maintenanceRoom.set(null)"
+  (onSave)="maintenanceRoom.set(null); refresh()"> </app-maintenance-ticket-modal>
+}
+
+@if (showMaintenanceMonitor) {
+<app-maintenance-monitor-modal [targetRoomId]="maintenanceFilterRoomId"
+  (onClose)="showMaintenanceMonitor = false; maintenanceFilterRoomId = null; refresh()"
+  (onResolved)="handleMonitorResolved()"> </app-maintenance-monitor-modal>
+}

@@ -7,7 +7,7 @@ import { provideAppInitializer, type EnvironmentProviders, type Provider } from 
 import { demoMockInterceptor } from '../demo/demo-mock.interceptor';
 
 export { LoginComponent as LoginPageComponent } from '../features/admin/components/login/login.component';
-export { DashboardComponent as HomePageComponent } from '../features/dashboard/components/dashboard/dashboard.component';
+export { HomeNextComponent as HomePageComponent } from '../next/home/home-next.component';
 export { ShellLayoutNextComponent as ShellLayoutComponent } from '../next/shell/shell-layout-next.component';
 
 export const UI_MODE: 'classic' | 'next' = 'next';
