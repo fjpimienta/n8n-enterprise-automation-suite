@@ -131,13 +131,14 @@ describe('today lists', () => {
 describe('nav', () => {
   it('hides ADMIN-only entries for non-admins and keeps all groups for admins', () => {
     const labels = (admin: boolean) => buildNav(admin).flatMap(g => g.links.map(l => l.label));
-    expect(labels(false)).toEqual(['Panel', 'Mantenimiento', 'Reservas', 'Huéspedes']);
+    expect(labels(false)).toEqual(['Panel', 'Limpieza', 'Mantenimiento', 'Reservas', 'Huéspedes']);
     expect(labels(true)).toContain('Caja y gastos');
     expect(buildNav(false).map(g => g.title)).toEqual(['Operaciones', 'Administración']);
   });
   it('titles pages', () => {
     expect(pageTitle('/dashboard')).toBe('Panel de operación');
     expect(pageTitle('/dashboard/reservas?x=1')).toBe('Reservas');
+    expect(pageTitle('/dashboard/limpieza')).toBe('Limpieza');
     expect(pageTitle('/otro')).toBe('Hotel San José');
   });
 });

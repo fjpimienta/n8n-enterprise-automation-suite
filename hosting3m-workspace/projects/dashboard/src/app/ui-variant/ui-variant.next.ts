@@ -4,7 +4,9 @@
  */
 import type { HttpInterceptorFn } from '@angular/common/http';
 import { provideAppInitializer, type EnvironmentProviders, type Provider } from '@angular/core';
+import type { Routes } from '@angular/router';
 import { demoMockInterceptor } from '../demo/demo-mock.interceptor';
+import { HousekeepingNextComponent } from '../next/housekeeping/housekeeping-next.component';
 
 export { LoginNextComponent as LoginPageComponent } from '../next/login/login-next.component';
 export { HomeNextComponent as HomePageComponent } from '../next/home/home-next.component';
@@ -13,6 +15,11 @@ export { ShellLayoutNextComponent as ShellLayoutComponent } from '../next/shell/
 export const UI_MODE: 'classic' | 'next' = 'next';
 
 export const uiHttpInterceptors: HttpInterceptorFn[] = [demoMockInterceptor];
+
+/** Child routes that exist only in the `next` UI. */
+export const uiChildRoutes: Routes = [
+  { path: 'limpieza', component: HousekeepingNextComponent }
+];
 
 /** Activates the `theme-hotel` scope; every `next` style is gated on this class. */
 export const uiProviders: (Provider | EnvironmentProviders)[] = [

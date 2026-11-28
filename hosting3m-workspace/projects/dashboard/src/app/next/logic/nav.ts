@@ -6,6 +6,7 @@ export interface NavGroup { title: string; links: NavLink[] }
 const NAV: NavGroup[] = [
   { title: 'Operaciones', links: [
     { label: 'Panel', route: '/dashboard', icon: 'grid', adminOnly: false },
+    { label: 'Limpieza', route: '/dashboard/limpieza', icon: 'brush', adminOnly: false },
     { label: 'Mantenimiento', route: '/dashboard/mantenimiento', icon: 'tool', adminOnly: false },
     { label: 'Reservas', route: '/dashboard/reservas', icon: 'calendar', adminOnly: false }
   ] },
@@ -28,6 +29,7 @@ export function buildNav(isAdmin: boolean): NavGroup[] {
 
 const TITLES: Record<string, string> = {
   '/dashboard': 'Panel de operación',
+  '/dashboard/limpieza': 'Limpieza',
   '/dashboard/mantenimiento': 'Mantenimiento',
   '/dashboard/reservas': 'Reservas',
   '/dashboard/huespedes': 'Huéspedes',

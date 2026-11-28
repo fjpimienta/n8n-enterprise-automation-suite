@@ -2,17 +2,19 @@ import { HttpInterceptorFn, HttpRequest, HttpResponse } from '@angular/common/ht
 import { delay, of } from 'rxjs';
 import { environment } from '@env/environment';
 import { DEMO_COMPANY_ID, buildDemoBookings, buildDemoRooms, buildDemoTickets } from './demo-data';
+import { applyRoomUpdate, withCleaningOverrides } from './demo-store';
 
 /**
  * Demo scenarios, selected with `?demo=<name>` on the page URL (QA of loading/empty/error states):
  * - `empty`: collections arrive as `data: [{}]` (the gateway's empty-collection shape).
  * - `error`: every CRUD read answers HTTP 200 with `error: true` (the Silent Error Shield case).
+ * - `writeerror`: reads are normal, every write answers HTTP 200 with `error: true` (failed-write QA).
  */
-export type DemoScenario = 'normal' | 'empty' | 'error';
+export type DemoScenario = 'normal' | 'empty' | 'error' | 'writeerror';
 
 export function scenarioFromSearch(search: string): DemoScenario {
   const value = new URLSearchParams(search).get('demo');
-  return value === 'empty' || value === 'error' ? value : 'normal';
+  return value === 'empty' || value === 'error' || value === 'writeerror' ? value : 'normal';
 }
 
 const DEMO_NOTICE = 'Modo demostración: sin escritura de datos.';
@@ -48,7 +50,14 @@ function loginResponse(body: any, now: Date): unknown {
 function crudResponse(table: string, body: any, scenario: DemoScenario, now: Date): unknown {
   const operation = String(body?.operation ?? '');
   if (operation !== 'getall') {
-    return { error: true, operation, data: [], message: DEMO_NOTICE };
+    // The single in-memory write of the demo: room cleaning status (see demo-store.ts). Everything else is refused.
+    if (table === 'hotel_rooms' && operation === 'update' && scenario === 'normal') {
+      const result = applyRoomUpdate(body);
+      return result.ok
+        ? { error: false, operation, data: [{ id: result.id, cleaning_status: result.cleaning_status }], message: 'ok' }
+        : { error: true, operation, data: [], message: result.message };
+    }
+    return { error: true, operation, data: [], message: scenario === 'writeerror' ? 'Demo: simulated write error' : DEMO_NOTICE };
   }
   if (scenario === 'error') {
     return { error: true, operation, data: [], message: 'Demo: simulated gateway error' };
@@ -57,7 +66,7 @@ function crudResponse(table: string, body: any, scenario: DemoScenario, now: Dat
     return { error: false, operation, data: [{}], message: 'ok' };
   }
   let data: unknown[] = [];
-  if (table === 'hotel_rooms') data = buildDemoRooms();
+  if (table === 'hotel_rooms') data = withCleaningOverrides(buildDemoRooms());
   else if (table === 'hotel_bookings') data = buildDemoBookings(now);
   else if (table === 'hotel_maintenance_tickets') {
     const wanted = body?.fields?.status ?? body?.filters?.status;

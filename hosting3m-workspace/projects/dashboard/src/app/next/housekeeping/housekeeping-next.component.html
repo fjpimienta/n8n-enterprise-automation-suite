@@ -1,0 +1,55 @@
+<div class="h-hk">
+  <header class="h-hk__head">
+    <p class="h-hk__date">Hoy, {{ today }}</p>
+    <button type="button" class="h-btn" (click)="refresh()"><app-h-icon name="refresh" [size]="18" /> Actualizar</button>
+  </header>
+
+  <section aria-label="Resumen de limpieza">
+    <div class="h-kpis">
+      <app-kpi-card label="Urgentes" icon="alert" [value]="urgent()" hint="Sucias con llegada hoy" [busy]="bookingService.loadingRooms()" />
+      <app-kpi-card label="Por limpiar" icon="brush" [value]="toClean()" hint="Libres y sucias" [busy]="bookingService.loadingRooms()" />
+      <app-kpi-card label="Salidas por liberar" icon="logout" [value]="departures()" hint="Ocupadas que salen hoy" [busy]="bookingService.loadingRooms()" />
+      <app-kpi-card label="Listas" icon="bed" [value]="ready()" hint="Limpias o inspeccionadas" [busy]="bookingService.loadingRooms()" />
+      <app-kpi-card label="En estancia" icon="users" [value]="stayOvers()" hint="Ocupadas que no salen hoy" [busy]="bookingService.loadingRooms()" />
+    </div>
+  </section>
+
+  <div class="h-hk__live" role="status" aria-live="polite">
+    @if (feedback()?.kind === 'ok') { <p class="h-banner h-banner--ok">{{ feedback()!.text }}</p> }
+  </div>
+  <div role="alert">
+    @if (feedback()?.kind === 'error') { <p class="h-banner h-banner--error">{{ feedback()!.text }}</p> }
+  </div>
+
+  @if (loading()) {
+  <div class="h-hk__list" aria-busy="true" aria-label="Cargando habitaciones">
+    @for (i of [1,2,3,4,5,6]; track i) { <div class="h-skeleton"></div> }
+  </div>
+  } @else if (empty()) {
+  <div class="h-card h-empty" role="status">
+    Sin datos de habitaciones. Si esperabas verlas, usa «Actualizar».
+  </div>
+  } @else {
+  @if (!reservationsKnown()) {
+  <p class="h-banner" role="status">Sin datos de reservas: las llegadas, salidas y estancias no se pueden confirmar.</p>
+  }
+  @if (sections().length === 0) {
+  <div class="h-card h-empty" role="status">No hay habitaciones por atender en este momento.</div>
+  }
+  @for (section of sections(); track section.group) {
+  <section class="h-hk__section" [attr.aria-labelledby]="'h-hk-' + section.group">
+    <h2 class="h-section-title" [id]="'h-hk-' + section.group">
+      {{ section.label }} <span class="h-group__count">{{ section.items.length }}</span>
+    </h2>
+    <p class="h-hk__hint">{{ section.hint }}</p>
+    <ul class="h-hk__list">
+      @for (item of section.items; track item.room.id) {
+      <li class="h-hk__row" [class]="'h-hk__row h-hk__row--' + item.group">
+        <app-housekeeping-row [item]="item" [busy]="isBusy(item.room.id)" (finish)="finish($event)" />
+      </li>
+      }
+    </ul>
+  </section>
+  }
+  }
+</div>
