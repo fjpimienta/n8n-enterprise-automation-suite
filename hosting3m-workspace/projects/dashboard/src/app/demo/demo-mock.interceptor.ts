@@ -21,7 +21,7 @@ const DEMO_NOTICE = 'Modo demostración: sin escritura de datos.';
 export function buildDemoToken(role: 'ADMIN' | 'EDITOR', now: Date = new Date()): string {
   const enc = (o: object) => btoa(JSON.stringify(o)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
   const payload = {
-    id: 1, user: 'demo', email: 'demo@example.invalid', name: 'Usuario Demo', role,
+    id: 9001, user: 'demo', email: 'demo@example.invalid', name: 'Usuario Demo', role,
     id_company: DEMO_COMPANY_ID, exp: Math.floor(now.getTime() / 1000) + 8 * 3600
   };
   return `${enc({ alg: 'none', typ: 'JWT' })}.${enc(payload)}.demo`;
@@ -36,8 +36,8 @@ function loginResponse(body: any, now: Date): unknown {
     return {
       status: 'select_company',
       data: { companies: [
-        { id_company: 1, company_name: 'Hotel Demo', role: 'ADMIN' },
-        { id_company: 2, company_name: 'Hotel Demo Norte', role: 'EDITOR' }
+        { id_company: DEMO_COMPANY_ID, company_name: 'Hotel Demo', role: 'ADMIN' },
+        { id_company: DEMO_COMPANY_ID + 1, company_name: 'Hotel Demo Norte', role: 'EDITOR' }
       ] }
     };
   }

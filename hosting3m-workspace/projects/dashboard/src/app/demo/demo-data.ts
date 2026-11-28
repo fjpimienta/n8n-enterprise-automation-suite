@@ -39,7 +39,8 @@ export interface DemoTicket {
   id_company: number;
 }
 
-export const DEMO_COMPANY_ID = 1;
+/** Deliberately synthetic; not a real tenant id. */
+export const DEMO_COMPANY_ID = 9001;
 
 /** Local calendar day shifted by `days`, as the gateway's midnight-UTC string. */
 export function dayOffsetStamp(days: number, base: Date = new Date()): string {
