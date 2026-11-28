@@ -18,6 +18,7 @@ export const routes: Routes = [
     component: ShellLayoutComponent,
     canActivate: [authGuard], // <-- Ahora usa el Guard blindado
     children: [
+      ...uiChildRoutes,
       { path: '', component: HomePageComponent },
       { path: 'mantenimiento', component: MaintenanceMonitorModalComponent },
       { path: 'reservas', component: ReservationManagerComponent },
@@ -25,7 +26,6 @@ export const routes: Routes = [
       { path: 'personal', component: UserListComponent, canActivate: [roleGuard(['ADMIN'])] },
       { path: 'inventario', component: InventoryManagerComponent, canActivate: [roleGuard(['ADMIN'])] },
       { path: 'finanzas', component: DailyReportModalComponent, canActivate: [roleGuard(['ADMIN'])] },
-      ...uiChildRoutes
     ]
   },
   { path: 'unauthorized', component: UnauthorizedComponent },

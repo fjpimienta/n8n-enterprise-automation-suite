@@ -1,0 +1,52 @@
+<div class="h-mt">
+  <header class="h-mt__head">
+    <p class="h-mt__date">Hoy, {{ today }}</p>
+    <button type="button" class="h-btn" [disabled]="loading()" (click)="refresh()"><app-h-icon name="refresh" [size]="18" /> Actualizar</button>
+  </header>
+
+  <section aria-label="Resumen de mantenimiento">
+    <div class="h-kpis">
+      <app-kpi-card label="Fallas abiertas" icon="tool" [value]="open()" hint="Con datos completos" [busy]="busy()" />
+      <app-kpi-card label="Críticas" icon="alert" [value]="critical()" hint="Atender primero" [busy]="busy()" />
+      <app-kpi-card label="Antiguas" icon="calendar" [value]="oldCount()" [hint]="'Más de ' + oldAfter + ' días abiertas'" [busy]="busy()" />
+      <app-kpi-card label="Bloqueadas" icon="lock" [value]="blockedRooms()" hint="Habitaciones en mantenimiento" [busy]="busy()" />
+      <app-kpi-card label="Con falla pendiente" icon="bed" [value]="pendingRooms()" hint="Aún operan, con falla abierta" [busy]="busy()" />
+    </div>
+  </section>
+
+  <div role="alert">
+    @if (loadFailed()) { <p class="h-banner h-banner--error">No se pudieron cargar las fallas. Usa «Actualizar» para intentar de nuevo.</p> }
+  </div>
+
+  @if (loading() && !ticketsKnown()) {
+  <div class="h-mt__list" aria-busy="true" aria-label="Cargando fallas">
+    @for (i of [1,2,3,4,5,6]; track i) { <div class="h-skeleton"></div> }
+  </div>
+  } @else if (empty()) {
+  <div class="h-card h-empty" role="status">
+    Sin datos de fallas. Si esperabas verlas, usa «Actualizar».
+  </div>
+  } @else if (ticketsKnown()) {
+  @if (reviewCount() > 0) {
+  <p class="h-banner" role="status">{{ reviewCount() }} {{ reviewCount() === 1 ? 'falla tiene' : 'fallas tienen' }} datos por revisar; no entran en los contadores.</p>
+  }
+  @if (noOpen()) {
+  <div class="h-card h-empty" role="status">No hay fallas abiertas.</div>
+  }
+  @for (section of sections(); track section.group) {
+  <section class="h-mt__section" [attr.aria-labelledby]="'h-mt-' + section.group">
+    <h2 class="h-section-title" [id]="'h-mt-' + section.group">
+      {{ section.label }} <span class="h-group__count">{{ section.items.length }}</span>
+    </h2>
+    <p class="h-mt__hint">{{ section.hint }}</p>
+    <ul class="h-mt__list">
+      @for (item of section.items; track item.key) {
+      <li [class]="'h-mt__row h-mt__row--' + item.group">
+        <app-maintenance-row [item]="item" />
+      </li>
+      }
+    </ul>
+  </section>
+  }
+  }
+</div>

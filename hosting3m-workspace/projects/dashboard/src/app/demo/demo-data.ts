@@ -4,6 +4,7 @@
  * gateway's midnight-UTC shape on purpose (parity with how real rows arrive).
  */
 import { toLocalDateString } from '../shared/services/data-utils.service';
+import { mexicoCityDateKey } from '../next/logic/maintenance';
 
 export interface DemoRoom {
   id: number;
@@ -29,12 +30,15 @@ export interface DemoBooking {
   id_company: number;
 }
 
+/** Ticket rows as the gateway may send them: some fields are deliberately missing or unknown in the synthetic set. */
 export interface DemoTicket {
-  id: number;
+  id?: number;
   room_id: number;
-  status: 'PENDING' | 'RESOLVED';
-  priority: 'CRITICAL' | 'NORMAL' | 'LOW';
-  description: string;
+  status: string;
+  priority: string;
+  issue_type?: string;
+  description?: string;
+  /** ISO instant, as `toISOString()` produces it in the classic app. */
   created_at: string;
   id_company: number;
 }
@@ -114,11 +118,39 @@ export function buildDemoBookings(base: Date = new Date()): DemoBooking[] {
   }));
 }
 
+/** Noon in Mexico City (UTC-6, no DST) of the Mexico City day `daysAgo` days before `base`, as an ISO instant. */
+export function ticketStamp(daysAgo: number, base: Date = new Date()): string {
+  const [y, m, d] = (mexicoCityDateKey(base) ?? '1970-01-01').split('-').map(Number);
+  const day = new Date(Date.UTC(y, m - 1, d - daysAgo));
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${day.getUTCFullYear()}-${pad(day.getUTCMonth() + 1)}-${pad(day.getUTCDate())}T18:00:00.000Z`;
+}
+
+/**
+ * Synthetic tickets. Every OPEN ticket sits on room 5 (in maintenance) or room 9 (available), so the rooms flagged
+ * by the tickets radar stay exactly {5, 9} (Panel KPI and Housekeeping board keep their figures). Ages (days):
+ * 0, 1, 2, 3 (threshold, not old), 4, 5, 6 and 9 (old). Includes the unhappy cases: unknown priority, missing id,
+ * missing description and type, unknown and missing type.
+ */
 export function buildDemoTickets(base: Date = new Date()): DemoTicket[] {
-  const stamp = `${toLocalDateString(base)}T09:00:00.000Z`;
+  const C = DEMO_COMPANY_ID;
+  const at = (n: number) => ticketStamp(n, base);
   return [
-    { id: 1, room_id: 5, status: 'PENDING', priority: 'CRITICAL', description: 'Demo ticket', created_at: stamp, id_company: DEMO_COMPANY_ID },
-    { id: 2, room_id: 9, status: 'PENDING', priority: 'NORMAL', description: 'Demo ticket', created_at: stamp, id_company: DEMO_COMPANY_ID },
-    { id: 3, room_id: 2, status: 'RESOLVED', priority: 'LOW', description: 'Demo ticket', created_at: stamp, id_company: DEMO_COMPANY_ID }
+    { id: 1, room_id: 5, status: 'PENDING', priority: 'CRITICAL', issue_type: 'ELECTRICO', description: 'Sin luz en el baño', created_at: at(4), id_company: C },
+    { id: 2, room_id: 9, status: 'PENDING', priority: 'NORMAL', issue_type: 'PLOMERIA', description: 'Fuga en el lavabo', created_at: at(3), id_company: C },
+    { id: 3, room_id: 5, status: 'PENDING', priority: 'NORMAL', issue_type: 'AIRE_ACONDICIONADO', description: 'El aire no enfría', created_at: at(1), id_company: C },
+    { id: 4, room_id: 9, status: 'PENDING', priority: 'LOW', issue_type: 'MOBILIARIO', description: 'Cajón del buró atorado', created_at: at(9), id_company: C },
+    { id: 5, room_id: 9, status: 'PENDING', priority: 'CRITICAL', issue_type: 'TECNOLOGIA', description: 'Sin internet en la habitación', created_at: at(0), id_company: C },
+    { id: 6, room_id: 5, status: 'PENDING', priority: 'URGENTE', issue_type: 'ALBAÑILERIA', description: 'Grieta en la pared', created_at: at(2), id_company: C },
+    // No id (unhappy case).
+    { room_id: 9, status: 'PENDING', priority: 'NORMAL', issue_type: 'PLOMERIA', description: 'Ticket sin identificador', created_at: at(1), id_company: C },
+    // No type (shown as "Otro").
+    { id: 8, room_id: 9, status: 'PENDING', priority: 'LOW', description: 'Pintar el marco de la puerta', created_at: at(2), id_company: C },
+    // Unknown type (shown as "Otro").
+    { id: 9, room_id: 5, status: 'PENDING', priority: 'NORMAL', issue_type: 'JARDINERIA', description: 'Maceta rota en el balcón', created_at: at(6), id_company: C },
+    // No description and no type (review).
+    { id: 10, room_id: 9, status: 'PENDING', priority: 'CRITICAL', created_at: at(5), id_company: C },
+    // Resolved (never shown by the board).
+    { id: 11, room_id: 2, status: 'RESOLVED', priority: 'LOW', issue_type: 'PLOMERIA', description: 'Cambio de empaque', created_at: at(12), id_company: C }
   ];
 }

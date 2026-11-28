@@ -336,3 +336,26 @@ body.theme-hotel .h-hk__live:empty { display: none; }
   body.theme-hotel .h-hk__note { grid-column: 1; }
   body.theme-hotel .h-hk__action { width: auto; grid-column: 2; grid-row: 1 / span 2; }
 }
+
+/* ---------- Maintenance ("Mantenimiento") ---------- */
+body.theme-hotel .h-mt { display: grid; gap: var(--h-space-4); grid-template-columns: minmax(0, 1fr); max-width: 960px; }
+body.theme-hotel .h-mt > * { min-width: 0; }
+body.theme-hotel .h-mt__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--h-space-3); }
+body.theme-hotel .h-mt__date { margin: 0; color: var(--h-muted); font-size: var(--h-fs-sm); }
+body.theme-hotel .h-mt__section { display: grid; gap: var(--h-space-2); }
+body.theme-hotel .h-mt__section .h-section-title { margin: 0; }
+body.theme-hotel .h-mt__hint { margin: 0; color: var(--h-muted); font-size: var(--h-fs-sm); }
+body.theme-hotel .h-mt__list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--h-space-2); }
+body.theme-hotel .h-mt__row {
+  display: block; background: var(--h-surface); border: 1px solid var(--h-border); border-left: 4px solid var(--h-border);
+  border-radius: var(--h-radius-md); box-shadow: var(--h-shadow-1); padding: var(--h-space-3);
+}
+body.theme-hotel .h-mt__row--critical { border-left-color: #DC2626; }
+body.theme-hotel .h-mt__row--normal { border-left-color: #D97706; }
+body.theme-hotel .h-mt__row--low { border-left-color: #2563EB; }
+body.theme-hotel .h-mt__row--review { border-left-color: var(--h-muted); border-left-style: dashed; }
+body.theme-hotel app-maintenance-row { display: grid; gap: var(--h-space-2); grid-template-columns: minmax(0, 1fr); }
+body.theme-hotel .h-mt__info { display: flex; flex-wrap: wrap; align-items: center; gap: var(--h-space-2); min-width: 0; }
+body.theme-hotel .h-mt__number { font: 700 var(--h-fs-lg)/1 var(--h-font-head); min-width: 3ch; }
+body.theme-hotel .h-mt__desc { margin: 0; overflow-wrap: anywhere; }
+body.theme-hotel .h-mt__meta { margin: 0; color: var(--h-muted); font-size: var(--h-fs-sm); }
