@@ -1,0 +1,64 @@
+<main class="h-login">
+  <form class="h-login__card" [formGroup]="loginForm" (ngSubmit)="onSubmit()" novalidate>
+    <div class="h-login__brand">
+      <img src="assets/images/logo_hotel_san_jose.png" alt="" width="72" height="72" style="object-fit: contain;" />
+      <h1>Hotel San José</h1>
+      <div style="color: var(--h-muted);">Catazajá, Chiapas, México</div>
+    </div>
+
+    @if (errorMessage()) {
+    <div class="h-banner" role="alert" style="margin-bottom: 16px;">
+      <app-h-icon name="alert" [size]="18" /> {{ errorMessage() }}
+    </div>
+    }
+
+    <div class="h-field">
+      <label for="h-login-user">Usuario o correo</label>
+      <div class="h-input-wrap">
+        <input id="h-login-user" type="text" formControlName="user" autocomplete="username" [class.is-invalid]="isFieldInvalid('user')"
+          [attr.aria-invalid]="isFieldInvalid('user')" aria-describedby="h-login-user-err" />
+      </div>
+      @if (isFieldInvalid('user')) { <span id="h-login-user-err" class="h-error">Escribe tu usuario.</span> }
+    </div>
+
+    <div class="h-field">
+      <label for="h-login-pass">Contraseña</label>
+      <div class="h-input-wrap">
+        <input id="h-login-pass" [type]="showPassword() ? 'text' : 'password'" formControlName="pass" autocomplete="current-password"
+          [class.is-invalid]="isFieldInvalid('pass')" [attr.aria-invalid]="isFieldInvalid('pass')" aria-describedby="h-login-pass-err" />
+        <button type="button" (click)="togglePassword($event)" [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+          <app-h-icon [name]="showPassword() ? 'eye-off' : 'eye'" />
+        </button>
+      </div>
+      @if (isFieldInvalid('pass')) { <span id="h-login-pass-err" class="h-error">Escribe tu contraseña.</span> }
+    </div>
+
+    @if (showCompanySelection()) {
+    <div class="h-field">
+      <label for="h-login-company">Hotel o sucursal</label>
+      <div class="h-input-wrap">
+        <select id="h-login-company" formControlName="id_company" [class.is-invalid]="isFieldInvalid('id_company')">
+          <option value="" disabled selected>Selecciona un hotel</option>
+          @for (company of availableCompanies(); track company.id_company) {
+          <option [value]="company.id_company">{{ company.company_name }} ({{ company.role }})</option>
+          }
+        </select>
+      </div>
+      @if (isFieldInvalid('id_company')) { <span class="h-error">Selecciona un hotel.</span> }
+    </div>
+    }
+
+    <button type="submit" class="h-btn h-btn--primary" style="width: 100%; min-height: 48px;" [disabled]="loginForm.invalid || isLoading()">
+      @if (isLoading()) { Verificando credenciales… } @else { {{ showCompanySelection() ? 'Confirmar y entrar' : 'Ingresar al sistema' }} }
+    </button>
+
+    <div style="text-align: center; margin-top: 20px; color: var(--h-muted); font-size: var(--h-fs-sm);">
+      By Hosting3M Suite · Gestión hotelera y automatización
+    </div>
+  </form>
+
+  <button type="button" class="h-btn h-btn--icon" style="position: fixed; top: 12px; right: 12px;"
+    [attr.aria-label]="themeService.currentTheme() === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'" (click)="themeService.toggleTheme()">
+    <app-h-icon [name]="themeService.currentTheme() === 'dark' ? 'sun' : 'moon'" />
+  </button>
+</main>

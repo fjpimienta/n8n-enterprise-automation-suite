@@ -6,7 +6,7 @@ import type { HttpInterceptorFn } from '@angular/common/http';
 import { provideAppInitializer, type EnvironmentProviders, type Provider } from '@angular/core';
 import { demoMockInterceptor } from '../demo/demo-mock.interceptor';
 
-export { LoginComponent as LoginPageComponent } from '../features/admin/components/login/login.component';
+export { LoginNextComponent as LoginPageComponent } from '../next/login/login-next.component';
 export { HomeNextComponent as HomePageComponent } from '../next/home/home-next.component';
 export { ShellLayoutNextComponent as ShellLayoutComponent } from '../next/shell/shell-layout-next.component';
 
