@@ -175,11 +175,11 @@ body.theme-hotel .h-bottomnav a, body.theme-hotel .h-bottomnav button {
 }
 body.theme-hotel .h-bottomnav a.is-active { color: var(--h-green); }
 body.theme-hotel .h-bottomnav :focus-visible { outline: 3px solid var(--h-focus); outline-offset: -3px; }
-body.theme-hotel .h-bottomnav__plus {
-  width: 56px; height: 56px; min-height: 56px !important; margin: -22px auto 0; border-radius: 50% !important;
-  background: var(--h-terracotta); color: #fff !important; box-shadow: var(--h-shadow-2);
+body.theme-hotel .h-bottomnav button.h-bottomnav__plus {
+  width: 56px; height: 56px; min-height: 56px; margin: -22px auto 0; border-radius: 50%;
+  background: var(--h-terracotta); color: #fff; box-shadow: var(--h-shadow-2);
 }
-[data-bs-theme='dark'] body.theme-hotel .h-bottomnav__plus, body.theme-hotel[data-bs-theme='dark'] .h-bottomnav__plus { color: #1C1917 !important; }
+body.theme-hotel[data-bs-theme='dark'] .h-bottomnav button.h-bottomnav__plus { color: #1C1917; }
 
 /* Floating actions: desktop/tablet stack on the right (never over the sidebar footer or list ends) */
 body.theme-hotel .h-fab-expense {
@@ -291,3 +291,10 @@ body.theme-hotel .h-input-wrap button:focus-visible { outline: 3px solid var(--h
 body.theme-hotel .h-error { color: #B91C1C; font-size: var(--h-fs-sm); }
 body.theme-hotel[data-bs-theme='dark'] .h-error { color: #FCA5A5; }
 body.theme-hotel .h-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+body.theme-hotel .h-room-host { display: block; position: relative; }
+body.theme-hotel .h-home > * { min-width: 0; }
+body.theme-hotel .h-home__main { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--h-space-4); align-content: start; }
+body.theme-hotel .h-filters { max-width: 100%; }
+body.theme-hotel .h-room__flags, body.theme-hotel .h-room__date { padding-right: 40px; }
+@media (max-width: 767.98px) { body.theme-hotel .h-kpis > :last-child:nth-child(odd) { grid-column: 1 / -1; } }

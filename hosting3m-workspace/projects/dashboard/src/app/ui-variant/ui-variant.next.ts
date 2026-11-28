@@ -3,15 +3,18 @@
  * Registers the synthetic-data mock; it never forwards a request to the network.
  */
 import type { HttpInterceptorFn } from '@angular/common/http';
-import type { Provider } from '@angular/core';
+import { provideAppInitializer, type EnvironmentProviders, type Provider } from '@angular/core';
 import { demoMockInterceptor } from '../demo/demo-mock.interceptor';
 
 export { LoginComponent as LoginPageComponent } from '../features/admin/components/login/login.component';
 export { DashboardComponent as HomePageComponent } from '../features/dashboard/components/dashboard/dashboard.component';
-export { MainLayoutComponent as ShellLayoutComponent } from '../shared/ui/layout/main-layout/main-layout.component';
+export { ShellLayoutNextComponent as ShellLayoutComponent } from '../next/shell/shell-layout-next.component';
 
 export const UI_MODE: 'classic' | 'next' = 'next';
 
 export const uiHttpInterceptors: HttpInterceptorFn[] = [demoMockInterceptor];
 
-export const uiProviders: Provider[] = [];
+/** Activates the `theme-hotel` scope; every `next` style is gated on this class. */
+export const uiProviders: (Provider | EnvironmentProviders)[] = [
+  provideAppInitializer(() => { document.body.classList.add('theme-hotel'); })
+];
