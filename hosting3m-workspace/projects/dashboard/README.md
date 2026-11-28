@@ -186,6 +186,7 @@ Verificado contra el código fuente el 2026-11-13.
 * Para ver la nueva interfaz: `npx ng serve dashboard --configuration=demo`
 * Parámetros opcionales: `?demo=empty` (colecciones vacías), `?demo=error` (respuestas con error) y `?demo=writeerror` (lecturas normales; toda escritura responde con error).
 * Módulo de limpieza: ruta `/dashboard/limpieza` (menú "Limpieza", en móvil dentro de "Más").
+* Módulo de mantenimiento: ruta `/dashboard/mantenimiento` muestra, solo en el build `demo`, el tablero de fallas abiertas (solo lectura): grupos por prioridad (Crítica, Normal, Baja), fallas con más de 3 días marcadas como «Antiguo» y datos incompletos bajo «Revisar datos». No escribe datos. En producción sigue el monitor clásico.
 * El demo no realiza llamadas reales. La única escritura permitida es "Finalizar limpieza", que se aplica solo en memoria y se reinicia al recargar la página.
 
 ## 🛠️ Comandos de Desarrollo

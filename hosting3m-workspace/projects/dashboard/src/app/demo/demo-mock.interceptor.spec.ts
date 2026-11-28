@@ -3,7 +3,8 @@ import { firstValueFrom } from 'rxjs';
 import { TestBed } from '@angular/core/testing';
 import { describe, expect, it } from 'vitest';
 import { environment } from '@env/environment';
-import { buildDemoBookings, buildDemoRooms, dayOffsetStamp } from './demo-data';
+import { buildDemoBookings, buildDemoRooms, buildDemoTickets, dayOffsetStamp, ticketStamp } from './demo-data';
+import { MT_OLD_AFTER_DAYS, reviewReasons, ticketAgeDays, toTicketViews } from '../next/logic/maintenance';
 import { buildDemoToken, demoMockInterceptor, scenarioFromSearch } from './demo-mock.interceptor';
 
 async function call(url: string, body: unknown): Promise<any> {
@@ -45,6 +46,31 @@ describe('demoMockInterceptor', () => {
   it('filters tickets by status', async () => {
     const res = await call(`${environment.apiUrl_crud}/hotel_maintenance_tickets`, { operation: 'getall', fields: { status: 'PENDING' } });
     expect(res.data.every((t: any) => t.status === 'PENDING')).toBe(true);
+  });
+
+  it('synthetic tickets: open ones sit on rooms 5 and 9 only, so the tickets radar flags the same rooms as before', () => {
+    const open = buildDemoTickets().filter(t => t.status === 'PENDING');
+    expect([...new Set(open.map(t => t.room_id))].sort()).toEqual([5, 9]);
+    expect(buildDemoTickets().some(t => t.status === 'RESOLVED')).toBe(true);
+  });
+
+  it('synthetic tickets cover ages around the threshold and the unhappy cases', () => {
+    const now = new Date();
+    const views = toTicketViews(buildDemoTickets(now));
+    const ages = views.map(v => ticketAgeDays(v.createdAt, now));
+    expect(ages).toContain(MT_OLD_AFTER_DAYS);
+    expect(ages).toContain(MT_OLD_AFTER_DAYS + 1);
+    expect(ages).toContain(0);
+    const reasons = views.flatMap(v => reviewReasons(v));
+    expect(reasons).toEqual(expect.arrayContaining(['no-id', 'no-content', 'unknown-priority']));
+    expect(buildDemoTickets().some(t => t.id === undefined)).toBe(true);
+    expect(buildDemoTickets().every(t => t.id_company === 9001)).toBe(true);
+  });
+
+  it('ticket stamps are noon in Mexico City (a whole-day offset in that calendar), never shifted by UTC', () => {
+    expect(ticketStamp(0, new Date('2026-11-28T05:59:00.000Z'))).toBe('2026-11-27T18:00:00.000Z'); // 23:59 CDMX on the 27th
+    expect(ticketStamp(0, new Date('2026-11-28T06:00:00.000Z'))).toBe('2026-11-28T18:00:00.000Z');
+    expect(ticketStamp(3, new Date('2026-11-28T18:00:00.000Z'))).toBe('2026-11-25T18:00:00.000Z');
   });
 
   it('refuses writes with error:true on HTTP 200', async () => {
