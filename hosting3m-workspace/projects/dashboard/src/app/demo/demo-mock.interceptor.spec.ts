@@ -73,6 +73,7 @@ describe('demoMockInterceptor', () => {
   it('parses scenarios', () => {
     expect(scenarioFromSearch('?demo=empty')).toBe('empty');
     expect(scenarioFromSearch('?demo=error')).toBe('error');
+    expect(scenarioFromSearch('?demo=writeerror')).toBe('writeerror');
     expect(scenarioFromSearch('?demo=zzz')).toBe('normal');
   });
 });

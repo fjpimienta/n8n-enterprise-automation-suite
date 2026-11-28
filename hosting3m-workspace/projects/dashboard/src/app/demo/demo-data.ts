@@ -95,7 +95,9 @@ const BOOKING_SEEDS: BookingSeed[] = [
   [8, 4, 'confirmed', 0, 2, 'E. H.', 'pending'],
   [9, 14, 'confirmed', 0, 1, 'F. M.', 'paid'],
   [10, 18, 'pending', 3, 5, 'K. O.', 'pending'],
-  [11, 12, 'confirmed', 2, 4, 'N. B.', 'pending']
+  [11, 12, 'confirmed', 2, 4, 'N. B.', 'pending'],
+  // Same-day turnover: room 101 leaves today and receives this booking today (occupied, so no arrivals KPI change).
+  [12, 1, 'confirmed', 0, 2, 'P. Q.', 'pending']
 ];
 
 export function buildDemoBookings(base: Date = new Date()): DemoBooking[] {
