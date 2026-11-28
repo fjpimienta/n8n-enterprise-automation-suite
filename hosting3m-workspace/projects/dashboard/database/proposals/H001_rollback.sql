@@ -1,0 +1,82 @@
+-- H001_rollback.sql  (PROPOSAL: not applied anywhere)
+-- Soft deactivation of the hotel test tenant created by H001_hotel_test_tenant.sql. It only UPDATEs rows of that one company: no DROP, no DELETE, no TRUNCATE.
+-- (user_companies cascades on company delete, so a company is never deleted.)
+--   * company: is_active = false (the qa_tenant flag stays)
+--   * memberships of the company: is_active = false, with an audit row each (USER_DEACTIVATED)
+--   * the two synthetic accounts (@example.invalid): is_active = false, only when they have no other active membership
+--   * rooms, guests, bookings: is_active = false; maintenance tickets: status = 'DELETED' (the model's own soft-delete value)
+--   * room inspections have no is_active column and stay (they are only reachable through the deactivated company)
+-- Aborts unless the company is found by name AND the qa_tenant flag. Backup first: see the runbook (database dump). Re-seeding a deactivated tenant is not supported.
+-- Usage:  psql -X -v ON_ERROR_STOP=1 -v owner_email=<EXISTING_ACCOUNT> -f H001_rollback.sql              (dry run)
+--         psql -X -v ON_ERROR_STOP=1 -v owner_email=<EXISTING_ACCOUNT> -v apply=true -f H001_rollback.sql
+\if :{?embedded}
+\else
+\set ON_ERROR_STOP on
+\endif
+\if :{?apply}
+\else
+\set apply false
+\endif
+\if :{?owner_email}
+\else
+\echo 'ABORT: pass -v owner_email=<the account recorded as actor in the audit log>'
+\quit
+\endif
+\if :{?embedded}
+\else
+BEGIN;
+\endif
+SET LOCAL lock_timeout = '5s';
+SELECT set_config('h001.apply', :'apply', true) AS apply, set_config('h001.owner', :'owner_email', true) IS NOT NULL AS owner_set;
+
+DO $$
+DECLARE
+    v_apply boolean := current_setting('h001.apply')::boolean;
+    v_owner text    := lower(btrim(current_setting('h001.owner')));
+    v_co    integer;
+    r       record;
+BEGIN
+    SELECT id_company INTO v_co FROM companys
+     WHERE company_name = '[TEST] Hotel Demo' AND metadata->>'qa_tenant' = 'true' ORDER BY id_company LIMIT 1;
+    IF v_co IS NULL THEN RAISE EXCEPTION 'ABORT: the flagged test company was not found.'; END IF;
+    IF v_co = 1 THEN RAISE EXCEPTION 'ABORT: company 1 can never be deactivated by this script.'; END IF;
+    IF NOT v_apply THEN
+        RAISE NOTICE 'DRY RUN: would deactivate company %, % memberships, % rooms, % guests, % bookings and mark % tickets DELETED.', v_co,
+            (SELECT count(*) FROM user_companies WHERE id_company = v_co AND is_active IS TRUE),
+            (SELECT count(*) FROM hotel_rooms WHERE id_company = v_co AND is_active IS TRUE),
+            (SELECT count(*) FROM hotel_guests WHERE id_company = v_co AND is_active IS TRUE),
+            (SELECT count(*) FROM hotel_bookings WHERE id_company = v_co AND is_active IS TRUE),
+            (SELECT count(*) FROM hotel_maintenance_tickets WHERE id_company = v_co AND status IS DISTINCT FROM 'DELETED');
+        RETURN;
+    END IF;
+
+    FOR r IN SELECT email, role FROM user_companies WHERE id_company = v_co AND is_active IS TRUE LOOP
+        UPDATE user_companies SET is_active = false WHERE id_company = v_co AND email = r.email;
+        INSERT INTO access_audit_log (id_company, actor_email, target_email, action, old_value, new_value)
+        VALUES (v_co, v_owner, r.email, 'USER_DEACTIVATED', jsonb_build_object('role', r.role, 'is_active', true),
+                jsonb_build_object('role', r.role, 'is_active', false, 'source', 'H001 rollback'));
+    END LOOP;
+
+    UPDATE users u SET is_active = false
+     WHERE lower(u.email) IN ('test.admin@example.invalid', 'test.editor@example.invalid')
+       AND NOT EXISTS (SELECT 1 FROM user_companies uc WHERE uc.email = u.email AND uc.is_active IS TRUE);
+
+    UPDATE hotel_rooms    SET is_active = false WHERE id_company = v_co;
+    UPDATE hotel_guests   SET is_active = false WHERE id_company = v_co;
+    UPDATE hotel_bookings SET is_active = false WHERE id_company = v_co;
+    UPDATE hotel_maintenance_tickets SET status = 'DELETED' WHERE id_company = v_co;
+    UPDATE companys SET is_active = false WHERE id_company = v_co;
+    RAISE NOTICE 'H001 rollback: company % deactivated.', v_co;
+END $$;
+
+-- @@FINALIZE
+\if :{?embedded}
+\else
+\if :apply
+COMMIT;
+\echo '*** H001 ROLLBACK COMMITTED (soft deactivation) ***'
+\else
+ROLLBACK;
+\echo '*** H001 ROLLBACK DRY RUN: nothing changed ***'
+\endif
+\endif
