@@ -308,7 +308,7 @@ body.theme-hotel .h-filters { max-width: 100%; }
 body.theme-hotel .h-hk { display: grid; gap: var(--h-space-4); grid-template-columns: minmax(0, 1fr); max-width: 960px; }
 body.theme-hotel .h-hk > * { min-width: 0; }
 body.theme-hotel .h-hk__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--h-space-3); }
-body.theme-hotel .h-hk__date { margin: 0; color: var(--h-muted); font-size: var(--h-fs-sm); text-transform: capitalize; }
+body.theme-hotel .h-hk__date { margin: 0; color: var(--h-muted); font-size: var(--h-fs-sm); }
 body.theme-hotel .h-hk__section { display: grid; gap: var(--h-space-2); }
 body.theme-hotel .h-hk__section .h-section-title { margin: 0; }
 body.theme-hotel .h-hk__hint { margin: 0; color: var(--h-muted); font-size: var(--h-fs-sm); }
