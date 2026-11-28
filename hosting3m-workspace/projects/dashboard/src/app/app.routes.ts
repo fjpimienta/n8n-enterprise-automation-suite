@@ -1,6 +1,6 @@
 import { Routes } from '@angular/router';
 import { UnauthorizedComponent } from './shared/ui/unauthorized/unauthorized.component';
-import { LoginPageComponent, HomePageComponent, ShellLayoutComponent } from './ui-variant/ui-variant';
+import { LoginPageComponent, HomePageComponent, ShellLayoutComponent, uiChildRoutes } from './ui-variant/ui-variant';
 import { ReservationManagerComponent } from '@features/booking/components/reservation-manager/reservation-manager.component';
 import { MaintenanceMonitorModalComponent } from '@features/dashboard/components/maintenance-monitor-modal/maintenance-monitor-modal.component';
 import { GuestListComponent } from '@features/admin/components/guest-list/guest-list.component';
@@ -24,7 +24,8 @@ export const routes: Routes = [
       { path: 'huespedes', component: GuestListComponent },
       { path: 'personal', component: UserListComponent, canActivate: [roleGuard(['ADMIN'])] },
       { path: 'inventario', component: InventoryManagerComponent, canActivate: [roleGuard(['ADMIN'])] },
-      { path: 'finanzas', component: DailyReportModalComponent, canActivate: [roleGuard(['ADMIN'])] }
+      { path: 'finanzas', component: DailyReportModalComponent, canActivate: [roleGuard(['ADMIN'])] },
+      ...uiChildRoutes
     ]
   },
   { path: 'unauthorized', component: UnauthorizedComponent },
