@@ -6,7 +6,7 @@
  * UI or the demo mock is reachable from the production module graph.
  */
 import type { HttpInterceptorFn } from '@angular/common/http';
-import type { Provider } from '@angular/core';
+import type { EnvironmentProviders, Provider } from '@angular/core';
 
 export { LoginComponent as LoginPageComponent } from '../features/admin/components/login/login.component';
 export { DashboardComponent as HomePageComponent } from '../features/dashboard/components/dashboard/dashboard.component';
@@ -18,4 +18,4 @@ export const UI_MODE: 'classic' | 'next' = 'classic';
 export const uiHttpInterceptors: HttpInterceptorFn[] = [];
 
 /** Extra application providers (none in classic). */
-export const uiProviders: Provider[] = [];
+export const uiProviders: (Provider | EnvironmentProviders)[] = [];
