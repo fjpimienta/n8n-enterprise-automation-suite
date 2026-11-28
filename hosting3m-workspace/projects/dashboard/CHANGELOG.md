@@ -10,6 +10,7 @@ El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/
 
 * Nueva interfaz de operación ("next"): panel con KPIs, Room Rack compacto, navegación móvil y tema `theme-hotel` (claro y oscuro). Solo disponible en la configuración "demo"; la compilación de producción sigue mostrando la interfaz actual.
 * Configuración de compilación "demo" con datos sintéticos, sin conexión a servicios reales.
+* Módulo 'Limpieza' en la interfaz 'next': tablero de prioridades de limpieza por habitación (cambio el mismo día, sucias con llegada hoy, otras sucias, salidas de hoy, listas y bloqueadas por mantenimiento) y acción 'Finalizar limpieza'. Solo disponible en la configuración 'demo'; en el demo la acción se aplica en memoria y se reinicia al recargar. Sin cambios para los usuarios actuales de producción.
 
 ### Notas
 

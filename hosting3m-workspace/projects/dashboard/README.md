@@ -184,8 +184,9 @@ Verificado contra el código fuente el 2026-11-13.
 ## 🧪 Modo demo
 
 * Para ver la nueva interfaz: `npx ng serve dashboard --configuration=demo`
-* Parámetros opcionales: `?demo=empty` (colecciones vacías) y `?demo=error` (respuestas con error).
-* El demo no realiza llamadas reales y no permite escrituras.
+* Parámetros opcionales: `?demo=empty` (colecciones vacías), `?demo=error` (respuestas con error) y `?demo=writeerror` (lecturas normales; toda escritura responde con error).
+* Módulo de limpieza: ruta `/dashboard/limpieza` (menú "Limpieza", en móvil dentro de "Más").
+* El demo no realiza llamadas reales. La única escritura permitida es "Finalizar limpieza", que se aplica solo en memoria y se reinicia al recargar la página.
 
 ## 🛠️ Comandos de Desarrollo
 
