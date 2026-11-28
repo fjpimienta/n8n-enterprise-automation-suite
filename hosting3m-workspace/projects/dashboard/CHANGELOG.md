@@ -4,6 +4,17 @@ Todos los cambios notables en el proyecto **n8n Enterprise Automation Suite** se
 
 El formato se basa en [Keep a Changelog](https://keepachangelog.com/es-ES/1.0.0/), y este proyecto se adhiere a [Semantic Versioning](https://semver.org/lang/es/).
 
+## [Sin publicar]
+
+### Añadido
+
+* Nueva interfaz de operación ("next"): panel con KPIs, Room Rack compacto, navegación móvil y tema `theme-hotel` (claro y oscuro). Solo disponible en la configuración "demo"; la compilación de producción sigue mostrando la interfaz actual.
+* Configuración de compilación "demo" con datos sintéticos, sin conexión a servicios reales.
+
+### Notas
+
+* Sin cambios visibles para los usuarios actuales de producción.
+
 ## [0.11.0] - 2026-03-25
 
 ### 🛡️ Seguridad & Arquitectura (Boundary Resilience)

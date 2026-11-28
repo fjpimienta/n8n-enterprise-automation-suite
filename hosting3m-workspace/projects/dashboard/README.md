@@ -181,6 +181,12 @@ Verificado contra el código fuente el 2026-11-13.
 7. **Entornos:** el `CLAUDE.md` del proyecto indica que `environment.ts` apunta a producción también en desarrollo, así que `ng serve` puede leer y escribir datos de producción. Los archivos de `src/environments/` no están en este checkout; TODO(verify).
 8. **Lecturas sin tenant:** ver *Aislamiento por empresa*. Las lecturas dependen del gateway `v5/CRUD`, no del cliente.
 
+## 🧪 Modo demo
+
+* Para ver la nueva interfaz: `npx ng serve dashboard --configuration=demo`
+* Parámetros opcionales: `?demo=empty` (colecciones vacías) y `?demo=error` (respuestas con error).
+* El demo no realiza llamadas reales y no permite escrituras.
+
 ## 🛠️ Comandos de Desarrollo
 
 1. **Instalación**
